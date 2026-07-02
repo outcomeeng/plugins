@@ -31,7 +31,7 @@ See `templates/nodes/enabler-name.md` for the spec format.
 
 **Directory suffix:** `.outcome`
 **Spec opening:** `WE BELIEVE THAT ... WILL ... CONTRIBUTING TO ...`
-**Purpose:** A bet on which output achieves a desired user behavior change. The word "hypothesis" means genuine uncertainty — which output achieves it is unknown.
+**Purpose:** A bet on which output achieves a desired user behavior change. The word "hypothesis" means material uncertainty — which output achieves it is unknown.
 
 The hypothesis has three parts:
 
@@ -70,7 +70,7 @@ Only two parent-child combinations are valid for directory-level children (nodes
 
 Decision records (ADR/PDR) are files within a node directory, not child nodes. Both enablers and outcomes can contain `.adr.md` and `.pdr.md` files.
 
-**Enablers CANNOT contain outcome children.** An enabler provides infrastructure — its internals decompose into more infrastructure, never into bets. If a child has genuine uncertainty about which output achieves a desired behavior change, either the parent is mis-typed (should be an outcome) or the child is mis-typed (should be an enabler).
+**Enablers CANNOT contain outcome children.** An enabler provides infrastructure — its internals decompose into more infrastructure, never into bets. If a child has material uncertainty about which output achieves a desired behavior change, either the parent is mis-typed (should be an outcome) or the child is mis-typed (should be an enabler).
 
 **Diagnostic:** If placing an outcome under an enabler, ask whether the child's output is fully determined by its specification. If yes — if the assertions are stable and grow only by addition — it is an enabler. Invoke `/decompose` for full structure decisions.
 

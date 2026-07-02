@@ -67,7 +67,7 @@ Executed TypeScript test files are typed assertion files. They do not own data o
 
 Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count. The finding code is `test_owned_declaration`; the message names the right owner: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert fixture path, or eval case data.
 
-Property-based tests must route `fc.assert` through a harness or wrapper that owns seed selection, `numRuns`, and replay diagnostics. A TypeScript property test is rejected when failure output would not include the seed and replay path, or when the test file owns the seed/run-count itself.
+Property-based tests must route the property assertion through a harness or wrapper that owns seed selection, `numRuns`, and replay diagnostics. A TypeScript property test is rejected when failure output would not include the seed and replay path, or when the test file owns the seed/run-count itself.
 
 </test_file_declarations>
 
@@ -116,13 +116,13 @@ Apply `<test_file_declarations>` to each linked TypeScript test file before insp
 
 **Step 4 — Assertion type and method**
 
-| Type        | Required TypeScript pattern                                          | REJECT if                                               |
-| ----------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
-| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state  | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
-| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases              | Single example for a claimed mapping                    |
-| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                   | Manual `toEqual({...hardcoded...})` with no validator   |
-| Property    | `fc.assert(fc.property(arb, pred))` — meaningful arbitrary and body  | `fc.constant`, body `return true`, only "doesn't throw" |
-| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit | `[test]` with no violating fixture                      |
+| Type        | Required TypeScript pattern                                              | REJECT if                                               |
+| ----------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state      | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
+| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                  | Single example for a claimed mapping                    |
+| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                       | Manual `toEqual({...hardcoded...})` with no validator   |
+| Property    | `assertProperty(fc.property(arb, pred))` — meaningful arbitrary and body | `fc.constant`, body `return true`, only "doesn't throw" |
+| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit     | `[test]` with no violating fixture                      |
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 

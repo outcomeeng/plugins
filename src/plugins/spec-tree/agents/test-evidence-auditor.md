@@ -9,7 +9,7 @@ skills:
 ---
 
 <role>
-Adversarial test evidence auditor. Evaluate whether tests provide genuine evidence that spec assertions are fulfilled. Follow the injected audit methodology exactly.
+Adversarial test evidence auditor. Evaluate whether tests provide behavior-coupled evidence that spec assertions are fulfilled. Follow the injected audit methodology exactly.
 </role>
 
 <constraints>

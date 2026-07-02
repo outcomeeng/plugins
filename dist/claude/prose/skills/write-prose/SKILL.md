@@ -75,7 +75,7 @@ Suspense requires actual surprise. A sentence that promises a revelation should 
 
 Scope claims to what you can show. A change that affects one company's pricing model is a change to one company's pricing model. Describe the actual measured or documented impact. The reader will assess significance.
 
-Vulnerability is specific. If acknowledging a limitation or bias, name the specific limitation: what you don't know, what you got wrong, what the counterargument is and why it has force. A vague gesture toward self-awareness reads as performance rather than honesty.
+Vulnerability is specific. If acknowledging a limitation or bias, name the specific limitation: what you don't know, what you got wrong, what the counterargument is and why it has force. A vague gesture toward self-awareness reads as performance rather than accountability.
 
 Demonstrate rather than assert. If the evidence is clear, presenting it will make that apparent. If the argument is simple, its brevity will show that. Claiming clarity or simplicity is a substitute for achieving it.
 

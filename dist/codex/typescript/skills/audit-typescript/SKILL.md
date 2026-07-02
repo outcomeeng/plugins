@@ -36,7 +36,7 @@ Automated tools catch syntax errors, type mismatches, and lint violations. Claud
 
 **Test evidence is out of scope.**
 
-`/audit-typescript-tests` evaluates whether tests provide genuine evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the main agent already passed it before dispatch. Do not duplicate that work.
+`/audit-typescript-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the main agent already passed it before dispatch. Do not duplicate that work.
 
 **Binary verdict, no caveats.**
 

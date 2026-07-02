@@ -146,6 +146,7 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  */
 
 import { withLhciCredentials } from "@testing/harnesses/lhci/credentials";
+import { createLhciAuditResults } from "@testing/harnesses/lhci/results";
 
 describe("LHCI", () => {
   it(
@@ -154,7 +155,7 @@ describe("LHCI", () => {
       await expect(uploadAuditResults({
         serverUrl: credentials.serverUrl,
         token: credentials.token,
-        results: testResults,
+        results: createLhciAuditResults(),
       })).resolves.toMatchObject({ success: true });
     }),
   );
@@ -194,14 +195,14 @@ class RecordingGateway implements PaymentGateway {
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
 
-| Code type               | Required property        | Pattern                  |
-| ----------------------- | ------------------------ | ------------------------ |
-| Parsers                 | `parse(format(x)) == x`  | `fc.assert(fc.property)` |
-| Serialization           | `decode(encode(x)) == x` | `fc.assert(fc.property)` |
-| Mathematical operations | algebraic laws           | `fc.assert(fc.property)` |
-| Complex algorithms      | invariant preservation   | `fc.assert(fc.property)` |
+| Code type               | Required property        | Pattern                            |
+| ----------------------- | ------------------------ | ---------------------------------- |
+| Parsers                 | `parse(format(x)) == x`  | `assertProperty(fc.property(...))` |
+| Serialization           | `decode(encode(x)) == x` | `assertProperty(fc.property(...))` |
+| Mathematical operations | algebraic laws           | `assertProperty(fc.property(...))` |
+| Complex algorithms      | invariant preservation   | `assertProperty(fc.property(...))` |
 
-`fc.assert` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
+An assertion that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
 Route property assertions through a harness or wrapper that owns seed selection, run count, and replay diagnostics; failure output must include the seed and replay path.
 </property_based_testing>
 
@@ -295,7 +296,7 @@ export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
 ```
 
-Use `arbitrary*()` generator functions for tests that should search a domain with `fc.assert`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
+Use `arbitrary*()` generator functions for tests that should search a domain with `assertProperty`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
 
 Reject generators that only rename constants:
 
@@ -467,7 +468,7 @@ TypeScript test guidance follows this standard when:
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
-- Property assertions use meaningful `fast-check` properties
+- Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - Source-owned values come from the owning production module
 - Shared test infrastructure lives under `testing/` as spec-governed harnesses, generators, or inert fixtures
 

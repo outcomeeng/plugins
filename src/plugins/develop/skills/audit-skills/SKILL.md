@@ -162,7 +162,7 @@ Check the capability surface a SKILL.md carries that a slash command also had, a
 **Tool-restriction security** (`allowed-tools`):
 
 - Bash is restricted to the narrowest verb pattern that works (`Bash(git add:*)`, not bare `Bash` or `Bash(git *)`) when specific verbs suffice
-- Destructive and network tools (`Write`, `Bash`, `WebFetch`) are absent unless the task genuinely needs them — a read-only or analysis skill cannot delete, force-push, deploy, or exfiltrate
+- Destructive and network tools (`Write`, `Bash`, `WebFetch`) are absent unless the task needs them — a read-only or analysis skill cannot delete, force-push, deploy, or exfiltrate
 - An `audit-*` skill carries `Read, Grep, Glob, Bash` (plus `Skill` when composing) and never `Write`/`Edit`
 
 **File-reference portability**:
@@ -182,7 +182,7 @@ Check against `/agent-prompt-standards` conventions:
 - **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "processes data", "please", "if possible"). No structural anti-patterns (explaining Claude to Claude, motivational prose, empty disclaimers)
 - **Conciseness**: Only information Claude doesn't already have. Concrete over abstract
 - **Failure modes**: Written from actual experience, use "Claude" as subject, structured as what/why/how-to-avoid
-- **Objective shape**: `<objective>` states the observable output in a definite shape — not an actor ("The skill", "Claude") or a bare activity verb ("Audit", "Evaluate", "Generate"), and not a behavioral claim. It is **one sentence** (two only when the output has two genuine parts): the output target, not a summary of the skill. Every clause names a property of the output; a clause describing *when* the skill runs (→ `description`), *how* it runs (→ `<workflow>`), or *what it avoids* (→ `<constraints>`) is bloat that must be cut. `<success_criteria>` proves the output (its sound-making properties), never a re-list of the workflow steps; the two do not duplicate (per `/agent-prompt-standards` `<objective_shape>`). For an `audit-*` skill, check the canonical structure in `/skill-standards` `references/auditor-skeleton.md`; code-auditor and test-auditor objectives may use the skeleton's APPROVED/REJECTED field form without a separate finding-category sentence
+- **Objective shape**: `<objective>` states the observable output in a definite shape — not an actor ("The skill", "Claude") or a bare activity verb ("Audit", "Evaluate", "Generate"), and not a behavioral claim. It is **one sentence** (two only when the output has two distinct parts): the output target, not a summary of the skill. Every clause names a property of the output; a clause describing *when* the skill runs (→ `description`), *how* it runs (→ `<workflow>`), or *what it avoids* (→ `<constraints>`) is bloat that must be cut. `<success_criteria>` proves the output (its sound-making properties), never a re-list of the workflow steps; the two do not duplicate (per `/agent-prompt-standards` `<objective_shape>`). For an `audit-*` skill, check the canonical structure in `/skill-standards` `references/auditor-skeleton.md`; code-auditor and test-auditor objectives may use the skeleton's APPROVED/REJECTED field form without a separate finding-category sentence
 
 </area>
 
@@ -192,7 +192,7 @@ Flag these issues:
 - **missing_required_tags**: Missing objective or success_criteria
 - **actor_or_activity_objective**: `<objective>` opens with an actor ("The skill…", "Claude…") or a bare activity verb ("Audit…", "Evaluate…", "Generate…") instead of naming the observable output it produces
 - **objective_criteria_duplication**: `<objective>` and `<success_criteria>` restate the same content — the objective names the output, success_criteria proves it
-- **objective_bloat**: `<objective>` runs past one sentence (two when the output has two genuine parts) or carries clauses describing when the skill runs, how it runs (steps, gates, orchestration), or what it avoids — content that belongs in `description`/`<workflow>`/`<constraints>`, not the output target
+- **objective_bloat**: `<objective>` runs past one sentence (two when the output has two distinct parts) or carries clauses describing when the skill runs, how it runs (steps, gates, orchestration), or what it avoids — content that belongs in `description`/`<workflow>`/`<constraints>`, not the output target
 - **auditor_skeleton_violation**: an `audit-*` skill deviating from `/skill-standards` `references/auditor-skeleton.md` — `<output_format>` instead of `<verdict_format>`, a non-`<audit_workflow>` procedure name, a `<quick_start>` block, or an objective outside the skeleton's verdict forms. The prose auditors (`audit-prose`, `audit-internal-docs`) are exempt from the procedure-name and `<dispatch_gate>` checks per the skeleton's `<prose_variant>`
 - **hybrid_xml_markdown**: Mixing XML tags with markdown headings in body
 - **unclosed_xml_tags**: XML tags not properly closed

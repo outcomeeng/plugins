@@ -48,12 +48,13 @@ This remains `l1` because the test calls deterministic source logic directly. Th
 ```typescript
 import { normalizeSourcePath } from "@/paths";
 import { arbitrarySourceFilePath } from "@testing/generators/paths";
+import { assertProperty } from "@testing/harnesses/properties";
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 describe("normalizeSourcePath", () => {
   it("normalizes generated source paths idempotently", () => {
-    fc.assert(
+    assertProperty(
       fc.property(arbitrarySourceFilePath(), (path) => {
         const normalized = normalizeSourcePath(path);
 

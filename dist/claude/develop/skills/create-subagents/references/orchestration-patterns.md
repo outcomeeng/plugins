@@ -507,7 +507,7 @@ Partial failure handling:
 
 **Example**: Three agents to review 10 lines of code (overkill).
 
-**Fix**: Reserve multi-agent for genuinely complex tasks. Single capable agent often better than coordinating multiple simple agents.
+**Fix**: Reserve multi-agent for complex tasks. Single capable agent often better than coordinating multiple simple agents.
 </anti_pattern>
 
 <anti_pattern name="no_coordination">

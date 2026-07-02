@@ -170,7 +170,7 @@ Testing output is sound when:
 
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
-- Every property test uses a meaningful generated domain and reports the seed or replay path on failure.
+- Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
 

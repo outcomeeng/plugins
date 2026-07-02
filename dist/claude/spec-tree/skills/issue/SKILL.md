@@ -28,7 +28,7 @@ Editing a spec-tree dependency's installed source directly to record a needed ch
 <captured_fields>
 Capture Claude's OBSERVATION only — never the dependency's internal taxonomy. Claude reports what it saw; the dependency workflow classifies it against its spec tree.
 
-Gather from the invoking context, asking the user only for genuine gaps:
+Gather from the invoking context, asking the user only for operator-owned gaps:
 
 - **Observation** — what was observed: the behavior, the gap, the contradiction.
 - **Uncertainty** — what remains unknown or unconfirmed.

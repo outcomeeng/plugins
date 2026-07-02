@@ -54,7 +54,7 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 - **Specificity** — restrict bash to the narrowest pattern that works: `Bash(git add:*)`, `Bash(git commit:*)`, never bare `Bash` or `Bash(git *)` when specific verbs suffice. A broad grant re-admits the destructive and exfiltrating commands the restriction exists to bar.
 - **Destructive-operation containment** — a skill that must not delete, force-push, or deploy omits the tools that would let it; the allow-list is the containment.
-- **Data-exfiltration containment** — a read-only analysis skill omits `Bash`, `WebFetch`, and `Write` so it cannot send local content outward; grant them only when the task genuinely needs them.
+- **Data-exfiltration containment** — a read-only analysis skill omits `Bash`, `WebFetch`, and `Write` so it cannot send local content outward; grant them only when the task needs them.
 - **Read-only audits** — an `audit-*` skill carries `Read, Grep, Glob, Bash` (plus `Skill` when it composes another skill) and never `Write`/`Edit`, per the read-only audit rule.
 
 - ALWAYS: grant the narrowest `allowed-tools` the skill's task needs, restricting bash to specific verb patterns.

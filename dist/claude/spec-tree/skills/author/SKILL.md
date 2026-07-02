@@ -138,13 +138,13 @@ Before drafting, gather what's needed for the artifact type:
 **Outcome (gate — answer the forcing question before proceeding):**
 
 - Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
-- Only if the forcing question confirms genuine uncertainty, gather hypothesis content:
+- Only if the forcing question confirms material uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
   - Impact: business value
 - What assertions specify the output?
 
-Use `AskUserQuestion` for genuine gaps. Do not ask about information already provided in the conversation.
+Use `AskUserQuestion` for operator-owned gaps. Do not ask about information already provided in the conversation.
 
 </step>
 
@@ -317,7 +317,7 @@ Claude created a parent outcome named "advanced operations" that grouped prune, 
 
 A container name must describe what the container contains. If the name would accept arbitrary future scope ("advanced", "core", "misc", "utilities", "helpers", "operations"), it is wrong — Claude will always find a plausible reason to drop the next feature in.
 
-How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the honest answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
+How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
 **Failure 7: Testable MUST/NEVER placed under `### Audit` instead of `### Testing`**
 
@@ -377,7 +377,7 @@ Authoring is complete when:
 - [ ] Context loaded for placement (or bootstrap mode for empty tree)
 - [ ] Index and placement determined using ordering rules
 - [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
-- [ ] Content gathered from user (genuine gaps only)
+- [ ] Content gathered from user (operator-owned gaps only)
 - [ ] Template read and filled with atemporal voice
 - [ ] Validation checklist passes
 - [ ] Files created in correct location
