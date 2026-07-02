@@ -48,7 +48,7 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
 
 </review_materials>
 
