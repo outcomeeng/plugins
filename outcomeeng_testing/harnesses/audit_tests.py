@@ -25,10 +25,7 @@ class AuditVerdict:
 
 
 def audit_verdict_for_test_owned_declaration() -> AuditVerdict:
-    declarations = _scanner().scan_text(
-        _fixture("test_owned_declaration.py").read_text(encoding="utf-8"),
-        _fixture("test_owned_declaration.py"),
-    )
+    declarations = _declarations_for_fixture("test_owned_declaration.py")
     if any(
         declaration.name == "mapping_runs" and declaration.kind == "variable"
         for declaration in declarations
@@ -37,9 +34,36 @@ def audit_verdict_for_test_owned_declaration() -> AuditVerdict:
     return AuditVerdict(status="APPROVED", finding_category="")
 
 
+def test_owned_declaration_is_rejected() -> bool:
+    return audit_verdict_for_test_owned_declaration() == AuditVerdict(
+        status="REJECT", finding_category="test-owned declaration"
+    )
+
+
+def async_helper_declarations_are_detected() -> bool:
+    return _has_function(
+        _declarations_for_fixture("async_helper_declaration.ts"), "loadCredentials"
+    ) and _has_function(
+        _declarations_for_fixture("async_helper_declaration.rs"), "setup"
+    )
+
+
+def _declarations_for_fixture(name: str) -> list[Declaration]:
+    fixture = _fixture(name)
+    return _scanner().scan_text(fixture.read_text(encoding="utf-8"), fixture)
+
+
+def _has_function(declarations: list[Declaration], name: str) -> bool:
+    return any(
+        declaration.name == name and declaration.kind == "function"
+        for declaration in declarations
+    )
+
+
 def _scanner() -> DeclarationScanner:
     module_path = Path(
-        "src/plugins/spec-tree/skills/audit-tests/scripts/declaration_scan.py"
+        Path(__file__).resolve().parents[2],
+        "src/plugins/spec-tree/skills/audit-tests/scripts/declaration_scan.py",
     )
     spec = importlib.util.spec_from_file_location(
         "audit_tests_declaration_scan", module_path

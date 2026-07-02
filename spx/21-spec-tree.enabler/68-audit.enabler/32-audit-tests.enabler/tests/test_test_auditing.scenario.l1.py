@@ -1,10 +1,12 @@
 from outcomeeng_testing.harnesses.audit_tests import (
-    audit_verdict_for_test_owned_declaration,
+    async_helper_declarations_are_detected,
+    test_owned_declaration_is_rejected,
 )
 
 
 def test_rejects_test_owned_declarations() -> None:
-    verdict = audit_verdict_for_test_owned_declaration()
+    assert test_owned_declaration_is_rejected()
 
-    assert verdict.status == "REJECT"
-    assert verdict.finding_category == "test-owned declaration"
+
+def test_detects_async_helper_declarations() -> None:
+    assert async_helper_declarations_are_detected()

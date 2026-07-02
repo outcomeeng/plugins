@@ -30,10 +30,10 @@ class Declaration:
 
 
 _TYPESCRIPT_DECLARATION = re.compile(
-    r"^\s*(?:export\s+)?(?P<kind>const|let|var|function)\s+(?P<name>[A-Za-z_$][\w$]*)"
+    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?P<kind>const|let|var|function)\s+(?P<name>[A-Za-z_$][\w$]*)"
 )
 _RUST_DECLARATION = re.compile(
-    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?P<kind>const|static|let|fn)\s+(?P<name>[A-Za-z_]\w*)"
+    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<name>[A-Za-z_]\w*)"
 )
 
 
