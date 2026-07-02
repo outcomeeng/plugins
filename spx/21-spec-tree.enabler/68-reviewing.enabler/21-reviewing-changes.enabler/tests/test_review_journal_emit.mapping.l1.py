@@ -262,7 +262,11 @@ def _stub_review_diff(
     files = changed_files if changed_files is not None else ["README.md"]
     diff = combined_diff
     if diff is None:
-        diff = lambda base_ref, head_ref: "### Committed diff\n\nREADME change"
+
+        def default_combined_diff(_base_ref: str, _head_ref: str) -> str:
+            return "### Committed diff\n\nREADME change"
+
+        diff = default_combined_diff
     monkeypatch.setattr(
         je.changeset_scope,
         "expand_diff_range",
