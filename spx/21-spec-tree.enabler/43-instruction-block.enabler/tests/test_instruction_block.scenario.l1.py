@@ -467,6 +467,51 @@ def test_cli_rejects_non_directory_repo_root(
     assert "--repo-root is not a directory" in capsys.readouterr().err
 
 
+def test_cli_rejects_missing_template(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    missing = tmp_path / "nonexistent-template.md"
+
+    exit_code = module.main(
+        ["--template", str(missing), "--repo-root", str(tmp_path), "--check"]
+    )
+
+    assert exit_code == 2
+    assert "--template does not exist" in capsys.readouterr().err
+
+
+def test_cli_rejects_symlinked_template(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    real_template = write_template(tmp_path, NEW_VERSION)
+    linked = tmp_path / "linked-template.md"
+    linked.symlink_to(real_template)
+
+    exit_code = module.main(
+        ["--template", str(linked), "--repo-root", str(tmp_path), "--check"]
+    )
+
+    assert exit_code == 2
+    assert "--template is a symlink" in capsys.readouterr().err
+
+
+def test_cli_rejects_directory_template(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    directory = tmp_path / "template-dir"
+    directory.mkdir()
+
+    exit_code = module.main(
+        ["--template", str(directory), "--repo-root", str(tmp_path), "--check"]
+    )
+
+    assert exit_code == 2
+    assert "--template is not a regular file" in capsys.readouterr().err
+
+
 def test_cli_rejects_root_instruction_symlink_escaping_repo_root(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

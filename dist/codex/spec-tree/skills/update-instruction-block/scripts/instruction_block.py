@@ -407,6 +407,24 @@ def _validated_repo_root(raw_repo_root: str | None) -> pathlib.Path | None:
     return repo_root
 
 
+def _validated_template_path(raw_template: str) -> pathlib.Path:
+    """Return a resolved template path, rejecting a symlink, missing, or non-file input.
+
+    ``--template`` is read from a CLI argument, so the path is validated before the read:
+    a faulty or hostile argument that points at a symlink or a non-regular file is rejected
+    rather than read, keeping the read from escaping into an unintended file.
+    """
+    if pathlib.Path(raw_template).is_symlink():
+        raise CliInputError(f"--template is a symlink: {raw_template}")
+    try:
+        template = pathlib.Path(raw_template).expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise CliInputError(f"--template does not exist: {raw_template}") from exc
+    if not template.is_file():
+        raise CliInputError(f"--template is not a regular file: {raw_template}")
+    return template
+
+
 def _repo_child(repo_root: pathlib.Path, relative_path: str) -> pathlib.Path:
     """Return a repo child path after validating its parent stays inside root."""
     if pathlib.PurePath(relative_path).is_absolute():
@@ -519,7 +537,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    template_text = pathlib.Path(args.template).read_text(encoding="utf-8")
+    try:
+        template_path = _validated_template_path(args.template)
+    except CliInputError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    template_text = template_path.read_text(encoding="utf-8")
     installed = parse_template_version(template_text)
     if installed is None:
         print("error: template has no template_version", file=sys.stderr)
