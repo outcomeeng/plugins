@@ -12,9 +12,11 @@ from typing import Any
 from outcomeeng_testing.harnesses.journal_projection import (
     RENDER_REVIEW_RUN_SCRIPT,
     load_journal_projection_module,
+    load_render_review_run_module,
 )
 
 jp = load_journal_projection_module()
+render_review_run = load_render_review_run_module()
 
 RUN_TOKEN = "2026-07-02_06-38-22-118-d7c71d2f5575"
 NOW = "2026-07-02T06:38:22Z"
@@ -93,6 +95,8 @@ def _write_spx(
                 "    'review',",
                 "    '--sealed',",
                 "    'sealed',",
+                "    '--limit',",
+                f"    {render_review_run.RECENT_RUN_LIST_LIMIT!r},",
                 "]",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_NOT_FOUND') == '1':",
                 "    sys.stderr.write('journal run not found; open the run before operating on it\\n')",
@@ -251,6 +255,47 @@ def test_missing_current_scope_run_uses_listed_branch_slug(
     assert result.returncode == 0
     assert f"Review run: {RUN_TOKEN}" in result.stdout
     assert "Status: approved" in result.stdout
+
+
+def test_missing_current_scope_run_without_list_match_reports_original_miss(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout="",
+        direct_not_found=True,
+        list_stdout=json.dumps([]),
+    )
+
+    assert result.returncode == 1
+    assert "journal run not found" in result.stderr
+
+
+def test_missing_current_scope_run_with_multiple_list_matches_reports_original_miss(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout="",
+        direct_not_found=True,
+        list_stdout=json.dumps(
+            [
+                {
+                    "runToken": RUN_TOKEN,
+                    "branchSlug": "work__review-run-inspection-helper",
+                    "sealed": True,
+                },
+                {
+                    "runToken": RUN_TOKEN,
+                    "branchSlug": "head-b5180223",
+                    "sealed": True,
+                },
+            ]
+        ),
+    )
+
+    assert result.returncode == 1
+    assert "journal run not found" in result.stderr
 
 
 def test_list_failure_is_reported_after_current_scope_miss(
