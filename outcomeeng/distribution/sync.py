@@ -17,14 +17,21 @@ The module's contract:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from outcomeeng.distribution.codex_cache import (
+    CodexCliInstalled,
+    InstalledSetError,
+    codex_cache_topology_errors,
+    default_cache_root,
+)
 from outcomeeng.distribution.marketplace_sources import (
     DEFAULT_MARKETPLACE,
     MarketplaceSourceError,
@@ -40,6 +47,12 @@ DISTRIBUTION_PATHS: tuple[str, ...] = (
     ".agents/plugins",
     "outcomeeng/distribution/agents.py",
 )
+SYNC_LOCK_FILENAME = ".sync-marketplace.lock"
+SYNC_PENDING_FILENAME = ".sync-marketplace.pending"
+SYNC_ALREADY_RUNNING_MESSAGE = (
+    "Marketplace refresh already running; recorded pending sync; exiting 0"
+)
+TOPOLOGY_CHECK_FAILED_PREFIX = "Codex cache topology check failed"
 
 
 @dataclass(frozen=True)
@@ -128,6 +141,108 @@ class ConfigRepairer(Protocol):
     def __call__(self) -> bool: ...
 
 
+class TopologyHealthProbe(Protocol):
+    """Returns Codex cache topology errors for installed marketplace plugins."""
+
+    def __call__(self) -> tuple[str, ...]: ...
+
+
+@dataclass(frozen=True)
+class SingleFlightClaim:
+    """Result of attempting to own one marketplace refresh sequence."""
+
+    acquired: bool
+    pending_recorded: bool = False
+    detail: str = ""
+
+
+class SingleFlight(Protocol):
+    """Coordinates concurrent sync invocations around one refresh sequence."""
+
+    def acquire(self) -> SingleFlightClaim: ...
+
+    def release(self) -> None: ...
+
+
+ProcessExists = Callable[[int], bool]
+
+
+@dataclass(frozen=True)
+class _FileSingleFlight:
+    """File-backed single-flight guard stored in the Codex cache directory."""
+
+    state_dir: Path
+    process_exists: ProcessExists = lambda pid: _process_exists(pid)
+
+    @property
+    def lock_path(self) -> Path:
+        return self.state_dir / SYNC_LOCK_FILENAME
+
+    @property
+    def pending_path(self) -> Path:
+        return self.state_dir / SYNC_PENDING_FILENAME
+
+    def acquire(self) -> SingleFlightClaim:
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        current_pid = os.getpid()
+        lock_body = f"{current_pid}\n"
+        for _attempt in range(2):
+            try:
+                fd = os.open(
+                    self.lock_path,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o644,
+                )
+            except FileExistsError:
+                owner_pid = self._read_lock_pid()
+                if owner_pid is not None and self.process_exists(owner_pid):
+                    self.pending_path.write_text(lock_body, encoding="utf-8")
+                    return SingleFlightClaim(
+                        acquired=False,
+                        pending_recorded=True,
+                        detail=f"pid {owner_pid} owns active repair",
+                    )
+                try:
+                    self.lock_path.unlink()
+                except FileNotFoundError:
+                    pass
+                continue
+            with os.fdopen(fd, "w", encoding="utf-8") as lock_file:
+                lock_file.write(lock_body)
+            return SingleFlightClaim(
+                acquired=True,
+                detail=f"pid {current_pid} owns active repair",
+            )
+        self.pending_path.write_text(lock_body, encoding="utf-8")
+        return SingleFlightClaim(
+            acquired=False,
+            pending_recorded=True,
+            detail="active repair lock changed during acquisition",
+        )
+
+    def release(self) -> None:
+        current_pid = os.getpid()
+        if self._read_lock_pid() == current_pid:
+            try:
+                self.lock_path.unlink()
+            except FileNotFoundError:
+                pass
+        try:
+            self.pending_path.unlink()
+        except FileNotFoundError:
+            pass
+
+    def _read_lock_pid(self) -> int | None:
+        try:
+            raw = self.lock_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            return None
+
+
 def sync(
     base_ref: str | None,
     *,
@@ -135,12 +250,16 @@ def sync(
     tool_probe: ToolProbe | None = None,
     change_probe: ChangeProbe | None = None,
     config_repairer: ConfigRepairer | None = None,
+    topology_probe: TopologyHealthProbe | None = None,
+    single_flight: SingleFlight | None = None,
 ) -> int:
     """Run the marketplace sync orchestration. Returns the process exit code."""
     runner = runner or _real_runner
     tool_probe = tool_probe or _real_tool_probe
     change_probe = change_probe or _real_change_probe
     config_repairer = config_repairer or _real_config_repairer
+    topology_probe = topology_probe or _real_topology_probe
+    single_flight = single_flight or _real_single_flight()
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
@@ -150,18 +269,76 @@ def sync(
     except MarketplaceSourceError as exc:
         print(f"Marketplace source configuration failed: {exc}", file=sys.stderr)
         return 1
-    if base_ref and not change_probe(base_ref) and not config_changed:
-        print(
-            f"No plugin distribution changes since {base_ref}; "
-            "runtime marketplace sources already configured; "
-            "skipping marketplace refresh",
+    distribution_changed = True
+    if base_ref:
+        distribution_changed = change_probe(base_ref)
+    if base_ref and not distribution_changed and not config_changed:
+        try:
+            topology_errors = topology_probe()
+        except InstalledSetError as exc:
+            print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+            return 1
+        if not topology_errors:
+            print(
+                f"No plugin distribution changes since {base_ref}; "
+                "runtime marketplace sources already configured; "
+                "Codex cache topology healthy; "
+                "skipping marketplace refresh",
+            )
+            return 0
+        for error in topology_errors:
+            print(f"Codex cache topology invalid: {error}", file=sys.stderr)
+        return _run_refresh_sequence(
+            runner,
+            single_flight,
+            reason="Codex cache topology invalid",
         )
+    if not base_ref:
+        reason = "no base_ref supplied"
+    elif distribution_changed:
+        reason = "plugin distribution paths changed"
+    else:
+        reason = "runtime marketplace source configuration changed"
+    return _run_refresh_sequence(runner, single_flight, reason=reason)
+
+
+def _run_refresh_sequence(
+    runner: StepRunner,
+    single_flight: SingleFlight,
+    *,
+    reason: str,
+) -> int:
+    try:
+        claim = single_flight.acquire()
+    except OSError as exc:
+        print(f"Marketplace refresh lock failed: {exc}", file=sys.stderr)
+        return 1
+    if not claim.acquired:
+        print(
+            SYNC_ALREADY_RUNNING_MESSAGE,
+        )
+        if claim.detail:
+            print(f"Active sync: {claim.detail}")
         return 0
-    for step in STEPS:
-        rc = runner(step.argv)
-        if rc != 0:
-            return rc
-    return 0
+    refresh_rc = 0
+    release_error: OSError | None = None
+    print(f"Running marketplace refresh: {reason}")
+    try:
+        for step in STEPS:
+            refresh_rc = runner(step.argv)
+            if refresh_rc != 0:
+                break
+    finally:
+        try:
+            single_flight.release()
+        except OSError as exc:
+            release_error = exc
+    if release_error is not None:
+        print(
+            f"Marketplace refresh lock release failed: {release_error}", file=sys.stderr
+        )
+        return 1
+    return refresh_rc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -222,6 +399,33 @@ def _real_config_repairer() -> bool:
         source_root=_real_source_root(),
     )
     return result.changed
+
+
+def _real_topology_probe() -> tuple[str, ...]:
+    installed_versions = CodexCliInstalled().installed_plugin_versions(
+        DEFAULT_MARKETPLACE,
+    )
+    marketplace_dir = default_cache_root() / DEFAULT_MARKETPLACE
+    errors: list[str] = []
+    for plugin, version in sorted(installed_versions.items()):
+        errors.extend(codex_cache_topology_errors(marketplace_dir, plugin, version))
+    return tuple(errors)
+
+
+def _real_single_flight() -> SingleFlight:
+    return _FileSingleFlight(default_cache_root() / DEFAULT_MARKETPLACE)
+
+
+def _process_exists(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def _real_source_root() -> Path:
@@ -321,8 +525,11 @@ __all__ = [
     "STEPS",
     "ChangeProbe",
     "ConfigRepairer",
+    "SingleFlight",
+    "SingleFlightClaim",
     "StepRunner",
     "SyncStep",
+    "TopologyHealthProbe",
     "ToolProbe",
     "main",
     "sync",

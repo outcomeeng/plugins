@@ -15,6 +15,7 @@ through the recording doubles in `outcomeeng_testing.harnesses.sync`.
 from __future__ import annotations
 
 from collections.abc import Sequence
+import os
 import pathlib
 import subprocess
 
@@ -22,11 +23,13 @@ import pytest
 
 from outcomeeng.distribution.agents import install_agents
 import outcomeeng.distribution.sync as sync_module
+from outcomeeng.distribution.codex_cache import InstalledSetError
 from outcomeeng.distribution.sync import (
     DISTRIBUTION_PATHS,
     REQUIRED_TOOLS,
     STEPS,
     _real_change_probe,
+    _FileSingleFlight,
     _worktree_path_for_branch,
     sync,
 )
@@ -34,7 +37,9 @@ from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
     ScriptedChangeProbe,
     ScriptedConfigRepairer,
+    ScriptedSingleFlight,
     ScriptedToolProbe,
+    ScriptedTopologyProbe,
 )
 from outcomeeng_testing.harnesses.src_tree import write_agent_tree
 
@@ -102,31 +107,31 @@ def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
 
 
 def test_real_source_root_selects_default_branch_worktree(
+    tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    listing = "\n".join(
-        [
-            "worktree /repo/plugins",
-            "HEAD 1111111111111111111111111111111111111111",
-            "branch refs/heads/main",
-            "",
-            "worktree /repo/plugins-d",
-            "HEAD 2222222222222222222222222222222222222222",
-            "branch refs/heads/work/manage-runtime-marketplaces",
-            "",
-        ],
+    repo_root = tmp_path / "plugins"
+    feature_root = tmp_path / "plugins-d"
+    repo_root.mkdir()
+    _git(repo_root, "init", "--initial-branch", "main", "--quiet")
+    _git(repo_root, "config", "user.email", "test@example.invalid")
+    _git(repo_root, "config", "user.name", "Test")
+    (repo_root / "README.md").write_text("seed\n", encoding="utf-8")
+    _git(repo_root, "add", "README.md")
+    _git(repo_root, "commit", "-m", "seed", "--quiet")
+    _git(repo_root, "branch", "work/manage-runtime-marketplaces")
+    _git(
+        repo_root,
+        "worktree",
+        "add",
+        "--quiet",
+        str(feature_root),
+        "work/manage-runtime-marketplaces",
     )
-    feature_root = pathlib.Path("/repo/plugins-d")
 
-    monkeypatch.setattr(sync_module, "_real_default_branch_name", lambda: "main")
-    monkeypatch.setattr(
-        sync_module,
-        "_real_worktree_root_for_branch",
-        lambda branch: _worktree_path_for_branch(listing, branch),
-    )
-    monkeypatch.setattr(sync_module, "_real_git_toplevel", lambda: feature_root)
+    monkeypatch.chdir(feature_root)
 
-    assert sync_module._real_source_root() == pathlib.Path("/repo/plugins")
+    assert sync_module._real_source_root() == repo_root
 
 
 def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
@@ -142,11 +147,13 @@ def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
     assert _worktree_path_for_branch(listing, "main") is None
 
 
-def test_no_distribution_changes_exits_zero_after_config_reconciliation() -> None:
+def test_no_distribution_changes_with_healthy_topology_skips_refresh() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe()
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         "abc123",
@@ -154,12 +161,134 @@ def test_no_distribution_changes_exits_zero_after_config_reconciliation() -> Non
         tool_probe=tool_probe,
         change_probe=change_probe,
         config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert runner.calls == []
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
+    assert topology_probe.calls == 1
+    assert single_flight.acquisitions == 0
+
+
+def test_invalid_topology_runs_refresh_without_distribution_changes() -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+    single_flight = ScriptedSingleFlight()
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 0
+    assert config_repairer.calls == 1
+    assert change_probe.queries == ["abc123"]
+    assert topology_probe.calls == 1
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
+    assert runner.calls == list(STEP_ARGVS)
+
+
+def test_active_single_flight_records_pending_and_exits_zero(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(state_dir=state_dir)
+    single_flight.lock_path.write_text(f"{os.getpid()}\n", encoding="utf-8")
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 0
+    assert runner.calls == []
+    assert topology_probe.calls == 1
+    assert single_flight.lock_path.exists()
+    assert single_flight.pending_path.read_text(encoding="utf-8").strip().isdigit()
+
+
+def test_stale_single_flight_lock_is_replaced(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: False,
+    )
+    single_flight.lock_path.write_text("999999\n", encoding="utf-8")
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 0
+    assert config_repairer.calls == 1
+    assert change_probe.queries == ["abc123"]
+    assert topology_probe.calls == 1
+    assert runner.calls == list(STEP_ARGVS)
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
+def test_topology_probe_failure_exits_before_refresh() -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(error=InstalledSetError("bad json"))
+    single_flight = ScriptedSingleFlight()
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 1
+    assert runner.calls == []
+    assert config_repairer.calls == 1
+    assert change_probe.queries == ["abc123"]
+    assert topology_probe.calls == 1
+    assert single_flight.acquisitions == 0
 
 
 def test_config_repair_runs_refresh_without_distribution_changes() -> None:
@@ -167,6 +296,7 @@ def test_config_repair_runs_refresh_without_distribution_changes() -> None:
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=True)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         "abc123",
@@ -174,11 +304,14 @@ def test_config_repair_runs_refresh_without_distribution_changes() -> None:
         tool_probe=tool_probe,
         change_probe=change_probe,
         config_repairer=config_repairer,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
     assert runner.calls == list(STEP_ARGVS)
 
 
@@ -187,6 +320,7 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
     config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         "abc123",
@@ -194,10 +328,13 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
         tool_probe=tool_probe,
         change_probe=change_probe,
         config_repairer=config_repairer,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert config_repairer.calls == 1
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
     assert runner.calls == list(STEP_ARGVS)
 
 
@@ -253,6 +390,7 @@ def test_absent_base_ref_runs_all_steps_without_consulting_change_probe() -> Non
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         None,
@@ -260,12 +398,15 @@ def test_absent_base_ref_runs_all_steps_without_consulting_change_probe() -> Non
         tool_probe=tool_probe,
         change_probe=change_probe,
         config_repairer=config_repairer,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
     assert change_probe.queries == []
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
 
 
 @pytest.mark.parametrize("base_ref", ["", None])
@@ -274,6 +415,7 @@ def test_empty_base_ref_treated_as_no_baseline(base_ref: str | None) -> None:
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         base_ref,
@@ -281,12 +423,15 @@ def test_empty_base_ref_treated_as_no_baseline(base_ref: str | None) -> None:
         tool_probe=tool_probe,
         change_probe=change_probe,
         config_repairer=config_repairer,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
     assert change_probe.queries == []
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
 
 
 def test_sync_detects_uncommitted_distribution_changes(
@@ -310,16 +455,20 @@ def test_sync_detects_uncommitted_distribution_changes(
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         base_ref,
         runner=runner,
         tool_probe=tool_probe,
         config_repairer=config_repairer,
+        single_flight=single_flight,
     )
 
     assert exit_code == 0
     assert config_repairer.calls == 1
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
     assert runner.calls == list(STEP_ARGVS)
 
 

@@ -21,7 +21,10 @@ from dataclasses import dataclass, field
 from outcomeeng.distribution.sync import (
     ChangeProbe,
     ConfigRepairer,
+    SingleFlight,
+    SingleFlightClaim,
     StepRunner,
+    TopologyHealthProbe,
     ToolProbe,
 )
 
@@ -98,6 +101,37 @@ class ScriptedConfigRepairer:
         return self.changed
 
 
+@dataclass
+class ScriptedTopologyProbe:
+    """TopologyHealthProbe returning scripted topology errors or raising."""
+
+    errors: tuple[str, ...] = ()
+    error: Exception | None = None
+    calls: int = 0
+
+    def __call__(self) -> tuple[str, ...]:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.errors
+
+
+@dataclass
+class ScriptedSingleFlight:
+    """SingleFlight double that records acquisition and release calls."""
+
+    claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
+    acquisitions: int = 0
+    releases: int = 0
+
+    def acquire(self) -> SingleFlightClaim:
+        self.acquisitions += 1
+        return self.claim
+
+    def release(self) -> None:
+        self.releases += 1
+
+
 __all__ = [
     "CHANGE_PROBE_EVENT",
     "CONFIG_REPAIR_EVENT",
@@ -105,6 +139,8 @@ __all__ = [
     "RecordingRunner",
     "ScriptedChangeProbe",
     "ScriptedConfigRepairer",
+    "ScriptedSingleFlight",
+    "ScriptedTopologyProbe",
     "ScriptedToolProbe",
     "TOOL_PROBE_EVENT_PREFIX",
 ]
@@ -114,3 +150,5 @@ _: type[StepRunner] = RecordingRunner
 _2: type[ToolProbe] = ScriptedToolProbe
 _3: type[ChangeProbe] = ScriptedChangeProbe
 _4: type[ConfigRepairer] = ScriptedConfigRepairer
+_5: type[TopologyHealthProbe] = ScriptedTopologyProbe
+_6: type[SingleFlight] = ScriptedSingleFlight
