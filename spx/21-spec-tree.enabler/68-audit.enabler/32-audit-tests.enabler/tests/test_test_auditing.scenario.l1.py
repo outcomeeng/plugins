@@ -4,6 +4,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     complete_evidence_is_approved,
     coupling_severed_is_rejected,
     coverage_trace_names_code_path,
+    false_coupling_is_rejected,
     fixture_laundering_is_rejected,
     laundered_indirect_is_rejected,
     misaligned_evidence_is_rejected,
@@ -12,9 +13,11 @@ from outcomeeng_testing.harnesses.audit_tests import (
     no_coverage_is_rejected,
     numeric_literal_is_rejected,
     positive_pattern_is_reported,
+    partial_coupling_is_rejected,
     prose_coupling_is_rejected,
     python_binding_declarations_are_detected,
     python_pattern_declarations_are_detected,
+    python_starred_assignment_declarations_are_detected,
     rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
     sourced_literals_pass,
@@ -43,6 +46,14 @@ def test_rejects_no_coupling() -> None:
 
 def test_rejects_severed_coupling() -> None:
     assert coupling_severed_is_rejected()
+
+
+def test_rejects_false_coupling() -> None:
+    assert false_coupling_is_rejected()
+
+
+def test_rejects_partial_coupling() -> None:
+    assert partial_coupling_is_rejected()
 
 
 def test_approves_complete_evidence() -> None:
@@ -107,6 +118,10 @@ def test_detects_python_binding_declarations() -> None:
 
 def test_detects_python_pattern_declarations() -> None:
     assert python_pattern_declarations_are_detected()
+
+
+def test_detects_python_starred_assignment_declarations() -> None:
+    assert python_starred_assignment_declarations_are_detected()
 
 
 def test_ignores_block_comment_declarations() -> None:

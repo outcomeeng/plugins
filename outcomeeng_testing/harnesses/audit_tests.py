@@ -60,6 +60,24 @@ def coupling_severed_is_rejected() -> bool:
     )
 
 
+def false_coupling_is_rejected() -> bool:
+    return (
+        audit_case_verdict(
+            _audit_case(coupling=CouplingEvidence.FALSE)
+        ).finding_category
+        is FindingCategory.FALSE_COUPLING
+    )
+
+
+def partial_coupling_is_rejected() -> bool:
+    return (
+        audit_case_verdict(
+            _audit_case(coupling=CouplingEvidence.PARTIAL)
+        ).finding_category
+        is FindingCategory.PARTIAL_COUPLING
+    )
+
+
 def complete_evidence_is_approved() -> bool:
     return audit_case_verdict(_audit_case()).status is AuditStatus.APPROVED
 
@@ -191,6 +209,17 @@ def python_pattern_declarations_are_detected() -> bool:
         and _has_variable(declarations, "rest")
         and _has_variable(declarations, "extra")
         and _has_variable(declarations, "missing")
+    )
+
+
+def python_starred_assignment_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("python_starred_assignment_declaration.py")
+    return (
+        _has_variable(declarations, "first")
+        and _has_variable(declarations, "rest")
+        and _has_variable(declarations, "head")
+        and _has_variable(declarations, "middle")
+        and _has_variable(declarations, "tail")
     )
 
 

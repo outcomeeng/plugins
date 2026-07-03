@@ -164,6 +164,8 @@ def _python_target_declarations(
         for element in target.elts:
             declarations.extend(_python_target_declarations(element, path, line))
         return declarations
+    if isinstance(target, ast.Starred):
+        return _python_target_declarations(target.value, path, line)
     return []
 
 

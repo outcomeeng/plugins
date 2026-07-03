@@ -15,11 +15,13 @@ class AuditStatus(StrEnum):
 class FindingCategory(StrEnum):
     COUPLING_PENDING = "coupling pending"
     COUPLING_SEVERED = "coupling severed"
+    FALSE_COUPLING = "false coupling"
     FIXTURE_LAUNDERING = "fixture laundering"
     LAUNDERED_INDIRECT = "laundered indirect"
     MISALIGNED = "misaligned"
     NO_COUPLING = "no coupling"
     NO_COVERAGE = "no coverage"
+    PARTIAL_COUPLING = "partial coupling"
     POSITIVE_PATTERN = "positive pattern"
     PROSE_COUPLING = "prose-coupling"
     TEST_OWNED_DECLARATION = "test-owned declaration"
@@ -111,6 +113,16 @@ def audit_case_verdict(case: AuditCase) -> AuditVerdict:
         return AuditVerdict(
             status=AuditStatus.REJECT,
             finding_category=FindingCategory.COUPLING_SEVERED,
+        )
+    if case.coupling is CouplingEvidence.FALSE:
+        return AuditVerdict(
+            status=AuditStatus.REJECT,
+            finding_category=FindingCategory.FALSE_COUPLING,
+        )
+    if case.coupling is CouplingEvidence.PARTIAL:
+        return AuditVerdict(
+            status=AuditStatus.REJECT,
+            finding_category=FindingCategory.PARTIAL_COUPLING,
         )
     if case.coupling is CouplingEvidence.PROSE:
         return AuditVerdict(
