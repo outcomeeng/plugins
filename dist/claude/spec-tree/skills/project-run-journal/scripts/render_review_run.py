@@ -18,7 +18,6 @@ REVIEW_TYPE = "review"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
 BRANCH_SLUG = re.compile(r"^[A-Za-z0-9._-]+$")
 RUN_NOT_FOUND_MARKER = "journal run not found"
-LIST_LIMIT = "200"
 _HERE = pathlib.Path(__file__).resolve()
 _CHANGESET_SCOPE_PATH = (
     _HERE.parents[2] / "scope-changeset" / "scripts" / "changeset_scope.py"
@@ -224,8 +223,6 @@ def _run_list_command() -> subprocess.CompletedProcess[str]:
         REVIEW_TYPE,
         "--sealed",
         "true",
-        "--limit",
-        LIST_LIMIT,
     ]
     return subprocess.run(  # noqa: S603,S607  # NOSONAR - fixed argv, no shell
         command,

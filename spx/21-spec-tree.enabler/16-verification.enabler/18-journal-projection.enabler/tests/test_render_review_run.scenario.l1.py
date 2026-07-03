@@ -93,8 +93,6 @@ def _write_spx(
                 "    'review',",
                 "    '--sealed',",
                 "    'true',",
-                "    '--limit',",
-                "    '200',",
                 "]",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_NOT_FOUND') == '1':",
                 "    sys.stderr.write('journal run not found; open the run before operating on it\\n')",
