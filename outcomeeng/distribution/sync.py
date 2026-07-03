@@ -251,14 +251,12 @@ class _FileSingleFlight:
         pid = os.getpid()
         identity = self.process_identity(pid)
         if identity is None:
-            identity = _unavailable_process_identity(pid)
+            raise OSError(f"process identity unavailable for pid {pid}")
         return _LockOwner(pid=pid, identity=identity)
 
     def _owner_is_active(self, owner: _LockOwner) -> bool:
         if not self.process_exists(owner.pid):
             return False
-        if owner.identity == _unavailable_process_identity(owner.pid):
-            return True
         live_identity = self.process_identity(owner.pid)
         if live_identity is None:
             return True
@@ -268,8 +266,6 @@ class _FileSingleFlight:
         current_pid = os.getpid()
         if owner.pid != current_pid:
             return False
-        if owner.identity == _unavailable_process_identity(current_pid):
-            return True
         current_identity = self.process_identity(current_pid)
         if current_identity is None:
             return True
@@ -304,10 +300,6 @@ def _serialize_lock_owner(owner: _LockOwner) -> str:
         )
         + "\n"
     )
-
-
-def _unavailable_process_identity(pid: int) -> str:
-    return f"pid:{pid}:identity-unavailable"
 
 
 def _process_identity(pid: int) -> str | None:

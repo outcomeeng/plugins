@@ -340,7 +340,7 @@ def test_single_flight_release_preserves_pending_marker(
     assert single_flight.pending_path.exists()
 
 
-def test_single_flight_identity_lookup_failure_keeps_lock_active(
+def test_single_flight_identity_lookup_failure_exits_before_refresh(
     tmp_path: pathlib.Path,
 ) -> None:
     state_dir = tmp_path / "outcomeeng"
@@ -349,31 +349,26 @@ def test_single_flight_identity_lookup_failure_keeps_lock_active(
         state_dir=state_dir,
         process_identity=lambda _pid: None,
     )
-    active_claim = single_flight.acquire()
-    assert active_claim.acquired is True
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
     topology_probe = ScriptedTopologyProbe(errors=("missing target",))
 
-    try:
-        exit_code = sync(
-            "abc123",
-            runner=runner,
-            tool_probe=tool_probe,
-            change_probe=change_probe,
-            config_repairer=config_repairer,
-            topology_probe=topology_probe,
-            single_flight=single_flight,
-        )
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
 
-        assert exit_code == 0
-        assert runner.calls == []
-        assert single_flight.lock_path.exists()
-        assert single_flight.pending_path.exists()
-    finally:
-        single_flight.release()
+    assert exit_code == 1
+    assert runner.calls == []
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
 
 
 def test_topology_probe_failure_exits_before_refresh() -> None:
