@@ -347,24 +347,43 @@ def _split_top_level(
 
 
 def _strip_block_comments(line: str, in_block_comment: bool) -> tuple[str, bool]:
-    output = ""
+    output: list[str] = []
     index = 0
+    quote: str | None = None
+    escaped = False
     while index < len(line):
         if in_block_comment:
             end = line.find("*/", index)
             if end == -1:
-                return output, True
+                return "".join(output), True
             index = end + 2
             in_block_comment = False
             continue
-        start = line.find("/*", index)
-        if start == -1:
-            output += line[index:]
-            return output, False
-        output += line[index:start]
-        index = start + 2
-        in_block_comment = True
-    return output, in_block_comment
+        char = line[index]
+        if quote is not None:
+            output.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            output.append(char)
+            index += 1
+            continue
+        if line.startswith("//", index):
+            return "".join(output), False
+        if line.startswith("/*", index):
+            index += 2
+            in_block_comment = True
+            continue
+        output.append(char)
+        index += 1
+    return "".join(output), in_block_comment
 
 
 def _value_kind(name: str) -> DeclarationKind:

@@ -181,10 +181,18 @@ def python_binding_declarations_are_detected() -> bool:
 
 
 def block_comment_declarations_are_ignored() -> bool:
-    return not _has_constant(
-        _declarations_for_fixture("block_comment_declaration.ts"), "CASES"
-    ) and not _has_function(
-        _declarations_for_fixture("block_comment_declaration.rs"), "setup"
+    typescript_declarations = _declarations_for_fixture("block_comment_declaration.ts")
+    rust_declarations = _declarations_for_fixture("block_comment_declaration.rs")
+    return (
+        not _has_constant(typescript_declarations, "CASES")
+        and _has_variable(typescript_declarations, "pattern")
+        and _has_variable(typescript_declarations, "afterPattern")
+        and _has_variable(typescript_declarations, "beforeTrailing")
+        and _has_variable(typescript_declarations, "afterTrailing")
+        and not _has_function(rust_declarations, "setup")
+        and _has_variable(rust_declarations, "pattern")
+        and _has_variable(rust_declarations, "before_trailing")
+        and _has_variable(rust_declarations, "after_trailing")
     )
 
 
