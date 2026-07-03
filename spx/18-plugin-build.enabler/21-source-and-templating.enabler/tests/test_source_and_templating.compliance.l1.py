@@ -65,6 +65,18 @@ def test_build_accepts_well_formed_src_tree(tmp_path: Path) -> None:
     build(builder.src_root, tmp_path / "dist")
 
 
+def test_build_ignores_ordinary_files_under_plugin_root(tmp_path: Path) -> None:
+    builder = SrcTreeBuilder(tmp_path)
+    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})
+    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    (builder.src_root / PLUGINS_DIR_NAME / PLUGIN_NAME / ".DS_Store").write_text(
+        "ignored by git",
+        encoding="utf-8",
+    )
+
+    build(builder.src_root, tmp_path / "dist")
+
+
 def test_build_rejects_shared_topic_without_fragment(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})

@@ -859,7 +859,7 @@ def _validate_source_tree(src_root: Path) -> None:
                 )
 
     for plugin_root in sorted(path for path in plugins_root.iterdir() if path.is_dir()):
-        for child in sorted(plugin_root.iterdir()):
+        for child in sorted(path for path in plugin_root.iterdir() if path.is_dir()):
             if child.name not in PLUGIN_SUBDIRS:
                 raise SourceFormatError(
                     f"unexpected plugin subdirectory {child.relative_to(src_root)}"
