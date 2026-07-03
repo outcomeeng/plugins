@@ -223,6 +223,8 @@ def infer_sandbox_mode(
         or ALL_TOOLS_SENTINEL in tool_set
     ):
         return None
+    if tool_set & (SCRIPT_CAPABLE_TOOLS | WRITE_CAPABLE_TOOLS):
+        return None
     if tool_set.issubset(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS):
         return READ_ONLY_SANDBOX_MODE
     return None

@@ -12,6 +12,8 @@ from outcomeeng.distribution.agents import (
     CODEX_AGENT_ENV_VAR,
     GENERATED_MANIFEST_FILENAME,
     AgentConversionError,
+    ClaudeAgent,
+    agent_environment_marker,
     install_agents,
 )
 from outcomeeng_testing.harnesses.src_tree import write_agent_tree
@@ -102,6 +104,19 @@ def test_environment_marker_is_namespaced_by_source_plugin(
         f"alpha{CODEX_AGENT_ENV_SEPARATOR}{AGENT_NAME}",
         f"beta{CODEX_AGENT_ENV_SEPARATOR}read-only-reviewer",
     }
+
+
+def test_environment_marker_without_source_plugin_uses_agent_name() -> None:
+    marker = agent_environment_marker(
+        ClaudeAgent(
+            source_path=Path("reviewer.md"),
+            name=AGENT_NAME,
+            description="Review.",
+            body="Review.",
+        )
+    )
+
+    assert marker == AGENT_NAME
 
 
 def test_invalid_generated_manifest_uses_converter_error(tmp_path: Path) -> None:

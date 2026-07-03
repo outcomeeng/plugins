@@ -15,8 +15,8 @@ CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manife
 
 - Claude Code `model` and `effort` frontmatter map to Codex `model` and `model_reasoning_effort` fields using the converter's model mapping ([test](tests/test_agents.mapping.l1.py))
 - Claude Code `permissionMode` values with supported Codex equivalents map to `sandbox_mode`, and unsupported values map to manual-review guidance in `developer_instructions` ([test](tests/test_agents.mapping.l1.py))
-- Claude Code tool allowlists that omit web-capable tools map to `web_search = "disabled"`, while allowlists that include any web-capable tool leave web search unset for runtime defaults ([test](tests/test_agents.mapping.l1.py))
-- Claude Code file-read-only and web-capable-only tool allowlists map to `sandbox_mode = "read-only"` when no explicit `permissionMode` is present; script-capable allowlists, write-capable allowlists, the `all` tool sentinel, and explicit unmapped `permissionMode` values leave sandbox mode unset for runtime defaults plus manual-review guidance ([test](tests/test_agents.mapping.l1.py))
+- Claude Code tool allowlists that omit web-capable tools map to `web_search = "disabled"`, while absent `tools` frontmatter, the `all` tool sentinel, and allowlists that include any web-capable tool leave web search unset for runtime defaults ([test](tests/test_agents.mapping.l1.py))
+- Claude Code file-read-only and web-capable-only tool allowlists map to `sandbox_mode = "read-only"` when no explicit `permissionMode` is present; absent `tools` frontmatter, script-capable allowlists, write-capable allowlists, the `all` tool sentinel, and explicit unmapped `permissionMode` values leave sandbox mode unset for runtime defaults plus manual-review guidance ([test](tests/test_agents.mapping.l1.py))
 
 ### Compliance
 
