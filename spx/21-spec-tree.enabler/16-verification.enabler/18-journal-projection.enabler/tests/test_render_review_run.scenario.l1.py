@@ -102,6 +102,7 @@ def _write_spx(
                 "    raise SystemExit(int(os.environ['SPX_DIRECT_EXIT_CODE']))",
                 "if sys.argv[1:] == list_expected:",
                 "    sys.stdout.write(os.environ.get('SPX_LIST_STDOUT', '[]'))",
+                "    sys.stderr.write(os.environ.get('SPX_LIST_STDERR', ''))",
                 "    raise SystemExit(int(os.environ.get('SPX_LIST_EXIT_CODE', '0')))",
                 "if sys.argv[1:] != expected and sys.argv[1:] != branch_expected:",
                 "    sys.stderr.write('unexpected spx arguments: ' + repr(sys.argv[1:]))",
@@ -129,6 +130,8 @@ def _run_helper(
     branch_slug: str = "",
     pass_branch_slug: bool = False,
     list_stdout: str = "[]",
+    list_stderr: str = "",
+    list_exit_code: int = 0,
 ) -> subprocess.CompletedProcess[str]:
     _write_spx(tmp_path)
     env = os.environ.copy()
@@ -145,6 +148,8 @@ def _run_helper(
     if branch_slug != "":
         env["SPX_BRANCH_SLUG"] = branch_slug
     env["SPX_LIST_STDOUT"] = list_stdout
+    env["SPX_LIST_STDERR"] = list_stderr
+    env["SPX_LIST_EXIT_CODE"] = str(list_exit_code)
     command = ["python3", str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN]
     if pass_branch_slug:
         command.extend(["--branch-slug", branch_slug])
@@ -246,6 +251,35 @@ def test_missing_current_scope_run_uses_listed_branch_slug(
     assert result.returncode == 0
     assert f"Review run: {RUN_TOKEN}" in result.stdout
     assert "Status: approved" in result.stdout
+
+
+def test_list_failure_is_reported_after_current_scope_miss(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout="",
+        direct_not_found=True,
+        list_stderr="journal list sealed filter is not registered\n",
+        list_exit_code=2,
+    )
+
+    assert result.returncode == 2
+    assert result.stderr == "journal list sealed filter is not registered\n"
+
+
+def test_malformed_list_output_is_reported_after_current_scope_miss(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout="",
+        direct_not_found=True,
+        list_stdout="not json",
+    )
+
+    assert result.returncode == 1
+    assert "spx journal list returned invalid JSON" in result.stderr
 
 
 def test_invalid_run_token_is_rejected_before_spx_invocation(

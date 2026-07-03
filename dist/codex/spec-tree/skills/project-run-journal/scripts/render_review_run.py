@@ -92,6 +92,8 @@ def _render_review_run(
 
     branch_result = _find_run_branch_slug(run_token)
     if branch_result.returncode != 0:
+        if branch_result.failure is not None:
+            return branch_result.failure
         return result
     if branch_result.branch_slug is None:
         return result
@@ -191,16 +193,17 @@ def _run_render_command_for_branch(
 class BranchLookupResult:
     returncode: int
     branch_slug: BranchSlug | None = None
+    failure: subprocess.CompletedProcess[str] | None = None
 
 
 def _find_run_branch_slug(run_token: RunToken) -> BranchLookupResult:
     result = _run_list_command()
     if result.returncode != 0:
-        return BranchLookupResult(returncode=result.returncode)
+        return BranchLookupResult(returncode=result.returncode, failure=result)
     try:
         runs = _load_listed_runs(result.stdout)
-    except ValueError:
-        return BranchLookupResult(returncode=1)
+    except ValueError as exc:
+        return BranchLookupResult(returncode=1, failure=_lookup_failure(str(exc)))
 
     matches = [
         branch_slug
@@ -212,6 +215,15 @@ def _find_run_branch_slug(run_token: RunToken) -> BranchLookupResult:
     if len(matches) != 1:
         return BranchLookupResult(returncode=0)
     return BranchLookupResult(returncode=0, branch_slug=matches[0])
+
+
+def _lookup_failure(message: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(
+        args=["spx", "journal", "list"],
+        returncode=1,
+        stdout="",
+        stderr=f"{message}\n",
+    )
 
 
 def _run_list_command() -> subprocess.CompletedProcess[str]:
