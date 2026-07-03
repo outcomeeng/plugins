@@ -69,12 +69,17 @@ def test_build_ignores_ordinary_files_under_plugin_root(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})
     builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    dist_root = tmp_path / "dist"
     (builder.src_root / PLUGINS_DIR_NAME / PLUGIN_NAME / ".DS_Store").write_text(
         "ignored by git",
         encoding="utf-8",
     )
 
-    build(builder.src_root, tmp_path / "dist")
+    build(builder.src_root, dist_root)
+
+    reader = DistTreeReader(tmp_path)
+    for target in Target:
+        assert Path(PLUGIN_NAME) / ".DS_Store" not in reader.list_all_files(target)
 
 
 def test_build_rejects_shared_topic_without_fragment(tmp_path: Path) -> None:

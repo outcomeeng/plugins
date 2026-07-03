@@ -839,7 +839,21 @@ def _write_text(path: Path, text: str) -> None:
 
 
 def _iter_plugin_files(plugins_root: Path) -> tuple[Path, ...]:
-    return tuple(sorted(path for path in plugins_root.rglob("*") if path.is_file()))
+    roots = (
+        plugin_root / subdir
+        for plugin_root in plugins_root.iterdir()
+        if plugin_root.is_dir()
+        for subdir in sorted(PLUGIN_SUBDIRS)
+    )
+    return tuple(
+        sorted(
+            path
+            for root in roots
+            if root.is_dir()
+            for path in root.rglob("*")
+            if path.is_file()
+        )
+    )
 
 
 def _validate_source_tree(src_root: Path) -> None:
