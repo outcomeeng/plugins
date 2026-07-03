@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import importlib.util
 import json
 import pathlib
@@ -27,6 +28,16 @@ class ChangesetScopeModule(Protocol):
     ) -> str: ...
 
 
+@dataclasses.dataclass(frozen=True)
+class RunToken:
+    value: str
+
+
+@dataclasses.dataclass(frozen=True)
+class BranchSlug:
+    value: str
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Render a compact summary for a sealed review journal run.",
@@ -39,10 +50,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        _validate_run_token(args.run_token)
+        run_token = _run_token(args.run_token)
+        branch_slug = None
         if args.branch_slug is not None:
-            _validate_branch_slug(args.branch_slug)
-        result = _render_review_run(args.run_token, branch_slug=args.branch_slug)
+            branch_slug = _branch_slug(args.branch_slug)
+        result = _render_review_run(run_token, branch_slug=branch_slug)
     except OSError as exc:
         sys.stderr.write(f"failed to run spx journal: {exc}\n")
         return 1
@@ -55,7 +67,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         events = _load_events(result.stdout)
-        surface = render_summary(args.run_token, events)
+        surface = render_summary(run_token.value, events)
     except ValueError as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
@@ -67,16 +79,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _render_review_run(
-    run_token: str, *, branch_slug: str | None = None
+    run_token: RunToken, *, branch_slug: BranchSlug | None = None
 ) -> subprocess.CompletedProcess[str]:
     if branch_slug is not None:
-        return _run_render_command(run_token, branch_slug=branch_slug)
+        return _run_render_command_for_branch(run_token, branch_slug)
 
-    result = _run_render_command(run_token)
-    if result.returncode == 0:
-        return result
-
-    return result
+    return _run_render_command(run_token)
 
 
 def _load_changeset_scope() -> ChangesetScopeModule:
@@ -94,27 +102,26 @@ def _load_changeset_scope() -> ChangesetScopeModule:
     return cast(ChangesetScopeModule, module)
 
 
-def _validate_run_token(value: str) -> None:
+def _run_token(value: str) -> RunToken:
     if not RUN_TOKEN.fullmatch(value):
         raise ValueError(
             "run token must contain only ASCII letters, digits, underscores, and hyphens"
         )
+    return RunToken(value)
 
 
-def _validate_branch_slug(value: str) -> None:
+def _branch_slug(value: str) -> BranchSlug:
     if value == "":
         raise ValueError("branch slug must not be empty")
     changeset_scope = _load_changeset_scope()
     if changeset_scope.branch_slug(value) != value:
         raise ValueError("branch slug must be a canonical changeset-scope branch slug")
+    return BranchSlug(value)
 
 
 def _run_render_command(
-    run_token: str, *, branch_slug: str | None = None
+    run_token: RunToken,
 ) -> subprocess.CompletedProcess[str]:
-    _validate_run_token(run_token)
-    if branch_slug is not None:
-        _validate_branch_slug(branch_slug)
     command = [
         "spx",
         "journal",
@@ -122,11 +129,32 @@ def _run_render_command(
         "--type",
         REVIEW_TYPE,
         "--run",
-        run_token,
+        run_token.value,
     ]
-    if branch_slug is not None:
-        command.extend(["--branch-slug", branch_slug])
-    return subprocess.run(  # noqa: S603,S607
+    return subprocess.run(  # noqa: S603,S607  # NOSONAR - fixed argv, validated token, no shell
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _run_render_command_for_branch(
+    run_token: RunToken,
+    branch_slug: BranchSlug,
+) -> subprocess.CompletedProcess[str]:
+    command = [
+        "spx",
+        "journal",
+        "render",
+        "--type",
+        REVIEW_TYPE,
+        "--run",
+        run_token.value,
+        "--branch-slug",
+        branch_slug.value,
+    ]
+    return subprocess.run(  # noqa: S603,S607  # NOSONAR - fixed argv, validated args, no shell
         command,
         capture_output=True,
         text=True,
