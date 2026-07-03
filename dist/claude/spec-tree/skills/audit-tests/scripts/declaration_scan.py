@@ -541,7 +541,10 @@ def _declaration_unit_complete(unit: str) -> bool:
     depth = 0
     quote: str | None = None
     escaped = False
+    last_significant = ""
     for char in unit:
+        if not char.isspace():
+            last_significant = char
         if quote is not None:
             if escaped:
                 escaped = False
@@ -558,7 +561,11 @@ def _declaration_unit_complete(unit: str) -> bool:
             depth = max(0, depth - 1)
         elif depth == 0 and char == ";":
             return True
-    return depth == 0 and "\n" not in unit
+    if depth != 0:
+        return False
+    if "\n" not in unit:
+        return True
+    return last_significant in {")", "]", "}"}
 
 
 def _split_top_level_commas(body: str) -> list[str]:

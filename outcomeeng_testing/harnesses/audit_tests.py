@@ -243,6 +243,20 @@ def typescript_multiline_declarations_are_detected() -> bool:
     )
 
 
+def typescript_semicolonless_declarations_are_split() -> bool:
+    declarations = _scanner().scan_text(
+        """const semicolonlessObject = {
+  enabled: true,
+}
+const afterSemicolonless = buildConfig()
+""",
+        Path("semicolonless.ts"),
+    )
+    return _has_variable(declarations, "semicolonlessObject") and _has_variable(
+        declarations, "afterSemicolonless"
+    )
+
+
 def rust_destructuring_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("rust_destructuring_declaration.rs")
     return (

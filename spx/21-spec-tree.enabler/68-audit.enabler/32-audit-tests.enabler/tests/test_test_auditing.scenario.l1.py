@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     testability_passes_to_coupling,
     typescript_loop_declarations_are_detected,
     typescript_multiline_declarations_are_detected,
+    typescript_semicolonless_declarations_are_split,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
 )
@@ -122,6 +123,10 @@ def test_detects_typescript_loop_declarations() -> None:
 
 def test_detects_typescript_multiline_declarations() -> None:
     assert typescript_multiline_declarations_are_detected()
+
+
+def test_splits_typescript_semicolonless_declarations() -> None:
+    assert typescript_semicolonless_declarations_are_split()
 
 
 def test_detects_rust_destructuring_declarations() -> None:
