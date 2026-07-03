@@ -17,6 +17,7 @@ The module's contract:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -53,6 +54,9 @@ SYNC_ALREADY_RUNNING_MESSAGE = (
     "Marketplace refresh already running; recorded pending sync; exiting 0"
 )
 TOPOLOGY_CHECK_FAILED_PREFIX = "Codex cache topology check failed"
+LOCK_OWNER_PID_FIELD = "pid"
+LOCK_OWNER_IDENTITY_FIELD = "identity"
+PROCESS_IDENTITY_TIMEOUT_SECONDS = 2.0
 
 
 @dataclass(frozen=True)
@@ -165,6 +169,13 @@ class SingleFlight(Protocol):
 
 
 ProcessExists = Callable[[int], bool]
+ProcessIdentity = Callable[[int], str | None]
+
+
+@dataclass(frozen=True)
+class _LockOwner:
+    pid: int
+    identity: str
 
 
 @dataclass(frozen=True)
@@ -173,6 +184,7 @@ class _FileSingleFlight:
 
     state_dir: Path
     process_exists: ProcessExists = lambda pid: _process_exists(pid)
+    process_identity: ProcessIdentity = lambda pid: _process_identity(pid)
 
     @property
     def lock_path(self) -> Path:
@@ -184,8 +196,8 @@ class _FileSingleFlight:
 
     def acquire(self) -> SingleFlightClaim:
         self.state_dir.mkdir(parents=True, exist_ok=True)
-        current_pid = os.getpid()
-        lock_body = f"{current_pid}\n"
+        current_owner = self._current_owner()
+        lock_body = _serialize_lock_owner(current_owner)
         for _attempt in range(2):
             try:
                 fd = os.open(
@@ -194,13 +206,13 @@ class _FileSingleFlight:
                     0o644,
                 )
             except FileExistsError:
-                owner_pid = self._read_lock_pid()
-                if owner_pid is not None and self.process_exists(owner_pid):
+                lock_owner = self._read_lock_owner()
+                if lock_owner is not None and self._owner_is_active(lock_owner):
                     self.pending_path.write_text(lock_body, encoding="utf-8")
                     return SingleFlightClaim(
                         acquired=False,
                         pending_recorded=True,
-                        detail=f"pid {owner_pid} owns active repair",
+                        detail=f"pid {lock_owner.pid} owns active repair",
                     )
                 try:
                     self.lock_path.unlink()
@@ -211,7 +223,7 @@ class _FileSingleFlight:
                 lock_file.write(lock_body)
             return SingleFlightClaim(
                 acquired=True,
-                detail=f"pid {current_pid} owns active repair",
+                detail=f"pid {current_owner.pid} owns active repair",
             )
         self.pending_path.write_text(lock_body, encoding="utf-8")
         return SingleFlightClaim(
@@ -221,8 +233,8 @@ class _FileSingleFlight:
         )
 
     def release(self) -> None:
-        current_pid = os.getpid()
-        if self._read_lock_pid() == current_pid:
+        current_owner = self._current_owner()
+        if self._read_lock_owner() == current_owner:
             try:
                 self.lock_path.unlink()
             except FileNotFoundError:
@@ -232,15 +244,81 @@ class _FileSingleFlight:
         except FileNotFoundError:
             pass
 
-    def _read_lock_pid(self) -> int | None:
+    def _read_lock_owner(self) -> _LockOwner | None:
         try:
             raw = self.lock_path.read_text(encoding="utf-8").strip()
         except OSError:
             return None
-        try:
-            return int(raw)
-        except ValueError:
-            return None
+        return _read_lock_owner_body(raw)
+
+    def _current_owner(self) -> _LockOwner:
+        pid = os.getpid()
+        identity = self.process_identity(pid)
+        if identity is None:
+            identity = f"pid:{pid}:identity-unavailable"
+        return _LockOwner(pid=pid, identity=identity)
+
+    def _owner_is_active(self, owner: _LockOwner) -> bool:
+        if not self.process_exists(owner.pid):
+            return False
+        return self.process_identity(owner.pid) == owner.identity
+
+
+def _read_lock_owner_body(raw: str) -> _LockOwner | None:
+    raw = raw.strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return _lock_owner_from_legacy_pid(raw)
+    if not isinstance(data, dict):
+        return None
+    pid = data.get(LOCK_OWNER_PID_FIELD)
+    identity = data.get(LOCK_OWNER_IDENTITY_FIELD)
+    if not isinstance(pid, int) or not isinstance(identity, str):
+        return None
+    return _LockOwner(pid=pid, identity=identity)
+
+
+def _serialize_lock_owner(owner: _LockOwner) -> str:
+    return (
+        json.dumps(
+            {
+                LOCK_OWNER_PID_FIELD: owner.pid,
+                LOCK_OWNER_IDENTITY_FIELD: owner.identity,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
+def _lock_owner_from_legacy_pid(raw: str) -> _LockOwner | None:
+    try:
+        pid = int(raw)
+    except ValueError:
+        return None
+    return _LockOwner(pid=pid, identity="")
+
+
+def _process_identity(pid: int) -> str | None:
+    if not _process_exists(pid):
+        return None
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "lstart="],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=PROCESS_IDENTITY_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    started_at = result.stdout.strip()
+    if result.returncode != 0 or not started_at:
+        return None
+    return f"pid:{pid}:started:{started_at}"
 
 
 def sync(

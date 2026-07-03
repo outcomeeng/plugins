@@ -205,29 +205,42 @@ def test_active_single_flight_records_pending_and_exits_zero(
 ) -> None:
     state_dir = tmp_path / "outcomeeng"
     state_dir.mkdir()
-    single_flight = _FileSingleFlight(state_dir=state_dir)
-    single_flight.lock_path.write_text(f"{os.getpid()}\n", encoding="utf-8")
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_identity=lambda pid: f"identity:{pid}",
+    )
+    active_claim = single_flight.acquire()
+    assert active_claim.acquired is True
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
     topology_probe = ScriptedTopologyProbe(errors=("missing target",))
 
-    exit_code = sync(
-        "abc123",
-        runner=runner,
-        tool_probe=tool_probe,
-        change_probe=change_probe,
-        config_repairer=config_repairer,
-        topology_probe=topology_probe,
-        single_flight=single_flight,
-    )
+    try:
+        exit_code = sync(
+            "abc123",
+            runner=runner,
+            tool_probe=tool_probe,
+            change_probe=change_probe,
+            config_repairer=config_repairer,
+            topology_probe=topology_probe,
+            single_flight=single_flight,
+        )
 
-    assert exit_code == 0
-    assert runner.calls == []
-    assert topology_probe.calls == 1
-    assert single_flight.lock_path.exists()
-    assert single_flight.pending_path.read_text(encoding="utf-8").strip().isdigit()
+        assert exit_code == 0
+        assert runner.calls == []
+        assert topology_probe.calls == 1
+        assert single_flight.lock_path.exists()
+        pending_owner = single_flight.pending_path.read_text(encoding="utf-8")
+        assert sync_module._read_lock_owner_body(
+            pending_owner
+        ) == sync_module._LockOwner(
+            pid=os.getpid(),
+            identity=f"identity:{os.getpid()}",
+        )
+    finally:
+        single_flight.release()
 
 
 def test_stale_single_flight_lock_is_replaced(
@@ -260,6 +273,46 @@ def test_stale_single_flight_lock_is_replaced(
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
     assert topology_probe.calls == 1
+    assert runner.calls == list(STEP_ARGVS)
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
+def test_single_flight_replaces_reused_pid_lock(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: True,
+        process_identity=lambda pid: f"current:{pid}",
+    )
+    reused_pid_owner = sync_module._LockOwner(
+        pid=os.getpid(),
+        identity=f"previous:{os.getpid()}",
+    )
+    single_flight.lock_path.write_text(
+        sync_module._serialize_lock_owner(reused_pid_owner),
+        encoding="utf-8",
+    )
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 0
     assert runner.calls == list(STEP_ARGVS)
     assert not single_flight.lock_path.exists()
     assert not single_flight.pending_path.exists()
