@@ -38,7 +38,7 @@ The canonical template is the single copy in the understanding skill at `${CLAUD
 
      New template blocks arrive, each root file preserves product-owned prose outside the block markers, each instruction block is scoped to the detected languages and its own harness, symlinked root instruction files are replaced by regular file copies, and obsolete `spx/` instruction files are removed. When only one of the two root instruction files exists, the missing file is first seeded with a copy of the existing file's product-owned prose before its instruction block is inserted — the `absent` case can therefore create a file whose prose is copied from its sibling.
 
-4. **Verify, then report.** Re-run the Step 2 `--check` command; it must now print `current`. Root instruction files are git-tracked, so review the result with `git diff -- CLAUDE.md AGENTS.md` and `git status` for any removed `spx/` file — an unexpected change is recoverable with `git checkout`. Then report the version transition, detected enabled-language list, root instruction files written, and whether obsolete `spx/` instruction files were removed.
+4. **Verify, then report.** Re-run the Step 2 `--check` command; it must now print `current` — this closing check, over the same granted script, confirms the write landed and the block is at the installed version. The root instruction files are git-tracked, so an unexpected change stays recoverable through the product's own version control before commit. Then report the version transition, detected enabled-language list, root instruction files written, and whether obsolete `spx/` instruction files were removed.
 
 </workflow>
 
