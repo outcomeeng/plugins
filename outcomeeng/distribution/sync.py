@@ -233,8 +233,8 @@ class _FileSingleFlight:
         )
 
     def release(self) -> None:
-        current_owner = self._current_owner()
-        if self._read_lock_owner() == current_owner:
+        lock_owner = self._read_lock_owner()
+        if lock_owner is not None and self._is_current_owner(lock_owner):
             try:
                 self.lock_path.unlink()
             except FileNotFoundError:
@@ -251,13 +251,29 @@ class _FileSingleFlight:
         pid = os.getpid()
         identity = self.process_identity(pid)
         if identity is None:
-            identity = f"pid:{pid}:identity-unavailable"
+            identity = _unavailable_process_identity(pid)
         return _LockOwner(pid=pid, identity=identity)
 
     def _owner_is_active(self, owner: _LockOwner) -> bool:
         if not self.process_exists(owner.pid):
             return False
-        return self.process_identity(owner.pid) == owner.identity
+        if owner.identity == _unavailable_process_identity(owner.pid):
+            return True
+        live_identity = self.process_identity(owner.pid)
+        if live_identity is None:
+            return True
+        return live_identity == owner.identity
+
+    def _is_current_owner(self, owner: _LockOwner) -> bool:
+        current_pid = os.getpid()
+        if owner.pid != current_pid:
+            return False
+        if owner.identity == _unavailable_process_identity(current_pid):
+            return True
+        current_identity = self.process_identity(current_pid)
+        if current_identity is None:
+            return True
+        return current_identity == owner.identity
 
 
 def _read_lock_owner_body(raw: str) -> _LockOwner | None:
@@ -288,6 +304,10 @@ def _serialize_lock_owner(owner: _LockOwner) -> str:
         )
         + "\n"
     )
+
+
+def _unavailable_process_identity(pid: int) -> str:
+    return f"pid:{pid}:identity-unavailable"
 
 
 def _process_identity(pid: int) -> str | None:
@@ -341,7 +361,7 @@ def sync(
     if base_ref and not distribution_changed and not config_changed:
         try:
             topology_errors = topology_probe()
-        except InstalledSetError as exc:
+        except (InstalledSetError, OSError) as exc:
             print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
             return 1
         if not topology_errors:
