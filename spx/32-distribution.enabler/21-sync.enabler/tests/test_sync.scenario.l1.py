@@ -14,15 +14,19 @@ through the recording doubles in `outcomeeng_testing.harnesses.sync`.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import pathlib
 import subprocess
 
 import pytest
 
+from outcomeeng.distribution.agents import install_agents
 import outcomeeng.distribution.sync as sync_module
 from outcomeeng.distribution.sync import (
+    DISTRIBUTION_PATHS,
     REQUIRED_TOOLS,
     STEPS,
+    _real_change_probe,
     _worktree_path_for_branch,
     sync,
 )
@@ -32,13 +36,50 @@ from outcomeeng_testing.harnesses.sync import (
     ScriptedConfigRepairer,
     ScriptedToolProbe,
 )
+from outcomeeng_testing.harnesses.src_tree import write_agent_tree
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
-CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
 CODEX_FINAL_REFRESH_STEP = "codex_local_refresh_final"
-INSTALL_VALIDATE_STEP = "install_validate"
+INSTALL_VALIDATE_STEP_NAME = "install_validate"
 INSTALLED_CHECK_STEP = "installed_check"
+PLUGIN_NAME = "sample"
+AGENT_NAME = "guarded-writer"
+AGENT_INSTALL_MODULE = "outcomeeng.distribution.agents"
+AGENT_INSTALL_STEP = next(step for step in STEPS if AGENT_INSTALL_MODULE in step.argv)
+INSTALL_VALIDATE_STEP = next(
+    step for step in STEPS if step.name == INSTALL_VALIDATE_STEP_NAME
+)
+SOURCE_AGENT = f"""---
+name: {AGENT_NAME}
+description: Guarded writer.
+tools:
+  - Read
+---
+
+Review write behavior.
+"""
+
+
+class AgentInstallRunner:
+    """Runs only the generated-agent install step against a temp target."""
+
+    def __init__(self, source_root: pathlib.Path, target_root: pathlib.Path) -> None:
+        self.source_root = source_root
+        self.target_root = target_root
+        self.calls: list[tuple[str, ...]] = []
+        self.agent_present_before_validation = False
+
+    def __call__(self, argv: Sequence[str]) -> int:
+        call = tuple(argv)
+        self.calls.append(call)
+        if call == AGENT_INSTALL_STEP.argv:
+            install_agents(self.source_root, self.target_root)
+        if call == INSTALL_VALIDATE_STEP.argv:
+            self.agent_present_before_validation = bool(
+                tuple(self.target_root.glob("*.toml"))
+            )
+        return 0
 
 
 def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
@@ -160,11 +201,30 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     assert runner.calls == list(STEP_ARGVS)
 
 
-def test_sync_declares_codex_local_refresh_step() -> None:
-    step_names = tuple(step.name for step in STEPS)
+def test_sync_installs_codex_agents_before_installed_plugin_validation(
+    tmp_path: pathlib.Path,
+) -> None:
+    source_root = write_agent_tree(tmp_path, PLUGIN_NAME, {AGENT_NAME: SOURCE_AGENT})
+    target_root = tmp_path / "codex-agents"
+    runner = AgentInstallRunner(source_root, target_root)
 
-    assert CODEX_LOCAL_REFRESH_STEP in step_names
-    assert "codex_cache_preserve" not in step_names
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE),
+        change_probe=ScriptedChangeProbe(changed=True),
+        config_repairer=ScriptedConfigRepairer(changed=False),
+    )
+
+    call_indexes = {argv: index for index, argv in enumerate(runner.calls)}
+    installed_agents = tuple(target_root.glob("*.toml"))
+
+    assert exit_code == 0
+    assert installed_agents
+    assert runner.agent_present_before_validation
+    assert (
+        call_indexes[AGENT_INSTALL_STEP.argv] < call_indexes[INSTALL_VALIDATE_STEP.argv]
+    )
 
 
 def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
@@ -175,7 +235,7 @@ def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
     step_names = tuple(step.name for step in STEPS)
 
     assert CODEX_FINAL_REFRESH_STEP in step_names
-    assert step_names.index(INSTALL_VALIDATE_STEP) < step_names.index(
+    assert step_names.index(INSTALL_VALIDATE_STEP_NAME) < step_names.index(
         CODEX_FINAL_REFRESH_STEP
     )
     assert step_names.index(INSTALLED_CHECK_STEP) < step_names.index(
@@ -263,6 +323,36 @@ def test_sync_detects_uncommitted_distribution_changes(
     assert runner.calls == list(STEP_ARGVS)
 
 
+@pytest.mark.parametrize("path_root", DISTRIBUTION_PATHS)
+@pytest.mark.parametrize("tracked", [True, False])
+def test_real_change_probe_detects_uncommitted_distribution_changes(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    path_root: str,
+    tracked: bool,
+) -> None:
+    _git(tmp_path, "init", "--initial-branch", "main", "--quiet")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    _git(tmp_path, "config", "user.name", "Test")
+    changed_file = _probe_target(tmp_path, path_root)
+    if tracked:
+        changed_file.parent.mkdir(parents=True)
+        changed_file.write_text("initial\n", encoding="utf-8")
+        _git(tmp_path, "add", path_root)
+    else:
+        (tmp_path / "README.md").write_text("seed\n", encoding="utf-8")
+        _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "seed", "--quiet")
+    base_ref = _git(tmp_path, "rev-parse", "HEAD").strip()
+
+    changed_file.parent.mkdir(parents=True, exist_ok=True)
+    changed_file.write_text("changed\n", encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+
+    assert _real_change_probe(base_ref)
+
+
 def _git(repo: pathlib.Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -272,3 +362,10 @@ def _git(repo: pathlib.Path, *args: str) -> str:
         check=True,
     )
     return result.stdout
+
+
+def _probe_target(repo: pathlib.Path, path_root: str) -> pathlib.Path:
+    root = pathlib.Path(path_root)
+    if root.suffix:
+        return repo / root
+    return repo / root / "distribution-probe.txt"

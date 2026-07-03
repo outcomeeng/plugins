@@ -54,6 +54,35 @@ def _validate_reference_filename(filename: str) -> None:
         raise ValueError(msg)
 
 
+def write_agent_tree(
+    root: Path,
+    plugin_name: str,
+    agents: Mapping[str, str],
+) -> Path:
+    """Materialize a plugin agent tree and return the src/plugins root."""
+    builder = SrcTreeBuilder(root)
+    builder.add_plugin(plugin_name, agents=agents)
+    return builder.src_root / PLUGINS_DIR_NAME
+
+
+def write_agent_source(
+    root: Path,
+    plugin_name: str,
+    agent_name: str,
+    content: str,
+) -> Path:
+    """Materialize one agent file and return its source path."""
+    write_agent_tree(root, plugin_name, {agent_name: content})
+    return (
+        root
+        / SRC_DIR_NAME
+        / PLUGINS_DIR_NAME
+        / plugin_name
+        / AGENTS_SUBDIR_NAME
+        / f"{agent_name}{AGENT_FILE_SUFFIX}"
+    )
+
+
 @dataclass(frozen=True)
 class SrcTreeBuilder:
     """Construct a sample src/ tree at a given root for build tests.

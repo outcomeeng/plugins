@@ -44,6 +44,18 @@ PERMISSION_MODE_MAPPINGS: Final = {
     "acceptEdits": "workspace-write",
     "readOnly": "read-only",
 }
+INHERIT_MODEL_VALUE: Final = "inherit"
+MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
+UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
+ALL_TOOLS_SENTINEL: Final = "all"
+CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
+CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+READ_ONLY_SANDBOX_MODE: Final = "read-only"
+WEB_SEARCH_DISABLED: Final = "disabled"
+READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "Read"})
+SCRIPT_CAPABLE_TOOLS: Final = frozenset({"Bash", "Skill"})
+WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch"})
+WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "NotebookEdit", "Write"})
 
 
 class AgentConversionError(Exception):
@@ -63,6 +75,7 @@ class ClaudeAgent:
     permission_mode: str | None = None
     skills: tuple[str, ...] = ()
     tools: tuple[str, ...] = ()
+    tools_declared: bool = False
     disallowed_tools: tuple[str, ...] = ()
     unsupported_fields: tuple[str, ...] = ()
 
@@ -109,6 +122,7 @@ def parse_agent_markdown(path: Path) -> ClaudeAgent:
         permission_mode=_optional_string(frontmatter, "permissionMode"),
         skills=_string_tuple(frontmatter, "skills"),
         tools=_string_tuple(frontmatter, "tools"),
+        tools_declared="tools" in frontmatter,
         disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
         unsupported_fields=unsupported_fields,
     )
@@ -127,8 +141,22 @@ def convert_agent(agent: ClaudeAgent) -> CodexAgent:
     if effort is not None:
         values["model_reasoning_effort"] = effort
     sandbox_mode = map_permission_mode(agent.permission_mode)
+    if sandbox_mode is None:
+        sandbox_mode = infer_sandbox_mode(
+            agent.tools,
+            agent.permission_mode,
+            tools_declared=agent.tools_declared,
+        )
     if sandbox_mode is not None:
         values["sandbox_mode"] = sandbox_mode
+    web_search = map_web_search(agent.tools, tools_declared=agent.tools_declared)
+    if web_search is not None:
+        values["web_search"] = web_search
+    values["shell_environment_policy"] = {
+        "set": {
+            CODEX_AGENT_ENV_VAR: agent_environment_marker(agent),
+        },
+    }
     values["developer_instructions"] = TomlMultilineString(
         render_developer_instructions(agent)
     )
@@ -137,12 +165,20 @@ def convert_agent(agent: ClaudeAgent) -> CodexAgent:
 
 def map_model(model: str | None) -> str | None:
     """Map Claude model names to Codex model slugs."""
-    if model is None or model == "inherit":
+    if model is None or model == INHERIT_MODEL_VALUE:
         return None
     for source_prefix, target_model in MODEL_MAPPINGS:
         if model == source_prefix or model.startswith(source_prefix):
             return target_model
     return model
+
+
+def agent_environment_marker(agent: ClaudeAgent) -> str:
+    """Return the stable Codex policy marker for a converted agent."""
+    plugin_name = _source_plugin_name(agent.source_path)
+    if plugin_name is None:
+        return agent.name
+    return f"{plugin_name}{CODEX_AGENT_ENV_SEPARATOR}{agent.name}"
 
 
 def map_effort(effort: str | None) -> str | None:
@@ -159,6 +195,41 @@ def map_permission_mode(permission_mode: str | None) -> str | None:
     return PERMISSION_MODE_MAPPINGS.get(permission_mode)
 
 
+def map_web_search(
+    tools: Sequence[str],
+    *,
+    tools_declared: bool = True,
+) -> str | None:
+    """Return the Codex web-search mode implied by an explicit Claude tool allowlist."""
+    tool_set = set(tools)
+    if not tools_declared or ALL_TOOLS_SENTINEL in tool_set:
+        return None
+    if tool_set & WEB_CAPABLE_TOOLS:
+        return None
+    return WEB_SEARCH_DISABLED
+
+
+def infer_sandbox_mode(
+    tools: Sequence[str],
+    permission_mode: str | None,
+    *,
+    tools_declared: bool = True,
+) -> str | None:
+    """Infer a Codex sandbox from an explicit Claude tool allowlist."""
+    tool_set = set(tools)
+    if (
+        permission_mode is not None
+        or not tools_declared
+        or ALL_TOOLS_SENTINEL in tool_set
+    ):
+        return None
+    if tool_set & (SCRIPT_CAPABLE_TOOLS | WRITE_CAPABLE_TOOLS):
+        return None
+    if tool_set.issubset(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS):
+        return READ_ONLY_SANDBOX_MODE
+    return None
+
+
 def render_developer_instructions(agent: ClaudeAgent) -> str:
     """Render the Codex developer-instruction body."""
     sections = [agent.body.strip()]
@@ -173,9 +244,10 @@ def render_developer_instructions(agent: ClaudeAgent) -> str:
 
     if agent.tools:
         guidance.append(
-            "Claude `tools` allowlists do not enforce Codex permissions. Treat "
-            "these tools as allowed guidance unless the runtime sandbox or MCP "
-            f"configuration enforces them: {', '.join(f'`{tool}`' for tool in agent.tools)}."
+            "Claude `tools` allowlists can map only to Codex configuration "
+            "boundaries with matching semantics. Treat command-level meanings "
+            "inside allowed shell tools as manual-review guidance: "
+            f"{', '.join(f'`{tool}`' for tool in agent.tools)}."
         )
 
     if agent.disallowed_tools:
@@ -474,10 +546,31 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip()).strip("-").lower() or "agent"
 
 
+def _source_plugin_name(path: Path) -> str | None:
+    if path.parent.name != "agents":
+        return None
+    plugin_dir = path.parent.parent
+    if plugin_dir == path.parent:
+        return None
+    return plugin_dir.name or None
+
+
 def _render_toml_document(values: Mapping[str, object]) -> str:
     lines: list[str] = []
+    table_values: list[tuple[str, Mapping[str, object]]] = []
     for key, value in values.items():
+        if isinstance(value, Mapping):
+            table_values.append((key, value))
+            continue
         lines.append(f"{_format_toml_key(key)} = {_format_toml_value(value)}")
+    for key, table in table_values:
+        if lines:
+            lines.append("")
+        lines.append(f"[{_format_toml_key(key)}]")
+        for table_key, table_value in table.items():
+            lines.append(
+                f"{_format_toml_key(str(table_key))} = {_format_toml_value(table_value)}"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -494,6 +587,12 @@ def _format_toml_value(value: object) -> str:
         return "true" if value else "false"
     if value is None:
         return '""'
+    if isinstance(value, Mapping):
+        items = (
+            f"{_format_toml_key(str(key))} = {_format_toml_value(item)}"
+            for key, item in sorted(value.items(), key=lambda item: str(item[0]))
+        )
+        return "{ " + ", ".join(items) + " }"
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
     return json.dumps(str(value))
@@ -505,20 +604,38 @@ def _format_toml_multiline(value: str) -> str:
 
 
 __all__ = [
+    "ALL_TOOLS_SENTINEL",
+    "CODEX_AGENT_ENV_VAR",
+    "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
     "DEFAULT_TARGET_ROOT",
+    "EFFORT_MAPPINGS",
     "GENERATED_MANIFEST_FILENAME",
+    "INHERIT_MODEL_VALUE",
+    "MODEL_MAPPINGS",
+    "MODEL_PREFIX_EXAMPLE_SUFFIX",
+    "PERMISSION_MODE_MAPPINGS",
+    "READ_ONLY_SANDBOX_MODE",
+    "READ_ONLY_TOOLS",
+    "SCRIPT_CAPABLE_TOOLS",
+    "UNMAPPED_PERMISSION_MODE_EXAMPLE",
+    "WEB_CAPABLE_TOOLS",
+    "WEB_SEARCH_DISABLED",
+    "WRITE_CAPABLE_TOOLS",
     "AgentConversionError",
     "ClaudeAgent",
     "CodexAgent",
+    "agent_environment_marker",
     "convert_agent",
     "convert_agents",
+    "infer_sandbox_mode",
     "install_agents",
     "iter_agent_files",
     "main",
     "map_effort",
     "map_model",
     "map_permission_mode",
+    "map_web_search",
     "parse_agent_markdown",
     "render_agent_toml",
 ]
