@@ -270,7 +270,8 @@ def bump(
     if not changed:
         return 0
 
-    plans: list[tuple[str, ManifestRecord, Version, Segment]] = []
+    plans: list[tuple[str, ManifestRecord, Version]] = []
+    plugin_targets: dict[str, tuple[Version, Segment]] = {}
     already_bumped_plugins: list[str] = []
     unbumped_plugins: list[str] = []
     for plugin in sorted(changed):
@@ -286,23 +287,37 @@ def bump(
                 file=sys.stderr,
             )
         resolved = segment if segment is not None else detected
-        plugin_already_bumped = False
+        working_tree_versions: list[Version] = []
+        baseline_versions: list[Version] = []
+        ahead_manifest = False
+        lagging_manifest = False
         for record in records:
             working_tree_version = _version_from_manifest_text(record.content)
+            working_tree_versions.append(working_tree_version)
             base_ref_content = _base_manifest_content_for_record(
                 content_probe, base_ref, record.path, plugin_changes
             )
             if base_ref_content is not None:
                 base_ref_version = _version_from_manifest_text(base_ref_content)
                 if working_tree_version > base_ref_version:
-                    plugin_already_bumped = True
-                version_to_bump = max(working_tree_version, base_ref_version)
+                    ahead_manifest = True
+                else:
+                    lagging_manifest = True
+                baseline_versions.append(max(working_tree_version, base_ref_version))
             else:
-                version_to_bump = working_tree_version
-            plans.append((plugin, record, version_to_bump, resolved))
-        if plugin_already_bumped:
+                lagging_manifest = True
+                baseline_versions.append(working_tree_version)
+            plans.append((plugin, record, working_tree_version))
+        plugin_versions_agree = len(set(working_tree_versions)) == 1
+        if not lagging_manifest and plugin_versions_agree:
             already_bumped_plugins.append(plugin)
         else:
+            plugin_target = (
+                max(working_tree_versions)
+                if ahead_manifest
+                else _SEGMENT_DISPATCH[resolved](max(baseline_versions))
+            )
+            plugin_targets[plugin] = (plugin_target, resolved)
             unbumped_plugins.append(plugin)
 
     if mode is Mode.CHECK:
@@ -326,11 +341,12 @@ def bump(
         )
 
     skip = set(already_bumped_plugins)
-    for plugin, record, working_tree_version, resolved in plans:
+    for plugin, record, working_tree_version in plans:
         if plugin in skip:
             continue
-        increment = _SEGMENT_DISPATCH[resolved]
-        new_version = increment(working_tree_version)
+        new_version, resolved = plugin_targets[plugin]
+        if working_tree_version == new_version:
+            continue
         if mode is Mode.DRY_RUN:
             print(
                 f"{plugin}: {record.path} {working_tree_version} -> "

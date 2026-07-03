@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     coverage_trace_names_code_path,
     false_coupling_is_rejected,
     fixture_laundering_is_rejected,
+    laundered_indirect_coupling_is_rejected,
     laundered_indirect_is_rejected,
     misaligned_evidence_is_rejected,
     multiple_typescript_declarations_are_detected,
@@ -100,6 +101,10 @@ def test_rejects_fixture_laundering() -> None:
 
 def test_rejects_laundered_indirect() -> None:
     assert laundered_indirect_is_rejected()
+
+
+def test_rejects_laundered_indirect_coupling() -> None:
+    assert laundered_indirect_coupling_is_rejected()
 
 
 def test_rejects_prose_coupling() -> None:

@@ -61,10 +61,9 @@ from outcomeeng_testing.harnesses.bump import (
     ScriptedChangeProbe,
     ScriptedContentProbe,
     ScriptedManifestReader,
+    all_tools_available,
+    base_ref,
 )
-
-BASE_REF = "origin/main"
-ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 
 
 @pytest.mark.parametrize("missing_tool", REQUIRED_TOOLS)
@@ -76,10 +75,10 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     content_probe = ScriptedContentProbe(content={})
     manifest_reader = ScriptedManifestReader(manifests={})
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE - {missing_tool})
+    tool_probe = RecordingToolProbe(available=all_tools_available() - {missing_tool})
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -113,17 +112,19 @@ def test_tool_availability_is_probed_before_any_other_probe_or_write() -> None:
         changed=patch_changes(plugin), event_log=event_log
     )
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content}, event_log=event_log
+        content={(base_ref(), claude_path): content}, event_log=event_log
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
         event_log=event_log,
     )
     manifest_writer = RecordingManifestWriter(event_log=event_log)
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE, event_log=event_log)
+    tool_probe = RecordingToolProbe(
+        available=all_tools_available(), event_log=event_log
+    )
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -162,7 +163,7 @@ def test_already_bumped_plugin_is_skipped_not_rewritten(
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): base_ref_content},
+        content={(base_ref(), claude_path): base_ref_content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={
@@ -170,10 +171,10 @@ def test_already_bumped_plugin_is_skipped_not_rewritten(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -207,8 +208,8 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, foo_path): foo_base,
-            (BASE_REF, bar_path): bar_base,
+            (base_ref(), foo_path): foo_base,
+            (base_ref(), bar_path): bar_base,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -218,10 +219,10 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -241,6 +242,92 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
     assert "foo" in captured.err
 
 
+def test_mixed_dual_manifest_plugin_updates_lagging_manifest_only() -> None:
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(
+        content={
+            (base_ref(), claude_path): manifest_text(plugin, "0.4.1"),
+            (base_ref(), codex_path): manifest_text(plugin, "0.4.1"),
+        },
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            plugin: (
+                ManifestRecord(
+                    path=claude_path, content=manifest_text(plugin, "0.4.2")
+                ),
+                ManifestRecord(path=codex_path, content=manifest_text(plugin, "0.4.1")),
+            )
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=all_tools_available())
+
+    exit_code = bump(
+        base_ref(),
+        Segment.PATCH,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    assert claude_path not in written
+    assert codex_path in written
+    assert '"version": "0.4.2"' in written[codex_path]
+
+
+def test_mixed_dual_manifest_plugin_fails_check(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(
+        content={
+            (base_ref(), claude_path): manifest_text(plugin, "0.4.1"),
+            (base_ref(), codex_path): manifest_text(plugin, "0.4.1"),
+        },
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            plugin: (
+                ManifestRecord(
+                    path=claude_path, content=manifest_text(plugin, "0.4.2")
+                ),
+                ManifestRecord(path=codex_path, content=manifest_text(plugin, "0.4.1")),
+            )
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=all_tools_available())
+
+    exit_code = bump(
+        base_ref(),
+        Segment.PATCH,
+        mode=Mode.CHECK,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert manifest_writer.writes == []
+    assert plugin in captured.err
+
+
 def test_already_bumped_plugin_skipped_in_dry_run(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -250,7 +337,7 @@ def test_already_bumped_plugin_skipped_in_dry_run(
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): manifest_text(plugin, "0.4.1")},
+        content={(base_ref(), claude_path): manifest_text(plugin, "0.4.1")},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={
@@ -262,10 +349,10 @@ def test_already_bumped_plugin_skipped_in_dry_run(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         mode=Mode.DRY_RUN,
         change_probe=change_probe,
@@ -294,8 +381,8 @@ def test_dry_run_skips_already_bumped_plugin_and_reports_the_other(
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, foo_path): manifest_text("foo", "0.4.1"),
-            (BASE_REF, bar_path): manifest_text("bar", "0.4.1"),
+            (base_ref(), foo_path): manifest_text("foo", "0.4.1"),
+            (base_ref(), bar_path): manifest_text("bar", "0.4.1"),
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -309,10 +396,10 @@ def test_dry_run_skips_already_bumped_plugin_and_reports_the_other(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         mode=Mode.DRY_RUN,
         change_probe=change_probe,
@@ -338,7 +425,7 @@ def test_unchanged_plugins_never_have_manifests_written() -> None:
 
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo"))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, foo_path): foo_content},
+        content={(base_ref(), foo_path): foo_content},
     )
     # `bar` and `baz` exist in the reader's domain but are not in the
     # change set; they must not be queried or written.
@@ -360,10 +447,10 @@ def test_unchanged_plugins_never_have_manifests_written() -> None:
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -391,8 +478,8 @@ def test_dual_manifest_plugin_writes_every_owned_manifest() -> None:
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, claude_path): claude_content,
-            (BASE_REF, codex_path): codex_content,
+            (base_ref(), claude_path): claude_content,
+            (base_ref(), codex_path): codex_content,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -404,10 +491,10 @@ def test_dual_manifest_plugin_writes_every_owned_manifest() -> None:
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -448,16 +535,16 @@ def test_non_version_content_is_preserved_character_for_character() -> None:
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): original},
+        content={(base_ref(), claude_path): original},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=original),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -494,7 +581,7 @@ def test_read_only_modes_never_write_regardless_of_plugin_state(
     for wt_version, base_version in [("0.4.1", "0.4.1"), ("0.4.2", "0.4.1")]:
         change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
         content_probe = ScriptedContentProbe(
-            content={(BASE_REF, claude_path): manifest_text(plugin, base_version)},
+            content={(base_ref(), claude_path): manifest_text(plugin, base_version)},
         )
         manifest_reader = ScriptedManifestReader(
             manifests={
@@ -507,10 +594,10 @@ def test_read_only_modes_never_write_regardless_of_plugin_state(
             },
         )
         manifest_writer = RecordingManifestWriter()
-        tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+        tool_probe = RecordingToolProbe(available=all_tools_available())
 
         bump(
-            BASE_REF,
+            base_ref(),
             Segment.PATCH,
             mode=mode,
             change_probe=change_probe,
@@ -564,16 +651,16 @@ def test_auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> 
 
     change_probe = ScriptedChangeProbe(changed={plugin: changes})
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content},
+        content={(base_ref(), claude_path): content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         segment=None,  # auto-detect
         change_probe=change_probe,
         content_probe=content_probe,

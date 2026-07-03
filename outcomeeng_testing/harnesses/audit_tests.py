@@ -12,9 +12,11 @@ from outcomeeng.test_evidence import (
     AuditStatus,
     COUPLING_TAXONOMY_CATEGORIES,
     CouplingEvidence,
+    FindingTarget,
     FindingCategory,
     LiteralOrigin,
     MIN_COUPLING_TAXONOMY_CATEGORIES,
+    UNTESTABLE_SOURCE_SKIPPED_CHECKS,
     audit_case_after_testability,
     audit_case_verdict,
     coupling_taxonomy_category_count,
@@ -31,9 +33,11 @@ class DeclarationScanner(Protocol):
 
 
 def untestable_source_targets_source() -> bool:
+    verdict = audit_case_verdict(_audit_case(source_exposes_assertion=False))
     return (
-        audit_case_verdict(_audit_case(source_exposes_assertion=False)).finding_category
-        is FindingCategory.UNTESTABLE_SOURCE
+        verdict.finding_category is FindingCategory.UNTESTABLE_SOURCE
+        and verdict.finding_target is FindingTarget.SOURCE_FILE
+        and verdict.skipped_checks == UNTESTABLE_SOURCE_SKIPPED_CHECKS
     )
 
 
@@ -152,6 +156,15 @@ def laundered_indirect_is_rejected() -> bool:
     return (
         audit_case_verdict(
             _audit_case(literal_origin=LiteralOrigin.LAUNDERED_INDIRECT)
+        ).finding_category
+        is FindingCategory.LAUNDERED_INDIRECT
+    )
+
+
+def laundered_indirect_coupling_is_rejected() -> bool:
+    return (
+        audit_case_verdict(
+            _audit_case(coupling=CouplingEvidence.LAUNDERED_INDIRECT)
         ).finding_category
         is FindingCategory.LAUNDERED_INDIRECT
     )
@@ -284,11 +297,59 @@ def typescript_semicolonless_declarations_are_split() -> bool:
   enabled: true,
 }
 const afterSemicolonless = buildConfig()
+const semicolonlessIdentifier =
+  sourceValue
+const afterIdentifier = buildConfig()
+const semicolonlessNumber =
+  1
+const afterNumber = buildConfig()
+const semicolonlessSum =
+  first +
+  second
+const afterSum = buildConfig()
+const semicolonlessTernary = sourceValue
+  /* comment-only line before continuation */
+  ? first
+  : second,
+  afterTernary = buildConfig()
+const semicolonlessCurrentLineComment = sourceValue /* block starts
+  block continues */
+  ? first
+  : second,
+  afterCurrentLineComment = buildConfig()
+const semicolonlessCall = sourceValue
+  (first),
+  afterCall = buildConfig()
+const semicolonlessIndex = sourceValue
+  [first],
+  afterIndex = buildConfig()
+const semicolonlessTemplate = tag
+  `value`,
+  afterTemplate = buildConfig()
+const afterTernaryStatement = buildConfig()
 """,
         Path("semicolonless.ts"),
     )
-    return _has_variable(declarations, "semicolonlessObject") and _has_variable(
-        declarations, "afterSemicolonless"
+    return (
+        _has_variable(declarations, "semicolonlessObject")
+        and _has_variable(declarations, "afterSemicolonless")
+        and _has_variable(declarations, "semicolonlessIdentifier")
+        and _has_variable(declarations, "afterIdentifier")
+        and _has_variable(declarations, "semicolonlessNumber")
+        and _has_variable(declarations, "afterNumber")
+        and _has_variable(declarations, "semicolonlessSum")
+        and _has_variable(declarations, "afterSum")
+        and _has_variable(declarations, "semicolonlessTernary")
+        and _has_variable(declarations, "afterTernary")
+        and _has_variable(declarations, "semicolonlessCurrentLineComment")
+        and _has_variable(declarations, "afterCurrentLineComment")
+        and _has_variable(declarations, "semicolonlessCall")
+        and _has_variable(declarations, "afterCall")
+        and _has_variable(declarations, "semicolonlessIndex")
+        and _has_variable(declarations, "afterIndex")
+        and _has_variable(declarations, "semicolonlessTemplate")
+        and _has_variable(declarations, "afterTemplate")
+        and _has_variable(declarations, "afterTernaryStatement")
     )
 
 
@@ -306,8 +367,15 @@ def typescript_template_literal_declarations_are_ignored() -> bool:
 
 def typescript_regex_literal_declarations_are_preserved() -> bool:
     declarations = _declarations_for_fixture("typescript_regex_literal_declaration.ts")
-    return _has_variable(declarations, "urlPattern") and _has_variable(
-        declarations, "afterPattern"
+    return (
+        _has_variable(declarations, "urlPattern")
+        and _has_variable(declarations, "afterPattern")
+        and _has_variable(declarations, "arrowPattern")
+        and _has_variable(declarations, "afterArrowPattern")
+        and _has_function(declarations, "matchesReturnPattern")
+        and _has_variable(declarations, "divisionValue")
+        and _has_variable(declarations, "afterDivision")
+        and _has_variable(declarations, "afterKeywordPattern")
     )
 
 

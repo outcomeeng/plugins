@@ -11,7 +11,7 @@ import sys
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Sequence
 
 
 class DeclarationKind(StrEnum):
@@ -40,6 +40,9 @@ _TYPESCRIPT_FOR_DECLARATION = re.compile(
 _TYPESCRIPT_CATCH_DECLARATION = re.compile(
     r"^\s*}?\s*catch\s*\(\s*(?P<body>[^)]*)\)",
     re.DOTALL,
+)
+_TYPESCRIPT_WORD_CONTINUATION = re.compile(
+    r"^(?:as|extends|in|instanceof|is|of|satisfies)\b"
 )
 _RUST_DECLARATION = re.compile(
     r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<body>.+)",
@@ -454,6 +457,7 @@ def _typescript_declaration_units(source: str) -> list[tuple[int, str]]:
             r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?function|for\s+(?:await\s+)?\()"
         ),
         conditional_header_pattern=None,
+        continuation_line=_typescript_line_continues_declaration,
     )
 
 
@@ -511,6 +515,7 @@ def _declaration_units(
     start_pattern: re.Pattern[str],
     header_only_pattern: re.Pattern[str],
     conditional_header_pattern: re.Pattern[str] | None,
+    continuation_line: Callable[[str], bool] | None = None,
 ) -> list[tuple[int, str]]:
     units: list[tuple[int, str]] = []
     current: list[str] = []
@@ -518,7 +523,8 @@ def _declaration_units(
     header_only = False
     conditional_header = False
     lexical_state = _LexicalState()
-    for index, raw_line in enumerate(source.splitlines(), start=1):
+    raw_lines = source.splitlines()
+    for index, raw_line in enumerate(raw_lines, start=1):
         line = _strip_comments(raw_line, lexical_state)
         if not current:
             if not start_pattern.match(line):
@@ -541,6 +547,19 @@ def _declaration_units(
             if conditional_header
             else _declaration_unit_complete(unit)
         )
+        if (
+            complete
+            and continuation_line is not None
+            and not header_only
+            and not conditional_header
+            and _next_line_continues_declaration(
+                raw_lines,
+                index,
+                _copy_lexical_state(lexical_state),
+                continuation_line,
+            )
+        ):
+            complete = False
         if complete:
             units.append((start_line, unit))
             current = []
@@ -550,6 +569,55 @@ def _declaration_units(
     if current:
         units.append((start_line, "\n".join(current)))
     return units
+
+
+def _next_line_continues_declaration(
+    raw_lines: list[str],
+    current_index: int,
+    lexical_state: _LexicalState,
+    continuation_line: Callable[[str], bool],
+) -> bool:
+    for next_line in raw_lines[current_index:]:
+        stripped = _strip_comments(next_line, lexical_state).lstrip()
+        if not stripped:
+            continue
+        return continuation_line(stripped)
+    return False
+
+
+def _typescript_line_continues_declaration(line: str) -> bool:
+    return (
+        line.startswith(
+            (
+                "=>",
+                "&&",
+                "||",
+                "??",
+                "?.",
+                ".",
+                ",",
+                "?",
+                ":",
+                "+",
+                "-",
+                "*",
+                "/",
+                "%",
+                "&",
+                "|",
+                "^",
+                "~",
+                "!",
+                "<",
+                ">",
+                "=",
+                "(",
+                "[",
+                "`",
+            )
+        )
+        or _TYPESCRIPT_WORD_CONTINUATION.match(line) is not None
+    )
 
 
 def _conditional_declaration_header_complete(unit: str) -> bool:
@@ -632,9 +700,46 @@ def _declaration_unit_complete(unit: str) -> bool:
         return False
     if depth != 0:
         return False
-    if "\n" not in unit:
+    if last_significant in {"", "=", ",", ".", "?", ":"}:
+        return False
+    stripped = unit.rstrip()
+    return not _ends_with_expression_continuation(stripped)
+
+
+def _ends_with_expression_continuation(text: str) -> bool:
+    if text.endswith(
+        (
+            "=>",
+            "&&",
+            "||",
+            "??",
+            "?.",
+            "+",
+            "-",
+            "*",
+            "/",
+            "%",
+            "&",
+            "|",
+            "^",
+            "~",
+            "<",
+            ">",
+            "==",
+            "===",
+            "!=",
+            "!==",
+            "<=",
+            ">=",
+        )
+    ):
         return True
-    return last_significant in {")", "]", "}"}
+    if re.search(
+        r"\b(?:as|extends|in|instanceof|is|of|satisfies)$",
+        text,
+    ):
+        return True
+    return False
 
 
 def _split_top_level_commas(body: str) -> list[str]:
@@ -730,6 +835,16 @@ class _LexicalState:
     regex_char_class: bool = False
 
 
+def _copy_lexical_state(state: _LexicalState) -> _LexicalState:
+    return _LexicalState(
+        in_block_comment=state.in_block_comment,
+        quote=state.quote,
+        escaped=state.escaped,
+        in_regex=state.in_regex,
+        regex_char_class=state.regex_char_class,
+    )
+
+
 def _strip_comments(line: str, state: _LexicalState) -> str:
     output: list[str] = []
     index = 0
@@ -795,7 +910,25 @@ def _looks_like_regex_literal_start(line: str, index: int) -> bool:
     before = line[:index].rstrip()
     if not before:
         return True
-    return before[-1] in "=(:,[!?"
+    expression_prefix_keywords = {
+        "case",
+        "delete",
+        "return",
+        "throw",
+        "typeof",
+        "void",
+        "yield",
+    }
+    token = re.search(r"[A-Za-z_$][\w$]*$", before)
+    if token is not None:
+        return token.group(0) in expression_prefix_keywords
+    if before.endswith("=>"):
+        return True
+    if before[-1] in "=({[:,;!?'~+-*%&|^<>":
+        return True
+    if before.endswith(("&&", "||", "??", "==", "===", "!=", "!==", "<=", ">=")):
+        return True
+    return False
 
 
 def _value_kind(name: str) -> DeclarationKind:

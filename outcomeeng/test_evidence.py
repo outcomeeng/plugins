@@ -30,6 +30,18 @@ class FindingCategory(StrEnum):
     UNTESTABLE_SOURCE = "untestable source"
 
 
+class FindingTarget(StrEnum):
+    SOURCE_FILE = "source file"
+    TEST_FILE = "test file"
+
+
+class EvidenceCheck(StrEnum):
+    COUPLING = "coupling"
+    FALSIFIABILITY = "falsifiability"
+    ALIGNMENT = "alignment"
+    COVERAGE = "coverage"
+
+
 class LiteralOrigin(StrEnum):
     ALLOWLIST_OR_SOURCED = "allowlist-or-sourced"
     STATIC_FIXTURE = "static-fixture"
@@ -50,7 +62,7 @@ class CouplingEvidence(StrEnum):
     PROSE = "prose"
 
 
-MIN_COUPLING_TAXONOMY_CATEGORIES: Final = 8
+MIN_COUPLING_TAXONOMY_CATEGORIES: Final = 9
 COUPLING_TAXONOMY_CATEGORIES: Final = frozenset(
     (
         CouplingEvidence.DIRECT,
@@ -60,7 +72,16 @@ COUPLING_TAXONOMY_CATEGORIES: Final = frozenset(
         CouplingEvidence.FALSE,
         CouplingEvidence.PARTIAL,
         CouplingEvidence.NONE,
+        CouplingEvidence.SEVERED,
         CouplingEvidence.PROSE,
+    )
+)
+UNTESTABLE_SOURCE_SKIPPED_CHECKS: Final = frozenset(
+    (
+        EvidenceCheck.COUPLING,
+        EvidenceCheck.FALSIFIABILITY,
+        EvidenceCheck.ALIGNMENT,
+        EvidenceCheck.COVERAGE,
     )
 )
 
@@ -86,7 +107,17 @@ class CoverageTrace:
 class AuditVerdict:
     status: AuditStatus
     finding_category: FindingCategory | None = None
+    finding_target: FindingTarget | None = None
+    skipped_checks: frozenset[EvidenceCheck] = frozenset()
     coverage_trace: CoverageTrace | None = None
+
+
+def reject_test_file(category: FindingCategory) -> AuditVerdict:
+    return AuditVerdict(
+        status=AuditStatus.REJECT,
+        finding_category=category,
+        finding_target=FindingTarget.TEST_FILE,
+    )
 
 
 def coupling_taxonomy_category_count() -> int:
@@ -98,72 +129,37 @@ def audit_case_verdict(case: AuditCase) -> AuditVerdict:
         return AuditVerdict(
             status=AuditStatus.REJECT,
             finding_category=FindingCategory.UNTESTABLE_SOURCE,
+            finding_target=FindingTarget.SOURCE_FILE,
+            skipped_checks=UNTESTABLE_SOURCE_SKIPPED_CHECKS,
         )
     if case.declarations:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.TEST_OWNED_DECLARATION,
-        )
+        return reject_test_file(FindingCategory.TEST_OWNED_DECLARATION)
     if case.coupling is CouplingEvidence.NONE:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.NO_COUPLING,
-        )
+        return reject_test_file(FindingCategory.NO_COUPLING)
     if case.coupling is CouplingEvidence.SEVERED:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.COUPLING_SEVERED,
-        )
+        return reject_test_file(FindingCategory.COUPLING_SEVERED)
+    if case.coupling is CouplingEvidence.LAUNDERED_INDIRECT:
+        return reject_test_file(FindingCategory.LAUNDERED_INDIRECT)
     if case.coupling is CouplingEvidence.FALSE:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.FALSE_COUPLING,
-        )
+        return reject_test_file(FindingCategory.FALSE_COUPLING)
     if case.coupling is CouplingEvidence.PARTIAL:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.PARTIAL_COUPLING,
-        )
+        return reject_test_file(FindingCategory.PARTIAL_COUPLING)
     if case.coupling is CouplingEvidence.PROSE:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.PROSE_COUPLING,
-        )
+        return reject_test_file(FindingCategory.PROSE_COUPLING)
     if case.literal_origin is LiteralOrigin.UNSOURCED_NUMERIC:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.UNSOURCED_LITERAL,
-        )
+        return reject_test_file(FindingCategory.UNSOURCED_LITERAL)
     if case.literal_origin is LiteralOrigin.UNSOURCED_STRING:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.UNSOURCED_LITERAL,
-        )
+        return reject_test_file(FindingCategory.UNSOURCED_LITERAL)
     if case.literal_origin is LiteralOrigin.STATIC_FIXTURE:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.FIXTURE_LAUNDERING,
-        )
+        return reject_test_file(FindingCategory.FIXTURE_LAUNDERING)
     if case.literal_origin is LiteralOrigin.LAUNDERED_INDIRECT:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.LAUNDERED_INDIRECT,
-        )
+        return reject_test_file(FindingCategory.LAUNDERED_INDIRECT)
     if not case.mutation_named:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.UNFALSIFIABLE,
-        )
+        return reject_test_file(FindingCategory.UNFALSIFIABLE)
     if not case.aligned:
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.MISALIGNED,
-        )
+        return reject_test_file(FindingCategory.MISALIGNED)
     if case.coverage_path == "":
-        return AuditVerdict(
-            status=AuditStatus.REJECT,
-            finding_category=FindingCategory.NO_COVERAGE,
-        )
+        return reject_test_file(FindingCategory.NO_COVERAGE)
     return AuditVerdict(
         status=AuditStatus.APPROVED,
         finding_category=FindingCategory.POSITIVE_PATTERN
