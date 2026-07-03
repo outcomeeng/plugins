@@ -22,6 +22,7 @@ Failure behavior:
 - A stale lock whose owning process is absent is treated as stale and replaced.
 - A repair lock that changes during acquisition without an observable active owner fails non-zero before marketplace refresh mutations.
 - A refresh lock release failure fails non-zero even when every marketplace refresh step succeeds.
+- A refresh lock release failure supersedes a failed refresh step exit code and returns 1.
 - A topology check failure caused by unreadable Codex CLI output fails loudly rather than pruning or assuming health.
 - No shell polling loop, background keep-alive, or `sleep` command is introduced.
 

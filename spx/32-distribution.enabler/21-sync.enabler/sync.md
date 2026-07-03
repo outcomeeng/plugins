@@ -26,11 +26,12 @@ The final Codex local-source refresh repairs cache drift caused by Codex CLI rea
 - Given plugin distribution changes since `base_ref` and another sync owns the active refresh, when sync runs, then it exits non-zero without invoking marketplace refresh mutations because change-driven sync cannot skip required validation ([test](tests/test_sync.scenario.l1.py))
 - Given no plugin distribution changes since `base_ref`, source reconciliation reports no runtime configuration repair, the Codex cache topology is invalid, and the repair lock changes during acquisition without an observable active owner, when sync runs, then it exits non-zero without invoking marketplace refresh mutations ([test](tests/test_sync.scenario.l1.py))
 - Given marketplace refresh steps succeed and the refresh lock release fails, when sync runs, then it exits non-zero and reports the release failure ([test](tests/test_sync.scenario.l1.py))
+- Given a marketplace refresh step fails and the refresh lock release also fails, when sync runs, then the release failure supersedes the step exit code and sync exits 1 while reporting the release failure ([test](tests/test_sync.scenario.l1.py))
 - Given uncommitted plugin distribution changes in the working tree since `base_ref`, when sync runs before commit, then it still invokes the full marketplace sync sequence because the change probe compares `base_ref` against the working tree rather than `HEAD` ([test](tests/test_sync.scenario.l1.py))
 
 ### Compliance
 
-- ALWAYS: check availability of `claude`, `codex`, and `uv` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_sync.compliance.l1.py))
+- ALWAYS: check availability of `claude`, `codex`, `ps`, and `uv` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_sync.compliance.l1.py))
 - ALWAYS: reconcile runtime marketplace source configuration before consulting the distribution-change probe — configuration drift is repaired even when plugin files did not change ([test](tests/test_sync.compliance.l1.py))
 - NEVER: skip any validation step when plugin distribution paths changed — every change-driven run completes the full sequence or fails ([test](tests/test_sync.compliance.l1.py))
 - NEVER: declare or invoke a sync step whose contract is `codex_cache_preserve`; Codex refresh is the local-source step governed by `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md` ([test](tests/test_sync.compliance.l1.py))

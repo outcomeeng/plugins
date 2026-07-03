@@ -29,6 +29,7 @@ import sys
 import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
@@ -44,7 +45,7 @@ from outcomeeng.distribution.marketplace_sources import (
     ensure_local_marketplace_sources,
 )
 
-REQUIRED_TOOLS: tuple[str, ...] = ("claude", "codex", "uv")
+REQUIRED_TOOLS: tuple[str, ...] = ("claude", "codex", "ps", "uv")
 
 DISTRIBUTION_PATHS: tuple[str, ...] = (
     "src",
@@ -62,6 +63,15 @@ TOPOLOGY_CHECK_FAILED_PREFIX = "Codex cache topology check failed"
 LOCK_OWNER_PID_FIELD = "pid"
 LOCK_OWNER_IDENTITY_FIELD = "identity"
 PROCESS_IDENTITY_TIMEOUT_SECONDS = 2.0
+
+
+class RefreshReason(StrEnum):
+    """Closed set of reasons that authorize a marketplace refresh."""
+
+    NO_BASE_REF = "no base_ref supplied"
+    DISTRIBUTION_CHANGED = "plugin distribution paths changed"
+    SOURCE_CONFIGURATION_CHANGED = "runtime marketplace source configuration changed"
+    CODEX_CACHE_TOPOLOGY_INVALID = "Codex cache topology invalid"
 
 
 @dataclass(frozen=True)
@@ -421,14 +431,14 @@ def sync(
         return _run_refresh_sequence(
             runner,
             single_flight,
-            reason="Codex cache topology invalid",
+            reason=RefreshReason.CODEX_CACHE_TOPOLOGY_INVALID,
         )
     if not base_ref:
-        reason = "no base_ref supplied"
+        reason = RefreshReason.NO_BASE_REF
     elif distribution_changed:
-        reason = "plugin distribution paths changed"
+        reason = RefreshReason.DISTRIBUTION_CHANGED
     else:
-        reason = "runtime marketplace source configuration changed"
+        reason = RefreshReason.SOURCE_CONFIGURATION_CHANGED
     return _run_refresh_sequence(runner, single_flight, reason=reason)
 
 
@@ -436,7 +446,7 @@ def _run_refresh_sequence(
     runner: StepRunner,
     single_flight: SingleFlight,
     *,
-    reason: str,
+    reason: RefreshReason,
 ) -> int:
     try:
         claim = single_flight.acquire()
@@ -450,9 +460,9 @@ def _run_refresh_sequence(
                 file=sys.stderr,
             )
             return 1
-        if reason != "Codex cache topology invalid":
+        if reason is not RefreshReason.CODEX_CACHE_TOPOLOGY_INVALID:
             print(
-                f"Marketplace refresh already running during {reason}; "
+                f"Marketplace refresh already running during {reason.value}; "
                 "change-driven sync cannot skip refresh",
                 file=sys.stderr,
             )
@@ -465,7 +475,7 @@ def _run_refresh_sequence(
         return 0
     refresh_rc = 0
     release_error: OSError | None = None
-    print(f"Running marketplace refresh: {reason}")
+    print(f"Running marketplace refresh: {reason.value}")
     try:
         for step in STEPS:
             refresh_rc = runner(step.argv)

@@ -383,6 +383,34 @@ def test_refresh_release_failure_exits_nonzero_after_successful_steps(
     assert single_flight.releases == 1
 
 
+def test_refresh_release_failure_supersedes_step_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runner = RecordingRunner(exit_codes=(7,))
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight(
+        release_error=OSError("permission denied"),
+    )
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Marketplace refresh lock release failed: permission denied" in captured.err
+    assert runner.calls == [STEP_ARGVS[0]]
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
+
+
 def test_invalid_single_flight_lock_is_replaced(
     tmp_path: pathlib.Path,
 ) -> None:
