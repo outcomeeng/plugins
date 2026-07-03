@@ -25,6 +25,11 @@ from outcomeeng.distribution.sync import (
     ToolProbe,
 )
 
+CHANGE_PROBE_EVENT = "change_probe"
+CONFIG_REPAIR_EVENT = "config_repair"
+RUNNER_EVENT = "runner"
+TOOL_PROBE_EVENT_PREFIX = "tool_probe:"
+
 
 @dataclass
 class RecordingRunner:
@@ -36,8 +41,11 @@ class RecordingRunner:
 
     exit_codes: Sequence[int] = ()
     calls: list[tuple[str, ...]] = field(default_factory=list)
+    events: list[str] | None = None
 
     def __call__(self, argv: Sequence[str]) -> int:
+        if self.events is not None:
+            self.events.append(RUNNER_EVENT)
         index = len(self.calls)
         self.calls.append(tuple(argv))
         if index < len(self.exit_codes):
@@ -51,8 +59,11 @@ class ScriptedToolProbe:
 
     available: frozenset[str]
     queries: list[str] = field(default_factory=list)
+    events: list[str] | None = None
 
     def __call__(self, name: str) -> bool:
+        if self.events is not None:
+            self.events.append(f"{TOOL_PROBE_EVENT_PREFIX}{name}")
         self.queries.append(name)
         return name in self.available
 
@@ -63,8 +74,11 @@ class ScriptedChangeProbe:
 
     changed: bool
     queries: list[str] = field(default_factory=list)
+    events: list[str] | None = None
 
     def __call__(self, base_ref: str) -> bool:
+        if self.events is not None:
+            self.events.append(CHANGE_PROBE_EVENT)
         self.queries.append(base_ref)
         return self.changed
 
@@ -75,17 +89,24 @@ class ScriptedConfigRepairer:
 
     changed: bool
     calls: int = 0
+    events: list[str] | None = None
 
     def __call__(self) -> bool:
+        if self.events is not None:
+            self.events.append(CONFIG_REPAIR_EVENT)
         self.calls += 1
         return self.changed
 
 
 __all__ = [
+    "CHANGE_PROBE_EVENT",
+    "CONFIG_REPAIR_EVENT",
+    "RUNNER_EVENT",
     "RecordingRunner",
     "ScriptedChangeProbe",
     "ScriptedConfigRepairer",
     "ScriptedToolProbe",
+    "TOOL_PROBE_EVENT_PREFIX",
 ]
 
 
