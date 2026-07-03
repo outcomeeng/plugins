@@ -30,6 +30,7 @@ REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
 UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
 DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
 NO_DRY_RUN_PUSH_FLAG = "--no-dry-run"
+PUSH_OPTION_FLAGS: frozenset[str] = frozenset(("-o", "--push-option"))
 SYNC_COMMAND: tuple[str, ...] = (
     "uv",
     "run",
@@ -98,9 +99,19 @@ def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
 
 def _is_dry_run(push_args: Sequence[str]) -> bool:
     is_dry_run = False
+    skip_next = False
     for arg in push_args:
+        if skip_next:
+            skip_next = False
+            continue
         if arg == NO_DRY_RUN_PUSH_FLAG:
             is_dry_run = False
+        elif arg in PUSH_OPTION_FLAGS:
+            skip_next = True
+        elif arg.startswith("--push-option="):
+            continue
+        elif arg.startswith("-o") and arg != "-o":
+            continue
         elif _is_dry_run_arg(arg):
             is_dry_run = True
     return is_dry_run

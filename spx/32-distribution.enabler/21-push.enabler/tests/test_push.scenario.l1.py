@@ -27,6 +27,7 @@ from outcomeeng_testing.harnesses.push import (
     dry_run_push_args,
     force_with_lease_push_args,
     git_help_push_args,
+    push_option_with_dry_run_operand_args,
     sync_invocation,
     tracked_upstream_ref,
 )
@@ -179,5 +180,23 @@ def test_no_dry_run_option_restores_marketplace_refresh() -> None:
     assert exit_code == 0
     assert runner.calls == [
         ("git", "push", *dry_run_then_no_dry_run_push_args()),
+        sync_invocation(tracked_upstream_ref()),
+    ]
+
+
+def test_push_option_operand_named_like_dry_run_still_refreshes_marketplace() -> None:
+    runner = TracedRunner(exit_codes=(0, 0))
+    trace = runner.trace
+
+    exit_code = push(
+        push_option_with_dry_run_operand_args(),
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), trace),
+    )
+
+    assert exit_code == 0
+    assert runner.calls == [
+        ("git", "push", *push_option_with_dry_run_operand_args()),
         sync_invocation(tracked_upstream_ref()),
     ]

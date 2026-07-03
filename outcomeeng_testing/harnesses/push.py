@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from outcomeeng.distribution.push import (
     DRY_RUN_PUSH_FLAGS,
     NO_DRY_RUN_PUSH_FLAG,
+    PUSH_OPTION_FLAGS,
     REQUIRED_TOOLS,
     SYNC_COMMAND,
     UPSTREAM_REF_COMMAND,
@@ -95,6 +96,16 @@ def dry_run_then_no_dry_run_push_args() -> tuple[str, ...]:
     )
 
 
+def push_option_with_dry_run_operand_args() -> tuple[str, ...]:
+    """Return push arguments where a push-option value looks like dry-run."""
+    return (
+        next(iter(sorted(PUSH_OPTION_FLAGS))),
+        "-n",
+        "origin",
+        "HEAD:refs/heads/feature",
+    )
+
+
 @dataclass
 class ScriptedUpstreamProbe:
     """UpstreamProbe that returns a scripted ref (or None) on each call."""
@@ -153,6 +164,7 @@ __all__ = [
     "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",
+    "push_option_with_dry_run_operand_args",
     "sync_invocation",
     "tool_probe_invocation",
     "tracked_upstream_ref",
