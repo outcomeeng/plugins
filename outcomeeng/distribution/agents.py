@@ -52,10 +52,10 @@ CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
 READ_ONLY_SANDBOX_MODE: Final = "read-only"
 WEB_SEARCH_DISABLED: Final = "disabled"
-READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "LS", "Read"})
+READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "Read"})
 SCRIPT_CAPABLE_TOOLS: Final = frozenset({"Bash", "Skill"})
-WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch", "web_search"})
-WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "MultiEdit", "NotebookEdit", "Write"})
+WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch"})
+WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "NotebookEdit", "Write"})
 
 
 class AgentConversionError(Exception):
