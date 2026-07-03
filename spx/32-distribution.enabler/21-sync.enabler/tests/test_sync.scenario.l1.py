@@ -40,6 +40,7 @@ from outcomeeng_testing.harnesses.sync import (
     ScriptedSingleFlight,
     ScriptedToolProbe,
     ScriptedTopologyProbe,
+    run_invalid_topology_refresh,
 )
 from outcomeeng_testing.harnesses.src_tree import write_agent_tree
 
@@ -106,6 +107,25 @@ def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
     )
 
 
+def test_default_branch_worktree_preserves_slash_containing_branch() -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins",
+            "HEAD 1111111111111111111111111111111111111111",
+            "branch refs/heads/release/main",
+            "",
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "branch refs/heads/main",
+            "",
+        ],
+    )
+
+    assert _worktree_path_for_branch(listing, "release/main") == pathlib.Path(
+        "/repo/plugins",
+    )
+
+
 def test_real_source_root_selects_default_branch_worktree(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -145,6 +165,28 @@ def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
     )
 
     assert _worktree_path_for_branch(listing, "main") is None
+
+
+def test_single_flight_lock_claim_exposes_owner_body(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_identity=lambda pid: f"identity:{pid}",
+    )
+
+    claim = single_flight.acquire()
+
+    assert claim.acquired is True
+    assert sync_module._read_lock_owner_body(
+        single_flight.lock_path.read_text(encoding="utf-8"),
+    ) == sync_module._LockOwner(
+        pid=os.getpid(),
+        identity=f"identity:{os.getpid()}",
+    )
+    assert list(state_dir.glob(f"{sync_module.SYNC_LOCK_FILENAME}.*.tmp")) == []
 
 
 def test_no_distribution_changes_with_healthy_topology_skips_refresh() -> None:
@@ -241,7 +283,46 @@ def test_active_single_flight_records_pending_and_exits_zero(
         )
     finally:
         single_flight.release()
-    assert single_flight.pending_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("distribution_changed", "config_changed"),
+    [
+        pytest.param(True, False, id="distribution-change"),
+        pytest.param(False, True, id="config-repair"),
+    ],
+)
+def test_validation_required_sync_fails_when_refresh_is_active(
+    distribution_changed: bool,
+    config_changed: bool,
+) -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=distribution_changed)
+    config_repairer = ScriptedConfigRepairer(changed=config_changed)
+    single_flight = ScriptedSingleFlight(
+        claim=sync_module.SingleFlightClaim(
+            acquired=False,
+            pending_recorded=True,
+            blocked_by_active_owner=True,
+        ),
+    )
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 1
+    assert runner.calls == []
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 0
+    assert change_probe.queries == (["abc123"] if distribution_changed else [])
 
 
 def test_invalid_single_flight_lock_is_replaced(
@@ -254,29 +335,85 @@ def test_invalid_single_flight_lock_is_replaced(
         process_exists=lambda _pid: False,
     )
     single_flight.lock_path.write_text("999999\n", encoding="utf-8")
-    runner = RecordingRunner()
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    change_probe = ScriptedChangeProbe(changed=False)
-    config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
 
-    exit_code = sync(
-        "abc123",
-        runner=runner,
-        tool_probe=tool_probe,
-        change_probe=change_probe,
-        config_repairer=config_repairer,
-        topology_probe=topology_probe,
-        single_flight=single_flight,
-    )
+    run = run_invalid_topology_refresh(single_flight)
 
-    assert exit_code == 0
-    assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
-    assert topology_probe.calls == 1
-    assert runner.calls == list(STEP_ARGVS)
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == list(STEP_ARGVS)
     assert not single_flight.lock_path.exists()
     assert not single_flight.pending_path.exists()
+
+
+def test_absent_single_flight_owner_lock_is_replaced(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: False,
+        process_identity=lambda pid: f"identity:{pid}",
+    )
+    missing_owner = sync_module._LockOwner(pid=999999, identity="absent")
+    stale_pending_owner = sync_module._LockOwner(pid=999998, identity="pending")
+    single_flight.lock_path.write_text(
+        sync_module._serialize_lock_owner(missing_owner),
+        encoding="utf-8",
+    )
+    single_flight.pending_path.write_text(
+        sync_module._serialize_lock_owner(stale_pending_owner),
+        encoding="utf-8",
+    )
+
+    run = run_invalid_topology_refresh(single_flight)
+
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == list(STEP_ARGVS)
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
+def test_stale_single_flight_unlink_preserves_replacement_lock(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    stale_owner = sync_module._LockOwner(pid=999999, identity="stale")
+    replacement_owner = sync_module._LockOwner(pid=os.getpid(), identity="replacement")
+    lock_path = state_dir / sync_module.SYNC_LOCK_FILENAME
+    lock_path.write_text(
+        sync_module._serialize_lock_owner(stale_owner),
+        encoding="utf-8",
+    )
+
+    def process_exists(pid: int) -> bool:
+        if pid == stale_owner.pid:
+            lock_path.write_text(
+                sync_module._serialize_lock_owner(replacement_owner),
+                encoding="utf-8",
+            )
+            return False
+        return pid == replacement_owner.pid
+
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=process_exists,
+        process_identity=lambda pid: (
+            "replacement" if pid == replacement_owner.pid else None
+        ),
+    )
+
+    claim = single_flight.acquire()
+
+    assert claim.acquired is False
+    assert claim.pending_recorded is True
+    assert claim.blocked_by_active_owner is True
+    assert single_flight.lock_path.read_text(
+        encoding="utf-8"
+    ) == sync_module._serialize_lock_owner(replacement_owner)
+    assert single_flight.pending_path.exists()
 
 
 def test_single_flight_replaces_reused_pid_lock(
@@ -297,29 +434,17 @@ def test_single_flight_replaces_reused_pid_lock(
         sync_module._serialize_lock_owner(reused_pid_owner),
         encoding="utf-8",
     )
-    runner = RecordingRunner()
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    change_probe = ScriptedChangeProbe(changed=False)
-    config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
 
-    exit_code = sync(
-        "abc123",
-        runner=runner,
-        tool_probe=tool_probe,
-        change_probe=change_probe,
-        config_repairer=config_repairer,
-        topology_probe=topology_probe,
-        single_flight=single_flight,
-    )
+    run = run_invalid_topology_refresh(single_flight)
 
-    assert exit_code == 0
-    assert runner.calls == list(STEP_ARGVS)
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == list(STEP_ARGVS)
     assert not single_flight.lock_path.exists()
     assert not single_flight.pending_path.exists()
 
 
-def test_single_flight_release_preserves_pending_marker(
+def test_single_flight_release_clears_pending_marker(
     tmp_path: pathlib.Path,
 ) -> None:
     state_dir = tmp_path / "outcomeeng"
@@ -337,7 +462,7 @@ def test_single_flight_release_preserves_pending_marker(
     single_flight.release()
 
     assert not single_flight.lock_path.exists()
-    assert single_flight.pending_path.exists()
+    assert not single_flight.pending_path.exists()
 
 
 def test_single_flight_identity_lookup_failure_exits_before_refresh(
@@ -349,24 +474,12 @@ def test_single_flight_identity_lookup_failure_exits_before_refresh(
         state_dir=state_dir,
         process_identity=lambda _pid: None,
     )
-    runner = RecordingRunner()
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    change_probe = ScriptedChangeProbe(changed=False)
-    config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
 
-    exit_code = sync(
-        "abc123",
-        runner=runner,
-        tool_probe=tool_probe,
-        change_probe=change_probe,
-        config_repairer=config_repairer,
-        topology_probe=topology_probe,
-        single_flight=single_flight,
-    )
+    run = run_invalid_topology_refresh(single_flight)
 
-    assert exit_code == 1
-    assert runner.calls == []
+    assert run.exit_code == 1
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == []
     assert not single_flight.lock_path.exists()
     assert not single_flight.pending_path.exists()
 
@@ -423,7 +536,7 @@ def test_topology_filesystem_failure_exits_before_refresh() -> None:
     assert single_flight.acquisitions == 0
 
 
-def test_config_repair_runs_refresh_without_distribution_changes() -> None:
+def test_config_repair_runs_refresh_without_consulting_distribution_changes() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
@@ -441,7 +554,7 @@ def test_config_repair_runs_refresh_without_distribution_changes() -> None:
 
     assert exit_code == 0
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == []
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 1
     assert runner.calls == list(STEP_ARGVS)

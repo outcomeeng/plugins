@@ -12,9 +12,10 @@ Observable path:
   - If distribution paths changed or source reconciliation repaired runtime configuration, sync keeps the full refresh sequence including final strict Codex local refresh.
   - If neither changed and topology is valid, sync exits 0 after source reconciliation and health inspection without running marketplace refresh mutations.
   - If neither changed and topology is invalid, sync runs the full refresh sequence.
-  - Concurrent watcher invocations are single-flight: one sync owns the repair, later invocations observe the active run, record pending state, and exit 0 without launching a second refresh.
+  - Concurrent watcher repair invocations are single-flight: one sync owns a no-change invalid-topology repair, later no-change repair invocations observe the active run, record pending state, and exit 0 without launching a second refresh.
+  - Distribution-change-driven or configuration-repair-driven sync cannot coalesce behind an active refresh: it exits non-zero rather than reporting success without running the required validation sequence.
 - Persistence or side effect: no durable state outside the cache directory except a short-lived lock/pending marker used by the running sync process.
-- Inspection surface: sync output states whether it skipped for healthy topology, ran because topology was invalid, or exited because another sync owns the active repair.
+- Inspection surface: sync output states whether it skipped for healthy topology, ran because topology was invalid, exited because another sync owns an active no-change repair, or failed because a change-driven/configuration-repair-driven sync encountered an active refresh.
 
 Failure behavior:
 

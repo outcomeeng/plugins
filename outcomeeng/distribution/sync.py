@@ -2,7 +2,8 @@
 
 Reconciles local runtime marketplace configuration, refreshes the local Claude
 marketplace, and re-validates installed plugins when plugin distribution paths
-changed since a reference commit or configuration repair changed runtime state.
+changed since a reference commit, configuration repair changed runtime state, or
+Codex cache topology is invalid in a no-change run.
 
 The module's contract:
 
@@ -11,6 +12,9 @@ The module's contract:
 - `STEPS` is the ordered tuple of named subprocess calls executed when a refresh runs.
 - `StepRunner`, `ToolProbe`, `ChangeProbe`, and `ConfigRepairer` Protocols describe
   the injected side-effecting boundaries; `sync()` accepts them as keyword arguments.
+- `TopologyHealthProbe` and `SingleFlight` describe the no-change cache repair
+  boundaries that let watcher-triggered repair coalesce without weakening
+  change-driven validation.
 - `main()` wires real subprocess, `shutil.which`, and `git diff` adapters.
 """
 
@@ -22,6 +26,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,6 +163,7 @@ class SingleFlightClaim:
     acquired: bool
     pending_recorded: bool = False
     detail: str = ""
+    blocked_by_active_owner: bool = False
 
 
 class SingleFlight(Protocol):
@@ -199,33 +205,25 @@ class _FileSingleFlight:
         current_owner = self._current_owner()
         lock_body = _serialize_lock_owner(current_owner)
         for _attempt in range(2):
-            try:
-                fd = os.open(
-                    self.lock_path,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                    0o644,
+            if self._try_create_lock(lock_body):
+                self._unlink_pending()
+                return SingleFlightClaim(
+                    acquired=True,
+                    detail=f"pid {current_owner.pid} owns active repair",
                 )
-            except FileExistsError:
+            else:
                 lock_owner = self._read_lock_owner()
                 if lock_owner is not None and self._owner_is_active(lock_owner):
-                    self.pending_path.write_text(lock_body, encoding="utf-8")
+                    _write_file_atomically(self.pending_path, lock_body)
                     return SingleFlightClaim(
                         acquired=False,
                         pending_recorded=True,
                         detail=f"pid {lock_owner.pid} owns active repair",
+                        blocked_by_active_owner=True,
                     )
-                try:
-                    self.lock_path.unlink()
-                except FileNotFoundError:
-                    pass
+                self._unlink_if_unchanged(lock_owner)
                 continue
-            with os.fdopen(fd, "w", encoding="utf-8") as lock_file:
-                lock_file.write(lock_body)
-            return SingleFlightClaim(
-                acquired=True,
-                detail=f"pid {current_owner.pid} owns active repair",
-            )
-        self.pending_path.write_text(lock_body, encoding="utf-8")
+        _write_file_atomically(self.pending_path, lock_body)
         return SingleFlightClaim(
             acquired=False,
             pending_recorded=True,
@@ -239,6 +237,7 @@ class _FileSingleFlight:
                 self.lock_path.unlink()
             except FileNotFoundError:
                 pass
+            self._unlink_pending()
 
     def _read_lock_owner(self) -> _LockOwner | None:
         try:
@@ -246,6 +245,34 @@ class _FileSingleFlight:
         except OSError:
             return None
         return _read_lock_owner_body(raw)
+
+    def _try_create_lock(self, lock_body: str) -> bool:
+        temp_path = _write_temp_file(self.state_dir, lock_body)
+        try:
+            os.link(temp_path, self.lock_path)
+        except FileExistsError:
+            return False
+        finally:
+            try:
+                temp_path.unlink()
+            except FileNotFoundError:
+                pass
+        return True
+
+    def _unlink_if_unchanged(self, stale_owner: _LockOwner | None) -> None:
+        current_owner = self._read_lock_owner()
+        if current_owner != stale_owner:
+            return
+        try:
+            self.lock_path.unlink()
+        except FileNotFoundError:
+            pass
+
+    def _unlink_pending(self) -> None:
+        try:
+            self.pending_path.unlink()
+        except FileNotFoundError:
+            pass
 
     def _current_owner(self) -> _LockOwner:
         pid = os.getpid()
@@ -302,6 +329,31 @@ def _serialize_lock_owner(owner: _LockOwner) -> str:
     )
 
 
+def _write_file_atomically(path: Path, body: str) -> None:
+    temp_path = _write_temp_file(path.parent, body)
+    try:
+        os.replace(temp_path, path)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _write_temp_file(directory: Path, body: str) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=directory,
+        prefix=f"{SYNC_LOCK_FILENAME}.",
+        suffix=".tmp",
+        delete=False,
+    ) as temp_file:
+        temp_file.write(body)
+        return Path(temp_file.name)
+
+
 def _process_identity(pid: int) -> str | None:
     if not _process_exists(pid):
         return None
@@ -347,8 +399,8 @@ def sync(
     except MarketplaceSourceError as exc:
         print(f"Marketplace source configuration failed: {exc}", file=sys.stderr)
         return 1
-    distribution_changed = True
-    if base_ref:
+    distribution_changed = not base_ref
+    if base_ref and not config_changed:
         distribution_changed = change_probe(base_ref)
     if base_ref and not distribution_changed and not config_changed:
         try:
@@ -392,6 +444,19 @@ def _run_refresh_sequence(
         print(f"Marketplace refresh lock failed: {exc}", file=sys.stderr)
         return 1
     if not claim.acquired:
+        if not claim.blocked_by_active_owner:
+            print(
+                "Marketplace refresh lock changed during acquisition",
+                file=sys.stderr,
+            )
+            return 1
+        if reason != "Codex cache topology invalid":
+            print(
+                f"Marketplace refresh already running during {reason}; "
+                "change-driven sync cannot skip refresh",
+                file=sys.stderr,
+            )
+            return 1
         print(
             SYNC_ALREADY_RUNNING_MESSAGE,
         )
@@ -530,7 +595,7 @@ def _real_default_branch_name() -> str | None:
     ref = result.stdout.strip()
     if not ref:
         return "main"
-    return ref.rsplit("/", maxsplit=1)[-1]
+    return ref.removeprefix("origin/")
 
 
 def _real_worktree_root_for_branch(branch: str) -> Path | None:
@@ -581,8 +646,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="outcomeeng.distribution.sync",
         description=(
-            "Refresh local marketplace installs and re-validate installed plugins "
-            "when plugin distribution paths changed since base_ref."
+            "Refresh local marketplace installs when distribution paths changed "
+            "since base_ref, runtime marketplace config was repaired, or Codex "
+            "cache topology is invalid."
         ),
     )
     parser.add_argument(

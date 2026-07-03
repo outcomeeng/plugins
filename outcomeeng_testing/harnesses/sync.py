@@ -21,9 +21,11 @@ from dataclasses import dataclass, field
 from outcomeeng.distribution.sync import (
     ChangeProbe,
     ConfigRepairer,
+    REQUIRED_TOOLS,
     SingleFlight,
     SingleFlightClaim,
     StepRunner,
+    sync,
     TopologyHealthProbe,
     ToolProbe,
 )
@@ -32,7 +34,8 @@ CHANGE_PROBE_EVENT = "change_probe"
 CONFIG_REPAIR_EVENT = "config_repair"
 RUNNER_EVENT = "runner"
 TOOL_PROBE_EVENT_PREFIX = "tool_probe:"
-
+SCRIPTED_BASE_REF = "abc123"
+DEFAULT_TOPOLOGY_ERRORS = ("missing target",)
 
 @dataclass
 class RecordingRunner:
@@ -132,17 +135,71 @@ class ScriptedSingleFlight:
         self.releases += 1
 
 
+@dataclass(frozen=True)
+class ScriptedSyncRun:
+    """Captured result and collaborators from one scripted sync invocation."""
+
+    exit_code: int
+    runner: RecordingRunner
+    tool_probe: ScriptedToolProbe
+    change_probe: ScriptedChangeProbe
+    config_repairer: ScriptedConfigRepairer
+    topology_probe: ScriptedTopologyProbe
+
+    @property
+    def observed_no_change_invalid_topology_probe(self) -> bool:
+        return (
+            self.config_repairer.calls == 1
+            and self.change_probe.queries == [SCRIPTED_BASE_REF]
+            and self.topology_probe.calls == 1
+        )
+
+
+def run_invalid_topology_refresh(
+    single_flight: SingleFlight,
+    *,
+    topology_errors: tuple[str, ...] = DEFAULT_TOPOLOGY_ERRORS,
+) -> ScriptedSyncRun:
+    """Run sync through the no-change invalid-topology refresh path."""
+
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=frozenset(REQUIRED_TOOLS))
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=topology_errors)
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+    return ScriptedSyncRun(
+        exit_code=exit_code,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+    )
+
+
 __all__ = [
     "CHANGE_PROBE_EVENT",
     "CONFIG_REPAIR_EVENT",
     "RUNNER_EVENT",
+    "DEFAULT_TOPOLOGY_ERRORS",
     "RecordingRunner",
     "ScriptedChangeProbe",
     "ScriptedConfigRepairer",
     "ScriptedSingleFlight",
+    "ScriptedSyncRun",
     "ScriptedTopologyProbe",
     "ScriptedToolProbe",
     "TOOL_PROBE_EVENT_PREFIX",
+    "run_invalid_topology_refresh",
 ]
 
 
