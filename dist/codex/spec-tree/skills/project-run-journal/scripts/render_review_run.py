@@ -222,7 +222,7 @@ def _run_list_command() -> subprocess.CompletedProcess[str]:
         "--type",
         REVIEW_TYPE,
         "--sealed",
-        "true",
+        "sealed",
     ]
     return subprocess.run(  # noqa: S603,S607  # NOSONAR - fixed argv, no shell
         command,
