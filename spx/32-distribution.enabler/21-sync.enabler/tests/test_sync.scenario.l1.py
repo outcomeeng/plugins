@@ -325,6 +325,64 @@ def test_validation_required_sync_fails_when_refresh_is_active(
     assert change_probe.queries == (["abc123"] if distribution_changed else [])
 
 
+def test_changed_single_flight_lock_exits_nonzero_without_refresh(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+    single_flight = ScriptedSingleFlight(
+        claim=sync_module.SingleFlightClaim(acquired=False),
+    )
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Marketplace refresh lock changed during acquisition" in captured.err
+    assert runner.calls == []
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 0
+
+
+def test_refresh_release_failure_exits_nonzero_after_successful_steps(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight(
+        release_error=OSError("permission denied"),
+    )
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Marketplace refresh lock release failed: permission denied" in captured.err
+    assert runner.calls == list(STEP_ARGVS)
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
+
+
 def test_invalid_single_flight_lock_is_replaced(
     tmp_path: pathlib.Path,
 ) -> None:

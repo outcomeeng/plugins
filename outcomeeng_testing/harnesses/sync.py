@@ -124,6 +124,7 @@ class ScriptedSingleFlight:
     """SingleFlight double that records acquisition and release calls."""
 
     claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
+    release_error: OSError | None = None
     acquisitions: int = 0
     releases: int = 0
 
@@ -133,6 +134,8 @@ class ScriptedSingleFlight:
 
     def release(self) -> None:
         self.releases += 1
+        if self.release_error is not None:
+            raise self.release_error
 
 
 @dataclass(frozen=True)
