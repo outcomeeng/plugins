@@ -14,7 +14,6 @@ from typing import Any, Protocol, Sequence, cast
 import journal_projection as jp
 
 REVIEW_TYPE = "review"
-RUN_NOT_FOUND = "journal run not found"
 RECENT_RUN_LIST_LIMIT = "200"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
 _HERE = pathlib.Path(__file__).resolve()
@@ -75,7 +74,7 @@ def _render_review_run(
         return _run_render_command(run_token, branch_slug=branch_slug)
 
     result = _run_render_command(run_token)
-    if result.returncode == 0 or RUN_NOT_FOUND not in result.stderr:
+    if result.returncode == 0:
         return result
 
     discovered_branch_slug = _branch_slug_for_recent_run(run_token)
@@ -155,13 +154,16 @@ def _branch_slug_for_recent_run(run_token: str) -> str | None:
         check=False,
     )
     if result.returncode != 0:
-        return None
+        raise ValueError(
+            "spx journal list failed while resolving branch slug: "
+            f"{result.stderr.strip()}"
+        )
     try:
         value = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return None
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"spx journal list returned invalid JSON: {exc.msg}") from exc
     if not isinstance(value, list):
-        return None
+        raise ValueError("spx journal list must return a JSON array")
     for item in value:
         if not isinstance(item, dict):
             continue
