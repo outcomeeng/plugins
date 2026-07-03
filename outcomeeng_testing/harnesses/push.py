@@ -106,6 +106,16 @@ def push_option_with_dry_run_operand_args() -> tuple[str, ...]:
     )
 
 
+def repo_option_with_dry_run_operand_args() -> tuple[str, ...]:
+    """Return push arguments where a repository option value looks like dry-run."""
+    return (
+        "--repo",
+        "-n",
+        "origin",
+        "HEAD:refs/heads/feature",
+    )
+
+
 @dataclass
 class ScriptedUpstreamProbe:
     """UpstreamProbe that returns a scripted ref (or None) on each call."""
@@ -165,6 +175,7 @@ __all__ = [
     "force_with_lease_push_args",
     "git_help_push_args",
     "push_option_with_dry_run_operand_args",
+    "repo_option_with_dry_run_operand_args",
     "sync_invocation",
     "tool_probe_invocation",
     "tracked_upstream_ref",

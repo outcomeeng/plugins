@@ -31,6 +31,15 @@ UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
 DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
 NO_DRY_RUN_PUSH_FLAG = "--no-dry-run"
 PUSH_OPTION_FLAGS: frozenset[str] = frozenset(("-o", "--push-option"))
+VALUE_TAKING_PUSH_FLAGS: frozenset[str] = frozenset(
+    (
+        "--exec",
+        "--receive-pack",
+        "--recurse-submodules",
+        "--repo",
+        *PUSH_OPTION_FLAGS,
+    )
+)
 SYNC_COMMAND: tuple[str, ...] = (
     "uv",
     "run",
@@ -106,9 +115,9 @@ def _is_dry_run(push_args: Sequence[str]) -> bool:
             continue
         if arg == NO_DRY_RUN_PUSH_FLAG:
             is_dry_run = False
-        elif arg in PUSH_OPTION_FLAGS:
+        elif arg in VALUE_TAKING_PUSH_FLAGS:
             skip_next = True
-        elif arg.startswith("--push-option="):
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS):
             continue
         elif arg.startswith("-o") and arg != "-o":
             continue
@@ -123,6 +132,14 @@ def _is_dry_run_arg(arg: str) -> bool:
     if arg.startswith("--"):
         return False
     return arg.startswith("-") and "n" in arg[1:]
+
+
+def _has_inline_value(arg: str, value_taking_flags: frozenset[str]) -> bool:
+    return any(
+        arg.startswith(f"{flag}=")
+        for flag in value_taking_flags
+        if flag.startswith("--")
+    )
 
 
 def _real_runner(argv: Sequence[str]) -> int:
