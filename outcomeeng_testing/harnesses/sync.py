@@ -37,6 +37,7 @@ TOOL_PROBE_EVENT_PREFIX = "tool_probe:"
 SCRIPTED_BASE_REF = "abc123"
 DEFAULT_TOPOLOGY_ERRORS = ("missing target",)
 
+
 @dataclass
 class RecordingRunner:
     """StepRunner that returns scripted exit codes in order of call.
