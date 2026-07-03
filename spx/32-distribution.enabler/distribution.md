@@ -4,7 +4,7 @@ PROVIDES the skill distribution pipeline that copies skills from the monorepo to
 SO THAT users who install individual plugins via GitHub
 CAN receive the same skill content as marketplace users
 
-The `outcomeeng.distribution.distribute` module reads `distribution.yml` for the mapping of downstream repos to built Claude plugins under `dist/claude/`, collects skills from each plugin, and copies them to the target repositories.
+Distribution maps downstream repositories to built Claude plugins, collects each plugin's skills, and copies those skills to the target repositories.
 
 ## Assertions
 
