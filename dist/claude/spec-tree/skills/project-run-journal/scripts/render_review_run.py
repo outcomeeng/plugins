@@ -3,18 +3,30 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import pathlib
 import re
 import subprocess
 import sys
-from typing import Any, Sequence
+from typing import Any, Protocol, Sequence, cast
 
 import journal_projection as jp
 
 REVIEW_TYPE = "review"
 RUN_NOT_FOUND = "journal run not found"
 RECENT_RUN_LIST_LIMIT = "200"
-SCOPE_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
+RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
+_HERE = pathlib.Path(__file__).resolve()
+_CHANGESET_SCOPE_PATH = (
+    _HERE.parents[2] / "scope-changeset" / "scripts" / "changeset_scope.py"
+)
+
+
+class ChangesetScopeModule(Protocol):
+    def branch_slug(
+        self, branch_name: str, state_dir: pathlib.Path | None = None
+    ) -> str: ...
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -29,9 +41,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        _validate_scope_token("run token", args.run_token)
+        _validate_run_token(args.run_token)
         if args.branch_slug is not None:
-            _validate_scope_token("branch slug", args.branch_slug)
+            _validate_branch_slug(args.branch_slug)
         result = _render_review_run(args.run_token, branch_slug=args.branch_slug)
     except OSError as exc:
         sys.stderr.write(f"failed to run spx journal: {exc}\n")
@@ -72,19 +84,42 @@ def _render_review_run(
     return _run_render_command(run_token, branch_slug=discovered_branch_slug)
 
 
-def _validate_scope_token(label: str, value: str) -> None:
-    if not SCOPE_TOKEN.fullmatch(value):
+def _load_changeset_scope() -> ChangesetScopeModule:
+    cached = sys.modules.get("changeset_scope")
+    if cached is not None:
+        return cast(ChangesetScopeModule, cached)
+    spec = importlib.util.spec_from_file_location(
+        "changeset_scope", _CHANGESET_SCOPE_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load changeset_scope from {_CHANGESET_SCOPE_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["changeset_scope"] = module
+    spec.loader.exec_module(module)
+    return cast(ChangesetScopeModule, module)
+
+
+def _validate_run_token(value: str) -> None:
+    if not RUN_TOKEN.fullmatch(value):
         raise ValueError(
-            f"{label} must contain only ASCII letters, digits, underscores, and hyphens"
+            "run token must contain only ASCII letters, digits, underscores, and hyphens"
         )
+
+
+def _validate_branch_slug(value: str) -> None:
+    if value == "":
+        raise ValueError("branch slug must not be empty")
+    changeset_scope = _load_changeset_scope()
+    if changeset_scope.branch_slug(value) != value:
+        raise ValueError("branch slug must be a canonical changeset-scope branch slug")
 
 
 def _run_render_command(
     run_token: str, *, branch_slug: str | None = None
 ) -> subprocess.CompletedProcess[str]:
-    _validate_scope_token("run token", run_token)
+    _validate_run_token(run_token)
     if branch_slug is not None:
-        _validate_scope_token("branch slug", branch_slug)
+        _validate_branch_slug(branch_slug)
     command = [
         "spx",
         "journal",

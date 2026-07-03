@@ -215,7 +215,7 @@ def test_run_token_resolves_branch_slug_from_journal_list(
         tmp_path,
         spx_stdout=json.dumps(_completed_events()),
         direct_not_found=True,
-        branch_slug="head-b5180223",
+        branch_slug="head.b5180223",
         require_list_for_branch_render=True,
     )
 
@@ -231,7 +231,7 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
         tmp_path,
         spx_stdout=json.dumps(_completed_events()),
         direct_not_found=True,
-        branch_slug="head-b5180223",
+        branch_slug="head.b5180223",
         pass_branch_slug=True,
     )
 
@@ -252,7 +252,9 @@ def test_invalid_listed_branch_slug_is_rejected_before_retry_render(
     )
 
     assert result.returncode == 1
-    assert "branch slug must contain only ASCII letters" in result.stderr
+    assert (
+        "branch slug must be a canonical changeset-scope branch slug" in result.stderr
+    )
     assert "unexpected spx arguments" not in result.stderr
 
 
@@ -302,7 +304,9 @@ def test_invalid_branch_slug_is_rejected_before_spx_invocation(
     )
 
     assert result.returncode == 1
-    assert "branch slug must contain only ASCII letters" in result.stderr
+    assert (
+        "branch slug must be a canonical changeset-scope branch slug" in result.stderr
+    )
     assert "unexpected spx arguments" not in result.stderr
 
 
