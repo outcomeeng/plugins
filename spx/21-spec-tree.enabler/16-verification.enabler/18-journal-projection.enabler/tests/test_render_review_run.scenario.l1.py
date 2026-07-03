@@ -231,12 +231,12 @@ def test_missing_current_scope_run_uses_listed_branch_slug(
         tmp_path,
         spx_stdout=json.dumps(_completed_events()),
         direct_not_found=True,
-        branch_slug="head-b5180223",
+        branch_slug="work__review-run-inspection-helper",
         list_stdout=json.dumps(
             [
                 {
                     "runToken": RUN_TOKEN,
-                    "branchSlug": "head-b5180223",
+                    "branchSlug": "work__review-run-inspection-helper",
                     "sealed": True,
                 }
             ]
