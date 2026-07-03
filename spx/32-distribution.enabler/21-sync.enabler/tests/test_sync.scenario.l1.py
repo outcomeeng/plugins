@@ -243,7 +243,7 @@ def test_active_single_flight_records_pending_and_exits_zero(
         single_flight.release()
 
 
-def test_stale_single_flight_lock_is_replaced(
+def test_invalid_single_flight_lock_is_replaced(
     tmp_path: pathlib.Path,
 ) -> None:
     state_dir = tmp_path / "outcomeeng"

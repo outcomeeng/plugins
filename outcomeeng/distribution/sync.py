@@ -271,7 +271,7 @@ def _read_lock_owner_body(raw: str) -> _LockOwner | None:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        return _lock_owner_from_legacy_pid(raw)
+        return None
     if not isinstance(data, dict):
         return None
     pid = data.get(LOCK_OWNER_PID_FIELD)
@@ -292,14 +292,6 @@ def _serialize_lock_owner(owner: _LockOwner) -> str:
         )
         + "\n"
     )
-
-
-def _lock_owner_from_legacy_pid(raw: str) -> _LockOwner | None:
-    try:
-        pid = int(raw)
-    except ValueError:
-        return None
-    return _LockOwner(pid=pid, identity="")
 
 
 def _process_identity(pid: int) -> str | None:
