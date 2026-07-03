@@ -1,7 +1,7 @@
 ---
 name: manage-pr
 description: >-
-  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /manage-github-pr.
+  ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
 allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(gh api graphql:*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(printf:*)
 ---
@@ -14,7 +14,7 @@ The pull request merged into the base branch on origin, or a terminal action tok
 
 `/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
 
-Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_READY:<head-sha>`, `MERGE_BLOCKED:<reason>`, `AWAIT_APPROVAL:<reason>`, and `POST_MERGE_VERIFY` never store PR state and never authorize a later wait, merge, or closeout without a fresh `/manage-pr` inspection pass. After compaction, foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior action-token authority and restart this workflow from Step 0 for the PR pointer.
+Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_READY:<head-sha>`, `MERGE_BLOCKED:<reason>`, `AWAIT_APPROVAL:<reason>`, and `POST_MERGE_VERIFY` never store PR state and never authorize a later wait, merge, or closeout without a fresh `/manage-pr` inspection pass. After compaction or when the foundation is absent, restart from Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior action-token authority and return to Step 1 for the PR pointer.
 
 GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why `/manage-pr` is being re-entered.
 
