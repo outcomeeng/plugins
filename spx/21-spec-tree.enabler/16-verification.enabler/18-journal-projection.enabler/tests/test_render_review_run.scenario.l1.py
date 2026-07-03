@@ -9,8 +9,6 @@ import stat
 import subprocess
 from typing import Any
 
-import pytest
-
 from outcomeeng_testing.harnesses.journal_projection import (
     RENDER_REVIEW_RUN_SCRIPT,
     load_journal_projection_module,
@@ -29,7 +27,7 @@ def _run_identity() -> Any:
         target="changeset",
         scope_hash="abc123def456",
         branch_name="work/review-run-inspection-helper",
-        branch_slug="work__review-run-inspection-helper",
+        branch_slug="work-review-run-inspection-helper-ddab1169",
         head_sha="1" * 40,
         base_ref="origin/main",
         base_sha="2" * 40,
@@ -47,7 +45,11 @@ def _run_identity() -> Any:
     )
 
 
-def _completed_events(*, findings: tuple[Any, ...] = ()) -> list[dict]:
+def _completed_events(
+    *,
+    findings: tuple[Any, ...] = (),
+    include_review_summary: bool = True,
+) -> list[dict]:
     run = _run_identity()
     events = [
         jp.scope_entered_event(run, now=NOW),
@@ -58,12 +60,15 @@ def _completed_events(*, findings: tuple[Any, ...] = ()) -> list[dict]:
         events.append(jp.finding_reported_event(finding, now=NOW))
     status = jp.terminal_status(jp.compute_overall(events))
     completed = jp.run_completed_event(run, status=status, now=NOW)
-    data = completed["data"]
-    data["review"] = {
-        "blocking": sum(1 for item in findings if item.severity == jp.Severity.REJECT),
-        "debt": sum(1 for item in findings if item.severity == jp.Severity.WARNING),
-        "overall": str(jp.compute_overall(events)),
-    }
+    if include_review_summary:
+        data = completed["data"]
+        data["review"] = {
+            "blocking": sum(
+                1 for item in findings if item.severity == jp.Severity.REJECT
+            ),
+            "debt": sum(1 for item in findings if item.severity == jp.Severity.WARNING),
+            "overall": str(jp.compute_overall(events)),
+        }
     events.append(completed)
     return events
 
@@ -205,6 +210,45 @@ def test_run_with_findings_renders_shared_projection(tmp_path: pathlib.Path) -> 
     assert "Required: close the gap" in result.stdout
 
 
+def test_run_without_review_summary_counts_finding_events(
+    tmp_path: pathlib.Path,
+) -> None:
+    blocking = jp.Finding(
+        file="a.py",
+        line=12,
+        rule="spx/example.md:AUDIT:1",
+        severity=jp.Severity.REJECT,
+        message="unsafe change",
+        concern="security",
+        action="close the gap",
+    )
+    debt = jp.Finding(
+        file="b.py",
+        line=18,
+        rule="spx/example.md:AUDIT:2",
+        severity=jp.Severity.WARNING,
+        message="coverage gap",
+        concern="evidence",
+        action="cover fallback counts",
+    )
+
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(
+            _completed_events(
+                findings=(blocking, debt),
+                include_review_summary=False,
+            )
+        ),
+    )
+
+    assert result.returncode == 0
+    assert "Status: rejected" in result.stdout
+    assert "Findings: 1 blocking, 1 debt" in result.stdout
+    assert "a.py:12" in result.stdout
+    assert "b.py:18" in result.stdout
+
+
 def test_direct_render_failure_is_reported_without_branch_slug_retry(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -226,7 +270,23 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
         tmp_path,
         spx_stdout=json.dumps(_completed_events()),
         direct_not_found=True,
-        branch_slug="head.b5180223",
+        branch_slug="head-b5180223",
+        pass_branch_slug=True,
+    )
+
+    assert result.returncode == 0
+    assert f"Review run: {RUN_TOKEN}" in result.stdout
+    assert "Status: approved" in result.stdout
+
+
+def test_explicit_branch_slug_accepts_state_store_slug(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        direct_not_found=True,
+        branch_slug="work-review-run-inspection-helper-ddab1169",
         pass_branch_slug=True,
     )
 
@@ -242,12 +302,36 @@ def test_missing_current_scope_run_uses_listed_branch_slug(
         tmp_path,
         spx_stdout=json.dumps(_completed_events()),
         direct_not_found=True,
-        branch_slug="work__review-run-inspection-helper",
+        branch_slug="work-review-run-inspection-helper-ddab1169",
         list_stdout=json.dumps(
             [
                 {
                     "runToken": RUN_TOKEN,
-                    "branchSlug": "work__review-run-inspection-helper",
+                    "branchSlug": "work-review-run-inspection-helper-ddab1169",
+                    "sealed": True,
+                }
+            ]
+        ),
+    )
+
+    assert result.returncode == 0
+    assert f"Review run: {RUN_TOKEN}" in result.stdout
+    assert "Status: approved" in result.stdout
+
+
+def test_missing_current_scope_run_uses_listed_state_store_branch_slug(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        direct_not_found=True,
+        branch_slug="task-test-audit-skill-governance-6e624d36",
+        list_stdout=json.dumps(
+            [
+                {
+                    "runToken": RUN_TOKEN,
+                    "branchSlug": "task-test-audit-skill-governance-6e624d36",
                     "sealed": True,
                 }
             ]
@@ -284,7 +368,7 @@ def test_missing_current_scope_run_with_multiple_list_matches_reports_original_m
             [
                 {
                     "runToken": RUN_TOKEN,
-                    "branchSlug": "work__review-run-inspection-helper",
+                    "branchSlug": "work-review-run-inspection-helper-ddab1169",
                     "sealed": True,
                 },
                 {
@@ -348,62 +432,6 @@ def test_invalid_run_token_is_rejected_before_spx_invocation(
     assert result.returncode == 1
     assert "run token must contain only ASCII letters" in result.stderr
     assert "unexpected spx arguments" not in result.stderr
-
-
-def test_invalid_branch_slug_is_rejected_before_spx_invocation(
-    tmp_path: pathlib.Path,
-) -> None:
-    _write_spx(tmp_path)
-    env = os.environ.copy()
-    env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
-    env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
-
-    result = subprocess.run(  # noqa: S603,S607
-        [
-            "python3",
-            str(RENDER_REVIEW_RUN_SCRIPT),
-            RUN_TOKEN,
-            "--branch-slug",
-            "bad/slug",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
-    )
-
-    assert result.returncode == 1
-    assert (
-        "branch slug must be a canonical changeset-scope branch slug" in result.stderr
-    )
-    assert "unexpected spx arguments" not in result.stderr
-
-
-def test_unavailable_changeset_scope_dependency_exits_cleanly(
-    tmp_path: pathlib.Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    original_path = render_review_run._CHANGESET_SCOPE_PATH
-    cached_module = render_review_run.sys.modules.pop("changeset_scope", None)
-    render_review_run._CHANGESET_SCOPE_PATH = tmp_path / "missing_changeset_scope.py"
-    try:
-        returncode = render_review_run.main(
-            [
-                RUN_TOKEN,
-                "--branch-slug",
-                "work__review-run-inspection-helper",
-            ]
-        )
-    finally:
-        render_review_run._CHANGESET_SCOPE_PATH = original_path
-        if cached_module is not None:
-            render_review_run.sys.modules["changeset_scope"] = cached_module
-
-    captured = capsys.readouterr()
-    assert returncode == 1
-    assert "failed to run spx journal:" in captured.err
-    assert "missing_changeset_scope.py" in captured.err
-    assert "Traceback" not in captured.err
 
 
 def test_incomplete_run_is_rejected(tmp_path: pathlib.Path) -> None:

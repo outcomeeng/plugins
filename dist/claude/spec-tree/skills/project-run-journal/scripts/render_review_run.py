@@ -4,31 +4,18 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import importlib.util
 import json
-import pathlib
 import re
 import subprocess
 import sys
-from typing import Any, Protocol, Sequence, cast
+from typing import Any, Sequence
 
 import journal_projection as jp
 
 REVIEW_TYPE = "review"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
-BRANCH_SLUG = re.compile(r"^[A-Za-z0-9._-]+$")
 RUN_NOT_FOUND_MARKER = "journal run not found"
 RECENT_RUN_LIST_LIMIT = "200"
-_HERE = pathlib.Path(__file__).resolve()
-_CHANGESET_SCOPE_PATH = (
-    _HERE.parents[2] / "scope-changeset" / "scripts" / "changeset_scope.py"
-)
-
-
-class ChangesetScopeModule(Protocol):
-    def branch_slug(
-        self, branch_name: str, state_dir: pathlib.Path | None = None
-    ) -> str: ...
 
 
 @dataclasses.dataclass(frozen=True)
@@ -101,21 +88,6 @@ def _render_review_run(
     return _run_render_command_for_branch(run_token, branch_result.branch_slug)
 
 
-def _load_changeset_scope() -> ChangesetScopeModule:
-    cached = sys.modules.get("changeset_scope")
-    if cached is not None:
-        return cast(ChangesetScopeModule, cached)
-    spec = importlib.util.spec_from_file_location(
-        "changeset_scope", _CHANGESET_SCOPE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load changeset_scope from {_CHANGESET_SCOPE_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["changeset_scope"] = module
-    spec.loader.exec_module(module)
-    return cast(ChangesetScopeModule, module)
-
-
 def _run_token(value: str) -> RunToken:
     if not RUN_TOKEN.fullmatch(value):
         raise ValueError(
@@ -125,26 +97,13 @@ def _run_token(value: str) -> RunToken:
 
 
 def _branch_slug(value: str) -> BranchSlug:
-    if not _valid_branch_slug(value):
-        raise ValueError("branch slug must be a canonical changeset-scope branch slug")
     return BranchSlug(value)
 
 
 def _listed_branch_slug(value: object) -> BranchSlug | None:
-    if not isinstance(value, str) or not _valid_branch_slug(value):
+    if not isinstance(value, str):
         return None
     return BranchSlug(value)
-
-
-def _valid_branch_slug(value: str) -> bool:
-    if value in {"", ".", ".."}:
-        return False
-    if not BRANCH_SLUG.fullmatch(value):
-        return False
-    changeset_scope = _load_changeset_scope()
-    if changeset_scope.branch_slug(value) == value:
-        return True
-    return "__" not in value
 
 
 def _run_render_command(
