@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from typing import Any, Sequence
@@ -13,6 +14,7 @@ import journal_projection as jp
 REVIEW_TYPE = "review"
 RUN_NOT_FOUND = "journal run not found"
 RECENT_RUN_LIST_LIMIT = "200"
+SCOPE_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -27,9 +29,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        _validate_scope_token("run token", args.run_token)
+        if args.branch_slug is not None:
+            _validate_scope_token("branch slug", args.branch_slug)
         result = _render_review_run(args.run_token, branch_slug=args.branch_slug)
     except OSError as exc:
         sys.stderr.write(f"failed to run spx journal: {exc}\n")
+        return 1
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
         return 1
     if result.returncode != 0:
         sys.stderr.write(result.stderr)
@@ -62,6 +70,13 @@ def _render_review_run(
     if discovered_branch_slug is None:
         return result
     return _run_render_command(run_token, branch_slug=discovered_branch_slug)
+
+
+def _validate_scope_token(label: str, value: str) -> None:
+    if not SCOPE_TOKEN.fullmatch(value):
+        raise ValueError(
+            f"{label} must contain only ASCII letters, digits, underscores, and hyphens"
+        )
 
 
 def _run_render_command(

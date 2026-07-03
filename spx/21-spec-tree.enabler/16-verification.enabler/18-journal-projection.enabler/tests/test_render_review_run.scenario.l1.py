@@ -230,6 +230,56 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
     assert "Status: approved" in result.stdout
 
 
+def test_invalid_run_token_is_rejected_before_spx_invocation(
+    tmp_path: pathlib.Path,
+) -> None:
+    _write_spx(tmp_path)
+    env = os.environ.copy()
+    env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
+    env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
+    env["SPX_LIST_MARKER"] = str(tmp_path / "listed-branch-slug")
+
+    result = subprocess.run(  # noqa: S603,S607
+        ["python3", str(RENDER_REVIEW_RUN_SCRIPT), "../bad"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 1
+    assert "run token must contain only ASCII letters" in result.stderr
+    assert "unexpected spx arguments" not in result.stderr
+
+
+def test_invalid_branch_slug_is_rejected_before_spx_invocation(
+    tmp_path: pathlib.Path,
+) -> None:
+    _write_spx(tmp_path)
+    env = os.environ.copy()
+    env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
+    env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
+    env["SPX_LIST_MARKER"] = str(tmp_path / "listed-branch-slug")
+
+    result = subprocess.run(  # noqa: S603,S607
+        [
+            "python3",
+            str(RENDER_REVIEW_RUN_SCRIPT),
+            RUN_TOKEN,
+            "--branch-slug",
+            "bad/slug",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 1
+    assert "branch slug must contain only ASCII letters" in result.stderr
+    assert "unexpected spx arguments" not in result.stderr
+
+
 def test_incomplete_run_is_rejected(tmp_path: pathlib.Path) -> None:
     events = [jp.scope_entered_event(_run_identity(), now=NOW)]
 
