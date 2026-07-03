@@ -52,7 +52,8 @@ CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
 READ_ONLY_SANDBOX_MODE: Final = "read-only"
 WEB_SEARCH_DISABLED: Final = "disabled"
-READ_ONLY_TOOLS: Final = frozenset({"Bash", "Glob", "Grep", "LS", "Read", "Skill"})
+READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "LS", "Read"})
+SCRIPT_CAPABLE_TOOLS: Final = frozenset({"Bash", "Skill"})
 WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch", "web_search"})
 WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "MultiEdit", "NotebookEdit", "Write"})
 
@@ -614,6 +615,7 @@ __all__ = [
     "PERMISSION_MODE_MAPPINGS",
     "READ_ONLY_SANDBOX_MODE",
     "READ_ONLY_TOOLS",
+    "SCRIPT_CAPABLE_TOOLS",
     "UNMAPPED_PERMISSION_MODE_EXAMPLE",
     "WEB_CAPABLE_TOOLS",
     "WEB_SEARCH_DISABLED",

@@ -16,6 +16,7 @@ from outcomeeng.distribution.agents import (
     PERMISSION_MODE_MAPPINGS,
     READ_ONLY_SANDBOX_MODE,
     READ_ONLY_TOOLS,
+    SCRIPT_CAPABLE_TOOLS,
     UNMAPPED_PERMISSION_MODE_EXAMPLE,
     WEB_CAPABLE_TOOLS,
     WEB_SEARCH_DISABLED,
@@ -149,6 +150,10 @@ def test_read_only_web_tool_allowlist_infers_read_only_sandbox() -> None:
     assert infer_sandbox_mode(read_only_web_tools, None) == READ_ONLY_SANDBOX_MODE
 
 
+def test_web_capable_only_tool_allowlist_infers_read_only_sandbox() -> None:
+    assert infer_sandbox_mode(tuple(WEB_CAPABLE_TOOLS), None) == READ_ONLY_SANDBOX_MODE
+
+
 def test_all_tools_sentinel_leaves_sandbox_to_runtime_default() -> None:
     assert infer_sandbox_mode((ALL_TOOLS_SENTINEL,), None) is None
 
@@ -163,6 +168,10 @@ def test_missing_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
 
 def test_write_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
     assert infer_sandbox_mode(tuple(WRITE_CAPABLE_TOOLS), None) is None
+
+
+def test_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> None:
+    assert infer_sandbox_mode(tuple(SCRIPT_CAPABLE_TOOLS), None) is None
 
 
 def test_explicit_unmapped_permission_mode_blocks_read_only_inference() -> None:

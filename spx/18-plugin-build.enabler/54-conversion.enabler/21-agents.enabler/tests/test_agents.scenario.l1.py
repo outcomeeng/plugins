@@ -44,7 +44,7 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
     assert parsed["description"] == AGENT_DESCRIPTION
     assert parsed["model"] == "gpt-5.4-mini"
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
-    assert parsed["sandbox_mode"] == READ_ONLY_SANDBOX_MODE
+    assert "sandbox_mode" not in parsed
     assert parsed["shell_environment_policy"]["set"] == {
         CODEX_AGENT_ENV_VAR: agent_environment_marker(agent)
     }
