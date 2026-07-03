@@ -34,8 +34,6 @@ from outcomeeng.merging_policy import (
     CheckRunStatus,
     DeliveryAction,
     DeliveryReadiness,
-    MergeAction,
-    ProductionReadiness,
     RequiredCheckClassification,
     RequiredCheckKind,
     ReviewCheckAction,
@@ -43,7 +41,6 @@ from outcomeeng.merging_policy import (
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
-    decide_production_readiness,
     decide_release_action,
     decide_review_check,
 )
@@ -119,7 +116,8 @@ def test_successful_review_check_maps_to_surface_inspection() -> None:
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert decision.required_action is ReviewCheckAction.INSPECT_REVIEW_SURFACES
@@ -127,7 +125,8 @@ def test_successful_review_check_maps_to_surface_inspection() -> None:
 
 def test_absent_review_check_maps_to_wait_for_review() -> None:
     decision = decide_review_check(
-        {FIELD_KIND: RequiredCheckKind.CHECK_RUN, FIELD_PRESENT: False}
+        {FIELD_KIND: RequiredCheckKind.CHECK_RUN, FIELD_PRESENT: False},
+        current_head_review_present=False,
     )
 
     assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
@@ -143,7 +142,8 @@ def test_non_terminal_review_check_maps_to_wait_for_review(
             FIELD_PRESENT: True,
             FIELD_STATUS: status,
             FIELD_CONCLUSION: None,
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
@@ -162,7 +162,8 @@ def test_failed_review_check_maps_to_merge_blocked(
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: conclusion,
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert (
@@ -178,7 +179,8 @@ def test_non_design_skipped_review_check_maps_to_merge_blocked() -> None:
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
             FIELD_STATE_CATEGORY: ReviewCheckStateCategory.SKIPPED_NON_EXCEPTION,
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert (
@@ -196,10 +198,28 @@ def test_self_modifying_skipped_review_check_maps_to_mention_review() -> None:
             FIELD_STATE_CATEGORY: (
                 ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
             ),
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert decision.required_action is ReviewCheckAction.MENTION_REVIEW_NEEDED
+
+
+def test_self_modifying_skip_with_current_review_maps_to_surface_inspection() -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
+            FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
+            FIELD_STATE_CATEGORY: (
+                ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
+            ),
+        },
+        current_head_review_present=True,
+    )
+
+    assert decision.required_action is ReviewCheckAction.INSPECT_REVIEW_SURFACES
 
 
 def test_review_check_missing_state_category_maps_to_wait_for_review() -> None:
@@ -207,7 +227,8 @@ def test_review_check_missing_state_category_maps_to_wait_for_review() -> None:
         {
             FIELD_KIND: RequiredCheckKind.CHECK_RUN,
             FIELD_STATE_CATEGORY: ReviewCheckStateCategory.MISSING,
-        }
+        },
+        current_head_review_present=False,
     )
 
     assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
@@ -259,40 +280,6 @@ def test_status_context_terminal_non_success_maps_to_terminal_not_success(
 
     assert decision.terminal_green is False
     assert decision.classification is RequiredCheckClassification.TERMINAL_NOT_SUCCESS
-
-
-@pytest.mark.parametrize(
-    ("recognition_mechanism_declared", "production_relevant", "operator_approved"),
-    (
-        (False, None, False),
-        (True, False, False),
-        (True, True, True),
-    ),
-)
-def test_production_readiness_permissive_or_approved_inputs_map_to_merge(
-    recognition_mechanism_declared: bool,
-    production_relevant: bool | None,
-    operator_approved: bool,
-) -> None:
-    decision = decide_production_readiness(
-        recognition_mechanism_declared=recognition_mechanism_declared,
-        production_relevant=production_relevant,
-        operator_approved=operator_approved,
-    )
-
-    assert decision.production_readiness is ProductionReadiness.HOLD
-    assert decision.merge_action is MergeAction.MERGE
-
-
-def test_production_relevant_unapproved_change_maps_to_await_approval() -> None:
-    decision = decide_production_readiness(
-        recognition_mechanism_declared=True,
-        production_relevant=True,
-        operator_approved=False,
-    )
-
-    assert decision.production_readiness is ProductionReadiness.WITHHOLD
-    assert decision.merge_action is MergeAction.AWAIT_APPROVAL
 
 
 def test_absent_deploy_declaration_maps_to_skip_without_blocking_later_phases() -> None:

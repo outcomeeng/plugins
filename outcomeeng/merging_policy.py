@@ -67,20 +67,6 @@ class RequiredCheckClassification(StrEnum):
     TERMINAL_NOT_SUCCESS = "terminal-not-success"
 
 
-class ProductionReadiness(StrEnum):
-    """Production-readiness gate result."""
-
-    HOLD = "HOLD"
-    WITHHOLD = "WITHHOLD"
-
-
-class MergeAction(StrEnum):
-    """Action allowed by production readiness."""
-
-    AWAIT_APPROVAL = "AWAIT_APPROVAL"
-    MERGE = "MERGE"
-
-
 class DeliveryReadiness(StrEnum):
     """Delivery-phase readiness gate result."""
 
@@ -160,14 +146,6 @@ class RequiredCheckDecision:
 
 
 @dataclass(frozen=True)
-class ProductionDecision:
-    """Decision for the production-readiness gate."""
-
-    production_readiness: ProductionReadiness
-    merge_action: MergeAction
-
-
-@dataclass(frozen=True)
 class AuditorVerdictDecision:
     """Decision for auditor-verdict handling."""
 
@@ -231,28 +209,6 @@ def classify_required_check(
     return _classify_check_run(
         status=check.get(FIELD_STATUS),
         conclusion=check.get(FIELD_CONCLUSION),
-    )
-
-
-def decide_production_readiness(
-    *,
-    recognition_mechanism_declared: bool,
-    production_relevant: bool | None,
-    operator_approved: bool,
-) -> ProductionDecision:
-    """Decide whether production readiness permits merge execution."""
-    if (
-        not recognition_mechanism_declared
-        or not production_relevant
-        or operator_approved
-    ):
-        return ProductionDecision(
-            production_readiness=ProductionReadiness.HOLD,
-            merge_action=MergeAction.MERGE,
-        )
-    return ProductionDecision(
-        production_readiness=ProductionReadiness.WITHHOLD,
-        merge_action=MergeAction.AWAIT_APPROVAL,
     )
 
 
@@ -324,9 +280,16 @@ def decide_auditor_verdict(verdict: Mapping[str, Any]) -> AuditorVerdictDecision
     )
 
 
-def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
+def decide_review_check(
+    check: Mapping[str, object],
+    *,
+    current_head_review_present: bool,
+) -> ReviewCheckDecision:
     """Decide how merge readiness handles the current-head review-kind check."""
-    if state_category_decision := _decide_review_check_state_category(check):
+    if state_category_decision := _decide_review_check_state_category(
+        check,
+        current_head_review_present=current_head_review_present,
+    ):
         return state_category_decision
     required_check = classify_required_check(check)
     if required_check.classification in {
@@ -353,6 +316,8 @@ def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
 
 def _decide_review_check_state_category(
     check: Mapping[str, object],
+    *,
+    current_head_review_present: bool,
 ) -> ReviewCheckDecision | None:
     state_category = check.get(FIELD_STATE_CATEGORY)
     if state_category in {
@@ -365,6 +330,10 @@ def _decide_review_check_state_category(
             required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
         )
     if state_category == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW:
+        if current_head_review_present:
+            return ReviewCheckDecision(
+                required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
+            )
         return ReviewCheckDecision(
             required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
         )

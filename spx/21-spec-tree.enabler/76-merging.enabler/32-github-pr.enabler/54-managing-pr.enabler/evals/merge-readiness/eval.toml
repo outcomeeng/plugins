@@ -17,3 +17,9 @@ smoke_cases = [
 ]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "dist/claude/spec-tree/skills/manage-pr/SKILL.md"
+section = "merge_readiness_decision_table"
+template = "prompt.template.md"

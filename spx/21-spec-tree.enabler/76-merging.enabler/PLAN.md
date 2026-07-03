@@ -75,10 +75,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Replace `POST_MERGE_VERIFY` with phase progression. A merged PR with a declared release continues to `RELEASE`; it does not exit at merge.
    - Keep `/open-pr` focused on publishing once `VERIFICATION_READINESS` holds; keep `/manage-pr` focused on current-head integration plus later declared phases.
    - Update direct-push to use the same phase sequence, with its transport-specific predicates bound locally.
-   - Replace the current production-readiness implementation and tests together:
-     - `outcomeeng/merging_policy.py` production-readiness helpers;
-     - `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py` functions `test_production_readiness_permissive_or_approved_inputs_map_to_merge` and `test_production_relevant_unapproved_change_maps_to_await_approval`.
-   - Keep the existing production-readiness tests until this transport PR because removing them in the decision PR reduces coverage for the still-installed `merging-standards` and `outcomeeng/merging_policy.py` behavior before the replacement implementation exists.
+   - Remove the retired production-readiness implementation and tests once the transport flow and shared methodology use `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
    - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
 
 4. **Repo-local release PR: marketplace refresh as `RELEASE`**

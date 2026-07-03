@@ -29,7 +29,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 - Route every assertion through all five stages. Do not skip ahead.
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the shape of the assertion, never from the section a rule appears in. A MUST/NEVER rule under a `## Compliance` heading does not imply the `compliance` assertion type.
-- This skill is the single authority for selecting an assertion's verification type and assertion type. A decision-record author routes each rule through it to record the assertion type its `### Testing` rule carries; a test author routes each spec assertion through it to select the assertion type. No agent hand-picks either.
+- This skill is the single authority for selecting an assertion's verification type and assertion type. A decision-record author routes each rule through it to record the assertion type its `### Testing` rule carries; a test author routes each spec assertion through it to select the assertion type. Claude never hand-picks either.
 
 ## Why tests exist
 

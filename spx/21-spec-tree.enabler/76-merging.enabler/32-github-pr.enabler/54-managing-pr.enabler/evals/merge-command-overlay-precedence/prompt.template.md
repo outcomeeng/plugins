@@ -1,5 +1,5 @@
 <!-- Prompt template for the merge-command-overlay-precedence eval.
-     Generated from dist/claude/spec-tree/skills/manage-pr/SKILL.md section merge_command_selection.
+     Generated from {producer_path} section {producer_section_name}.
      The harness substitutes case input JSON before sending the prompt. -->
 
 Use the producer section below as the authority for `/manage-pr` merge-command selection after `MERGE_READINESS` holds. The case input gives the overlay merge-command declaration available to the producer.
@@ -7,15 +7,7 @@ Use the producer section below as the authority for `/manage-pr` merge-command s
 Producer section:
 
 ```text
-<step name="merge_command_selection">
-
-Select the merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`:
-
-- Use the overlay's declared merge command when one exists.
-- Use the universal default from /merging-standards `<merge_cleanup>` when the overlay is silent: selected merge flag `--rebase`, explicit delete-branch flag `--delete-branch=false`, and worktree-safe manual branch deletion.
-- Never select merge commit (`--merge`) or squash (`--squash`) from the gate alone; those flags require an overlay declaration.
-
-</step>
+{producer_section}
 ```
 
 Case input:

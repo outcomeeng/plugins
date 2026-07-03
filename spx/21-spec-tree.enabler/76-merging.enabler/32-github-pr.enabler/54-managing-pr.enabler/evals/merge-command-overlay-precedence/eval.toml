@@ -13,3 +13,9 @@ owned_paths = [
 smoke_cases = ["overlay-silent-uses-rebase-default", "overlay-declares-merge-commit-with-rationale"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "dist/claude/spec-tree/skills/manage-pr/SKILL.md"
+section = "merge_command_selection"
+template = "prompt.template.md"
