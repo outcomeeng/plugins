@@ -180,6 +180,15 @@ class DualManifestCase:
     run: BumpRun
 
 
+@dataclass(frozen=True)
+class SingleManifestCase:
+    """Harness case for a changed plugin owning one Claude manifest."""
+
+    plugin: str
+    path: str
+    run: BumpRun
+
+
 def base_ref() -> str:
     return "origin/main"
 
@@ -229,6 +238,29 @@ def dual_manifest_case(
         codex_path=codex_path,
         run=run,
     )
+
+
+def single_manifest_case(
+    plugin: str,
+    *,
+    version: str,
+    base_version: str | None = None,
+) -> SingleManifestCase:
+    base = base_version if base_version is not None else version
+    path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, version)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
+        content_probe=ScriptedContentProbe(
+            content={(base_ref(), path): manifest_text(plugin, base)},
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={plugin: (ManifestRecord(path=path, content=content),)},
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+    return SingleManifestCase(plugin=plugin, path=path, run=run)
 
 
 CHANGE_DETECT_PLUGIN = "demo"
@@ -327,10 +359,12 @@ __all__ = [
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
+    "SingleManifestCase",
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
     "build_repo_with_untracked_new_skill",
+    "single_manifest_case",
 ]
 
 

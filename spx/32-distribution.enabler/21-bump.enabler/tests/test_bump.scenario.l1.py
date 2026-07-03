@@ -49,6 +49,7 @@ from outcomeeng_testing.harnesses.bump import (
     base_ref,
     build_repo_with_untracked_new_skill,
     dual_manifest_case,
+    single_manifest_case,
 )
 
 
@@ -405,6 +406,19 @@ def test_check_compares_copied_manifest_to_base_source_path(
     assert manifest_writer.writes == []
     assert captured.err == ""
     assert content_probe.queries == [(base_ref(), src_path), (base_ref(), base_path)]
+
+
+def test_check_fails_when_changed_plugin_is_not_yet_bumped(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    case = single_manifest_case("foo", version="0.4.1")
+
+    exit_code = case.run.run(mode=Mode.CHECK)
+
+    captured = capsys.readouterr()
+    assert exit_code != 0
+    assert case.run.manifest_writer.writes == []
+    assert case.plugin in captured.err
 
 
 def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
