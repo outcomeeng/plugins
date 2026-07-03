@@ -10,6 +10,7 @@ from typing import Protocol, cast
 from outcomeeng.test_evidence import (
     AuditCase,
     AuditStatus,
+    COUPLING_TAXONOMY_CATEGORIES,
     CouplingEvidence,
     FindingCategory,
     LiteralOrigin,
@@ -374,6 +375,15 @@ def rust_match_declarations_are_detected() -> bool:
 
 def coupling_taxonomy_has_distinct_failure_modes() -> bool:
     return coupling_taxonomy_category_count() >= MIN_COUPLING_TAXONOMY_CATEGORIES
+
+
+def coupling_taxonomy_category_is_distinct_failure_mode(
+    category: CouplingEvidence,
+) -> bool:
+    return (
+        category in COUPLING_TAXONOMY_CATEGORIES
+        and coupling_taxonomy_has_distinct_failure_modes()
+    )
 
 
 def _declarations_for_fixture(name: str) -> list[Declaration]:
