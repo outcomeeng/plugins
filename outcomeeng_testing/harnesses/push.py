@@ -116,6 +116,15 @@ def repo_option_with_dry_run_operand_args() -> tuple[str, ...]:
     )
 
 
+def separator_repository_named_like_dry_run_args() -> tuple[str, ...]:
+    """Return push args where a post-separator repository looks like dry-run."""
+    return (
+        "--",
+        "-n",
+        "HEAD:refs/heads/feature",
+    )
+
+
 @dataclass
 class ScriptedUpstreamProbe:
     """UpstreamProbe that returns a scripted ref (or None) on each call."""
@@ -176,6 +185,7 @@ __all__ = [
     "git_help_push_args",
     "push_option_with_dry_run_operand_args",
     "repo_option_with_dry_run_operand_args",
+    "separator_repository_named_like_dry_run_args",
     "sync_invocation",
     "tool_probe_invocation",
     "tracked_upstream_ref",

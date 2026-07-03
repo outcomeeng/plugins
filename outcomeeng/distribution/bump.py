@@ -97,7 +97,7 @@ class ChangedPath:
     old_path: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Version:
     """A `MAJOR.MINOR.PATCH` semver triple with segment-specific bumps."""
 
@@ -294,9 +294,12 @@ def bump(
             )
             if base_ref_content is not None:
                 base_ref_version = _version_from_manifest_text(base_ref_content)
-                if working_tree_version != base_ref_version:
+                if working_tree_version > base_ref_version:
                     plugin_already_bumped = True
-            plans.append((plugin, record, working_tree_version, resolved))
+                version_to_bump = max(working_tree_version, base_ref_version)
+            else:
+                version_to_bump = working_tree_version
+            plans.append((plugin, record, version_to_bump, resolved))
         if plugin_already_bumped:
             already_bumped_plugins.append(plugin)
         else:
@@ -307,7 +310,7 @@ def bump(
             for plugin in unbumped_plugins:
                 print(
                     f"Plugin {plugin} needs a version bump but its "
-                    f"working-tree version still equals its {base_ref} version",
+                    f"working-tree version is not ahead of its {base_ref} version",
                     file=sys.stderr,
                 )
             return 1
@@ -538,7 +541,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Exit non-zero if any changed plugin's working-tree version "
-            "still equals its base_ref version. Useful in CI."
+            "is not ahead of its base_ref version. Useful in CI."
         ),
     )
     return parser

@@ -113,6 +113,8 @@ def _is_dry_run(push_args: Sequence[str]) -> bool:
         if skip_next:
             skip_next = False
             continue
+        if arg == "--":
+            break
         if arg == NO_DRY_RUN_PUSH_FLAG:
             is_dry_run = False
         elif arg in VALUE_TAKING_PUSH_FLAGS:

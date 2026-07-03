@@ -16,17 +16,23 @@ from outcomeeng_testing.harnesses.audit_tests import (
     partial_coupling_is_rejected,
     prose_coupling_is_rejected,
     python_binding_declarations_are_detected,
+    python_exception_declarations_are_detected,
     python_pattern_declarations_are_detected,
     python_starred_assignment_declarations_are_detected,
     rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
+    rust_loop_declarations_are_detected,
+    rust_match_declarations_are_detected,
     sourced_literals_pass,
     string_literal_is_rejected,
     test_owned_declaration_is_rejected,
     testability_passes_to_coupling,
     typescript_loop_declarations_are_detected,
     typescript_multiline_declarations_are_detected,
+    typescript_regex_literal_declarations_are_preserved,
     typescript_semicolonless_declarations_are_split,
+    typescript_catch_declarations_are_detected,
+    typescript_template_literal_declarations_are_ignored,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
 )
@@ -124,6 +130,10 @@ def test_detects_python_starred_assignment_declarations() -> None:
     assert python_starred_assignment_declarations_are_detected()
 
 
+def test_detects_python_exception_declarations() -> None:
+    assert python_exception_declarations_are_detected()
+
+
 def test_ignores_block_comment_declarations() -> None:
     assert block_comment_declarations_are_ignored()
 
@@ -144,9 +154,29 @@ def test_splits_typescript_semicolonless_declarations() -> None:
     assert typescript_semicolonless_declarations_are_split()
 
 
+def test_ignores_declarations_inside_typescript_template_literals() -> None:
+    assert typescript_template_literal_declarations_are_ignored()
+
+
+def test_preserves_typescript_regex_literal_declarations() -> None:
+    assert typescript_regex_literal_declarations_are_preserved()
+
+
+def test_detects_typescript_catch_declarations() -> None:
+    assert typescript_catch_declarations_are_detected()
+
+
 def test_detects_rust_destructuring_declarations() -> None:
     assert rust_destructuring_declarations_are_detected()
 
 
 def test_detects_rust_conditional_declarations() -> None:
     assert rust_conditional_declarations_are_detected()
+
+
+def test_detects_rust_loop_declarations() -> None:
+    assert rust_loop_declarations_are_detected()
+
+
+def test_detects_rust_match_declarations() -> None:
+    assert rust_match_declarations_are_detected()

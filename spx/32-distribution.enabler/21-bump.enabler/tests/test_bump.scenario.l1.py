@@ -281,6 +281,67 @@ def test_check_passes_when_every_changed_plugin_is_already_bumped(
     assert captured.err == ""
 
 
+def test_write_bumps_from_base_when_working_tree_version_is_below_base() -> None:
+    plugin = "foo"
+    path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    working_tree_content = manifest_text(plugin, "0.72.4")
+    base_content = manifest_text(plugin, "0.73.0")
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(content={(BASE_REF, path): base_content})
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=path, content=working_tree_content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        Segment.PATCH,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    assert version_of(written[path]) == "0.73.1"
+
+
+def test_check_fails_when_working_tree_version_is_below_base(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin = "foo"
+    path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    working_tree_content = manifest_text(plugin, "0.72.4")
+    base_content = manifest_text(plugin, "0.73.0")
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(content={(BASE_REF, path): base_content})
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=path, content=working_tree_content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        mode=Mode.CHECK,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert manifest_writer.writes == []
+    assert plugin in captured.err
+
+
 def test_check_compares_added_manifest_to_base_source_path(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

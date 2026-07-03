@@ -37,12 +37,20 @@ _TYPESCRIPT_FOR_DECLARATION = re.compile(
     r"^\s*for\s+(?:await\s+)?\(\s*(?P<kind>const|let|var)\s+(?P<body>.+)",
     re.DOTALL,
 )
+_TYPESCRIPT_CATCH_DECLARATION = re.compile(
+    r"^\s*}?\s*catch\s*\(\s*(?P<body>[^)]*)\)",
+    re.DOTALL,
+)
 _RUST_DECLARATION = re.compile(
     r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<body>.+)",
     re.DOTALL,
 )
 _RUST_CONDITIONAL_LET_DECLARATION = re.compile(
     r"^\s*(?:if|while)\s+let\s+(?P<body>.+)",
+    re.DOTALL,
+)
+_RUST_FOR_DECLARATION = re.compile(
+    r"^\s*for\s+(?P<body>.+)",
     re.DOTALL,
 )
 _TYPESCRIPT_IDENTIFIER = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)")
@@ -138,6 +146,11 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
             declarations.extend(
                 _python_target_declarations(node.target, path, node.lineno)
             )
+        elif isinstance(node, ast.ExceptHandler):
+            if node.name is not None:
+                declarations.append(
+                    _python_variable_declaration(node.name, path, node.lineno)
+                )
         elif isinstance(node, ast.Match):
             for case in node.cases:
                 declarations.extend(
@@ -219,6 +232,7 @@ def _python_variable_declaration(name: str, path: Path, line: int) -> Declaratio
 
 def _scan_rust(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
+    declarations.extend(_rust_match_declarations(source, path))
     for index, unit in _rust_declaration_units(source):
         stripped = unit.lstrip()
         if stripped.startswith(("//", "#")):
@@ -229,17 +243,26 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
             if item_match is None
             else None
         )
-        if item_match is None and conditional_match is None:
+        for_match = (
+            _RUST_FOR_DECLARATION.match(unit)
+            if item_match is None and conditional_match is None
+            else None
+        )
+        if item_match is None and conditional_match is None and for_match is None:
             continue
         kind = item_match.group("kind") if item_match is not None else "let"
         body = (
             item_match.group("body")
             if item_match is not None
             else conditional_match.group("body")
+            if conditional_match is not None
+            else for_match.group("body")
         )
         names = (
             _rust_let_binding_names(body)
-            if kind == "let"
+            if kind == "let" and for_match is None
+            else _rust_for_binding_names(body)
+            if for_match is not None
             else _rust_named_item_name(body)
         )
         for name in names:
@@ -261,10 +284,10 @@ def _rust_declaration_units(source: str) -> list[tuple[int, str]]:
     return _declaration_units(
         source,
         start_pattern=re.compile(
-            r"^\s*(?:(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:const|static|let|fn)|(?:if|while)\s+let)\b"
+            r"^\s*(?:(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:const|static|let|fn)|(?:if|while)\s+let|for)\b"
         ),
         header_only_pattern=re.compile(
-            r"^\s*(?:(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn)\b"
+            r"^\s*(?:(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn|for)\b"
         ),
         conditional_header_pattern=re.compile(r"^\s*(?:if|while)\s+let\b"),
     )
@@ -280,6 +303,42 @@ def _rust_named_item_name(body: str) -> list[str]:
 def _rust_let_binding_names(body: str) -> list[str]:
     pattern = _before_top_level(_before_top_level(body, "="), ":").strip()
     return _rust_pattern_names(pattern)
+
+
+def _rust_for_binding_names(body: str) -> list[str]:
+    pattern = _before_top_level_token(body, " in ").strip()
+    return _rust_pattern_names(pattern)
+
+
+def _rust_match_declarations(source: str, path: Path) -> list[Declaration]:
+    declarations: list[Declaration] = []
+    lexical_state = _LexicalState()
+    for index, raw_line in enumerate(source.splitlines(), start=1):
+        line = _strip_comments(raw_line, lexical_state)
+        pattern = _rust_match_arm_pattern(line)
+        if pattern is None:
+            continue
+        for name in _rust_pattern_names(pattern):
+            declarations.append(
+                Declaration(
+                    path=str(path),
+                    line=index,
+                    kind=_value_kind(name),
+                    name=name,
+                    language="rust",
+                )
+            )
+    return declarations
+
+
+def _rust_match_arm_pattern(line: str) -> str | None:
+    arrow_index = _top_level_token_index(line, "=>")
+    if arrow_index is None:
+        return None
+    pattern = line[:arrow_index].strip()
+    if not pattern or pattern.startswith(("//", "#")):
+        return None
+    return _before_top_level_token(pattern, " if ").strip()
 
 
 def _rust_pattern_names(pattern: str) -> list[str]:
@@ -343,12 +402,16 @@ def _scan_typescript(source: str, path: Path) -> list[Declaration]:
             continue
         match = _TYPESCRIPT_DECLARATION.match(unit)
         is_for_declaration = False
+        is_catch_declaration = False
         if match is None:
             match = _TYPESCRIPT_FOR_DECLARATION.match(unit)
             is_for_declaration = match is not None
         if match is None:
+            match = _TYPESCRIPT_CATCH_DECLARATION.match(unit)
+            is_catch_declaration = match is not None
+        if match is None:
             continue
-        kind = match.group("kind")
+        kind = match.group("kind") if not is_catch_declaration else "let"
         if kind == "function":
             name_match = _TYPESCRIPT_IDENTIFIER.match(match.group("body"))
             if name_match is not None:
@@ -385,10 +448,10 @@ def _typescript_declaration_units(source: str) -> list[tuple[int, str]]:
     return _declaration_units(
         source,
         start_pattern=re.compile(
-            r"^\s*(?:(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function)|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function)|for\s+(?:await\s+)?\()"
         ),
         header_only_pattern=re.compile(
-            r"^\s*(?:(?:export\s+)?(?:default\s+)?(?:async\s+)?function|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?function|for\s+(?:await\s+)?\()"
         ),
         conditional_header_pattern=None,
     )
@@ -454,9 +517,9 @@ def _declaration_units(
     start_line = 0
     header_only = False
     conditional_header = False
-    in_block_comment = False
+    lexical_state = _LexicalState()
     for index, raw_line in enumerate(source.splitlines(), start=1):
-        line, in_block_comment = _strip_block_comments(raw_line, in_block_comment)
+        line = _strip_comments(raw_line, lexical_state)
         if not current:
             if not start_pattern.match(line):
                 continue
@@ -536,6 +599,8 @@ def _declaration_header_complete(unit: str) -> bool:
             depth = max(0, depth - 1)
         elif depth == 0 and char == ";":
             return True
+    if quote is not None:
+        return False
     return depth == 0 and "\n" not in unit
 
 
@@ -563,6 +628,8 @@ def _declaration_unit_complete(unit: str) -> bool:
             depth = max(0, depth - 1)
         elif depth == 0 and char == ";":
             return True
+    if quote is not None:
+        return False
     if depth != 0:
         return False
     if "\n" not in unit:
@@ -579,6 +646,11 @@ def _before_top_level(body: str, delimiter: str) -> str:
 
 
 def _before_top_level_token(body: str, delimiter: str) -> str:
+    index = _top_level_token_index(body, delimiter)
+    return body[:index] if index is not None else body
+
+
+def _top_level_token_index(body: str, delimiter: str) -> int | None:
     depth = 0
     quote: str | None = None
     escaped = False
@@ -598,8 +670,8 @@ def _before_top_level_token(body: str, delimiter: str) -> str:
         elif char in {")", "]", "}"}:
             depth = max(0, depth - 1)
         elif depth == 0 and body.startswith(delimiter, index):
-            return body[:index]
-    return body
+            return index
+    return None
 
 
 def _split_top_level(
@@ -649,44 +721,81 @@ def _split_top_level(
     return declarators
 
 
-def _strip_block_comments(line: str, in_block_comment: bool) -> tuple[str, bool]:
+@dataclass
+class _LexicalState:
+    in_block_comment: bool = False
+    quote: str | None = None
+    escaped: bool = False
+    in_regex: bool = False
+    regex_char_class: bool = False
+
+
+def _strip_comments(line: str, state: _LexicalState) -> str:
     output: list[str] = []
     index = 0
-    quote: str | None = None
-    escaped = False
     while index < len(line):
-        if in_block_comment:
+        if state.in_block_comment:
             end = line.find("*/", index)
             if end == -1:
-                return "".join(output), True
+                return "".join(output)
             index = end + 2
-            in_block_comment = False
+            state.in_block_comment = False
             continue
         char = line[index]
-        if quote is not None:
+        if state.quote is not None:
             output.append(char)
-            if escaped:
-                escaped = False
+            if state.escaped:
+                state.escaped = False
             elif char == "\\":
-                escaped = True
-            elif char == quote:
-                quote = None
+                state.escaped = True
+            elif char == state.quote:
+                state.quote = None
+            index += 1
+            continue
+        if state.in_regex:
+            output.append(char)
+            if state.escaped:
+                state.escaped = False
+            elif char == "\\":
+                state.escaped = True
+            elif char == "[":
+                state.regex_char_class = True
+            elif char == "]":
+                state.regex_char_class = False
+            elif char == "/" and not state.regex_char_class:
+                state.in_regex = False
             index += 1
             continue
         if char in {"'", '"', "`"}:
-            quote = char
+            state.quote = char
+            output.append(char)
+            index += 1
+            continue
+        if char == "/" and _looks_like_regex_literal_start(line, index):
+            state.in_regex = True
             output.append(char)
             index += 1
             continue
         if line.startswith("//", index):
-            return "".join(output), False
+            return "".join(output)
         if line.startswith("/*", index):
             index += 2
-            in_block_comment = True
+            state.in_block_comment = True
             continue
         output.append(char)
         index += 1
-    return "".join(output), in_block_comment
+    return "".join(output)
+
+
+def _looks_like_regex_literal_start(line: str, index: int) -> bool:
+    if not line.startswith("/", index):
+        return False
+    if index + 1 >= len(line) or line[index + 1] in {"/", "*"}:
+        return False
+    before = line[:index].rstrip()
+    if not before:
+        return True
+    return before[-1] in "=(:,[!?"
 
 
 def _value_kind(name: str) -> DeclarationKind:

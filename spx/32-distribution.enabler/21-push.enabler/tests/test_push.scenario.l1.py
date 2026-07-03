@@ -29,6 +29,7 @@ from outcomeeng_testing.harnesses.push import (
     git_help_push_args,
     push_option_with_dry_run_operand_args,
     repo_option_with_dry_run_operand_args,
+    separator_repository_named_like_dry_run_args,
     sync_invocation,
     tracked_upstream_ref,
 )
@@ -217,5 +218,23 @@ def test_repo_option_operand_named_like_dry_run_still_refreshes_marketplace() ->
     assert exit_code == 0
     assert runner.calls == [
         ("git", "push", *repo_option_with_dry_run_operand_args()),
+        sync_invocation(tracked_upstream_ref()),
+    ]
+
+
+def test_separator_repository_named_like_dry_run_still_refreshes_marketplace() -> None:
+    runner = TracedRunner(exit_codes=(0, 0))
+    trace = runner.trace
+
+    exit_code = push(
+        separator_repository_named_like_dry_run_args(),
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), trace),
+    )
+
+    assert exit_code == 0
+    assert runner.calls == [
+        ("git", "push", *separator_repository_named_like_dry_run_args()),
         sync_invocation(tracked_upstream_ref()),
     ]
