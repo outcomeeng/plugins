@@ -18,7 +18,7 @@ Rust test guidance follows this standard when:
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
 - property assertions use meaningful `proptest` or `quickcheck` properties
 - compile-time claims use compile-fail evidence
-- shared harnesses, generators, and fixtures live in a separate workspace-member crate (test-infrastructure production code), per the product's `test-infrastructure` PDR
+- shared harnesses, generators, and fixtures live in a separate workspace-member crate as test-infrastructure production code
 - coverage claims are measured with the repository's real coverage tool or recorded as unavailable
 
 </success_criteria>
@@ -150,12 +150,12 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 **Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
 
-| Origin             | What it means                                                 | Where it lives              |
-| ------------------ | ------------------------------------------------------------- | --------------------------- |
-| Source-owned       | The production module defines and exports the value           | Import from that module     |
-| Generator-produced | Pure code emits varied values each run                        | test-owned generator module |
-| Harness-managed    | Infrastructure mediates interaction with an external resource | test-owned harness module   |
-| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file     |
+| Origin             | What it means                                                 | Where it lives                    |
+| ------------------ | ------------------------------------------------------------- | --------------------------------- |
+| Source-owned       | The production module defines and exports the value           | Import from that module           |
+| Generator-produced | Pure code emits varied values each run                        | `product-testing/src/generators/` |
+| Harness-managed    | Infrastructure mediates interaction with an external resource | `product-testing/src/harnesses/`  |
+| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file           |
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
@@ -182,7 +182,7 @@ Use generators for inputs that vary per run. A generator is a pure function — 
 - Write strategy factories for domain-shaped values
 
 ```rust
-// tests/generators/audit.rs
+// product-testing/src/generators/audit.rs
 
 fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
     prop_oneof![
@@ -363,7 +363,7 @@ use product_testing::harnesses::database::with_test_database;
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
     with_test_database(valid_user(), async |db, user| {
-        UserRepository::new(db.pool()).save(user).await.unwrap();
+        UserRepository::new(db.pool()).save(&user).await.unwrap();
 
         assert_eq!(
             UserRepository::new(db.pool()).find(user.id()).await.unwrap().email(),
@@ -416,6 +416,16 @@ Coverage is evidence only when measured against the exercised module:
 - If the repository lacks usable coverage tooling, state that limitation explicitly and do not fabricate a coverage pass
 
 </coverage_rules>
+
+<failure_modes>
+
+**Failure 1: Placed shared generated domains under `tests/`.** Claude wrote `tests/generators/audit.rs` because the file was only imported by tests. Why it failed: a reusable generator is test-infrastructure production code, so placing it under `tests/` hides ownership and discovery behind an executed-test tree. How to avoid: put reusable Rust generators in `product-testing/src/generators/` and import them through the `product_testing` dev-dependency crate.
+
+**Failure 2: Copied an owned example into an async harness.** Claude passed `user` by value into `save(user)` and then read `user.id()` and `user.email()` afterward. Why it failed: the example no longer compiled for normal non-`Copy` data and taught consumers to work around ownership rather than express the tested behavior. How to avoid: write Rust examples as executable ownership models; borrow shared generated values when later assertions still need them.
+
+**Failure 3: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `product-testing` property harness and require reproducible failure output.
+
+</failure_modes>
 
 <anti_patterns>
 Reject or rewrite these patterns:
