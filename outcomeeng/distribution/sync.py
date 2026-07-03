@@ -38,6 +38,7 @@ DISTRIBUTION_PATHS: tuple[str, ...] = (
     "dist",
     ".claude-plugin",
     ".agents/plugins",
+    "outcomeeng/distribution/agents.py",
 )
 
 

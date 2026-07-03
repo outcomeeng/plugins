@@ -334,7 +334,7 @@ def test_real_change_probe_detects_uncommitted_distribution_changes(
     _git(tmp_path, "init", "--initial-branch", "main", "--quiet")
     _git(tmp_path, "config", "user.email", "test@example.invalid")
     _git(tmp_path, "config", "user.name", "Test")
-    changed_file = tmp_path / path_root / "distribution-probe.txt"
+    changed_file = _probe_target(tmp_path, path_root)
     if tracked:
         changed_file.parent.mkdir(parents=True)
         changed_file.write_text("initial\n", encoding="utf-8")
@@ -362,3 +362,10 @@ def _git(repo: pathlib.Path, *args: str) -> str:
         check=True,
     )
     return result.stdout
+
+
+def _probe_target(repo: pathlib.Path, path_root: str) -> pathlib.Path:
+    root = pathlib.Path(path_root)
+    if root.suffix:
+        return repo / root
+    return repo / root / "distribution-probe.txt"
