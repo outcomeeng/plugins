@@ -35,14 +35,24 @@ from collections.abc import Mapping
 from outcomeeng.distribution.bump import (
     ChangedPath,
     ChangeProbe,
+    CODEX_MANIFEST,
+    CLAUDE_MANIFEST,
     ContentProbe,
     DIST_CODEX_PLUGINS_DIR,
     ManifestReader,
     ManifestRecord,
     ManifestWriter,
+    Mode,
     SOURCE_PLUGINS_DIR,
     ToolProbe,
     REQUIRED_TOOLS,
+    Segment,
+    bump,
+)
+from outcomeeng_testing.generators.bump import (
+    manifest_relpath,
+    manifest_text,
+    patch_changes,
 )
 
 
@@ -132,12 +142,93 @@ class RecordingManifestWriter:
             self.event_log.append(f"writer:{path}")
 
 
+@dataclass(frozen=True)
+class BumpRun:
+    """Complete injected bump call with its recording boundaries."""
+
+    change_probe: ScriptedChangeProbe
+    content_probe: ScriptedContentProbe
+    manifest_reader: ScriptedManifestReader
+    manifest_writer: RecordingManifestWriter
+    tool_probe: RecordingToolProbe
+
+    def run(
+        self, segment: Segment | None = Segment.PATCH, mode: Mode = Mode.WRITE
+    ) -> int:
+        return bump(
+            base_ref(),
+            segment,
+            mode=mode,
+            change_probe=self.change_probe,
+            content_probe=self.content_probe,
+            manifest_reader=self.manifest_reader,
+            manifest_writer=self.manifest_writer,
+            tool_probe=self.tool_probe,
+        )
+
+    def written(self) -> dict[str, str]:
+        return dict(self.manifest_writer.writes)
+
+
+@dataclass(frozen=True)
+class DualManifestCase:
+    """Harness case for a changed plugin owning Claude and Codex manifests."""
+
+    plugin: str
+    claude_path: str
+    codex_path: str
+    run: BumpRun
+
+
 def base_ref() -> str:
     return "origin/main"
 
 
 def all_tools_available() -> frozenset[str]:
     return frozenset(REQUIRED_TOOLS)
+
+
+def dual_manifest_case(
+    plugin: str,
+    *,
+    claude_version: str,
+    codex_version: str,
+    claude_base_version: str | None = None,
+    codex_base_version: str | None = None,
+) -> DualManifestCase:
+    claude_base = (
+        claude_base_version if claude_base_version is not None else claude_version
+    )
+    codex_base = codex_base_version if codex_base_version is not None else codex_version
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
+    claude_content = manifest_text(plugin, claude_version)
+    codex_content = manifest_text(plugin, codex_version)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
+        content_probe=ScriptedContentProbe(
+            content={
+                (base_ref(), claude_path): manifest_text(plugin, claude_base),
+                (base_ref(), codex_path): manifest_text(plugin, codex_base),
+            },
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={
+                plugin: (
+                    ManifestRecord(path=claude_path, content=claude_content),
+                    ManifestRecord(path=codex_path, content=codex_content),
+                )
+            },
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+    return DualManifestCase(
+        plugin=plugin,
+        claude_path=claude_path,
+        codex_path=codex_path,
+        run=run,
+    )
 
 
 CHANGE_DETECT_PLUGIN = "demo"

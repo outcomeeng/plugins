@@ -38,7 +38,6 @@ import pytest
 
 from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
-    CODEX_MANIFEST,
     REQUIRED_TOOLS,
     ChangedPath,
     FileStatus,
@@ -63,6 +62,7 @@ from outcomeeng_testing.harnesses.bump import (
     ScriptedManifestReader,
     all_tools_available,
     base_ref,
+    dual_manifest_case,
 )
 
 
@@ -243,89 +243,40 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
 
 
 def test_mixed_dual_manifest_plugin_updates_lagging_manifest_only() -> None:
-    plugin = "foo"
-    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
-    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
-
-    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(
-        content={
-            (base_ref(), claude_path): manifest_text(plugin, "0.4.1"),
-            (base_ref(), codex_path): manifest_text(plugin, "0.4.1"),
-        },
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.2",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
     )
-    manifest_reader = ScriptedManifestReader(
-        manifests={
-            plugin: (
-                ManifestRecord(
-                    path=claude_path, content=manifest_text(plugin, "0.4.2")
-                ),
-                ManifestRecord(path=codex_path, content=manifest_text(plugin, "0.4.1")),
-            )
-        },
-    )
-    manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=all_tools_available())
+    exit_code = case.run.run()
 
-    exit_code = bump(
-        base_ref(),
-        Segment.PATCH,
-        change_probe=change_probe,
-        content_probe=content_probe,
-        manifest_reader=manifest_reader,
-        manifest_writer=manifest_writer,
-        tool_probe=tool_probe,
-    )
-
-    written = dict(manifest_writer.writes)
+    written = case.run.written()
     assert exit_code == 0
-    assert claude_path not in written
-    assert codex_path in written
-    assert '"version": "0.4.2"' in written[codex_path]
+    assert case.claude_path not in written
+    assert case.codex_path in written
+    assert '"version": "0.4.2"' in written[case.codex_path]
 
 
 def test_mixed_dual_manifest_plugin_fails_check(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    plugin = "foo"
-    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
-    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
-
-    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(
-        content={
-            (base_ref(), claude_path): manifest_text(plugin, "0.4.1"),
-            (base_ref(), codex_path): manifest_text(plugin, "0.4.1"),
-        },
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.2",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
     )
-    manifest_reader = ScriptedManifestReader(
-        manifests={
-            plugin: (
-                ManifestRecord(
-                    path=claude_path, content=manifest_text(plugin, "0.4.2")
-                ),
-                ManifestRecord(path=codex_path, content=manifest_text(plugin, "0.4.1")),
-            )
-        },
-    )
-    manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=all_tools_available())
-
-    exit_code = bump(
-        base_ref(),
-        Segment.PATCH,
+    exit_code = case.run.run(
         mode=Mode.CHECK,
-        change_probe=change_probe,
-        content_probe=content_probe,
-        manifest_reader=manifest_reader,
-        manifest_writer=manifest_writer,
-        tool_probe=tool_probe,
     )
 
     captured = capsys.readouterr()
     assert exit_code == 1
-    assert manifest_writer.writes == []
-    assert plugin in captured.err
+    assert case.run.manifest_writer.writes == []
+    assert case.plugin in captured.err
 
 
 def test_already_bumped_plugin_skipped_in_dry_run(
@@ -466,47 +417,13 @@ def test_unchanged_plugins_never_have_manifests_written() -> None:
 
 
 def test_dual_manifest_plugin_writes_every_owned_manifest() -> None:
-    """Both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`
-    receive the same new version in one bump pass when a plugin owns both.
-    """
-    plugin = "foo"
-    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
-    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
-    claude_content = manifest_text(plugin, "0.4.1")
-    codex_content = manifest_text(plugin, "0.4.1")
+    case = dual_manifest_case("foo", claude_version="0.4.1", codex_version="0.4.1")
+    exit_code = case.run.run()
 
-    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(
-        content={
-            (base_ref(), claude_path): claude_content,
-            (base_ref(), codex_path): codex_content,
-        },
-    )
-    manifest_reader = ScriptedManifestReader(
-        manifests={
-            plugin: (
-                ManifestRecord(path=claude_path, content=claude_content),
-                ManifestRecord(path=codex_path, content=codex_content),
-            ),
-        },
-    )
-    manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=all_tools_available())
-
-    exit_code = bump(
-        base_ref(),
-        Segment.PATCH,
-        change_probe=change_probe,
-        content_probe=content_probe,
-        manifest_reader=manifest_reader,
-        manifest_writer=manifest_writer,
-        tool_probe=tool_probe,
-    )
-
-    written = dict(manifest_writer.writes)
+    written = case.run.written()
     written_versions = {version_of(content) for content in written.values()}
     assert exit_code == 0
-    assert set(written) == {claude_path, codex_path}
+    assert set(written) == {case.claude_path, case.codex_path}
     # Asserting the exact post-bump value (not just equality across writes)
     # rejects the mutant that wrote `0.4.1` to both manifests without bumping.
     assert written_versions == {"0.4.2"}

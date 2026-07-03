@@ -24,7 +24,6 @@ import pytest
 
 from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
-    CODEX_MANIFEST,
     ChangedPath,
     FileStatus,
     ManifestRecord,
@@ -49,6 +48,7 @@ from outcomeeng_testing.harnesses.bump import (
     all_tools_available,
     base_ref,
     build_repo_with_untracked_new_skill,
+    dual_manifest_case,
 )
 
 
@@ -92,44 +92,13 @@ def test_only_changed_plugin_manifests_are_written() -> None:
 
 
 def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
-    plugin = "foo"
-    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
-    codex_path = manifest_relpath(plugin, CODEX_MANIFEST)
-    claude_content = manifest_text(plugin, "0.4.1")
-    codex_content = manifest_text(plugin, "0.4.1")
+    case = dual_manifest_case("foo", claude_version="0.4.1", codex_version="0.4.1")
+    exit_code = case.run.run()
 
-    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(
-        content={
-            (base_ref(), claude_path): claude_content,
-            (base_ref(), codex_path): codex_content,
-        },
-    )
-    manifest_reader = ScriptedManifestReader(
-        manifests={
-            plugin: (
-                ManifestRecord(path=claude_path, content=claude_content),
-                ManifestRecord(path=codex_path, content=codex_content),
-            ),
-        },
-    )
-    manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=all_tools_available())
-
-    exit_code = bump(
-        base_ref(),
-        Segment.PATCH,
-        change_probe=change_probe,
-        content_probe=content_probe,
-        manifest_reader=manifest_reader,
-        manifest_writer=manifest_writer,
-        tool_probe=tool_probe,
-    )
-
-    written = dict(manifest_writer.writes)
+    written = case.run.written()
     written_versions = {version_of(content) for content in written.values()}
     assert exit_code == 0
-    assert set(written) == {claude_path, codex_path}
+    assert set(written) == {case.claude_path, case.codex_path}
     # Asserting the exact post-bump value (not just equality) rejects the
     # mutant that wrote `0.4.1` to both manifests without bumping.
     assert written_versions == {"0.4.2"}
