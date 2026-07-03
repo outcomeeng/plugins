@@ -14,11 +14,15 @@ from outcomeeng_testing.harnesses.audit_tests import (
     positive_pattern_is_reported,
     prose_coupling_is_rejected,
     python_binding_declarations_are_detected,
+    python_pattern_declarations_are_detected,
+    rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
     sourced_literals_pass,
     string_literal_is_rejected,
     test_owned_declaration_is_rejected,
     testability_passes_to_coupling,
+    typescript_loop_declarations_are_detected,
+    typescript_multiline_declarations_are_detected,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
 )
@@ -100,6 +104,10 @@ def test_detects_python_binding_declarations() -> None:
     assert python_binding_declarations_are_detected()
 
 
+def test_detects_python_pattern_declarations() -> None:
+    assert python_pattern_declarations_are_detected()
+
+
 def test_ignores_block_comment_declarations() -> None:
     assert block_comment_declarations_are_ignored()
 
@@ -108,5 +116,17 @@ def test_detects_multiple_typescript_declarations() -> None:
     assert multiple_typescript_declarations_are_detected()
 
 
+def test_detects_typescript_loop_declarations() -> None:
+    assert typescript_loop_declarations_are_detected()
+
+
+def test_detects_typescript_multiline_declarations() -> None:
+    assert typescript_multiline_declarations_are_detected()
+
+
 def test_detects_rust_destructuring_declarations() -> None:
     assert rust_destructuring_declarations_are_detected()
+
+
+def test_detects_rust_conditional_declarations() -> None:
+    assert rust_conditional_declarations_are_detected()

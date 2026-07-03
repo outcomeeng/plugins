@@ -182,6 +182,18 @@ def python_binding_declarations_are_detected() -> bool:
     )
 
 
+def python_pattern_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("python_pattern_declaration.py")
+    return (
+        _has_variable(declarations, "computed")
+        and _has_variable(declarations, "root")
+        and _has_variable(declarations, "first")
+        and _has_variable(declarations, "rest")
+        and _has_variable(declarations, "extra")
+        and _has_variable(declarations, "missing")
+    )
+
+
 def block_comment_declarations_are_ignored() -> bool:
     typescript_declarations = _declarations_for_fixture("block_comment_declaration.ts")
     rust_declarations = _declarations_for_fixture("block_comment_declaration.rs")
@@ -208,6 +220,29 @@ def multiple_typescript_declarations_are_detected() -> bool:
     )
 
 
+def typescript_loop_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("typescript_loop_declaration.ts")
+    return (
+        _has_variable(declarations, "row")
+        and _has_variable(declarations, "input")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "index")
+    )
+
+
+def typescript_multiline_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("typescript_multiline_declaration.ts")
+    return (
+        _has_variable(declarations, "source")
+        and _has_variable(declarations, "target")
+        and _has_variable(declarations, "rest")
+        and _has_variable(declarations, "input")
+        and _has_variable(declarations, "output")
+        and _has_variable(declarations, "configured")
+        and not _has_variable(declarations, "expected")
+    )
+
+
 def rust_destructuring_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("rust_destructuring_declaration.rs")
     return (
@@ -221,6 +256,23 @@ def rust_destructuring_declarations_are_detected() -> bool:
         and _has_constant(declarations, "LOGGER")
         and not _has_variable(declarations, "Harness")
         and not _has_variable(declarations, "Foo")
+    )
+
+
+def rust_conditional_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("rust_conditional_declaration.rs")
+    return (
+        _has_variable(declarations, "value")
+        and _has_variable(declarations, "input")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "branch")
+        and _has_variable(declarations, "nested_branch")
+        and _has_variable(declarations, "block_branch")
+        and _has_variable(declarations, "nested_block_branch")
+        and _has_variable(declarations, "project_dir")
+        and _has_variable(declarations, "target")
+        and _has_variable(declarations, "root")
+        and _has_variable(declarations, "nested_target")
     )
 
 
