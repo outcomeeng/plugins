@@ -9,6 +9,8 @@ import stat
 import subprocess
 from typing import Any
 
+import pytest
+
 from outcomeeng_testing.harnesses.journal_projection import (
     RENDER_REVIEW_RUN_SCRIPT,
     load_journal_projection_module,
@@ -375,6 +377,33 @@ def test_invalid_branch_slug_is_rejected_before_spx_invocation(
         "branch slug must be a canonical changeset-scope branch slug" in result.stderr
     )
     assert "unexpected spx arguments" not in result.stderr
+
+
+def test_unavailable_changeset_scope_dependency_exits_cleanly(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    original_path = render_review_run._CHANGESET_SCOPE_PATH
+    cached_module = render_review_run.sys.modules.pop("changeset_scope", None)
+    render_review_run._CHANGESET_SCOPE_PATH = tmp_path / "missing_changeset_scope.py"
+    try:
+        returncode = render_review_run.main(
+            [
+                RUN_TOKEN,
+                "--branch-slug",
+                "work__review-run-inspection-helper",
+            ]
+        )
+    finally:
+        render_review_run._CHANGESET_SCOPE_PATH = original_path
+        if cached_module is not None:
+            render_review_run.sys.modules["changeset_scope"] = cached_module
+
+    captured = capsys.readouterr()
+    assert returncode == 1
+    assert "failed to run spx journal:" in captured.err
+    assert "missing_changeset_scope.py" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def test_incomplete_run_is_rejected(tmp_path: pathlib.Path) -> None:

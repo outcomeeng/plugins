@@ -58,7 +58,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.branch_slug is not None:
             branch_slug = _branch_slug(args.branch_slug)
         result = _render_review_run(run_token, branch_slug=branch_slug)
-    except OSError as exc:
+    except (OSError, RuntimeError) as exc:
         sys.stderr.write(f"failed to run spx journal: {exc}\n")
         return 1
     except ValueError as exc:
