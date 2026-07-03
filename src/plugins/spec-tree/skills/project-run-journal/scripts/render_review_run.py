@@ -16,6 +16,9 @@ import journal_projection as jp
 
 REVIEW_TYPE = "review"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
+BRANCH_SLUG = re.compile(r"^[A-Za-z0-9._-]+$")
+RUN_NOT_FOUND_MARKER = "journal run not found"
+LIST_LIMIT = "200"
 _HERE = pathlib.Path(__file__).resolve()
 _CHANGESET_SCOPE_PATH = (
     _HERE.parents[2] / "scope-changeset" / "scripts" / "changeset_scope.py"
@@ -84,7 +87,16 @@ def _render_review_run(
     if branch_slug is not None:
         return _run_render_command_for_branch(run_token, branch_slug)
 
-    return _run_render_command(run_token)
+    result = _run_render_command(run_token)
+    if result.returncode == 0 or RUN_NOT_FOUND_MARKER not in result.stderr:
+        return result
+
+    branch_result = _find_run_branch_slug(run_token)
+    if branch_result.returncode != 0:
+        return result
+    if branch_result.branch_slug is None:
+        return result
+    return _run_render_command_for_branch(run_token, branch_result.branch_slug)
 
 
 def _load_changeset_scope() -> ChangesetScopeModule:
@@ -111,12 +123,26 @@ def _run_token(value: str) -> RunToken:
 
 
 def _branch_slug(value: str) -> BranchSlug:
-    if value == "":
-        raise ValueError("branch slug must not be empty")
-    changeset_scope = _load_changeset_scope()
-    if changeset_scope.branch_slug(value) != value:
+    if not _valid_branch_slug(value):
         raise ValueError("branch slug must be a canonical changeset-scope branch slug")
     return BranchSlug(value)
+
+
+def _listed_branch_slug(value: object) -> BranchSlug | None:
+    if not isinstance(value, str) or not _valid_branch_slug(value):
+        return None
+    return BranchSlug(value)
+
+
+def _valid_branch_slug(value: str) -> bool:
+    if value in {"", ".", ".."}:
+        return False
+    if not BRANCH_SLUG.fullmatch(value):
+        return False
+    changeset_scope = _load_changeset_scope()
+    if changeset_scope.branch_slug(value) == value:
+        return True
+    return "__" not in value
 
 
 def _run_render_command(
@@ -160,6 +186,67 @@ def _run_render_command_for_branch(
         text=True,
         check=False,
     )
+
+
+@dataclasses.dataclass(frozen=True)
+class BranchLookupResult:
+    returncode: int
+    branch_slug: BranchSlug | None = None
+
+
+def _find_run_branch_slug(run_token: RunToken) -> BranchLookupResult:
+    result = _run_list_command()
+    if result.returncode != 0:
+        return BranchLookupResult(returncode=result.returncode)
+    try:
+        runs = _load_listed_runs(result.stdout)
+    except ValueError:
+        return BranchLookupResult(returncode=1)
+
+    matches = [
+        branch_slug
+        for item in runs
+        if item.get("runToken") == run_token.value
+        for branch_slug in [_listed_branch_slug(item.get("branchSlug"))]
+        if branch_slug is not None
+    ]
+    if len(matches) != 1:
+        return BranchLookupResult(returncode=0)
+    return BranchLookupResult(returncode=0, branch_slug=matches[0])
+
+
+def _run_list_command() -> subprocess.CompletedProcess[str]:
+    command = [
+        "spx",
+        "journal",
+        "list",
+        "--type",
+        REVIEW_TYPE,
+        "--sealed",
+        "true",
+        "--limit",
+        LIST_LIMIT,
+    ]
+    return subprocess.run(  # noqa: S603,S607  # NOSONAR - fixed argv, no shell
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _load_listed_runs(text: str) -> list[dict[str, Any]]:
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"spx journal list returned invalid JSON: {exc.msg}") from exc
+    if not isinstance(value, list):
+        raise ValueError("spx journal list must return a JSON array")
+    runs: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            runs.append(item)
+    return runs
 
 
 def _load_events(text: str) -> list[dict[str, Any]]:

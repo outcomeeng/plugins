@@ -86,12 +86,25 @@ def _write_spx(
                 "    '--branch-slug',",
                 "    os.environ.get('SPX_BRANCH_SLUG', ''),",
                 "]",
+                "list_expected = [",
+                "    'journal',",
+                "    'list',",
+                "    '--type',",
+                "    'review',",
+                "    '--sealed',",
+                "    'true',",
+                "    '--limit',",
+                "    '200',",
+                "]",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_NOT_FOUND') == '1':",
                 "    sys.stderr.write('journal run not found; open the run before operating on it\\n')",
                 "    raise SystemExit(1)",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_EXIT_CODE') is not None:",
                 "    sys.stderr.write(os.environ.get('SPX_DIRECT_STDERR', ''))",
                 "    raise SystemExit(int(os.environ['SPX_DIRECT_EXIT_CODE']))",
+                "if sys.argv[1:] == list_expected:",
+                "    sys.stdout.write(os.environ.get('SPX_LIST_STDOUT', '[]'))",
+                "    raise SystemExit(int(os.environ.get('SPX_LIST_EXIT_CODE', '0')))",
                 "if sys.argv[1:] != expected and sys.argv[1:] != branch_expected:",
                 "    sys.stderr.write('unexpected spx arguments: ' + repr(sys.argv[1:]))",
                 "    raise SystemExit(97)",
@@ -117,6 +130,7 @@ def _run_helper(
     direct_exit_code: int | None = None,
     branch_slug: str = "",
     pass_branch_slug: bool = False,
+    list_stdout: str = "[]",
 ) -> subprocess.CompletedProcess[str]:
     _write_spx(tmp_path)
     env = os.environ.copy()
@@ -132,6 +146,7 @@ def _run_helper(
         env["SPX_DIRECT_STDERR"] = direct_stderr
     if branch_slug != "":
         env["SPX_BRANCH_SLUG"] = branch_slug
+    env["SPX_LIST_STDOUT"] = list_stdout
     command = ["python3", str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN]
     if pass_branch_slug:
         command.extend(["--branch-slug", branch_slug])
@@ -204,6 +219,30 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
         direct_not_found=True,
         branch_slug="head.b5180223",
         pass_branch_slug=True,
+    )
+
+    assert result.returncode == 0
+    assert f"Review run: {RUN_TOKEN}" in result.stdout
+    assert "Status: approved" in result.stdout
+
+
+def test_missing_current_scope_run_uses_listed_branch_slug(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        direct_not_found=True,
+        branch_slug="head-b5180223",
+        list_stdout=json.dumps(
+            [
+                {
+                    "runToken": RUN_TOKEN,
+                    "branchSlug": "head-b5180223",
+                    "sealed": True,
+                }
+            ]
+        ),
     )
 
     assert result.returncode == 0
