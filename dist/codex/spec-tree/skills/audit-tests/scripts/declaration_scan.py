@@ -33,9 +33,11 @@ _TYPESCRIPT_DECLARATION = re.compile(
     r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?P<kind>const|let|var|function)\s+(?P<body>.+)"
 )
 _RUST_DECLARATION = re.compile(
-    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<name>[A-Za-z_]\w*)"
+    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<body>.+)"
 )
 _TYPESCRIPT_IDENTIFIER = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)")
+_RUST_IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
+_RUST_PATTERN_PREFIXES: frozenset[str] = frozenset(("mut", "ref"))
 
 
 class PathValidationError(ValueError):
@@ -72,7 +74,7 @@ def scan_text(source: str, path: Path) -> list[Declaration]:
     if language == "typescript":
         return _scan_typescript(source, path)
     if language == "rust":
-        return _scan_line_language(source, path, language, _RUST_DECLARATION)
+        return _scan_rust(source, path)
     return []
 
 
@@ -146,12 +148,7 @@ def _python_target_declarations(
     return []
 
 
-def _scan_line_language(
-    source: str,
-    path: Path,
-    language: str,
-    declaration_pattern: re.Pattern[str],
-) -> list[Declaration]:
+def _scan_rust(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
     in_block_comment = False
     for index, line in enumerate(source.splitlines(), start=1):
@@ -159,22 +156,94 @@ def _scan_line_language(
         stripped = line.lstrip()
         if stripped.startswith(("//", "#")):
             continue
-        match = declaration_pattern.match(line)
+        match = _RUST_DECLARATION.match(line)
         if match is None:
             continue
-        name = match.group("name")
-        declarations.append(
-            Declaration(
-                path=str(path),
-                line=index,
-                kind=DeclarationKind.FUNCTION
-                if match.group("kind") in {"function", "fn"}
-                else _value_kind(name),
-                name=name,
-                language=language,
-            )
+        kind = match.group("kind")
+        body = match.group("body")
+        names = (
+            _rust_let_binding_names(body)
+            if kind == "let"
+            else _rust_named_item_name(body)
         )
+        for name in names:
+            declarations.append(
+                Declaration(
+                    path=str(path),
+                    line=index,
+                    kind=DeclarationKind.FUNCTION
+                    if kind == "fn"
+                    else _value_kind(name),
+                    name=name,
+                    language="rust",
+                )
+            )
     return declarations
+
+
+def _rust_named_item_name(body: str) -> list[str]:
+    names = _RUST_IDENTIFIER.findall(body)
+    while names and names[0] in _RUST_PATTERN_PREFIXES:
+        names = names[1:]
+    return names[:1]
+
+
+def _rust_let_binding_names(body: str) -> list[str]:
+    pattern = _before_top_level(_before_top_level(body, "="), ":").strip()
+    return _rust_pattern_names(pattern)
+
+
+def _rust_pattern_names(pattern: str) -> list[str]:
+    pattern = pattern.strip()
+    while pattern.startswith("&"):
+        pattern = pattern[1:].strip()
+    for prefix in _RUST_PATTERN_PREFIXES:
+        if pattern.startswith(f"{prefix} "):
+            return _rust_pattern_names(pattern[len(prefix) :])
+    if not pattern or pattern in {"_", ".."}:
+        return []
+    alias_parts = _split_top_level(pattern, "@", maxsplit=1)
+    if len(alias_parts) > 1:
+        return _rust_names_from_segments(alias_parts)
+    if pattern[0] in "([{":
+        inner = _strip_enclosing_pattern(pattern)
+        return _rust_names_from_segments(_split_top_level_commas(inner))
+    if "{" in pattern:
+        inner = pattern[pattern.find("{") + 1 : pattern.rfind("}")]
+        return _rust_struct_field_names(inner)
+    if "(" in pattern and pattern.endswith(")"):
+        inner = pattern[pattern.find("(") + 1 : -1]
+        return _rust_names_from_segments(_split_top_level_commas(inner))
+    match = _RUST_IDENTIFIER.fullmatch(pattern)
+    return [pattern] if match is not None else []
+
+
+def _rust_struct_field_names(inner: str) -> list[str]:
+    names: list[str] = []
+    for segment in _split_top_level_commas(inner):
+        field = segment.strip()
+        if not field or field == "..":
+            continue
+        if ":" in field:
+            names.extend(_rust_pattern_names(field.split(":", 1)[1]))
+            continue
+        names.extend(_rust_pattern_names(field))
+    return names
+
+
+def _rust_names_from_segments(segments: list[str]) -> list[str]:
+    names: list[str] = []
+    for segment in segments:
+        names.extend(_rust_pattern_names(segment))
+    return names
+
+
+def _strip_enclosing_pattern(pattern: str) -> str:
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    closing = pairs.get(pattern[0])
+    if closing is not None and pattern.endswith(closing):
+        return pattern[1:-1]
+    return pattern
 
 
 def _scan_typescript(source: str, path: Path) -> list[Declaration]:
@@ -219,11 +288,31 @@ def _scan_typescript(source: str, path: Path) -> list[Declaration]:
 
 
 def _split_typescript_declarators(body: str) -> list[str]:
+    return _split_top_level(body, ",", track_type_angles=True)
+
+
+def _split_top_level_commas(body: str) -> list[str]:
+    return _split_top_level(body, ",")
+
+
+def _before_top_level(body: str, delimiter: str) -> str:
+    return _split_top_level(body, delimiter, maxsplit=1)[0]
+
+
+def _split_top_level(
+    body: str,
+    delimiter: str,
+    *,
+    maxsplit: int | None = None,
+    track_type_angles: bool = False,
+) -> list[str]:
     declarators: list[str] = []
     start = 0
     depth = 0
+    angle_depth = 0
     quote: str | None = None
     escaped = False
+    splits = 0
     for index, char in enumerate(body):
         if quote is not None:
             if escaped:
@@ -235,6 +324,10 @@ def _split_typescript_declarators(body: str) -> list[str]:
             continue
         if char in {"'", '"', "`"}:
             quote = char
+        elif track_type_angles and depth == 0 and char == "<":
+            angle_depth += 1
+        elif track_type_angles and depth == 0 and char == ">":
+            angle_depth = max(0, angle_depth - 1)
         elif char in {"(", "[", "{"}:
             depth += 1
         elif char in {
@@ -243,9 +336,12 @@ def _split_typescript_declarators(body: str) -> list[str]:
             "}",
         }:
             depth = max(0, depth - 1)
-        elif char == "," and depth == 0:
+        elif char == delimiter and depth == 0 and angle_depth == 0:
             declarators.append(body[start:index])
             start = index + 1
+            splits += 1
+            if maxsplit is not None and splits >= maxsplit:
+                break
     declarators.append(body[start:])
     return declarators
 

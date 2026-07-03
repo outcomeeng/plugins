@@ -194,6 +194,23 @@ def multiple_typescript_declarations_are_detected() -> bool:
         _has_variable(declarations, "input")
         and _has_variable(declarations, "expected")
         and not _has_variable(declarations, "other")
+        and not _has_variable(declarations, "number")
+    )
+
+
+def rust_destructuring_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("rust_destructuring_declaration.rs")
+    return (
+        _has_variable(declarations, "project_dir")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "root")
+        and _has_variable(declarations, "alias")
+        and _has_variable(declarations, "value")
+        and _has_variable(declarations, "nested_alias")
+        and _has_variable(declarations, "nested_value")
+        and _has_constant(declarations, "LOGGER")
+        and not _has_variable(declarations, "Harness")
+        and not _has_variable(declarations, "Foo")
     )
 
 

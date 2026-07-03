@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.push import (
     TracedToolProbe,
     all_required_tools_available,
     all_tool_probe_invocations,
+    clustered_dry_run_push_args,
     dry_run_push_args,
     force_with_lease_push_args,
     git_help_push_args,
@@ -146,3 +147,18 @@ def test_dry_run_push_does_not_refresh_marketplace() -> None:
 
     assert exit_code == 0
     assert runner.calls == [("git", "push", *dry_run_push_args())]
+
+
+def test_clustered_short_option_dry_run_does_not_refresh_marketplace() -> None:
+    runner = TracedRunner()
+    trace = runner.trace
+
+    exit_code = push(
+        clustered_dry_run_push_args(),
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), trace),
+    )
+
+    assert exit_code == 0
+    assert runner.calls == [("git", "push", *clustered_dry_run_push_args())]

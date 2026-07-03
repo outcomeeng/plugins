@@ -1,1 +1,1 @@
-const input = ["source", "other"], expected = "target";
+const input = new Map<string, number>(), expected = "target";

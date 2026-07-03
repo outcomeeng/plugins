@@ -96,7 +96,15 @@ def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
 
 
 def _is_dry_run(push_args: Sequence[str]) -> bool:
-    return any(arg in DRY_RUN_PUSH_FLAGS for arg in push_args)
+    return any(_is_dry_run_arg(arg) for arg in push_args)
+
+
+def _is_dry_run_arg(arg: str) -> bool:
+    if arg == "--dry-run":
+        return True
+    if arg.startswith("--"):
+        return False
+    return arg.startswith("-") and "n" in arg[1:]
 
 
 def _real_runner(argv: Sequence[str]) -> int:

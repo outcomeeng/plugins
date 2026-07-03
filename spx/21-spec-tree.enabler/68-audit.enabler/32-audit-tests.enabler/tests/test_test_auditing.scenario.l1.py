@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     positive_pattern_is_reported,
     prose_coupling_is_rejected,
     python_binding_declarations_are_detected,
+    rust_destructuring_declarations_are_detected,
     sourced_literals_pass,
     string_literal_is_rejected,
     test_owned_declaration_is_rejected,
@@ -105,3 +106,7 @@ def test_ignores_block_comment_declarations() -> None:
 
 def test_detects_multiple_typescript_declarations() -> None:
     assert multiple_typescript_declarations_are_detected()
+
+
+def test_detects_rust_destructuring_declarations() -> None:
+    assert rust_destructuring_declarations_are_detected()
