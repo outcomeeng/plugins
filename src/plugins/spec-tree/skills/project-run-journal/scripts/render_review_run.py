@@ -82,6 +82,9 @@ def _validate_scope_token(label: str, value: str) -> None:
 def _run_render_command(
     run_token: str, *, branch_slug: str | None = None
 ) -> subprocess.CompletedProcess[str]:
+    _validate_scope_token("run token", run_token)
+    if branch_slug is not None:
+        _validate_scope_token("branch slug", branch_slug)
     command = [
         "spx",
         "journal",

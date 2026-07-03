@@ -129,6 +129,7 @@ def _run_helper(
     spx_exit_code: int = 0,
     direct_not_found: bool = False,
     branch_slug: str = "",
+    listed_branch_slug: str | None = None,
     require_list_for_branch_render: bool = False,
     pass_branch_slug: bool = False,
 ) -> subprocess.CompletedProcess[str]:
@@ -147,7 +148,16 @@ def _run_helper(
     if branch_slug != "":
         env["SPX_BRANCH_SLUG"] = branch_slug
         env["SPX_LIST_STDOUT"] = json.dumps(
-            [{"runToken": RUN_TOKEN, "branchSlug": branch_slug}]
+            [
+                {
+                    "runToken": RUN_TOKEN,
+                    "branchSlug": (
+                        branch_slug
+                        if listed_branch_slug is None
+                        else listed_branch_slug
+                    ),
+                }
+            ]
         )
     command = ["python3", str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN]
     if pass_branch_slug:
@@ -228,6 +238,22 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
     assert result.returncode == 0
     assert f"Review run: {RUN_TOKEN}" in result.stdout
     assert "Status: approved" in result.stdout
+
+
+def test_invalid_listed_branch_slug_is_rejected_before_retry_render(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        direct_not_found=True,
+        branch_slug="head-b5180223",
+        listed_branch_slug="bad/slug",
+    )
+
+    assert result.returncode == 1
+    assert "branch slug must contain only ASCII letters" in result.stderr
+    assert "unexpected spx arguments" not in result.stderr
 
 
 def test_invalid_run_token_is_rejected_before_spx_invocation(
