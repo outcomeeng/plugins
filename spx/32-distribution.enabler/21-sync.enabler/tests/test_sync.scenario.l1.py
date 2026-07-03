@@ -323,10 +323,8 @@ def test_sync_detects_uncommitted_distribution_changes(
     assert runner.calls == list(STEP_ARGVS)
 
 
-@pytest.mark.parametrize(
-    ("path_root", "tracked"),
-    [(DISTRIBUTION_PATHS[0], True), (DISTRIBUTION_PATHS[1], False)],
-)
+@pytest.mark.parametrize("path_root", DISTRIBUTION_PATHS)
+@pytest.mark.parametrize("tracked", [True, False])
 def test_real_change_probe_detects_uncommitted_distribution_changes(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -336,10 +334,10 @@ def test_real_change_probe_detects_uncommitted_distribution_changes(
     _git(tmp_path, "init", "--initial-branch", "main", "--quiet")
     _git(tmp_path, "config", "user.email", "test@example.invalid")
     _git(tmp_path, "config", "user.name", "Test")
-    changed_file = tmp_path / path_root / "plugins/foo/.claude-plugin/plugin.json"
-    changed_file.parent.mkdir(parents=True)
-    changed_file.write_text('{"name": "foo", "version": "0.1.0"}\n')
+    changed_file = tmp_path / path_root / "distribution-probe.txt"
     if tracked:
+        changed_file.parent.mkdir(parents=True)
+        changed_file.write_text("initial\n", encoding="utf-8")
         _git(tmp_path, "add", path_root)
     else:
         (tmp_path / "README.md").write_text("seed\n", encoding="utf-8")
@@ -347,7 +345,8 @@ def test_real_change_probe_detects_uncommitted_distribution_changes(
     _git(tmp_path, "commit", "-m", "seed", "--quiet")
     base_ref = _git(tmp_path, "rev-parse", "HEAD").strip()
 
-    changed_file.write_text('{"name": "foo", "version": "0.2.0"}\n')
+    changed_file.parent.mkdir(parents=True, exist_ok=True)
+    changed_file.write_text("changed\n", encoding="utf-8")
 
     monkeypatch.chdir(tmp_path)
 
