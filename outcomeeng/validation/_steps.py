@@ -20,7 +20,7 @@ from typing import Final
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
     DIST_DIFF_ARGV,
-    GUIDE_DIFF_ARGV,
+    INSTRUCTION_BLOCK_ARGV,
     ORCHESTRATION_VALIDATION_ARGV,
     TEXT_FILE_SUFFIXES,
 )
@@ -125,7 +125,7 @@ PREFLIGHT_STEPS: Final = (
 VALIDATION_STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
-    Step(label="guide-diff", argv=GUIDE_DIFF_ARGV),
+    Step(label="instructions-diff", argv=INSTRUCTION_BLOCK_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=FMT_CHECK_ARGV),
     Step(label="actionlint", argv=ACTIONLINT_ARGV),

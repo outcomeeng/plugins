@@ -22,12 +22,12 @@ Required handling:
 - Add the planned mapping tests named in `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md`.
 - Attach `[test](tests/test_merge_gate_policy.mapping.l1.py)` evidence to the deploy and release mapping assertions only in the same changeset that adds the tests.
 
-## Generated guide lifecycle vocabulary window
+## Generated instruction-block lifecycle vocabulary window
 
-`spx/15-merging.pdr.md` declares four readiness gates and the lifecycle `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE`, while the generated guides still teach the installed `merging-standards` vocabulary until the shared methodology PR updates `src/plugins/spec-tree/skills/merging-standards/SKILL.md` and regenerates guide output.
+`spx/15-merging.pdr.md` declares four readiness gates and the lifecycle `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE`, while the generated instruction blocks still teach the installed `merging-standards` vocabulary until the shared methodology PR updates `src/plugins/spec-tree/skills/merging-standards/SKILL.md` and regenerates instruction-block output.
 
 Required handling:
 
 - Update `src/plugins/spec-tree/skills/merging-standards/SKILL.md` in the shared methodology PR.
-- Run `just build-skills` and `just build-guides`.
-- Verify generated `spx/CLAUDE.md` and `spx/AGENTS.md` no longer teach the old three-gate or production-readiness lifecycle.
+- Run `just build-skills` and `just build-instructions`.
+- Verify the generated instruction blocks in root `CLAUDE.md` and `AGENTS.md` no longer teach the old three-gate or production-readiness lifecycle.
