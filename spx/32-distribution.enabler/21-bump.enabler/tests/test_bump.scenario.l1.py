@@ -25,7 +25,6 @@ import pytest
 from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
     CODEX_MANIFEST,
-    REQUIRED_TOOLS,
     ChangedPath,
     FileStatus,
     ManifestRecord,
@@ -47,11 +46,10 @@ from outcomeeng_testing.harnesses.bump import (
     ScriptedChangeProbe,
     ScriptedContentProbe,
     ScriptedManifestReader,
+    all_tools_available,
+    base_ref,
     build_repo_with_untracked_new_skill,
 )
-
-BASE_REF = "origin/main"
-ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 
 
 def test_only_changed_plugin_manifests_are_written() -> None:
@@ -63,8 +61,8 @@ def test_only_changed_plugin_manifests_are_written() -> None:
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo"))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, foo_claude): foo_content,
-            (BASE_REF, bar_claude): bar_content,
+            (base_ref(), foo_claude): foo_content,
+            (base_ref(), bar_claude): bar_content,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -74,10 +72,10 @@ def test_only_changed_plugin_manifests_are_written() -> None:
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -103,8 +101,8 @@ def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, claude_path): claude_content,
-            (BASE_REF, codex_path): codex_content,
+            (base_ref(), claude_path): claude_content,
+            (base_ref(), codex_path): codex_content,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -116,10 +114,10 @@ def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -156,16 +154,16 @@ def test_segment_selection_produces_expected_version(
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): claude_content},
+        content={(base_ref(), claude_path): claude_content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=claude_content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         segment,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -184,10 +182,10 @@ def test_no_changed_plugins_exits_zero_without_writing() -> None:
     content_probe = ScriptedContentProbe(content={})
     manifest_reader = ScriptedManifestReader(manifests={})
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -210,16 +208,16 @@ def test_dry_run_reports_would_be_new_version_without_writing(
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content},
+        content={(base_ref(), claude_path): content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         mode=Mode.DRY_RUN,
         change_probe=change_probe,
@@ -251,8 +249,8 @@ def test_check_passes_when_every_changed_plugin_is_already_bumped(
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, foo_path): foo_base,
-            (BASE_REF, bar_path): bar_base,
+            (base_ref(), foo_path): foo_base,
+            (base_ref(), bar_path): bar_base,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -262,10 +260,10 @@ def test_check_passes_when_every_changed_plugin_is_already_bumped(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         mode=Mode.CHECK,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -288,15 +286,15 @@ def test_write_bumps_from_base_when_working_tree_version_is_below_base() -> None
     base_content = manifest_text(plugin, "0.73.0")
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(content={(BASE_REF, path): base_content})
+    content_probe = ScriptedContentProbe(content={(base_ref(), path): base_content})
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=path, content=working_tree_content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -319,15 +317,15 @@ def test_check_fails_when_working_tree_version_is_below_base(
     base_content = manifest_text(plugin, "0.73.0")
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
-    content_probe = ScriptedContentProbe(content={(BASE_REF, path): base_content})
+    content_probe = ScriptedContentProbe(content={(base_ref(), path): base_content})
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=path, content=working_tree_content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         mode=Mode.CHECK,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -364,7 +362,7 @@ def test_check_compares_added_manifest_to_base_source_path(
         },
     )
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, base_path): base_content},
+        content={(base_ref(), base_path): base_content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={
@@ -372,10 +370,10 @@ def test_check_compares_added_manifest_to_base_source_path(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         mode=Mode.CHECK,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -388,7 +386,7 @@ def test_check_compares_added_manifest_to_base_source_path(
     assert exit_code == 0
     assert manifest_writer.writes == []
     assert captured.err == ""
-    assert content_probe.queries == [(BASE_REF, src_path), (BASE_REF, base_path)]
+    assert content_probe.queries == [(base_ref(), src_path), (base_ref(), base_path)]
 
 
 def test_check_compares_copied_manifest_to_base_source_path(
@@ -413,7 +411,7 @@ def test_check_compares_copied_manifest_to_base_source_path(
         },
     )
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, base_path): base_content},
+        content={(base_ref(), base_path): base_content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={
@@ -421,10 +419,10 @@ def test_check_compares_copied_manifest_to_base_source_path(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         mode=Mode.CHECK,
         change_probe=change_probe,
         content_probe=content_probe,
@@ -437,7 +435,7 @@ def test_check_compares_copied_manifest_to_base_source_path(
     assert exit_code == 0
     assert manifest_writer.writes == []
     assert captured.err == ""
-    assert content_probe.queries == [(BASE_REF, src_path), (BASE_REF, base_path)]
+    assert content_probe.queries == [(base_ref(), src_path), (base_ref(), base_path)]
 
 
 def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
@@ -453,8 +451,8 @@ def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
     change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
-            (BASE_REF, foo_path): foo_unchanged,
-            (BASE_REF, bar_path): bar_base,
+            (base_ref(), foo_path): foo_unchanged,
+            (base_ref(), bar_path): bar_base,
         },
     )
     manifest_reader = ScriptedManifestReader(
@@ -464,10 +462,10 @@ def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
         },
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,
         mode=Mode.CHECK,
         change_probe=change_probe,
@@ -493,16 +491,16 @@ def test_auto_detected_segment_is_minor_for_new_skill_addition() -> None:
 
     change_probe = ScriptedChangeProbe(changed={plugin: minor_change(plugin)})
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content},
+        content={(base_ref(), claude_path): content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         segment=None,  # auto-detect
         change_probe=change_probe,
         content_probe=content_probe,
@@ -525,16 +523,16 @@ def test_auto_detected_segment_is_patch_for_modification_only_changes() -> None:
 
     change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content},
+        content={(base_ref(), claude_path): content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         segment=None,  # auto-detect
         change_probe=change_probe,
         content_probe=content_probe,
@@ -560,16 +558,16 @@ def test_explicit_segment_patch_overrides_detected_minor_with_warning(
 
     change_probe = ScriptedChangeProbe(changed={plugin: minor_change(plugin)})
     content_probe = ScriptedContentProbe(
-        content={(BASE_REF, claude_path): content},
+        content={(base_ref(), claude_path): content},
     )
     manifest_reader = ScriptedManifestReader(
         manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
     )
     manifest_writer = RecordingManifestWriter()
-    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+    tool_probe = RecordingToolProbe(available=all_tools_available())
 
     exit_code = bump(
-        BASE_REF,
+        base_ref(),
         Segment.PATCH,  # explicit override
         change_probe=change_probe,
         content_probe=content_probe,

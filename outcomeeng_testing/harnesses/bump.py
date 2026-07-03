@@ -42,6 +42,7 @@ from outcomeeng.distribution.bump import (
     ManifestWriter,
     SOURCE_PLUGINS_DIR,
     ToolProbe,
+    REQUIRED_TOOLS,
 )
 
 
@@ -129,6 +130,14 @@ class RecordingManifestWriter:
         self.writes.append((path, new_content))
         if self.event_log is not None:
             self.event_log.append(f"writer:{path}")
+
+
+def base_ref() -> str:
+    return "origin/main"
+
+
+def all_tools_available() -> frozenset[str]:
+    return frozenset(REQUIRED_TOOLS)
 
 
 CHANGE_DETECT_PLUGIN = "demo"
@@ -228,6 +237,8 @@ __all__ = [
     "ScriptedContentProbe",
     "ScriptedManifestReader",
     "UntrackedSkillRepo",
+    "all_tools_available",
+    "base_ref",
     "build_repo_with_untracked_new_skill",
 ]
 

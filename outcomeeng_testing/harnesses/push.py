@@ -54,6 +54,16 @@ def tracked_upstream_ref() -> str:
     return "abc123"
 
 
+def push_failure_exit_code() -> int:
+    """Return a representative non-zero git-push failure code."""
+    return 7
+
+
+def sync_skip_failure_exit_code() -> int:
+    """Return a representative failure code for no-sync assertions."""
+    return 13
+
+
 def force_with_lease_push_args() -> tuple[str, ...]:
     """Return a representative post-rebase git-push argument vector."""
     return (
@@ -186,6 +196,8 @@ __all__ = [
     "push_option_with_dry_run_operand_args",
     "repo_option_with_dry_run_operand_args",
     "separator_repository_named_like_dry_run_args",
+    "push_failure_exit_code",
+    "sync_skip_failure_exit_code",
     "sync_invocation",
     "tool_probe_invocation",
     "tracked_upstream_ref",

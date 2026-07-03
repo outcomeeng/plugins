@@ -28,6 +28,7 @@ from outcomeeng_testing.harnesses.push import (
     force_with_lease_push_args,
     git_help_push_args,
     push_option_with_dry_run_operand_args,
+    push_failure_exit_code,
     repo_option_with_dry_run_operand_args,
     separator_repository_named_like_dry_run_args,
     sync_invocation,
@@ -88,7 +89,7 @@ def test_untracked_branch_invokes_sync_without_ref() -> None:
 
 
 def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
-    runner = TracedRunner(exit_codes=(7,))
+    runner = TracedRunner(exit_codes=(push_failure_exit_code(),))
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
@@ -103,7 +104,7 @@ def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
         upstream_probe=upstream_probe,
     )
 
-    assert exit_code == 7
+    assert exit_code == push_failure_exit_code()
     assert runner.calls == [("git", "push", "origin", "main")]
 
 

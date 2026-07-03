@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.push import (
     TracedToolProbe,
     all_required_tools_available,
     all_tool_probe_invocations,
+    sync_skip_failure_exit_code,
     sync_invocation,
     tracked_upstream_ref,
 )
@@ -96,7 +97,7 @@ def test_upstream_probe_runs_before_git_push() -> None:
 
 
 def test_sync_not_invoked_when_push_fails() -> None:
-    runner = TracedRunner(exit_codes=(13,))
+    runner = TracedRunner(exit_codes=(sync_skip_failure_exit_code(),))
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
@@ -109,7 +110,7 @@ def test_sync_not_invoked_when_push_fails() -> None:
         upstream_probe=upstream_probe,
     )
 
-    assert exit_code == 13
+    assert exit_code == sync_skip_failure_exit_code()
     # Only the git push call was recorded — no sync invocation.
     assert runner.calls == [("git", "push", "origin", "main")]
     assert all(call[:3] != sync_invocation()[:3] for call in runner.calls)
