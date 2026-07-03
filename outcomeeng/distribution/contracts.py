@@ -32,8 +32,14 @@ BUILD_COMMAND_ARGV: Final = (
 )
 DIST_DIFF_MODULE_NAME: Final = "outcomeeng.distribution.dist_diff"
 DIST_DIFF_ARGV: Final = ("uv", "run", "python", "-m", DIST_DIFF_MODULE_NAME)
-GUIDE_DIFF_MODULE_NAME: Final = "outcomeeng.distribution.guide_diff"
-GUIDE_DIFF_ARGV: Final = ("uv", "run", "python", "-m", GUIDE_DIFF_MODULE_NAME)
+INSTRUCTION_BLOCK_MODULE_NAME: Final = "outcomeeng.distribution.instruction_block"
+INSTRUCTION_BLOCK_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    INSTRUCTION_BLOCK_MODULE_NAME,
+)
 ORCHESTRATION_VALIDATION_ARGV: Final = (
     "uv",
     "run",

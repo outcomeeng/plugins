@@ -2,7 +2,7 @@
 
 This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
 
-`AGENTS.md` and `CLAUDE.md` share product-owned instructions, while each file carries its own harness-specific managed Spec Tree Guide section.
+`AGENTS.md` and `CLAUDE.md` share product-owned instructions, while each file carries its own harness-specific managed Spec Tree instruction block.
 
 ## Two audiences, two design surfaces
 
@@ -69,7 +69,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See the plugin catalog in [`README.md`](README.md#plugins) for the available skills.
 - ⚠️ **NEVER write code without invoking a skill first** - See the plugin catalog in [`README.md`](README.md#plugins) for language-specific coding skills.
 - ⚠️ **NEVER read, analyze, or propose changes to product work without invoking `/understand` then `/contextualize` first** - The trigger is *engaging with product state*, not editing one enumerated artifact type. Before you read any file under `spx/`, `src/plugins/`, or `outcomeeng*/` **to analyze, propose, or change product work** — a spec, a decision record, a coordination note (`PLAN.md`/`ISSUES.md`), an authored skill/command/agent/template, or implementation code governed by a node — invoke `/understand` (once per session) to load the methodology foundation, then `/contextualize <full-path>` on each involved node to load its ancestry (product → decisions → ancestors → target) deterministically. Locating the target path with `ls`/`Glob` is fine; `/contextualize` performs the authoritative read. **NEVER form a judgment, proposal, or edit from a bare `Read` before the methodology and the node's ancestry are loaded** — that is exactly what made `spx/ISSUES.md` look like "just a coordination note" instead of spec-tree work. Reading the root agent guide (`AGENTS.md` / `CLAUDE.md`) to learn the rules is the sole exemption — it is the only file readable before `/understand` loads. Concretely, this pair is required before implementing work on an existing node, editing an existing spec file, cleaning or reconciling a `PLAN.md`/`ISSUES.md`, **editing an authored skill, command, agent, or template under `src/plugins/` whose behavior an `spx/` node governs** (a `SKILL.md` body is implementation that an `spx/` `[eval]` or conformance test evaluates — it counts even though no module *imports* the markdown and the file is not under `spx/`; e.g. the `manage-pr` and `review-changes` skills implement `spx/21-spec-tree.enabler/76-merging.enabler/`), or opening a PR whose diff sits inside `spx/` or imports modules tested by `spx/`. **This pair runs BEFORE `develop:create-skills` or any other authoring-mechanics skill** — editing a skill that implements a node is spec-tree work first and skill-authoring work second; reaching for `create-skills` (or its `skill-standards` router) first is the exact mistake this rule exists to prevent. The "Spec-tree navigation" section below explains how to identify the governing node from a diff, including the inverse path from an authored skill body to its node.
-- ⚠️ **ALWAYS use the root managed Spec Tree Guide section before spec-tree work** - The managed section in this root instruction file is the spec-tree skill router. Read it before working with files under `spx/` or applying spec-tree lifecycle rules from the product-owned root guide content.
+- ⚠️ **ALWAYS use the root managed Spec Tree instruction block before spec-tree work** - The instruction block in this root instruction file is the spec-tree skill router. Read it before working with files under `spx/` or applying spec-tree lifecycle rules from the product-owned root instruction content.
 - ⚠️ **NEVER create a spec-tree artifact without invoking `/author` first** - Before creating a product spec, ADR, PDR, enabler, or outcome, invoke `/author`. The skill carries the templates, the index-assignment procedure, and chains into `/contextualize` on the parent directory so sibling enumeration prevents index collisions. Do not invoke `/contextualize` directly on a not-yet-existing node path — it will abort with "Target path not found"; the bootstrap-mode entry point belongs to `/author`.
 - ⚠️ **ALWAYS read harness guide files in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's active harness guide first if it exists: `CLAUDE.md` in Claude Code, `AGENTS.md` in Codex.
 - ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
@@ -96,7 +96,7 @@ Historical plugin implementations are pruned from this repository. The history t
   - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
   - Full local deterministic gate: `just check`. Run this only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate, such as shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
   - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
-  - Generated root Spec Tree guide sections after guide-template or distribution-render changes: `just build-skills`, then `just build-guides`. Do not hand-edit the managed sections in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just guide-check`.
+  - Generated root Spec Tree instruction blocks after instruction-block-template or distribution-render changes: `just build-skills`, then `just build-instructions`. Do not hand-edit the managed instruction blocks in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just instructions-check`.
   - Marketplace install refresh after merged plugin-distribution changes: `just sync-marketplace <previous-main-ref>` from the marketplace-source worktree, as directed by `spx/local/merging.md`.
 - 🛑 **STOP TRIGGER — NEVER raise command expense ceilings without explicit operator approval** - Command defaults are authority for cost-bearing and quota-bearing runs. Do not add or increase flags, environment variables, or config values that raise spend, quota use, hosted minutes, paid API usage, token budget, worker parallelism, retry count, timeout, or external-service capacity without structured operator approval in the same turn. Examples include `--max-budget-usd`, model/API budget caps, worker or parallelism counts, retry limits, hosted-runner minutes, and paid-provider switches. If a command fails because the default ceiling is too low, stop and ask with `request_user_input`, naming the exact failed command, the blocked ceiling, the proposed new ceiling, and a pause/inspect option.
 - ✅ **Use the Justfile as this repo's command interface** - Use `just --list` / `just help` only to confirm exact recipe spelling after a governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. Repository-local Python modules (`python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations) run through `just` recipes only; inside the `Justfile`, those invocations are recipe implementation details. If a needed repository operation exists only as a Python module, add or fix the narrow Just recipe first, then run the recipe. Plugin-shipped skill scripts are different: when an active skill instructs a direct `python3 "${CLAUDE_SKILL_DIR}/scripts/..."` command, run that exact portable skill script. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
@@ -267,7 +267,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 - `src/plugins/` — authored skills, agents, commands, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
-- `spx/` — this product's spec tree (durable map). The managed Spec Tree Guide section in this root file is the skill router. Per-node `local/` holds product-specific skill overlays.
+- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. Per-node `local/` holds product-specific skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
@@ -281,7 +281,7 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### Autonomy
 
-The managed Spec Tree Guide section in this root file is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it classifies the changeset, reads `spx/local/merging.md` when present, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from the product-owned root guide content.
+The managed Spec Tree instruction block in this root file is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it classifies the changeset, reads `spx/local/merging.md` when present, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from the product-owned root instruction content.
 
 The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the governing skill flow. The only permitted direct git/GitHub command forms are those an active skill or this repository command section names exactly.
 
@@ -289,7 +289,7 @@ The autonomy does **not** cover blind force-push (`git push --force`), force-pus
 
 ### Lifecycle
 
-The lifecycle authority is: the managed Spec Tree Guide section routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `AGENTS.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
+The lifecycle authority is: the managed Spec Tree instruction block routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `AGENTS.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
 
 ### Marketplace Publish Commands
 
@@ -386,14 +386,14 @@ If a user's global Codex config already enables a plugin that the product should
 enabled = false
 ```
 
-<!-- BEGIN MANAGED SPEC TREE GUIDE -->
+<!-- BEGIN MANAGED SPEC TREE INSTRUCTIONS -->
 <!-- spec-tree-template-version: 0.21.5 -->
 <!-- spec-tree-template-source: spec-tree -->
 <!-- spec-tree-languages: python -->
 
-# Spec Tree Guide
+# Spec Tree Instructions
 
-This guide explains WHEN to invoke spec-tree skills for this product. It is a **router** — the skills contain the HOW.
+These instructions explain WHEN to invoke spec-tree skills for this product. They are a **router** — the skills contain the HOW.
 
 ---
 
@@ -437,7 +437,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merge` reads `spx/local/merging.md` as a repo-local overlay **when that file is present**; the overlay is optional, so its absence is normal and not a blocker — `/merge` applies the default lifecycle. `spx/local/merging.md` is the one place repository-specific merge behavior belongs: never infer the transport from other docs when it is absent, and never edit this generated guide to change merge behavior — invoke `/merge` and let the lifecycle apply the defaults. The three authority gates, the delivered-value boundary, and the finding-disposition rule are transport-neutral and live in `/merging-standards`.
+Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merge` reads `spx/local/merging.md` as a repo-local overlay **when that file is present**; the overlay is optional, so its absence is normal and not a blocker — `/merge` applies the default lifecycle. `spx/local/merging.md` is the one place repository-specific merge behavior belongs: never infer the transport from other docs when it is absent, and never edit this generated instruction block to change merge behavior — invoke `/merge` and let the lifecycle apply the defaults. The three authority gates, the delivered-value boundary, and the finding-disposition rule are transport-neutral and live in `/merging-standards`.
 
 ## Stop Triggers
 
@@ -571,7 +571,7 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 }
 ```
 
-**Use explicit prompts for audit agents.** The `message` field comes from the `multi_agent_v1.spawn_agent` schema. The guide owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
+**Use explicit prompts for audit agents.** The `message` field comes from the `multi_agent_v1.spawn_agent` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
 Use this shape for a one-off implementation audit:
 
@@ -673,7 +673,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}*` skills 
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
+Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages listed in its `languages` frontmatter; `/update-instruction-block` re-renders from the installed template when the methodology advances.
 
 ### Python
 
@@ -689,4 +689,4 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 Sessions are shared across every worktree. Each session must be handed off via `/handoff` so it can be resumed from any other worktree: the handoff leaves the worktree clean and persists all state on origin. Propose a handoff when the session's goal is met or the work must pause; resume one with `/pickup`. When a claimed session is complete and should leave the active queue, close it through `/handoff` or `/handoff --no-session` so claimed-session accounting archives it. To return a wrongly claimed session to the shared queue instead, run `spx session release <session-id>`.
 
-<!-- END MANAGED SPEC TREE GUIDE -->
+<!-- END MANAGED SPEC TREE INSTRUCTIONS -->

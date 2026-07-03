@@ -105,7 +105,7 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Invoke `/update-spx` for the repository root so its generator writes both root guide managed sections — `CLAUDE.md` for this runtime and `AGENTS.md` for the other runtime — from the installed template. `/update-spx` owns guide rendering, enabled-language detection, and any explicit language override.
+3. Invoke `/update-instruction-block` for the repository root so its generator writes both root instruction blocks — `CLAUDE.md` for this runtime and `AGENTS.md` for the other runtime — from the installed template. `/update-instruction-block` owns instruction-block rendering, enabled-language detection, and any explicit language override.
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
    - Candidate product areas from the interview

@@ -104,16 +104,16 @@ def test_enforced_by_default_only_ignored_files_exempt(tmp_path: Path) -> None:
         tmp_path / "plugins" / "live" / "SKILL.md", ignore=ignore, repo_root=tmp_path
     )
 
-    # The live exemption set covers the guide-generation node files, which define
+    # The live exemption set covers the instruction-block node files, which define
     # file-kind names as runtime data and cannot consume a build token, plus
-    # review-changes neutral citation surfaces that name both guide filenames as
-    # citation targets rather than runtime-resolved guide reads.
+    # review-changes neutral citation surfaces that name both instruction filenames as
+    # citation targets rather than runtime-resolved instruction reads.
     assert RUNTIME_TOKEN_IGNORE == frozenset(
         {
-            "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py",
-            "src/plugins/spec-tree/skills/update-spx/SKILL.md",
-            "src/plugins/spec-tree/agents/spx-updater.md",
-            "src/plugins/spec-tree/skills/understand/templates/spx-claude.md",
+            "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+            "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
+            "src/plugins/spec-tree/agents/instruction-block-updater.md",
+            "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
             "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
             "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
         }
@@ -138,14 +138,14 @@ def test_real_tree_scan_passes() -> None:
     assert gate_files  # the gate scans a non-empty authored set
     assert scan_paths(gate_files) == []
 
-    # The live exemptions are the guide-generation node files and the review-changes
+    # The live exemptions are the instruction-block node files and the review-changes
     # neutral citation surfaces; every other gate file is checked.
     assert RUNTIME_TOKEN_IGNORE == frozenset(
         {
-            "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py",
-            "src/plugins/spec-tree/skills/update-spx/SKILL.md",
-            "src/plugins/spec-tree/agents/spx-updater.md",
-            "src/plugins/spec-tree/skills/understand/templates/spx-claude.md",
+            "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+            "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
+            "src/plugins/spec-tree/agents/instruction-block-updater.md",
+            "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
             "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
             "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
         }

@@ -1,0 +1,294 @@
+"""Test harness for the instruction-block render module.
+
+Exposes:
+
+- An importlib loader for ``instruction_block.py``. The module ships under a
+  generated plugin skill directory and is not importable by package
+  name; tests load it through ``importlib`` instead.
+- ``build_template``. Constructs a synthetic instruction-block.md-shaped template with a
+  brace-delimited illustration token, a language-conditional block per language in
+  ``TEMPLATE_LANGUAGES``, and (optionally) a section that exists only in a newer
+  template — for exercising new-section propagation on update. The lang-block
+  marker syntax mirrors the module's ``_LANG_BLOCK`` contract; a test that drifts
+  from it fails to render, which is the intended coupling.
+
+The render and parse functions take document strings, so the harness builds
+documents as strings; no filesystem is involved.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import pathlib
+from dataclasses import dataclass
+import sys
+from types import ModuleType
+from typing import Final
+
+REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
+# Coupled to the update-instruction-block skill directory name; a rename there must update
+# this path or load_instruction_block_module raises RuntimeError at import time.
+INSTRUCTION_BLOCK_MODULE_PATH = (
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "update-instruction-block"
+    / "scripts"
+    / "instruction_block.py"
+)
+CANONICAL_TEMPLATE_PATH = (
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "understand"
+    / "templates"
+    / "instruction-block.md"
+)
+
+INSTRUCTION_CLAUDE: Final = "CLAUDE.md"
+INSTRUCTION_AGENTS: Final = "AGENTS.md"
+ROOT_CLAUDE_BODY: Final = "# Claude Root\n\nClaude repository instructions.\n"
+ROOT_AGENTS_BODY: Final = "# Agents Root\n\nCodex repository instructions.\n"
+ROOT_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
+
+# Source-template content probes for the rendered-output session-result check.
+SESSION_MANAGEMENT_HEADING = "## Session Management"
+SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
+SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+
+# Invented scenario payload owned by the harness.
+LANG_PRIMARY = "python"
+LANG_SECONDARY = "typescript"
+TEMPLATE_LANGUAGES = (LANG_PRIMARY, LANG_SECONDARY)
+BASE_SECTION = "Test Naming"
+NEW_SECTION = "Process Hygiene"
+# A brace-delimited illustration token the render must pass through unchanged.
+ILLUSTRATION_TOKEN = "{product-slug}"
+BUILD_MACRO_CAPABILITY = "ask_user"
+BUILD_MACRO_HARNESS = "codex"
+
+# Harness payload: the template carries a per-harness block for each agent harness,
+# rendered only into that harness's instruction file. The marker syntax mirrors the module's
+# ``_HARNESS_BLOCK`` contract; a test that drifts from it fails to render.
+HARNESS_CLAUDE = "claude"
+HARNESS_CODEX = "codex"
+TEMPLATE_HARNESSES = (HARNESS_CLAUDE, HARNESS_CODEX)
+
+
+@dataclass(frozen=True)
+class RootInstructionTopology:
+    """Root instruction files and symlinks a consumer repository may already contain."""
+
+    files: dict[str, str]
+    symlinks: dict[str, str]
+
+
+def root_instruction_topology_only_claude() -> RootInstructionTopology:
+    """Return a root topology with only the Claude harness instruction file present."""
+    return RootInstructionTopology(
+        files={INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY}, symlinks={}
+    )
+
+
+def root_instruction_topology_only_agents() -> RootInstructionTopology:
+    """Return a root topology with only the Codex harness instruction file present."""
+    return RootInstructionTopology(
+        files={INSTRUCTION_AGENTS: ROOT_AGENTS_BODY}, symlinks={}
+    )
+
+
+def root_instruction_topology_separate() -> RootInstructionTopology:
+    """Return a root topology with two independent harness instruction files."""
+    return RootInstructionTopology(
+        files={
+            INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+            INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_symlinked() -> RootInstructionTopology:
+    """Return a root topology matching a shared instruction file with a harness symlink."""
+    return RootInstructionTopology(
+        files={INSTRUCTION_AGENTS: ROOT_SHARED_BODY},
+        symlinks={INSTRUCTION_CLAUDE: INSTRUCTION_AGENTS},
+    )
+
+
+def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
+    """Write ``body`` as a regular file, replacing a symlink or file at ``path``."""
+    if path.exists() or path.is_symlink():
+        path.unlink()
+    path.write_text(body, encoding="utf-8")
+
+
+def _seed_body(
+    root: pathlib.Path, instruction_name: str, fallback: str | None
+) -> str | None:
+    """Read an instruction file's body, following symlinks, or return ``fallback`` when absent."""
+    path = root / instruction_name
+    if path.exists() or path.is_symlink():
+        return path.read_text(encoding="utf-8")
+    return fallback
+
+
+def materialize_root_instruction_topology(
+    root: pathlib.Path, topology: RootInstructionTopology
+) -> dict[str, str]:
+    """Create ``topology`` under ``root`` and normalize harness instruction files."""
+    root.mkdir(parents=True, exist_ok=True)
+    for name, body in topology.files.items():
+        _replace_path_with_text(root / name, body)
+    for name, target in topology.symlinks.items():
+        link_path = root / name
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        link_path.symlink_to(target)
+
+    claude_seed = _seed_body(root, INSTRUCTION_CLAUDE, None)
+    agents_seed = _seed_body(root, INSTRUCTION_AGENTS, claude_seed)
+    if claude_seed is None:
+        claude_seed = agents_seed
+    if claude_seed is None or agents_seed is None:
+        claude_seed = agents_seed = ""
+
+    seeds = {INSTRUCTION_CLAUDE: claude_seed, INSTRUCTION_AGENTS: agents_seed}
+    for name, body in seeds.items():
+        _replace_path_with_text(root / name, body)
+    return seeds
+
+
+def harness_line(harness: str) -> str:
+    """The body the harness emits inside a harness block — what render keeps or drops."""
+    return f"{harness.upper()} runs the audit as a subagent."
+
+
+def render_build_macro() -> str:
+    """Build an unresolved macro-shaped token owned by the render harness."""
+    return f"\n{{{{! tool('{BUILD_MACRO_CAPABILITY}', '{BUILD_MACRO_HARNESS}') !}}}}\n"
+
+
+def load_instruction_block_module() -> ModuleType:
+    """Load the ``instruction_block`` module via importlib and cache it."""
+    cached = sys.modules.get("instruction_block")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["instruction_block"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def read_canonical_template() -> str:
+    """Read the canonical template both instruction files render from."""
+    return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def extract_markdown_section(document: str, heading: str) -> str:
+    """Return a markdown section by exact heading line, including the heading."""
+    lines = document.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as exc:
+        raise RuntimeError(f"Heading not found: {heading}") from exc
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index, line in enumerate(lines[start + 1 :], start=start + 1):
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+def _language_heading(language: str) -> str:
+    """The H3 heading the harness emits inside a language block — what render keeps or drops."""
+    return f"### {language.capitalize()}"
+
+
+def build_template(version: str, *, extra_section: bool = False) -> str:
+    """Build a synthetic template at ``version`` with a block per template language.
+
+    With ``extra_section`` the template also carries ``NEW_SECTION`` — a section a
+    newer template introduces, absent from an older one.
+    """
+    module = load_instruction_block_module()
+    delimiter = module.FRONTMATTER_DELIMITER
+    frontmatter = (
+        f"{delimiter}\n"
+        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
+        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
+        f"{delimiter}\n"
+    )
+    parts = [
+        "",
+        "# Spec Tree Instructions",
+        "",
+        f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
+        "",
+        f"## {BASE_SECTION}",
+        "",
+    ]
+    for language in TEMPLATE_LANGUAGES:
+        parts += [
+            f"<!-- lang:{language} -->",
+            "",
+            _language_heading(language),
+            f"{language} naming rules",
+            "",
+            f"<!-- /lang:{language} -->",
+        ]
+    for harness in TEMPLATE_HARNESSES:
+        parts += [
+            f"<!-- harness:{harness} -->",
+            "",
+            harness_line(harness),
+            "",
+            f"<!-- /harness:{harness} -->",
+        ]
+    if extra_section:
+        parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
+    return frontmatter + "\n".join(parts) + "\n"
+
+
+def write_spx_tree_with_tests(
+    spx_dir: pathlib.Path, extensions: tuple[str, ...]
+) -> pathlib.Path:
+    """Create an ``spx/`` tree carrying one node whose ``tests/`` holds the given extensions.
+
+    Lets language-detection tests drive the CLI edge against a real on-disk tree: the
+    detector globs ``spx/**/tests/`` and maps each test-file extension to its language.
+    """
+    tests_dir = spx_dir / "21-node.enabler" / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    for extension in extensions:
+        (tests_dir / f"test_subject.scenario.l1.{extension}").write_text(
+            "", encoding="utf-8"
+        )
+    return spx_dir
+
+
+def write_template(
+    directory: pathlib.Path, version: str, *, extra_section: bool = False
+) -> pathlib.Path:
+    """Write ``build_template(...)`` into ``directory`` and return the file path.
+
+    Lets CLI-edge tests drive ``main([...])`` against a real template file under a
+    pytest ``tmp_path``; the harness owns the on-disk setup.
+    """
+    path = directory / "instruction-block.md"
+    path.write_text(
+        build_template(version, extra_section=extra_section), encoding="utf-8"
+    )
+    return path

@@ -12,7 +12,7 @@ In addition to `/open-pr`'s branch hygiene, verify before opening:
 | Plugin manifest version bumped when the change warrants it                                                  | STOP. Bump per `spx/local/commit-changes.md`.                        |
 | Both marketplace catalogs updated when adding or removing a plugin                                          | STOP. Run the catalog or manifest command named by root `AGENTS.md`. |
 | `AGENTS.md` skills, commands, and agents tables updated to match the change                                 | STOP. New or removed artifacts must appear in the catalog.           |
-| `understand/templates/spx-claude.md` updated when skill structure changes                                   | STOP. New projects inherit this template.                            |
+| `understand/templates/instruction-block.md` updated when skill structure changes                            | STOP. New projects inherit this template.                            |
 
 ## Required body sections
 

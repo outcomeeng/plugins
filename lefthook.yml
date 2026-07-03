@@ -18,9 +18,9 @@ pre-commit:
       run: just build-skills && uv run python -m outcomeeng.distribution.dist_diff
       stage_fixed: true
       priority: 20
-    regenerate-spx-guides:
-      glob: "{src/plugins/spec-tree/skills/understand/templates/spx-claude.md,src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py,spx/**/tests/*}"
-      run: just build-guides
+    regenerate-instruction-blocks:
+      glob: "{src/plugins/spec-tree/skills/understand/templates/instruction-block.md,src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py,spx/**/tests/*}"
+      run: just build-instructions
       stage_fixed: true
       priority: 25
     dprint:

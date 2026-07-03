@@ -2,7 +2,7 @@
 
 PROVIDES a validator that flags a raw runtime-divergent name in authored source the build renders or inlines — plugin content under `src/plugins/` and shared fragments under `src/_shared/` — a name that renders differently per coding agent and so must be a registry-backed token such as `{{! tool('…') !}}` / `{{! file('…') !}}`, or a per-runtime conditional — while passing token-expressed references and an explicit ignore-list of tracked exemptions
 SO THAT the marketplace quality gate and skill, agent, and command authors
-CAN keep each generated target's output naming only its own native tools and guide files, with a raw literal caught at the validation gate rather than shipped as a foreign instruction into another agent's output
+CAN keep each generated target's output naming only its own native tools and instruction files, with a raw literal caught at the validation gate rather than shipped as a foreign instruction into another agent's output
 
 ## Assertions
 
@@ -10,7 +10,7 @@ CAN keep each generated target's output naming only its own native tools and gui
 
 - Given a file containing a raw runtime-divergent token, when the validator scans it, then it reports the file, line, and token and exits non-zero ([test](tests/test_runtime_token.scenario.l1.py))
 - Given a file whose runtime-divergent references are all expressed as `{{! tool('…') !}}` tokens or per-runtime conditionals, when the validator scans it, then it reports nothing and exits zero ([test](tests/test_runtime_token.scenario.l1.py))
-- Given a file on the ignore-list, when the validator scans it, then a raw runtime-divergent token in that file is not reported — the ignore-list is the explicit, tracked exception for a not-yet-converted file, an authored file of the guide-generation node whose subject is the two named guide files, or a runtime-neutral citation surface that names both guide filenames as citation targets for any repo under review ([test](tests/test_runtime_token.scenario.l1.py))
+- Given a file on the ignore-list, when the validator scans it, then a raw runtime-divergent token in that file is not reported — the ignore-list is the explicit, tracked exception for a not-yet-converted file, an authored file of the instruction-block node whose subject is the two named instruction files, or a runtime-neutral citation surface that names both instruction filenames as citation targets for any repo under review ([test](tests/test_runtime_token.scenario.l1.py))
 
 ### Compliance
 

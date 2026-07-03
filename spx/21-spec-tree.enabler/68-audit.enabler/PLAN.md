@@ -2,7 +2,7 @@
 
 Apply to the audit surface the same Codex subagent-invocation transformation that
 `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` and its
-`changes-reviewer` agent received (landed in the `spx-claude.md` guide template). This is the
+`changes-reviewer` agent received (landed in the `instruction-block.md` guide template). This is the
 audit-family slice of the verification-skill migration owned by the SPX-journal-channel migration
 work; it is blocked on the forthcoming `spx` sub-command that provides a cleaner audit surface than
 today's `spx journal --type audit`.
@@ -15,7 +15,7 @@ today's `spx journal --type audit`.
 
 ## Scope to transform
 
-- `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` — the `runtime:codex` audit
+- `src/plugins/spec-tree/skills/understand/templates/instruction-block.md` — the `runtime:codex` audit
   invocation contract (currently only `changes-reviewer` carries the full contract).
 - `src/plugins/spec-tree/agents/auditor.md` and `.../audit-orchestrator.md`.
 - The artifact-type auditors `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`.
@@ -53,5 +53,5 @@ Whether the audit `message` carries a caller-requested output shape.
 - `spx/14-verification.pdr.md`, `spx/15-audit-result-delivery.pdr.md`,
   `spx/21-spec-tree.enabler/17-audit.adr.md`,
   `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`.
-- Reference implementation to mirror: the `changes-reviewer` contract in the `spx-claude.md` guide
+- Reference implementation to mirror: the `changes-reviewer` contract in the `instruction-block.md` guide
   template and `src/plugins/spec-tree/agents/changes-reviewer.md`.

@@ -69,17 +69,17 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
-# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections from rendered harness templates
-build-guides:
-    uv run python -m outcomeeng.distribution.guide_diff --write
+# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks from rendered harness templates
+build-instructions:
+    uv run python -m outcomeeng.distribution.instruction_block --write
 
 # Format Python files with ruff
 fmt-python *args:
     uv run ruff format {{args}}
 
-# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections and fail on drift (CI gate)
-guide-check:
-    uv run python -m outcomeeng.distribution.guide_diff
+# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks and fail on drift (CI gate)
+instructions-check:
+    uv run python -m outcomeeng.distribution.instruction_block
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
 docs:
