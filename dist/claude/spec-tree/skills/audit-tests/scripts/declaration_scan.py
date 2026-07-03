@@ -30,11 +30,12 @@ class Declaration:
 
 
 _TYPESCRIPT_DECLARATION = re.compile(
-    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?P<kind>const|let|var|function)\s+(?P<name>[A-Za-z_$][\w$]*)"
+    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?P<kind>const|let|var|function)\s+(?P<body>.+)"
 )
 _RUST_DECLARATION = re.compile(
     r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?P<kind>const|static|let|fn)\s+(?P<name>[A-Za-z_]\w*)"
 )
+_TYPESCRIPT_IDENTIFIER = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)")
 
 
 class PathValidationError(ValueError):
@@ -69,7 +70,7 @@ def scan_text(source: str, path: Path) -> list[Declaration]:
     if language == "python":
         return _scan_python(source, path)
     if language == "typescript":
-        return _scan_line_language(source, path, language, _TYPESCRIPT_DECLARATION)
+        return _scan_typescript(source, path)
     if language == "rust":
         return _scan_line_language(source, path, language, _RUST_DECLARATION)
     return []
@@ -174,6 +175,79 @@ def _scan_line_language(
             )
         )
     return declarations
+
+
+def _scan_typescript(source: str, path: Path) -> list[Declaration]:
+    declarations: list[Declaration] = []
+    in_block_comment = False
+    for index, line in enumerate(source.splitlines(), start=1):
+        line, in_block_comment = _strip_block_comments(line, in_block_comment)
+        stripped = line.lstrip()
+        if stripped.startswith(("//", "#")):
+            continue
+        match = _TYPESCRIPT_DECLARATION.match(line)
+        if match is None:
+            continue
+        kind = match.group("kind")
+        if kind == "function":
+            name_match = _TYPESCRIPT_IDENTIFIER.match(match.group("body"))
+            if name_match is not None:
+                declarations.append(
+                    Declaration(
+                        path=str(path),
+                        line=index,
+                        kind=DeclarationKind.FUNCTION,
+                        name=name_match.group("name"),
+                        language="typescript",
+                    )
+                )
+            continue
+        for declarator in _split_typescript_declarators(match.group("body")):
+            name_match = _TYPESCRIPT_IDENTIFIER.search(declarator.strip())
+            if name_match is not None:
+                name = name_match.group("name")
+                declarations.append(
+                    Declaration(
+                        path=str(path),
+                        line=index,
+                        kind=_value_kind(name),
+                        name=name,
+                        language="typescript",
+                    )
+                )
+    return declarations
+
+
+def _split_typescript_declarators(body: str) -> list[str]:
+    declarators: list[str] = []
+    start = 0
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(body):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char in {"(", "[", "{"}:
+            depth += 1
+        elif char in {
+            ")",
+            "]",
+            "}",
+        }:
+            depth = max(0, depth - 1)
+        elif char == "," and depth == 0:
+            declarators.append(body[start:index])
+            start = index + 1
+    declarators.append(body[start:])
+    return declarators
 
 
 def _strip_block_comments(line: str, in_block_comment: bool) -> tuple[str, bool]:

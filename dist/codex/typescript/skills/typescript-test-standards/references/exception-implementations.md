@@ -48,9 +48,10 @@ describe("Saga", () => {
 describe("CachingWrapper", () => {
   it("does not refetch cached values", async () => {
     await withCachingClient(async (client, expected) => {
-      await new CachingWrapper(client).getUser(expected.userId);
-      await new CachingWrapper(client).getUser(expected.userId);
-      await new CachingWrapper(client).getUser(expected.userId);
+      const cache = new CachingWrapper(client);
+      await cache.getUser(expected.userId);
+      await cache.getUser(expected.userId);
+      await cache.getUser(expected.userId);
 
       expect(client.fetchCount()).toBe(expected.fetchCount);
     });

@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     fixture_laundering_is_rejected,
     laundered_indirect_is_rejected,
     misaligned_evidence_is_rejected,
+    multiple_typescript_declarations_are_detected,
     no_coupling_is_rejected,
     no_coverage_is_rejected,
     numeric_literal_is_rejected,
@@ -100,3 +101,7 @@ def test_detects_python_binding_declarations() -> None:
 
 def test_ignores_block_comment_declarations() -> None:
     assert block_comment_declarations_are_ignored()
+
+
+def test_detects_multiple_typescript_declarations() -> None:
+    assert multiple_typescript_declarations_are_detected()

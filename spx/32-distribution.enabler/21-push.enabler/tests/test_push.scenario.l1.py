@@ -35,7 +35,9 @@ def test_tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
 
     exit_code = push(
         ("origin", "main"),
@@ -48,13 +50,13 @@ def test_tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> None:
     assert upstream_probe.calls == 1
     assert runner.calls == [
         ("git", "push", "origin", "main"),
-        sync_invocation("abc123"),
+        sync_invocation(tracked_upstream_ref()),
     ]
     assert runner.trace == [
         *all_tool_probe_invocations(),
         UPSTREAM_REF_COMMAND,
         ("git", "push", "origin", "main"),
-        sync_invocation("abc123"),
+        sync_invocation(tracked_upstream_ref()),
     ]
 
 
@@ -85,7 +87,9 @@ def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
 
     exit_code = push(
         ("origin", "main"),
@@ -103,7 +107,9 @@ def test_no_push_args_forwards_bare_git_push() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
 
     exit_code = push(
         (),
@@ -115,7 +121,7 @@ def test_no_push_args_forwards_bare_git_push() -> None:
     assert exit_code == 0
     assert runner.calls == [
         ("git", "push"),
-        sync_invocation("abc123"),
+        sync_invocation(tracked_upstream_ref()),
     ]
 
 

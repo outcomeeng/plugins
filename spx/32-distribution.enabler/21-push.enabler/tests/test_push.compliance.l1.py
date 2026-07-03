@@ -18,6 +18,7 @@ from outcomeeng_testing.harnesses.push import (
     all_required_tools_available,
     all_tool_probe_invocations,
     sync_invocation,
+    tracked_upstream_ref,
 )
 
 
@@ -31,7 +32,7 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
         available=all_required_tools_available() - {missing_tool},
         trace=runner.trace,
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    upstream_probe = ScriptedUpstreamProbe(ref=tracked_upstream_ref())
 
     exit_code = push(
         ("origin", "main"),
@@ -52,7 +53,9 @@ def test_tool_availability_is_checked_before_upstream_or_push() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
 
     push(
         ("origin", "main"),
@@ -74,7 +77,9 @@ def test_upstream_probe_runs_before_git_push() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
 
     push(
         ("origin", "main"),
@@ -95,7 +100,7 @@ def test_sync_not_invoked_when_push_fails() -> None:
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    upstream_probe = ScriptedUpstreamProbe(ref=tracked_upstream_ref())
 
     exit_code = push(
         ("origin", "main"),

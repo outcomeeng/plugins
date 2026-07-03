@@ -188,6 +188,15 @@ def block_comment_declarations_are_ignored() -> bool:
     )
 
 
+def multiple_typescript_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("multiple_declaration.ts")
+    return (
+        _has_variable(declarations, "input")
+        and _has_variable(declarations, "expected")
+        and not _has_variable(declarations, "other")
+    )
+
+
 def _declarations_for_fixture(name: str) -> list[Declaration]:
     fixture = _fixture(name)
     return _scanner().scan_text(fixture.read_text(encoding="utf-8"), fixture)
