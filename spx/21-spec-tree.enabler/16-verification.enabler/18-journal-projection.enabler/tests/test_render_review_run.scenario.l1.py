@@ -73,9 +73,7 @@ def _write_spx(
             [
                 "#!/usr/bin/env python3",
                 "import os",
-                "import pathlib",
                 "import sys",
-                "marker = pathlib.Path(os.environ['SPX_LIST_MARKER'])",
                 "expected = [",
                 "    'journal',",
                 "    'render',",
@@ -88,31 +86,12 @@ def _write_spx(
                 "    '--branch-slug',",
                 "    os.environ.get('SPX_BRANCH_SLUG', ''),",
                 "]",
-                "list_expected = [",
-                "    'journal',",
-                "    'list',",
-                "    '--type',",
-                "    'review',",
-                "    '--limit',",
-                "    '200',",
-                "]",
-                "if sys.argv[1:] == list_expected:",
-                "    if os.environ.get('SPX_LIST_EXIT_CODE') is not None:",
-                "        sys.stderr.write(os.environ.get('SPX_LIST_STDERR', ''))",
-                "        raise SystemExit(int(os.environ['SPX_LIST_EXIT_CODE']))",
-                "    marker.write_text(os.environ.get('SPX_BRANCH_SLUG', ''), encoding='utf-8')",
-                "    sys.stdout.write(os.environ.get('SPX_LIST_STDOUT', '[]'))",
-                "    raise SystemExit(0)",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_NOT_FOUND') == '1':",
                 "    sys.stderr.write('journal run not found; open the run before operating on it\\n')",
                 "    raise SystemExit(1)",
                 "if sys.argv[1:] == expected and os.environ.get('SPX_DIRECT_EXIT_CODE') is not None:",
                 "    sys.stderr.write(os.environ.get('SPX_DIRECT_STDERR', ''))",
                 "    raise SystemExit(int(os.environ['SPX_DIRECT_EXIT_CODE']))",
-                "if sys.argv[1:] == branch_expected and os.environ.get('SPX_REQUIRE_LIST_FOR_BRANCH_RENDER') == '1':",
-                "    if not marker.exists() or marker.read_text(encoding='utf-8') != os.environ.get('SPX_BRANCH_SLUG', ''):",
-                "        sys.stderr.write('branch render happened before journal list resolved the slug')",
-                "        raise SystemExit(98)",
                 "if sys.argv[1:] != expected and sys.argv[1:] != branch_expected:",
                 "    sys.stderr.write('unexpected spx arguments: ' + repr(sys.argv[1:]))",
                 "    raise SystemExit(97)",
@@ -137,47 +116,22 @@ def _run_helper(
     direct_stderr: str = "",
     direct_exit_code: int | None = None,
     branch_slug: str = "",
-    listed_branch_slug: str | None = None,
-    require_list_for_branch_render: bool = False,
     pass_branch_slug: bool = False,
-    list_stdout: str | None = None,
-    list_stderr: str = "",
-    list_exit_code: int | None = None,
 ) -> subprocess.CompletedProcess[str]:
     _write_spx(tmp_path)
     env = os.environ.copy()
     env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
     env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
-    env["SPX_LIST_MARKER"] = str(tmp_path / "listed-branch-slug")
     env["SPX_STDOUT"] = spx_stdout
     env["SPX_STDERR"] = spx_stderr
     env["SPX_EXIT_CODE"] = str(spx_exit_code)
-    if list_exit_code is not None:
-        env["SPX_LIST_EXIT_CODE"] = str(list_exit_code)
-        env["SPX_LIST_STDERR"] = list_stderr
     if direct_not_found:
         env["SPX_DIRECT_NOT_FOUND"] = "1"
     if direct_exit_code is not None:
         env["SPX_DIRECT_EXIT_CODE"] = str(direct_exit_code)
         env["SPX_DIRECT_STDERR"] = direct_stderr
-    if require_list_for_branch_render:
-        env["SPX_REQUIRE_LIST_FOR_BRANCH_RENDER"] = "1"
     if branch_slug != "":
         env["SPX_BRANCH_SLUG"] = branch_slug
-        env["SPX_LIST_STDOUT"] = json.dumps(
-            [
-                {
-                    "runToken": RUN_TOKEN,
-                    "branchSlug": (
-                        branch_slug
-                        if listed_branch_slug is None
-                        else listed_branch_slug
-                    ),
-                }
-            ]
-        )
-    if list_stdout is not None:
-        env["SPX_LIST_STDOUT"] = list_stdout
     command = ["python3", str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN]
     if pass_branch_slug:
         command.extend(["--branch-slug", branch_slug])
@@ -227,37 +181,18 @@ def test_run_with_findings_renders_shared_projection(tmp_path: pathlib.Path) -> 
     assert "Required: close the gap" in result.stdout
 
 
-def test_run_token_resolves_branch_slug_from_journal_list(
+def test_direct_render_failure_is_reported_without_branch_slug_retry(
     tmp_path: pathlib.Path,
 ) -> None:
     result = _run_helper(
         tmp_path,
-        spx_stdout=json.dumps(_completed_events()),
-        direct_not_found=True,
-        branch_slug="head.b5180223",
-        require_list_for_branch_render=True,
-    )
-
-    assert result.returncode == 0
-    assert f"Review run: {RUN_TOKEN}" in result.stdout
-    assert "Status: approved" in result.stdout
-
-
-def test_failed_direct_render_still_resolves_branch_slug_from_journal_list(
-    tmp_path: pathlib.Path,
-) -> None:
-    result = _run_helper(
-        tmp_path,
-        spx_stdout=json.dumps(_completed_events()),
+        spx_stdout="",
         direct_stderr="run is outside current scope\n",
         direct_exit_code=2,
-        branch_slug="head.b5180223",
-        require_list_for_branch_render=True,
     )
 
-    assert result.returncode == 0
-    assert f"Review run: {RUN_TOKEN}" in result.stdout
-    assert "Status: approved" in result.stdout
+    assert result.returncode == 2
+    assert result.stderr == "run is outside current scope\n"
 
 
 def test_explicit_branch_slug_renders_run_outside_current_scope(
@@ -276,57 +211,6 @@ def test_explicit_branch_slug_renders_run_outside_current_scope(
     assert "Status: approved" in result.stdout
 
 
-def test_invalid_listed_branch_slug_is_rejected_before_retry_render(
-    tmp_path: pathlib.Path,
-) -> None:
-    result = _run_helper(
-        tmp_path,
-        spx_stdout=json.dumps(_completed_events()),
-        direct_not_found=True,
-        branch_slug="head-b5180223",
-        listed_branch_slug="bad/slug",
-    )
-
-    assert result.returncode == 1
-    assert (
-        "branch slug must be a canonical changeset-scope branch slug" in result.stderr
-    )
-    assert "unexpected spx arguments" not in result.stderr
-
-
-def test_journal_list_failure_is_reported_during_branch_slug_resolution(
-    tmp_path: pathlib.Path,
-) -> None:
-    result = _run_helper(
-        tmp_path,
-        spx_stdout="",
-        spx_stderr="run is outside current scope\n",
-        spx_exit_code=2,
-        list_stderr="list failed\n",
-        list_exit_code=9,
-    )
-
-    assert result.returncode == 1
-    assert "spx journal list failed while resolving branch slug: list failed" in (
-        result.stderr
-    )
-
-
-def test_journal_list_invalid_json_is_reported_during_branch_slug_resolution(
-    tmp_path: pathlib.Path,
-) -> None:
-    result = _run_helper(
-        tmp_path,
-        spx_stdout="",
-        spx_stderr="run is outside current scope\n",
-        spx_exit_code=2,
-        list_stdout="{bad",
-    )
-
-    assert result.returncode == 1
-    assert "spx journal list returned invalid JSON" in result.stderr
-
-
 def test_invalid_run_token_is_rejected_before_spx_invocation(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -334,7 +218,6 @@ def test_invalid_run_token_is_rejected_before_spx_invocation(
     env = os.environ.copy()
     env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
     env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
-    env["SPX_LIST_MARKER"] = str(tmp_path / "listed-branch-slug")
 
     result = subprocess.run(  # noqa: S603,S607
         ["python3", str(RENDER_REVIEW_RUN_SCRIPT), "../bad"],
@@ -356,7 +239,6 @@ def test_invalid_branch_slug_is_rejected_before_spx_invocation(
     env = os.environ.copy()
     env["PATH"] = f"{tmp_path}{os.pathsep}{env['PATH']}"
     env["EXPECTED_RUN_TOKEN"] = RUN_TOKEN
-    env["SPX_LIST_MARKER"] = str(tmp_path / "listed-branch-slug")
 
     result = subprocess.run(  # noqa: S603,S607
         [

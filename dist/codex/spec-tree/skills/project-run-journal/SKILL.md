@@ -43,7 +43,7 @@ The projection lives in `${SKILL_DIR}/scripts/journal_projection.py`, imported b
 | `journal_run_state_record(run, *, status)`          | Serialize a run's identity into the core run-state dict; `run_completed_event` wraps it, and a consumer needing the raw dict calls it directly                                           |
 | `render_surface(events)`                            | The human-readable verdict surface rendered from any event prefix — partial in-flight or sealed: heading, a progress line per scope-advanced, a finding line each, footer once completed |
 
-`render_review_run.py <run-token> [--branch-slug <slug>]` is the supported local inspection helper for sealed review runs. It calls `spx journal render --type review --run <run-token>`, resolves the branch slug from recent `spx journal list --type review` output when a current range review stored the token under a derived slug, accepts an explicit `--branch-slug` for older listed runs, parses the returned event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through `render_surface(events)`.
+`render_review_run.py <run-token> [--branch-slug <slug>]` is the supported local inspection helper for sealed review runs. It calls `spx journal render --type review --run <run-token>`, accepts an explicit `--branch-slug` for runs outside the current branch scope, parses the returned event prefix, and prints the raw token, terminal status, full head/base identity, scope coverage, blocking/debt counts, and any findings through `render_surface(events)`.
 
 </api_surface>
 
@@ -65,7 +65,7 @@ After a `changes-reviewer` wrapper returns a raw review run token, inspect that 
 python3 "${SKILL_DIR}/scripts/render_review_run.py" <run-token>
 ```
 
-For an older run selected from `spx journal list`, pass its listed branch slug:
+For a run outside the current branch scope, pass its branch slug:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/render_review_run.py" <run-token> --branch-slug <slug>
@@ -79,7 +79,7 @@ Treat the helper output as an inspection projection of the sealed journal prefix
 
 - A run is streamed as journal events appended as it advances and its verdict derived from the sealed event prefix, never from a separate store and never as one batch built from a finished result.
 - Each per-event builder's output conforms to the channel append-input contract; `compute_overall` follows the rollup rule; `render_surface` renders any prefix including a partial in-flight one; all are pure and `l1`-verifiable without a real journal.
-- A current sealed review run token is locally inspectable through `render_review_run.py`, which resolves the run's branch slug from recent journal metadata when needed, accepts an explicit branch slug for older listed runs, reads the prefix through `spx journal render --type review --run <run-token>`, and renders summary output from that prefix.
+- A sealed review run token is locally inspectable through `render_review_run.py`, which accepts an explicit branch slug for runs outside the current branch scope, reads the prefix through `spx journal render --type review --run <run-token>`, and renders summary output from that prefix.
 - Every agentic verification surface drives the run journal through this one projection — no consumer re-implements event construction or the rollup.
 - `journal_projection.py` imports only the Python standard library.
 

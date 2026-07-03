@@ -14,7 +14,6 @@ from typing import Any, Protocol, Sequence, cast
 import journal_projection as jp
 
 REVIEW_TYPE = "review"
-RECENT_RUN_LIST_LIMIT = "200"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
 _HERE = pathlib.Path(__file__).resolve()
 _CHANGESET_SCOPE_PATH = (
@@ -35,7 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("run_token")
     parser.add_argument(
         "--branch-slug",
-        help="Branch slug from `spx journal list` for runs outside the current branch scope.",
+        help="Branch slug for a run outside the current branch scope.",
     )
     args = parser.parse_args(argv)
 
@@ -77,10 +76,7 @@ def _render_review_run(
     if result.returncode == 0:
         return result
 
-    discovered_branch_slug = _branch_slug_for_recent_run(run_token)
-    if discovered_branch_slug is None:
-        return result
-    return _run_render_command(run_token, branch_slug=discovered_branch_slug)
+    return result
 
 
 def _load_changeset_scope() -> ChangesetScopeModule:
@@ -136,43 +132,6 @@ def _run_render_command(
         text=True,
         check=False,
     )
-
-
-def _branch_slug_for_recent_run(run_token: str) -> str | None:
-    result = subprocess.run(  # noqa: S603,S607
-        [
-            "spx",
-            "journal",
-            "list",
-            "--type",
-            REVIEW_TYPE,
-            "--limit",
-            RECENT_RUN_LIST_LIMIT,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise ValueError(
-            "spx journal list failed while resolving branch slug: "
-            f"{result.stderr.strip()}"
-        )
-    try:
-        value = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"spx journal list returned invalid JSON: {exc.msg}") from exc
-    if not isinstance(value, list):
-        raise ValueError("spx journal list must return a JSON array")
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        if item.get("runToken") != run_token:
-            continue
-        branch_slug = item.get("branchSlug")
-        if isinstance(branch_slug, str) and branch_slug != "":
-            return branch_slug
-    return None
 
 
 def _load_events(text: str) -> list[dict[str, Any]]:
