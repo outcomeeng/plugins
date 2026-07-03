@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 
 class AuditStatus(StrEnum):
@@ -37,9 +38,29 @@ class LiteralOrigin(StrEnum):
 
 class CouplingEvidence(StrEnum):
     DIRECT = "direct"
+    INDIRECT = "indirect"
+    TRANSITIVE = "transitive"
+    LAUNDERED_INDIRECT = "laundered indirect"
+    FALSE = "false"
+    PARTIAL = "partial"
     NONE = "none"
     SEVERED = "severed"
     PROSE = "prose"
+
+
+MIN_COUPLING_TAXONOMY_CATEGORIES: Final = 8
+COUPLING_TAXONOMY_CATEGORIES: Final = frozenset(
+    (
+        CouplingEvidence.DIRECT,
+        CouplingEvidence.INDIRECT,
+        CouplingEvidence.TRANSITIVE,
+        CouplingEvidence.LAUNDERED_INDIRECT,
+        CouplingEvidence.FALSE,
+        CouplingEvidence.PARTIAL,
+        CouplingEvidence.NONE,
+        CouplingEvidence.PROSE,
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -64,6 +85,10 @@ class AuditVerdict:
     status: AuditStatus
     finding_category: FindingCategory | None = None
     coverage_trace: CoverageTrace | None = None
+
+
+def coupling_taxonomy_category_count() -> int:
+    return len(COUPLING_TAXONOMY_CATEGORIES)
 
 
 def audit_case_verdict(case: AuditCase) -> AuditVerdict:

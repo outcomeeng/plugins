@@ -115,13 +115,10 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 - The audit methodology classifies coupling into at least the eight categories defined in the Coupling Taxonomy — distinct failure modes require distinct audit responses ([test](tests/test_test_auditing.property.l1.py))
 
-### Conformance
-
-- The `/audit-tests` skill invokes `/contextualize` on the target spec node before any audit phase ([test](tests/test_test_auditing.conformance.l1.py))
-
 ### Compliance
 
 - ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
+- ALWAYS: `/audit-tests` invokes `/contextualize` on the target spec node before any audit phase ([review])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([review])

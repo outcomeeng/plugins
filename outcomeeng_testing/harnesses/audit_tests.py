@@ -13,8 +13,10 @@ from outcomeeng.test_evidence import (
     CouplingEvidence,
     FindingCategory,
     LiteralOrigin,
+    MIN_COUPLING_TAXONOMY_CATEGORIES,
     audit_case_after_testability,
     audit_case_verdict,
+    coupling_taxonomy_category_count,
 )
 
 
@@ -220,6 +222,10 @@ def rust_destructuring_declarations_are_detected() -> bool:
         and not _has_variable(declarations, "Harness")
         and not _has_variable(declarations, "Foo")
     )
+
+
+def coupling_taxonomy_has_distinct_failure_modes() -> bool:
+    return coupling_taxonomy_category_count() >= MIN_COUPLING_TAXONOMY_CATEGORIES
 
 
 def _declarations_for_fixture(name: str) -> list[Declaration]:
