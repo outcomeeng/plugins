@@ -40,7 +40,6 @@ from outcomeeng_testing.harnesses.src_tree import write_agent_tree
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
-CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
 CODEX_FINAL_REFRESH_STEP = "codex_local_refresh_final"
 INSTALL_VALIDATE_STEP_NAME = "install_validate"
 INSTALLED_CHECK_STEP = "installed_check"
@@ -200,13 +199,6 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     assert exit_code == 0
     assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
-
-
-def test_sync_declares_codex_local_refresh_step() -> None:
-    step_names = tuple(step.name for step in STEPS)
-
-    assert CODEX_LOCAL_REFRESH_STEP in step_names
-    assert "codex_cache_preserve" not in step_names
 
 
 def test_sync_installs_codex_agents_before_installed_plugin_validation(

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution.agents import (
+    ALL_TOOLS_SENTINEL,
     ClaudeAgent,
     EFFORT_MAPPINGS,
     INHERIT_MODEL_VALUE,
@@ -134,8 +135,22 @@ def test_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default() -> 
     assert map_web_search(tuple(WEB_CAPABLE_TOOLS)) is None
 
 
+def test_all_tools_sentinel_leaves_web_search_to_runtime_default() -> None:
+    assert map_web_search((ALL_TOOLS_SENTINEL,)) is None
+
+
 def test_read_only_tool_allowlist_infers_read_only_sandbox() -> None:
     assert infer_sandbox_mode(tuple(READ_ONLY_TOOLS), None) == READ_ONLY_SANDBOX_MODE
+
+
+def test_read_only_web_tool_allowlist_infers_read_only_sandbox() -> None:
+    read_only_web_tools = tuple(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS)
+
+    assert infer_sandbox_mode(read_only_web_tools, None) == READ_ONLY_SANDBOX_MODE
+
+
+def test_all_tools_sentinel_leaves_sandbox_to_runtime_default() -> None:
+    assert infer_sandbox_mode((ALL_TOOLS_SENTINEL,), None) is None
 
 
 def test_explicit_empty_tool_allowlist_infers_read_only_sandbox() -> None:

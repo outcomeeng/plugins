@@ -47,6 +47,7 @@ PERMISSION_MODE_MAPPINGS: Final = {
 INHERIT_MODEL_VALUE: Final = "inherit"
 MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
 UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
+ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
 READ_ONLY_SANDBOX_MODE: Final = "read-only"
@@ -199,9 +200,10 @@ def map_web_search(
     tools_declared: bool = True,
 ) -> str | None:
     """Return the Codex web-search mode implied by an explicit Claude tool allowlist."""
-    if not tools_declared:
+    tool_set = set(tools)
+    if not tools_declared or ALL_TOOLS_SENTINEL in tool_set:
         return None
-    if set(tools) & WEB_CAPABLE_TOOLS:
+    if tool_set & WEB_CAPABLE_TOOLS:
         return None
     return WEB_SEARCH_DISABLED
 
@@ -213,9 +215,14 @@ def infer_sandbox_mode(
     tools_declared: bool = True,
 ) -> str | None:
     """Infer a Codex sandbox from an explicit Claude tool allowlist."""
-    if permission_mode is not None or not tools_declared:
+    tool_set = set(tools)
+    if (
+        permission_mode is not None
+        or not tools_declared
+        or ALL_TOOLS_SENTINEL in tool_set
+    ):
         return None
-    if set(tools).issubset(READ_ONLY_TOOLS):
+    if tool_set.issubset(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS):
         return READ_ONLY_SANDBOX_MODE
     return None
 
@@ -594,6 +601,7 @@ def _format_toml_multiline(value: str) -> str:
 
 
 __all__ = [
+    "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
