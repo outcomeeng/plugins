@@ -94,7 +94,7 @@ def coverage_trace_names_code_path() -> bool:
 def numeric_literal_is_rejected() -> bool:
     return (
         audit_case_verdict(
-            _audit_case(literal_origin=LiteralOrigin.UNSOURCED)
+            _audit_case(literal_origin=LiteralOrigin.UNSOURCED_NUMERIC)
         ).finding_category
         is FindingCategory.UNSOURCED_LITERAL
     )
@@ -103,7 +103,7 @@ def numeric_literal_is_rejected() -> bool:
 def string_literal_is_rejected() -> bool:
     return (
         audit_case_verdict(
-            _audit_case(literal_origin=LiteralOrigin.UNSOURCED)
+            _audit_case(literal_origin=LiteralOrigin.UNSOURCED_STRING)
         ).finding_category
         is FindingCategory.UNSOURCED_LITERAL
     )

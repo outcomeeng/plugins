@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 
 from outcomeeng.distribution.push import (
     DRY_RUN_PUSH_FLAGS,
+    NO_DRY_RUN_PUSH_FLAG,
     REQUIRED_TOOLS,
     SYNC_COMMAND,
     UPSTREAM_REF_COMMAND,
@@ -84,6 +85,16 @@ def clustered_dry_run_push_args() -> tuple[str, ...]:
     )
 
 
+def dry_run_then_no_dry_run_push_args() -> tuple[str, ...]:
+    """Return push arguments where Git's positive dry-run flag is later cleared."""
+    return (
+        "--dry-run",
+        NO_DRY_RUN_PUSH_FLAG,
+        "origin",
+        "HEAD:refs/heads/feature",
+    )
+
+
 @dataclass
 class ScriptedUpstreamProbe:
     """UpstreamProbe that returns a scripted ref (or None) on each call."""
@@ -138,6 +149,7 @@ __all__ = [
     "all_required_tools_available",
     "all_tool_probe_invocations",
     "clustered_dry_run_push_args",
+    "dry_run_then_no_dry_run_push_args",
     "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",

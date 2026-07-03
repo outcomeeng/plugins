@@ -31,7 +31,8 @@ class LiteralOrigin(StrEnum):
     ALLOWLIST_OR_SOURCED = "allowlist-or-sourced"
     STATIC_FIXTURE = "static-fixture"
     LAUNDERED_INDIRECT = "laundered-indirect"
-    UNSOURCED = "unsourced"
+    UNSOURCED_NUMERIC = "unsourced-numeric"
+    UNSOURCED_STRING = "unsourced-string"
 
 
 class CouplingEvidence(StrEnum):
@@ -91,7 +92,12 @@ def audit_case_verdict(case: AuditCase) -> AuditVerdict:
             status=AuditStatus.REJECT,
             finding_category=FindingCategory.PROSE_COUPLING,
         )
-    if case.literal_origin is LiteralOrigin.UNSOURCED:
+    if case.literal_origin is LiteralOrigin.UNSOURCED_NUMERIC:
+        return AuditVerdict(
+            status=AuditStatus.REJECT,
+            finding_category=FindingCategory.UNSOURCED_LITERAL,
+        )
+    if case.literal_origin is LiteralOrigin.UNSOURCED_STRING:
         return AuditVerdict(
             status=AuditStatus.REJECT,
             finding_category=FindingCategory.UNSOURCED_LITERAL,

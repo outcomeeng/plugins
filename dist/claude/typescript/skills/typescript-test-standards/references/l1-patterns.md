@@ -6,8 +6,9 @@ Table of contents: [pure_function](#pure_function) · [typed_factory](#typed_fac
 
 ```typescript
 import { ARCHIVE_FLAGS } from "@/archive-command";
-import { archiveCommandCase } from "@testing/generators/archive-command";
-import { expectArchiveCommandPreservesSource } from "@testing/harnesses/archive-command";
+import { arbitraryArchiveCommandCase, archiveCommandCase } from "@testing/generators/archive-command";
+import { assertProperty } from "@testing/harnesses/properties";
+import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 describe("buildCommand", () => {
@@ -15,8 +16,12 @@ describe("buildCommand", () => {
     expect(buildCommand(archiveCommandCase())).toContain(ARCHIVE_FLAGS.checksum);
   });
 
-  it("preserves unicode paths", () => {
-    expectArchiveCommandPreservesSource(buildCommand, archiveCommandCase());
+  it("preserves generated source paths", () => {
+    assertProperty(
+      fc.property(arbitraryArchiveCommandCase(), (archiveCase) => {
+        expect(buildCommand(archiveCase.options)).toContain(archiveCase.sourcePath);
+      }),
+    );
   });
 });
 ```
