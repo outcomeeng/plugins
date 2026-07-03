@@ -239,10 +239,6 @@ class _FileSingleFlight:
                 self.lock_path.unlink()
             except FileNotFoundError:
                 pass
-        try:
-            self.pending_path.unlink()
-        except FileNotFoundError:
-            pass
 
     def _read_lock_owner(self) -> _LockOwner | None:
         try:
