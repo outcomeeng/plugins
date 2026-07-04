@@ -134,3 +134,176 @@ def test_direct_thread_id_resolves_without_discovery(
             "id=PRRT_thread0002",
         ]
     ]
+
+
+def test_review_thread_discovery_pages_threads_until_comment_is_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script()
+    calls: list[list[str]] = []
+    first_page = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+                        "nodes": [
+                            {
+                                "id": "PRRT_thread0003",
+                                "comments": {
+                                    "pageInfo": {
+                                        "hasNextPage": False,
+                                        "endCursor": None,
+                                    },
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_comment0003",
+                                            "databaseId": 303,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+    second_page = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "id": "PRRT_thread0004",
+                                "comments": {
+                                    "pageInfo": {
+                                        "hasNextPage": False,
+                                        "endCursor": None,
+                                    },
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_comment0004",
+                                            "databaseId": 404,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+
+    def fake_run(argv: list[str], **kwargs: Any) -> SimpleNamespace:
+        calls.append(argv)
+        if "id=PRRT_thread0004" in argv:
+            return SimpleNamespace(returncode=0)
+        assert kwargs["capture_output"] is True
+        if "threadsAfter=cursor-1" in argv:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(second_page),
+                stderr="",
+            )
+        return SimpleNamespace(returncode=0, stdout=json.dumps(first_page), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "404",
+        ],
+    )
+
+    assert module.main() == 0
+    assert any("threadsAfter=cursor-1" in call for call in calls)
+    assert calls[-1][-1] == "id=PRRT_thread0004"
+
+
+def test_review_thread_discovery_pages_comments_until_comment_is_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script()
+    calls: list[list[str]] = []
+    threads_page = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "id": "PRRT_thread0005",
+                                "comments": {
+                                    "pageInfo": {
+                                        "hasNextPage": True,
+                                        "endCursor": "comment-cursor-1",
+                                    },
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_comment0005",
+                                            "databaseId": 505,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+    comments_page = {
+        "data": {
+            "node": {
+                "comments": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "nodes": [{"id": "PRRC_comment0006", "databaseId": 606}],
+                }
+            }
+        }
+    }
+
+    def fake_run(argv: list[str], **kwargs: Any) -> SimpleNamespace:
+        calls.append(argv)
+        if "id=PRRT_thread0005" in argv:
+            return SimpleNamespace(returncode=0)
+        assert kwargs["capture_output"] is True
+        if "threadId=PRRT_thread0005" in argv:
+            assert "commentsAfter=comment-cursor-1" in argv
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(comments_page),
+                stderr="",
+            )
+        return SimpleNamespace(returncode=0, stdout=json.dumps(threads_page), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "606",
+        ],
+    )
+
+    assert module.main() == 0
+    assert any("commentsAfter=comment-cursor-1" in call for call in calls)
+    assert calls[-1][-1] == "id=PRRT_thread0005"

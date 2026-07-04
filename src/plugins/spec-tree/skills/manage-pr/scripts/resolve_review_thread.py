@@ -18,11 +18,30 @@ QUERY = (
     "}"
 )
 THREADS_QUERY = (
-    "query($owner: String!, $repo: String!, $number: Int!) { "
+    "query($owner: String!, $repo: String!, $number: Int!, $threadsAfter: String) { "
     "repository(owner: $owner, name: $repo) { "
     "pullRequest(number: $number) { "
-    "reviewThreads(first: 100) { "
-    "nodes { id comments(first: 100) { nodes { id databaseId } } } "
+    "reviewThreads(first: 100, after: $threadsAfter) { "
+    "pageInfo { hasNextPage endCursor } "
+    "nodes { "
+    "id "
+    "comments(first: 100) { "
+    "pageInfo { hasNextPage endCursor } "
+    "nodes { id databaseId } "
+    "} "
+    "} "
+    "} "
+    "} "
+    "} "
+    "}"
+)
+THREAD_COMMENTS_QUERY = (
+    "query($threadId: ID!, $commentsAfter: String) { "
+    "node(id: $threadId) { "
+    "... on PullRequestReviewThread { "
+    "comments(first: 100, after: $commentsAfter) { "
+    "pageInfo { hasNextPage endCursor } "
+    "nodes { id databaseId } "
     "} "
     "} "
     "} "
@@ -77,21 +96,12 @@ def validate_comment_id(comment_id: str | None) -> str:
     return comment_id
 
 
-def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> str:
+def run_graphql(query: str, fields: dict[str, str | int]) -> dict[str, object]:
+    argv = ["gh", "api", "graphql", "-f", f"query={query}"]
+    for key, value in fields.items():
+        argv.extend(["-F", f"{key}={value}"])
     completed = subprocess.run(
-        [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={THREADS_QUERY}",
-            "-F",
-            f"owner={owner}",
-            "-F",
-            f"repo={repo}",
-            "-F",
-            f"number={pr_number}",
-        ],
+        argv,
         check=False,
         capture_output=True,
         text=True,
@@ -99,16 +109,79 @@ def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> st
     if completed.returncode != 0:
         print(completed.stderr, file=sys.stderr, end="")
         raise SystemExit(completed.returncode)
-    payload = json.loads(completed.stdout)
-    threads = payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-    for thread in threads:
-        for comment in thread["comments"]["nodes"]:
-            if (
-                str(comment.get("databaseId")) == comment_id
-                or comment.get("id") == comment_id
+    return json.loads(completed.stdout)
+
+
+def comment_matches(comment: dict[str, object], comment_id: str) -> bool:
+    return (
+        str(comment.get("databaseId")) == comment_id or comment.get("id") == comment_id
+    )
+
+
+def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
+    nodes = comments["nodes"]
+    if not isinstance(nodes, list):
+        raise ValueError("GitHub response comments.nodes must be a list")
+    for comment in nodes:
+        if isinstance(comment, dict) and comment_matches(comment, comment_id):
+            return True
+    return False
+
+
+def thread_has_comment(
+    thread_id: str, comments: dict[str, object], comment_id: str
+) -> bool:
+    if find_comment_in_page(comments, comment_id):
+        return True
+    page_info = comments["pageInfo"]
+    if not isinstance(page_info, dict):
+        raise ValueError("GitHub response comments.pageInfo must be an object")
+    while page_info.get("hasNextPage"):
+        end_cursor = page_info.get("endCursor")
+        if not isinstance(end_cursor, str) or not end_cursor:
+            raise ValueError("GitHub response comments page is missing endCursor")
+        payload = run_graphql(
+            THREAD_COMMENTS_QUERY,
+            {"threadId": thread_id, "commentsAfter": end_cursor},
+        )
+        node = payload["data"]["node"]  # type: ignore[index]
+        comments = node["comments"]  # type: ignore[index]
+        if find_comment_in_page(comments, comment_id):
+            return True
+        page_info = comments["pageInfo"]
+        if not isinstance(page_info, dict):
+            raise ValueError("GitHub response comments.pageInfo must be an object")
+    return False
+
+
+def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> str:
+    fields: dict[str, str | int] = {"owner": owner, "repo": repo, "number": pr_number}
+    while True:
+        payload = run_graphql(THREADS_QUERY, fields)
+        review_threads = payload["data"]["repository"]["pullRequest"]["reviewThreads"]  # type: ignore[index]
+        threads = review_threads["nodes"]
+        if not isinstance(threads, list):
+            raise ValueError("GitHub response reviewThreads.nodes must be a list")
+        for thread in threads:
+            if not isinstance(thread, dict):
+                continue
+            thread_id = validate_thread_id(str(thread["id"]))
+            comments = thread["comments"]
+            if isinstance(comments, dict) and thread_has_comment(
+                thread_id, comments, comment_id
             ):
-                return validate_thread_id(thread["id"])
-    raise ValueError("review comment was not found in a pull-request review thread")
+                return thread_id
+        page_info = review_threads["pageInfo"]
+        if not isinstance(page_info, dict):
+            raise ValueError("GitHub response reviewThreads.pageInfo must be an object")
+        if not page_info.get("hasNextPage"):
+            raise ValueError(
+                "review comment was not found after complete review-thread pagination"
+            )
+        end_cursor = page_info.get("endCursor")
+        if not isinstance(end_cursor, str) or not end_cursor:
+            raise ValueError("GitHub response reviewThreads page is missing endCursor")
+        fields["threadsAfter"] = end_cursor
 
 
 def main() -> int:

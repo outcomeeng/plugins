@@ -25,15 +25,3 @@ Required handling when an eval-coverage sweep happens:
 - Run the eval to populate `history.jsonl`.
 
 Surfaced by the local `changes-reviewer` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
-
-## 3. Review-thread resolver discovery lacks pagination (FOLLOW-UP)
-
-`src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py` discovers a review thread from a review-comment ID by querying `reviewThreads(first: 100)` and each thread's `comments(first: 100)`. A pull request with more than 100 review threads, or a thread with more than 100 comments, can leave a valid review-comment ID undiscovered without distinguishing "not found" from "outside the first page".
-
-Required handling when the resolver is hardened:
-
-- Page through `PullRequest.reviewThreads` until the target comment is found or no pages remain.
-- Page through each thread's comments when the target is not in the first comments page.
-- Report an explicit "not found after complete pagination" diagnostic.
-
-Surfaced by CI `spec-tree-review` on PR `405` (2026-07-04).

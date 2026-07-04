@@ -81,6 +81,12 @@ def test_serialize_result_carries_schema_version_and_suite_summary() -> None:
     }
 
 
+def test_serialize_result_defaults_to_concrete_model() -> None:
+    payload = serialize_result(_suite_result(passed=True), title="my-eval")
+
+    assert payload["model"] == "sonnet"
+
+
 def test_serialize_result_preserves_case_expectations() -> None:
     payload = serialize_result(_suite_result(passed=True), title="t")
     outcome = payload["outcomes"][0]

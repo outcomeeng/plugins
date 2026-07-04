@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from outcomeeng_evals.case import Case
+from outcomeeng_evals.definition import DEFAULT_MODEL
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import SuiteResult, TrialResult
 
@@ -29,7 +30,7 @@ def serialize_result(
     result: SuiteResult,
     title: str,
     *,
-    model: str | None = None,
+    model: str = DEFAULT_MODEL,
 ) -> dict[str, Any]:
     """Serialize a ``SuiteResult`` to a JSON-stable plain dict."""
     case_count = len(result.outcomes)
@@ -198,7 +199,7 @@ def write_json_report(
     output_path: Path,
     title: str,
     *,
-    model: str | None = None,
+    model: str = DEFAULT_MODEL,
 ) -> Path:
     """Write only the JSON results document to ``output_path``."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -211,7 +212,7 @@ def write_run_reports(
     html_path: Path,
     title: str,
     *,
-    model: str | None = None,
+    model: str = DEFAULT_MODEL,
 ) -> Path:
     """Write a run's reports: the JSON results document and the HTML viewer.
 
