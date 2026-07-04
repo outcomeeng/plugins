@@ -202,7 +202,7 @@ The closeout MUST include:
 - **Human-readable change summary**: the key sections, controls, behaviors, checks, or workflow rules changed, written so the operator can inspect the result without reconstructing it from the diff.
 - **Verification evidence**: commands, audits, reviews, CI checks, screenshots, or manual inspections that passed, including exact session ids, run ids, PR numbers, or commit SHAs verbatim when they are part of the evidence.
 - **Inspection surface**: a PR URL, merged commit, local file path, running URL, screenshot path, generated artifact path, or other place the operator can inspect the result. Include whichever surfaces apply; omit unavailable surfaces rather than inventing one.
-- **Delivered state**: where the work now lives — default branch on origin, local branch, running dev server, generated plugin install, archived session state, or intentionally local output.
+- **Delivered state**: one concise field naming where the work now lives — default branch on origin, local branch, running dev server, generated plugin install, archived session state, or intentionally local output. This field never becomes the closeout title or first section.
 - **Remaining work**: open follow-up only when one exists, with its owner or tracking location. Say when none remains for this closure.
 - **Remaining Branches**: for merge lifecycle closeout, group branch state under exactly four labels — **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**. Include full branch names and full commit SHAs.
 
@@ -211,6 +211,23 @@ When closing after a default-branch merge, compute or preserve the merge transpo
 Apply the cleanup policy before writing the closeout: delete a still-existing remote feature branch through the approved merge lifecycle deletion command; delete a local feature branch only when it exists, tracks a gone upstream, and is fully merged into `origin/<base>`; delete a no-remote preservation branch when all substantive commits are present on `origin/<base>` by ancestry or patch equivalence unless the branch name or operator instruction marks retained evidence. Never delete a branch checked out in another live worktree; report the exact worktree path and branch. Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`; report the unmatched full SHAs and keep it.
 
 Use domain-specific closeout content. In a plugin marketplace repository, a useful closeout usually names the skill or spec-tree behavior changed, authored source paths, generated `dist/` paths when regenerated, verification commands, auditor or reviewer verdict ids, PR URL, merged commit, marketplace sync status, and any active PLAN.md or ISSUES.md continuation. In a web app, a useful closeout usually names the changed page or flow, the running URL, the test page or route, browser verification, screenshots if captured, and any known UI follow-up.
+
+<rejected_delivered_state_receipt>
+
+NEVER replace the product closeout with a section headed `Delivered state` whose bullets only report transport, branch, sync, or session mechanics. This receipt shape is the anti-pattern:
+
+```text
+Delivered state:
+- Merge commit: <full-sha>
+- PR head merged: <full-sha>
+- Marketplace source worktree fast-forwarded
+- Sync command passed
+- Session <session-id> archived
+```
+
+Why it fails: the operator still has to reconstruct the product outcome, changed surface, workflow behavior, verification meaning, inspection surface, and remaining-work state from mechanics. If these facts matter, place them under **Verification evidence**, **Inspection surface**, **Delivered state**, **Remaining work**, **Remaining Branches**, or the session-mechanics block after the product summary.
+
+</rejected_delivered_state_receipt>
 
 Put session mechanics only after the product summary:
 
@@ -238,6 +255,7 @@ Put session mechanics only after the product summary:
 - Confirmation output names the continuation path and the archived ids.
 - Default-branch merge closeout includes the branch-state closeout record fields from `/merging-standards` `<branch_state_closeout>` or an explicitly preserved record from the merge transport.
 - Merge lifecycle final output includes `Remaining Branches` grouped under **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**.
+- Confirmation output never uses a top-level `Delivered state` receipt as a substitute for the product-first closeout fields.
 - The releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.
 
 </success_criteria>
