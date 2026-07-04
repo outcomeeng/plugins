@@ -315,10 +315,8 @@ def _rust_for_binding_names(body: str) -> list[str]:
 
 def _rust_match_declarations(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
-    lexical_state = _LexicalState()
-    for index, raw_line in enumerate(source.splitlines(), start=1):
-        line = _strip_comments(raw_line, lexical_state)
-        pattern = _rust_match_arm_pattern(line)
+    for index, unit in _rust_match_arm_units(source):
+        pattern = _rust_match_arm_pattern(unit)
         if pattern is None:
             continue
         for name in _rust_pattern_names(pattern):
@@ -332,6 +330,79 @@ def _rust_match_declarations(source: str, path: Path) -> list[Declaration]:
                 )
             )
     return declarations
+
+
+def _rust_match_arm_units(source: str) -> list[tuple[int, str]]:
+    units: list[tuple[int, str]] = []
+    current: list[str] = []
+    start_line = 0
+    lexical_state = _LexicalState()
+    raw_lines = source.splitlines()
+    for index, raw_line in enumerate(raw_lines, start=1):
+        line = _strip_comments(raw_line, lexical_state)
+        stripped = line.strip()
+        if not current:
+            if _rust_match_arm_start_is_skippable(stripped):
+                continue
+            current = [line]
+            start_line = index
+        else:
+            current.append(line)
+        unit = "\n".join(current)
+        if _top_level_token_index(unit, "=>") is not None:
+            units.append((start_line, unit))
+            current = []
+            start_line = 0
+        elif not _rust_match_arm_can_continue(unit):
+            current = []
+            start_line = 0
+    return units
+
+
+def _rust_match_arm_start_is_skippable(line: str) -> bool:
+    if not line or line in {"{", "}"}:
+        return True
+    return line.startswith(
+        (
+            "#",
+            "fn ",
+            "let ",
+            "const ",
+            "static ",
+            "if ",
+            "while ",
+            "for ",
+            "match ",
+            "pub ",
+            "use ",
+            "mod ",
+        )
+    )
+
+
+def _rust_match_arm_can_continue(unit: str) -> bool:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    last_significant = ""
+    for char in unit:
+        if not char.isspace():
+            last_significant = char
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char in {"(", "[", "{"}:
+            depth += 1
+        elif char in {")", "]", "}"}:
+            depth = max(0, depth - 1)
+    return quote is not None or depth > 0 or last_significant in {"|", ",", "@"}
 
 
 def _rust_match_arm_pattern(line: str) -> str | None:

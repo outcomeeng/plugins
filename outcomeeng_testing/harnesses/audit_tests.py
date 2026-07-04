@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, cast
+
+from hypothesis import given, seed, settings
 
 from outcomeeng.test_evidence import (
     AuditCase,
@@ -21,6 +24,17 @@ from outcomeeng.test_evidence import (
     audit_case_verdict,
     coupling_taxonomy_category_count,
 )
+from outcomeeng_testing.generators.audit_tests import coupling_taxonomy_categories
+
+
+AUDIT_TESTS_PROPERTY_SEED = 20260704
+AUDIT_TESTS_PROPERTY_REPLAY_PATH = (
+    "just test "
+    "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/tests/"
+    "test_test_auditing.property.l1.py::"
+    "test_coupling_taxonomy_classifies_distinct_failure_modes"
+)
+AUDIT_TESTS_PROPERTY_EXAMPLES = 25
 
 
 class Declaration(Protocol):
@@ -30,6 +44,24 @@ class Declaration(Protocol):
 
 class DeclarationScanner(Protocol):
     def scan_text(self, source: str, path: Path) -> list[Declaration]: ...
+
+
+def coupling_taxonomy_property(test_func: Callable[..., None]) -> Callable[[], None]:
+    configured = seed(AUDIT_TESTS_PROPERTY_SEED)(
+        settings(max_examples=AUDIT_TESTS_PROPERTY_EXAMPLES)(
+            given(category=coupling_taxonomy_categories())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        try:
+            configured()
+        except AssertionError as error:
+            error.add_note(f"Hypothesis seed: {AUDIT_TESTS_PROPERTY_SEED}")
+            error.add_note(f"Replay path: {AUDIT_TESTS_PROPERTY_REPLAY_PATH}")
+            raise
+
+    return wrapper
 
 
 def untestable_source_targets_source() -> bool:
@@ -440,6 +472,10 @@ def rust_match_declarations_are_detected() -> bool:
         and _has_variable(declarations, "expected")
         and _has_variable(declarations, "root")
         and _has_variable(declarations, "target")
+        and _has_variable(declarations, "multiline_input")
+        and _has_variable(declarations, "multiline_expected")
+        and _has_variable(declarations, "multiline_root")
+        and _has_variable(declarations, "multiline_target")
         and not _has_variable(declarations, "Harness")
     )
 
