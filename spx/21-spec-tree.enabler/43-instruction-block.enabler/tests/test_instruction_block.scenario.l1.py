@@ -84,55 +84,6 @@ def test_update_propagates_new_section_and_preserves_languages() -> None:
         assert f"### {LANG_SECONDARY.capitalize()}" not in updated
 
 
-def test_cli_check_reports_absent_stale_and_current(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-    supplied = [*base, "--languages", LANG_PRIMARY]
-
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "absent"
-
-    write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), OLD_VERSION)
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "stale"
-
-    write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_reports_language_drift(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-
-    assert module.main([*base, "--languages", LANG_PRIMARY]) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_check_treats_language_order_as_a_set(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    write_both_instruction_files(
-        module, tmp_path, (LANG_SECONDARY, LANG_PRIMARY), NEW_VERSION
-    )
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-
-    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-
 def test_cli_check_ignores_unmanaged_metadata_comments(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -379,27 +330,6 @@ def test_cli_check_uses_managed_metadata_not_root_frontmatter(
         == 0
     )
     assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_reports_stale_from_detected_language_drift(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    extensions = tuple(
-        next(ext for ext, lang in module.LANGUAGE_BY_EXTENSION.items() if lang == want)
-        for want in (LANG_PRIMARY, LANG_SECONDARY)
-    )
-    write_spx_tree_with_tests(tmp_path / "spx", extensions)
-
-    assert (
-        module.main(
-            ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "stale"
 
 
 def test_cli_check_reports_absent_when_one_instruction_file_is_missing(

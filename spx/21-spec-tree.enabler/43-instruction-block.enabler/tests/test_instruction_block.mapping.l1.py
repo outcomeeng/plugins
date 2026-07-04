@@ -9,15 +9,22 @@ is derived from the input subset, not hand-picked.
 from __future__ import annotations
 
 import itertools
+import pathlib
 
 import pytest
 
 from outcomeeng_testing.harnesses.instruction_block import (
     HARNESS_CLAUDE,
+    LANG_PRIMARY,
+    LANG_SECONDARY,
     NEW_VERSION,
+    OLD_VERSION,
     TEMPLATE_LANGUAGES,
     build_template,
     load_instruction_block_module,
+    write_both_instruction_files,
+    write_spx_tree_with_tests,
+    write_template,
 )
 
 
@@ -81,3 +88,79 @@ def test_a_name_outside_the_fixed_slot_set_maps_to_no_recognized_slot() -> None:
     )
     for name in outsiders:
         assert module.parse_command_slot(scaffolded, name) is None
+
+
+@pytest.mark.parametrize(
+    ("state", "check_languages", "expected"),
+    [
+        ("missing", LANG_PRIMARY, "absent"),
+        ("version-behind", LANG_PRIMARY, "stale"),
+        ("version-current", LANG_PRIMARY, "current"),
+        ("language-mismatch", f"{LANG_PRIMARY},{LANG_SECONDARY}", "stale"),
+    ],
+)
+def test_check_maps_router_block_state_to_report(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+    state: str,
+    check_languages: str,
+    expected: str,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    if state == "version-behind":
+        write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), OLD_VERSION)
+    elif state in ("version-current", "language-mismatch"):
+        write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
+    # "missing": neither root file is written, so no router block exists.
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--repo-root",
+            str(tmp_path),
+            "--check",
+            "--languages",
+            check_languages,
+        ]
+    )
+    assert exit_code == 0
+    assert capsys.readouterr().out.strip() == expected
+
+
+def test_check_treats_the_recorded_language_set_order_insensitively(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    write_both_instruction_files(
+        module, tmp_path, (LANG_SECONDARY, LANG_PRIMARY), NEW_VERSION
+    )
+    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
+
+    # Recorded set {secondary, primary} equals the supplied set regardless of order -> current.
+    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
+    assert capsys.readouterr().out.strip() == "current"
+
+
+def test_check_maps_detected_tree_language_drift_to_stale(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
+    extensions = tuple(
+        next(ext for ext, lang in module.LANGUAGE_BY_EXTENSION.items() if lang == want)
+        for want in (LANG_PRIMARY, LANG_SECONDARY)
+    )
+    write_spx_tree_with_tests(tmp_path / "spx", extensions)
+
+    # No --languages: the check detects {primary, secondary} from the tree, differing from the
+    # recorded {primary} -> stale.
+    assert (
+        module.main(
+            ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "stale"

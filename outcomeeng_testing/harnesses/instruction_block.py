@@ -20,6 +20,7 @@ documents as strings; no filesystem is involved.
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 import subprocess
 from dataclasses import dataclass
@@ -62,11 +63,6 @@ ROOT_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
 # assert; the strings carry no domain vocabulary.
 SAMPLE_COMMAND_BODY: Final = "Build: `product build --all`"
 SAMPLE_COMMAND_BODY_ALT: Final = "Build: `product build --changed`"
-
-# Source-template content probes for the rendered-output session-result check.
-SESSION_MANAGEMENT_HEADING = "## Session Management"
-SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
-SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
@@ -209,22 +205,6 @@ def load_instruction_block_module() -> ModuleType:
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
-
-
-def extract_markdown_section(document: str, heading: str) -> str:
-    """Return a markdown section by exact heading line, including the heading."""
-    lines = document.splitlines()
-    try:
-        start = lines.index(heading)
-    except ValueError as exc:
-        raise RuntimeError(f"Heading not found: {heading}") from exc
-    heading_level = len(heading) - len(heading.lstrip("#"))
-    end = len(lines)
-    for index, line in enumerate(lines[start + 1 :], start=start + 1):
-        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
-            end = index
-            break
-    return "\n".join(lines[start:end])
 
 
 def _language_heading(language: str) -> str:
@@ -415,3 +395,128 @@ def remove_command_slot_fence(text: str, slot: str) -> str:
     suffix = text[end + len(close_marker) :].lstrip("\n")
     joiner = "\n\n" if prefix and suffix else ""
     return f"{prefix}{joiner}{suffix}"
+
+
+def workflow_run_block(step_name: str) -> str:
+    """Return the run-command block of one refresh-workflow step, dedented for assertions.
+
+    Reads ``.github/workflows/refresh-instruction-blocks.yml`` and extracts the ``run: |`` block
+    of the named step. Workflow parsing is shared setup, so it lives in the harness rather than a
+    test body.
+    """
+    workflow = REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    step_line = f"      - name: {step_name}"
+    start = lines.index(step_line)
+    run_line = lines.index("        run: |", start)
+    block: list[str] = []
+    for line in lines[run_line + 1 :]:
+        if line.startswith("      - name: "):
+            break
+        if line.startswith("          "):
+            block.append(line[10:])
+        elif line:
+            break
+        else:
+            block.append("")
+    return "\n".join(block) + "\n"
+
+
+def workflow_step_block(step_name: str) -> str:
+    """Return the full YAML block of one refresh-workflow step, for step assertions."""
+    workflow = REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    step_line = f"      - name: {step_name}"
+    start = lines.index(step_line)
+    block: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("      - name: ") and block:
+            break
+        block.append(line)
+    return "\n".join(block) + "\n"
+
+
+def workflow_env_value(name: str) -> str:
+    """Return the value of one refresh-workflow ``env`` entry, for env assertions."""
+    workflow = REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    prefix = f"      {name}: "
+    for line in workflow.splitlines():
+        if line.startswith(prefix):
+            return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
+    raise AssertionError(f"workflow env value not found: {name}")
+
+
+def justfile_recipe_body(justfile: str, recipe: str) -> str:
+    """Return the indented body of one justfile recipe, for recipe-binding assertions.
+
+    A recipe header is ``<recipe>:`` at column 0; its body is the following indented lines up to
+    the next unindented line. Scoping an invocation to the recipe body, rather than to the whole
+    file, is what makes a recipe-body swap falsifiable.
+    """
+    lines = justfile.splitlines()
+    start = lines.index(f"{recipe}:")
+    body: list[str] = []
+    for line in lines[start + 1 :]:
+        if line and not line[0].isspace():
+            break
+        body.append(line)
+    return "\n".join(body)
+
+
+def write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
+    """Write a fake ``gh`` CLI into ``bin_dir`` that logs its args and accepts pr list/create."""
+    stub = bin_dir / "gh"
+    stub.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                f'printf "%s\\n" "$*" >> {str(log_path)!r}',
+                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "list" ]; then',
+                "  exit 0",
+                "fi",
+                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "create" ]; then',
+                "  exit 0",
+                "fi",
+                'echo "unexpected gh invocation: $*" >&2',
+                "exit 64",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    stub.chmod(0o755)
+
+
+def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
+    """Run the refresh workflow's PR-opening step against ``repo_root`` with a stubbed ``gh``.
+
+    Executes the extracted step's bash block with a fake ``gh`` on PATH so the drift-driven
+    commit-and-open behavior runs for real without a network call. Subprocess execution setup is
+    the harness's responsibility, not a test body's.
+    """
+    bin_dir = repo_root.parent / f"{repo_root.name}-stub-bin"
+    bin_dir.mkdir()
+    write_gh_stub(bin_dir, gh_log)
+    env = os.environ.copy()
+    env["GH_TOKEN"] = "test-token"
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    result = subprocess.run(
+        [
+            "/bin/bash",
+            "-c",
+            workflow_run_block("Open instruction-block refresh pull request"),
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout

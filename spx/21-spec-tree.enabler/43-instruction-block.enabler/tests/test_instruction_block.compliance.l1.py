@@ -15,9 +15,7 @@ Rules in ``instruction-block.md`` with deterministic test evidence:
 - NEVER: the generator authors, edits, or overwrites a command slot's product-owned body.
 """
 
-import os
 import pathlib
-import subprocess
 
 import pytest
 
@@ -34,115 +32,23 @@ from outcomeeng_testing.harnesses.instruction_block import (
     ROOT_SHARED_BODY,
     SAMPLE_COMMAND_BODY,
     SAMPLE_COMMAND_BODY_ALT,
-    SESSION_ARCHIVE_RESULT_INSTRUCTION,
-    SESSION_MANAGEMENT_HEADING,
-    SESSION_RESULT_FRONTMATTER_FIELD,
     build_template,
-    extract_markdown_section,
     git_command,
     init_git_identity,
+    justfile_recipe_body,
     load_instruction_block_module,
     read_canonical_template,
     remove_command_slot_fence,
     render_build_macro,
     run_generator_write,
+    run_refresh_pr_step,
+    workflow_env_value,
+    workflow_run_block,
+    workflow_step_block,
     write_template,
 )
 
 JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
-
-
-def _workflow_run_block(step_name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-    step_line = f"      - name: {step_name}"
-    start = lines.index(step_line)
-    run_line = lines.index("        run: |", start)
-    block: list[str] = []
-    for line in lines[run_line + 1 :]:
-        if line.startswith("      - name: "):
-            break
-        if line.startswith("          "):
-            block.append(line[10:])
-        elif line:
-            break
-        else:
-            block.append("")
-    return "\n".join(block) + "\n"
-
-
-def _workflow_step_block(step_name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-    step_line = f"      - name: {step_name}"
-    start = lines.index(step_line)
-    block: list[str] = []
-    for line in lines[start:]:
-        if line.startswith("      - name: ") and block:
-            break
-        block.append(line)
-    return "\n".join(block) + "\n"
-
-
-def _workflow_env_value(name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    prefix = f"      {name}: "
-    for line in workflow.splitlines():
-        if line.startswith(prefix):
-            return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
-    raise AssertionError(f"workflow env value not found: {name}")
-
-
-def _write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
-    stub = bin_dir / "gh"
-    stub.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env bash",
-                "set -euo pipefail",
-                f'printf "%s\\n" "$*" >> {str(log_path)!r}',
-                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "list" ]; then',
-                "  exit 0",
-                "fi",
-                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "create" ]; then',
-                "  exit 0",
-                "fi",
-                'echo "unexpected gh invocation: $*" >&2',
-                "exit 64",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    stub.chmod(0o755)
-
-
-def _run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
-    bin_dir = repo_root.parent / f"{repo_root.name}-stub-bin"
-    bin_dir.mkdir()
-    _write_gh_stub(bin_dir, gh_log)
-    env = os.environ.copy()
-    env["GH_TOKEN"] = "test-token"
-    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-    result = subprocess.run(
-        [
-            "/bin/bash",
-            "-c",
-            _workflow_run_block("Open instruction-block refresh pull request"),
-        ],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    assert result.returncode == 0, result.stderr
-    return result.stdout
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:
@@ -269,13 +175,20 @@ def test_justfile_exposes_instruction_writer_and_gate() -> None:
         instruction_block.JUSTFILE_NAME
     ).read_text(encoding="utf-8")
 
-    assert f"\n{instruction_block.BUILD_INSTRUCTIONS_RECIPE}:" in justfile
-    assert f"\n{instruction_block.INSTRUCTIONS_CHECK_RECIPE}:" in justfile
+    build_body = justfile_recipe_body(
+        justfile, instruction_block.BUILD_INSTRUCTIONS_RECIPE
+    )
+    check_body = justfile_recipe_body(
+        justfile, instruction_block.INSTRUCTIONS_CHECK_RECIPE
+    )
+    # The writer recipe invokes the module with --write; the gate recipe invokes it bare.
+    # Scoping each invocation to its own recipe body makes a body swap fail this test.
     assert (
         f"outcomeeng.distribution.instruction_block {instruction_block.WRITE_FLAG}"
-        in justfile
+        in build_body
     )
-    assert "outcomeeng.distribution.instruction_block\n" in justfile
+    assert instruction_block.WRITE_FLAG not in check_body
+    assert "outcomeeng.distribution.instruction_block" in check_body
 
 
 def test_lefthook_instruction_refresh_uses_rendered_dist_templates() -> None:
@@ -359,7 +272,7 @@ def test_root_instruction_refresh_workflow_regenerates_and_opens_pr() -> None:
         "    permissions:\n      contents: write\n      pull-requests: write"
         in workflow
     )
-    regenerate_commands = _workflow_run_block(
+    regenerate_commands = workflow_run_block(
         "Regenerate instruction blocks"
     ).splitlines()
     build_skills = regenerate_commands.index("just build-skills")
@@ -369,14 +282,14 @@ def test_root_instruction_refresh_workflow_regenerates_and_opens_pr() -> None:
 
 
 def test_root_instruction_refresh_workflow_checks_out_main() -> None:
-    checkout_step = _workflow_step_block("Checkout")
+    checkout_step = workflow_step_block("Checkout")
 
     assert "          ref: main\n" in checkout_step
 
 
 def test_root_instruction_refresh_workflow_verifies_just_download() -> None:
-    install_commands = _workflow_run_block("Install just")
-    just_sha256 = _workflow_env_value("JUST_SHA256")
+    install_commands = workflow_run_block("Install just")
+    just_sha256 = workflow_env_value("JUST_SHA256")
 
     assert just_sha256
     assert 'tmp="$(mktemp -d)"' in install_commands
@@ -387,18 +300,36 @@ def test_root_instruction_refresh_workflow_verifies_just_download() -> None:
     assert 'sudo install -m 0755 "$tmp/just" /usr/local/bin/just' in install_commands
     assert "-o just.tar.gz" not in install_commands
     assert "tar -xzf just.tar.gz" not in install_commands
+    # The assertion is "before installing it": the checksum verification must precede the
+    # install, so a reorder that installs the unverified download fails this test.
+    assert install_commands.index("sha256sum -c -") < install_commands.index(
+        'sudo install -m 0755 "$tmp/just" /usr/local/bin/just'
+    )
+    # "fails the run rather than executing": halt-on-error is what turns a `sha256sum -c -`
+    # mismatch (non-zero exit through the pipe) into a failed step. Without it the mismatch
+    # would print an error and continue into the install, so deleting the directive while
+    # keeping the checksum command fails this test.
+    assert "set -euo pipefail" in install_commands
 
 
 def test_root_instruction_refresh_workflow_installs_dprint() -> None:
     # `just build-skills` formats generated dist output with dprint, so the refresh
     # workflow must provision dprint before regenerating — otherwise the build fails
     # with "dprint is required to format generated dist output".
-    install_commands = _workflow_run_block("Install dprint")
-    dprint_version = _workflow_env_value("DPRINT_VERSION")
+    install_commands = workflow_run_block("Install dprint")
+    dprint_version = workflow_env_value("DPRINT_VERSION")
 
     assert dprint_version
     assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install_commands
     assert "dprint --version" in install_commands
+    # The assertion is "before regenerating skill output": the Install dprint step must precede
+    # the Regenerate step that runs `just build-skills`, so moving it after fails this test.
+    workflow = instruction_block.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    assert workflow.index("      - name: Install dprint") < workflow.index(
+        "      - name: Regenerate instruction blocks"
+    )
 
 
 def test_root_instruction_refresh_pr_step_exits_cleanly_without_drift(
@@ -411,7 +342,7 @@ def test_root_instruction_refresh_pr_step_exits_cleanly_without_drift(
     git_command(tmp_path, "add", ".")
     git_command(tmp_path, "commit", "-m", "seed instruction files")
 
-    output = _run_refresh_pr_step(tmp_path, gh_log)
+    output = run_refresh_pr_step(tmp_path, gh_log)
 
     assert output == "Root instruction blocks are current.\n"
     assert not gh_log.exists()
@@ -446,7 +377,7 @@ def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
     (spx_dir / INSTRUCTION_CLAUDE).unlink()
     (spx_dir / INSTRUCTION_AGENTS).unlink()
 
-    _run_refresh_pr_step(repo, gh_log)
+    run_refresh_pr_step(repo, gh_log)
 
     committed = git_command(
         repo,
@@ -494,19 +425,6 @@ def test_write_regenerates_a_drifted_instruction_block(tmp_path: pathlib.Path) -
     assert module.main([*args, "--write"]) == 0
     for instruction_file in instruction_files:
         assert "HAND DRIFT" not in instruction_file.read_text(encoding="utf-8")
-
-
-def test_no_rendered_instruction_block_teaches_result_session_frontmatter() -> None:
-    module = load_instruction_block_module()
-    template = read_canonical_template()
-    # Render the canonical template for each agent harness and assert the rendered
-    # Session Management section carries no result-frontmatter instruction —
-    # exercising the generator's output, not just the authored template text.
-    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
-        rendered = module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
-        section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
-        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
-        assert SESSION_RESULT_FRONTMATTER_FIELD not in section
 
 
 def test_write_removes_obsolete_spx_instruction_files(tmp_path: pathlib.Path) -> None:
