@@ -209,15 +209,18 @@ def async_helper_declarations_are_detected() -> bool:
 
 def python_binding_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("python_binding_declaration.py")
-    return _has_variable(declarations, "project_dir") and _has_variable(
-        declarations, "case"
+    return (
+        _has_variable(declarations, "project_dir")
+        and _has_variable(declarations, "cases")
+        and _has_variable(declarations, "case")
     )
 
 
 def python_pattern_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("python_pattern_declaration.py")
     return (
-        _has_variable(declarations, "computed")
+        _has_variable(declarations, "case")
+        and _has_variable(declarations, "computed")
         and _has_variable(declarations, "root")
         and _has_variable(declarations, "first")
         and _has_variable(declarations, "rest")
