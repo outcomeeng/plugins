@@ -941,6 +941,23 @@ def real_change_probe_detects_rename_away_from_structural_path(
     )
 
 
+def real_change_probe_detects_cross_plugin_structural_rename(
+    repo: pathlib.Path,
+) -> bool:
+    handle = build_repo_with_cross_plugin_structural_rename(repo)
+
+    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
+    source_changes = {change.path: change for change in changes[handle.source_plugin]}
+    target_changes = {change.path: change for change in changes[handle.target_plugin]}
+    return (
+        source_changes.keys() == target_changes.keys() == {handle.target_path}
+        and source_changes[handle.target_path].old_path == handle.source_path
+        and target_changes[handle.target_path].old_path == handle.source_path
+        and auto_segment(changes[handle.source_plugin]) is Segment.MINOR
+        and auto_segment(changes[handle.target_plugin]) is Segment.MINOR
+    )
+
+
 def _check_compares_manifest_to_base_source_path(status: FileStatus) -> bool:
     src_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     base_path = src_path.removeprefix("src/")
@@ -1025,6 +1042,18 @@ class RenamedStructuralRepo:
     plugin: str
     structural_path: str
     renamed_path: str
+
+
+@dataclass(frozen=True)
+class CrossPluginRenameRepo:
+    """A real git repo whose working tree moves a structural path across plugins."""
+
+    repo: pathlib.Path
+    base_ref: str
+    source_plugin: str
+    target_plugin: str
+    source_path: str
+    target_path: str
 
 
 def _run_git(repo: pathlib.Path, *args: str) -> None:
@@ -1126,7 +1155,49 @@ def build_repo_with_renamed_structural_path(
     )
 
 
+def build_repo_with_cross_plugin_structural_rename(
+    repo: pathlib.Path,
+) -> CrossPluginRenameRepo:
+    """Commit one plugin's structural path, then move it under another plugin."""
+    source_plugin = "source"
+    target_plugin = "target"
+    source_root = f"{SOURCE_PLUGINS_DIR}/{source_plugin}"
+    target_root = f"{SOURCE_PLUGINS_DIR}/{target_plugin}"
+    source_path = f"{source_root}/skills/moved/SKILL.md"
+    target_path = f"{target_root}/skills/moved/SKILL.md"
+    repo.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "init", "-q", "-b", "main")
+    _run_git(repo, "config", "commit.gpgsign", "false")
+    _write(
+        repo,
+        f"{source_root}/.claude-plugin/plugin.json",
+        '{\n  "name": "source",\n  "version": "0.1.0"\n}\n',
+    )
+    _write(
+        repo,
+        f"{target_root}/.claude-plugin/plugin.json",
+        '{\n  "name": "target",\n  "version": "0.1.0"\n}\n',
+    )
+    _write(repo, source_path, "---\nname: moved\n---\n\nv1\n")
+    _run_git(repo, "add", "-A")
+    _run_git(repo, "commit", "-q", "-m", "base")
+    base_ref = "HEAD"
+
+    (repo / target_path).parent.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "mv", source_path, target_path)
+
+    return CrossPluginRenameRepo(
+        repo=repo,
+        base_ref=base_ref,
+        source_plugin=source_plugin,
+        target_plugin=target_plugin,
+        source_path=source_path,
+        target_path=target_path,
+    )
+
+
 __all__ = [
+    "CrossPluginRenameRepo",
     "RecordingManifestWriter",
     "RecordingToolProbe",
     "ScriptedChangeProbe",
@@ -1137,8 +1208,10 @@ __all__ = [
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
+    "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
+    "real_change_probe_detects_cross_plugin_structural_rename",
     "real_change_probe_detects_rename_away_from_structural_path",
     "single_manifest_case",
 ]

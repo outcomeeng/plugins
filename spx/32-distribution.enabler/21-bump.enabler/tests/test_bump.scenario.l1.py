@@ -19,6 +19,7 @@ from outcomeeng_testing.harnesses.bump import (
     mixed_dual_manifest_minor_change_uses_current_segment,
     no_changed_plugins_exits_zero_without_writing,
     only_changed_plugin_manifests_are_written,
+    real_change_probe_detects_cross_plugin_structural_rename,
     real_change_probe_detects_rename_away_from_structural_path,
     real_change_probe_detects_untracked_new_skill_as_added,
     segment_selection_produces_expected_versions,
@@ -100,5 +101,13 @@ def test_real_change_probe_detects_rename_away_from_structural_path(
     tmp_path: pathlib.Path,
 ) -> None:
     assert real_change_probe_detects_rename_away_from_structural_path(
+        tmp_path / "repo",
+    )
+
+
+def test_real_change_probe_detects_cross_plugin_structural_rename(
+    tmp_path: pathlib.Path,
+) -> None:
+    assert real_change_probe_detects_cross_plugin_structural_rename(
         tmp_path / "repo",
     )

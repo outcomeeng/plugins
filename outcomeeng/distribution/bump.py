@@ -457,13 +457,23 @@ def _real_change_probe(
     )
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
-        plugin = _plugin_from_changed_path(parsed_change.path)
-        if plugin is None and parsed_change.old_path is not None:
-            plugin = _plugin_from_changed_path(parsed_change.old_path)
-        if plugin is None:
+        plugins = _plugins_from_changed_path(parsed_change)
+        if not plugins:
             continue
-        changes.setdefault(plugin, []).append(parsed_change)
+        for plugin in plugins:
+            changes.setdefault(plugin, []).append(parsed_change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
+
+
+def _plugins_from_changed_path(change: ChangedPath) -> frozenset[str]:
+    plugins: set[str] = set()
+    if plugin := _plugin_from_changed_path(change.path):
+        plugins.add(plugin)
+    if change.old_path is not None and (
+        plugin := _plugin_from_changed_path(change.old_path)
+    ):
+        plugins.add(plugin)
+    return frozenset(plugins)
 
 
 def _parse_diff_line(line: str) -> ChangedPath | None:
