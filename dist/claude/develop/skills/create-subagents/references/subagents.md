@@ -4,7 +4,7 @@
 - `<storage_locations>` — product, user, CLI, and plugin placement
 - `<execution_model>` — black-box execution and workflow implications
 - `<tool_configuration>` — inherited and specific tool grants
-- `<model_selection>` — explicit model aliases and reproducibility-sensitive inheritance boundaries
+- `<model_selection>` — model aliases and reproducibility-sensitive inheritance boundaries
 - `<invocation>` — automatic and explicit subagent use
 - `<management>` — `/agents`, direct files, and CLI configuration
 - `<example_subagents>` — test-writer and debugger examples
@@ -23,7 +23,7 @@ Subagent file structure:
 name: your-subagent-name
 description: Description of when this subagent should be invoked
 tools: tool1, tool2, tool3 # Optional - inherits all tools if omitted
-model: sonnet # Optional - use an explicit reproducible model alias
+model: sonnet # Optional - opus, sonnet, haiku, or inherit
 skills: # Optional - inject skill content at startup
   - skill-name-one
   - skill-name-two
@@ -46,13 +46,13 @@ Step-by-step process for consistency.
 
 <configuration_fields>
 
-| Field         | Required | Description                                                                         |
-| ------------- | -------- | ----------------------------------------------------------------------------------- |
-| `name`        | Yes      | Unique identifier using lowercase letters and hyphens                               |
-| `description` | Yes      | Natural language description of purpose. Include when Claude should invoke this.    |
-| `tools`       | No       | Comma-separated list. If omitted, inherits all tools from main thread               |
-| `model`       | No       | Explicit reproducible model alias. Use `sonnet` unless a stronger model is required |
-| `skills`      | No       | Array of skill names. Full skill content injected into subagent context at startup  |
+| Field         | Required | Description                                                                                |
+| ------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `name`        | Yes      | Unique identifier using lowercase letters and hyphens                                      |
+| `description` | Yes      | Natural language description of purpose. Include when Claude should invoke this.           |
+| `tools`       | No       | Comma-separated list. If omitted, inherits all tools from main thread                      |
+| `model`       | No       | `opus`, `sonnet`, `haiku`, or `inherit`; use explicit aliases when reproducibility matters |
+| `skills`      | No       | Array of skill names. Full skill content injected into subagent context at startup         |
 
 </configuration_fields>
 </file_format>
@@ -160,6 +160,11 @@ Use `/agents` command to see full list of available tools.
 - SWE-bench Verified: 49.0%
 - **Use for**: Planning, complex reasoning, validation, critical decisions
 
+**Haiku** (`haiku`):
+
+- Fast, lower-cost model alias
+- **Use for**: simple transformations, high-volume processing, and clear execution tasks when the owning workflow accepts lower-cost execution
+
 **Opus** (`opus`):
 
 - Highest performance on evaluation benchmarks
@@ -182,10 +187,10 @@ Use `/agents` command to see full list of available tools.
    - Breaks task into subtasks
    - Identifies parallelizable work
 
-2. Sonnet (Workers):
+2. Haiku or Sonnet (Workers):
    - Execute subtasks in parallel
-   - Preserve the same reproducible capability floor
-   - Use the same prompt and tool boundaries for comparable outputs
+   - Use `haiku` for simple or high-volume tasks when the owning workflow accepts lower-cost execution
+   - Use `sonnet` when comparable evidence quality or higher reasoning capability matters
 
 3. Sonnet (Validator):
    - Integrates results
@@ -201,9 +206,12 @@ Use `/agents` command to see full list of available tools.
 
 | Task Type           | Recommended Model | Rationale                               |
 | ------------------- | ----------------- | --------------------------------------- |
+| Simple validation   | Haiku             | Fast lower-cost execution               |
+| Clear execution     | Haiku             | Efficient for bounded tasks             |
 | Complex analysis    | Sonnet            | Superior reasoning, worth the cost      |
 | Multi-step planning | Sonnet            | Best for breaking down complexity       |
 | Quality validation  | Sonnet            | Critical checkpoint, needs intelligence |
+| Batch processing    | Haiku             | Cost efficiency for high volume         |
 | Critical security   | Sonnet            | High stakes require best model          |
 | Output synthesis    | Sonnet            | Ensuring coherence across inputs        |
 

@@ -300,11 +300,12 @@ Workers (5 concurrent instances of security-reviewer):
 </when_to_use>
 
 <explicit_model_orchestration>
-**Explicit model orchestration**: reproducible model choices per orchestration role.
+**Explicit model orchestration**: model choices declared per orchestration role.
 
 Research findings:
 
 - Sonnet 4.5: "Best model in the world for agents", exceptional at planning and validation
+- Haiku: lower-cost execution for simple or high-volume work when the owning workflow accepts that trade-off
 - Explicit model aliases keep agent behavior stable when the main conversation model changes
 
 **Pattern**:
@@ -316,7 +317,7 @@ Research findings:
    - Breaks into subtasks
    - Identifies what can be parallelized
 
-2. Sonnet (Workers):
+2. Haiku or Sonnet (Workers):
    - Each completes assigned subtask
    - Executes in parallel for speed
    - Returns results to orchestrator
@@ -328,7 +329,7 @@ Research findings:
    - Delivers final output
 ```
 
-**Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit model aliases and avoid session-model inheritance.
+**Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit `sonnet` aliases and avoid session-model inheritance.
 </explicit_model_orchestration>
 </orchestrator_worker>
 </pattern_catalog>
@@ -409,7 +410,6 @@ Coordinator:
 ---
 name: workflow-coordinator
 description: Orchestrates multi-agent workflows. Use when task requires multiple specialized agents in coordination.
-tools: all
 model: sonnet
 ---
 
@@ -590,7 +590,7 @@ Heavy coordinator = bottleneck. Coordinator should route and synthesize, not do 
 - Planning and validation: Sonnet
 - Evidence-producing review and audit: Sonnet
 - Highest-stakes decisions: explicit stronger model when warranted
-- Bulk processing: explicit model choice declared by the owning workflow
+- Simple or high-volume execution: Haiku when the owning workflow accepts lower-cost execution
 
 </principle>
 </best_practices>
