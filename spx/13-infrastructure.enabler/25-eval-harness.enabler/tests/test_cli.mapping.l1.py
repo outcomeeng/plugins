@@ -364,6 +364,40 @@ def test_run_command_model_option_overrides_eval_definition_model(
     assert harness.models == ["sonnet"]
 
 
+def test_run_command_records_selected_model_in_artifacts(
+    tmp_path: Path,
+) -> None:
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl=(
+            '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
+        ),
+        model="claude-sonnet-4-5",
+    )
+
+    result = harness.runner.invoke(
+        main,
+        [
+            "run",
+            str(harness.eval_toml),
+            "--plugin-dir",
+            str(harness.plugin_dir),
+            "--model",
+            "sonnet",
+        ],
+        obj=harness.runner_context,
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    runs_dir = harness.eval_toml.parent / "runs"
+    result_json = next(runs_dir.glob("*.json"))
+    history_row = json.loads(
+        (harness.eval_toml.parent / "history.jsonl").read_text(encoding="utf-8")
+    )
+    assert json.loads(result_json.read_text(encoding="utf-8"))["model"] == "sonnet"
+    assert history_row["model"] == "sonnet"
+
+
 def test_run_command_rejects_inherit_model_option(
     tmp_path: Path,
 ) -> None:

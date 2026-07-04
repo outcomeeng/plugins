@@ -25,13 +25,19 @@ from outcomeeng_evals.suite import SuiteResult, TrialResult
 JSON_SCHEMA_VERSION = "1"
 
 
-def serialize_result(result: SuiteResult, title: str) -> dict[str, Any]:
+def serialize_result(
+    result: SuiteResult,
+    title: str,
+    *,
+    model: str | None = None,
+) -> dict[str, Any]:
     """Serialize a ``SuiteResult`` to a JSON-stable plain dict."""
     case_count = len(result.outcomes)
     passed_count = sum(1 for o in result.outcomes if o.passed)
     return {
         "schema_version": JSON_SCHEMA_VERSION,
         "title": title,
+        "model": model,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "suite": {
             "passed": result.passed,
@@ -187,14 +193,26 @@ def _dump_json(payload: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def write_json_report(result: SuiteResult, output_path: Path, title: str) -> Path:
+def write_json_report(
+    result: SuiteResult,
+    output_path: Path,
+    title: str,
+    *,
+    model: str | None = None,
+) -> Path:
     """Write only the JSON results document to ``output_path``."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    _dump_json(serialize_result(result, title), output_path)
+    _dump_json(serialize_result(result, title, model=model), output_path)
     return output_path
 
 
-def write_run_reports(result: SuiteResult, html_path: Path, title: str) -> Path:
+def write_run_reports(
+    result: SuiteResult,
+    html_path: Path,
+    title: str,
+    *,
+    model: str | None = None,
+) -> Path:
     """Write a run's reports: the JSON results document and the HTML viewer.
 
     Writes ``{html_path.stem}.json`` — the authoritative artifact for
@@ -205,7 +223,7 @@ def write_run_reports(result: SuiteResult, html_path: Path, title: str) -> Path:
     path.
     """
     html_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = serialize_result(result, title)
+    payload = serialize_result(result, title, model=model)
     _dump_json(payload, html_path.with_suffix(".json"))
     html_path.write_text(_render_html_shell(payload), encoding="utf-8")
     return html_path

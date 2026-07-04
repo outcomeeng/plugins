@@ -132,13 +132,14 @@ def run_command(
     timestamp_label = _timestamp_label()
     runs_dir = eval_dir / RUNS_DIRNAME
     html_path = runs_dir / f"{timestamp_label}.html"
-    write_run_reports(result, html_path, title=definition.title)
+    write_run_reports(result, html_path, title=definition.title, model=selected_model)
 
     append_history_row(
         eval_dir / HISTORY_FILENAME,
         _history_row(
             timestamp=timestamp_label,
             result=result,
+            model=selected_model,
             transcript_relative=f"{RUNS_DIRNAME}/{timestamp_label}.json",
         ),
     )
@@ -233,12 +234,14 @@ def _history_row(
     *,
     timestamp: str,
     result: SuiteResult,
+    model: str,
     transcript_relative: str,
 ) -> HistoryRow:
     return {
         "timestamp": timestamp,
         "schema_version": JSON_SCHEMA_VERSION,
         "git_sha": _git_sha(),
+        "model": model,
         "passed": result.passed,
         "pass_rate": result.pass_rate,
         "cases_total": len(result.outcomes),

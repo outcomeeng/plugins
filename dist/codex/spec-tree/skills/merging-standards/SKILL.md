@@ -183,7 +183,7 @@ git diff --name-only "origin/${base}...HEAD"
 
 **Stacked-gate** (all must hold): the PR base is the previous stack branch (named in the PR body's `Stack` or `Merge order` note); the branch remains draft while the base is unmerged; after the base merges, the branch is rebased onto the updated default branch before final merge.
 
-Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, invoke `request_user_input` rather than guess.
+Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, the consuming workflow asks the operator through its own structured-question tool grant rather than guessing.
 
 ```bash
 base_branch="<previous-stack-branch>"
@@ -307,19 +307,19 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
 
 ```bash
-gh pr view <pr-number> --json baseRefName --jq '.baseRefName'
-gh pr view <pr-number> --json headRefName --jq '.headRefName'
-# explicit --delete-branch=false — never rely on gh's default for the omitted flag (it
-# varies by gh version and config, unknowable across consumer environments). =false
-# guarantees gh skips its local-branch-delete + switch-to-base step, which fails
-# when the base branch is checked out in another worktree.
+base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
+branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+# explicit --delete-branch=false — never rely on gh's default for the omitted flag
+# (it varies by gh version and config, unknowable across consumer environments).
+# Passing =false guarantees gh skips its local-branch-delete + switch-to-base step,
+# which fails when the base branch is checked out in another worktree.
 gh pr merge <pr-number> --rebase --delete-branch=false
-git fetch origin "<base-from-pr>"
-git switch --detach "origin/<base-from-pr>"   # step this worktree off the merged branch onto the new base tip
-git branch --list "<branch-from-pr>"
-git branch -D "<branch-from-pr>"   # run only when the branch is listed locally
-git ls-remote --exit-code --heads origin "<branch-from-pr>"   # a no-match exit means the remote branch is already absent
-git push origin --delete "<branch-from-pr>"   # run only when the remote branch exists
+git fetch origin "$base_from_pr"
+git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
+git branch --list "$branch_from_pr"
+git branch -D "$branch_from_pr"   # run only when the branch is listed locally
+git ls-remote --exit-code --heads origin "$branch_from_pr"   # a no-match exit means the remote branch is already absent
+git push origin --delete "$branch_from_pr"   # run only when the remote branch exists
 git status --porcelain
 ```
 
