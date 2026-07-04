@@ -44,12 +44,14 @@ def build_run_cli_harness(
     *,
     cases_jsonl: str,
     prompt_template: str = "Case {case_id}: {input_json}",
+    model: str | None = None,
 ) -> RunCliHarness:
     """Create a temporary eval suite wired to a recording model runner."""
     eval_dir = tmp_path / "evals" / "rule"
     eval_dir.mkdir(parents=True)
+    model_line = f'model = "{model}"\n' if model is not None else ""
     (eval_dir / EVAL_TOML_FILENAME).write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
+        f'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n{model_line}',
         encoding="utf-8",
     )
     (eval_dir / "cases.jsonl").write_text(cases_jsonl, encoding="utf-8")

@@ -318,11 +318,7 @@ def test_run_command_uses_eval_definition_model(
         cases_jsonl=(
             '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
         ),
-    )
-    original_toml = harness.eval_toml.read_text(encoding="utf-8")
-    harness.eval_toml.write_text(
-        original_toml + 'model = "claude-sonnet-4-5"\n',
-        encoding="utf-8",
+        model="claude-sonnet-4-5",
     )
 
     result = harness.runner.invoke(
@@ -348,11 +344,7 @@ def test_run_command_model_option_overrides_eval_definition_model(
         cases_jsonl=(
             '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
         ),
-    )
-    original_toml = harness.eval_toml.read_text(encoding="utf-8")
-    harness.eval_toml.write_text(
-        original_toml + 'model = "claude-sonnet-4-5"\n',
-        encoding="utf-8",
+        model="claude-sonnet-4-5",
     )
 
     result = harness.runner.invoke(
