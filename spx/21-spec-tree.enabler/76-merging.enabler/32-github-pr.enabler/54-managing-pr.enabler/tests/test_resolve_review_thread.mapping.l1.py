@@ -307,3 +307,170 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
     assert module.main() == 0
     assert any("commentsAfter=comment-cursor-1" in call for call in calls)
     assert calls[-1][-1] == "id=PRRT_thread0005"
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    (
+        (["bad!"], "thread_id must be a GitHub node ID"),
+        (
+            ["--repo", "outcomeeng", "--pr", "405", "--review-comment-id", "12345"],
+            "repo must be in owner/name form",
+        ),
+        (
+            [
+                "--repo",
+                "outcomeeng/plugins",
+                "--pr",
+                "0",
+                "--review-comment-id",
+                "12345",
+            ],
+            "pr must be a positive integer",
+        ),
+        (
+            [
+                "--repo",
+                "outcomeeng/plugins",
+                "--pr",
+                "405",
+                "--review-comment-id",
+                "bad!",
+            ],
+            "review_comment_id must be a database ID or GitHub node ID",
+        ),
+        (
+            [
+                "PRRT_thread0007",
+                "--repo",
+                "outcomeeng/plugins",
+                "--pr",
+                "405",
+                "--review-comment-id",
+                "12345",
+            ],
+            "pass either thread_id or --repo/--pr/--review-comment-id",
+        ),
+    ),
+)
+def test_invalid_arguments_fail_before_github_calls(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+    message: str,
+) -> None:
+    module = load_script()
+
+    def fail_run(_argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        pytest.fail("invalid arguments must not call GitHub")
+
+    monkeypatch.setattr(subprocess, "run", fail_run)
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), *argv])
+
+    assert module.main() == 2
+    assert message in capsys.readouterr().err
+
+
+def test_review_comment_not_found_after_complete_pagination_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = load_script()
+    calls: list[list[str]] = []
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "id": "PRRT_thread0008",
+                                "comments": {
+                                    "pageInfo": {
+                                        "hasNextPage": False,
+                                        "endCursor": None,
+                                    },
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_comment0008",
+                                            "databaseId": 808,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+
+    def fake_run(argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "909",
+        ],
+    )
+
+    assert module.main() == 2
+    assert (
+        "review comment was not found after complete review-thread pagination"
+        in capsys.readouterr().err
+    )
+    assert len(calls) == 1
+
+
+def test_malformed_paginated_response_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = load_script()
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": None},
+                        "nodes": [],
+                    }
+                }
+            }
+        }
+    }
+
+    def fake_run(_argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "909",
+        ],
+    )
+
+    assert module.main() == 2
+    assert (
+        "GitHub response reviewThreads page is missing endCursor"
+        in capsys.readouterr().err
+    )
