@@ -32,11 +32,11 @@ DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
 HELP_PUSH_FLAGS: frozenset[str] = frozenset(("-h", "--help"))
 NO_DRY_RUN_PUSH_FLAG = "--no-dry-run"
 PUSH_OPTION_FLAGS: frozenset[str] = frozenset(("-o", "--push-option"))
+INLINE_VALUE_PUSH_FLAGS: frozenset[str] = frozenset(("--recurse-submodules",))
 VALUE_TAKING_PUSH_FLAGS: frozenset[str] = frozenset(
     (
         "--exec",
         "--receive-pack",
-        "--recurse-submodules",
         "--repo",
         *PUSH_OPTION_FLAGS,
     )
@@ -122,7 +122,7 @@ def _is_dry_run(push_args: Sequence[str]) -> bool:
             is_dry_run = False
         elif arg in VALUE_TAKING_PUSH_FLAGS:
             skip_next = True
-        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS):
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS | INLINE_VALUE_PUSH_FLAGS):
             continue
         elif arg.startswith("-o") and arg != "-o":
             continue
@@ -141,7 +141,7 @@ def _is_help_request(push_args: Sequence[str]) -> bool:
             break
         if arg in VALUE_TAKING_PUSH_FLAGS:
             skip_next = True
-        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS):
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS | INLINE_VALUE_PUSH_FLAGS):
             continue
         elif arg.startswith("-o") and arg != "-o":
             continue

@@ -145,6 +145,24 @@ def separator_repository_named_like_dry_run_args() -> tuple[str, ...]:
     )
 
 
+def recurse_submodules_bare_dry_run_args() -> tuple[str, ...]:
+    """Return dry-run args after bare recurse-submodules."""
+    return (
+        "--recurse-submodules",
+        "--dry-run",
+        "origin",
+        "HEAD:refs/heads/feature",
+    )
+
+
+def recurse_submodules_bare_help_args() -> tuple[str, ...]:
+    """Return help args after bare recurse-submodules."""
+    return (
+        "--recurse-submodules",
+        "--help",
+    )
+
+
 def missing_required_tool_fails_fast_with_diagnostic() -> bool:
     for missing_tool in REQUIRED_TOOLS:
         runner = TracedRunner()
@@ -377,6 +395,31 @@ def git_help_push_skips_marketplace_tool_probes_and_upstream_capture() -> bool:
     )
 
 
+def recurse_submodules_bare_dry_run_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(recurse_submodules_bare_dry_run_args())
+
+
+def recurse_submodules_bare_help_skips_probes_and_upstream_capture() -> bool:
+    runner = TracedRunner()
+    tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
+    args = recurse_submodules_bare_help_args()
+
+    exit_code = push(
+        args,
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == 0
+        and tool_probe.queries == []
+        and upstream_probe.calls == 0
+        and runner.calls == [("git", "push", *args)]
+    )
+
+
 def dry_run_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(dry_run_push_args())
 
@@ -490,6 +533,10 @@ __all__ = [
     "git_help_push_args",
     "git_help_push_skips_marketplace_tool_probes_and_upstream_capture",
     "push_option_with_dry_run_operand_args",
+    "recurse_submodules_bare_dry_run_args",
+    "recurse_submodules_bare_dry_run_does_not_refresh_marketplace",
+    "recurse_submodules_bare_help_args",
+    "recurse_submodules_bare_help_skips_probes_and_upstream_capture",
     "repo_option_with_dry_run_operand_args",
     "separator_repository_named_like_dry_run_args",
     "push_failure_exit_code",
