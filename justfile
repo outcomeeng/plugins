@@ -17,7 +17,8 @@ eval eval_toml:
     #!/usr/bin/env bash
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --timeout-seconds "${TIMEOUT_SECONDS:-120}")
+    model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'
@@ -28,7 +29,8 @@ eval-case eval_toml case_id:
     #!/usr/bin/env bash
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --timeout-seconds "${TIMEOUT_SECONDS:-120}" --case-id "{{case_id}}")
+    model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}" --case-id "{{case_id}}")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'

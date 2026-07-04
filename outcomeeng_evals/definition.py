@@ -18,6 +18,7 @@ from typing import Any
 DEFAULT_SUITE_THRESHOLD = 0.85
 DEFAULT_TRIALS_PER_CASE = 1
 DEFAULT_CI_POLICY = "full"
+DEFAULT_MODEL = "sonnet"
 # Upper bound on ``trials`` from an ``eval.toml``: a misconfigured value
 # like ``trials = 10000`` would otherwise fire that many subprocesses.
 # Mirrors the ``--workers`` CLI cap (16); 100 leaves ample headroom for
@@ -33,9 +34,11 @@ _REQUIRED_PROMPT = "prompt"
 _OPTIONAL_THRESHOLD = "threshold"
 _OPTIONAL_TRIALS = "trials"
 _OPTIONAL_PLUGIN_DIR = "plugin_dir"
+_OPTIONAL_MODEL = "model"
 _OPTIONAL_OWNED_PATHS = "owned_paths"
 _OPTIONAL_SMOKE_CASES = "smoke_cases"
 _OPTIONAL_CI_POLICY = "ci_policy"
+_INHERIT_MODEL = "inherit"
 
 
 class CiPolicy(StrEnum):
@@ -55,6 +58,7 @@ class EvalDefinition:
     threshold: float
     trials: int
     plugin_dir: Path | None
+    model: str
     owned_paths: tuple[str, ...]
     smoke_case_ids: tuple[str, ...]
     ci_policy: CiPolicy
@@ -98,6 +102,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         max_value=MAX_TRIALS_PER_CASE,
     )
     plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
+    model = _optional_model(raw, _OPTIONAL_MODEL)
     owned_paths = _optional_str_tuple(raw, _OPTIONAL_OWNED_PATHS)
     smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
     ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
@@ -109,6 +114,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         threshold=threshold,
         trials=trials,
         plugin_dir=plugin_dir,
+        model=model,
         owned_paths=owned_paths,
         smoke_case_ids=smoke_case_ids,
         ci_policy=ci_policy,
@@ -191,6 +197,19 @@ def _optional_path(data: dict[str, Any], key: str) -> Path | None:
         msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"
         raise ValueError(msg)
     return Path(value)
+
+
+def _optional_model(data: dict[str, Any], key: str) -> str:
+    if key not in data:
+        return DEFAULT_MODEL
+    value = data[key]
+    if not isinstance(value, str) or not value:
+        msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"
+        raise ValueError(msg)
+    if value == _INHERIT_MODEL:
+        msg = f"field {key!r} must not be {_INHERIT_MODEL!r}"
+        raise ValueError(msg)
+    return value
 
 
 def _optional_str_tuple(data: dict[str, Any], key: str) -> tuple[str, ...]:

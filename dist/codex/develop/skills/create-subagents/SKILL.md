@@ -21,7 +21,7 @@ A subagent configured for an isolated, focused role — its system prompt, tool 
    - **name**: lowercase-with-hyphens
    - **description**: When should this subagent be used?
    - **tools**: Optional comma-separated list (inherits all if omitted)
-   - **model**: Optional (`opus`, `sonnet`, `haiku`, or `inherit`)
+   - **model**: Optional; use `sonnet` unless a stronger explicit model is required
    - **skills**: Optional array of skill names to inject at startup
 5. Write the system prompt (the subagent's instructions)
 
@@ -89,9 +89,9 @@ Product-scope subagents override user-scope when names conflict.
 </field>
 
 <field name="model">
-- `sonnet`, `opus`, `haiku`, or `inherit`
-- `inherit`: uses same model as main conversation
-- If omitted: defaults to configured subagent model (usually sonnet)
+- Use an explicit reproducible alias. Default to `sonnet`.
+- Use `opus` only when the subagent's task warrants the higher-cost model.
+- NEVER use `inherit` for verification, audit, review, or other reproducibility-sensitive agents.
 
 </field>
 
@@ -294,7 +294,7 @@ You can also edit subagent files directly:
 
 - File format and configuration
 - Skill injection (`skills:` field for preloading skill content)
-- Model selection (Sonnet 4.5 + Haiku 4.5 orchestration)
+- Explicit model selection for reproducible agent behavior
 - Tool security and least privilege
 - Prompt caching optimization
 - Complete examples
@@ -333,7 +333,7 @@ You can also edit subagent files directly:
 **Orchestration patterns**: [${SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
 
 - Sequential, parallel, hierarchical, coordinator patterns
-- Sonnet + Haiku orchestration for cost/performance
+- Explicit model selection for orchestration roles
 - Multi-agent coordination
 - Pattern selection guidance
 
@@ -355,6 +355,6 @@ A well-configured subagent has:
 - XML-structured system prompt with role, approach, and constraints
 - Description field optimized for automatic routing
 - Successfully tested on representative tasks
-- Model selection appropriate for task complexity (Sonnet for reasoning, Haiku for simple tasks)
+- Explicit model selection appropriate for task complexity and reproducibility needs
 
 </success_criteria>

@@ -118,6 +118,14 @@ def test_claude_cli_runner_returns_text_and_metadata_from_envelope(
     assert result.metadata.total_cost_usd == pytest.approx(0.2207325)
 
 
+def test_claude_cli_runner_passes_model_to_subprocess(tmp_path: Path) -> None:
+    runner = ClaudeCliRunner(plugin_dir=tmp_path, model="claude-sonnet-4-5")
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    assert argv[argv.index("--model") + 1] == "claude-sonnet-4-5"
+
+
 def test_claude_cli_runner_passes_env_without_claudecode(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

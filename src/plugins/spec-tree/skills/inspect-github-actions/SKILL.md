@@ -3,7 +3,7 @@ name: inspect-github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
 allowed-tools: Bash(python3:*gh_access.py*), Bash(git branch:*), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh auth switch:*), Read, Grep, {{! tool('ask_user') !}}
-model: claude-haiku-4-5-20251001
+model: sonnet
 ---
 
 <objective>

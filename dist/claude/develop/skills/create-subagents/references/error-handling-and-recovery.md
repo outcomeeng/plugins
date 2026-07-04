@@ -1,4 +1,12 @@
-# Error Handling and Recovery for Subagents
+<table_of_contents>
+
+- `<common_failure_modes>` — specification, coordination, verification, cascading, and non-determinism failures
+- `<recovery_strategies>` — degradation, retries, circuit breakers, timeouts, alternate verification, reassignment, and communication
+- `<observability>` — logging, correlation IDs, metrics, and evaluator agents
+- `<anti_patterns>` — silent failures, missing fallback paths, infinite retry, cascading errors, and missing context
+- `<recovery_checklist>` — pre-deployment recovery checks
+
+</table_of_contents>
 
 <common_failure_modes>
 
@@ -381,7 +389,7 @@ Main chat [abc123]:
 name: output-validator
 description: Validates subagent outputs against expected schemas and quality criteria. Use after any subagent produces structured output.
 tools: Read
-model: haiku
+model: sonnet
 ---
 
 <role>

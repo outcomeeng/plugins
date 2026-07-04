@@ -37,6 +37,7 @@ class RunnerFactory(Protocol):
         self,
         *,
         plugin_dir: Path,
+        model: str,
         max_budget_usd: float,
         timeout_seconds: int,
     ) -> ModelRunner: ...
@@ -71,6 +72,12 @@ class RunnerFactory(Protocol):
     help="Per-invocation budget passed through to the Claude CLI.",
 )
 @click.option(
+    "--model",
+    type=str,
+    default=None,
+    help="Model passed through to the Claude CLI. Defaults to eval.toml model.",
+)
+@click.option(
     "--timeout-seconds",
     type=click.IntRange(min=1),
     default=120,
@@ -88,6 +95,7 @@ def run_command(
     plugin_dir: Path,
     workers: int,
     max_budget_usd: float,
+    model: str | None,
     timeout_seconds: int,
     case_ids: tuple[str, ...],
 ) -> None:
@@ -96,6 +104,7 @@ def run_command(
     runner_factory = _runner_factory_from_context()
     runner = runner_factory(
         plugin_dir=plugin_dir,
+        model=model or definition.model,
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
     )

@@ -310,6 +310,68 @@ def test_run_command_filters_repeated_case_ids_in_case_file_order(
     )
 
 
+def test_run_command_uses_eval_definition_model(
+    tmp_path: Path,
+) -> None:
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl=(
+            '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
+        ),
+    )
+    original_toml = harness.eval_toml.read_text(encoding="utf-8")
+    harness.eval_toml.write_text(
+        original_toml + 'model = "claude-sonnet-4-5"\n',
+        encoding="utf-8",
+    )
+
+    result = harness.runner.invoke(
+        main,
+        [
+            "run",
+            str(harness.eval_toml),
+            "--plugin-dir",
+            str(harness.plugin_dir),
+        ],
+        obj=harness.runner_context,
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    assert harness.models == ["claude-sonnet-4-5"]
+
+
+def test_run_command_model_option_overrides_eval_definition_model(
+    tmp_path: Path,
+) -> None:
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl=(
+            '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
+        ),
+    )
+    original_toml = harness.eval_toml.read_text(encoding="utf-8")
+    harness.eval_toml.write_text(
+        original_toml + 'model = "claude-sonnet-4-5"\n',
+        encoding="utf-8",
+    )
+
+    result = harness.runner.invoke(
+        main,
+        [
+            "run",
+            str(harness.eval_toml),
+            "--plugin-dir",
+            str(harness.plugin_dir),
+            "--model",
+            "sonnet",
+        ],
+        obj=harness.runner_context,
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    assert harness.models == ["sonnet"]
+
+
 def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
     tmp_path: Path,
 ) -> None:

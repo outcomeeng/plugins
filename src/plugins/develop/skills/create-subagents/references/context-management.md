@@ -1,4 +1,15 @@
-# Context Management for Subagents
+<table_of_contents>
+
+- `<core_problem>` — why subagent context needs explicit management
+- `<memory_architecture>` — short-term, long-term, working, core, and archival memory
+- `<context_strategies>` — summarization, sliding windows, scratchpads, smart memory, and compaction
+- `<subagent_patterns>` — stateful and stateless subagent shapes
+- `<context_inheritance>` — what subagents do and do not inherit
+- `<anti_patterns>` — context failures to avoid
+- `<best_practices>` — memory and retrieval principles
+- `<prompt_caching_interaction>` — cache-friendly context patterns
+
+</table_of_contents>
 
 <core_problem>
 
@@ -413,7 +424,7 @@ State file structure:
 name: syntax-checker
 description: Validates code syntax without maintaining state
 tools: Read, Bash
-model: haiku
+model: sonnet
 ---
 
 <role>

@@ -1,4 +1,14 @@
-# Debugging and Troubleshooting Subagents
+<table_of_contents>
+
+- `<core_challenges>` — non-determinism, emergent behavior, black-box execution, and context failures
+- `<debugging_approaches>` — logging, tracing, correlation IDs, and evaluator agents
+- `<common_failure_types>` — hallucinations, format errors, prompt injection, workflow gaps, and tool misuse
+- `<diagnostic_procedures>` — systematic diagnosis steps
+- `<remediation_strategies>` — prompt specificity, workflow enforcement, output formats, and tool guidance
+- `<anti_patterns>` — debugging practices that hide root causes
+- `<monitoring>` — metrics, alerts, dashboards, and continuous improvement
+
+</table_of_contents>
 
 <core_challenges>
 
@@ -189,7 +199,7 @@ Events:
 name: output-validator
 description: Validates subagent outputs for correctness, completeness, and format compliance
 tools: Read
-model: haiku
+model: sonnet
 ---
 
 <role>

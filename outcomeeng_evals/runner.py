@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from outcomeeng_evals.definition import DEFAULT_MODEL
+
 
 @dataclass(frozen=True)
 class RunMetadata:
@@ -68,6 +70,7 @@ class ClaudeCliRunner:
     """Spawn ``claude`` in non-interactive print mode and return the response."""
 
     plugin_dir: Path
+    model: str = DEFAULT_MODEL
     binary: str = "claude"
     max_budget_usd: float | None = 0.50
     timeout_seconds: float = 120.0
@@ -83,6 +86,8 @@ class ClaudeCliRunner:
                 "--output-format",
                 "json",
                 "--no-session-persistence",
+                "--model",
+                self.model,
                 "--plugin-dir",
                 str(self.plugin_dir),
             ]

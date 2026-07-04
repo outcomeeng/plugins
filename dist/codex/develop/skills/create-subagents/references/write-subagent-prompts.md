@@ -1,3 +1,16 @@
+<table_of_contents>
+
+- `<context>` — prompt-writing scope for subagents
+- `<xml_structure_rule>` — XML body structure requirement
+- `<core_principles>` — specificity, clarity, and constraints
+- `<structure_with_xml>` — concrete prompt examples
+- `<anti_patterns>` — generic prompts, missing workflow, unclear triggers, missing constraints, and user-interaction mistakes
+- `<best_practices>` — role, focus, workflow, output, boundaries, examples, thinking, and success criteria
+- `<testing_subagents>` — checklist and common issues
+- `<quick_reference>` — compact prompt template
+
+</table_of_contents>
+
 <context>
 Subagent prompts should be task-specific, not generic. They define a specialized role with clear focus areas, workflows, and constraints.
 

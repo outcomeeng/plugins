@@ -1,4 +1,4 @@
-"""Compliance: every wrapper agent (skills: field present) declares model: sonnet or model: inherit."""
+"""Compliance: every wrapper agent (skills: field present) declares model: sonnet."""
 
 import pathlib
 import re
@@ -12,7 +12,7 @@ AGENTS_DIR = (
     / "spec-tree"
     / "agents"
 )
-VALID_MODELS = frozenset({"sonnet", "inherit"})
+VALID_MODELS = frozenset({"sonnet"})
 
 _FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 _SKILLS_RE = re.compile(r"^skills\s*:", re.MULTILINE)
