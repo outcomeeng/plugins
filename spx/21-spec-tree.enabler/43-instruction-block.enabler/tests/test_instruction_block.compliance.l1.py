@@ -587,3 +587,19 @@ def test_drift_gate_reports_a_cross_file_command_slot_conflict(
     report = instruction_block.render_report([], (module.SLOT_MERGE,))
     assert instruction_block.SLOT_CONFLICT_HEADER in report
     assert module.slot_reference(module.SLOT_MERGE) in report
+
+
+def test_render_report_separates_drift_and_conflict_sections() -> None:
+    module = load_instruction_block_module()
+    # A report carrying both a drift path and a slot conflict exercises the blank-line separator
+    # between the two sections — the branch a drift-only or conflict-only report never reaches.
+    report = instruction_block.render_report(
+        [INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS], (module.SLOT_MERGE,)
+    )
+    assert instruction_block.HEADER in report
+    assert instruction_block.SLOT_CONFLICT_HEADER in report
+    assert module.slot_reference(module.SLOT_MERGE) in report
+    assert (
+        f"{instruction_block.REMEDIATION}\n\n{instruction_block.SLOT_CONFLICT_HEADER}"
+        in report
+    )
