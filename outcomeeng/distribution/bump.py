@@ -339,8 +339,6 @@ def bump(
         if plugin in skip:
             continue
         new_version, resolved = plugin_targets[plugin]
-        if working_tree_version == new_version:
-            continue
         if mode is Mode.DRY_RUN:
             print(
                 f"{plugin}: {record.path} {working_tree_version} -> "

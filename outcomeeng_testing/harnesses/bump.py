@@ -410,6 +410,27 @@ def mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> bool:
     )
 
 
+def mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max() -> bool:
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.3",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
+    )
+
+    with contextlib.redirect_stderr(io.StringIO()):
+        exit_code = case.run.run()
+
+    written = case.run.written()
+    return (
+        exit_code == 0
+        and set(written) == {case.claude_path, case.codex_path}
+        and version_of(written[case.claude_path]) == "0.4.4"
+        and version_of(written[case.codex_path]) == "0.4.4"
+    )
+
+
 def mixed_dual_manifest_plugin_fails_check() -> bool:
     case = dual_manifest_case(
         "foo",

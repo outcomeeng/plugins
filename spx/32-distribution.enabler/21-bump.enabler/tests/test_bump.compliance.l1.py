@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.bump import (
     dual_manifest_plugin_writes_every_owned_manifest,
     missing_required_tool_fails_fast_with_diagnostic,
     mixed_dual_manifest_plugin_fails_check,
+    mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max,
     mixed_dual_manifest_plugin_writes_lockstep_patch_target,
     non_version_content_is_preserved_character_for_character,
     read_only_modes_never_write_regardless_of_plugin_state,
@@ -38,6 +39,12 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() ->
 
 def test_mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> None:
     assert mixed_dual_manifest_plugin_writes_lockstep_patch_target()
+
+
+def test_mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max() -> (
+    None
+):
+    assert mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max()
 
 
 def test_mixed_dual_manifest_plugin_fails_check() -> None:
