@@ -23,8 +23,10 @@ from outcomeeng_testing.harnesses.audit_tests import (
     python_starred_assignment_declarations_are_detected,
     rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
+    rust_lifetime_declarations_are_split,
     rust_loop_declarations_are_detected,
     rust_match_declarations_are_detected,
+    rust_or_pattern_declarations_are_detected,
     sourced_literals_pass,
     string_literal_is_rejected,
     test_owned_declaration_is_rejected as owned_declaration_is_rejected,
@@ -35,7 +37,9 @@ from outcomeeng_testing.harnesses.audit_tests import (
     typescript_regex_literal_declarations_are_preserved,
     typescript_semicolonless_declarations_are_split,
     typescript_catch_declarations_are_detected,
+    typescript_comparison_initializer_declarators_are_split,
     typescript_same_line_statement_declarations_are_detected,
+    typescript_jsx_closing_declarations_are_split,
     typescript_template_literal_declarations_are_ignored,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
@@ -170,6 +174,14 @@ def test_detects_typescript_same_line_statement_declarations() -> None:
     assert typescript_same_line_statement_declarations_are_detected()
 
 
+def test_splits_typescript_comparison_initializer_declarators() -> None:
+    assert typescript_comparison_initializer_declarators_are_split()
+
+
+def test_splits_typescript_jsx_closing_declarations() -> None:
+    assert typescript_jsx_closing_declarations_are_split()
+
+
 def test_ignores_declarations_inside_typescript_template_literals() -> None:
     assert typescript_template_literal_declarations_are_ignored()
 
@@ -200,3 +212,11 @@ def test_detects_rust_loop_declarations() -> None:
 
 def test_detects_rust_match_declarations() -> None:
     assert rust_match_declarations_are_detected()
+
+
+def test_splits_rust_lifetime_declarations() -> None:
+    assert rust_lifetime_declarations_are_split()
+
+
+def test_detects_rust_or_pattern_declarations() -> None:
+    assert rust_or_pattern_declarations_are_detected()

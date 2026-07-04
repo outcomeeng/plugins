@@ -424,6 +424,9 @@ def _rust_pattern_names(pattern: str) -> list[str]:
             return _rust_pattern_names(pattern[len(prefix) :])
     if not pattern or pattern in {"_", ".."}:
         return []
+    or_parts = _split_top_level(pattern, "|")
+    if len(or_parts) > 1:
+        return _rust_names_from_segments(or_parts)
     alias_parts = _split_top_level(pattern, "@", maxsplit=1)
     if len(alias_parts) > 1:
         return _rust_names_from_segments(alias_parts)
@@ -809,7 +812,7 @@ def _declaration_unit_complete(unit: str) -> bool:
     quote: str | None = None
     escaped = False
     last_significant = ""
-    for char in unit:
+    for index, char in enumerate(unit):
         if not char.isspace():
             last_significant = char
         if quote is not None:
@@ -821,6 +824,8 @@ def _declaration_unit_complete(unit: str) -> bool:
                 quote = None
             continue
         if char in {"'", '"', "`"}:
+            if char == "'" and _looks_like_rust_lifetime(unit, index):
+                continue
             quote = char
         elif char in {"(", "[", "{"}:
             depth += 1
@@ -839,6 +844,8 @@ def _declaration_unit_complete(unit: str) -> bool:
 
 
 def _ends_with_expression_continuation(text: str) -> bool:
+    if _ends_with_jsx_close(text):
+        return False
     if text.endswith(
         (
             "=>",
@@ -872,6 +879,13 @@ def _ends_with_expression_continuation(text: str) -> bool:
     ):
         return True
     return False
+
+
+def _ends_with_jsx_close(text: str) -> bool:
+    return (
+        re.search(r"</[A-Za-z][\w.:-]*>\s*$", text) is not None
+        or re.search(r"<[A-Za-z][\w.:-]*(?:\s+[^<>]*)?/>\s*$", text) is not None
+    )
 
 
 def _split_top_level_commas(body: str) -> list[str]:
@@ -936,7 +950,12 @@ def _split_top_level(
             continue
         if char in {"'", '"', "`"}:
             quote = char
-        elif track_type_angles and depth == 0 and char == "<":
+        elif (
+            track_type_angles
+            and depth == 0
+            and char == "<"
+            and _looks_like_typescript_type_arguments(body, index)
+        ):
             angle_depth += 1
         elif track_type_angles and depth == 0 and char == ">":
             angle_depth = max(0, angle_depth - 1)
@@ -956,6 +975,52 @@ def _split_top_level(
                 break
     declarators.append(body[start:])
     return declarators
+
+
+def _looks_like_typescript_type_arguments(body: str, index: int) -> bool:
+    if index == 0:
+        return False
+    previous = body[:index].rstrip()
+    if not previous or not re.search(r"[\w$)\]]$", previous):
+        return False
+    return _typescript_angle_end(body, index) is not None
+
+
+def _typescript_angle_end(body: str, index: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for current_index, char in enumerate(body[index:], start=index):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char == "<":
+            depth += 1
+        elif char == ">":
+            depth -= 1
+            if depth == 0:
+                return current_index
+        elif char in {"=", ";"} and depth == 1:
+            return None
+    return None
+
+
+def _looks_like_rust_lifetime(text: str, index: int) -> bool:
+    if index + 1 >= len(text):
+        return False
+    if not re.match(r"[A-Za-z_]", text[index + 1]):
+        return False
+    end = index + 2
+    while end < len(text) and re.match(r"\w", text[end]):
+        end += 1
+    return end >= len(text) or text[end] != "'"
 
 
 @dataclass

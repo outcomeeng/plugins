@@ -417,6 +417,33 @@ def typescript_same_line_statement_declarations_are_detected() -> bool:
     )
 
 
+def typescript_comparison_initializer_declarators_are_split() -> bool:
+    declarations = _scanner().scan_text(
+        "const underLimit = count < max, expected = true",
+        Path("comparison.ts"),
+    )
+    return _has_variable(declarations, "underLimit") and _has_variable(
+        declarations, "expected"
+    )
+
+
+def typescript_jsx_closing_declarations_are_split() -> bool:
+    declarations = _scanner().scan_text(
+        """const element = <Widget />
+const expected = buildExpectation()
+const closed = <section></section>
+const afterClosed = buildExpectation()
+""",
+        Path("component.tsx"),
+    )
+    return (
+        _has_variable(declarations, "element")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "closed")
+        and _has_variable(declarations, "afterClosed")
+    )
+
+
 def typescript_template_literal_declarations_are_ignored() -> bool:
     declarations = _declarations_for_fixture(
         "typescript_template_literal_declaration.ts"
@@ -514,6 +541,29 @@ def rust_match_declarations_are_detected() -> bool:
         and _has_variable(declarations, "multiline_target")
         and not _has_variable(declarations, "Harness")
     )
+
+
+def rust_lifetime_declarations_are_split() -> bool:
+    declarations = _scanner().scan_text(
+        """let value: &'static str = source();
+let expected = build_expected();
+""",
+        Path("lifetime.rs"),
+    )
+    return _has_variable(declarations, "value") and _has_variable(
+        declarations, "expected"
+    )
+
+
+def rust_or_pattern_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """match result {
+    Ok(value) | Err(value) => assert_value(value),
+}
+""",
+        Path("or-pattern.rs"),
+    )
+    return _has_variable(declarations, "value")
 
 
 def coupling_taxonomy_has_distinct_failure_modes() -> bool:
