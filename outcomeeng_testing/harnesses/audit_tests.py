@@ -561,6 +561,8 @@ def rust_match_declarations_are_detected() -> bool:
         and _has_variable(declarations, "multiline_root")
         and _has_variable(declarations, "multiline_target")
         and not _has_variable(declarations, "Harness")
+        and not _has_variable(declarations, "None")
+        and not _has_variable(declarations, "ImportedVariant")
     )
 
 

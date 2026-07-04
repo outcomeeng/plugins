@@ -440,7 +440,13 @@ def _rust_pattern_names(pattern: str) -> list[str]:
         inner = pattern[pattern.find("(") + 1 : -1]
         return _rust_names_from_segments(_split_top_level_commas(inner))
     match = _RUST_IDENTIFIER.fullmatch(pattern)
-    return [pattern] if match is not None else []
+    return (
+        [pattern] if match is not None and _is_rust_binding_identifier(pattern) else []
+    )
+
+
+def _is_rust_binding_identifier(name: str) -> bool:
+    return name.startswith("_") or name[0].islower()
 
 
 def _rust_struct_field_names(inner: str) -> list[str]:

@@ -1,6 +1,8 @@
 fn checks_match_bindings() {
     match outcome() {
         Some(value) => assert_value(value),
+        None => assert_absent(),
+        ImportedVariant => assert_imported_variant(),
         Ok((input, expected)) => assert_case(input, expected),
         Harness { root, target, .. } => assert_paths(root, target),
         Ok((
