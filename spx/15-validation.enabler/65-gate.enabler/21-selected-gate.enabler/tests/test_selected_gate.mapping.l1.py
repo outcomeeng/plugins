@@ -6,17 +6,20 @@ from pathlib import Path
 
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
+    FMT_CHECK_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     PYTEST_ARGV,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
+    SPX_MARKDOWN_ARGV,
     TEST_STEPS,
     SHELLCHECK_ARGV,
     VALIDATION_STEPS,
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.selected_gate import (
+    DEFAULT_BASE_REF,
     FULL_GATE_REASON,
     FULL_GATE_PATTERNS,
     GIT_DIFF_BRANCH_ARGV_PREFIX,
@@ -26,6 +29,8 @@ from outcomeeng.validation.selected_gate import (
     PYTHON_ASSERTION_TEST_PATTERNS,
     PYTHON_PATTERNS,
     PYTHON_REASON,
+    MARKDOWN_PATTERNS,
+    MARKDOWN_REASON,
     SKILL_REASON,
     SKILL_PATTERNS,
     SKILL_STEP_LABELS,
@@ -60,6 +65,37 @@ def test_workflow_change_selects_workflow_validation_steps() -> None:
     assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
 
 
+def test_mixed_non_full_gate_paths_select_ordered_step_union() -> None:
+    plan = build_selected_gate_plan(
+        (
+            PYTHON_PATTERNS[0],
+            MARKDOWN_PATTERNS[0],
+            WORKFLOW_PATTERNS[0],
+        )
+    )
+
+    assert tuple(item.step.argv for item in plan.selected_steps) == (
+        FMT_CHECK_ARGV,
+        ACTIONLINT_ARGV,
+        SHELLCHECK_ARGV,
+        RUFF_FORMAT_ARGV,
+        RUFF_CHECK_ARGV,
+        MYPY_ARGV,
+        PYRIGHT_ARGV,
+        SPX_MARKDOWN_ARGV,
+    )
+    assert tuple(item.reason for item in plan.selected_steps) == (
+        MARKDOWN_REASON,
+        WORKFLOW_REASON,
+        WORKFLOW_REASON,
+        PYTHON_REASON,
+        PYTHON_REASON,
+        PYTHON_REASON,
+        PYTHON_REASON,
+        MARKDOWN_REASON,
+    )
+
+
 def test_changed_python_assertion_test_targets_pytest() -> None:
     test_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
     plan = build_selected_gate_plan((test_path,))
@@ -69,13 +105,14 @@ def test_changed_python_assertion_test_targets_pytest() -> None:
 
 
 def test_full_gate_surface_selects_all_declared_steps() -> None:
-    plan = build_selected_gate_plan((FULL_GATE_PATTERNS[2],))
+    plans = [build_selected_gate_plan((pattern,)) for pattern in FULL_GATE_PATTERNS]
 
-    assert plan.full_gate is True
-    assert tuple(item.step for item in plan.selected_steps) == tuple(
-        (*VALIDATION_STEPS, *TEST_STEPS)
-    )
-    assert all(item.reason == FULL_GATE_REASON for item in plan.selected_steps)
+    for plan in plans:
+        assert plan.full_gate is True
+        assert tuple(item.step for item in plan.selected_steps) == tuple(
+            (*VALIDATION_STEPS, *TEST_STEPS)
+        )
+        assert all(item.reason == FULL_GATE_REASON for item in plan.selected_steps)
 
 
 def test_skill_surface_selects_source_owned_skill_steps() -> None:
@@ -93,7 +130,7 @@ def test_changed_path_collection_merges_branch_staged_unstaged_and_untracked(
     unstaged_path = SKILL_PATTERNS[0]
     untracked_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
     outputs = {
-        (*GIT_DIFF_BRANCH_ARGV_PREFIX, "origin/main...HEAD"): branch_path,
+        (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{DEFAULT_BASE_REF}...HEAD"): branch_path,
         GIT_DIFF_STAGED_ARGV: staged_path,
         GIT_DIFF_UNSTAGED_ARGV: unstaged_path,
         GIT_LS_UNTRACKED_ARGV: untracked_path,

@@ -17,8 +17,20 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hypothesis import settings
+
 from outcomeeng.validation import ProcessHandle, ProcessSpawner
 from outcomeeng.validation._git import GitCommandResult
+from outcomeeng.validation.selected_gate import SELECTED_CHECK_PLAN_HEADER
+
+SELECTED_GATE_PROPERTY_SETTINGS = settings(max_examples=40, deadline=None)
+
+
+def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
+    """Expected selected-check plan block for tests that inspect CLI output."""
+
+    lines = [SELECTED_CHECK_PLAN_HEADER, *(f"  {label}: {reason}" for label in labels)]
+    return "\n".join(lines) + "\n"
 
 
 @dataclass

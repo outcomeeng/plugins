@@ -30,6 +30,8 @@ from outcomeeng.validation._steps import (
 )
 
 RECIPE_CHECK_FULL: Final = "check-full"
+DEFAULT_BASE_REF: Final = "origin/main"
+SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
 NO_CHANGED_PATHS_REASON: Final = "no changed paths"
 FULL_GATE_REASON: Final = "full gate surface changed"
 PYTHON_REASON: Final = "python source or test path changed"
@@ -50,6 +52,8 @@ SKILL_STEP_LABELS: Final = (
 FULL_GATE_PATTERNS: Final = (
     "pyproject.toml",
     "uv.lock",
+    "justfile",
+    "Justfile",
     "outcomeeng/validation/**",
     "outcomeeng_testing/harnesses/gate.py",
     ".github/workflows/check.yml",
@@ -136,7 +140,7 @@ class SelectedGatePlan:
 def collect_changed_paths(
     repo: Path,
     *,
-    base_ref: str = "origin/main",
+    base_ref: str = DEFAULT_BASE_REF,
     runner: GitRunner = run_git_command,
 ) -> tuple[str, ...]:
     """Return branch, staged, unstaged, and untracked paths for local gate selection."""
@@ -256,7 +260,7 @@ def run_selected_check(
 
 
 def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
-    sink.write("━━━ Selected check plan ━━━\n")
+    sink.write(f"{SELECTED_CHECK_PLAN_HEADER}\n")
     if not plan.changed_paths:
         sink.write(f"No gate steps selected: {NO_CHANGED_PATHS_REASON}.\n")
         sink.flush()

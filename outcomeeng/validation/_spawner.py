@@ -1,8 +1,7 @@
 """Production adapter binding ProcessSpawner to subprocess.Popen.
 
-This module is the only file in the check_pipeline package that imports
-subprocess. The compliance test `TestSubprocessImportContainment` enforces
-this — moving the import anywhere else breaks the test.
+This module is the validation package subprocess boundary. The compliance test
+`TestSubprocessImportContainment` enforces this boundary for validation code.
 
 The adapter passes `start_new_session=True` so that the child runs in its
 own process group, enabling `os.killpg` to forward signals to the entire

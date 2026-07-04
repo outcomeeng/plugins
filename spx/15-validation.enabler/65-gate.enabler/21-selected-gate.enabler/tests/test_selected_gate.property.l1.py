@@ -6,8 +6,10 @@ from hypothesis import given
 
 from outcomeeng.validation.selected_gate import build_selected_gate_plan
 from outcomeeng_testing.generators.gate import selected_gate_changed_paths
+from outcomeeng_testing.harnesses.gate import SELECTED_GATE_PROPERTY_SETTINGS
 
 
+@SELECTED_GATE_PROPERTY_SETTINGS
 @given(selected_gate_changed_paths())
 def test_selection_is_deterministic_for_path_order_and_duplicates(
     paths: list[str],
