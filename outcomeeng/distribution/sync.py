@@ -290,7 +290,7 @@ class _FileSingleFlight:
     def _read_lock_owner(self) -> _LockOwner | None:
         try:
             raw = self.lock_path.read_text(encoding="utf-8").strip()
-        except OSError:
+        except FileNotFoundError:
             return None
         return _read_lock_owner_body(raw)
 

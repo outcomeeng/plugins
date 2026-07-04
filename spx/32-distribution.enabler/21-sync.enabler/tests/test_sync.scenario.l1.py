@@ -488,6 +488,41 @@ def test_refresh_release_failure_exits_nonzero_after_successful_steps(
     assert single_flight.releases == 1
 
 
+def test_file_single_flight_release_reports_lock_read_failure(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_identity=lambda pid: f"identity:{pid}",
+    )
+    runner = RecordingRunner()
+
+    def corrupt_lock_then_succeed(argv: Sequence[str]) -> int:
+        result = runner(argv)
+        if single_flight.lock_path.is_file():
+            single_flight.lock_path.unlink()
+            single_flight.lock_path.mkdir()
+        return result
+
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=corrupt_lock_then_succeed,
+        tool_probe=ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE),
+        change_probe=ScriptedChangeProbe(changed=True),
+        config_repairer=ScriptedConfigRepairer(changed=False),
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Marketplace refresh lock release failed:" in captured.err
+    assert runner.calls == list(STEP_ARGVS)
+    assert single_flight.lock_path.is_dir()
+
+
 def test_refresh_release_failure_supersedes_step_failure(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
