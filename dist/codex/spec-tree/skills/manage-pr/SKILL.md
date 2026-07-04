@@ -3,7 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
-allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(gh api graphql:*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(printf:*)
 ---
 
 <objective>
@@ -140,9 +140,7 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
   --field body="Acknowledged — fix in next push."
 
 # Mark a review thread resolved
-gh api graphql --silent \
-  -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
-  -F id=<review-thread-node-id>
+python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" <review-thread-node-id>
 
 # Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
 # rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,

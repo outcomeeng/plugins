@@ -25,15 +25,3 @@ Required handling when an eval-coverage sweep happens:
 - Run the eval to populate `history.jsonl`.
 
 Surfaced by the local `changes-reviewer` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
-
-## 3. Review-thread GraphQL mutation needs a narrower command surface (FOLLOW-UP)
-
-The `/manage-pr` skill's scoped `allowed-tools` list grants `Bash(gh api graphql:*)` so Step 8 can resolve review threads through the `resolveReviewThread` mutation. The prefix-matching allowed-tools syntax cannot restrict by GraphQL operation body, so the entry grants every GraphQL query and mutation the token can perform.
-
-Required handling:
-
-- Add a thin shipped script or another narrow invocation surface for the `resolveReviewThread` mutation.
-- Replace `Bash(gh api graphql:*)` in `src/plugins/spec-tree/skills/manage-pr/SKILL.md` with the narrow wrapper command.
-- Regenerate `dist/claude` and `dist/codex`.
-
-Tracked because the bounded fix needs a wrapper design and portability review rather than another wildcard edit in the PR-management re-entry changeset.
