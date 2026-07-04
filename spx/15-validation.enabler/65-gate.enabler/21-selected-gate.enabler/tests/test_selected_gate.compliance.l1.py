@@ -6,10 +6,14 @@ import io
 import os
 from pathlib import Path
 
+import pytest
+
 from outcomeeng.validation import CHECK_RECIPES, PREFLIGHT_STEPS
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     FULL_GATE_PATTERNS,
+    GIT_DISCOVERY_ERROR_PREFIX,
+    GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_DIFF_BRANCH_ARGV_PREFIX,
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
@@ -17,6 +21,7 @@ from outcomeeng.validation.selected_gate import (
     PYTHON_REASON,
     PYTHON_PATTERNS,
     build_selected_gate_plan,
+    collect_changed_paths,
     run_selected_check,
 )
 from outcomeeng.validation._git import GitCommandResult
@@ -109,3 +114,60 @@ def test_selected_check_uses_full_wrapper_for_full_gate_surface(
     assert "full gate surface changed" in output
     assert "Recipe validation" in output
     assert "Recipe test" in output
+
+
+def test_selected_check_fails_when_git_discovery_fails(tmp_path: Path) -> None:
+    failed_branch_command = (
+        *GIT_DIFF_BRANCH_ARGV_PREFIX,
+        f"{DEFAULT_BASE_REF}...HEAD",
+    )
+    spawner = RecordingSpawner(exit_codes=[os.EX_OK])
+    runner = RecordingGitRunner(
+        outputs={
+            failed_branch_command: GitCommandResult(
+                returncode=GIT_DISCOVERY_FAILURE_EXIT_CODE,
+                stdout="fatal: bad revision\n",
+            ),
+            GIT_DIFF_STAGED_ARGV: GitCommandResult(returncode=0, stdout=""),
+            GIT_DIFF_UNSTAGED_ARGV: GitCommandResult(returncode=0, stdout=""),
+            GIT_LS_UNTRACKED_ARGV: GitCommandResult(returncode=0, stdout=""),
+        }
+    )
+    sink = io.StringIO()
+
+    exit_code = run_selected_check(
+        spawner=spawner,
+        sink=sink,
+        repo=tmp_path,
+        runner=runner,
+    )
+
+    output = sink.getvalue()
+    assert exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
+    assert spawner.spawn_calls == []
+    assert runner.calls == [failed_branch_command]
+    assert GIT_DISCOVERY_ERROR_PREFIX in output
+    assert "fatal: bad revision" in output
+
+
+def test_changed_path_collection_rejects_failed_git_discovery(tmp_path: Path) -> None:
+    failed_branch_command = (
+        *GIT_DIFF_BRANCH_ARGV_PREFIX,
+        f"{DEFAULT_BASE_REF}...HEAD",
+    )
+    runner = RecordingGitRunner(
+        outputs={
+            failed_branch_command: GitCommandResult(
+                returncode=GIT_DISCOVERY_FAILURE_EXIT_CODE,
+                stdout="fatal: bad revision\n",
+            ),
+            GIT_DIFF_STAGED_ARGV: GitCommandResult(returncode=0, stdout=""),
+            GIT_DIFF_UNSTAGED_ARGV: GitCommandResult(returncode=0, stdout=""),
+            GIT_LS_UNTRACKED_ARGV: GitCommandResult(returncode=0, stdout=""),
+        }
+    )
+
+    with pytest.raises(RuntimeError, match=GIT_DISCOVERY_ERROR_PREFIX):
+        collect_changed_paths(tmp_path, runner=runner)
+
+    assert runner.calls == [failed_branch_command]

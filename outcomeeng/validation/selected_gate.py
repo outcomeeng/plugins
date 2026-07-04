@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import fnmatch
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, TextIO
 
 from outcomeeng.validation._engine import run_check, run_recipe
-from outcomeeng.validation._git import GitRunner, run_git_command
+from outcomeeng.validation._git import GitCommandResult, GitRunner, run_git_command
 from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
@@ -33,6 +34,8 @@ RECIPE_CHECK_FULL: Final = "check-full"
 DEFAULT_BASE_REF: Final = "origin/main"
 SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
 NO_CHANGED_PATHS_REASON: Final = "no changed paths"
+GIT_DISCOVERY_FAILURE_EXIT_CODE: Final = 1
+GIT_DISCOVERY_ERROR_PREFIX: Final = "error: selected gate git discovery failed"
 FULL_GATE_REASON: Final = "full gate surface changed"
 PYTHON_REASON: Final = "python source or test path changed"
 MARKDOWN_REASON: Final = "markdown or spec path changed"
@@ -137,6 +140,27 @@ class SelectedGatePlan:
         return tuple(item.step for item in self.selected_steps)
 
 
+class GitDiscoveryError(RuntimeError):
+    """A git path-discovery command failed before the gate could select steps."""
+
+    def __init__(self, command: Sequence[str], result: GitCommandResult) -> None:
+        self.command: tuple[str, ...] = tuple(command)
+        self.returncode = result.returncode
+        self.stdout = result.stdout
+        super().__init__(self.message)
+
+    @property
+    def command_text(self) -> str:
+        return " ".join(self.command)
+
+    @property
+    def message(self) -> str:
+        return (
+            f"{GIT_DISCOVERY_ERROR_PREFIX}: {self.command_text} "
+            f"exited {self.returncode}"
+        )
+
+
 def collect_changed_paths(
     repo: Path,
     *,
@@ -155,7 +179,7 @@ def collect_changed_paths(
     for command in commands:
         completed = runner(command, repo)
         if completed.returncode != 0:
-            continue
+            raise GitDiscoveryError(command, completed)
         paths.update(
             line.strip() for line in completed.stdout.splitlines() if line.strip()
         )
@@ -242,7 +266,12 @@ def run_selected_check(
 ) -> int:
     """Run the selected local check through the recipe orchestrator."""
 
-    plan = build_selected_gate_plan(collect_changed_paths(repo, runner=runner))
+    try:
+        changed_paths = collect_changed_paths(repo, runner=runner)
+    except GitDiscoveryError as exc:
+        _write_git_discovery_error(sink, exc)
+        return GIT_DISCOVERY_FAILURE_EXIT_CODE
+    plan = build_selected_gate_plan(changed_paths)
     _write_plan(sink, plan)
     if plan.full_gate:
         return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
@@ -267,6 +296,14 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
         return
     for item in plan.selected_steps:
         sink.write(f"  {item.step.label}: {item.reason}\n")
+    sink.flush()
+
+
+def _write_git_discovery_error(sink: TextIO, exc: GitDiscoveryError) -> None:
+    sink.write(f"{exc.message}\n")
+    output = exc.stdout.strip()
+    if output:
+        sink.write(f"git output:\n{output}\n")
     sink.flush()
 
 
