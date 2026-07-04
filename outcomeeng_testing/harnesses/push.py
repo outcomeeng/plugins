@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 from outcomeeng.distribution.push import (
     DRY_RUN_PUSH_FLAGS,
+    HELP_PUSH_FLAGS,
     NO_DRY_RUN_PUSH_FLAG,
     PUSH_OPTION_FLAGS,
     REQUIRED_TOOLS,
@@ -80,6 +81,11 @@ def force_with_lease_push_args() -> tuple[str, ...]:
 def git_help_push_args() -> tuple[str, ...]:
     """Return the git-push help flag that must pass through the wrapper."""
     return ("-h",)
+
+
+def long_git_help_push_args() -> tuple[str, ...]:
+    """Return the long git-push help flag."""
+    return (next(iter(sorted(HELP_PUSH_FLAGS - {"-h"}))),)
 
 
 def dry_run_push_args() -> tuple[str, ...]:
@@ -341,6 +347,14 @@ def cli_parser_forwards_leading_git_options_verbatim() -> bool:
 
 def cli_parser_forwards_git_help_flag_verbatim() -> bool:
     return parse_push_args(git_help_push_args()) == git_help_push_args()
+
+
+def git_help_push_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(git_help_push_args())
+
+
+def long_git_help_push_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(long_git_help_push_args())
 
 
 def dry_run_push_does_not_refresh_marketplace() -> bool:

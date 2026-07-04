@@ -8,6 +8,8 @@ from outcomeeng_testing.harnesses.push import (
     clustered_short_option_dry_run_does_not_refresh_marketplace,
     dry_run_push_does_not_refresh_marketplace,
     failed_git_push_propagates_exit_code_and_skips_sync,
+    git_help_push_does_not_refresh_marketplace,
+    long_git_help_push_does_not_refresh_marketplace,
     no_dry_run_option_restores_marketplace_refresh,
     no_push_args_forwards_bare_git_push,
     push_option_operand_named_like_dry_run_still_refreshes_marketplace,
@@ -40,6 +42,14 @@ def test_cli_parser_forwards_leading_git_options_verbatim() -> None:
 
 def test_cli_parser_forwards_git_help_flag_verbatim() -> None:
     assert cli_parser_forwards_git_help_flag_verbatim()
+
+
+def test_git_help_push_does_not_refresh_marketplace() -> None:
+    assert git_help_push_does_not_refresh_marketplace()
+
+
+def test_long_git_help_push_does_not_refresh_marketplace() -> None:
+    assert long_git_help_push_does_not_refresh_marketplace()
 
 
 def test_dry_run_push_does_not_refresh_marketplace() -> None:

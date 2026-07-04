@@ -29,6 +29,7 @@ from typing import Protocol
 REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
 UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
 DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
+HELP_PUSH_FLAGS: frozenset[str] = frozenset(("-h", "--help"))
 NO_DRY_RUN_PUSH_FLAG = "--no-dry-run"
 PUSH_OPTION_FLAGS: frozenset[str] = frozenset(("-o", "--push-option"))
 VALUE_TAKING_PUSH_FLAGS: frozenset[str] = frozenset(
@@ -83,6 +84,8 @@ def push(
     push_rc = runner(("git", "push", *push_args))
     if push_rc != 0:
         return push_rc
+    if _is_help_request(push_args):
+        return 0
     if _is_dry_run(push_args):
         return 0
     sync_argv: tuple[str, ...] = SYNC_COMMAND
@@ -128,6 +131,25 @@ def _is_dry_run(push_args: Sequence[str]) -> bool:
     return is_dry_run
 
 
+def _is_help_request(push_args: Sequence[str]) -> bool:
+    skip_next = False
+    for arg in push_args:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--":
+            break
+        if arg in VALUE_TAKING_PUSH_FLAGS:
+            skip_next = True
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS):
+            continue
+        elif arg.startswith("-o") and arg != "-o":
+            continue
+        elif arg in HELP_PUSH_FLAGS:
+            return True
+    return False
+
+
 def _is_dry_run_arg(arg: str) -> bool:
     if arg == "--dry-run":
         return True
@@ -167,6 +189,7 @@ def _real_upstream_probe() -> str | None:
 
 __all__ = [
     "DRY_RUN_PUSH_FLAGS",
+    "HELP_PUSH_FLAGS",
     "REQUIRED_TOOLS",
     "SYNC_COMMAND",
     "StepRunner",
