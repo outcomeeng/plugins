@@ -258,10 +258,17 @@ def test_available_codex_plugins_are_read_from_dist_codex(
     _write_codex_manifest(repo_root, "alpha", "0.1.0")
     (repo_root / DIST_CODEX_PLUGINS_DIR / "missing-manifest").mkdir(parents=True)
 
-    plugins = available_codex_plugins(repo_root)
+    initial_plugins = available_codex_plugins(repo_root)
+    _write_codex_manifest(repo_root, "beta", "0.3.0")
+    refreshed_plugins = available_codex_plugins(repo_root)
 
-    assert [(plugin.name, plugin.version) for plugin in plugins] == [
+    assert [(plugin.name, plugin.version) for plugin in initial_plugins] == [
         ("alpha", "0.1.0"),
+        ("zeta", "0.2.0"),
+    ]
+    assert [(plugin.name, plugin.version) for plugin in refreshed_plugins] == [
+        ("alpha", "0.1.0"),
+        ("beta", "0.3.0"),
         ("zeta", "0.2.0"),
     ]
 
@@ -668,6 +675,69 @@ def test_source_reconciliation_preserves_claude_plugin_installs_when_source_chan
         ),
     ):
         assert_restore_failure_surfaces(command, stderr, command_fragment)
+
+
+def test_source_reconciliation_accepts_already_enabled_claude_plugin_restore(
+    tmp_path: Path,
+) -> None:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    project_path = tmp_path / "consumer-project"
+    spec_tree_enable = (
+        *CLAUDE_PLUGIN_ENABLE_COMMAND,
+        "--scope",
+        "project",
+        f"spec-tree@{DEFAULT_MARKETPLACE}",
+    )
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "source": "Directory",
+                        "path": str(stale_root),
+                    }
+                ]
+            ),
+            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "sourceType": "local",
+                        "path": str(canonical_root),
+                    }
+                ]
+            ),
+            (*CLAUDE_PLUGIN_LIST_COMMAND,): json.dumps(
+                [
+                    {
+                        "id": f"spec-tree@{DEFAULT_MARKETPLACE}",
+                        "scope": "project",
+                        "enabled": True,
+                        "projectPath": str(project_path),
+                    }
+                ]
+            ),
+        },
+        returncode_by_command={spec_tree_enable: 1},
+        stderr_by_command={
+            spec_tree_enable: (
+                'Failed to enable plugin "spec-tree@outcomeeng": '
+                'Plugin "spec-tree@outcomeeng" is already enabled at project scope'
+            )
+        },
+    )
+
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
+    )
+
+    assert result.changed is True
+    assert spec_tree_enable in runner.calls
+    assert result.commands[-1] == spec_tree_enable
 
 
 def test_source_reconciliation_rejects_scoped_claude_plugin_without_project_path(
