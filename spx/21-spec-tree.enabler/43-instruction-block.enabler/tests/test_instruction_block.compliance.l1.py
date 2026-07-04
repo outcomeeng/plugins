@@ -32,7 +32,11 @@ from outcomeeng_testing.harnesses.instruction_block import (
     ROOT_SHARED_BODY,
     SAMPLE_COMMAND_BODY,
     SAMPLE_COMMAND_BODY_ALT,
+    SESSION_ARCHIVE_RESULT_INSTRUCTION,
+    SESSION_MANAGEMENT_HEADING,
+    SESSION_RESULT_FRONTMATTER_FIELD,
     build_template,
+    extract_markdown_section,
     git_command,
     init_git_identity,
     justfile_recipe_body,
@@ -425,6 +429,19 @@ def test_write_regenerates_a_drifted_instruction_block(tmp_path: pathlib.Path) -
     assert module.main([*args, "--write"]) == 0
     for instruction_file in instruction_files:
         assert "HAND DRIFT" not in instruction_file.read_text(encoding="utf-8")
+
+
+def test_no_rendered_instruction_block_teaches_result_session_frontmatter() -> None:
+    module = load_instruction_block_module()
+    template = read_canonical_template()
+    # Render the canonical template through the generator for each agent harness and assert the
+    # rendered Session Management section carries no session-result instruction — a deterministic
+    # regression guard on render()'s output that fails if a template edit reintroduces the token.
+    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
+        rendered = module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
+        section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
+        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
+        assert SESSION_RESULT_FRONTMATTER_FIELD not in section
 
 
 def test_write_removes_obsolete_spx_instruction_files(tmp_path: pathlib.Path) -> None:

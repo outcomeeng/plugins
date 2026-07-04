@@ -64,6 +64,13 @@ ROOT_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
 SAMPLE_COMMAND_BODY: Final = "Build: `product build --all`"
 SAMPLE_COMMAND_BODY_ALT: Final = "Build: `product build --changed`"
 
+# The retired session-result tokens the shipped instruction block must never teach. No
+# production module owns a removed token, so the regression guard declares the forbidden
+# strings here and asserts they are absent from the real rendered output.
+SESSION_MANAGEMENT_HEADING = "## Session Management"
+SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
+SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
 LANG_SECONDARY = "typescript"
@@ -205,6 +212,22 @@ def load_instruction_block_module() -> ModuleType:
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def extract_markdown_section(document: str, heading: str) -> str:
+    """Return a markdown section by exact heading line, including the heading."""
+    lines = document.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as exc:
+        raise RuntimeError(f"Heading not found: {heading}") from exc
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index, line in enumerate(lines[start + 1 :], start=start + 1):
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end])
 
 
 def _language_heading(language: str) -> str:
