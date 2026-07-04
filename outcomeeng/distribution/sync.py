@@ -64,6 +64,7 @@ LOCK_OWNER_PID_FIELD = "pid"
 LOCK_OWNER_IDENTITY_FIELD = "identity"
 PROCESS_IDENTITY_TIMEOUT_SECONDS = 2.0
 PROCESS_STATE_TIMEOUT_SECONDS = 2.0
+MAX_LOCK_OWNER_PID = (2**31) - 1
 
 
 class RefreshReason(StrEnum):
@@ -228,7 +229,14 @@ class _FileSingleFlight:
         lock_body = _serialize_lock_owner(current_owner)
         for _attempt in range(2):
             if self._try_create_lock(lock_body):
-                self._unlink_pending()
+                try:
+                    self._unlink_pending()
+                except OSError:
+                    try:
+                        self.lock_path.unlink()
+                    except FileNotFoundError:
+                        pass
+                    raise
                 return SingleFlightClaim(
                     acquired=True,
                     detail=f"pid {current_owner.pid} owns active repair",
@@ -362,6 +370,8 @@ def _read_lock_owner_body(raw: str) -> _LockOwner | None:
     pid = data.get(LOCK_OWNER_PID_FIELD)
     identity = data.get(LOCK_OWNER_IDENTITY_FIELD)
     if not isinstance(pid, int) or not isinstance(identity, str):
+        return None
+    if pid < 1 or pid > MAX_LOCK_OWNER_PID:
         return None
     return _LockOwner(pid=pid, identity=identity)
 

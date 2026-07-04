@@ -227,6 +227,15 @@ def test_single_flight_lock_claim_exposes_owner_body(
     assert list(state_dir.glob(f"{sync_module.SYNC_LOCK_FILENAME}.*.tmp")) == []
 
 
+def test_single_flight_rejects_malformed_pid_lock_body() -> None:
+    lock_body = (
+        f'{{"{sync_module.LOCK_OWNER_PID_FIELD}": {sync_module.MAX_LOCK_OWNER_PID + 1}, '
+        f'"{sync_module.LOCK_OWNER_IDENTITY_FIELD}": "oversized"}}'
+    )
+
+    assert sync_module._read_lock_owner_body(lock_body) is None
+
+
 def test_real_process_identity_observes_live_and_exited_process() -> None:
     child = subprocess.Popen(
         [sys.executable, "-c", "import signal\nsignal.pause()"],
@@ -458,6 +467,36 @@ def test_changed_single_flight_lock_exits_nonzero_without_refresh(
     assert runner.calls == []
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 0
+
+
+def test_pending_cleanup_failure_releases_newly_acquired_lock(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_identity=lambda pid: f"identity:{pid}",
+    )
+    single_flight.pending_path.mkdir()
+    runner = RecordingRunner()
+
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=runner,
+        tool_probe=ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE),
+        change_probe=ScriptedChangeProbe(changed=True),
+        config_repairer=ScriptedConfigRepairer(changed=False),
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Marketplace refresh lock failed:" in captured.err
+    assert runner.calls == []
+    assert not single_flight.lock_path.exists()
+    assert single_flight.pending_path.is_dir()
 
 
 def test_refresh_release_failure_exits_nonzero_after_successful_steps(
