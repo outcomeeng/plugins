@@ -179,6 +179,8 @@ class SingleFlightClaim:
 class SingleFlight(Protocol):
     """Coordinates concurrent sync invocations around one refresh sequence."""
 
+    def observe(self) -> SingleFlightClaim: ...
+
     def acquire(self) -> SingleFlightClaim: ...
 
     def release(self) -> None: ...
@@ -238,6 +240,32 @@ class _FileSingleFlight:
             acquired=False,
             pending_recorded=True,
             detail="active repair lock changed during acquisition",
+        )
+
+    def observe(self) -> SingleFlightClaim:
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        lock_owner = self._read_lock_owner()
+        if lock_owner is None or not self._owner_is_active(lock_owner):
+            return SingleFlightClaim(
+                acquired=False,
+                detail="no active repair owner",
+            )
+        pending_recorded = False
+        try:
+            current_owner = self._current_owner()
+        except OSError:
+            current_owner = None
+        if current_owner is not None:
+            _write_file_atomically(
+                self.pending_path,
+                _serialize_lock_owner(current_owner),
+            )
+            pending_recorded = True
+        return SingleFlightClaim(
+            acquired=False,
+            pending_recorded=pending_recorded,
+            detail=f"pid {lock_owner.pid} owns active repair",
+            blocked_by_active_owner=True,
         )
 
     def release(self) -> None:
@@ -446,10 +474,13 @@ def _handle_topology_probe_error(
     exc: InstalledSetError | OSError,
 ) -> int:
     try:
-        claim = single_flight.acquire()
+        claim = single_flight.observe()
     except OSError as lock_error:
         print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-        print(f"Marketplace refresh lock failed: {lock_error}", file=sys.stderr)
+        print(
+            f"Marketplace refresh lock observation failed: {lock_error}",
+            file=sys.stderr,
+        )
         return 1
     if not claim.acquired:
         if claim.blocked_by_active_owner:
@@ -459,16 +490,7 @@ def _handle_topology_probe_error(
                 print(f"Active sync: {claim.detail}")
             return 0
         print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-        print("Marketplace refresh lock changed during acquisition", file=sys.stderr)
-        return 1
-    try:
-        single_flight.release()
-    except OSError as release_error:
-        print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-        print(
-            f"Marketplace refresh lock release failed: {release_error}",
-            file=sys.stderr,
-        )
+        print("Marketplace refresh has no active owner", file=sys.stderr)
         return 1
     print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
     return 1

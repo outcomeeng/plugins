@@ -125,9 +125,15 @@ class ScriptedSingleFlight:
     """SingleFlight double that records acquisition and release calls."""
 
     claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
+    observation_claim: SingleFlightClaim = SingleFlightClaim(acquired=False)
     release_error: OSError | None = None
     acquisitions: int = 0
+    observations: int = 0
     releases: int = 0
+
+    def observe(self) -> SingleFlightClaim:
+        self.observations += 1
+        return self.observation_claim
 
     def acquire(self) -> SingleFlightClaim:
         self.acquisitions += 1

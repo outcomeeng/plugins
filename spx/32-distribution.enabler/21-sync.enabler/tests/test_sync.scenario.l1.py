@@ -381,6 +381,35 @@ def test_validation_required_sync_fails_when_refresh_is_active(
     assert change_probe.queries == (["abc123"] if distribution_changed else [])
 
 
+def test_absent_base_ref_fails_when_refresh_is_active() -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    single_flight = ScriptedSingleFlight(
+        claim=sync_module.SingleFlightClaim(
+            acquired=False,
+            pending_recorded=True,
+            blocked_by_active_owner=True,
+        ),
+    )
+
+    exit_code = sync(
+        None,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        single_flight=single_flight,
+    )
+
+    assert exit_code == 1
+    assert runner.calls == []
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 0
+    assert change_probe.queries == []
+
+
 def test_changed_single_flight_lock_exits_nonzero_without_refresh(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -649,8 +678,9 @@ def test_topology_probe_failure_exits_before_refresh() -> None:
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
     assert topology_probe.calls == 1
-    assert single_flight.acquisitions == 1
-    assert single_flight.releases == 1
+    assert single_flight.observations == 1
+    assert single_flight.acquisitions == 0
+    assert single_flight.releases == 0
 
 
 def test_topology_filesystem_failure_exits_before_refresh() -> None:
@@ -676,20 +706,29 @@ def test_topology_filesystem_failure_exits_before_refresh() -> None:
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
     assert topology_probe.calls == 1
-    assert single_flight.acquisitions == 1
-    assert single_flight.releases == 1
+    assert single_flight.observations == 1
+    assert single_flight.acquisitions == 0
+    assert single_flight.releases == 0
 
 
-def test_topology_filesystem_failure_coalesces_with_active_refresh(
+@pytest.mark.parametrize(
+    "topology_error",
+    [
+        pytest.param(InstalledSetError("bad json"), id="installed-set-error"),
+        pytest.param(OSError("permission denied"), id="filesystem-error"),
+    ],
+)
+def test_topology_failure_coalesces_with_active_refresh(
+    topology_error: Exception,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(error=OSError("permission denied"))
+    topology_probe = ScriptedTopologyProbe(error=topology_error)
     single_flight = ScriptedSingleFlight(
-        claim=sync_module.SingleFlightClaim(
+        observation_claim=sync_module.SingleFlightClaim(
             acquired=False,
             pending_recorded=True,
             blocked_by_active_owner=True,
@@ -709,14 +748,15 @@ def test_topology_filesystem_failure_coalesces_with_active_refresh(
 
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert "Codex cache topology check failed: permission denied" in captured.err
+    assert f"Codex cache topology check failed: {topology_error}" in captured.err
     assert "Marketplace refresh already running" in captured.out
     assert "Active sync: pid:123" in captured.out
     assert runner.calls == []
     assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
     assert topology_probe.calls == 1
-    assert single_flight.acquisitions == 1
+    assert single_flight.observations == 1
+    assert single_flight.acquisitions == 0
     assert single_flight.releases == 0
 
 
