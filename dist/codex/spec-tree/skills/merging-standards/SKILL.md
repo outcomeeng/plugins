@@ -307,17 +307,19 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
 
 ```bash
-base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
-branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+gh pr view <pr-number> --json baseRefName --jq '.baseRefName'
+gh pr view <pr-number> --json headRefName --jq '.headRefName'
 # explicit --delete-branch=false — never rely on gh's default for the omitted flag (it
 # varies by gh version and config, unknowable across consumer environments). =false
-# guarantees gh skips its local-branch-delete + switch-to-"${base}" step, which fails
-# when "${base}" is checked out in another worktree.
+# guarantees gh skips its local-branch-delete + switch-to-base step, which fails
+# when the base branch is checked out in another worktree.
 gh pr merge <pr-number> --rebase --delete-branch=false
-git fetch origin "${base}"
-git switch --detach "origin/${base}"   # step this worktree off the merged branch onto the new base tip
-git branch -D "${branch}" 2>/dev/null || true   # delete the now-unoccupied local branch (tolerate "not found")
-git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
+git fetch origin <base-from-pr>
+git switch --detach origin/<base-from-pr>   # step this worktree off the merged branch onto the new base tip
+git branch --list <branch-from-pr>
+git branch -D <branch-from-pr>   # run when the branch is listed locally
+git ls-remote --exit-code --heads origin <branch-from-pr>
+git push origin --delete <branch-from-pr>   # run when the remote branch exists
 git status --porcelain
 ```
 
