@@ -15,6 +15,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.instruction_block import (
+    ROOT_SHARED_BODY,
     TEMPLATE_LANGUAGES,
     TEMPLATE_HARNESSES,
     build_template,
@@ -58,6 +59,30 @@ def test_render_output_ends_with_single_newline(
     )
     assert rendered.endswith("\n")
     assert not rendered.endswith("\n\n")
+
+
+@given(installed=_VERSION)
+def test_managed_surface_ends_with_single_newline(
+    installed: tuple[int, int, int],
+) -> None:
+    module = load_instruction_block_module()
+    installed_str = _to_version(installed)
+    blocks = {
+        harness: module.render(
+            build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, harness
+        )
+        for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    seeds = {
+        harness: ROOT_SHARED_BODY
+        for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    # The full managed surface — router block, every command-slot fence, and out-of-fence
+    # prose — not just the router block that render() returns.
+    documents = module.build_root_instruction_documents(seeds, blocks)
+    for document in documents.values():
+        assert document.endswith("\n")
+        assert not document.endswith("\n\n")
 
 
 @given(left=_VERSION, right=_VERSION)
