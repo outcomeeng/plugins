@@ -309,17 +309,19 @@ Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the muta
 ```bash
 base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-# explicit --delete-branch=false — never rely on gh's default for the omitted flag
-# (it varies by gh version and config, unknowable across consumer environments).
-# Passing =false guarantees gh skips its local-branch-delete + switch-to-base step,
-# which fails when the base branch is checked out in another worktree.
 gh pr merge <pr-number> --rebase --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
-git branch --list "$branch_from_pr"
-git branch -D "$branch_from_pr"   # run only when the branch is listed locally
-git ls-remote --exit-code --heads origin "$branch_from_pr"   # a no-match exit means the remote branch is already absent
-git push origin --delete "$branch_from_pr"   # run only when the remote branch exists
+held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
+if [ -n "$held_worktree" ]; then echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
+elif [ -n "$(git branch --list "$branch_from_pr")" ]; then git branch -D "$branch_from_pr"; fi
+remote_branch_status=0
+git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
+case "$remote_branch_status" in
+  0) git push origin --delete "$branch_from_pr" ;;
+  2) ;;
+  *) exit "$remote_branch_status" ;;
+esac
 git status --porcelain
 ```
 
