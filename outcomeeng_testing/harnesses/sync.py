@@ -129,6 +129,7 @@ class ScriptedSingleFlight:
 
     claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
     observation_claim: SingleFlightClaim = SingleFlightClaim(acquired=False)
+    observe_error: OSError | None = None
     release_error: OSError | None = None
     events: list[str] | None = None
     acquisitions: int = 0
@@ -139,6 +140,8 @@ class ScriptedSingleFlight:
         if self.events is not None:
             self.events.append(SINGLE_FLIGHT_OBSERVE_EVENT)
         self.observations += 1
+        if self.observe_error is not None:
+            raise self.observe_error
         return self.observation_claim
 
     def acquire(self) -> SingleFlightClaim:

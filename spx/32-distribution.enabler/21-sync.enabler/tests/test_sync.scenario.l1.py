@@ -35,6 +35,7 @@ from outcomeeng.distribution.sync import (
     sync,
 )
 from outcomeeng_testing.harnesses.sync import (
+    DEFAULT_TOPOLOGY_ERRORS,
     RecordingRunner,
     SCRIPTED_BASE_REF,
     ScriptedChangeProbe,
@@ -277,7 +278,7 @@ def test_invalid_topology_runs_refresh_without_distribution_changes() -> None:
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+    topology_probe = ScriptedTopologyProbe(errors=DEFAULT_TOPOLOGY_ERRORS)
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
@@ -314,7 +315,7 @@ def test_active_single_flight_records_pending_and_exits_zero(
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+    topology_probe = ScriptedTopologyProbe(errors=DEFAULT_TOPOLOGY_ERRORS)
 
     try:
         exit_code = sync(
@@ -436,7 +437,7 @@ def test_changed_single_flight_lock_exits_nonzero_without_refresh(
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
     config_repairer = ScriptedConfigRepairer(changed=False)
-    topology_probe = ScriptedTopologyProbe(errors=("missing target",))
+    topology_probe = ScriptedTopologyProbe(errors=DEFAULT_TOPOLOGY_ERRORS)
     single_flight = ScriptedSingleFlight(
         claim=sync_module.SingleFlightClaim(acquired=False),
     )
@@ -879,6 +880,43 @@ def test_topology_failure_without_pending_marker_exits_nonzero(
     assert exit_code == 1
     assert "Codex cache topology check failed: permission denied" in captured.err
     assert "Marketplace refresh pending marker was not recorded" in captured.err
+    assert runner.calls == []
+    assert config_repairer.calls == 1
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
+    assert topology_probe.calls == 1
+    assert single_flight.observations == 1
+    assert single_flight.acquisitions == 0
+    assert single_flight.releases == 0
+
+
+def test_topology_failure_exits_nonzero_when_lock_observation_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(error=InstalledSetError("bad json"))
+    single_flight = ScriptedSingleFlight(
+        observe_error=OSError("state unavailable"),
+    )
+
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Codex cache topology check failed: bad json" in captured.err
+    assert (
+        "Marketplace refresh lock observation failed: state unavailable" in captured.err
+    )
     assert runner.calls == []
     assert config_repairer.calls == 1
     assert change_probe.queries == [SCRIPTED_BASE_REF]
