@@ -222,6 +222,16 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         assert "PR URL" in execute
         assert "running URL" in execute
         assert "session mechanics only after the product summary" in execute
+        assert "<rejected_delivered_state_receipt>" in execute
+        assert (
+            "NEVER replace the product closeout with a section headed `Delivered state`"
+            in execute
+        )
+        assert "Delivered state:\n- Merge commit: <full-sha>" in execute
+        assert (
+            "never uses a top-level `Delivered state` receipt as a substitute"
+            in execute
+        )
         assert (
             "Include whichever surfaces apply; omit unavailable surfaces rather than inventing one."
             in execute
