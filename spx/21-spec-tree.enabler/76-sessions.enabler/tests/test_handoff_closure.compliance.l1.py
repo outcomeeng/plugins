@@ -229,7 +229,7 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         )
         assert "Delivered state:\n- Merge commit: <full-sha>" in execute
         assert (
-            "never uses a top-level `Delivered state` receipt as a substitute"
+            "Confirmation output never uses a top-level `Delivered state` receipt"
             in execute
         )
         assert (
