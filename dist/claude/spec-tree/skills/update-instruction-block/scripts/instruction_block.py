@@ -1,21 +1,35 @@
-"""Deterministic generator for a product's root Spec Tree instruction block.
+"""Deterministic generator for a product's root Spec Tree instruction surface.
 
 One repository is worked by both Claude Code and Codex at once, and each agent harness
 retains its root instruction file across compaction: ``CLAUDE.md`` for Claude Code and
-``AGENTS.md`` for Codex. The Spec Tree instructions are therefore a managed block in those
-root files, not generated files under ``spx/``. Both blocks render from one
-canonical template: the body is shared, and the spans that differ by agent harness
-are authored once as ``<!-- harness:NAME -->`` blocks rendered only into that
-harness's block, mirroring the ``<!-- lang:NAME -->`` language blocks. The only
-per-product variation inside the instruction block is the enabled-language list.
+``AGENTS.md`` for Codex. The Spec Tree instructions are therefore a managed surface in those
+root files, not generated files under ``spx/``. Each root file's managed surface is three
+region kinds:
 
-Generation is deterministic and needs no agent judgment: the enabled-language list is read
-from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version and
-language-set comparison, and the render is a pure string transformation. The parse,
-version-compare, language-filter, harness-filter, and render functions take document strings
-and return document strings — no filesystem, environment, or subprocess access. The CLI edge
-reads the template, globs the test extensions, replaces symlinked root instruction files with
-regular files, removes obsolete ``spx/`` instruction files, and writes both root files.
+- A generated **router block**, delimited by a single opening marker
+  ``<!-- SPEC-TREE v{version} langs:{list} -->`` and a closing ``<!-- /SPEC-TREE -->``. Both
+  router blocks render from one canonical template: the body is shared, and the spans that
+  differ by agent harness are authored once as ``<!-- harness:NAME -->`` blocks rendered only
+  into that harness's block, mirroring the ``<!-- lang:NAME -->`` language blocks. The only
+  per-product variation inside the router is the enabled-language list.
+- Named **per-product command slots** over the fixed set ``author``, ``verify``, ``gate``,
+  ``merge``, each delimited by ``<!-- SPEC-TREE:{slot} -->`` and ``<!-- /SPEC-TREE:{slot} -->``.
+  A slot holds one product's operational command for a spec-tree phase; its body is
+  product-owned and preserved verbatim across a re-render. A slot's body is identical in both
+  root files, so an empty or placeholder slot in one file is filled from its filled sibling.
+- The product's own **out-of-fence prose**, preserved verbatim.
+
+Router generation is deterministic and needs no agent judgment: the enabled-language list is
+read from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version
+and language-set comparison, and the render is a pure string transformation. Slot handling is
+fence recognition plus verbatim carry-through with sibling fill; the one case it does not
+resolve — a slot filled with different bodies in the two files — is reported as a conflict for
+the update skill's git-recency judgment. The parse, version-compare, language-filter,
+harness-filter, router-replacement, slot-preservation, sibling-fill, and render functions take
+document strings and return document strings — no filesystem, environment, or subprocess
+access. The CLI edge reads the template, globs the test extensions, replaces symlinked root
+instruction files with regular files, removes obsolete ``spx/`` instruction files, and writes
+both root files.
 """
 
 from __future__ import annotations
@@ -32,20 +46,49 @@ TEMPLATE_VERSION_KEY = "template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
-MANAGED_BLOCK_START = "<!-- BEGIN MANAGED SPEC TREE INSTRUCTIONS -->"
-MANAGED_BLOCK_END = "<!-- END MANAGED SPEC TREE INSTRUCTIONS -->"
-# Legacy marker pair from the retired "guide" naming. Recognized so an existing managed
-# block is located and replaced in place on upgrade rather than left behind as prose while
-# a second block is appended.
+
+# The router block's compressed marker. The opening marker carries the two fields staleness
+# reads — the dotted template version and the recorded enabled-language list — inline, so no
+# separate metadata comment lines are written. The template source is always the methodology's
+# own, so it is not recorded.
+ROUTER_MARKER_PREFIX = "<!-- SPEC-TREE v"
+ROUTER_BLOCK_END = "<!-- /SPEC-TREE -->"
+ROUTER_LANGS_KEY = "langs:"
+_ROUTER_MARKER_RE = re.compile(
+    r"<!--\s*SPEC-TREE\s+v(?P<version>\S+)\s+langs:(?P<langs>\S*)\s*-->"
+)
+
+# Retired marker pairs. A managed surface delimited by one of these is generated content from a
+# superseded naming; it is located and replaced in place on upgrade rather than left behind as
+# prose while a new router block is appended. The two prior forms are the four-line
+# ``BEGIN/END MANAGED SPEC TREE INSTRUCTIONS`` header and the older ``... GUIDE`` header.
 LEGACY_MANAGED_BLOCK_MARKERS = (
+    (
+        "<!-- BEGIN MANAGED SPEC TREE INSTRUCTIONS -->",
+        "<!-- END MANAGED SPEC TREE INSTRUCTIONS -->",
+    ),
     (
         "<!-- BEGIN MANAGED SPEC TREE GUIDE -->",
         "<!-- END MANAGED SPEC TREE GUIDE -->",
     ),
 )
+# Metadata comment lines a retired header records inside its block; the version and languages
+# prefixes are recognized so a legacy block's version and language set are read back before it
+# is replaced. The source prefix has no production reader — the compressed marker records no
+# source field — and survives only as the vocabulary legacy-format test fixtures build and the
+# render's output asserts absent.
 MANAGED_TEMPLATE_VERSION_PREFIX = "<!-- spec-tree-template-version:"
 MANAGED_TEMPLATE_SOURCE_PREFIX = "<!-- spec-tree-template-source:"
 MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
+
+# The fixed, methodology-defined per-product command slots, one per spec-tree phase that runs a
+# product command. ``author`` rebuilds or regenerates artifacts after a create/update/delete on
+# a spec, test, or implementation file; ``verify`` is the deterministic check over a node and
+# the changeset; ``gate`` is the full deterministic bundle; ``merge`` is the transport command.
+FIXED_COMMAND_SLOTS = ("author", "verify", "gate", "merge")
+# A slot body carrying this mark is unfilled — a scaffolded placeholder, not a product command.
+# Sibling-fill and conflict detection treat such a body as empty.
+SLOT_PLACEHOLDER_MARK = "<!-- unfilled -->"
 
 # Each agent harness reads its own instruction filename from the product root.
 AGENT_HARNESS_INSTRUCTION_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
@@ -97,20 +140,21 @@ def _frontmatter_value(frontmatter: list[str], key: str) -> str | None:
     return None
 
 
-def _frontmatter_block(frontmatter: list[str]) -> str:
-    return "\n".join([FRONTMATTER_DELIMITER, *frontmatter, FRONTMATTER_DELIMITER])
+def _router_marker(version: str, languages: tuple[str, ...]) -> str:
+    """Build the router block's opening marker from the version and enabled languages."""
+    return (
+        f"{ROUTER_MARKER_PREFIX}{version} {ROUTER_LANGS_KEY}{','.join(languages)} -->"
+    )
 
 
-def _managed_block_bounds(text: str) -> tuple[int, int] | None:
-    """Return the instruction block's start and end offsets when present.
+def _router_marker_match(text: str) -> re.Match[str] | None:
+    """Return the router block's opening-marker match, or None."""
+    return _ROUTER_MARKER_RE.search(text)
 
-    The canonical markers are tried first, then each retired legacy marker pair, so an
-    existing block authored under the old naming is replaced in place on upgrade.
-    """
-    for start_marker, end_marker in (
-        (MANAGED_BLOCK_START, MANAGED_BLOCK_END),
-        *LEGACY_MANAGED_BLOCK_MARKERS,
-    ):
+
+def _legacy_block_bounds(text: str) -> tuple[int, int] | None:
+    """Return a retired marker pair's start and end offsets when present."""
+    for start_marker, end_marker in LEGACY_MANAGED_BLOCK_MARKERS:
         start = text.find(start_marker)
         if start == -1:
             continue
@@ -124,6 +168,30 @@ def _managed_block_bounds(text: str) -> tuple[int, int] | None:
     return None
 
 
+def _router_block_bounds(text: str) -> tuple[int, int] | None:
+    """Return the current router block's start and end offsets when present."""
+    match = _router_marker_match(text)
+    if match is None:
+        return None
+    start = match.start()
+    end_marker_start = text.find(ROUTER_BLOCK_END, match.end())
+    if end_marker_start == -1:
+        return None
+    end = end_marker_start + len(ROUTER_BLOCK_END)
+    if text[end : end + 1] == "\n":
+        end += 1
+    return start, end
+
+
+def _managed_block_bounds(text: str) -> tuple[int, int] | None:
+    """Return the managed router block's start and end offsets when present.
+
+    The current compressed marker is tried first, then each retired marker pair, so an existing
+    block authored under a superseded naming is replaced in place on upgrade.
+    """
+    return _router_block_bounds(text) or _legacy_block_bounds(text)
+
+
 def _managed_block_text(text: str) -> str | None:
     bounds = _managed_block_bounds(text)
     if bounds is None:
@@ -133,7 +201,7 @@ def _managed_block_text(text: str) -> str | None:
 
 
 def _managed_metadata_value(text: str, prefix: str) -> str | None:
-    """Return a metadata comment value from inside the instruction block."""
+    """Return a metadata comment value from inside a retired managed block."""
     block = _managed_block_text(text)
     if block is None:
         return None
@@ -145,7 +213,7 @@ def _managed_metadata_value(text: str, prefix: str) -> str | None:
 
 
 def _parse_languages(value: str | None) -> tuple[str, ...]:
-    """Parse a ``languages`` value (``[a, b]`` or ``a, b``) into a tuple."""
+    """Parse a ``languages`` value (``[a, b]``, ``a, b``, or ``a,b``) into a tuple."""
     if not value:
         return ()
     inner = value.strip().removeprefix("[").removesuffix("]")
@@ -164,25 +232,31 @@ def parse_template_version(text: str) -> str | None:
     frontmatter, _ = _split_frontmatter(text)
     return _frontmatter_value(
         frontmatter, TEMPLATE_VERSION_KEY
-    ) or _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
+    ) or parse_instruction_version(text)
 
 
 def parse_instruction_version(text: str) -> str | None:
-    """Return an instruction block's ``template_version`` value, or None."""
+    """Return a managed block's ``template_version``, from the router marker or legacy metadata."""
+    match = _router_marker_match(text)
+    if match is not None:
+        return match.group("version")
     return _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
 
 
 def parse_languages(text: str) -> tuple[str, ...]:
-    """Read the recorded enabled-language list from an instruction file's frontmatter."""
+    """Read the recorded enabled-language list from an instruction file's frontmatter or block."""
     frontmatter, _ = _split_frontmatter(text)
-    return _parse_languages(
-        _frontmatter_value(frontmatter, LANGUAGES_KEY)
-        or _managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX)
-    )
+    frontmatter_value = _frontmatter_value(frontmatter, LANGUAGES_KEY)
+    if frontmatter_value is not None:
+        return _parse_languages(frontmatter_value)
+    return parse_instruction_languages(text)
 
 
 def parse_instruction_languages(text: str) -> tuple[str, ...]:
-    """Return an instruction block's language list."""
+    """Return a managed block's language list, from the router marker or legacy metadata."""
+    match = _router_marker_match(text)
+    if match is not None:
+        return _parse_languages(match.group("langs"))
     return _parse_languages(_managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX))
 
 
@@ -289,35 +363,198 @@ def render(
     installed_version: str,
     harness: str,
 ) -> str:
-    """Render one agent harness's instruction block from the template and enabled languages.
+    """Render one agent harness's router block from the template and enabled languages.
 
     Language-conditional blocks render only for enabled languages and harness-conditional
     blocks only for ``harness``; nothing else is substituted, so brace-delimited illustration
-    tokens pass through unchanged. Metadata comments record the version, source, and language
-    list so a later update reads the languages back from any position in a root instruction file.
+    tokens pass through unchanged. The opening marker records the version and language list
+    inline, so a later update reads both back from the marker without separate metadata lines.
     """
     languages = normalize_languages(languages)
-    template_frontmatter, template_body = _split_frontmatter(template_text)
-    source = (
-        _frontmatter_value(template_frontmatter, TEMPLATE_SOURCE_KEY)
-        or DEFAULT_TEMPLATE_SOURCE
-    )
+    _, template_body = _split_frontmatter(template_text)
 
     body = _filter_languages(template_body, languages)
     body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
 
-    metadata = "\n".join(
-        [
-            MANAGED_BLOCK_START,
-            f"{MANAGED_TEMPLATE_VERSION_PREFIX} {installed_version} -->",
-            f"{MANAGED_TEMPLATE_SOURCE_PREFIX} {source} -->",
-            f"{MANAGED_LANGUAGES_PREFIX} {', '.join(languages)} -->",
-            "",
-        ]
-    )
-    rendered = f"{metadata}{body.rstrip()}\n\n{MANAGED_BLOCK_END}"
+    marker = _router_marker(installed_version, languages)
+    rendered = f"{marker}\n{body.rstrip()}\n\n{ROUTER_BLOCK_END}"
     return rendered.rstrip("\n") + "\n"
+
+
+# --- Command slots -------------------------------------------------------------------------
+
+
+def _slot_open(slot: str) -> str:
+    return f"<!-- SPEC-TREE:{slot} -->"
+
+
+def _slot_close(slot: str) -> str:
+    return f"<!-- /SPEC-TREE:{slot} -->"
+
+
+def slot_placeholder(slot: str) -> str:
+    """Return the scaffolded placeholder body for an unfilled command slot."""
+    return f"{SLOT_PLACEHOLDER_MARK} add this product's `{slot}` command"
+
+
+def _render_slot(slot: str, body: str) -> str:
+    # Blank lines around the body keep the fence dprint-compliant: an HTML comment and the
+    # Markdown that follows it are separate blocks, so the formatter requires a blank between.
+    return f"{_slot_open(slot)}\n\n{body}\n\n{_slot_close(slot)}"
+
+
+def parse_command_slot(text: str, slot: str) -> str | None:
+    """Return a command slot's body, or None when the slot fence is absent."""
+    open_marker, close_marker = _slot_open(slot), _slot_close(slot)
+    start = text.find(open_marker)
+    if start == -1:
+        return None
+    body_start = start + len(open_marker)
+    end = text.find(close_marker, body_start)
+    if end == -1:
+        return None
+    return text[body_start:end].strip("\n")
+
+
+def is_slot_filled(body: str | None) -> bool:
+    """Report whether a slot body is a real product command rather than empty or placeholder."""
+    return body is not None and body.strip() != "" and SLOT_PLACEHOLDER_MARK not in body
+
+
+def set_command_slot(text: str, slot: str, body: str) -> str:
+    """Return ``text`` with the command slot's body replaced; unchanged when the fence is absent."""
+    open_marker, close_marker = _slot_open(slot), _slot_close(slot)
+    start = text.find(open_marker)
+    if start == -1:
+        return text
+    body_start = start + len(open_marker)
+    end = text.find(close_marker, body_start)
+    if end == -1:
+        return text
+    # Blank lines around the body match the dprint-compliant fence shape from ``_render_slot``.
+    return f"{text[:body_start]}\n\n{body}\n\n{text[end:]}"
+
+
+def _next_fence_index(text: str, pos: int) -> int:
+    """Return the earliest offset at or after ``pos`` of any fence marker, or ``len(text)``.
+
+    Both the router markers (``<!-- SPEC-TREE`` / ``<!-- /SPEC-TREE``) and the slot markers
+    share these prefixes, so this bounds a malformed open-only fence's orphaned body at the
+    next fence of any kind or the end of the document.
+    """
+    found = [
+        index
+        for marker in ("<!-- SPEC-TREE", "<!-- /SPEC-TREE")
+        if (index := text.find(marker, pos)) != -1
+    ]
+    return min(found) if found else len(text)
+
+
+def ensure_slot_fences(text: str) -> str:
+    """Return ``text`` with every fixed command-slot fence present and well-formed.
+
+    A slot with no parseable fence is repaired. Presence uses the same full open-and-close
+    contract as :func:`parse_command_slot`, so a malformed open-only fence — an open marker
+    with no matching close, from a truncated write or a partial edit — is not mistaken for a
+    valid one. Repair preserves the slot's product-owned body: an open-only fence's orphaned
+    body (from after the open marker to the next fence or end of document) is recovered and
+    re-rendered inside a well-formed fence, never discarded, so the generator does not overwrite
+    a real command. A slot with no recoverable body — truly absent, or an open marker with an
+    empty body — is scaffolded with a placeholder.
+    """
+    additions = []
+    for slot in FIXED_COMMAND_SLOTS:
+        if parse_command_slot(text, slot) is not None:
+            continue
+        body = slot_placeholder(slot)
+        start = text.find(_slot_open(slot))
+        if start != -1:
+            body_start = start + len(_slot_open(slot))
+            end = _next_fence_index(text, body_start)
+            recovered = text[body_start:end].strip("\n")
+            if recovered:
+                body = recovered
+            text = f"{text[:start]}{text[end:]}"
+        # Drop any stray close marker (a close-only fragment carries no recoverable body).
+        text = text.replace(_slot_close(slot), "")
+        additions.append(_render_slot(slot, body))
+    if not additions:
+        return text
+    base = _BLANK_RUN.sub("\n\n", text).rstrip("\n")
+    joined = "\n\n".join(additions)
+    return f"{base}\n\n{joined}\n" if base else f"{joined}\n"
+
+
+def command_slot_conflicts(text_a: str, text_b: str) -> tuple[str, ...]:
+    """Return the fixed slots filled with different bodies in the two texts.
+
+    A conflict is the one case sibling-fill cannot resolve: both files carry a real command for
+    the slot and the commands differ, so choosing which is current needs git-recency judgment
+    the deterministic generator does not supply.
+    """
+    conflicts = []
+    for slot in FIXED_COMMAND_SLOTS:
+        body_a = parse_command_slot(text_a, slot)
+        body_b = parse_command_slot(text_b, slot)
+        if (
+            body_a is not None
+            and body_b is not None
+            and is_slot_filled(body_a)
+            and is_slot_filled(body_b)
+            and body_a.strip() != body_b.strip()
+        ):
+            conflicts.append(slot)
+    return tuple(conflicts)
+
+
+def command_slots_pending_sibling_fill(text_a: str, text_b: str) -> tuple[str, ...]:
+    """Return the fixed slots filled in one text but empty or placeholder in the other.
+
+    These are the slots sibling-fill would change on the next ``--write``: the two files' slot
+    bodies are not yet identical, so the surface is drift until a write propagates the filled
+    body to its sibling.
+    """
+    pending = []
+    for slot in FIXED_COMMAND_SLOTS:
+        filled_a = is_slot_filled(parse_command_slot(text_a, slot))
+        filled_b = is_slot_filled(parse_command_slot(text_b, slot))
+        if filled_a != filled_b:
+            pending.append(slot)
+    return tuple(pending)
+
+
+def reconcile_command_slots(text_a: str, text_b: str) -> tuple[str, str]:
+    """Return the two texts with each slot's body made identical by sibling-fill.
+
+    A slot filled in one file and empty or placeholder in the other is filled from the filled
+    side. A slot filled differently in both files is a conflict and is left unchanged.
+    """
+    for slot in FIXED_COMMAND_SLOTS:
+        body_a = parse_command_slot(text_a, slot)
+        body_b = parse_command_slot(text_b, slot)
+        if body_a is None or body_b is None:
+            continue
+        a_filled, b_filled = is_slot_filled(body_a), is_slot_filled(body_b)
+        if a_filled and not b_filled:
+            text_b = set_command_slot(text_b, slot, body_a)
+        elif b_filled and not a_filled:
+            text_a = set_command_slot(text_a, slot, body_b)
+    return text_a, text_b
+
+
+def missing_command_slots(text: str) -> tuple[str, ...]:
+    """Return the fixed command slots whose fence is absent from ``text``.
+
+    A fixed slot must always carry its fence — filled or placeholder — so the router's by-name
+    references never dangle; an absent fence is drift a re-render restores by re-scaffolding it.
+    """
+    return tuple(
+        slot for slot in FIXED_COMMAND_SLOTS if parse_command_slot(text, slot) is None
+    )
+
+
+# --- CLI edge ------------------------------------------------------------------------------
 
 
 def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
@@ -348,20 +585,24 @@ def instruction_status(
     text = instruction_path.read_text(encoding="utf-8")
     if _managed_block_text(text) is None:
         return "stale"
-    if MANAGED_BLOCK_START not in text:
-        # A legacy-marker block is present but not the canonical marker; a re-render
-        # migrates it to the current marker.
+    if _router_marker_match(text) is None:
+        # A retired-marker block is present but not the current compressed marker; a re-render
+        # migrates it.
         return "stale"
     version = parse_instruction_version(text)
     if version is None or is_stale(version, installed_version):
         return "stale"
     if parse_instruction_languages(text) != normalize_languages(languages):
         return "stale"
+    if missing_command_slots(text):
+        # A fixed command slot's fence is absent — a re-render restores it, so the surface is
+        # stale until it does. The shipped --check verb enforces this without the git-diff gate.
+        return "stale"
     return "current"
 
 
 def upsert_managed_block(document: str, block: str) -> str:
-    """Return ``document`` with exactly one managed Spec Tree instruction block."""
+    """Return ``document`` with exactly one managed Spec Tree router block."""
     block = block.rstrip("\n") + "\n"
     bounds = _managed_block_bounds(document)
     if bounds is not None:
@@ -466,10 +707,17 @@ def _read_text_if_present(path: pathlib.Path, repo_root: pathlib.Path) -> str | 
 
 
 def _replace_path_with_text(path: pathlib.Path, text: str) -> None:
-    """Write ``text`` as a regular file, replacing any file or symlink."""
+    """Write ``text`` as a regular file, replacing any file or symlink.
+
+    Every caller passes a ``_repo_child(repo_root, <fixed filename>)`` path: ``repo_root`` is a
+    resolved, existing directory (``_validated_repo_root``), the filename is a constant
+    (``CLAUDE.md``/``AGENTS.md``), and ``_repo_child`` rejects a parent that resolves outside
+    ``repo_root`` — so the write target is provably inside the operator's own repository, not
+    attacker-controlled path data.
+    """
     if path.exists() or path.is_symlink():
-        path.unlink()
-    path.write_text(text, encoding="utf-8")
+        path.unlink()  # NOSONAR S2083
+    path.write_text(text, encoding="utf-8")  # NOSONAR S2083
 
 
 def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
@@ -485,17 +733,44 @@ def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
     }
 
 
+def build_root_instruction_documents(
+    seeds: Mapping[str, str], blocks_by_harness: Mapping[str, str]
+) -> dict[str, str]:
+    """Compose each harness's root document: router block, slot fences, and sibling-fill.
+
+    Pure over the seed and block strings: upsert the router block into product-owned prose,
+    scaffold every missing command-slot fence with a placeholder, then reconcile the two
+    harnesses' slots so each slot's body is identical across them.
+    """
+    documents = {
+        harness: ensure_slot_fences(
+            upsert_managed_block(
+                _product_owned_root_document(seeds[harness]),
+                blocks_by_harness[harness],
+            )
+        )
+        for harness in AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    claude, codex = build_root_instruction_documents_reconciled(documents)
+    return {"claude": claude, "codex": codex}
+
+
+def build_root_instruction_documents_reconciled(
+    documents: Mapping[str, str],
+) -> tuple[str, str]:
+    """Reconcile the two harnesses' command slots by sibling-fill; return (claude, codex)."""
+    claude, codex = reconcile_command_slots(documents["claude"], documents["codex"])
+    return claude, codex
+
+
 def write_root_instruction_files(
     repo_root: pathlib.Path, blocks_by_harness: Mapping[str, str]
 ) -> None:
-    """Insert instruction blocks into root files, replacing symlinks with files."""
+    """Insert router blocks and command slots into root files, replacing symlinks with files."""
     seeds = _root_seed_documents(repo_root)
+    documents = build_root_instruction_documents(seeds, blocks_by_harness)
     for harness, filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
-        output = upsert_managed_block(
-            _product_owned_root_document(seeds[harness]),
-            blocks_by_harness[harness],
-        )
-        _replace_path_with_text(_repo_child(repo_root, filename), output)
+        _replace_path_with_text(_repo_child(repo_root, filename), documents[harness])
 
 
 def remove_obsolete_spx_instruction_files(repo_root: pathlib.Path) -> None:
@@ -509,10 +784,82 @@ def remove_obsolete_spx_instruction_files(repo_root: pathlib.Path) -> None:
             path.unlink()
 
 
+def _read_both_root_texts(repo_root: pathlib.Path) -> tuple[str, str] | None:
+    """Read both root instruction files' text, or None when either is absent."""
+    texts = []
+    for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+        path = _repo_child(repo_root, filename)
+        text = _read_text_if_present(path, repo_root)
+        if text is None:
+            return None
+        texts.append(text)
+    return texts[0], texts[1]
+
+
+def conflicting_command_slots(repo_root: pathlib.Path) -> tuple[str, ...]:
+    """CLI-edge helper: return fixed slots filled with different bodies across the root files.
+
+    The filesystem read lives here at the edge; the comparison is the pure
+    :func:`command_slot_conflicts`.
+    """
+    texts = _read_both_root_texts(repo_root)
+    if texts is None:
+        return ()
+    return command_slot_conflicts(texts[0], texts[1])
+
+
+def sibling_fill_pending_command_slots(repo_root: pathlib.Path) -> tuple[str, ...]:
+    """CLI-edge helper: return fixed slots filled in one root file but not the other.
+
+    The filesystem read lives here at the edge; the comparison is the pure
+    :func:`command_slots_pending_sibling_fill`.
+    """
+    texts = _read_both_root_texts(repo_root)
+    if texts is None:
+        return ()
+    return command_slots_pending_sibling_fill(texts[0], texts[1])
+
+
+def fill_command_slot_from(
+    repo_root: pathlib.Path, slot: str, source_harness: str
+) -> None:
+    """Set one command slot in both root files to the ``source_harness`` file's body.
+
+    The write is deterministic; choosing the source harness is the update skill's git-recency
+    judgment, which the deterministic generator does not make. Used to reconcile a slot filled
+    with different bodies in the two files after that judgment picks the more recent side.
+    Every read is validated against ``repo_root`` so a symlinked root file escaping the
+    repository is rejected rather than followed.
+    """
+    source_path = _repo_child(
+        repo_root, AGENT_HARNESS_INSTRUCTION_FILENAMES[source_harness]
+    )
+    source_text = _read_text_if_present(source_path, repo_root)
+    if source_text is None:
+        raise CliInputError(
+            f"source harness {source_harness} instruction file is absent"
+        )
+    body = parse_command_slot(source_text, slot)
+    if body is None:
+        raise CliInputError(
+            f"source harness {source_harness} has no {slot} command slot"
+        )
+    for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+        path = _repo_child(repo_root, filename)
+        text = _read_text_if_present(path, repo_root)
+        if text is None:
+            # Reconciling a slot across both files is meaningless when one is absent; fail
+            # loudly rather than leave a partial fill, symmetric with the source-file case.
+            raise CliInputError(f"root instruction file is absent: {filename}")
+        _replace_path_with_text(
+            path, set_command_slot(ensure_slot_fences(text), slot, body)
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Thin CLI edge: read the template, detect languages, render and write both files."""
     parser = argparse.ArgumentParser(
-        description="Generate managed Spec Tree instruction blocks in root CLAUDE.md and AGENTS.md."
+        description="Generate the managed Spec Tree instruction surface in root CLAUDE.md and AGENTS.md."
     )
     parser.add_argument(
         "--template", required=True, help="Path to the canonical template."
@@ -534,6 +881,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--languages",
         help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
+    )
+    parser.add_argument(
+        "--fill-slot",
+        choices=FIXED_COMMAND_SLOTS,
+        help="Reconcile one command slot across both root files from the --from harness.",
+    )
+    parser.add_argument(
+        "--from",
+        dest="from_harness",
+        choices=tuple(AGENT_HARNESS_INSTRUCTION_FILENAMES),
+        help="Source harness whose slot body fills both files under --fill-slot.",
     )
     args = parser.parse_args(argv)
 
@@ -565,6 +923,20 @@ def main(argv: list[str] | None = None) -> int:
     else:
         languages = ()
 
+    if args.fill_slot is not None:
+        if repo_root is None:
+            print("error: --fill-slot requires --repo-root", file=sys.stderr)
+            return 2
+        if args.from_harness is None:
+            print("error: --fill-slot requires --from", file=sys.stderr)
+            return 2
+        try:
+            fill_command_slot_from(repo_root, args.fill_slot, args.from_harness)
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
     if args.check:
         if repo_root is None:
             print("error: --check requires --repo-root", file=sys.stderr)
@@ -579,6 +951,14 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 for filename in AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
             }
+            if conflicting_command_slots(repo_root):
+                # A command slot filled differently in the two files is drift the update skill
+                # reconciles; report it as stale so the gate does not pass over it.
+                statuses.add("stale")
+            if sibling_fill_pending_command_slots(repo_root):
+                # A slot filled in one file but not the other is drift the next --write resolves
+                # by sibling-fill; the two bodies are not yet identical, so report it stale.
+                statuses.add("stale")
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2

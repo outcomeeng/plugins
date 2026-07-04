@@ -2,9 +2,10 @@
 
 Universal invariants in ``instruction-block.md``: after a render the output's
 ``template_version`` equals the installed version, every render ends with exactly one
-trailing newline, and staleness ordering matches dotted-numeric version order (catching
-lexicographic defects such as 0.9.0 vs 0.10.0). Hypothesis owns the generated version
-domain; Python tuple ordering is the independent oracle.
+trailing newline, staleness ordering matches dotted-numeric version order (catching
+lexicographic defects such as 0.9.0 vs 0.10.0), and after sibling-fill each fixed command
+slot's body is identical across the two root files. Hypothesis owns the generated version and
+slot-body domains; Python tuple ordering and string equality are the independent oracles.
 """
 
 from __future__ import annotations
@@ -65,3 +66,43 @@ def test_is_stale_matches_numeric_version_order(
 ) -> None:
     module = load_instruction_block_module()
     assert module.is_stale(_to_version(left), _to_version(right)) is (left < right)
+
+
+# Command-slot body text: non-empty, no fence markers or newlines, so it round-trips through a
+# slot fence unambiguously. The domain varies per case; the sibling-fill invariant is the oracle.
+_SLOT_BODY = st.text(
+    alphabet=st.characters(
+        whitelist_categories=("L", "N"), whitelist_characters=" -_`"
+    ),
+    min_size=1,
+).filter(lambda body: body.strip() != "")
+_SLOT_SIDE = st.sampled_from(("claude", "agents", "both", "neither"))
+
+
+@given(data=st.data())
+def test_sibling_fill_makes_each_slot_body_identical_across_files(
+    data: st.DataObject,
+) -> None:
+    module = load_instruction_block_module()
+    base = module.ensure_slot_fences("")
+    claude, agents = base, base
+    # Fill each slot on one side, both sides with the same body, or neither — never both sides
+    # with different bodies, which is the conflict case sibling-fill deliberately leaves alone.
+    for slot in module.FIXED_COMMAND_SLOTS:
+        side = data.draw(_SLOT_SIDE)
+        if side == "neither":
+            continue
+        body = data.draw(_SLOT_BODY)
+        if side in ("claude", "both"):
+            claude = module.set_command_slot(claude, slot, body)
+        if side in ("agents", "both"):
+            agents = module.set_command_slot(agents, slot, body)
+
+    reconciled_claude, reconciled_agents = module.reconcile_command_slots(
+        claude, agents
+    )
+
+    for slot in module.FIXED_COMMAND_SLOTS:
+        assert module.parse_command_slot(
+            reconciled_claude, slot
+        ) == module.parse_command_slot(reconciled_agents, slot)

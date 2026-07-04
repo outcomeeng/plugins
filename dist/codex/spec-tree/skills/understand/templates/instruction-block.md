@@ -1,11 +1,24 @@
 ---
-template_version: "0.21.5"
+template_version: "0.22.0"
 template_source: spec-tree
 ---
 
 # Spec Tree Instructions
 
 These instructions explain WHEN to invoke spec-tree skills for this product. They are a **router** — the skills contain the HOW.
+
+---
+
+## Product Commands
+
+This product's operational commands live in the managed command slots below, each owned by the product and preserved across a re-render. The router names a slot by role; the slot holds the command:
+
+- `author` — after a create, update, or delete on a spec, test, or implementation file, run the command in `SPEC-TREE:author` to rebuild or regenerate artifacts.
+- `verify` — for `/apply` and pre-merge checks, run the command in `SPEC-TREE:verify` over the node and the changeset.
+- `gate` — for the full deterministic bundle, run the command in `SPEC-TREE:gate`.
+- `merge` — for the transport step of `/merge`, run the command in `SPEC-TREE:merge`.
+
+A slot marked unfilled has no product command recorded yet; fill it in both root instruction files with `/update-instruction-block`.
 
 ---
 
@@ -312,7 +325,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}*` skills 
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages listed in its `languages` frontmatter; `/update-instruction-block` re-renders from the installed template when the methodology advances.
+Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker; `/update-instruction-block` re-renders from the installed template when the methodology advances.
 
 <!-- lang:typescript -->
 

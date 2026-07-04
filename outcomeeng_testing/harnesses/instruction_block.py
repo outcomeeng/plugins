@@ -20,10 +20,11 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import subprocess
 from dataclasses import dataclass
 import sys
 from types import ModuleType
-from typing import Final
+from typing import Final, cast
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-instruction-block skill directory name; a rename there must update
@@ -54,6 +55,12 @@ INSTRUCTION_AGENTS: Final = "AGENTS.md"
 ROOT_CLAUDE_BODY: Final = "# Claude Root\n\nClaude repository instructions.\n"
 ROOT_AGENTS_BODY: Final = "# Agents Root\n\nCodex repository instructions.\n"
 ROOT_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
+
+# Invented product-command payloads the harness owns, for command-slot preservation,
+# sibling-fill, and conflict tests. Their identity across a re-render is what the tests
+# assert; the strings carry no domain vocabulary.
+SAMPLE_COMMAND_BODY: Final = "Build: `product build --all`"
+SAMPLE_COMMAND_BODY_ALT: Final = "Build: `product build --changed`"
 
 # Source-template content probes for the rendered-output session-result check.
 SESSION_MANAGEMENT_HEADING = "## Session Management"
@@ -292,3 +299,71 @@ def write_template(
         build_template(version, extra_section=extra_section), encoding="utf-8"
     )
     return path
+
+
+def run_generator_write(
+    module: ModuleType,
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str,
+) -> int:
+    """Run the generator CLI's ``--write`` over ``repo_root`` and return its exit code.
+
+    Centralizes the CLI-invocation setup the render-model tests share, since harness code —
+    not test bodies — owns shared execution scaffolding. The dynamically loaded module types
+    ``main`` as ``Any``; the CLI contract returns an exit code, so the result is cast to ``int``.
+    """
+    return cast(
+        int,
+        module.main(
+            [
+                "--template",
+                str(template_path),
+                "--repo-root",
+                str(repo_root),
+                "--languages",
+                languages,
+                "--write",
+            ]
+        ),
+    )
+
+
+def git_command(
+    repo_root: pathlib.Path, *args: str
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command in ``repo_root`` for tests that need real git state.
+
+    Centralizes the git subprocess setup the drift-gate tests share, since harness code —
+    not test bodies — owns shared execution scaffolding.
+    """
+    return subprocess.run(
+        ["git", *args], cwd=repo_root, capture_output=True, check=True, text=True
+    )
+
+
+def init_git_identity(repo_root: pathlib.Path) -> None:
+    """Initialize a git repository with a committed-safe identity for drift-gate tests."""
+    git_command(repo_root, "init")
+    git_command(repo_root, "config", "user.name", "Test User")
+    git_command(repo_root, "config", "user.email", "test@example.com")
+
+
+# The slot fence markers mirror the module's ``_slot_open``/``_slot_close`` contract; a test
+# that drifts from this shape fails to locate the fence, which is the intended coupling — the
+# same drift-coupling the lang/harness markers above rely on.
+def remove_command_slot_fence(text: str, slot: str) -> str:
+    """Return ``text`` with one command slot's fence and body removed, for missing-fence tests."""
+    open_marker = f"<!-- SPEC-TREE:{slot} -->"
+    close_marker = f"<!-- /SPEC-TREE:{slot} -->"
+    start = text.find(open_marker)
+    if start == -1:
+        return text
+    end = text.find(close_marker, start)
+    if end == -1:
+        return text
+    prefix = text[:start].rstrip("\n")
+    suffix = text[end + len(close_marker) :].lstrip("\n")
+    joiner = "\n\n" if prefix and suffix else ""
+    return f"{prefix}{joiner}{suffix}"

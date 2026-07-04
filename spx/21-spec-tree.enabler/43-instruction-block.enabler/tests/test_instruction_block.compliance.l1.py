@@ -10,6 +10,9 @@ Rules in ``instruction-block.md`` with deterministic test evidence:
 - ALWAYS: instruction blocks render from harness-specific templates under ``dist/``.
 - NEVER: instruction-block generation writes output from a template with unresolved build macros.
 - NEVER: obsolete ``spx/`` instruction files remain after instruction-block generation.
+- ALWAYS: the drift gate requires each fixed command slot's fence in each root file.
+- ALWAYS: the router block references a command slot by name.
+- NEVER: the generator authors, edits, or overwrites a command slot's product-owned body.
 """
 
 import os
@@ -28,29 +31,25 @@ from outcomeeng_testing.harnesses.instruction_block import (
     HARNESS_CLAUDE,
     HARNESS_CODEX,
     ROOT_SHARED_BODY,
+    SAMPLE_COMMAND_BODY,
+    SAMPLE_COMMAND_BODY_ALT,
     SESSION_ARCHIVE_RESULT_INSTRUCTION,
     SESSION_MANAGEMENT_HEADING,
     SESSION_RESULT_FRONTMATTER_FIELD,
     build_template,
     extract_markdown_section,
+    git_command,
+    init_git_identity,
     load_instruction_block_module,
     read_canonical_template,
+    remove_command_slot_fence,
     render_build_macro,
+    run_generator_write,
     write_template,
 )
 
 VERSION = "0.18.0"
 JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
-
-
-def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=repo_root,
-        capture_output=True,
-        check=True,
-        text=True,
-    )
 
 
 def _workflow_run_block(step_name: str) -> str:
@@ -161,8 +160,8 @@ def test_re_render_ignores_unmodeled_instruction_block_edits() -> None:
     existing_document = f"{ROOT_SHARED_BODY}\n\n{clean_block}"
 
     tampered = existing_document.replace(
-        module.MANAGED_BLOCK_END,
-        f"\n## Hand Section\n\n{JUNK_EDIT}\n{module.MANAGED_BLOCK_END}",
+        module.ROUTER_BLOCK_END,
+        f"\n## Hand Section\n\n{JUNK_EDIT}\n{module.ROUTER_BLOCK_END}",
     )
     updated = module.upsert_managed_block(tampered, clean_block)
 
@@ -222,8 +221,8 @@ def test_root_content_outside_instruction_block_is_preserved(
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
         content = (tmp_path / filename).read_text(encoding="utf-8")
         assert ROOT_SHARED_BODY.rstrip("\n") in content
-        assert content.count(module.MANAGED_BLOCK_START) == 1
-        assert content.count(module.MANAGED_BLOCK_END) == 1
+        assert content.count(module.ROUTER_MARKER_PREFIX) == 1
+        assert content.count(module.ROUTER_BLOCK_END) == 1
 
 
 def test_instruction_templates_are_loaded_from_harness_specific_dist_outputs(
@@ -295,12 +294,10 @@ def test_lefthook_instruction_refresh_uses_rendered_dist_templates() -> None:
 def test_instruction_drift_probe_marks_untracked_root_files_intent_to_add(
     tmp_path: pathlib.Path,
 ) -> None:
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
+    init_git_identity(tmp_path)
     (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
-    _git(tmp_path, "add", ".gitignore")
-    _git(tmp_path, "commit", "-m", "seed repository")
+    git_command(tmp_path, "add", ".gitignore")
+    git_command(tmp_path, "commit", "-m", "seed repository")
     (tmp_path / INSTRUCTION_CLAUDE).write_text("generated claude\n", encoding="utf-8")
     (tmp_path / INSTRUCTION_AGENTS).write_text("generated agents\n", encoding="utf-8")
 
@@ -313,12 +310,10 @@ def test_instruction_drift_probe_marks_untracked_root_files_intent_to_add(
 def test_instruction_drift_probe_reports_missing_root_files(
     tmp_path: pathlib.Path,
 ) -> None:
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
+    init_git_identity(tmp_path)
     (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
-    _git(tmp_path, "add", ".gitignore")
-    _git(tmp_path, "commit", "-m", "seed repository")
+    git_command(tmp_path, "add", ".gitignore")
+    git_command(tmp_path, "commit", "-m", "seed repository")
 
     assert instruction_block.drifting_instruction_files(repo_root=tmp_path) == [
         INSTRUCTION_AGENTS,
@@ -339,11 +334,9 @@ def test_instruction_drift_probe_skips_missing_obsolete_spx_files(
     ):
         path.write_text(f"{path.name}\n", encoding="utf-8")
 
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
-    _git(tmp_path, "add", ".")
-    _git(tmp_path, "commit", "-m", "seed instruction files")
+    init_git_identity(tmp_path)
+    git_command(tmp_path, "add", ".")
+    git_command(tmp_path, "commit", "-m", "seed instruction files")
 
     (spx_dir / INSTRUCTION_CLAUDE).unlink()
     (spx_dir / INSTRUCTION_AGENTS).unlink()
@@ -412,13 +405,11 @@ def test_root_instruction_refresh_pr_step_exits_cleanly_without_drift(
     tmp_path: pathlib.Path,
 ) -> None:
     gh_log = tmp_path / "gh.log"
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
+    init_git_identity(tmp_path)
     (tmp_path / INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
     (tmp_path / INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
-    _git(tmp_path, "add", ".")
-    _git(tmp_path, "commit", "-m", "seed instruction files")
+    git_command(tmp_path, "add", ".")
+    git_command(tmp_path, "commit", "-m", "seed instruction files")
 
     output = _run_refresh_pr_step(tmp_path, gh_log)
 
@@ -432,10 +423,10 @@ def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
     remote = tmp_path / "remote.git"
     repo = tmp_path / "repo"
     gh_log = tmp_path / "gh.log"
-    _git(tmp_path, "init", "--bare", str(remote))
-    _git(tmp_path, "clone", str(remote), str(repo))
-    _git(repo, "config", "user.name", "Test User")
-    _git(repo, "config", "user.email", "test@example.com")
+    git_command(tmp_path, "init", "--bare", str(remote))
+    git_command(tmp_path, "clone", str(remote), str(repo))
+    git_command(repo, "config", "user.name", "Test User")
+    git_command(repo, "config", "user.email", "test@example.com")
     spx_dir = repo / "spx"
     spx_dir.mkdir()
     for path in (
@@ -445,10 +436,10 @@ def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
         spx_dir / INSTRUCTION_AGENTS,
     ):
         path.write_text(f"{path.name}\n", encoding="utf-8")
-    _git(repo, "add", ".")
-    _git(repo, "commit", "-m", "seed instruction files")
-    _git(repo, "branch", "-M", "main")
-    _git(repo, "push", "-u", "origin", "main")
+    git_command(repo, "add", ".")
+    git_command(repo, "commit", "-m", "seed instruction files")
+    git_command(repo, "branch", "-M", "main")
+    git_command(repo, "push", "-u", "origin", "main")
 
     (repo / INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
     (repo / INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
@@ -457,7 +448,7 @@ def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
 
     _run_refresh_pr_step(repo, gh_log)
 
-    committed = _git(
+    committed = git_command(
         repo,
         "show",
         "--name-status",
@@ -495,8 +486,8 @@ def test_write_regenerates_a_drifted_instruction_block(tmp_path: pathlib.Path) -
     for instruction_file in instruction_files:
         instruction_file.write_text(
             instruction_file.read_text().replace(
-                module.MANAGED_BLOCK_END,
-                f"\nHAND DRIFT\n{module.MANAGED_BLOCK_END}",
+                module.ROUTER_BLOCK_END,
+                f"\nHAND DRIFT\n{module.ROUTER_BLOCK_END}",
             ),
             encoding="utf-8",
         )
@@ -543,3 +534,112 @@ def test_write_removes_obsolete_spx_instruction_files(tmp_path: pathlib.Path) ->
 
     assert not (spx_dir / INSTRUCTION_CLAUDE).exists()
     assert not (spx_dir / INSTRUCTION_AGENTS).exists()
+
+
+def test_generation_requires_every_fixed_command_slot_fence(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, VERSION)
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        (tmp_path / filename).write_text(ROOT_SHARED_BODY, encoding="utf-8")
+
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        content = (tmp_path / filename).read_text(encoding="utf-8")
+        for slot in module.FIXED_COMMAND_SLOTS:
+            assert module.parse_command_slot(content, slot) is not None
+
+
+def test_rendered_router_references_each_command_slot_by_name() -> None:
+    module = load_instruction_block_module()
+    template = read_canonical_template()
+    # Render the canonical template through the generator for each harness and assert every
+    # slot name survives into the rendered router block — exercising render()'s pass-through of
+    # non-conditional body text, not the raw authored template prose.
+    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
+        rendered = module.render(template, (LANG_PRIMARY,), VERSION, harness)
+        for slot in module.FIXED_COMMAND_SLOTS:
+            assert f"SPEC-TREE:{slot}" in rendered
+
+
+def test_drift_gate_reports_a_missing_command_slot_fence(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, VERSION)
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+    init_git_identity(tmp_path)
+    git_command(tmp_path, "add", ".")
+    git_command(tmp_path, "commit", "-m", "seed instruction files")
+
+    # A committed root file loses one slot fence; the gate regenerates (restoring it) and its
+    # drift probe reports the file as drifted.
+    agents = tmp_path / INSTRUCTION_AGENTS
+    agents.write_text(
+        remove_command_slot_fence(agents.read_text(encoding="utf-8"), "gate"),
+        encoding="utf-8",
+    )
+    assert module.parse_command_slot(agents.read_text(encoding="utf-8"), "gate") is None
+    git_command(tmp_path, "commit", "-am", "drop gate fence")
+
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+    assert (
+        module.parse_command_slot(agents.read_text(encoding="utf-8"), "gate")
+        is not None
+    )
+    assert INSTRUCTION_AGENTS in instruction_block.drifting_instruction_files(
+        repo_root=tmp_path
+    )
+
+
+def test_regenerate_preserves_a_filled_command_slot_body(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, VERSION)
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        path = tmp_path / filename
+        path.write_text(
+            module.set_command_slot(
+                path.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY
+            ),
+            encoding="utf-8",
+        )
+
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+
+    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        content = (tmp_path / filename).read_text(encoding="utf-8")
+        assert module.parse_command_slot(content, "merge") == SAMPLE_COMMAND_BODY
+
+
+def test_drift_gate_reports_a_cross_file_command_slot_conflict(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, VERSION)
+    assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
+
+    claude = tmp_path / INSTRUCTION_CLAUDE
+    agents = tmp_path / INSTRUCTION_AGENTS
+    claude.write_text(
+        module.set_command_slot(
+            claude.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY
+        ),
+        encoding="utf-8",
+    )
+    agents.write_text(
+        module.set_command_slot(
+            agents.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY_ALT
+        ),
+        encoding="utf-8",
+    )
+
+    assert instruction_block.conflicting_command_slots(repo_root=tmp_path) == ("merge",)
+    report = instruction_block.render_report([], ("merge",))
+    assert instruction_block.SLOT_CONFLICT_HEADER in report
+    assert "SPEC-TREE:merge" in report

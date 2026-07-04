@@ -53,3 +53,29 @@ def test_detected_language_set_is_the_mapped_extensions() -> None:
     assert module.detect_languages(all_extensions) == expected
     # An extension with no language mapping contributes nothing.
     assert module.detect_languages(("md", "txt")) == ()
+
+
+def test_each_fixed_slot_name_maps_to_its_recognized_fence() -> None:
+    module = load_instruction_block_module()
+    scaffolded = module.ensure_slot_fences("")
+    # Every fixed slot name maps to a recognized `<!-- SPEC-TREE:{slot} -->` fence.
+    present = tuple(
+        slot
+        for slot in module.FIXED_COMMAND_SLOTS
+        if module.parse_command_slot(scaffolded, slot) is not None
+    )
+    assert present == module.FIXED_COMMAND_SLOTS
+    for slot in module.FIXED_COMMAND_SLOTS:
+        assert f"<!-- SPEC-TREE:{slot} -->" in scaffolded
+
+
+def test_a_name_outside_the_fixed_slot_set_maps_to_no_recognized_slot() -> None:
+    module = load_instruction_block_module()
+    scaffolded = module.ensure_slot_fences("")
+    outsiders = tuple(
+        name
+        for name in ("deploy", "release", "spec", "test")
+        if name not in module.FIXED_COMMAND_SLOTS
+    )
+    for name in outsiders:
+        assert module.parse_command_slot(scaffolded, name) is None

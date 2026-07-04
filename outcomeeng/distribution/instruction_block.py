@@ -36,6 +36,13 @@ DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
+SLOT_CONFLICT_HEADER: Final = (
+    "root instruction blocks carry a command slot filled differently in each file."
+)
+SLOT_CONFLICT_REMEDIATION: Final = (
+    "Reconcile the conflicting slot with `/update-instruction-block`, which picks the "
+    "git-more-recent body, then commit the reconciled root CLAUDE.md and AGENTS.md."
+)
 UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
 BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
@@ -74,6 +81,8 @@ class InstructionBlockModule(Protocol):
     ) -> None: ...
 
     def remove_obsolete_spx_instruction_files(self, repo_root: Path) -> None: ...
+
+    def conflicting_command_slots(self, repo_root: Path) -> tuple[str, ...]: ...
 
 
 def _run(
@@ -235,9 +244,36 @@ def drifting_instruction_files(
     return sorted({*missing_root_paths, *drift})
 
 
-def render_report(drift: Sequence[str]) -> str:
-    """Render the actionable drift report from the drifting instruction-file paths."""
-    return "\n".join([HEADER, "", *(f"  {path}" for path in drift), "", REMEDIATION])
+def conflicting_command_slots(
+    *, repo_root: Path = REPO_ROOT, module: InstructionBlockModule | None = None
+) -> tuple[str, ...]:
+    """Return fixed command slots filled with different bodies across the root files.
+
+    Sibling-fill makes an empty-and-filled slot pair identical on regenerate, so a difference
+    that survives is a genuine two-sided conflict the deterministic writer leaves unresolved for
+    the update skill's git-recency judgment. Reporting it keeps the gate from passing over a
+    slot that names one command for Claude Code and a different one for Codex.
+    """
+    instruction_module = module or load_instruction_block_module()
+    return instruction_module.conflicting_command_slots(repo_root)
+
+
+def render_report(drift: Sequence[str], conflicts: Sequence[str] = ()) -> str:
+    """Render the actionable drift report from drifting paths and conflicting command slots."""
+    sections: list[str] = []
+    if drift:
+        sections += [HEADER, "", *(f"  {path}" for path in drift), "", REMEDIATION]
+    if conflicts:
+        if sections:
+            sections.append("")
+        sections += [
+            SLOT_CONFLICT_HEADER,
+            "",
+            *(f"  SPEC-TREE:{slot}" for slot in conflicts),
+            "",
+            SLOT_CONFLICT_REMEDIATION,
+        ]
+    return "\n".join(sections)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -255,6 +291,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.write:
             return 0
         drift = drifting_instruction_files()
+        conflicts = conflicting_command_slots()
     except InstructionBlockRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -266,9 +303,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{HEADER}\n  the root instruction-block gate failed; see the error above."
         )
         return 1
-    if not drift:
+    if not drift and not conflicts:
         return 0
-    print(render_report(drift))
+    print(render_report(drift, conflicts))
     return 1
 
 
