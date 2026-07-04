@@ -390,7 +390,7 @@ def already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() -> bool
     )
 
 
-def mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> bool:
+def mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump() -> bool:
     case = dual_manifest_case(
         "foo",
         claude_version="0.4.2",
@@ -406,12 +406,12 @@ def mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> bool:
     return (
         exit_code == 0
         and set(written) == {case.claude_path, case.codex_path}
-        and version_of(written[case.claude_path]) == "0.4.3"
-        and version_of(written[case.codex_path]) == "0.4.3"
+        and version_of(written[case.claude_path]) == "0.4.2"
+        and version_of(written[case.codex_path]) == "0.4.2"
     )
 
 
-def mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max() -> bool:
+def mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max() -> bool:
     case = dual_manifest_case(
         "foo",
         claude_version="0.4.3",
@@ -427,8 +427,8 @@ def mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max() ->
     return (
         exit_code == 0
         and set(written) == {case.claude_path, case.codex_path}
-        and version_of(written[case.claude_path]) == "0.4.4"
-        and version_of(written[case.codex_path]) == "0.4.4"
+        and version_of(written[case.claude_path]) == "0.4.3"
+        and version_of(written[case.codex_path]) == "0.4.3"
     )
 
 

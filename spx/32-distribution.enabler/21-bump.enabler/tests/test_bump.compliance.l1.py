@@ -11,9 +11,9 @@ from outcomeeng_testing.harnesses.bump import (
     dry_run_skips_already_bumped_plugin_and_reports_the_other,
     dual_manifest_plugin_writes_every_owned_manifest,
     missing_required_tool_fails_fast_with_diagnostic,
+    mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max,
+    mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump,
     mixed_dual_manifest_plugin_fails_check,
-    mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max,
-    mixed_dual_manifest_plugin_writes_lockstep_patch_target,
     non_version_content_is_preserved_character_for_character,
     read_only_modes_never_write_regardless_of_plugin_state,
     tool_availability_is_probed_before_any_other_probe_or_write,
@@ -37,14 +37,14 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() ->
     assert already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped()
 
 
-def test_mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> None:
-    assert mixed_dual_manifest_plugin_writes_lockstep_patch_target()
+def test_mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump() -> None:
+    assert mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump()
 
 
-def test_mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max() -> (
+def test_mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max() -> (
     None
 ):
-    assert mixed_dual_manifest_plugin_writes_every_owned_manifest_from_current_max()
+    assert mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max()
 
 
 def test_mixed_dual_manifest_plugin_fails_check() -> None:
