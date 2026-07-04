@@ -141,6 +141,7 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
 
 # Mark a review thread resolved
 python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" <review-thread-node-id>
+python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --repo <owner>/<repo> --pr <pr-number> --review-comment-id <review-comment-id>
 
 # Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
 # rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,
