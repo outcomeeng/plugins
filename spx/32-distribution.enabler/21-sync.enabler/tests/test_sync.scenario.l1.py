@@ -709,6 +709,44 @@ def test_single_flight_replaces_reused_pid_lock(
     assert not single_flight.pending_path.exists()
 
 
+def test_single_flight_unresolved_live_owner_records_pending(
+    tmp_path: pathlib.Path,
+) -> None:
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    live_owner = sync_module._LockOwner(pid=999999, identity="unresolved")
+
+    def process_identity(pid: int) -> str | None:
+        if pid == os.getpid():
+            return f"identity:{pid}"
+        return None
+
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: True,
+        process_identity=process_identity,
+    )
+    single_flight.lock_path.write_text(
+        sync_module._serialize_lock_owner(live_owner),
+        encoding="utf-8",
+    )
+
+    run = run_invalid_topology_refresh(single_flight)
+
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == []
+    assert single_flight.lock_path.read_text(
+        encoding="utf-8",
+    ) == sync_module._serialize_lock_owner(live_owner)
+    assert sync_module._read_lock_owner_body(
+        single_flight.pending_path.read_text(encoding="utf-8"),
+    ) == sync_module._LockOwner(
+        pid=os.getpid(),
+        identity=f"identity:{os.getpid()}",
+    )
+
+
 def test_single_flight_release_clears_pending_marker(
     tmp_path: pathlib.Path,
 ) -> None:
