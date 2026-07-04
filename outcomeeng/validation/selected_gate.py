@@ -45,6 +45,7 @@ TEST_REASON: Final = "changed python assertion tests"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
+    "manifests",
     "skills",
     "skill-injection",
     "reference-portability",
