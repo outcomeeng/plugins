@@ -4,7 +4,7 @@ Use the producer section from `dist/claude/spec-tree/skills/merging-standards/SK
 
 Producer section:
 
-```text
+````text
 <step name="review_inspection">
 <review_inspection>
 
@@ -30,7 +30,7 @@ Compare timestamps against the most recent push. Entries after that push are re-
 
 </review_inspection>
 </step>
-```
+````
 
 Inspection plan:
 
