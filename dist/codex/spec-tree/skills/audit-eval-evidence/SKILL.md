@@ -96,6 +96,8 @@ Classify how the eval reaches the producer:
 | False            | Metadata names the producer but the prompt or harness never uses it                         | REJECT                                                                 |
 | Unknown          | The artifact path cannot establish how the producer is reached                              | REJECT                                                                 |
 
+When `eval.toml` declares `prompt_source.kind = "producer-section"`, treat the materialized prompt as Prompt-loaded only after verifying the producer path, selected section, and prompt template exist and `prompt.md` is current with that source. The selected producer section is the artifact under audit for that suite; a mutation to that section must change the materialized prompt and at least one case outcome. A hand-authored prompt that copies the same policy without `prompt_source` remains Simulation.
+
 For skill, agent, classifier, or script behavior claims, changing the real producer to unrelated text must change the eval result. If the eval would still pass after such a mutation, classify as Simulation or False and REJECT.
 
 </step>

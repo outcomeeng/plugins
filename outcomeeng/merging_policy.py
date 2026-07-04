@@ -302,10 +302,6 @@ def decide_review_check(
             required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
         )
     if check.get(FIELD_CONCLUSION) == CheckRunConclusion.SKIPPED:
-        if _review_check_skipped_by_design(check):
-            return ReviewCheckDecision(
-                required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
-            )
         return ReviewCheckDecision(
             required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_SKIPPED,
         )
@@ -346,13 +342,6 @@ def _decide_review_check_state_category(
             required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
         )
     return None
-
-
-def _review_check_skipped_by_design(check: Mapping[str, object]) -> bool:
-    return (
-        check.get(FIELD_STATE_CATEGORY)
-        == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
-    )
 
 
 def _classify_check_run(
