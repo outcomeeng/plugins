@@ -27,7 +27,7 @@ import sys
 from collections.abc import Sequence
 from typing import Protocol
 
-REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "uv")
+REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
 
 
 class StepRunner(Protocol):

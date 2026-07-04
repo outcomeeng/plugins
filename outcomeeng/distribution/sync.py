@@ -416,8 +416,7 @@ def sync(
         try:
             topology_errors = topology_probe()
         except (InstalledSetError, OSError) as exc:
-            print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-            return 1
+            return _handle_topology_probe_error(single_flight, exc)
         if not topology_errors:
             print(
                 f"No plugin distribution changes since {base_ref}; "
@@ -440,6 +439,39 @@ def sync(
     else:
         reason = RefreshReason.SOURCE_CONFIGURATION_CHANGED
     return _run_refresh_sequence(runner, single_flight, reason=reason)
+
+
+def _handle_topology_probe_error(
+    single_flight: SingleFlight,
+    exc: InstalledSetError | OSError,
+) -> int:
+    try:
+        claim = single_flight.acquire()
+    except OSError as lock_error:
+        print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+        print(f"Marketplace refresh lock failed: {lock_error}", file=sys.stderr)
+        return 1
+    if not claim.acquired:
+        if claim.blocked_by_active_owner:
+            print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+            print(SYNC_ALREADY_RUNNING_MESSAGE)
+            if claim.detail:
+                print(f"Active sync: {claim.detail}")
+            return 0
+        print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+        print("Marketplace refresh lock changed during acquisition", file=sys.stderr)
+        return 1
+    try:
+        single_flight.release()
+    except OSError as release_error:
+        print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+        print(
+            f"Marketplace refresh lock release failed: {release_error}",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+    return 1
 
 
 def _run_refresh_sequence(
