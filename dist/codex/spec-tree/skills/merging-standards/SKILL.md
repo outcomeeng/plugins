@@ -343,6 +343,7 @@ The merge flag follows the overlay when it declares one (`--merge` or `--squash`
 
 </merge_cleanup>
 
+<step name="pr_check_wait">
 <pr_check_wait>
 
 Waiting for PR checks or the current-head CI review uses exactly one foreground command:
@@ -356,6 +357,9 @@ After that command exits, immediately run the full managing inspection again bef
 Forbidden waits: shell `sleep`, `gh run watch`, background keep-alives, and `until`/`while` polling. Never wrap `gh pr checks --watch` in a loop or background it. The Bash tool does not reliably reap detached subprocess trees across turns; fork-bomb-class accumulation results when those patterns are repeated.
 
 </pr_check_wait>
+</step>
+
+<step name="review_inspection">
 
 <review_inspection>
 
@@ -378,6 +382,7 @@ Compare timestamps against the most recent push. Entries after that push are re-
 
 </review_inspection>
 
+</step>
 <review_classification>
 
 Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.

@@ -2,7 +2,7 @@
 
 PROVIDES ruff linting for Python files and strict mypy plus standard pyright type checking for the importable product packages
 SO THAT validation scripts, test harnesses, and utility modules in `outcomeeng`, `outcomeeng_testing`, and `outcomeeng_evals`
-CAN maintain type-correct, lint-clean code enforced by `just check`
+CAN maintain type-correct, lint-clean code enforced by `just check-full`
 
 ## Assertions
 
@@ -14,4 +14,4 @@ CAN maintain type-correct, lint-clean code enforced by `just check`
 
 ### Compliance
 
-- ALWAYS: `ruff check`, `mypy --strict` over the importable product packages, and `pyright` over the importable product packages run as named steps in `just check` — static analysis must block the quality gate ([test](tests/test_python_code_quality.compliance.l2.py))
+- ALWAYS: `ruff check`, `mypy --strict` over the importable product packages, and `pyright` over the importable product packages run as named steps in `just check-full` — static analysis must block the quality gate ([test](tests/test_python_code_quality.compliance.l2.py))

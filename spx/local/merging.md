@@ -23,7 +23,7 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 
 - Spec-only (specs, decisions, coordination notes, Markdown): `spx validation markdown` and `spx spec status --format json`.
 - Skill/doc Markdown under `src/plugins/` or `dist/`: `just check-skills` and `just docs-check`.
-- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
+- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check-full` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
 
 ## Governance surfaces (base-sync review reuse)
 

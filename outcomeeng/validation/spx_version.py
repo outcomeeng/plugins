@@ -11,7 +11,7 @@ an opaque test failure against the pinned CLI or as a consumer-side regression.
 lowest published spx version whose capabilities the skills and tests depend on.
 This step reads the version the CI workflow pins (``SPX_VERSION`` in
 ``.github/workflows/check.yml``) and fails when the pin falls below the floor, so
-the gap is named in the same ``just check`` a contributor runs before merge
+the gap is named in the same ``just check-full`` CI runs before merge
 ("skills require spx >= X, CI pins Y") rather than left to a downstream test.
 
 The floor rises only when a skill begins to depend on a newer capability. Because

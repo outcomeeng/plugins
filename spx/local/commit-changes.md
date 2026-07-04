@@ -72,7 +72,7 @@ The `bump*` recipes take two **positional** arguments — `base_ref` (default `o
 
 **Segment auto-detection is structural.** `just bump` keys on structure, not on a change's semantic weight: a plugin that gains, loses, or renames a skill, command, agent, or manifest detects `minor`; every other plugin-distribution change detects `patch`. One run can write `minor` for one changed plugin and `patch` for another. It NEVER selects `major`. It also cannot recognize a non-structural change the policy still treats as `minor` — a **major functional change** or **significant user experience improvement** per `## Version Management` (for example a new claim mechanism inside an existing skill) gains no skill/command/agent/manifest, so `just bump` detects `patch`; pass `just bump origin/main minor` for it. Giving an explicit positional `segment` (`major`/`minor`/`patch`) forces that segment for every changed plugin and warns on stderr for any plugin whose detected segment differed. In `## Version Bump Examples` below, the structural rows (new command, new skill) are what auto-detection produces; a row marked "not structural" needs the positional `minor` override.
 
-**`bump-check` is local, not a CI gate.** The quality gate (`just check`) does not run `bump-check`, so a missing or wrong version is NOT caught by CI — run `just bump` (or at least `just bump-check`) yourself before pushing.
+**`bump-check` is local, not a CI gate.** The quality gate (`just check-full`) does not run `bump-check`, so a missing or wrong version is NOT caught by CI — run `just bump` (or at least `just bump-check`) yourself before pushing.
 
 **Marketplace catalogs** are separate from the version bump and are still hand-edited only when ADDING or REMOVING a plugin (not on every version change):
 
@@ -81,7 +81,7 @@ The `bump*` recipes take two **positional** arguments — `base_ref` (default `o
 | `.claude-plugin/marketplace.json`  | Claude Code |
 | `.agents/plugins/marketplace.json` | Codex       |
 
-`just check` runs `validate_plugins`, which exits non-zero if a plugin directory is missing from either catalog.
+`just check-full` runs `validate_plugins`, which exits non-zero if a plugin directory is missing from either catalog.
 
 ## Version Bump Workflow
 

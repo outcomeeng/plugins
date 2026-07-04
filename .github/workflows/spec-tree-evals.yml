@@ -26,7 +26,7 @@
 # claude to exfiltrate the token, so only trusted authors' PRs execute.
 #
 # Scope: the workflow discovers eval.toml files under EVALS_ROOT and asks the
-# `outcomeeng-evals plan` command which suites and cases to run. PR runs use
+# `outcomeeng-evals ci` command which suites and cases to run. PR runs use
 # changed paths and each suite's `owned_paths` / `smoke_cases` metadata, so a
 # skill-only edit runs a small canary set. Eval-definition changes and harness
 # changes run the full affected suites. Push, schedule, and manual runs use the
@@ -274,69 +274,18 @@ jobs:
             : > changed-paths.txt
           fi
 
-      - name: Plan eval suites
+      - name: Run eval suites
         env:
           CI_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
         run: |
           set -euo pipefail
-          uv run outcomeeng-evals plan "$EVALS_ROOT" \
+          uv run outcomeeng-evals ci "$EVALS_ROOT" \
             --mode "$CI_MODE" \
             --changed-paths-file changed-paths.txt \
             --default-plugin-dir "$PLUGIN_DIR" \
-            > eval-plan.json
-          python3 -m json.tool eval-plan.json
-
-      - name: Run eval suites
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          import json
-          import os
-          import subprocess
-          import sys
-
-          with open("eval-plan.json", encoding="utf-8") as fh:
-              plan = json.load(fh)
-
-          if not plan:
-              print("No eval suites selected for this change.")
-              sys.exit(0)
-
-          print(f"Selected {len(plan)} eval suite invocation(s):")
-          for item in plan:
-              case_suffix = ""
-              if item["case_ids"]:
-                  case_suffix = " cases=" + ",".join(item["case_ids"])
-              print(f"  {item['eval_toml']} plugin={item['plugin_dir']}{case_suffix}")
-
-          failed = False
-          for item in plan:
-              print(f"::group::eval {item['eval_toml']}")
-              command = [
-                  "uv",
-                  "run",
-                  "outcomeeng-evals",
-                  "run",
-                  item["eval_toml"],
-                  "--plugin-dir",
-                  item["plugin_dir"],
-                  "--workers",
-                  os.environ["WORKERS"],
-                  "--max-budget-usd",
-                  os.environ["MAX_BUDGET_USD"],
-                  "--timeout-seconds",
-                  os.environ["TIMEOUT_SECONDS"],
-              ]
-              for case_id in item["case_ids"]:
-                  command.extend(("--case-id", case_id))
-              completed = subprocess.run(command, check=False)
-              if completed.returncode != 0:
-                  print(f"::error::Eval suite below threshold or errored: {item['eval_toml']}")
-                  failed = True
-              print("::endgroup::")
-
-          sys.exit(1 if failed else 0)
-          PY
+            --workers "$WORKERS" \
+            --max-budget-usd "$MAX_BUDGET_USD" \
+            --timeout-seconds "$TIMEOUT_SECONDS"
 
       - name: Commit history.jsonl appends
         # Runs even when a suite fails (a failed run still records a history

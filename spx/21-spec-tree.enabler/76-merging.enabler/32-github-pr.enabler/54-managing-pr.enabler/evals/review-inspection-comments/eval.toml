@@ -1,7 +1,7 @@
 title = "review-inspection-comments"
 cases = "cases.jsonl"
 prompt = "prompt.md"
-plugin_dir = "dist/claude/spec-tree"
+plugin_dir = "dist/claude/spec-tree/skills/merging-standards"
 owned_paths = [
   "spx/15-merging.pdr.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**",
@@ -13,3 +13,9 @@ owned_paths = [
 smoke_cases = ["complete-inspection-includes-comments-and-thread-api", "missing-comments-field-is-incomplete"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "dist/claude/spec-tree/skills/merging-standards/SKILL.md"
+section = "review_inspection"
+template = "prompt.template.md"

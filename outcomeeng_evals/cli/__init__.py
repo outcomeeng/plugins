@@ -8,6 +8,7 @@ The ``main`` group exposes these subcommands:
 - ``view`` — open a run's HTML report (or the latest one).
 - ``discover`` — walk a directory tree and list every eval.toml found.
 - ``plan`` — select eval suites and cases for CI.
+- ``ci`` — plan and run eval suites for CI.
 - ``materialize-prompts`` — write or check producer-derived prompt.md files.
 """
 
@@ -16,6 +17,7 @@ from __future__ import annotations
 import click
 
 from outcomeeng_evals.cli.commands.discover import discover_command
+from outcomeeng_evals.cli.commands.ci import ci_command
 from outcomeeng_evals.cli.commands.history import history_command
 from outcomeeng_evals.cli.commands.materialize_prompts import (
     materialize_prompts_command,
@@ -34,5 +36,6 @@ main.add_command(run_command)
 main.add_command(history_command)
 main.add_command(view_command)
 main.add_command(discover_command)
+main.add_command(ci_command)
 main.add_command(plan_command)
 main.add_command(materialize_prompts_command)

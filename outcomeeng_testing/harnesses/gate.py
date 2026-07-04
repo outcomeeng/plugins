@@ -13,11 +13,12 @@ Recording doubles let `l1` tests assert on those interactions.
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from outcomeeng.validation import ProcessHandle, ProcessSpawner
+from outcomeeng.validation._git import GitCommandResult
 
 
 @dataclass
@@ -80,6 +81,21 @@ class RecordingSpawner:
         handle = RecordingHandle(pid=self._next_pid + index, exit_code=exit_code)
         self.handles.append(handle)
         return handle
+
+
+@dataclass
+class RecordingGitRunner:
+    """A git runner double keyed by command argv."""
+
+    outputs: Mapping[tuple[str, ...], GitCommandResult]
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+    repos: list[Path] = field(default_factory=list)
+
+    def __call__(self, command: Sequence[str], repo: Path) -> GitCommandResult:
+        key = tuple(command)
+        self.calls.append(key)
+        self.repos.append(repo)
+        return self.outputs[key]
 
 
 @dataclass
@@ -147,6 +163,7 @@ class HangingHandle:
 
 __all__ = [
     "HangingHandle",
+    "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",
     "SignalRaisingSpawner",

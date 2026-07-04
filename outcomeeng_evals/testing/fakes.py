@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
+import os
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Final
 
 from outcomeeng_evals.runner import ModelRunner, RunMetadata, RunResult
+
+RECORDING_UV_COMMANDS_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_COMMANDS"
+RECORDING_UV_EXIT_CODE_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_EXIT_CODE"
+RECORDING_UV_SCRIPT = """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+record_path = Path(os.environ["OUTCOMEENG_EVALS_RECORDING_UV_COMMANDS"])
+with record_path.open("a", encoding="utf-8") as output:
+    output.write(json.dumps(sys.argv[1:]) + "\\n")
+raise SystemExit(int(os.environ.get("OUTCOMEENG_EVALS_RECORDING_UV_EXIT_CODE", "0")))
+"""
 
 
 @dataclass(frozen=True)
@@ -64,3 +84,61 @@ class RecordingRunner:
         result = self.inner.run(prompt)
         self.transcripts.append((prompt, result))
         return result
+
+
+@dataclass
+class RecordingCommandRunner:
+    """Callable command runner that records argv tuples and returns scripted exits."""
+
+    exit_codes: Sequence[int] = ()
+    default_exit_code: int = os.EX_OK
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+
+    def __call__(self, command: Sequence[str]) -> int:
+        index = len(self.calls)
+        self.calls.append(tuple(command))
+        return (
+            self.exit_codes[index]
+            if index < len(self.exit_codes)
+            else self.default_exit_code
+        )
+
+
+@dataclass(frozen=True)
+class RecordingUvExecutable:
+    """Temporary ``uv`` executable that records argv and exits with a fixed code."""
+
+    bin_dir: Path
+    record_path: Path
+    env: dict[str, str]
+
+    def commands(self) -> tuple[tuple[str, ...], ...]:
+        if not self.record_path.exists():
+            return ()
+        return tuple(
+            tuple(json.loads(line))
+            for line in self.record_path.read_text(encoding="utf-8").splitlines()
+        )
+
+
+def make_recording_uv_executable(
+    tmp_path: Path,
+    *,
+    exit_code: int = os.EX_OK,
+) -> RecordingUvExecutable:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    uv_path = bin_dir / "uv"
+    uv_path.write_text(RECORDING_UV_SCRIPT, encoding="utf-8")
+    uv_path.chmod(0o755)
+    record_path = tmp_path / "uv-commands.jsonl"
+    env = {
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+        RECORDING_UV_COMMANDS_ENV: str(record_path),
+        RECORDING_UV_EXIT_CODE_ENV: str(exit_code),
+    }
+    return RecordingUvExecutable(
+        bin_dir=bin_dir,
+        record_path=record_path,
+        env=env,
+    )

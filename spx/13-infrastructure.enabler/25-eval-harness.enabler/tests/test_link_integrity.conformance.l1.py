@@ -4,7 +4,7 @@ The walker scans markdown files for ``[eval](path)`` and ``[test](path)``
 references and asserts each target resolves to an existing, correctly
 placed and named file (an ``eval.toml`` under ``evals/{rule}/``, or a
 pytest collectable under ``tests/``). The marketplace script under
-``outcomeeng/scripts/`` invokes the walker; ``just check`` consumes its
+``outcomeeng/scripts/`` invokes the walker; ``just check-full`` consumes its
 exit code.
 """
 

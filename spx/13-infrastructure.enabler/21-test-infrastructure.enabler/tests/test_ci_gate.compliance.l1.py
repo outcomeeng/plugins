@@ -3,8 +3,8 @@
 Verifies that the GitHub Actions quality-gate workflow enforces the full gate
 on every path to `main`, per the governing decision
 `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`.
-The workflow runs the gate by invoking the source-owned check recipe through
-`just check` rather than a re-enumerated subset of the recipe step constants.
+The workflow runs the gate by invoking the source-owned full gate recipe through
+`just check-full` rather than a re-enumerated subset of the recipe step constants.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import yaml  # type: ignore[import-untyped]
 
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
-    RECIPE_CHECK,
+    RECIPE_CHECK_FULL,
     SHELLCHECK_ARGV,
     VALIDATION_STEPS,
 )
@@ -92,7 +92,7 @@ def test_gate_workflow_invokes_the_full_gate_recipe() -> None:
         cast("str", step["run"]) for step in _gate_steps(_workflow()) if "run" in step
     ]
 
-    assert any(run.strip() == f"{JUST_BINARY} {RECIPE_CHECK}" for run in runs)
+    assert any(run.strip() == f"{JUST_BINARY} {RECIPE_CHECK_FULL}" for run in runs)
 
 
 def test_gate_declares_workflow_and_shell_lint_steps() -> None:

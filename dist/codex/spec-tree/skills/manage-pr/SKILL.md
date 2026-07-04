@@ -3,7 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
-allowed-tools: Read, Glob, Grep, Edit, Write, Skill, request_user_input, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, Skill, request_user_input, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*)
 ---
 
 <objective>
@@ -53,6 +53,8 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 Then re-run /merging-standards `<branch_hygiene>` before the push — hygiene applies on every push, not only at creation. Push via /merging-standards `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form. The PR is ready throughout — a follow-up push goes to the ready PR and re-fires CI; there is no draft toggle.
 
+<step name="pr_check_wait">
+
 **Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. `/manage-pr` owns PR check and review waits. Run the exact foreground wait command from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
 
 ```bash
@@ -60,6 +62,10 @@ gh pr checks <pr-number> --watch --fail-fast --interval 30
 ```
 
 The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
+
+When Step 8 emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action.
+
+</step>
 
 **Step 8 — Evaluate the merge gates and act.** Apply /merging-standards `<authority_gates>`: `MERGE_READINESS`, then `PRODUCTION_READINESS`. Declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases are handled after merge in Step 9.
 

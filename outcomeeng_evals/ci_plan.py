@@ -81,6 +81,18 @@ def plan_to_jsonable(items: list[EvalPlanItem]) -> list[dict[str, object]]:
     ]
 
 
+def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
+    """Read repository-relative changed paths from a newline-delimited file."""
+
+    if path is None:
+        return ()
+    return tuple(
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
+
+
 def _pr_selection(
     *,
     eval_toml: Path,

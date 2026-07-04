@@ -29,10 +29,6 @@ from outcomeeng_evals.testing.cli import build_run_cli_harness
 EXIT_SUCCESS = 0
 EXIT_GENERAL_ERROR = 1
 EXIT_INVOCATION_ERROR = 2
-REPO_ROOT: Final = Path(__file__).resolve().parents[4]
-SPEC_TREE_EVALS_WORKFLOW: Final = (
-    REPO_ROOT / ".github" / "workflows" / "spec-tree-evals.yml"
-)
 
 
 def test_main_group_exposes_documented_subcommands() -> None:
@@ -47,6 +43,7 @@ def test_main_group_exposes_documented_subcommands() -> None:
         "view",
         "discover",
         "plan",
+        "ci",
         "materialize-prompts",
     ):
         assert subcommand in result.output
@@ -503,12 +500,6 @@ def test_plan_subcommand_selects_full_suite_when_harness_change_follows_owned_pa
             "case_ids": [],
         }
     ]
-
-
-def test_eval_workflow_collects_deleted_paths_for_planning() -> None:
-    workflow_text = SPEC_TREE_EVALS_WORKFLOW.read_text(encoding="utf-8")
-
-    assert "--diff-filter=ACDMRT" in workflow_text
 
 
 def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -> None:

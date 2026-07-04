@@ -1,7 +1,7 @@
 title = "pr-check-wait"
 cases = "cases.jsonl"
 prompt = "prompt.md"
-plugin_dir = "dist/claude/spec-tree"
+plugin_dir = "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/evals/pr-check-wait"
 owned_paths = [
   "spx/13-plugin-and-runtime-conventions.adr.md",
   "spx/15-merging.pdr.md",
