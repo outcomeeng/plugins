@@ -154,6 +154,41 @@ def test_real_source_root_selects_default_branch_worktree(
     assert sync_module._real_source_root() == repo_root
 
 
+def test_real_source_root_preserves_slash_containing_default_branch(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path / "plugins"
+    feature_root = tmp_path / "plugins-d"
+    repo_root.mkdir()
+    _git(repo_root, "init", "--initial-branch", "release/main", "--quiet")
+    _git(repo_root, "config", "user.email", "test@example.invalid")
+    _git(repo_root, "config", "user.name", "Test")
+    (repo_root / "README.md").write_text("seed\n", encoding="utf-8")
+    _git(repo_root, "add", "README.md")
+    _git(repo_root, "commit", "-m", "seed", "--quiet")
+    _git(repo_root, "update-ref", "refs/remotes/origin/release/main", "HEAD")
+    _git(
+        repo_root,
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/release/main",
+    )
+    _git(repo_root, "branch", "work/manage-runtime-marketplaces")
+    _git(
+        repo_root,
+        "worktree",
+        "add",
+        "--quiet",
+        str(feature_root),
+        "work/manage-runtime-marketplaces",
+    )
+
+    monkeypatch.chdir(feature_root)
+
+    assert sync_module._real_source_root() == repo_root
+
+
 def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
     listing = "\n".join(
         [
