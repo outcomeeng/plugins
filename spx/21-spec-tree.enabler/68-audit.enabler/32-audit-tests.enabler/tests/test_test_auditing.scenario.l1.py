@@ -35,6 +35,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     typescript_regex_literal_declarations_are_preserved,
     typescript_semicolonless_declarations_are_split,
     typescript_catch_declarations_are_detected,
+    typescript_same_line_statement_declarations_are_detected,
     typescript_template_literal_declarations_are_ignored,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
@@ -163,6 +164,10 @@ def test_detects_typescript_multiline_declarations() -> None:
 
 def test_splits_typescript_semicolonless_declarations() -> None:
     assert typescript_semicolonless_declarations_are_split()
+
+
+def test_detects_typescript_same_line_statement_declarations() -> None:
+    assert typescript_same_line_statement_declarations_are_detected()
 
 
 def test_ignores_declarations_inside_typescript_template_literals() -> None:

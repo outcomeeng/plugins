@@ -398,6 +398,25 @@ const afterTernaryStatement = buildConfig()
     )
 
 
+def typescript_same_line_statement_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        (
+            "const first = buildConfig(); const second = buildConfig(); "
+            "let third = buildConfig(); var fourth = buildConfig(); "
+            "const semicolonPattern = /;/; const afterPattern = buildConfig();"
+        ),
+        Path("same-line.ts"),
+    )
+    return (
+        _has_variable(declarations, "first")
+        and _has_variable(declarations, "second")
+        and _has_variable(declarations, "third")
+        and _has_variable(declarations, "fourth")
+        and _has_variable(declarations, "semicolonPattern")
+        and _has_variable(declarations, "afterPattern")
+    )
+
+
 def typescript_template_literal_declarations_are_ignored() -> bool:
     declarations = _declarations_for_fixture(
         "typescript_template_literal_declaration.ts"

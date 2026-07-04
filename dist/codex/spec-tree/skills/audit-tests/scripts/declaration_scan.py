@@ -609,49 +609,98 @@ def _declaration_units(
     raw_lines = source.splitlines()
     for index, raw_line in enumerate(raw_lines, start=1):
         line = _strip_comments(raw_line, lexical_state)
-        if not current:
-            if not start_pattern.match(line):
-                continue
-            current = [line]
-            start_line = index
-            header_only = header_only_pattern.match(line) is not None
-            conditional_header = (
-                conditional_header_pattern.match(line) is not None
-                if conditional_header_pattern is not None
-                else False
+        for line_segment in _declaration_line_segments(line):
+            if not current:
+                if not start_pattern.match(line_segment):
+                    continue
+                current = [line_segment]
+                start_line = index
+                header_only = header_only_pattern.match(line_segment) is not None
+                conditional_header = (
+                    conditional_header_pattern.match(line_segment) is not None
+                    if conditional_header_pattern is not None
+                    else False
+                )
+            else:
+                current.append(line_segment)
+            unit = "\n".join(current)
+            complete = (
+                _declaration_header_complete(unit)
+                if header_only
+                else _conditional_declaration_header_complete(unit)
+                if conditional_header
+                else _declaration_unit_complete(unit)
             )
-        else:
-            current.append(line)
-        unit = "\n".join(current)
-        complete = (
-            _declaration_header_complete(unit)
-            if header_only
-            else _conditional_declaration_header_complete(unit)
-            if conditional_header
-            else _declaration_unit_complete(unit)
-        )
-        if (
-            complete
-            and continuation_line is not None
-            and not header_only
-            and not conditional_header
-            and _next_line_continues_declaration(
-                raw_lines,
-                index,
-                _copy_lexical_state(lexical_state),
-                continuation_line,
-            )
-        ):
-            complete = False
-        if complete:
-            units.append((start_line, unit))
-            current = []
-            start_line = 0
-            header_only = False
-            conditional_header = False
+            if (
+                complete
+                and continuation_line is not None
+                and not header_only
+                and not conditional_header
+                and _next_line_continues_declaration(
+                    raw_lines,
+                    index,
+                    _copy_lexical_state(lexical_state),
+                    continuation_line,
+                )
+            ):
+                complete = False
+            if complete:
+                units.append((start_line, unit))
+                current = []
+                start_line = 0
+                header_only = False
+                conditional_header = False
     if current:
         units.append((start_line, "\n".join(current)))
     return units
+
+
+def _declaration_line_segments(line: str) -> list[str]:
+    segments: list[str] = []
+    start = 0
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    in_regex = False
+    regex_char_class = False
+    for index, char in enumerate(line):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if in_regex:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "[":
+                regex_char_class = True
+            elif char == "]":
+                regex_char_class = False
+            elif char == "/" and not regex_char_class:
+                in_regex = False
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char == "/" and _looks_like_regex_literal_start(line, index):
+            in_regex = True
+        elif char in {"(", "[", "{"}:
+            depth += 1
+        elif char in {")", "]", "}"}:
+            depth = max(0, depth - 1)
+        elif depth == 0 and char == ";":
+            segment = line[start : index + 1]
+            if segment.strip():
+                segments.append(segment)
+            start = index + 1
+    tail = line[start:]
+    if tail.strip():
+        segments.append(tail)
+    return segments or [line]
 
 
 def _next_line_continues_declaration(
