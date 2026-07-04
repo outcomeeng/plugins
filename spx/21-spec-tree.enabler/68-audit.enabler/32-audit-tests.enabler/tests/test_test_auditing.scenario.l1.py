@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     coverage_trace_names_code_path,
     false_coupling_is_rejected,
     fixture_laundering_is_rejected,
+    helper_function_declaration_is_rejected,
     laundered_indirect_coupling_is_rejected,
     laundered_indirect_is_rejected,
     misaligned_evidence_is_rejected,
@@ -113,6 +114,10 @@ def test_rejects_prose_coupling() -> None:
 
 def test_rejects_test_owned_declarations() -> None:
     assert test_owned_declaration_is_rejected()
+
+
+def test_rejects_helper_function_declarations() -> None:
+    assert helper_function_declaration_is_rejected()
 
 
 def test_reports_positive_pattern() -> None:

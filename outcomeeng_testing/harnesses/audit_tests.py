@@ -224,6 +224,16 @@ def test_owned_declaration_is_rejected() -> bool:
     return False
 
 
+def helper_function_declaration_is_rejected() -> bool:
+    declarations = _declarations_for_fixture("async_helper_declaration.ts")
+    if not _has_function(declarations, "loadCredentials"):
+        return False
+    return (
+        audit_case_verdict(_audit_case(declarations=True)).finding_category
+        is FindingCategory.TEST_OWNED_DECLARATION
+    )
+
+
 def positive_pattern_is_reported() -> bool:
     return (
         audit_case_verdict(_audit_case(positive_pattern=True)).finding_category
