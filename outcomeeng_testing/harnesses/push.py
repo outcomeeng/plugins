@@ -13,6 +13,8 @@ Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 
 from __future__ import annotations
 
+import contextlib
+import io
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
@@ -134,6 +136,104 @@ def separator_repository_named_like_dry_run_args() -> tuple[str, ...]:
         "--",
         "-n",
         "HEAD:refs/heads/feature",
+    )
+
+
+def missing_required_tool_fails_fast_with_diagnostic() -> bool:
+    for missing_tool in REQUIRED_TOOLS:
+        runner = TracedRunner()
+        tool_probe = TracedToolProbe(
+            available=all_required_tools_available() - {missing_tool},
+            trace=runner.trace,
+        )
+        upstream_probe = ScriptedUpstreamProbe(ref=tracked_upstream_ref())
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = push(
+                ("origin", "main"),
+                runner=runner,
+                tool_probe=tool_probe,
+                upstream_probe=upstream_probe,
+            )
+
+        if not (
+            exit_code != 0
+            and runner.calls == []
+            and upstream_probe.calls == 0
+            and missing_tool in (stderr.getvalue() + stdout.getvalue())
+        ):
+            return False
+    return True
+
+
+def tool_availability_is_checked_before_upstream_or_push() -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
+
+    push(
+        ("origin", "main"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        set(tool_probe.queries) >= set(REQUIRED_TOOLS)
+        and runner.trace[: len(REQUIRED_TOOLS)] == list(all_tool_probe_invocations())
+        and upstream_probe.calls == 1
+        and runner.trace[len(REQUIRED_TOOLS)] == UPSTREAM_REF_COMMAND
+        and runner.calls[0] == ("git", "push", "origin", "main")
+    )
+
+
+def upstream_probe_runs_before_git_push() -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
+
+    push(
+        ("origin", "main"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        upstream_probe.calls == 1
+        and runner.trace[len(REQUIRED_TOOLS)] == UPSTREAM_REF_COMMAND
+        and runner.calls[0][:2] == ("git", "push")
+    )
+
+
+def sync_not_invoked_when_push_fails() -> bool:
+    runner = TracedRunner(exit_codes=(sync_skip_failure_exit_code(),))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref=tracked_upstream_ref())
+
+    exit_code = push(
+        ("origin", "main"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == sync_skip_failure_exit_code()
+        and runner.calls == [("git", "push", "origin", "main")]
+        and all(call[:3] != sync_invocation()[:3] for call in runner.calls)
     )
 
 

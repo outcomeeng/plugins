@@ -52,8 +52,10 @@ from outcomeeng.distribution.bump import (
     Segment,
     _real_change_probe,
     bump,
+    main,
 )
 from outcomeeng_testing.generators.bump import (
+    manifest_fixture_path,
     manifest_relpath,
     manifest_text,
     minor_change,
@@ -267,6 +269,348 @@ def single_manifest_case(
         tool_probe=RecordingToolProbe(available=all_tools_available()),
     )
     return SingleManifestCase(plugin=plugin, path=path, run=run)
+
+
+def missing_required_tool_fails_fast_with_diagnostic() -> bool:
+    for missing_tool in REQUIRED_TOOLS:
+        run = BumpRun(
+            change_probe=ScriptedChangeProbe(changed=patch_changes("foo")),
+            content_probe=ScriptedContentProbe(content={}),
+            manifest_reader=ScriptedManifestReader(manifests={}),
+            manifest_writer=RecordingManifestWriter(),
+            tool_probe=RecordingToolProbe(
+                available=all_tools_available() - {missing_tool}
+            ),
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = run.run()
+
+        if not (
+            exit_code != 0
+            and run.manifest_writer.writes == []
+            and run.change_probe.queries == []
+            and run.manifest_reader.queries == []
+            and missing_tool in (stderr.getvalue() + stdout.getvalue())
+        ):
+            return False
+    return True
+
+
+def tool_availability_is_probed_before_any_other_probe_or_write() -> bool:
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+    event_log: list[str] = []
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(
+            changed=patch_changes(plugin), event_log=event_log
+        ),
+        content_probe=ScriptedContentProbe(
+            content={(base_ref(), claude_path): content}, event_log=event_log
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+            event_log=event_log,
+        ),
+        manifest_writer=RecordingManifestWriter(event_log=event_log),
+        tool_probe=RecordingToolProbe(
+            available=all_tools_available(), event_log=event_log
+        ),
+    )
+
+    exit_code = run.run()
+    first_non_tool_index = next(
+        (i for i, event in enumerate(event_log) if not event.startswith("tool:")),
+        len(event_log),
+    )
+    early_tools = {
+        event.removeprefix("tool:") for event in event_log[:first_non_tool_index]
+    }
+    return exit_code == 0 and early_tools >= set(REQUIRED_TOOLS)
+
+
+def already_bumped_plugin_is_skipped_not_rewritten() -> bool:
+    case = single_manifest_case("foo", version="0.4.2", base_version="0.4.1")
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stderr(stderr):
+        exit_code = case.run.run()
+
+    return (
+        exit_code == 0
+        and case.run.manifest_writer.writes == []
+        and case.plugin in stderr.getvalue()
+    )
+
+
+def already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped() -> bool:
+    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
+    bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes("foo", "bar")),
+        content_probe=ScriptedContentProbe(
+            content={
+                (base_ref(), foo_path): manifest_text("foo", "0.4.1"),
+                (base_ref(), bar_path): manifest_text("bar", "0.4.1"),
+            },
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={
+                "foo": (
+                    ManifestRecord(
+                        path=foo_path, content=manifest_text("foo", "0.4.2")
+                    ),
+                ),
+                "bar": (
+                    ManifestRecord(
+                        path=bar_path, content=manifest_text("bar", "0.4.1")
+                    ),
+                ),
+            },
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stderr(stderr):
+        exit_code = run.run()
+
+    written = run.written()
+    return (
+        exit_code == 0
+        and foo_path not in written
+        and bar_path in written
+        and version_of(written[bar_path]) == "0.4.2"
+        and "foo" in stderr.getvalue()
+    )
+
+
+def mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> bool:
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.2",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
+    )
+
+    with contextlib.redirect_stderr(io.StringIO()):
+        exit_code = case.run.run()
+
+    written = case.run.written()
+    return (
+        exit_code == 0
+        and set(written) == {case.claude_path, case.codex_path}
+        and version_of(written[case.claude_path]) == "0.4.3"
+        and version_of(written[case.codex_path]) == "0.4.3"
+    )
+
+
+def mixed_dual_manifest_plugin_fails_check() -> bool:
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.2",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
+    )
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stderr(stderr):
+        exit_code = case.run.run(mode=Mode.CHECK)
+
+    return (
+        exit_code == 1
+        and case.run.manifest_writer.writes == []
+        and case.plugin in stderr.getvalue()
+    )
+
+
+def already_bumped_plugin_skipped_in_dry_run() -> bool:
+    case = single_manifest_case("foo", version="0.4.2", base_version="0.4.1")
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stderr(stderr):
+        exit_code = case.run.run(mode=Mode.DRY_RUN)
+
+    return (
+        exit_code == 0
+        and case.run.manifest_writer.writes == []
+        and case.plugin in stderr.getvalue()
+    )
+
+
+def dry_run_skips_already_bumped_plugin_and_reports_the_other() -> bool:
+    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
+    bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes("foo", "bar")),
+        content_probe=ScriptedContentProbe(
+            content={
+                (base_ref(), foo_path): manifest_text("foo", "0.4.1"),
+                (base_ref(), bar_path): manifest_text("bar", "0.4.1"),
+            },
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={
+                "foo": (
+                    ManifestRecord(
+                        path=foo_path, content=manifest_text("foo", "0.4.2")
+                    ),
+                ),
+                "bar": (
+                    ManifestRecord(
+                        path=bar_path, content=manifest_text("bar", "0.4.1")
+                    ),
+                ),
+            },
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        exit_code = run.run(mode=Mode.DRY_RUN)
+
+    return (
+        exit_code == 0
+        and run.manifest_writer.writes == []
+        and "bar" in stdout.getvalue()
+        and "0.4.1 -> 0.4.2" in stdout.getvalue()
+        and "foo" in stderr.getvalue()
+    )
+
+
+def unchanged_plugins_never_have_manifests_written() -> bool:
+    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
+    foo_content = manifest_text("foo", "0.4.1")
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes("foo")),
+        content_probe=ScriptedContentProbe(
+            content={(base_ref(), foo_path): foo_content},
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={
+                "foo": (ManifestRecord(path=foo_path, content=foo_content),),
+                "bar": (
+                    ManifestRecord(
+                        path=manifest_relpath("bar", CLAUDE_MANIFEST),
+                        content=manifest_text("bar", "0.4.1"),
+                    ),
+                ),
+                "baz": (
+                    ManifestRecord(
+                        path=manifest_relpath("baz", CLAUDE_MANIFEST),
+                        content=manifest_text("baz", "0.4.1"),
+                    ),
+                ),
+            },
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+
+    exit_code = run.run()
+    written_paths = [path for path, _ in run.manifest_writer.writes]
+    return (
+        exit_code == 0
+        and written_paths == [foo_path]
+        and run.manifest_reader.queries == ["foo"]
+    )
+
+
+def dual_manifest_plugin_writes_every_owned_manifest() -> bool:
+    return dual_manifest_plugin_writes_both_with_same_new_version()
+
+
+def non_version_content_is_preserved_character_for_character() -> bool:
+    plugin = "fixture-plugin"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    original = manifest_fixture_path("representative_plugin.json").read_text()
+    old_version = version_of(original)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
+        content_probe=ScriptedContentProbe(
+            content={(base_ref(), claude_path): original},
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={plugin: (ManifestRecord(path=claude_path, content=original),)},
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+
+    exit_code = run.run()
+    written = run.written()
+    new_content = written[claude_path]
+    new_version = version_of(new_content)
+    expected = original.replace(
+        f'"version": "{old_version}"',
+        f'"version": "{new_version}"',
+        1,
+    )
+    return exit_code == 0 and new_content == expected
+
+
+def read_only_modes_never_write_regardless_of_plugin_state() -> bool:
+    for mode in (Mode.DRY_RUN, Mode.CHECK):
+        for wt_version, base_version in (("0.4.1", "0.4.1"), ("0.4.2", "0.4.1")):
+            case = single_manifest_case(
+                "foo", version=wt_version, base_version=base_version
+            )
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                case.run.run(mode=mode)
+            if case.run.manifest_writer.writes != []:
+                return False
+    return True
+
+
+def dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary() -> bool:
+    stderr = io.StringIO()
+
+    try:
+        with contextlib.redirect_stderr(stderr):
+            main(["--dry-run", "--check"])
+    except SystemExit as exc:
+        return exc.code != 0 and "not allowed with" in stderr.getvalue()
+    return False
+
+
+def auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> bool:
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+    changes = (
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/skills/new/SKILL.md"),
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/commands/new-command.md"),
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/agents/new-agent.md"),
+        ChangedPath(
+            FileStatus.ADDED, f"src/plugins/{plugin}/.codex-plugin/plugin.json"
+        ),
+    )
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed={plugin: changes}),
+        content_probe=ScriptedContentProbe(
+            content={(base_ref(), claude_path): content},
+        ),
+        manifest_reader=ScriptedManifestReader(
+            manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+
+    exit_code = run.run(segment=None)
+    return exit_code == 0 and version_of(run.written()[claude_path]) == "0.5.0"
 
 
 def only_changed_plugin_manifests_are_written() -> bool:
