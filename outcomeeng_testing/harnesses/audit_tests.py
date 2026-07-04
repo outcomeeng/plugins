@@ -424,7 +424,9 @@ def typescript_same_line_statement_declarations_are_detected() -> bool:
         (
             "const first = buildConfig(); const second = buildConfig(); "
             "let third = buildConfig(); var fourth = buildConfig(); "
-            "const semicolonPattern = /;/; const afterPattern = buildConfig();"
+            "const semicolonPattern = /;/; const afterPattern = buildConfig(); "
+            'it("checks", () => { const inlineExpected = buildConfig(); '
+            "expect(actual()).toEqual(inlineExpected); });"
         ),
         Path("same-line.ts"),
     )
@@ -435,6 +437,7 @@ def typescript_same_line_statement_declarations_are_detected() -> bool:
         and _has_variable(declarations, "fourth")
         and _has_variable(declarations, "semicolonPattern")
         and _has_variable(declarations, "afterPattern")
+        and _has_variable(declarations, "inlineExpected")
     )
 
 

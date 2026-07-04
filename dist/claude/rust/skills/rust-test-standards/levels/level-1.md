@@ -93,11 +93,15 @@ fn loads_config_from_temp_dir() {
 <property_pattern>
 
 ```rust
-proptest! {
-    #[test]
-    fn canonical_key_roundtrips(input in "[a-z0-9_-]{1,32}") {
+use product_testing::generators::keys::canonical_key_strings;
+use product_testing::harnesses::properties::check_property;
+
+#[test]
+fn canonical_key_roundtrips() {
+    check_property(canonical_key_strings(), |input| {
         prop_assert_eq!(CanonicalKey::parse(&input).unwrap().as_str(), input);
-    }
+        Ok(())
+    });
 }
 ```
 

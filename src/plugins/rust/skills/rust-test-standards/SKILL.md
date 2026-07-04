@@ -306,11 +306,15 @@ fn loads_yaml_from_temp_dir() {
 Use `proptest` for universal invariants:
 
 ```rust
-proptest! {
-    #[test]
-    fn config_roundtrips(input in valid_config_strategy()) {
+use product_testing::generators::configs::valid_config_strategy;
+use product_testing::harnesses::properties::check_property;
+
+#[test]
+fn config_roundtrips() {
+    check_property(valid_config_strategy(), |input| {
         prop_assert_eq!(decode_config(&encode_config(&input).unwrap()).unwrap(), input);
-    }
+        Ok(())
+    });
 }
 ```
 

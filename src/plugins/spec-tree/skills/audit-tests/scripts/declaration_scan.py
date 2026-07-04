@@ -709,7 +709,137 @@ def _declaration_line_segments(line: str) -> list[str]:
     tail = line[start:]
     if tail.strip():
         segments.append(tail)
-    return segments or [line]
+    return _with_nested_declaration_segments(segments or [line])
+
+
+def _with_nested_declaration_segments(segments: list[str]) -> list[str]:
+    expanded: list[str] = []
+    for segment in segments:
+        expanded.append(segment)
+        expanded.extend(_nested_declaration_segments(segment))
+    return expanded
+
+
+def _nested_declaration_segments(segment: str) -> list[str]:
+    nested: list[str] = []
+    for start in _nested_declaration_start_indices(segment):
+        if not segment[:start].strip():
+            continue
+        nested_segment = segment[start : _nested_declaration_end(segment, start)]
+        if nested_segment.strip():
+            nested.append(nested_segment)
+    return nested
+
+
+def _nested_declaration_start_indices(segment: str) -> list[int]:
+    starts: list[int] = []
+    quote: str | None = None
+    escaped = False
+    in_regex = False
+    regex_char_class = False
+    index = 0
+    while index < len(segment):
+        char = segment[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if in_regex:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "[":
+                regex_char_class = True
+            elif char == "]":
+                regex_char_class = False
+            elif char == "/" and not regex_char_class:
+                in_regex = False
+            index += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            index += 1
+            continue
+        if char == "/" and _looks_like_regex_literal_start(segment, index):
+            in_regex = True
+            index += 1
+            continue
+        token = _declaration_token_at(segment, index)
+        if token is not None and _declaration_token_has_nested_prefix(segment, index):
+            starts.append(index)
+            index += len(token)
+            continue
+        index += 1
+    return starts
+
+
+def _declaration_token_at(segment: str, index: int) -> str | None:
+    for token in ("const", "let", "var", "function", "static", "fn"):
+        if not segment.startswith(token, index):
+            continue
+        before = segment[index - 1] if index > 0 else ""
+        after_index = index + len(token)
+        after = segment[after_index] if after_index < len(segment) else ""
+        if (before and (before.isalnum() or before in "_$")) or (
+            after and (after.isalnum() or after in "_$")
+        ):
+            continue
+        return token
+    return None
+
+
+def _declaration_token_has_nested_prefix(segment: str, index: int) -> bool:
+    prefix = segment[:index].rstrip()
+    return bool(prefix) and prefix[-1] in "{;"
+
+
+def _nested_declaration_end(segment: str, start: int) -> int:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    in_regex = False
+    regex_char_class = False
+    for index in range(start, len(segment)):
+        char = segment[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if in_regex:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "[":
+                regex_char_class = True
+            elif char == "]":
+                regex_char_class = False
+            elif char == "/" and not regex_char_class:
+                in_regex = False
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char == "/" and _looks_like_regex_literal_start(segment, index):
+            in_regex = True
+        elif char in {"(", "[", "{"}:
+            depth += 1
+        elif char in {")", "]", "}"}:
+            if depth == 0:
+                return index
+            depth -= 1
+        elif depth == 0 and char == ";":
+            return index + 1
+    return len(segment)
 
 
 def _next_line_continues_declaration(
