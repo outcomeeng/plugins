@@ -534,26 +534,38 @@ def command_slot_conflicts(text_a: str, text_b: str) -> tuple[str, ...]:
 
 
 def command_slots_pending_sibling_fill(text_a: str, text_b: str) -> tuple[str, ...]:
-    """Return the fixed slots filled in one text but empty or placeholder in the other.
+    """Return the fixed slots whose two bodies the next ``--write`` would reconcile.
 
-    These are the slots sibling-fill would change on the next ``--write``: the two files' slot
-    bodies are not yet identical, so the surface is drift until a write propagates the filled
-    body to its sibling.
+    A slot filled in one text but empty or placeholder in the other is filled from the filled
+    side; a slot unfilled in both texts but carrying divergent placeholder bodies is normalized to
+    the canonical placeholder. Either way the two files' slot bodies are not yet identical, so the
+    surface is drift until a write reconciles them.
     """
     pending = []
     for slot in FIXED_COMMAND_SLOTS:
-        filled_a = is_slot_filled(parse_command_slot(text_a, slot))
-        filled_b = is_slot_filled(parse_command_slot(text_b, slot))
+        body_a = parse_command_slot(text_a, slot)
+        body_b = parse_command_slot(text_b, slot)
+        filled_a, filled_b = is_slot_filled(body_a), is_slot_filled(body_b)
         if filled_a != filled_b:
+            pending.append(slot)
+        elif (
+            not filled_a
+            and not filled_b
+            and body_a is not None
+            and body_b is not None
+            and body_a != body_b
+        ):
             pending.append(slot)
     return tuple(pending)
 
 
 def reconcile_command_slots(text_a: str, text_b: str) -> tuple[str, str]:
-    """Return the two texts with each slot's body made identical by sibling-fill.
+    """Return the two texts with each slot's body reconciled to be identical.
 
     A slot filled in one file and empty or placeholder in the other is filled from the filled
-    side. A slot filled differently in both files is a conflict and is left unchanged.
+    side. A slot unfilled in both files but carrying divergent placeholder bodies is normalized to
+    the canonical placeholder in both, so the two files never carry different bodies for an
+    unfilled slot. A slot filled differently in both files is a conflict and is left unchanged.
     """
     for slot in FIXED_COMMAND_SLOTS:
         body_a = parse_command_slot(text_a, slot)
@@ -565,6 +577,10 @@ def reconcile_command_slots(text_a: str, text_b: str) -> tuple[str, str]:
             text_b = set_command_slot(text_b, slot, body_a)
         elif b_filled and not a_filled:
             text_a = set_command_slot(text_a, slot, body_b)
+        elif not a_filled and not b_filled and body_a != body_b:
+            placeholder = slot_placeholder(slot)
+            text_a = set_command_slot(text_a, slot, placeholder)
+            text_b = set_command_slot(text_b, slot, placeholder)
     return text_a, text_b
 
 

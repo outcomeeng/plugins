@@ -941,3 +941,48 @@ def test_cli_check_reports_stale_when_a_slot_is_filled_in_only_one_file(
     # --check reports stale: sibling-fill on the next --write would change the files.
     assert module.main(check) == 0
     assert capsys.readouterr().out.strip() == "stale"
+
+
+def test_write_normalizes_divergent_placeholder_bodies(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    assert run_generator_write_primary(tmp_path, template) == 0
+
+    # Both files keep the unfilled placeholder marker, but one file's placeholder body is edited
+    # to different text — both slots stay unfilled, so filled-vs-filled conflict detection and
+    # sibling-fill both ignore them.
+    claude = tmp_path / INSTRUCTION_CLAUDE
+    claude.write_text(
+        module.set_command_slot(
+            claude.read_text(encoding="utf-8"),
+            module.SLOT_MERGE,
+            f"{module.SLOT_PLACEHOLDER_MARK} a hand-edited note",
+        ),
+        encoding="utf-8",
+    )
+    check = [
+        "--template",
+        str(template),
+        "--repo-root",
+        str(tmp_path),
+        "--check",
+        "--languages",
+        LANG_PRIMARY,
+    ]
+
+    # --check reports stale: the two unfilled bodies differ.
+    assert module.main(check) == 0
+    assert capsys.readouterr().out.strip() == "stale"
+
+    # --write normalizes both to the canonical placeholder, byte-identical across the two files.
+    assert run_generator_write_primary(tmp_path, template) == 0
+    claude_body = module.parse_command_slot(
+        (tmp_path / INSTRUCTION_CLAUDE).read_text(encoding="utf-8"), module.SLOT_MERGE
+    )
+    agents_body = module.parse_command_slot(
+        (tmp_path / INSTRUCTION_AGENTS).read_text(encoding="utf-8"), module.SLOT_MERGE
+    )
+    assert claude_body == agents_body
+    assert not module.is_slot_filled(claude_body)
