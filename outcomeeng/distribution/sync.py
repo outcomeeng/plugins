@@ -200,6 +200,7 @@ class SingleFlight(Protocol):
 
 ProcessExists = Callable[[int], bool]
 ProcessIdentity = Callable[[int], str | None]
+ProcessIsZombie = Callable[[int], bool]
 
 
 @dataclass(frozen=True)
@@ -215,6 +216,7 @@ class _FileSingleFlight:
     state_dir: Path
     process_exists: ProcessExists = lambda pid: _process_exists(pid)
     process_identity: ProcessIdentity = lambda pid: _process_identity(pid)
+    process_is_zombie: ProcessIsZombie = lambda pid: _process_is_zombie(pid)
 
     @property
     def lock_path(self) -> Path:
@@ -341,11 +343,13 @@ class _FileSingleFlight:
     def _owner_is_active(self, owner: _LockOwner) -> bool:
         if not self.process_exists(owner.pid):
             return False
-        if _process_is_zombie(owner.pid):
+        if self.process_is_zombie(owner.pid):
             return False
         live_identity = self.process_identity(owner.pid)
         if live_identity is None:
-            return self.process_exists(owner.pid) and not _process_is_zombie(owner.pid)
+            return self.process_exists(owner.pid) and not self.process_is_zombie(
+                owner.pid
+            )
         return live_identity == owner.identity
 
     def _is_current_owner(self, owner: _LockOwner) -> bool:

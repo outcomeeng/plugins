@@ -869,7 +869,6 @@ def test_single_flight_identity_lookup_failure_exits_before_refresh(
 
 def test_single_flight_treats_zombie_owner_lock_as_stale(
     tmp_path: pathlib.Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     zombie_owner = sync_module._LockOwner(pid=999999, identity="zombie")
     state_dir = tmp_path / "outcomeeng"
@@ -880,15 +879,11 @@ def test_single_flight_treats_zombie_owner_lock_as_stale(
         process_identity=lambda pid: (
             f"identity:{pid}" if pid == os.getpid() else zombie_owner.identity
         ),
+        process_is_zombie=lambda pid: pid == zombie_owner.pid,
     )
     single_flight.lock_path.write_text(
         sync_module._serialize_lock_owner(zombie_owner),
         encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        sync_module,
-        "_process_is_zombie",
-        lambda pid: pid == zombie_owner.pid,
     )
 
     run = run_invalid_topology_refresh(single_flight)
