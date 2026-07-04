@@ -675,6 +675,7 @@ def test_sync_installs_codex_agents_before_installed_plugin_validation(
     source_root = write_agent_tree(tmp_path, PLUGIN_NAME, {AGENT_NAME: SOURCE_AGENT})
     target_root = tmp_path / "codex-agents"
     runner = AgentInstallRunner(source_root, target_root)
+    single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
         "abc123",
@@ -682,6 +683,7 @@ def test_sync_installs_codex_agents_before_installed_plugin_validation(
         tool_probe=ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE),
         change_probe=ScriptedChangeProbe(changed=True),
         config_repairer=ScriptedConfigRepairer(changed=False),
+        single_flight=single_flight,
     )
 
     call_indexes = {argv: index for index, argv in enumerate(runner.calls)}
@@ -689,6 +691,8 @@ def test_sync_installs_codex_agents_before_installed_plugin_validation(
 
     assert exit_code == 0
     assert installed_agents
+    assert single_flight.acquisitions == 1
+    assert single_flight.releases == 1
     assert runner.agent_present_before_validation
     assert (
         call_indexes[AGENT_INSTALL_STEP.argv] < call_indexes[INSTALL_VALIDATE_STEP.argv]
