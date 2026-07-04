@@ -64,6 +64,7 @@ LOCK_OWNER_PID_FIELD = "pid"
 LOCK_OWNER_IDENTITY_FIELD = "identity"
 PROCESS_IDENTITY_TIMEOUT_SECONDS = 2.0
 PROCESS_STATE_TIMEOUT_SECONDS = 2.0
+ZOMBIE_PROCESS_STATE_PREFIX = "Z"
 MAX_LOCK_OWNER_PID = (2**31) - 1
 
 
@@ -446,7 +447,7 @@ def _process_is_zombie(pid: int) -> bool:
         return False
     if result.returncode != 0:
         return False
-    return result.stdout.strip().startswith("Z")
+    return result.stdout.strip().startswith(ZOMBIE_PROCESS_STATE_PREFIX)
 
 
 def sync(

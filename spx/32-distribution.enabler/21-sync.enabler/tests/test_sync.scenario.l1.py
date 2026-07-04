@@ -255,6 +255,86 @@ def test_real_process_identity_observes_live_and_exited_process() -> None:
     assert sync_module._process_identity(child.pid) is None
 
 
+def test_process_is_zombie_reads_zombie_process_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner_pid = os.getpid()
+
+    def run_process(
+        argv: list[str],
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        assert argv == ["ps", "-p", str(owner_pid), "-o", "state="]
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == sync_module.PROCESS_STATE_TIMEOUT_SECONDS
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout=f"{sync_module.ZOMBIE_PROCESS_STATE_PREFIX}+\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(sync_module.subprocess, "run", run_process)
+
+    assert sync_module._process_is_zombie(owner_pid) is True
+
+
+def test_process_is_zombie_treats_process_state_failures_as_live(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner_pid = os.getpid()
+
+    def run_process(
+        argv: list[str],
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        assert argv == ["ps", "-p", str(owner_pid), "-o", "state="]
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == sync_module.PROCESS_STATE_TIMEOUT_SECONDS
+        return subprocess.CompletedProcess(argv, 1, stdout="", stderr="missing")
+
+    monkeypatch.setattr(sync_module.subprocess, "run", run_process)
+
+    assert sync_module._process_is_zombie(owner_pid) is False
+
+
+def test_process_is_zombie_treats_process_state_timeout_as_live(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner_pid = os.getpid()
+
+    def run_process(
+        argv: list[str],
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        assert argv == ["ps", "-p", str(owner_pid), "-o", "state="]
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == sync_module.PROCESS_STATE_TIMEOUT_SECONDS
+        raise subprocess.TimeoutExpired(argv, timeout)
+
+    monkeypatch.setattr(sync_module.subprocess, "run", run_process)
+
+    assert sync_module._process_is_zombie(owner_pid) is False
+
+
 def test_no_distribution_changes_with_healthy_topology_skips_refresh() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
