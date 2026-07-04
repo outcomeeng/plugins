@@ -26,6 +26,8 @@ from outcomeeng.distribution.push import (
     StepRunner,
     ToolProbe,
     UpstreamProbe,
+    parse_push_args,
+    push,
 )
 
 
@@ -133,6 +135,165 @@ def separator_repository_named_like_dry_run_args() -> tuple[str, ...]:
         "-n",
         "HEAD:refs/heads/feature",
     )
+
+
+def tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
+
+    exit_code = push(
+        ("origin", "main"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == 0
+        and upstream_probe.calls == 1
+        and runner.calls
+        == [
+            ("git", "push", "origin", "main"),
+            sync_invocation(tracked_upstream_ref()),
+        ]
+        and runner.trace
+        == [
+            *all_tool_probe_invocations(),
+            UPSTREAM_REF_COMMAND,
+            ("git", "push", "origin", "main"),
+            sync_invocation(tracked_upstream_ref()),
+        ]
+    )
+
+
+def untracked_branch_invokes_sync_without_ref() -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref=None, trace=runner.trace)
+
+    exit_code = push(
+        ("origin", "feature"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == 0
+        and upstream_probe.calls == 1
+        and runner.calls == [("git", "push", "origin", "feature"), sync_invocation()]
+    )
+
+
+def failed_git_push_propagates_exit_code_and_skips_sync() -> bool:
+    runner = TracedRunner(exit_codes=(push_failure_exit_code(),))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
+
+    exit_code = push(
+        ("origin", "main"),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return exit_code == push_failure_exit_code() and runner.calls == [
+        ("git", "push", "origin", "main")
+    ]
+
+
+def no_push_args_forwards_bare_git_push() -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(
+        ref=tracked_upstream_ref(), trace=runner.trace
+    )
+
+    exit_code = push(
+        (),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return exit_code == 0 and runner.calls == [
+        ("git", "push"),
+        sync_invocation(tracked_upstream_ref()),
+    ]
+
+
+def cli_parser_forwards_leading_git_options_verbatim() -> bool:
+    return parse_push_args(force_with_lease_push_args()) == force_with_lease_push_args()
+
+
+def cli_parser_forwards_git_help_flag_verbatim() -> bool:
+    return parse_push_args(git_help_push_args()) == git_help_push_args()
+
+
+def dry_run_push_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(dry_run_push_args())
+
+
+def clustered_short_option_dry_run_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(clustered_dry_run_push_args())
+
+
+def no_dry_run_option_restores_marketplace_refresh() -> bool:
+    return _push_refreshes_marketplace(dry_run_then_no_dry_run_push_args())
+
+
+def push_option_operand_named_like_dry_run_still_refreshes_marketplace() -> bool:
+    return _push_refreshes_marketplace(push_option_with_dry_run_operand_args())
+
+
+def repo_option_operand_named_like_dry_run_still_refreshes_marketplace() -> bool:
+    return _push_refreshes_marketplace(repo_option_with_dry_run_operand_args())
+
+
+def separator_repository_named_like_dry_run_still_refreshes_marketplace() -> bool:
+    return _push_refreshes_marketplace(separator_repository_named_like_dry_run_args())
+
+
+def _push_does_not_refresh_marketplace(args: tuple[str, ...]) -> bool:
+    runner = TracedRunner()
+
+    exit_code = push(
+        args,
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), runner.trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace),
+    )
+
+    return exit_code == 0 and runner.calls == [("git", "push", *args)]
+
+
+def _push_refreshes_marketplace(args: tuple[str, ...]) -> bool:
+    runner = TracedRunner(exit_codes=(0, 0))
+
+    exit_code = push(
+        args,
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), runner.trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace),
+    )
+
+    return exit_code == 0 and runner.calls == [
+        ("git", "push", *args),
+        sync_invocation(tracked_upstream_ref()),
+    ]
 
 
 @dataclass
