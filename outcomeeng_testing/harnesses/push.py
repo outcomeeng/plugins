@@ -83,6 +83,11 @@ def git_help_push_args() -> tuple[str, ...]:
     return ("-h",)
 
 
+def clustered_git_help_push_args() -> tuple[str, ...]:
+    """Return a clustered short option that Git treats as help."""
+    return ("-vh",)
+
+
 def long_git_help_push_args() -> tuple[str, ...]:
     """Return the long git-push help flag."""
     return (next(iter(sorted(HELP_PUSH_FLAGS - {"-h"}))),)
@@ -375,6 +380,10 @@ def long_git_help_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(long_git_help_push_args())
 
 
+def clustered_git_help_push_does_not_refresh_marketplace() -> bool:
+    return _push_does_not_refresh_marketplace(clustered_git_help_push_args())
+
+
 def git_help_push_skips_marketplace_tool_probes_and_upstream_capture() -> bool:
     runner = TracedRunner()
     tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
@@ -526,6 +535,8 @@ __all__ = [
     "TracedToolProbe",
     "all_required_tools_available",
     "all_tool_probe_invocations",
+    "clustered_git_help_push_args",
+    "clustered_git_help_push_does_not_refresh_marketplace",
     "clustered_dry_run_push_args",
     "dry_run_then_no_dry_run_push_args",
     "dry_run_push_args",

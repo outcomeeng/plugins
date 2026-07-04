@@ -145,9 +145,17 @@ def _is_help_request(push_args: Sequence[str]) -> bool:
             continue
         elif arg.startswith("-o") and arg != "-o":
             continue
-        elif arg in HELP_PUSH_FLAGS:
+        elif _is_help_arg(arg):
             return True
     return False
+
+
+def _is_help_arg(arg: str) -> bool:
+    if arg == "--help":
+        return True
+    if arg.startswith("--"):
+        return False
+    return arg.startswith("-") and "h" in arg[1:]
 
 
 def _is_dry_run_arg(arg: str) -> bool:

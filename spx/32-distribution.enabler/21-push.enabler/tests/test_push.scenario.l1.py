@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.push import (
     cli_parser_forwards_git_help_flag_verbatim,
+    clustered_git_help_push_does_not_refresh_marketplace,
     cli_parser_forwards_leading_git_options_verbatim,
     clustered_short_option_dry_run_does_not_refresh_marketplace,
     dry_run_push_does_not_refresh_marketplace,
@@ -61,6 +62,10 @@ def test_recurse_submodules_bare_help_skips_probes_and_upstream_capture() -> Non
 
 def test_long_git_help_push_does_not_refresh_marketplace() -> None:
     assert long_git_help_push_does_not_refresh_marketplace()
+
+
+def test_clustered_git_help_push_does_not_refresh_marketplace() -> None:
+    assert clustered_git_help_push_does_not_refresh_marketplace()
 
 
 def test_dry_run_push_does_not_refresh_marketplace() -> None:
