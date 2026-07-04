@@ -327,7 +327,7 @@ class _FileSingleFlight:
             return False
         live_identity = self.process_identity(owner.pid)
         if live_identity is None:
-            return True
+            return self.process_exists(owner.pid) and not _process_is_zombie(owner.pid)
         return live_identity == owner.identity
 
     def _is_current_owner(self, owner: _LockOwner) -> bool:

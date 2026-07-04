@@ -689,7 +689,35 @@ def test_single_flight_treats_zombie_owner_lock_as_stale(
     assert not single_flight.pending_path.exists()
 
 
-def test_topology_probe_failure_exits_before_refresh() -> None:
+def test_single_flight_treats_vanished_owner_lock_as_stale(
+    tmp_path: pathlib.Path,
+) -> None:
+    vanished_owner = sync_module._LockOwner(pid=999999, identity="vanished")
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    process_exists_results = iter([True, False])
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: next(process_exists_results),
+        process_identity=lambda pid: f"identity:{pid}" if pid == os.getpid() else None,
+    )
+    single_flight.lock_path.write_text(
+        sync_module._serialize_lock_owner(vanished_owner),
+        encoding="utf-8",
+    )
+
+    run = run_invalid_topology_refresh(single_flight)
+
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == list(STEP_ARGVS)
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
+def test_topology_probe_failure_exits_before_refresh(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
@@ -707,7 +735,10 @@ def test_topology_probe_failure_exits_before_refresh() -> None:
         single_flight=single_flight,
     )
 
+    captured = capsys.readouterr()
     assert exit_code == 1
+    assert "Codex cache topology check failed: bad json" in captured.err
+    assert "Marketplace refresh has no active owner" in captured.err
     assert runner.calls == []
     assert config_repairer.calls == 1
     assert change_probe.queries == [SCRIPTED_BASE_REF]
@@ -717,7 +748,9 @@ def test_topology_probe_failure_exits_before_refresh() -> None:
     assert single_flight.releases == 0
 
 
-def test_topology_filesystem_failure_exits_before_refresh() -> None:
+def test_topology_filesystem_failure_exits_before_refresh(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
@@ -735,7 +768,10 @@ def test_topology_filesystem_failure_exits_before_refresh() -> None:
         single_flight=single_flight,
     )
 
+    captured = capsys.readouterr()
     assert exit_code == 1
+    assert "Codex cache topology check failed: permission denied" in captured.err
+    assert "Marketplace refresh has no active owner" in captured.err
     assert runner.calls == []
     assert config_repairer.calls == 1
     assert change_probe.queries == [SCRIPTED_BASE_REF]
