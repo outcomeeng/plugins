@@ -27,8 +27,9 @@ from outcomeeng_testing.harnesses.audit_tests import (
     rust_match_declarations_are_detected,
     sourced_literals_pass,
     string_literal_is_rejected,
-    test_owned_declaration_is_rejected,
+    test_owned_declaration_is_rejected as owned_declaration_is_rejected,
     testability_passes_to_coupling,
+    typescript_generator_declarations_are_detected,
     typescript_loop_declarations_are_detected,
     typescript_multiline_declarations_are_detected,
     typescript_regex_literal_declarations_are_preserved,
@@ -113,7 +114,7 @@ def test_rejects_prose_coupling() -> None:
 
 
 def test_rejects_test_owned_declarations() -> None:
-    assert test_owned_declaration_is_rejected()
+    assert owned_declaration_is_rejected()
 
 
 def test_rejects_helper_function_declarations() -> None:
@@ -174,6 +175,10 @@ def test_preserves_typescript_regex_literal_declarations() -> None:
 
 def test_detects_typescript_catch_declarations() -> None:
     assert typescript_catch_declarations_are_detected()
+
+
+def test_detects_typescript_generator_declarations() -> None:
+    assert typescript_generator_declarations_are_detected()
 
 
 def test_detects_rust_destructuring_declarations() -> None:

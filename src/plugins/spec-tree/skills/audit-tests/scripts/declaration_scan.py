@@ -30,7 +30,7 @@ class Declaration:
 
 
 _TYPESCRIPT_DECLARATION = re.compile(
-    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?P<kind>const|let|var|function)\s+(?P<body>.+)",
+    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:(?P<value_kind>const|let|var)\s+|(?P<function_kind>function)\s*\*?\s+)(?P<body>.+)",
     re.DOTALL,
 )
 _TYPESCRIPT_FOR_DECLARATION = re.compile(
@@ -485,7 +485,9 @@ def _scan_typescript(source: str, path: Path) -> list[Declaration]:
             is_catch_declaration = match is not None
         if match is None:
             continue
-        kind = match.group("kind") if not is_catch_declaration else "let"
+        kind = (
+            _typescript_declaration_kind(match) if not is_catch_declaration else "let"
+        )
         if kind == "function":
             name_match = _TYPESCRIPT_IDENTIFIER.match(match.group("body"))
             if name_match is not None:
@@ -522,13 +524,23 @@ def _typescript_declaration_units(source: str) -> list[tuple[int, str]]:
     return _declaration_units(
         source,
         start_pattern=re.compile(
-            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function)|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function\s*\*?)|for\s+(?:await\s+)?\()"
         ),
         header_only_pattern=re.compile(
-            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?function|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?|for\s+(?:await\s+)?\()"
         ),
         conditional_header_pattern=None,
         continuation_line=_typescript_line_continues_declaration,
+    )
+
+
+def _typescript_declaration_kind(match: re.Match[str]) -> str:
+    groups = match.groupdict()
+    return (
+        groups.get("kind")
+        or groups.get("value_kind")
+        or groups.get("function_kind")
+        or ""
     )
 
 

@@ -429,6 +429,13 @@ def typescript_catch_declarations_are_detected() -> bool:
     return _has_variable(declarations, "error")
 
 
+def typescript_generator_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("typescript_generator_declaration.ts")
+    return _has_function(declarations, "generateCases") and _has_function(
+        declarations, "streamCases"
+    )
+
+
 def rust_destructuring_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("rust_destructuring_declaration.rs")
     return (
