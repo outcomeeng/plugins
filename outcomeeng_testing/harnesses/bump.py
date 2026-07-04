@@ -51,6 +51,7 @@ from outcomeeng.distribution.bump import (
     REQUIRED_TOOLS,
     Segment,
     _real_change_probe,
+    auto_segment,
     bump,
     main,
 )
@@ -924,6 +925,22 @@ def real_change_probe_detects_untracked_new_skill_as_added(repo: pathlib.Path) -
     )
 
 
+def real_change_probe_detects_rename_away_from_structural_path(
+    repo: pathlib.Path,
+) -> bool:
+    handle = build_repo_with_renamed_structural_path(repo)
+
+    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
+    by_path = {change.path: change for change in changes.get(handle.plugin, ())}
+    change = by_path.get(handle.renamed_path)
+    return (
+        change is not None
+        and change.status is FileStatus.RENAMED
+        and change.old_path == handle.structural_path
+        and auto_segment(changes[handle.plugin]) is Segment.MINOR
+    )
+
+
 def _check_compares_manifest_to_base_source_path(status: FileStatus) -> bool:
     src_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     base_path = src_path.removeprefix("src/")
@@ -980,15 +997,6 @@ def _single_manifest_run_for_changes(
     )
 
 
-CHANGE_DETECT_PLUGIN = "demo"
-_PLUGIN_ROOT = f"{SOURCE_PLUGINS_DIR}/{CHANGE_DETECT_PLUGIN}"
-_CODEX_PLUGIN_ROOT = f"{DIST_CODEX_PLUGINS_DIR}/{CHANGE_DETECT_PLUGIN}"
-TRACKED_MODIFIED_PATH = f"{_PLUGIN_ROOT}/skills/existing/SKILL.md"
-MANIFEST_PATH = f"{_PLUGIN_ROOT}/.claude-plugin/plugin.json"
-UNTRACKED_ADDED_PATH = f"{_PLUGIN_ROOT}/skills/new-skill/SKILL.md"
-UNTRACKED_CODEX_ADDED_PATH = f"{_CODEX_PLUGIN_ROOT}/skills/new-skill/SKILL.md"
-
-
 @dataclass(frozen=True)
 class UntrackedSkillRepo:
     """A real git repo whose working tree carries a tracked edit plus an
@@ -1006,6 +1014,17 @@ class UntrackedSkillRepo:
     tracked_modified_path: str
     untracked_added_path: str
     untracked_codex_added_path: str
+
+
+@dataclass(frozen=True)
+class RenamedStructuralRepo:
+    """A real git repo whose working tree renames a structural plugin path away."""
+
+    repo: pathlib.Path
+    base_ref: str
+    plugin: str
+    structural_path: str
+    renamed_path: str
 
 
 def _run_git(repo: pathlib.Path, *args: str) -> None:
@@ -1045,28 +1064,65 @@ def build_repo_with_untracked_new_skill(repo: pathlib.Path) -> UntrackedSkillRep
     modification; the untracked new skills are recoverable only through
     ``git ls-files --others``.
     """
+    plugin = "demo"
+    plugin_root = f"{SOURCE_PLUGINS_DIR}/{plugin}"
+    codex_plugin_root = f"{DIST_CODEX_PLUGINS_DIR}/{plugin}"
+    tracked_modified_path = f"{plugin_root}/skills/existing/SKILL.md"
+    manifest_path = f"{plugin_root}/.claude-plugin/plugin.json"
+    untracked_added_path = f"{plugin_root}/skills/new-skill/SKILL.md"
+    untracked_codex_added_path = f"{codex_plugin_root}/skills/new-skill/SKILL.md"
     repo.mkdir(parents=True, exist_ok=True)
     _run_git(repo, "init", "-q", "-b", "main")
     _run_git(repo, "config", "commit.gpgsign", "false")
-    _write(repo, MANIFEST_PATH, '{\n  "name": "demo",\n  "version": "0.1.0"\n}\n')
-    _write(repo, TRACKED_MODIFIED_PATH, "---\nname: existing\n---\n\nv1\n")
+    _write(repo, manifest_path, '{\n  "name": "demo",\n  "version": "0.1.0"\n}\n')
+    _write(repo, tracked_modified_path, "---\nname: existing\n---\n\nv1\n")
     _run_git(repo, "add", "-A")
     _run_git(repo, "commit", "-q", "-m", "base")
     base_ref = "HEAD"
 
-    (repo / TRACKED_MODIFIED_PATH).write_text(
+    (repo / tracked_modified_path).write_text(
         "---\nname: existing\n---\n\nv2\n", encoding="utf-8"
     )
-    _write(repo, UNTRACKED_ADDED_PATH, "---\nname: new-skill\n---\n\nnew\n")
-    _write(repo, UNTRACKED_CODEX_ADDED_PATH, "---\nname: new-skill\n---\n\nnew\n")
+    _write(repo, untracked_added_path, "---\nname: new-skill\n---\n\nnew\n")
+    _write(repo, untracked_codex_added_path, "---\nname: new-skill\n---\n\nnew\n")
 
     return UntrackedSkillRepo(
         repo=repo,
         base_ref=base_ref,
-        plugin=CHANGE_DETECT_PLUGIN,
-        tracked_modified_path=TRACKED_MODIFIED_PATH,
-        untracked_added_path=UNTRACKED_ADDED_PATH,
-        untracked_codex_added_path=UNTRACKED_CODEX_ADDED_PATH,
+        plugin=plugin,
+        tracked_modified_path=tracked_modified_path,
+        untracked_added_path=untracked_added_path,
+        untracked_codex_added_path=untracked_codex_added_path,
+    )
+
+
+def build_repo_with_renamed_structural_path(
+    repo: pathlib.Path,
+) -> RenamedStructuralRepo:
+    """Commit a structural plugin path, then rename it outside plugin roots."""
+    plugin = "demo"
+    plugin_root = f"{SOURCE_PLUGINS_DIR}/{plugin}"
+    structural_path = f"{plugin_root}/skills/removed/SKILL.md"
+    renamed_path = "archived/removed-skill.md"
+    manifest_path = f"{plugin_root}/.claude-plugin/plugin.json"
+    repo.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "init", "-q", "-b", "main")
+    _run_git(repo, "config", "commit.gpgsign", "false")
+    _write(repo, manifest_path, '{\n  "name": "demo",\n  "version": "0.1.0"\n}\n')
+    _write(repo, structural_path, "---\nname: removed\n---\n\nv1\n")
+    _run_git(repo, "add", "-A")
+    _run_git(repo, "commit", "-q", "-m", "base")
+    base_ref = "HEAD"
+
+    (repo / renamed_path).parent.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "mv", structural_path, renamed_path)
+
+    return RenamedStructuralRepo(
+        repo=repo,
+        base_ref=base_ref,
+        plugin=plugin,
+        structural_path=structural_path,
+        renamed_path=renamed_path,
     )
 
 
@@ -1076,11 +1132,14 @@ __all__ = [
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
+    "RenamedStructuralRepo",
     "SingleManifestCase",
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
+    "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
+    "real_change_probe_detects_rename_away_from_structural_path",
     "single_manifest_case",
 ]
 

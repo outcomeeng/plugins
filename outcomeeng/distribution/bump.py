@@ -211,9 +211,15 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     for change in changes:
         if change.status is FileStatus.MODIFIED:
             continue
-        if _is_minor_triggering_path(change.path):
+        if _change_has_minor_triggering_path(change):
             return Segment.MINOR
     return Segment.PATCH
+
+
+def _change_has_minor_triggering_path(change: ChangedPath) -> bool:
+    return _is_minor_triggering_path(change.path) or (
+        change.old_path is not None and _is_minor_triggering_path(change.old_path)
+    )
 
 
 def _is_minor_triggering_path(path: str) -> bool:
@@ -452,6 +458,8 @@ def _real_change_probe(
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
         plugin = _plugin_from_changed_path(parsed_change.path)
+        if plugin is None and parsed_change.old_path is not None:
+            plugin = _plugin_from_changed_path(parsed_change.old_path)
         if plugin is None:
             continue
         changes.setdefault(plugin, []).append(parsed_change)
