@@ -794,6 +794,46 @@ def test_topology_failure_coalesces_with_active_refresh(
     assert single_flight.releases == 0
 
 
+def test_topology_failure_without_pending_marker_exits_nonzero(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(error=OSError("permission denied"))
+    single_flight = ScriptedSingleFlight(
+        observation_claim=sync_module.SingleFlightClaim(
+            acquired=False,
+            pending_recorded=False,
+            blocked_by_active_owner=True,
+            detail="pid:123",
+        ),
+    )
+
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Codex cache topology check failed: permission denied" in captured.err
+    assert "Marketplace refresh pending marker was not recorded" in captured.err
+    assert runner.calls == []
+    assert config_repairer.calls == 1
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
+    assert topology_probe.calls == 1
+    assert single_flight.observations == 1
+    assert single_flight.acquisitions == 0
+    assert single_flight.releases == 0
+
+
 def test_config_repair_runs_refresh_without_consulting_distribution_changes() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)

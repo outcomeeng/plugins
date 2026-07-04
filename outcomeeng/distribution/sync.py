@@ -503,6 +503,12 @@ def _handle_topology_probe_error(
         return 1
     assert not claim.acquired
     if claim.blocked_by_active_owner:
+        if not claim.pending_recorded:
+            print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+            print(
+                "Marketplace refresh pending marker was not recorded", file=sys.stderr
+            )
+            return 1
         print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
         print(SYNC_ALREADY_RUNNING_MESSAGE)
         if claim.detail:
