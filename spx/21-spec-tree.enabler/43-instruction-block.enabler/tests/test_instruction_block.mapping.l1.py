@@ -14,12 +14,11 @@ import pytest
 
 from outcomeeng_testing.harnesses.instruction_block import (
     HARNESS_CLAUDE,
+    NEW_VERSION,
     TEMPLATE_LANGUAGES,
     build_template,
     load_instruction_block_module,
 )
-
-VERSION = "0.18.0"
 
 
 def _all_language_subsets() -> list[tuple[str, ...]]:
@@ -32,7 +31,9 @@ def _all_language_subsets() -> list[tuple[str, ...]]:
 @pytest.mark.parametrize("enabled", _all_language_subsets())
 def test_language_block_present_iff_enabled(enabled: tuple[str, ...]) -> None:
     module = load_instruction_block_module()
-    rendered = module.render(build_template(VERSION), enabled, VERSION, HARNESS_CLAUDE)
+    rendered = module.render(
+        build_template(NEW_VERSION), enabled, NEW_VERSION, HARNESS_CLAUDE
+    )
     for language in TEMPLATE_LANGUAGES:
         heading = f"### {language.capitalize()}"
         assert (heading in rendered) is (language in enabled)
@@ -58,7 +59,8 @@ def test_detected_language_set_is_the_mapped_extensions() -> None:
 def test_each_fixed_slot_name_maps_to_its_recognized_fence() -> None:
     module = load_instruction_block_module()
     scaffolded = module.ensure_slot_fences("")
-    # Every fixed slot name maps to a recognized `<!-- SPEC-TREE:{slot} -->` fence.
+    # Every fixed slot name maps to a recognized slot fence — the module's own source-owned
+    # `slot_open_marker`, never a fence format re-spelled here.
     present = tuple(
         slot
         for slot in module.FIXED_COMMAND_SLOTS
@@ -66,7 +68,7 @@ def test_each_fixed_slot_name_maps_to_its_recognized_fence() -> None:
     )
     assert present == module.FIXED_COMMAND_SLOTS
     for slot in module.FIXED_COMMAND_SLOTS:
-        assert f"<!-- SPEC-TREE:{slot} -->" in scaffolded
+        assert module.slot_open_marker(slot) in scaffolded
 
 
 def test_a_name_outside_the_fixed_slot_set_maps_to_no_recognized_slot() -> None:

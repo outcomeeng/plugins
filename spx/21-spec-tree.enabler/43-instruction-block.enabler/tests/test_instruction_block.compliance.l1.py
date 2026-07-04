@@ -28,6 +28,7 @@ from outcomeeng_testing.harnesses.instruction_block import (
     INSTRUCTION_CLAUDE,
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
+    NEW_VERSION,
     HARNESS_CLAUDE,
     HARNESS_CODEX,
     ROOT_SHARED_BODY,
@@ -48,7 +49,6 @@ from outcomeeng_testing.harnesses.instruction_block import (
     write_template,
 )
 
-VERSION = "0.18.0"
 JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
 
 
@@ -148,15 +148,15 @@ def _run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
 def test_render_passes_brace_token_through_unchanged() -> None:
     module = load_instruction_block_module()
     rendered = module.render(
-        build_template(VERSION), (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE
+        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE
     )
     assert ILLUSTRATION_TOKEN in rendered
 
 
 def test_re_render_ignores_unmodeled_instruction_block_edits() -> None:
     module = load_instruction_block_module()
-    template = build_template(VERSION)
-    clean_block = module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
+    template = build_template(NEW_VERSION)
+    clean_block = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE)
     existing_document = f"{ROOT_SHARED_BODY}\n\n{clean_block}"
 
     tampered = existing_document.replace(
@@ -172,7 +172,7 @@ def test_re_render_ignores_unmodeled_instruction_block_edits() -> None:
 
 def test_generation_writes_both_root_instruction_files(tmp_path: pathlib.Path) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
 
     exit_code = module.main(
         [
@@ -199,7 +199,7 @@ def test_root_content_outside_instruction_block_is_preserved(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
         (tmp_path / filename).write_text(ROOT_SHARED_BODY, encoding="utf-8")
 
@@ -239,7 +239,7 @@ def test_instruction_templates_are_loaded_from_harness_specific_dist_outputs(
             / harness
             / instruction_block.DIST_TEMPLATE_RELATIVE_PATH
         )
-        template = build_template(f"{VERSION}.{harness}")
+        template = build_template(f"{NEW_VERSION}.{harness}")
         expected[harness] = template
         dist_path = instruction_block.dist_template_path(harness, repo_root=tmp_path)
         dist_path.parent.mkdir(parents=True, exist_ok=True)
@@ -253,7 +253,7 @@ def test_instruction_templates_are_loaded_from_harness_specific_dist_outputs(
 def test_instruction_render_rejects_unresolved_build_macro() -> None:
     module = load_instruction_block_module()
     harness_templates = {
-        harness: build_template(VERSION)
+        harness: build_template(NEW_VERSION)
         for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
     }
     harness_templates[HARNESS_CODEX] += render_build_macro()
@@ -467,7 +467,7 @@ def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
 
 def test_write_regenerates_a_drifted_instruction_block(tmp_path: pathlib.Path) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     args = [
         "--template",
         str(template),
@@ -503,7 +503,7 @@ def test_no_rendered_instruction_block_teaches_result_session_frontmatter() -> N
     # Session Management section carries no result-frontmatter instruction —
     # exercising the generator's output, not just the authored template text.
     for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
-        rendered = module.render(template, (LANG_PRIMARY,), VERSION, harness)
+        rendered = module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
         section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
         assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
         assert SESSION_RESULT_FRONTMATTER_FIELD not in section
@@ -511,7 +511,7 @@ def test_no_rendered_instruction_block_teaches_result_session_frontmatter() -> N
 
 def test_write_removes_obsolete_spx_instruction_files(tmp_path: pathlib.Path) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     spx_dir = tmp_path / "spx"
     spx_dir.mkdir()
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
@@ -540,7 +540,7 @@ def test_generation_requires_every_fixed_command_slot_fence(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
         (tmp_path / filename).write_text(ROOT_SHARED_BODY, encoding="utf-8")
 
@@ -559,16 +559,16 @@ def test_rendered_router_references_each_command_slot_by_name() -> None:
     # slot name survives into the rendered router block — exercising render()'s pass-through of
     # non-conditional body text, not the raw authored template prose.
     for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
-        rendered = module.render(template, (LANG_PRIMARY,), VERSION, harness)
+        rendered = module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
         for slot in module.FIXED_COMMAND_SLOTS:
-            assert f"SPEC-TREE:{slot}" in rendered
+            assert module.slot_reference(slot) in rendered
 
 
 def test_drift_gate_reports_a_missing_command_slot_fence(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
     init_git_identity(tmp_path)
     git_command(tmp_path, "add", ".")
@@ -578,15 +578,18 @@ def test_drift_gate_reports_a_missing_command_slot_fence(
     # drift probe reports the file as drifted.
     agents = tmp_path / INSTRUCTION_AGENTS
     agents.write_text(
-        remove_command_slot_fence(agents.read_text(encoding="utf-8"), "gate"),
+        remove_command_slot_fence(agents.read_text(encoding="utf-8"), module.SLOT_GATE),
         encoding="utf-8",
     )
-    assert module.parse_command_slot(agents.read_text(encoding="utf-8"), "gate") is None
+    assert (
+        module.parse_command_slot(agents.read_text(encoding="utf-8"), module.SLOT_GATE)
+        is None
+    )
     git_command(tmp_path, "commit", "-am", "drop gate fence")
 
     assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
     assert (
-        module.parse_command_slot(agents.read_text(encoding="utf-8"), "gate")
+        module.parse_command_slot(agents.read_text(encoding="utf-8"), module.SLOT_GATE)
         is not None
     )
     assert INSTRUCTION_AGENTS in instruction_block.drifting_instruction_files(
@@ -598,14 +601,14 @@ def test_regenerate_preserves_a_filled_command_slot_body(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
 
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
         path = tmp_path / filename
         path.write_text(
             module.set_command_slot(
-                path.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY
+                path.read_text(encoding="utf-8"), module.SLOT_MERGE, SAMPLE_COMMAND_BODY
             ),
             encoding="utf-8",
         )
@@ -614,32 +617,38 @@ def test_regenerate_preserves_a_filled_command_slot_body(
 
     for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
         content = (tmp_path / filename).read_text(encoding="utf-8")
-        assert module.parse_command_slot(content, "merge") == SAMPLE_COMMAND_BODY
+        assert (
+            module.parse_command_slot(content, module.SLOT_MERGE) == SAMPLE_COMMAND_BODY
+        )
 
 
 def test_drift_gate_reports_a_cross_file_command_slot_conflict(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
+    template = write_template(tmp_path, NEW_VERSION)
     assert run_generator_write(module, tmp_path, template, languages=LANG_PRIMARY) == 0
 
     claude = tmp_path / INSTRUCTION_CLAUDE
     agents = tmp_path / INSTRUCTION_AGENTS
     claude.write_text(
         module.set_command_slot(
-            claude.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY
+            claude.read_text(encoding="utf-8"), module.SLOT_MERGE, SAMPLE_COMMAND_BODY
         ),
         encoding="utf-8",
     )
     agents.write_text(
         module.set_command_slot(
-            agents.read_text(encoding="utf-8"), "merge", SAMPLE_COMMAND_BODY_ALT
+            agents.read_text(encoding="utf-8"),
+            module.SLOT_MERGE,
+            SAMPLE_COMMAND_BODY_ALT,
         ),
         encoding="utf-8",
     )
 
-    assert instruction_block.conflicting_command_slots(repo_root=tmp_path) == ("merge",)
-    report = instruction_block.render_report([], ("merge",))
+    assert instruction_block.conflicting_command_slots(repo_root=tmp_path) == (
+        module.SLOT_MERGE,
+    )
+    report = instruction_block.render_report([], (module.SLOT_MERGE,))
     assert instruction_block.SLOT_CONFLICT_HEADER in report
-    assert "SPEC-TREE:merge" in report
+    assert module.slot_reference(module.SLOT_MERGE) in report

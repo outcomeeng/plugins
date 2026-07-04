@@ -9,8 +9,9 @@ Exposes:
   brace-delimited illustration token, a language-conditional block per language in
   ``TEMPLATE_LANGUAGES``, and (optionally) a section that exists only in a newer
   template — for exercising new-section propagation on update. The lang-block
-  marker syntax mirrors the module's ``_LANG_BLOCK`` contract; a test that drifts
-  from it fails to render, which is the intended coupling.
+  marker syntax mirrors the module's ``<!-- lang:NAME -->`` conditional-block contract
+  (parsed by ``_filter_languages``); a synthetic template that drifts from it fails to
+  render, which is the intended input-fixture coupling.
 
 The render and parse functions take document strings, so the harness builds
 documents as strings; no filesystem is involved.
@@ -73,6 +74,12 @@ LANG_SECONDARY = "typescript"
 TEMPLATE_LANGUAGES = (LANG_PRIMARY, LANG_SECONDARY)
 BASE_SECTION = "Test Naming"
 NEW_SECTION = "Process Hygiene"
+# Invented scenario version payload owned by the harness: NEW_VERSION is the installed (current)
+# template version, OLD_VERSION a version numerically below it. The values carry no domain
+# meaning; the dotted-numeric ordering NEW_VERSION > OLD_VERSION is what the staleness and
+# upgrade scenarios rely on.
+OLD_VERSION: Final = "0.17.0"
+NEW_VERSION: Final = "0.18.0"
 # A brace-delimited illustration token the render must pass through unchanged.
 ILLUSTRATION_TOKEN = "{product-slug}"
 BUILD_MACRO_CAPABILITY = "ask_user"
@@ -80,7 +87,8 @@ BUILD_MACRO_HARNESS = "codex"
 
 # Harness payload: the template carries a per-harness block for each agent harness,
 # rendered only into that harness's instruction file. The marker syntax mirrors the module's
-# ``_HARNESS_BLOCK`` contract; a test that drifts from it fails to render.
+# ``<!-- harness:NAME -->`` conditional-block contract (parsed by ``_filter_harness``); a
+# synthetic template that drifts from it fails to render.
 HARNESS_CLAUDE = "claude"
 HARNESS_CODEX = "codex"
 TEMPLATE_HARNESSES = (HARNESS_CLAUDE, HARNESS_CODEX)
@@ -330,6 +338,43 @@ def run_generator_write(
     )
 
 
+def run_generator_write_primary(
+    repo_root: pathlib.Path, template_path: pathlib.Path
+) -> int:
+    """Run the generator ``--write`` over ``repo_root`` with the harness's primary language.
+
+    The render-model scenario tests share this exact run configuration — the loaded module and the
+    single primary language — so it lives in the harness rather than a test-local wrapper.
+    """
+    return run_generator_write(
+        load_instruction_block_module(),
+        repo_root,
+        template_path,
+        languages=LANG_PRIMARY,
+    )
+
+
+def write_both_instruction_files(
+    module: ModuleType,
+    repo_root: pathlib.Path,
+    languages: tuple[str, ...],
+    version: str,
+) -> None:
+    """Render and write root CLAUDE.md and AGENTS.md with router blocks and scaffolded slots.
+
+    Mirrors the writer's own shape — the router block plus every fixed command-slot fence — so a
+    file this helper produces is fence-complete like a real ``--write`` output. This root
+    instruction-file setup policy lives in the harness rather than a test body.
+    """
+    template = build_template(version)
+    for harness, filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
+        block = module.render(template, languages, version, harness)
+        (repo_root / filename).write_text(
+            module.ensure_slot_fences(module.upsert_managed_block("", block)),
+            encoding="utf-8",
+        )
+
+
 def git_command(
     repo_root: pathlib.Path, *args: str
 ) -> subprocess.CompletedProcess[str]:
@@ -350,13 +395,16 @@ def init_git_identity(repo_root: pathlib.Path) -> None:
     git_command(repo_root, "config", "user.email", "test@example.com")
 
 
-# The slot fence markers mirror the module's ``_slot_open``/``_slot_close`` contract; a test
-# that drifts from this shape fails to locate the fence, which is the intended coupling — the
-# same drift-coupling the lang/harness markers above rely on.
 def remove_command_slot_fence(text: str, slot: str) -> str:
-    """Return ``text`` with one command slot's fence and body removed, for missing-fence tests."""
-    open_marker = f"<!-- SPEC-TREE:{slot} -->"
-    close_marker = f"<!-- /SPEC-TREE:{slot} -->"
+    """Return ``text`` with one command slot's fence and body removed, for missing-fence tests.
+
+    The fence markers come from the generator's source-owned ``slot_open_marker`` /
+    ``slot_close_marker`` accessors, so this setup helper never re-spells the module's fence
+    format.
+    """
+    module = load_instruction_block_module()
+    open_marker = module.slot_open_marker(slot)
+    close_marker = module.slot_close_marker(slot)
     start = text.find(open_marker)
     if start == -1:
         return text
