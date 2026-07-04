@@ -106,3 +106,31 @@ def test_review_comment_id_discovers_thread_before_resolving(
         "-F",
         "id=PRRT_thread0001",
     ]
+
+
+def test_direct_thread_id_resolves_without_discovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script()
+    calls: list[list[str]] = []
+
+    def fake_run(argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        calls.append(argv)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "PRRT_thread0002"])
+
+    assert module.main() == 0
+    assert calls == [
+        [
+            "gh",
+            "api",
+            "graphql",
+            "--silent",
+            "-f",
+            f"query={module.QUERY}",
+            "-F",
+            "id=PRRT_thread0002",
+        ]
+    ]

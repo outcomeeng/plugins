@@ -30,7 +30,7 @@ THREADS_QUERY = (
 )
 NODE_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{8,256}")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
-NUMBER_PATTERN = re.compile(r"[1-9][0-9]*")
+NUMBER_PATTERN = re.compile(r"[1-9]\d*")
 COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{1,256}")
 
 
