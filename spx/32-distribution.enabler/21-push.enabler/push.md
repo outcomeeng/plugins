@@ -16,6 +16,6 @@ The `outcomeeng.distribution.push` module captures the upstream commit reference
 
 ### Compliance
 
-- ALWAYS: check availability of `git`, `claude`, `codex`, and `uv` before any orchestration step — missing tools fail fast with a diagnostic ([test](tests/test_push.compliance.l1.py))
+- ALWAYS: check availability of `git`, `claude`, `codex`, `ps`, and `uv` before any orchestration step — missing tools fail fast with a diagnostic ([test](tests/test_push.compliance.l1.py))
 - ALWAYS: capture the upstream ref before invoking `git push` — the captured ref reflects the pre-push state, never the post-push state ([test](tests/test_push.compliance.l1.py))
 - NEVER: invoke sync when `git push` failed — a failed push has no published range for sync to act on ([test](tests/test_push.compliance.l1.py))

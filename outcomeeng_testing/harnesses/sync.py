@@ -21,7 +21,12 @@ from dataclasses import dataclass, field
 from outcomeeng.distribution.sync import (
     ChangeProbe,
     ConfigRepairer,
+    REQUIRED_TOOLS,
+    SingleFlight,
+    SingleFlightClaim,
     StepRunner,
+    sync,
+    TopologyHealthProbe,
     ToolProbe,
 )
 
@@ -29,6 +34,11 @@ CHANGE_PROBE_EVENT = "change_probe"
 CONFIG_REPAIR_EVENT = "config_repair"
 RUNNER_EVENT = "runner"
 TOOL_PROBE_EVENT_PREFIX = "tool_probe:"
+SINGLE_FLIGHT_ACQUIRE_EVENT = "single_flight_acquire"
+SINGLE_FLIGHT_OBSERVE_EVENT = "single_flight_observe"
+SINGLE_FLIGHT_RELEASE_EVENT = "single_flight_release"
+SCRIPTED_BASE_REF = "abc123"
+DEFAULT_TOPOLOGY_ERRORS = ("missing target",)
 
 
 @dataclass
@@ -98,15 +108,124 @@ class ScriptedConfigRepairer:
         return self.changed
 
 
+@dataclass
+class ScriptedTopologyProbe:
+    """TopologyHealthProbe returning scripted topology errors or raising."""
+
+    errors: tuple[str, ...] = ()
+    error: Exception | None = None
+    calls: int = 0
+
+    def __call__(self) -> tuple[str, ...]:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.errors
+
+
+@dataclass
+class ScriptedSingleFlight:
+    """SingleFlight double that records acquisition and release calls."""
+
+    claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
+    observation_claim: SingleFlightClaim = SingleFlightClaim(acquired=False)
+    observe_error: OSError | None = None
+    release_error: OSError | None = None
+    events: list[str] | None = None
+    acquisitions: int = 0
+    observations: int = 0
+    releases: int = 0
+
+    def observe(self) -> SingleFlightClaim:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_OBSERVE_EVENT)
+        self.observations += 1
+        if self.observe_error is not None:
+            raise self.observe_error
+        return self.observation_claim
+
+    def acquire(self) -> SingleFlightClaim:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_ACQUIRE_EVENT)
+        self.acquisitions += 1
+        return self.claim
+
+    def release(self) -> None:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_RELEASE_EVENT)
+        self.releases += 1
+        if self.release_error is not None:
+            raise self.release_error
+
+
+@dataclass(frozen=True)
+class ScriptedSyncRun:
+    """Captured result and collaborators from one scripted sync invocation."""
+
+    exit_code: int
+    runner: RecordingRunner
+    tool_probe: ScriptedToolProbe
+    change_probe: ScriptedChangeProbe
+    config_repairer: ScriptedConfigRepairer
+    topology_probe: ScriptedTopologyProbe
+
+    @property
+    def observed_no_change_invalid_topology_probe(self) -> bool:
+        return (
+            self.config_repairer.calls == 1
+            and self.change_probe.queries == [SCRIPTED_BASE_REF]
+            and self.topology_probe.calls == 1
+        )
+
+
+def run_invalid_topology_refresh(
+    single_flight: SingleFlight,
+    *,
+    topology_errors: tuple[str, ...] = DEFAULT_TOPOLOGY_ERRORS,
+) -> ScriptedSyncRun:
+    """Run sync through the no-change invalid-topology refresh path."""
+
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=frozenset(REQUIRED_TOOLS))
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
+    topology_probe = ScriptedTopologyProbe(errors=topology_errors)
+    exit_code = sync(
+        SCRIPTED_BASE_REF,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+        single_flight=single_flight,
+    )
+    return ScriptedSyncRun(
+        exit_code=exit_code,
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+        topology_probe=topology_probe,
+    )
+
+
 __all__ = [
     "CHANGE_PROBE_EVENT",
     "CONFIG_REPAIR_EVENT",
     "RUNNER_EVENT",
+    "SINGLE_FLIGHT_ACQUIRE_EVENT",
+    "SINGLE_FLIGHT_OBSERVE_EVENT",
+    "SINGLE_FLIGHT_RELEASE_EVENT",
+    "DEFAULT_TOPOLOGY_ERRORS",
     "RecordingRunner",
     "ScriptedChangeProbe",
     "ScriptedConfigRepairer",
+    "ScriptedSingleFlight",
+    "ScriptedSyncRun",
+    "ScriptedTopologyProbe",
     "ScriptedToolProbe",
     "TOOL_PROBE_EVENT_PREFIX",
+    "run_invalid_topology_refresh",
 ]
 
 
@@ -114,3 +233,5 @@ _: type[StepRunner] = RecordingRunner
 _2: type[ToolProbe] = ScriptedToolProbe
 _3: type[ChangeProbe] = ScriptedChangeProbe
 _4: type[ConfigRepairer] = ScriptedConfigRepairer
+_5: type[TopologyHealthProbe] = ScriptedTopologyProbe
+_6: type[SingleFlight] = ScriptedSingleFlight

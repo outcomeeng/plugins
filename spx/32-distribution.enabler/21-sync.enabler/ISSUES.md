@@ -9,11 +9,21 @@ Implementation audit `019f2777-97ab-7a03-89d3-30e61c4c820e` raised a decompositi
 - prerequisite tool checks
 - marketplace source reconciliation
 - distribution-change detection
+- Codex cache topology health checks
+- file-backed single-flight coordination
 - ordered sync-step orchestration
 - named forbidden-step compliance
 
 The audit cited `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, whose decomposition rule treats more than roughly seven assertions as a signal for analysis and separates independent concerns when each concern has a meaningful validation boundary.
 
-Revisit condition: when structural work on `spx/32-distribution.enabler/21-sync.enabler` is scheduled, invoke `/decompose` on the sync node. Split prerequisite checks, reconciliation, change detection, and orchestration sequencing into focused child nodes when the ordering-evidence matrix supports the split.
+Revisit condition: when structural work on `spx/32-distribution.enabler/21-sync.enabler` is scheduled, invoke `/decompose` on the sync node. Split prerequisite checks, reconciliation, change detection, topology/single-flight coordination, and orchestration sequencing into focused child nodes when the ordering-evidence matrix supports the split.
 
-Chosen handling: this branch records the structure debt and continues the generated Codex-agent config enforcement change. The branch does not move or rewrite the existing sync assertions.
+Triggered again: PR #402 added topology health inspection and single-flight repair coordination to this node, increasing the assertion count and adding another independently validated concern. The current branch keeps the behavior change in place and updates this tracking note; the next structural pass should run `/decompose` before adding more sync orchestration concerns.
+
+## DEBT [correctness]: document and bound PID reuse identity limits
+
+The file-backed refresh lock detects stale owners by combining the owner PID with the process start timestamp reported by `ps -p <pid> -o lstart=`.
+BSD and GNU `ps` expose that timestamp at whole-second resolution, so an unrelated process that reuses the same PID within the same wall-clock second can produce the same lock-owner identity string.
+
+The failure mode is conservative: a no-change topology repair can record pending state behind a phantom active owner and skip one refresh attempt rather than corrupting the cache.
+The next topology/single-flight correctness pass should either use a higher-resolution process identity source when available, or declare and test the whole-second PID-reuse window as an accepted limitation.

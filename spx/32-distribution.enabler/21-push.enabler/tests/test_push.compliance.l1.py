@@ -62,9 +62,8 @@ def test_tool_availability_is_checked_before_upstream_or_push() -> None:
     )
 
     assert set(tool_probe.queries) >= set(REQUIRED_TOOLS)
-    # All four required tools were queried before either the upstream probe or
-    # the first runner call could have observed evidence of an out-of-order
-    # invocation.
+    # Required tools were queried before either the upstream probe or the first
+    # runner call could have observed evidence of an out-of-order invocation.
     assert upstream_probe.calls == 1
     assert runner.calls[0] == ("git", "push", "origin", "main")
 
