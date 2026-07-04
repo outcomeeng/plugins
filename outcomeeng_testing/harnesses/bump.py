@@ -452,6 +452,32 @@ def mixed_dual_manifest_plugin_fails_check() -> bool:
     )
 
 
+def new_plugin_without_base_manifest_passes_check() -> bool:
+    plugin = "foo"
+    path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    run = BumpRun(
+        change_probe=ScriptedChangeProbe(changed={plugin: minor_change(plugin)}),
+        content_probe=ScriptedContentProbe(content={}),
+        manifest_reader=ScriptedManifestReader(
+            manifests={
+                plugin: (
+                    ManifestRecord(path=path, content=manifest_text(plugin, "0.1.0")),
+                )
+            },
+        ),
+        manifest_writer=RecordingManifestWriter(),
+        tool_probe=RecordingToolProbe(available=all_tools_available()),
+    )
+    stderr = io.StringIO()
+
+    with contextlib.redirect_stderr(stderr):
+        exit_code = run.run(segment=None, mode=Mode.CHECK)
+
+    return (
+        exit_code == 0 and run.manifest_writer.writes == [] and stderr.getvalue() == ""
+    )
+
+
 def already_bumped_plugin_skipped_in_dry_run() -> bool:
     case = single_manifest_case("foo", version="0.4.2", base_version="0.4.1")
     stderr = io.StringIO()
@@ -1211,6 +1237,7 @@ __all__ = [
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
+    "new_plugin_without_base_manifest_passes_check",
     "real_change_probe_detects_cross_plugin_structural_rename",
     "real_change_probe_detects_rename_away_from_structural_path",
     "single_manifest_case",

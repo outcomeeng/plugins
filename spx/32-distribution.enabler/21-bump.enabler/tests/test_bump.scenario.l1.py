@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.bump import (
     dual_manifest_plugin_writes_both_with_same_new_version,
     explicit_segment_patch_overrides_detected_minor_with_warning,
     mixed_dual_manifest_minor_change_uses_current_segment,
+    new_plugin_without_base_manifest_passes_check,
     no_changed_plugins_exits_zero_without_writing,
     only_changed_plugin_manifests_are_written,
     real_change_probe_detects_cross_plugin_structural_rename,
@@ -61,6 +62,10 @@ def test_write_bumps_from_base_when_working_tree_version_is_below_base() -> None
 
 def test_check_fails_when_working_tree_version_is_below_base() -> None:
     assert check_fails_when_working_tree_version_is_below_base()
+
+
+def test_new_plugin_without_base_manifest_passes_check() -> None:
+    assert new_plugin_without_base_manifest_passes_check()
 
 
 def test_check_compares_added_manifest_to_base_source_path() -> None:

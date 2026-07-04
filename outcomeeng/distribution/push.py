@@ -76,6 +76,8 @@ def push(
     upstream_probe: UpstreamProbe,
 ) -> int:
     """Run the publish-and-sync orchestration. Returns the process exit code."""
+    if _is_help_request(push_args):
+        return runner(("git", "push", *push_args))
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
@@ -84,8 +86,6 @@ def push(
     push_rc = runner(("git", "push", *push_args))
     if push_rc != 0:
         return push_rc
-    if _is_help_request(push_args):
-        return 0
     if _is_dry_run(push_args):
         return 0
     sync_argv: tuple[str, ...] = SYNC_COMMAND

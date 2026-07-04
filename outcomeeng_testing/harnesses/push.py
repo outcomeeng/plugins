@@ -357,6 +357,26 @@ def long_git_help_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(long_git_help_push_args())
 
 
+def git_help_push_skips_marketplace_tool_probes_and_upstream_capture() -> bool:
+    runner = TracedRunner()
+    tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
+
+    exit_code = push(
+        git_help_push_args(),
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == 0
+        and tool_probe.queries == []
+        and upstream_probe.calls == 0
+        and runner.calls == [("git", "push", *git_help_push_args())]
+    )
+
+
 def dry_run_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(dry_run_push_args())
 
@@ -468,6 +488,7 @@ __all__ = [
     "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",
+    "git_help_push_skips_marketplace_tool_probes_and_upstream_capture",
     "push_option_with_dry_run_operand_args",
     "repo_option_with_dry_run_operand_args",
     "separator_repository_named_like_dry_run_args",

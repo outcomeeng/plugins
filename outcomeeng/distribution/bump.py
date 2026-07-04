@@ -308,7 +308,6 @@ def bump(
                     lagging_manifest = True
                 baseline_versions.append(max(working_tree_version, base_ref_version))
             else:
-                lagging_manifest = True
                 baseline_versions.append(working_tree_version)
             plans.append((plugin, record, working_tree_version))
         plugin_versions_agree = len(set(working_tree_versions)) == 1
