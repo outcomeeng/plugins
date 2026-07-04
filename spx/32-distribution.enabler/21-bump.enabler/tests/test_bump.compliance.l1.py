@@ -242,7 +242,7 @@ def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
     assert "foo" in captured.err
 
 
-def test_mixed_dual_manifest_plugin_updates_lagging_manifest_only() -> None:
+def test_mixed_dual_manifest_plugin_writes_lockstep_patch_target() -> None:
     case = dual_manifest_case(
         "foo",
         claude_version="0.4.2",
@@ -254,9 +254,9 @@ def test_mixed_dual_manifest_plugin_updates_lagging_manifest_only() -> None:
 
     written = case.run.written()
     assert exit_code == 0
-    assert case.claude_path not in written
-    assert case.codex_path in written
-    assert '"version": "0.4.2"' in written[case.codex_path]
+    assert set(written) == {case.claude_path, case.codex_path}
+    assert '"version": "0.4.3"' in written[case.claude_path]
+    assert '"version": "0.4.3"' in written[case.codex_path]
 
 
 def test_mixed_dual_manifest_plugin_fails_check(

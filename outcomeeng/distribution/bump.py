@@ -289,7 +289,6 @@ def bump(
         resolved = segment if segment is not None else detected
         working_tree_versions: list[Version] = []
         baseline_versions: list[Version] = []
-        ahead_manifest = False
         lagging_manifest = False
         for record in records:
             working_tree_version = _version_from_manifest_text(record.content)
@@ -299,9 +298,7 @@ def bump(
             )
             if base_ref_content is not None:
                 base_ref_version = _version_from_manifest_text(base_ref_content)
-                if working_tree_version > base_ref_version:
-                    ahead_manifest = True
-                else:
+                if working_tree_version <= base_ref_version:
                     lagging_manifest = True
                 baseline_versions.append(max(working_tree_version, base_ref_version))
             else:
@@ -312,11 +309,8 @@ def bump(
         if not lagging_manifest and plugin_versions_agree:
             already_bumped_plugins.append(plugin)
         else:
-            plugin_target = (
-                max(working_tree_versions)
-                if ahead_manifest
-                else _SEGMENT_DISPATCH[resolved](max(baseline_versions))
-            )
+            segment_target = _SEGMENT_DISPATCH[resolved](max(baseline_versions))
+            plugin_target = max(segment_target, max(working_tree_versions))
             plugin_targets[plugin] = (plugin_target, resolved)
             unbumped_plugins.append(plugin)
 

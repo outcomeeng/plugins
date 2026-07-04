@@ -105,6 +105,24 @@ def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
     assert written_versions == {"0.4.2"}
 
 
+def test_mixed_dual_manifest_minor_change_uses_current_segment() -> None:
+    case = dual_manifest_case(
+        "foo",
+        claude_version="0.4.2",
+        codex_version="0.4.1",
+        claude_base_version="0.4.1",
+        codex_base_version="0.4.1",
+    )
+
+    exit_code = case.run.run(segment=Segment.MINOR)
+
+    written = case.run.written()
+    assert exit_code == 0
+    assert set(written) == {case.claude_path, case.codex_path}
+    assert version_of(written[case.claude_path]) == "0.5.0"
+    assert version_of(written[case.codex_path]) == "0.5.0"
+
+
 @pytest.mark.parametrize(
     ("segment", "old_version", "expected_version"),
     [
