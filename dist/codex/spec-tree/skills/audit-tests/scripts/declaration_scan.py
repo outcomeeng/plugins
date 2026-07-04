@@ -617,8 +617,15 @@ def _declaration_units(
     lexical_state = _LexicalState()
     raw_lines = source.splitlines()
     for index, raw_line in enumerate(raw_lines, start=1):
+        leading_quote = lexical_state.quote if not current else None
+        leading_escaped = lexical_state.escaped
         line = _strip_comments(raw_line, lexical_state)
-        for line_segment in _declaration_line_segments(line):
+        segment_line = (
+            _mask_leading_quoted_content(line, leading_quote, leading_escaped)
+            if leading_quote is not None
+            else line
+        )
+        for line_segment in _declaration_line_segments(segment_line):
             if not current:
                 if not start_pattern.match(line_segment):
                     continue
@@ -662,6 +669,20 @@ def _declaration_units(
     if current:
         units.append((start_line, "\n".join(current)))
     return units
+
+
+def _mask_leading_quoted_content(line: str, quote: str, escaped_at_start: bool) -> str:
+    chars = list(line)
+    escaped = escaped_at_start
+    for index, char in enumerate(chars):
+        chars[index] = " "
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == quote:
+            break
+    return "".join(chars)
 
 
 def _declaration_line_segments(line: str) -> list[str]:

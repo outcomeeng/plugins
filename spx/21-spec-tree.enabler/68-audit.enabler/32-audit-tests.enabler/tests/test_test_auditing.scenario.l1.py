@@ -29,6 +29,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     rust_loop_declarations_are_detected,
     rust_match_declarations_are_detected,
     rust_or_pattern_declarations_are_detected,
+    rust_raw_string_declarations_are_ignored,
     sourced_literals_pass,
     string_literal_is_rejected,
     test_owned_declaration_is_rejected as owned_declaration_is_rejected,
@@ -218,6 +219,10 @@ def test_detects_rust_loop_declarations() -> None:
 
 def test_detects_rust_match_declarations() -> None:
     assert rust_match_declarations_are_detected()
+
+
+def test_ignores_declarations_inside_rust_raw_strings() -> None:
+    assert rust_raw_string_declarations_are_ignored()
 
 
 def test_splits_rust_lifetime_declarations() -> None:

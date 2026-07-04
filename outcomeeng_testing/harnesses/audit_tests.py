@@ -569,6 +569,15 @@ def rust_match_declarations_are_detected() -> bool:
     )
 
 
+def rust_raw_string_declarations_are_ignored() -> bool:
+    declarations = _declarations_for_fixture("rust_raw_string_declaration.rs")
+    return (
+        _has_variable(declarations, "actual")
+        and not _has_variable(declarations, "expected")
+        and not _has_function(declarations, "helper")
+    )
+
+
 def rust_lifetime_declarations_are_split() -> bool:
     declarations = _scanner().scan_text(
         """let value: &'static str = source();
