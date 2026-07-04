@@ -1079,6 +1079,10 @@ def _strip_comments(line: str, state: _LexicalState) -> str:
             index += 1
             continue
         if char in {"'", '"', "`"}:
+            if char == "'" and _looks_like_rust_lifetime(line, index):
+                output.append(char)
+                index += 1
+                continue
             state.quote = char
             output.append(char)
             index += 1

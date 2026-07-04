@@ -555,6 +555,23 @@ let expected = build_expected();
     )
 
 
+def rust_lifetime_before_block_comment_declarations_are_ignored() -> bool:
+    declarations = _scanner().scan_text(
+        """let value: &'static str = source();
+/*
+let commented = "not real";
+*/
+let expected = build_expected();
+""",
+        Path("lifetime-comment.rs"),
+    )
+    return (
+        _has_variable(declarations, "value")
+        and not _has_variable(declarations, "commented")
+        and _has_variable(declarations, "expected")
+    )
+
+
 def rust_or_pattern_declarations_are_detected() -> bool:
     declarations = _scanner().scan_text(
         """match result {

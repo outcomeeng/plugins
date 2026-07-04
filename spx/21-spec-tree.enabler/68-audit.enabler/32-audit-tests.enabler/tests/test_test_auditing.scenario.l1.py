@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     python_starred_assignment_declarations_are_detected,
     rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
+    rust_lifetime_before_block_comment_declarations_are_ignored,
     rust_lifetime_declarations_are_split,
     rust_loop_declarations_are_detected,
     rust_match_declarations_are_detected,
@@ -216,6 +217,10 @@ def test_detects_rust_match_declarations() -> None:
 
 def test_splits_rust_lifetime_declarations() -> None:
     assert rust_lifetime_declarations_are_split()
+
+
+def test_ignores_block_comment_declarations_after_rust_lifetime() -> None:
+    assert rust_lifetime_before_block_comment_declarations_are_ignored()
 
 
 def test_detects_rust_or_pattern_declarations() -> None:
