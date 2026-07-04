@@ -22,6 +22,7 @@ import outcomeeng.distribution.sync as sync_module
 from outcomeeng.distribution.sync import REQUIRED_TOOLS, STEPS, sync
 from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
+    SCRIPTED_BASE_REF,
     ScriptedChangeProbe,
     ScriptedConfigRepairer,
     ScriptedSingleFlight,
@@ -55,7 +56,7 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -82,7 +83,7 @@ def test_tool_availability_is_checked_before_orchestration() -> None:
     single_flight = _RecordingSingleFlightWithEvents(events)
 
     sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -121,7 +122,7 @@ def test_source_reconciliation_precedes_distribution_change_probe() -> None:
         return True
 
     sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -148,7 +149,7 @@ def test_changes_present_runs_full_sequence_when_every_step_succeeds() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -176,7 +177,7 @@ def test_changes_present_stops_at_first_failing_step_without_skipping_earlier(
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,

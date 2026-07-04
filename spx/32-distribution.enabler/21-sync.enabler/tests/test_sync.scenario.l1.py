@@ -36,6 +36,7 @@ from outcomeeng.distribution.sync import (
 )
 from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
+    SCRIPTED_BASE_REF,
     ScriptedChangeProbe,
     ScriptedConfigRepairer,
     ScriptedSingleFlight,
@@ -253,7 +254,7 @@ def test_no_distribution_changes_with_healthy_topology_skips_refresh() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -265,7 +266,7 @@ def test_no_distribution_changes_with_healthy_topology_skips_refresh() -> None:
     assert exit_code == 0
     assert runner.calls == []
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
     assert topology_probe.calls == 1
     assert single_flight.acquisitions == 0
     assert single_flight.releases == 0
@@ -280,7 +281,7 @@ def test_invalid_topology_runs_refresh_without_distribution_changes() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -291,7 +292,7 @@ def test_invalid_topology_runs_refresh_without_distribution_changes() -> None:
 
     assert exit_code == 0
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
     assert topology_probe.calls == 1
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 1
@@ -317,7 +318,7 @@ def test_active_single_flight_records_pending_and_exits_zero(
 
     try:
         exit_code = sync(
-            "abc123",
+            SCRIPTED_BASE_REF,
             runner=runner,
             tool_probe=tool_probe,
             change_probe=change_probe,
@@ -366,7 +367,7 @@ def test_validation_required_sync_fails_when_refresh_is_active(
     )
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -378,7 +379,7 @@ def test_validation_required_sync_fails_when_refresh_is_active(
     assert runner.calls == []
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 0
-    assert change_probe.queries == (["abc123"] if distribution_changed else [])
+    assert change_probe.queries == ([SCRIPTED_BASE_REF] if distribution_changed else [])
 
 
 def test_absent_base_ref_fails_when_refresh_is_active() -> None:
@@ -423,7 +424,7 @@ def test_changed_single_flight_lock_exits_nonzero_without_refresh(
     )
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -452,7 +453,7 @@ def test_refresh_release_failure_exits_nonzero_after_successful_steps(
     )
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -480,7 +481,7 @@ def test_refresh_release_failure_supersedes_step_failure(
     )
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -655,6 +656,39 @@ def test_single_flight_identity_lookup_failure_exits_before_refresh(
     assert not single_flight.pending_path.exists()
 
 
+def test_single_flight_treats_zombie_owner_lock_as_stale(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    zombie_owner = sync_module._LockOwner(pid=999999, identity="zombie")
+    state_dir = tmp_path / "outcomeeng"
+    state_dir.mkdir()
+    single_flight = _FileSingleFlight(
+        state_dir=state_dir,
+        process_exists=lambda _pid: True,
+        process_identity=lambda pid: (
+            f"identity:{pid}" if pid == os.getpid() else zombie_owner.identity
+        ),
+    )
+    single_flight.lock_path.write_text(
+        sync_module._serialize_lock_owner(zombie_owner),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sync_module,
+        "_process_is_zombie",
+        lambda pid: pid == zombie_owner.pid,
+    )
+
+    run = run_invalid_topology_refresh(single_flight)
+
+    assert run.exit_code == 0
+    assert run.observed_no_change_invalid_topology_probe
+    assert run.runner.calls == list(STEP_ARGVS)
+    assert not single_flight.lock_path.exists()
+    assert not single_flight.pending_path.exists()
+
+
 def test_topology_probe_failure_exits_before_refresh() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
@@ -664,7 +698,7 @@ def test_topology_probe_failure_exits_before_refresh() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -676,7 +710,7 @@ def test_topology_probe_failure_exits_before_refresh() -> None:
     assert exit_code == 1
     assert runner.calls == []
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
     assert topology_probe.calls == 1
     assert single_flight.observations == 1
     assert single_flight.acquisitions == 0
@@ -692,7 +726,7 @@ def test_topology_filesystem_failure_exits_before_refresh() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -704,7 +738,7 @@ def test_topology_filesystem_failure_exits_before_refresh() -> None:
     assert exit_code == 1
     assert runner.calls == []
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
     assert topology_probe.calls == 1
     assert single_flight.observations == 1
     assert single_flight.acquisitions == 0
@@ -737,7 +771,7 @@ def test_topology_failure_coalesces_with_active_refresh(
     )
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -753,7 +787,7 @@ def test_topology_failure_coalesces_with_active_refresh(
     assert "Active sync: pid:123" in captured.out
     assert runner.calls == []
     assert config_repairer.calls == 1
-    assert change_probe.queries == ["abc123"]
+    assert change_probe.queries == [SCRIPTED_BASE_REF]
     assert topology_probe.calls == 1
     assert single_flight.observations == 1
     assert single_flight.acquisitions == 0
@@ -768,7 +802,7 @@ def test_config_repair_runs_refresh_without_consulting_distribution_changes() ->
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -792,7 +826,7 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
@@ -816,7 +850,7 @@ def test_sync_installs_codex_agents_before_installed_plugin_validation(
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
-        "abc123",
+        SCRIPTED_BASE_REF,
         runner=runner,
         tool_probe=ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE),
         change_probe=ScriptedChangeProbe(changed=True),

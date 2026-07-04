@@ -63,6 +63,7 @@ TOPOLOGY_CHECK_FAILED_PREFIX = "Codex cache topology check failed"
 LOCK_OWNER_PID_FIELD = "pid"
 LOCK_OWNER_IDENTITY_FIELD = "identity"
 PROCESS_IDENTITY_TIMEOUT_SECONDS = 2.0
+PROCESS_STATE_TIMEOUT_SECONDS = 2.0
 
 
 class RefreshReason(StrEnum):
@@ -322,6 +323,8 @@ class _FileSingleFlight:
     def _owner_is_active(self, owner: _LockOwner) -> bool:
         if not self.process_exists(owner.pid):
             return False
+        if _process_is_zombie(owner.pid):
+            return False
         live_identity = self.process_identity(owner.pid)
         if live_identity is None:
             return True
@@ -411,6 +414,22 @@ def _process_identity(pid: int) -> str | None:
     return f"pid:{pid}:started:{started_at}"
 
 
+def _process_is_zombie(pid: int) -> bool:
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "state="],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=PROCESS_STATE_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if result.returncode != 0:
+        return False
+    return result.stdout.strip().startswith("Z")
+
+
 def sync(
     base_ref: str | None,
     *,
@@ -482,17 +501,15 @@ def _handle_topology_probe_error(
             file=sys.stderr,
         )
         return 1
-    if not claim.acquired:
-        if claim.blocked_by_active_owner:
-            print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-            print(SYNC_ALREADY_RUNNING_MESSAGE)
-            if claim.detail:
-                print(f"Active sync: {claim.detail}")
-            return 0
+    assert not claim.acquired
+    if claim.blocked_by_active_owner:
         print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
-        print("Marketplace refresh has no active owner", file=sys.stderr)
-        return 1
+        print(SYNC_ALREADY_RUNNING_MESSAGE)
+        if claim.detail:
+            print(f"Active sync: {claim.detail}")
+        return 0
     print(f"{TOPOLOGY_CHECK_FAILED_PREFIX}: {exc}", file=sys.stderr)
+    print("Marketplace refresh has no active owner", file=sys.stderr)
     return 1
 
 
