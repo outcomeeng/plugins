@@ -34,6 +34,9 @@ CHANGE_PROBE_EVENT = "change_probe"
 CONFIG_REPAIR_EVENT = "config_repair"
 RUNNER_EVENT = "runner"
 TOOL_PROBE_EVENT_PREFIX = "tool_probe:"
+SINGLE_FLIGHT_ACQUIRE_EVENT = "single_flight_acquire"
+SINGLE_FLIGHT_OBSERVE_EVENT = "single_flight_observe"
+SINGLE_FLIGHT_RELEASE_EVENT = "single_flight_release"
 SCRIPTED_BASE_REF = "abc123"
 DEFAULT_TOPOLOGY_ERRORS = ("missing target",)
 
@@ -127,19 +130,26 @@ class ScriptedSingleFlight:
     claim: SingleFlightClaim = SingleFlightClaim(acquired=True)
     observation_claim: SingleFlightClaim = SingleFlightClaim(acquired=False)
     release_error: OSError | None = None
+    events: list[str] | None = None
     acquisitions: int = 0
     observations: int = 0
     releases: int = 0
 
     def observe(self) -> SingleFlightClaim:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_OBSERVE_EVENT)
         self.observations += 1
         return self.observation_claim
 
     def acquire(self) -> SingleFlightClaim:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_ACQUIRE_EVENT)
         self.acquisitions += 1
         return self.claim
 
     def release(self) -> None:
+        if self.events is not None:
+            self.events.append(SINGLE_FLIGHT_RELEASE_EVENT)
         self.releases += 1
         if self.release_error is not None:
             raise self.release_error
@@ -200,6 +210,9 @@ __all__ = [
     "CHANGE_PROBE_EVENT",
     "CONFIG_REPAIR_EVENT",
     "RUNNER_EVENT",
+    "SINGLE_FLIGHT_ACQUIRE_EVENT",
+    "SINGLE_FLIGHT_OBSERVE_EVENT",
+    "SINGLE_FLIGHT_RELEASE_EVENT",
     "DEFAULT_TOPOLOGY_ERRORS",
     "RecordingRunner",
     "ScriptedChangeProbe",

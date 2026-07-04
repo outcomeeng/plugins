@@ -344,15 +344,27 @@ def test_active_single_flight_records_pending_and_exits_zero(
 
 
 @pytest.mark.parametrize(
-    ("distribution_changed", "config_changed"),
+    ("distribution_changed", "config_changed", "expected_message"),
     [
-        pytest.param(True, False, id="distribution-change"),
-        pytest.param(False, True, id="config-repair"),
+        pytest.param(
+            True,
+            False,
+            "change-driven sync cannot skip refresh",
+            id="distribution-change",
+        ),
+        pytest.param(
+            False,
+            True,
+            "configuration repair cannot skip refresh",
+            id="config-repair",
+        ),
     ],
 )
 def test_validation_required_sync_fails_when_refresh_is_active(
     distribution_changed: bool,
     config_changed: bool,
+    expected_message: str,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
@@ -375,14 +387,18 @@ def test_validation_required_sync_fails_when_refresh_is_active(
         single_flight=single_flight,
     )
 
+    captured = capsys.readouterr()
     assert exit_code == 1
+    assert expected_message in captured.err
     assert runner.calls == []
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 0
     assert change_probe.queries == ([SCRIPTED_BASE_REF] if distribution_changed else [])
 
 
-def test_absent_base_ref_fails_when_refresh_is_active() -> None:
+def test_absent_base_ref_fails_when_refresh_is_active(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
@@ -404,7 +420,9 @@ def test_absent_base_ref_fails_when_refresh_is_active() -> None:
         single_flight=single_flight,
     )
 
+    captured = capsys.readouterr()
     assert exit_code == 1
+    assert "no-baseline sync cannot skip refresh" in captured.err
     assert runner.calls == []
     assert single_flight.acquisitions == 1
     assert single_flight.releases == 0

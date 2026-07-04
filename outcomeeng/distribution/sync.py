@@ -75,6 +75,15 @@ class RefreshReason(StrEnum):
     CODEX_CACHE_TOPOLOGY_INVALID = "Codex cache topology invalid"
 
 
+REFRESH_BLOCKED_MESSAGES: dict[RefreshReason, str] = {
+    RefreshReason.NO_BASE_REF: "no-baseline sync cannot skip refresh",
+    RefreshReason.DISTRIBUTION_CHANGED: "change-driven sync cannot skip refresh",
+    RefreshReason.SOURCE_CONFIGURATION_CHANGED: (
+        "configuration repair cannot skip refresh"
+    ),
+}
+
+
 @dataclass(frozen=True)
 class SyncStep:
     """A named orchestration step with its argv tuple."""
@@ -540,7 +549,7 @@ def _run_refresh_sequence(
         if reason is not RefreshReason.CODEX_CACHE_TOPOLOGY_INVALID:
             print(
                 f"Marketplace refresh already running during {reason.value}; "
-                "change-driven sync cannot skip refresh",
+                f"{REFRESH_BLOCKED_MESSAGES[reason]}",
                 file=sys.stderr,
             )
             return 1

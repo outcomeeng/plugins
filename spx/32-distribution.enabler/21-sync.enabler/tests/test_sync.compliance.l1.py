@@ -14,31 +14,27 @@ Covers the compliance assertions in `sync.md`:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 import pytest
 
-import outcomeeng.distribution.sync as sync_module
 from outcomeeng.distribution.sync import REQUIRED_TOOLS, STEPS, sync
 from outcomeeng_testing.harnesses.sync import (
+    CHANGE_PROBE_EVENT,
+    CONFIG_REPAIR_EVENT,
     RecordingRunner,
     SCRIPTED_BASE_REF,
+    SINGLE_FLIGHT_ACQUIRE_EVENT,
     ScriptedChangeProbe,
     ScriptedConfigRepairer,
     ScriptedSingleFlight,
     ScriptedToolProbe,
+    TOOL_PROBE_EVENT_PREFIX,
+    RUNNER_EVENT,
 )
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
 INITIAL_CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
 FORBIDDEN_CACHE_PRESERVE_STEP = "codex_cache_preserve"
-TOOL_EVENT_PREFIX = "tool:"
-RUNNER_EVENT = "runner"
-CONFIG_EVENT = "config"
-CHANGE_EVENT = "change"
-ACQUIRE_EVENT = "acquire"
-RELEASE_EVENT = "release"
 
 
 @pytest.mark.parametrize("missing_tool", REQUIRED_TOOLS)
@@ -52,7 +48,7 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     tool_probe = ScriptedToolProbe(
         available=ALL_TOOLS_AVAILABLE - {missing_tool},
     )
-    change_probe = _recording_change_probe(events, changed=True)
+    change_probe = ScriptedChangeProbe(changed=True, events=events)
     single_flight = ScriptedSingleFlight()
 
     exit_code = sync(
@@ -76,11 +72,14 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
 def test_tool_availability_is_checked_before_orchestration() -> None:
     """Every required tool probe must precede every orchestration boundary."""
     events: list[str] = []
-    runner = _RecordingRunnerWithEvents(events)
-    tool_probe = _recording_tool_probe(events)
-    change_probe = _recording_change_probe(events, changed=True)
-    config_repairer = _recording_config_repairer(events, changed=False)
-    single_flight = _RecordingSingleFlightWithEvents(events)
+    runner = RecordingRunner(events=events)
+    tool_probe = ScriptedToolProbe(
+        available=ALL_TOOLS_AVAILABLE,
+        events=events,
+    )
+    change_probe = ScriptedChangeProbe(changed=True, events=events)
+    config_repairer = ScriptedConfigRepairer(changed=False, events=events)
+    single_flight = ScriptedSingleFlight(events=events)
 
     sync(
         SCRIPTED_BASE_REF,
@@ -91,16 +90,23 @@ def test_tool_availability_is_checked_before_orchestration() -> None:
         single_flight=single_flight,
     )
 
-    required_tool_events = [f"{TOOL_EVENT_PREFIX}{tool}" for tool in REQUIRED_TOOLS]
+    required_tool_events = [
+        f"{TOOL_PROBE_EVENT_PREFIX}{tool}" for tool in REQUIRED_TOOLS
+    ]
     assert events[: len(required_tool_events)] == required_tool_events
     assert set(events[: len(required_tool_events)]) == set(required_tool_events)
     assert all(
         event not in events[: len(required_tool_events)]
-        for event in (CONFIG_EVENT, CHANGE_EVENT, ACQUIRE_EVENT, RUNNER_EVENT)
+        for event in (
+            CONFIG_REPAIR_EVENT,
+            CHANGE_PROBE_EVENT,
+            SINGLE_FLIGHT_ACQUIRE_EVENT,
+            RUNNER_EVENT,
+        )
     )
-    assert events.index(CONFIG_EVENT) > len(required_tool_events) - 1
-    assert events.index(CHANGE_EVENT) > len(required_tool_events) - 1
-    assert events.index(ACQUIRE_EVENT) > len(required_tool_events) - 1
+    assert events.index(CONFIG_REPAIR_EVENT) > len(required_tool_events) - 1
+    assert events.index(CHANGE_PROBE_EVENT) > len(required_tool_events) - 1
+    assert events.index(SINGLE_FLIGHT_ACQUIRE_EVENT) > len(required_tool_events) - 1
     assert events.index(RUNNER_EVENT) > len(required_tool_events) - 1
     assert runner.calls == list(STEP_ARGVS)
 
@@ -109,17 +115,9 @@ def test_source_reconciliation_precedes_distribution_change_probe() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     single_flight = ScriptedSingleFlight()
-    config_event = object()
-    change_probe_event = object()
-    events: list[object] = []
-
-    def config_repairer() -> bool:
-        events.append(config_event)
-        return False
-
-    def change_probe(_base_ref: str) -> bool:
-        events.append(change_probe_event)
-        return True
+    events: list[str] = []
+    config_repairer = ScriptedConfigRepairer(changed=False, events=events)
+    change_probe = ScriptedChangeProbe(changed=True, events=events)
 
     sync(
         SCRIPTED_BASE_REF,
@@ -130,7 +128,7 @@ def test_source_reconciliation_precedes_distribution_change_probe() -> None:
         single_flight=single_flight,
     )
 
-    assert events == [config_event, change_probe_event]
+    assert events == [CONFIG_REPAIR_EVENT, CHANGE_PROBE_EVENT]
 
 
 def test_no_codex_cache_preserve_step_is_declared() -> None:
@@ -191,58 +189,3 @@ def test_changes_present_stops_at_first_failing_step_without_skipping_earlier(
     # Steps before failing_index ran in order; the failing step is the last recorded call.
     expected_argvs = list(STEP_ARGVS[: failing_index + 1])
     assert runner.calls == expected_argvs
-
-
-class _RecordingRunnerWithEvents:
-    def __init__(self, events: list[str]) -> None:
-        self.events = events
-        self.calls: list[tuple[str, ...]] = []
-
-    def __call__(self, argv: Sequence[str]) -> int:
-        self.events.append(RUNNER_EVENT)
-        self.calls.append(tuple(argv))
-        return 0
-
-
-class _RecordingSingleFlightWithEvents:
-    def __init__(self, events: list[str]) -> None:
-        self.events = events
-
-    def acquire(self) -> sync_module.SingleFlightClaim:
-        self.events.append(ACQUIRE_EVENT)
-        return sync_module.SingleFlightClaim(acquired=True)
-
-    def release(self) -> None:
-        self.events.append(RELEASE_EVENT)
-
-
-def _recording_tool_probe(events: list[str]) -> sync_module.ToolProbe:
-    def tool_probe(name: str) -> bool:
-        events.append(f"{TOOL_EVENT_PREFIX}{name}")
-        return True
-
-    return tool_probe
-
-
-def _recording_config_repairer(
-    events: list[str],
-    *,
-    changed: bool,
-) -> sync_module.ConfigRepairer:
-    def config_repairer() -> bool:
-        events.append(CONFIG_EVENT)
-        return changed
-
-    return config_repairer
-
-
-def _recording_change_probe(
-    events: list[str],
-    *,
-    changed: bool,
-) -> sync_module.ChangeProbe:
-    def change_probe(_base_ref: str) -> bool:
-        events.append(CHANGE_EVENT)
-        return changed
-
-    return change_probe
