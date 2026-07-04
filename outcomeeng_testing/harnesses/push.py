@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 from outcomeeng.distribution.push import (
     DRY_RUN_PUSH_FLAGS,
+    GIT_TOOL,
     HELP_PUSH_FLAGS,
     NO_DRY_RUN_PUSH_FLAG,
     PUSH_OPTION_FLAGS,
@@ -384,23 +385,27 @@ def clustered_git_help_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(clustered_git_help_push_args())
 
 
-def git_help_push_skips_marketplace_tool_probes_and_upstream_capture() -> bool:
+def git_help_push_checks_tools_and_skips_marketplace_upstream_capture() -> bool:
     runner = TracedRunner()
     tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
     upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
+    stdout = io.StringIO()
+    stderr = io.StringIO()
 
-    exit_code = push(
-        git_help_push_args(),
-        runner=runner,
-        tool_probe=tool_probe,
-        upstream_probe=upstream_probe,
-    )
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        exit_code = push(
+            git_help_push_args(),
+            runner=runner,
+            tool_probe=tool_probe,
+            upstream_probe=upstream_probe,
+        )
 
     return (
-        exit_code == 0
-        and tool_probe.queries == []
+        exit_code != 0
+        and tool_probe.queries == [GIT_TOOL]
+        and runner.calls == []
         and upstream_probe.calls == 0
-        and runner.calls == [("git", "push", *git_help_push_args())]
+        and GIT_TOOL in (stderr.getvalue() + stdout.getvalue())
     )
 
 
@@ -408,9 +413,11 @@ def recurse_submodules_bare_dry_run_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(recurse_submodules_bare_dry_run_args())
 
 
-def recurse_submodules_bare_help_skips_probes_and_upstream_capture() -> bool:
+def recurse_submodules_bare_help_checks_tools_and_skips_upstream_capture() -> bool:
     runner = TracedRunner()
-    tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
     upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
     args = recurse_submodules_bare_help_args()
 
@@ -423,9 +430,9 @@ def recurse_submodules_bare_help_skips_probes_and_upstream_capture() -> bool:
 
     return (
         exit_code == 0
-        and tool_probe.queries == []
+        and tool_probe.queries == list(REQUIRED_TOOLS)
         and upstream_probe.calls == 0
-        and runner.calls == [("git", "push", *args)]
+        and runner.trace == [*all_tool_probe_invocations(), (GIT_TOOL, "push", *args)]
     )
 
 
@@ -542,12 +549,12 @@ __all__ = [
     "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",
-    "git_help_push_skips_marketplace_tool_probes_and_upstream_capture",
+    "git_help_push_checks_tools_and_skips_marketplace_upstream_capture",
     "push_option_with_dry_run_operand_args",
     "recurse_submodules_bare_dry_run_args",
     "recurse_submodules_bare_dry_run_does_not_refresh_marketplace",
     "recurse_submodules_bare_help_args",
-    "recurse_submodules_bare_help_skips_probes_and_upstream_capture",
+    "recurse_submodules_bare_help_checks_tools_and_skips_upstream_capture",
     "repo_option_with_dry_run_operand_args",
     "separator_repository_named_like_dry_run_args",
     "push_failure_exit_code",

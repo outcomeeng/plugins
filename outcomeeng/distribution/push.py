@@ -26,7 +26,8 @@ import sys
 from collections.abc import Sequence
 from typing import Protocol
 
-REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
+GIT_TOOL = "git"
+REQUIRED_TOOLS: tuple[str, ...] = (GIT_TOOL, "claude", "codex", "ps", "uv")
 UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
 DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
 HELP_PUSH_FLAGS: frozenset[str] = frozenset(("-h", "--help"))
@@ -76,14 +77,15 @@ def push(
     upstream_probe: UpstreamProbe,
 ) -> int:
     """Run the publish-and-sync orchestration. Returns the process exit code."""
-    if _is_help_request(push_args):
-        return runner(("git", "push", *push_args))
+    is_help_request = _is_help_request(push_args)
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
             return 1
+    if is_help_request:
+        return runner((GIT_TOOL, "push", *push_args))
     before_ref = upstream_probe()
-    push_rc = runner(("git", "push", *push_args))
+    push_rc = runner((GIT_TOOL, "push", *push_args))
     if push_rc != 0:
         return push_rc
     if _is_dry_run(push_args):
@@ -197,6 +199,7 @@ def _real_upstream_probe() -> str | None:
 
 __all__ = [
     "DRY_RUN_PUSH_FLAGS",
+    "GIT_TOOL",
     "HELP_PUSH_FLAGS",
     "REQUIRED_TOOLS",
     "SYNC_COMMAND",
