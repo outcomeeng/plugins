@@ -314,12 +314,12 @@ gh pr view <pr-number> --json headRefName --jq '.headRefName'
 # guarantees gh skips its local-branch-delete + switch-to-base step, which fails
 # when the base branch is checked out in another worktree.
 gh pr merge <pr-number> --rebase --delete-branch=false
-git fetch origin <base-from-pr>
-git switch --detach origin/<base-from-pr>   # step this worktree off the merged branch onto the new base tip
-git branch --list <branch-from-pr>
-git branch -D <branch-from-pr>   # run when the branch is listed locally
-git ls-remote --exit-code --heads origin <branch-from-pr>
-git push origin --delete <branch-from-pr>   # run when the remote branch exists
+git fetch origin "<base-from-pr>"
+git switch --detach "origin/<base-from-pr>"   # step this worktree off the merged branch onto the new base tip
+git branch --list "<branch-from-pr>"
+git branch -D "<branch-from-pr>"   # run only when the branch is listed locally
+git ls-remote --exit-code --heads origin "<branch-from-pr>"   # a no-match exit means the remote branch is already absent
+git push origin --delete "<branch-from-pr>"   # run only when the remote branch exists
 git status --porcelain
 ```
 
