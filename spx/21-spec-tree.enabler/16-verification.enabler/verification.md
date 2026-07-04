@@ -22,7 +22,7 @@ Each rule enforces a guarantee of `spx/21-spec-tree.enabler/16-verification.enab
 - ALWAYS: appended events carry strictly increasing, contiguous sequence numbers, and reads resume from a cursor ([audit])
 - ALWAYS: a correction to a prior finding is a later event referencing the original, never a mutation of a persisted event ([audit])
 - ALWAYS: a terminal seal makes a run's sequence final — no append succeeds on a sealed journal ([audit])
-- ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares a model identifier, `tools: Bash, Read, Skill`, and `skills:` listing the skill ([audit])
+- ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares `model: sonnet`, `tools: Bash, Read, Skill`, and `skills:` listing the skill ([audit])
 - ALWAYS: every wrapper agent declares `model: sonnet` — omitting the field or declaring `model: inherit` falls back to the session model, which is unacceptable for verification agents ([test](tests/test_agent_model_field.mapping.l1.py))
 - ALWAYS: every agentic verification skill derives its changeset scope through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/changeset-scope.md`) ([audit])
 - NEVER: an agentic verification skill reads authoritative run state from a rendered surface rather than from the journal ([audit])
