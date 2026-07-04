@@ -10,17 +10,19 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(gh auth status:*), Bas
 The pull request merged into the base branch on origin, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
-<reentry_and_tokens>
+<step name="pr_wait_and_reentry_policy">
 
 `/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
 
 Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_READY:<head-sha>`, `MERGE_BLOCKED:<reason>`, `AWAIT_APPROVAL:<reason>`, and `POST_MERGE_VERIFY` never store PR state and never authorize a later wait, merge, or closeout without a fresh `/manage-pr` inspection pass. After compaction or when the foundation is absent, restart from Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior action-token authority and return to Step 1 for the PR pointer.
 
+When PR checks or current-head review output are not terminal, `/manage-pr` runs exactly one foreground wait command, `gh pr checks <pr-number> --watch --fail-fast --interval 30`, then discards the pre-wait token authority and re-inspects PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before deciding the next action. Runtime heartbeats, runtime timers, background waits, shell polling, background `sleep`, and `gh run watch` are invalid wait mechanisms for GitHub PR checks.
+
 GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why `/manage-pr` is being re-entered.
 
-</reentry_and_tokens>
+</step>
 
-<the_managing_flow>
+<step name="the_managing_flow">
 
 Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds.
 
@@ -94,7 +96,7 @@ If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standar
 
 **Exit when:** the PR is closed, Step 9 has returned closeout-ready evidence to `/manage-github-pr`, Step 9 has emitted `POST_MERGE_VERIFY` with branch-state closeout evidence, or Step 9 invoked `/handoff` for a direct invocation. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
-</the_managing_flow>
+</step>
 
 <commands_reference>
 
