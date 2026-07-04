@@ -85,7 +85,16 @@ MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 # product command. ``author`` rebuilds or regenerates artifacts after a create/update/delete on
 # a spec, test, or implementation file; ``verify`` is the deterministic check over a node and
 # the changeset; ``gate`` is the full deterministic bundle; ``merge`` is the transport command.
-FIXED_COMMAND_SLOTS = ("author", "verify", "gate", "merge")
+# Each name is a source-owned constant, so a consumer or test references a slot by name rather
+# than copying the string literal.
+SLOT_AUTHOR = "author"
+SLOT_VERIFY = "verify"
+SLOT_GATE = "gate"
+SLOT_MERGE = "merge"
+FIXED_COMMAND_SLOTS = (SLOT_AUTHOR, SLOT_VERIFY, SLOT_GATE, SLOT_MERGE)
+# The slot marker namespace. The fence markers and the router's in-prose slot references both
+# derive from this prefix, so it is the single source of the ``SPEC-TREE:{slot}`` vocabulary.
+SLOT_MARKER_NAME = "SPEC-TREE:"
 # A slot body carrying this mark is unfilled — a scaffolded placeholder, not a product command.
 # Sibling-fill and conflict detection treat such a body as empty.
 SLOT_PLACEHOLDER_MARK = "<!-- unfilled -->"
@@ -140,8 +149,12 @@ def _frontmatter_value(frontmatter: list[str], key: str) -> str | None:
     return None
 
 
-def _router_marker(version: str, languages: tuple[str, ...]) -> str:
-    """Build the router block's opening marker from the version and enabled languages."""
+def router_marker(version: str, languages: tuple[str, ...]) -> str:
+    """Build the router block's opening marker from the version and enabled languages.
+
+    The single source of the ``<!-- SPEC-TREE v{version} langs:{list} -->`` marker format, so a
+    consumer or test references it here rather than copying the literal.
+    """
     return (
         f"{ROUTER_MARKER_PREFIX}{version} {ROUTER_LANGS_KEY}{','.join(languages)} -->"
     )
@@ -377,7 +390,7 @@ def render(
     body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
 
-    marker = _router_marker(installed_version, languages)
+    marker = router_marker(installed_version, languages)
     rendered = f"{marker}\n{body.rstrip()}\n\n{ROUTER_BLOCK_END}"
     return rendered.rstrip("\n") + "\n"
 
@@ -385,12 +398,24 @@ def render(
 # --- Command slots -------------------------------------------------------------------------
 
 
-def _slot_open(slot: str) -> str:
-    return f"<!-- SPEC-TREE:{slot} -->"
+def slot_reference(slot: str) -> str:
+    """The in-prose reference token the router uses for a command slot, e.g. ``SPEC-TREE:author``.
+
+    The single source of the ``SPEC-TREE:{slot}`` slot vocabulary: the fence markers below and
+    the router's authored slot references both derive from it, so a consumer or test names a slot
+    through this accessor rather than copying the literal.
+    """
+    return f"{SLOT_MARKER_NAME}{slot}"
 
 
-def _slot_close(slot: str) -> str:
-    return f"<!-- /SPEC-TREE:{slot} -->"
+def slot_open_marker(slot: str) -> str:
+    """The opening fence marker delimiting a command slot's body."""
+    return f"<!-- {slot_reference(slot)} -->"
+
+
+def slot_close_marker(slot: str) -> str:
+    """The closing fence marker delimiting a command slot's body."""
+    return f"<!-- /{slot_reference(slot)} -->"
 
 
 def slot_placeholder(slot: str) -> str:
@@ -401,12 +426,12 @@ def slot_placeholder(slot: str) -> str:
 def _render_slot(slot: str, body: str) -> str:
     # Blank lines around the body keep the fence dprint-compliant: an HTML comment and the
     # Markdown that follows it are separate blocks, so the formatter requires a blank between.
-    return f"{_slot_open(slot)}\n\n{body}\n\n{_slot_close(slot)}"
+    return f"{slot_open_marker(slot)}\n\n{body}\n\n{slot_close_marker(slot)}"
 
 
 def parse_command_slot(text: str, slot: str) -> str | None:
     """Return a command slot's body, or None when the slot fence is absent."""
-    open_marker, close_marker = _slot_open(slot), _slot_close(slot)
+    open_marker, close_marker = slot_open_marker(slot), slot_close_marker(slot)
     start = text.find(open_marker)
     if start == -1:
         return None
@@ -424,7 +449,7 @@ def is_slot_filled(body: str | None) -> bool:
 
 def set_command_slot(text: str, slot: str, body: str) -> str:
     """Return ``text`` with the command slot's body replaced; unchanged when the fence is absent."""
-    open_marker, close_marker = _slot_open(slot), _slot_close(slot)
+    open_marker, close_marker = slot_open_marker(slot), slot_close_marker(slot)
     start = text.find(open_marker)
     if start == -1:
         return text
@@ -468,16 +493,16 @@ def ensure_slot_fences(text: str) -> str:
         if parse_command_slot(text, slot) is not None:
             continue
         body = slot_placeholder(slot)
-        start = text.find(_slot_open(slot))
+        start = text.find(slot_open_marker(slot))
         if start != -1:
-            body_start = start + len(_slot_open(slot))
+            body_start = start + len(slot_open_marker(slot))
             end = _next_fence_index(text, body_start)
             recovered = text[body_start:end].strip("\n")
             if recovered:
                 body = recovered
             text = f"{text[:start]}{text[end:]}"
         # Drop any stray close marker (a close-only fragment carries no recoverable body).
-        text = text.replace(_slot_close(slot), "")
+        text = text.replace(slot_close_marker(slot), "")
         additions.append(_render_slot(slot, body))
     if not additions:
         return text

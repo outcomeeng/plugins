@@ -84,6 +84,8 @@ class InstructionBlockModule(Protocol):
 
     def conflicting_command_slots(self, repo_root: Path) -> tuple[str, ...]: ...
 
+    def slot_reference(self, slot: str) -> str: ...
+
 
 def _run(
     args: Sequence[str], *, cwd: Path = REPO_ROOT
@@ -258,18 +260,28 @@ def conflicting_command_slots(
     return instruction_module.conflicting_command_slots(repo_root)
 
 
-def render_report(drift: Sequence[str], conflicts: Sequence[str] = ()) -> str:
-    """Render the actionable drift report from drifting paths and conflicting command slots."""
+def render_report(
+    drift: Sequence[str],
+    conflicts: Sequence[str] = (),
+    *,
+    module: InstructionBlockModule | None = None,
+) -> str:
+    """Render the actionable drift report from drifting paths and conflicting command slots.
+
+    A conflicting slot is named through the generator's source-owned ``slot_reference``, so the
+    report and the fence markers share one ``SPEC-TREE:{slot}`` vocabulary rather than a copy.
+    """
     sections: list[str] = []
     if drift:
         sections += [HEADER, "", *(f"  {path}" for path in drift), "", REMEDIATION]
     if conflicts:
+        instruction_module = module or load_instruction_block_module()
         if sections:
             sections.append("")
         sections += [
             SLOT_CONFLICT_HEADER,
             "",
-            *(f"  SPEC-TREE:{slot}" for slot in conflicts),
+            *(f"  {instruction_module.slot_reference(slot)}" for slot in conflicts),
             "",
             SLOT_CONFLICT_REMEDIATION,
         ]
