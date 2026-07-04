@@ -234,6 +234,27 @@ def helper_function_declaration_is_rejected() -> bool:
     )
 
 
+def owned_declaration_categories_are_rejected() -> bool:
+    declarations = _declarations_for_fixture("test_owned_declaration_categories.py")
+    expected_declarations = {
+        "test_data",
+        "expected_output",
+        "RUNNER_SETTINGS",
+        "PROPERTY_CONFIGURATION",
+        "setup_policy",
+        "reusable_cases",
+        "fixture_path",
+        "generator_choice",
+        "harness_behavior",
+    }
+    observed_declarations = {declaration.name for declaration in declarations}
+    return (
+        expected_declarations <= observed_declarations
+        and audit_case_verdict(_audit_case(declarations=True)).finding_category
+        is FindingCategory.TEST_OWNED_DECLARATION
+    )
+
+
 def positive_pattern_is_reported() -> bool:
     return (
         audit_case_verdict(_audit_case(positive_pattern=True)).finding_category

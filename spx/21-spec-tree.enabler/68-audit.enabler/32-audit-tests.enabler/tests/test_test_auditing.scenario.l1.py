@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     no_coupling_is_rejected,
     no_coverage_is_rejected,
     numeric_literal_is_rejected,
+    owned_declaration_categories_are_rejected,
     positive_pattern_is_reported,
     partial_coupling_is_rejected,
     prose_coupling_is_rejected,
@@ -125,6 +126,10 @@ def test_rejects_test_owned_declarations() -> None:
 
 def test_rejects_helper_function_declarations() -> None:
     assert helper_function_declaration_is_rejected()
+
+
+def test_rejects_owned_declaration_categories() -> None:
+    assert owned_declaration_categories_are_rejected()
 
 
 def test_reports_positive_pattern() -> None:
