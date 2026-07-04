@@ -202,7 +202,11 @@ def _optional_path(data: dict[str, Any], key: str) -> Path | None:
 def _optional_model(data: dict[str, Any], key: str) -> str:
     if key not in data:
         return DEFAULT_MODEL
-    value = data[key]
+    return validate_model(data[key], key)
+
+
+def validate_model(value: Any, key: str) -> str:
+    """Validate a model name from a durable or CLI-owned configuration field."""
     if not isinstance(value, str) or not value:
         msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"
         raise ValueError(msg)

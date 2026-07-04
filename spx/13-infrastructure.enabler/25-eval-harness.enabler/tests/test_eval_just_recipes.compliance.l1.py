@@ -98,6 +98,26 @@ def test_eval_recipe_uses_model_env_override(
     assert "suite pass_rate=100.00%" in completed.stdout
 
 
+def test_eval_case_recipe_uses_model_env_override(
+    tmp_path: Path,
+) -> None:
+    eval_toml, _plugin_dir, fake_claude = _write_eval_fixture(tmp_path)
+
+    completed = _run_just_eval(
+        tmp_path,
+        fake_claude,
+        "eval-case",
+        str(eval_toml),
+        "case-pass",
+        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "--model claude-sonnet-4-5" in completed.stdout
+    assert "--case-id case-pass" in completed.stdout
+    assert "suite pass_rate=100.00%" in completed.stdout
+
+
 def test_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None:
     plugin_dir = tmp_path / "plugin"
     plugin_dir.mkdir()

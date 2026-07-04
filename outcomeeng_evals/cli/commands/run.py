@@ -14,7 +14,7 @@ import click
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
-from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
+from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition, validate_model
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
 from outcomeeng_evals.runner import ModelRunner, RunMetadata
@@ -101,10 +101,16 @@ def run_command(
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
+    try:
+        selected_model = (
+            validate_model(model, "--model") if model is not None else definition.model
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
     runner_factory = _runner_factory_from_context()
     runner = runner_factory(
         plugin_dir=plugin_dir,
-        model=model or definition.model,
+        model=selected_model,
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
     )
