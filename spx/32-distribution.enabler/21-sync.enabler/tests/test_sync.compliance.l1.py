@@ -30,6 +30,7 @@ from outcomeeng_testing.harnesses.sync import (
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
+INITIAL_CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
 FORBIDDEN_CACHE_PRESERVE_STEP = "codex_cache_preserve"
 TOOL_EVENT_PREFIX = "tool:"
 RUNNER_EVENT = "runner"
@@ -134,6 +135,7 @@ def test_source_reconciliation_precedes_distribution_change_probe() -> None:
 def test_no_codex_cache_preserve_step_is_declared() -> None:
     step_names = tuple(step.name for step in STEPS)
 
+    assert INITIAL_CODEX_LOCAL_REFRESH_STEP in step_names
     assert FORBIDDEN_CACHE_PRESERVE_STEP not in step_names
 
 
