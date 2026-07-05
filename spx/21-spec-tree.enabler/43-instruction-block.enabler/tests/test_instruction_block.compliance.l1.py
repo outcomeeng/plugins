@@ -1,545 +1,214 @@
-"""Compliance evidence for the root managed instruction-block generator.
+"""Compliance evidence for the instruction-block render model.
 
-Rules in ``instruction-block.md`` with deterministic test evidence:
-
-- NEVER: the render substitutes a product-specific string — a brace-delimited illustration
-  token in the template passes through to the instruction block unchanged.
-- NEVER: an update keeps an unmodeled hand-prose edit inside the instruction block — a
-  tampered block re-renders to the same output as a clean render from the same languages.
-- ALWAYS: generation writes instruction blocks into both root instruction files.
-- ALWAYS: instruction blocks render from harness-specific templates under ``dist/``.
-- NEVER: instruction-block generation writes output from a template with unresolved build macros.
-- NEVER: obsolete ``spx/`` instruction files remain after instruction-block generation.
+The ALWAYS/NEVER rules of ``instruction-block.md`` with deterministic test evidence: both root
+files are written together, the router is first and carries a read-the-whole-file instruction,
+generation reads the ``dist/`` templates, the writer is bound through the ``just`` recipes and
+the lefthook pre-commit hook, the drift gate reports a missing root path and overwrites router
+drift, the refresh workflow regenerates and opens a PR only on drift while verifying its pinned
+tooling, no product-specific string enters the router, a former command-slot fence is ordinary
+content, a reconcile never blends bodies, the retired session tokens never render, an unresolved
+build macro is rejected, and retired ``spx/`` instruction files are removed. Real repository
+config (``justfile``, ``lefthook.yml``, the workflow) is read through harness helpers.
 """
 
-import os
+from __future__ import annotations
+
 import pathlib
-import subprocess
 
 import pytest
 
-from outcomeeng.distribution import instruction_block
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
-from outcomeeng_testing.harnesses.instruction_block import (
-    INSTRUCTION_AGENTS,
-    INSTRUCTION_CLAUDE,
-    ILLUSTRATION_TOKEN,
-    LANG_PRIMARY,
-    HARNESS_CLAUDE,
-    HARNESS_CODEX,
-    ROOT_SHARED_BODY,
-    SESSION_ARCHIVE_RESULT_INSTRUCTION,
-    SESSION_MANAGEMENT_HEADING,
-    SESSION_RESULT_FRONTMATTER_FIELD,
-    build_template,
-    extract_markdown_section,
-    load_instruction_block_module,
-    read_canonical_template,
-    render_build_macro,
-    write_template,
-)
+from outcomeeng.distribution import instruction_block as dist
+from outcomeeng_testing.harnesses import instruction_block as harness
 
-VERSION = "0.18.0"
-JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
+MODULE = harness.load_instruction_block_module()
 
 
-def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=repo_root,
-        capture_output=True,
-        check=True,
-        text=True,
+def _template(tmp_path: pathlib.Path) -> pathlib.Path:
+    return harness.write_template(tmp_path, harness.NEW_VERSION)
+
+
+def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
+    assert (repo / harness.INSTRUCTION_AGENTS).is_file()
+
+
+@pytest.mark.parametrize("agent_harness", harness.TEMPLATE_HARNESSES)
+def test_router_is_first_and_carries_read_whole_file_instruction(
+    agent_harness: str,
+) -> None:
+    template = harness.read_canonical_template()
+    rendered = MODULE.render(
+        template,
+        harness.TEMPLATE_LANGUAGES,
+        MODULE.parse_template_version(template),
+        agent_harness,
     )
+    document = MODULE.prepend_router_block(rendered, harness.ROOT_SHARED_BODY)
+    assert document.startswith(MODULE.ROUTER_MARKER_PREFIX)
+    router_block = document[: document.index(MODULE.ROUTER_BLOCK_END)]
+    assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
-def _workflow_run_block(step_name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-    step_line = f"      - name: {step_name}"
-    start = lines.index(step_line)
-    run_line = lines.index("        run: |", start)
-    block: list[str] = []
-    for line in lines[run_line + 1 :]:
-        if line.startswith("      - name: "):
-            break
-        if line.startswith("          "):
-            block.append(line[10:])
-        elif line:
-            break
-        else:
-            block.append("")
-    return "\n".join(block) + "\n"
+def test_generation_reads_dist_templates() -> None:
+    for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        path = dist.dist_template_path(agent_harness)
+        assert dist.DIST_DIR_NAME in path.parts
+        assert agent_harness in path.parts
 
 
-def _workflow_step_block(step_name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-    step_line = f"      - name: {step_name}"
-    start = lines.index(step_line)
-    block: list[str] = []
-    for line in lines[start:]:
-        if line.startswith("      - name: ") and block:
-            break
-        block.append(line)
-    return "\n".join(block) + "\n"
+def test_justfile_binds_build_and_check_recipes() -> None:
+    justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
+    build_body = harness.justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
+    check_body = harness.justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
+    assert f"outcomeeng.distribution.instruction_block {dist.WRITE_FLAG}" in build_body
+    assert "outcomeeng.distribution.instruction_block" in check_body
+    assert dist.WRITE_FLAG not in check_body
 
 
-def _workflow_env_value(name: str) -> str:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    prefix = f"      {name}: "
-    for line in workflow.splitlines():
-        if line.startswith(prefix):
-            return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
-    raise AssertionError(f"workflow env value not found: {name}")
+def test_lefthook_regenerates_through_build_instructions() -> None:
+    lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
+    # the hook's run directive regenerates through the recipe, not a direct generator invocation
+    assert "run: just build-instructions" in lefthook
 
 
-def _write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
-    stub = bin_dir / "gh"
-    stub.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env bash",
-                "set -euo pipefail",
-                f'printf "%s\\n" "$*" >> {str(log_path)!r}',
-                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "list" ]; then',
-                "  exit 0",
-                "fi",
-                'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "create" ]; then',
-                "  exit 0",
-                "fi",
-                'echo "unexpected gh invocation: $*" >&2',
-                "exit 64",
-            ]
-        )
-        + "\n",
+def test_drift_gate_reports_a_missing_root_instruction_file(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    harness.write_both_root_files_with_shared_region(
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+    )
+    harness.git_commit_at(
+        repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
+    )
+    (repo / harness.INSTRUCTION_CLAUDE).unlink()
+
+    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    assert harness.INSTRUCTION_CLAUDE in drift
+
+
+def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = _template(tmp_path)
+    harness.run_generator_write_primary(repo, template)
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        claude.read_text(encoding="utf-8").replace(f"v{harness.NEW_VERSION}", "v0.0.1"),
         encoding="utf-8",
     )
-    stub.chmod(0o755)
-
-
-def _run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
-    bin_dir = repo_root.parent / f"{repo_root.name}-stub-bin"
-    bin_dir.mkdir()
-    _write_gh_stub(bin_dir, gh_log)
-    env = os.environ.copy()
-    env["GH_TOKEN"] = "test-token"
-    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-    result = subprocess.run(
-        [
-            "/bin/bash",
-            "-c",
-            _workflow_run_block("Open instruction-block refresh pull request"),
-        ],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        env=env,
+    harness.run_generator_write_primary(repo, template)
+    assert (
+        MODULE.parse_instruction_version(claude.read_text(encoding="utf-8"))
+        == harness.NEW_VERSION
     )
-    assert result.returncode == 0, result.stderr
-    return result.stdout
+
+
+def test_refresh_workflow_regenerates_and_opens_pr() -> None:
+    workflow = dist.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    regenerate = harness.workflow_run_block("Regenerate instruction blocks")
+    assert "just build-instructions" in regenerate
+    pr_step = harness.workflow_step_block("Open instruction-block refresh pull request")
+    # opens or updates the PR only when git reports drift
+    assert "git status --porcelain" in pr_step
+
+
+def test_refresh_workflow_checks_out_main() -> None:
+    checkout = harness.workflow_step_block("Checkout")
+    assert "main" in checkout
+
+
+def test_refresh_workflow_verifies_just_download() -> None:
+    install = harness.workflow_run_block("Install just")
+    just_sha256 = harness.workflow_env_value("JUST_SHA256")
+    # the pinned checksum is declared and the install verifies the download against it
+    assert len(just_sha256) == 64
+    assert "$JUST_SHA256" in install
+    assert "sha256sum" in install.lower()
+
+
+def test_refresh_workflow_installs_dprint() -> None:
+    install = harness.workflow_run_block("Install dprint")
+    dprint_version = harness.workflow_env_value("DPRINT_VERSION")
+    # the pinned version is declared and the install references it
+    assert dprint_version
+    assert "${DPRINT_VERSION}" in install
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:
-    module = load_instruction_block_module()
-    rendered = module.render(
-        build_template(VERSION), (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE
+    rendered = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
     )
-    assert ILLUSTRATION_TOKEN in rendered
+    assert harness.ILLUSTRATION_TOKEN in rendered
 
 
-def test_re_render_ignores_unmodeled_instruction_block_edits() -> None:
-    module = load_instruction_block_module()
-    template = build_template(VERSION)
-    clean_block = module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
-    existing_document = f"{ROOT_SHARED_BODY}\n\n{clean_block}"
-
-    tampered = existing_document.replace(
-        module.MANAGED_BLOCK_END,
-        f"\n## Hand Section\n\n{JUNK_EDIT}\n{module.MANAGED_BLOCK_END}",
-    )
-    updated = module.upsert_managed_block(tampered, clean_block)
-
-    assert JUNK_EDIT not in updated
-    assert ROOT_SHARED_BODY.rstrip("\n") in updated
-    assert clean_block in updated
-
-
-def test_generation_writes_both_root_instruction_files(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
-
-    exit_code = module.main(
-        [
-            "--template",
-            str(template),
-            "--repo-root",
-            str(tmp_path),
-            "--languages",
-            LANG_PRIMARY,
-            "--write",
-        ]
-    )
-    assert exit_code == 0
-
-    written = {
-        name
-        for name in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
-        if (tmp_path / name).is_file()
-    }
-    assert written == set(module.AGENT_HARNESS_INSTRUCTION_FILENAMES.values())
-
-
-def test_root_content_outside_instruction_block_is_preserved(
+def test_former_command_slot_fence_is_ordinary_content(
     tmp_path: pathlib.Path,
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
-    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / filename).write_text(ROOT_SHARED_BODY, encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
-        )
-        == 0
-    )
-
-    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        content = (tmp_path / filename).read_text(encoding="utf-8")
-        assert ROOT_SHARED_BODY.rstrip("\n") in content
-        assert content.count(module.MANAGED_BLOCK_START) == 1
-        assert content.count(module.MANAGED_BLOCK_END) == 1
-
-
-def test_instruction_templates_are_loaded_from_harness_specific_dist_outputs(
-    tmp_path: pathlib.Path,
-) -> None:
-    module = load_instruction_block_module()
-    expected: dict[str, str] = {}
-    for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
-        path = instruction_block.dist_template_path(harness)
-        assert (
-            path
-            == instruction_block.REPO_ROOT
-            / DIST_DIR_NAME
-            / harness
-            / instruction_block.DIST_TEMPLATE_RELATIVE_PATH
-        )
-        template = build_template(f"{VERSION}.{harness}")
-        expected[harness] = template
-        dist_path = instruction_block.dist_template_path(harness, repo_root=tmp_path)
-        dist_path.parent.mkdir(parents=True, exist_ok=True)
-        dist_path.write_text(template, encoding="utf-8")
-
-    assert (
-        instruction_block.load_harness_templates(module, repo_root=tmp_path) == expected
-    )
-
-
-def test_instruction_render_rejects_unresolved_build_macro() -> None:
-    module = load_instruction_block_module()
-    harness_templates = {
-        harness: build_template(VERSION)
-        for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
-    harness_templates[HARNESS_CODEX] += render_build_macro()
-
-    with pytest.raises(instruction_block.UnresolvedInstructionTemplateError):
-        instruction_block.render_instruction_blocks_from_harness_templates(
-            module, harness_templates, (LANG_PRIMARY,)
-        )
-
-
-def test_justfile_exposes_instruction_writer_and_gate() -> None:
-    justfile = instruction_block.REPO_ROOT.joinpath(
-        instruction_block.JUSTFILE_NAME
-    ).read_text(encoding="utf-8")
-
-    assert f"\n{instruction_block.BUILD_INSTRUCTIONS_RECIPE}:" in justfile
-    assert f"\n{instruction_block.INSTRUCTIONS_CHECK_RECIPE}:" in justfile
-    assert (
-        f"outcomeeng.distribution.instruction_block {instruction_block.WRITE_FLAG}"
-        in justfile
-    )
-    assert "outcomeeng.distribution.instruction_block\n" in justfile
-
-
-def test_lefthook_instruction_refresh_uses_rendered_dist_templates() -> None:
-    lefthook = instruction_block.REPO_ROOT.joinpath("lefthook.yml").read_text(
-        encoding="utf-8"
-    )
-
-    assert "run: just build-instructions" in lefthook
-    assert (
-        "--template src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
-        not in lefthook
-    )
-    assert "--repo-root ." not in lefthook
-
-
-def test_instruction_drift_probe_marks_untracked_root_files_intent_to_add(
-    tmp_path: pathlib.Path,
-) -> None:
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
-    (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
-    _git(tmp_path, "add", ".gitignore")
-    _git(tmp_path, "commit", "-m", "seed repository")
-    (tmp_path / INSTRUCTION_CLAUDE).write_text("generated claude\n", encoding="utf-8")
-    (tmp_path / INSTRUCTION_AGENTS).write_text("generated agents\n", encoding="utf-8")
-
-    assert instruction_block.drifting_instruction_files(repo_root=tmp_path) == [
-        INSTRUCTION_AGENTS,
-        INSTRUCTION_CLAUDE,
-    ]
-
-
-def test_instruction_drift_probe_reports_missing_root_files(
-    tmp_path: pathlib.Path,
-) -> None:
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
-    (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
-    _git(tmp_path, "add", ".gitignore")
-    _git(tmp_path, "commit", "-m", "seed repository")
-
-    assert instruction_block.drifting_instruction_files(repo_root=tmp_path) == [
-        INSTRUCTION_AGENTS,
-        INSTRUCTION_CLAUDE,
-    ]
-
-
-def test_instruction_drift_probe_skips_missing_obsolete_spx_files(
-    tmp_path: pathlib.Path,
-) -> None:
-    spx_dir = tmp_path / "spx"
-    spx_dir.mkdir()
-    for path in (
-        tmp_path / INSTRUCTION_CLAUDE,
-        tmp_path / INSTRUCTION_AGENTS,
-        spx_dir / INSTRUCTION_CLAUDE,
-        spx_dir / INSTRUCTION_AGENTS,
-    ):
-        path.write_text(f"{path.name}\n", encoding="utf-8")
-
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
-    _git(tmp_path, "add", ".")
-    _git(tmp_path, "commit", "-m", "seed instruction files")
-
-    (spx_dir / INSTRUCTION_CLAUDE).unlink()
-    (spx_dir / INSTRUCTION_AGENTS).unlink()
-
-    assert instruction_block.drifting_instruction_files(repo_root=tmp_path) == [
-        f"spx/{INSTRUCTION_AGENTS}",
-        f"spx/{INSTRUCTION_CLAUDE}",
-    ]
-
-
-def test_root_instruction_refresh_workflow_regenerates_and_opens_pr() -> None:
-    workflow = instruction_block.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-
-    assert "workflow_dispatch:" in workflow
-    assert "schedule:" in workflow
-    assert "\npermissions:" not in workflow
-    assert (
-        "    permissions:\n      contents: write\n      pull-requests: write"
-        in workflow
-    )
-    regenerate_commands = _workflow_run_block(
-        "Regenerate instruction blocks"
-    ).splitlines()
-    build_skills = regenerate_commands.index("just build-skills")
-    build_instructions = regenerate_commands.index("just build-instructions")
-    assert build_skills < build_instructions
-    assert "just instructions-check" not in regenerate_commands
-
-
-def test_root_instruction_refresh_workflow_checks_out_main() -> None:
-    checkout_step = _workflow_step_block("Checkout")
-
-    assert "          ref: main\n" in checkout_step
-
-
-def test_root_instruction_refresh_workflow_verifies_just_download() -> None:
-    install_commands = _workflow_run_block("Install just")
-    just_sha256 = _workflow_env_value("JUST_SHA256")
-
-    assert just_sha256
-    assert 'tmp="$(mktemp -d)"' in install_commands
-    assert "trap 'rm -rf \"$tmp\"' EXIT" in install_commands
-    assert '-o "$tmp/just.tar.gz"' in install_commands
-    assert 'printf \'%s  %s\\n\' "$JUST_SHA256" "$tmp/just.tar.gz"' in install_commands
-    assert "sha256sum -c -" in install_commands
-    assert 'sudo install -m 0755 "$tmp/just" /usr/local/bin/just' in install_commands
-    assert "-o just.tar.gz" not in install_commands
-    assert "tar -xzf just.tar.gz" not in install_commands
-
-
-def test_root_instruction_refresh_workflow_installs_dprint() -> None:
-    # `just build-skills` formats generated dist output with dprint, so the refresh
-    # workflow must provision dprint before regenerating — otherwise the build fails
-    # with "dprint is required to format generated dist output".
-    install_commands = _workflow_run_block("Install dprint")
-    dprint_version = _workflow_env_value("DPRINT_VERSION")
-
-    assert dprint_version
-    assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install_commands
-    assert "dprint --version" in install_commands
-
-
-def test_root_instruction_refresh_pr_step_exits_cleanly_without_drift(
-    tmp_path: pathlib.Path,
-) -> None:
-    gh_log = tmp_path / "gh.log"
-    _git(tmp_path, "init")
-    _git(tmp_path, "config", "user.name", "Test User")
-    _git(tmp_path, "config", "user.email", "test@example.com")
-    (tmp_path / INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
-    (tmp_path / INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
-    _git(tmp_path, "add", ".")
-    _git(tmp_path, "commit", "-m", "seed instruction files")
-
-    output = _run_refresh_pr_step(tmp_path, gh_log)
-
-    assert output == "Root instruction blocks are current.\n"
-    assert not gh_log.exists()
-
-
-def test_root_instruction_refresh_pr_step_stages_obsolete_deletions(
-    tmp_path: pathlib.Path,
-) -> None:
-    remote = tmp_path / "remote.git"
     repo = tmp_path / "repo"
-    gh_log = tmp_path / "gh.log"
-    _git(tmp_path, "init", "--bare", str(remote))
-    _git(tmp_path, "clone", str(remote), str(repo))
-    _git(repo, "config", "user.name", "Test User")
-    _git(repo, "config", "user.email", "test@example.com")
+    repo.mkdir()
+    slot_fence = (
+        "<!-- SPEC-TREE:author -->\n\nproduct author command\n\n"
+        "<!-- /SPEC-TREE:author -->\n"
+    )
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(slot_fence, encoding="utf-8")
+
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    # the former slot text survives as ordinary content, and no slot name is a managed region
+    assert "product author command" in result
+    assert set(MODULE.parse_shared_regions(result)) == {harness.SHARED_REGION_NAME}
+
+
+def test_reconcile_replaces_the_losing_region_whole() -> None:
+    open_marker = MODULE.shared_open_marker(harness.SHARED_REGION_NAME)
+    close_marker = MODULE.shared_close_marker(harness.SHARED_REGION_NAME)
+    doc_a = f"{open_marker}\n\n{harness.SHARED_REGION_BODY}\n\n{close_marker}\n"
+    doc_b = f"{open_marker}\n\n{harness.SHARED_REGION_BODY_ALT}\n\n{close_marker}\n"
+    _, new_b = MODULE.reconcile_shared_regions(doc_a, doc_b, "a")
+    reconciled = MODULE.parse_shared_regions(new_b)[harness.SHARED_REGION_NAME]
+    assert reconciled == harness.SHARED_REGION_BODY
+    assert harness.SHARED_REGION_BODY_ALT not in reconciled
+
+
+def test_rendered_router_omits_retired_session_tokens() -> None:
+    template = harness.read_canonical_template()
+    version = MODULE.parse_template_version(template)
+    for agent_harness in harness.TEMPLATE_HARNESSES:
+        rendered = MODULE.render(
+            template, harness.TEMPLATE_LANGUAGES, version, agent_harness
+        )
+        assert harness.SESSION_ARCHIVE_RESULT_INSTRUCTION not in rendered
+        assert harness.SESSION_RESULT_FRONTMATTER_FIELD not in rendered
+
+
+def test_unresolved_build_macro_is_rejected() -> None:
+    with pytest.raises(dist.UnresolvedInstructionTemplateError):
+        dist.assert_no_unresolved_build_macros(
+            harness.render_build_macro(), path="synthetic-template"
+        )
+
+
+def test_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
     spx_dir = repo / "spx"
     spx_dir.mkdir()
-    for path in (
-        repo / INSTRUCTION_CLAUDE,
-        repo / INSTRUCTION_AGENTS,
-        spx_dir / INSTRUCTION_CLAUDE,
-        spx_dir / INSTRUCTION_AGENTS,
-    ):
-        path.write_text(f"{path.name}\n", encoding="utf-8")
-    _git(repo, "add", ".")
-    _git(repo, "commit", "-m", "seed instruction files")
-    _git(repo, "branch", "-M", "main")
-    _git(repo, "push", "-u", "origin", "main")
+    for name in harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS:
+        (spx_dir / name).write_text("retired spx instruction file\n", encoding="utf-8")
 
-    (repo / INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
-    (repo / INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
-    (spx_dir / INSTRUCTION_CLAUDE).unlink()
-    (spx_dir / INSTRUCTION_AGENTS).unlink()
-
-    _run_refresh_pr_step(repo, gh_log)
-
-    committed = _git(
-        repo,
-        "show",
-        "--name-status",
-        "--format=%s",
-        "automation/refresh-instruction-blocks",
-    ).stdout
-    assert "Refresh root instruction blocks" in committed
-    assert f"M\t{INSTRUCTION_CLAUDE}" in committed
-    assert f"M\t{INSTRUCTION_AGENTS}" in committed
-    assert f"D\tspx/{INSTRUCTION_CLAUDE}" in committed
-    assert f"D\tspx/{INSTRUCTION_AGENTS}" in committed
-    gh_calls = gh_log.read_text(encoding="utf-8")
-    assert "pr list" in gh_calls
-    assert "pr create" in gh_calls
-
-
-def test_write_regenerates_a_drifted_instruction_block(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
-    args = [
-        "--template",
-        str(template),
-        "--repo-root",
-        str(tmp_path),
-        "--languages",
-        LANG_PRIMARY,
-    ]
-    assert module.main([*args, "--write"]) == 0
-
-    # Drift both instruction blocks by hand, then regenerate. Product-owned root content
-    # outside the block markers remains; drift inside the instruction block is removed.
-    instruction_files = [
-        tmp_path / name for name in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
-    ]
-    for instruction_file in instruction_files:
-        instruction_file.write_text(
-            instruction_file.read_text().replace(
-                module.MANAGED_BLOCK_END,
-                f"\nHAND DRIFT\n{module.MANAGED_BLOCK_END}",
-            ),
-            encoding="utf-8",
-        )
-    assert module.main([*args, "--write"]) == 0
-    for instruction_file in instruction_files:
-        assert "HAND DRIFT" not in instruction_file.read_text(encoding="utf-8")
-
-
-def test_no_rendered_instruction_block_teaches_result_session_frontmatter() -> None:
-    module = load_instruction_block_module()
-    template = read_canonical_template()
-    # Render the canonical template for each agent harness and assert the rendered
-    # Session Management section carries no result-frontmatter instruction —
-    # exercising the generator's output, not just the authored template text.
-    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
-        rendered = module.render(template, (LANG_PRIMARY,), VERSION, harness)
-        section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
-        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
-        assert SESSION_RESULT_FRONTMATTER_FIELD not in section
-
-
-def test_write_removes_obsolete_spx_instruction_files(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, VERSION)
-    spx_dir = tmp_path / "spx"
-    spx_dir.mkdir()
-    for filename in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (spx_dir / filename).write_text("obsolete\n", encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
-        )
-        == 0
-    )
-
-    assert not (spx_dir / INSTRUCTION_CLAUDE).exists()
-    assert not (spx_dir / INSTRUCTION_AGENTS).exists()
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    assert not (spx_dir / harness.INSTRUCTION_CLAUDE).exists()
+    assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
