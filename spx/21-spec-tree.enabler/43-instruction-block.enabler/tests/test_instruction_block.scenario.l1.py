@@ -1100,3 +1100,41 @@ def test_write_recovers_malformed_slot_body_quoting_a_marker(
         module.parse_command_slot(agents.read_text(encoding="utf-8"), module.SLOT_MERGE)
         == body
     )
+
+
+def test_check_reports_whitespace_only_slot_body_difference_as_drift(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    assert run_generator_write_primary(tmp_path, template) == 0
+
+    # Fill merge in both files with bodies differing only by leading whitespace — byte-different
+    # but equal after stripping.
+    claude = tmp_path / INSTRUCTION_CLAUDE
+    agents = tmp_path / INSTRUCTION_AGENTS
+    claude.write_text(
+        module.set_command_slot(
+            claude.read_text(encoding="utf-8"), module.SLOT_MERGE, "just check"
+        ),
+        encoding="utf-8",
+    )
+    agents.write_text(
+        module.set_command_slot(
+            agents.read_text(encoding="utf-8"), module.SLOT_MERGE, "    just check"
+        ),
+        encoding="utf-8",
+    )
+    assert module.conflicting_command_slots(tmp_path) == (module.SLOT_MERGE,)
+
+    check = [
+        "--template",
+        str(template),
+        "--repo-root",
+        str(tmp_path),
+        "--check",
+        "--languages",
+        LANG_PRIMARY,
+    ]
+    assert module.main(check) == 0
+    assert capsys.readouterr().out.strip() == "stale"

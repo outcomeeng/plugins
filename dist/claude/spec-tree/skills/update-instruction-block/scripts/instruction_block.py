@@ -568,7 +568,7 @@ def command_slot_conflicts(text_a: str, text_b: str) -> tuple[str, ...]:
             and body_b is not None
             and is_slot_filled(body_a)
             and is_slot_filled(body_b)
-            and body_a.strip() != body_b.strip()
+            and body_a != body_b
         ):
             conflicts.append(slot)
     return tuple(conflicts)
