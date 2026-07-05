@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 
 
 QUERY = (
@@ -154,33 +155,53 @@ def thread_has_comment(
     return False
 
 
+def review_threads_from_payload(payload: dict[str, object]) -> dict[str, object]:
+    review_threads = payload["data"]["repository"]["pullRequest"]["reviewThreads"]  # type: ignore[index]
+    if not isinstance(review_threads, dict):
+        raise ValueError("GitHub response reviewThreads must be an object")
+    return review_threads
+
+
+def iter_thread_comments(
+    review_threads: dict[str, object],
+) -> Iterator[tuple[str, dict[str, object]]]:
+    threads = review_threads["nodes"]
+    if not isinstance(threads, list):
+        raise ValueError("GitHub response reviewThreads.nodes must be a list")
+    for thread in threads:
+        if not isinstance(thread, dict):
+            continue
+        thread_id = validate_thread_id(str(thread["id"]))
+        comments = thread["comments"]
+        if isinstance(comments, dict):
+            yield thread_id, comments
+
+
+def next_threads_cursor(review_threads: dict[str, object]) -> str | None:
+    page_info = review_threads["pageInfo"]
+    if not isinstance(page_info, dict):
+        raise ValueError("GitHub response reviewThreads.pageInfo must be an object")
+    if not page_info.get("hasNextPage"):
+        return None
+    end_cursor = page_info.get("endCursor")
+    if not isinstance(end_cursor, str) or not end_cursor:
+        raise ValueError("GitHub response reviewThreads page is missing endCursor")
+    return end_cursor
+
+
 def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> str:
     fields: dict[str, str | int] = {"owner": owner, "repo": repo, "number": pr_number}
     while True:
         payload = run_graphql(THREADS_QUERY, fields)
-        review_threads = payload["data"]["repository"]["pullRequest"]["reviewThreads"]  # type: ignore[index]
-        threads = review_threads["nodes"]
-        if not isinstance(threads, list):
-            raise ValueError("GitHub response reviewThreads.nodes must be a list")
-        for thread in threads:
-            if not isinstance(thread, dict):
-                continue
-            thread_id = validate_thread_id(str(thread["id"]))
-            comments = thread["comments"]
-            if isinstance(comments, dict) and thread_has_comment(
-                thread_id, comments, comment_id
-            ):
+        review_threads = review_threads_from_payload(payload)
+        for thread_id, comments in iter_thread_comments(review_threads):
+            if thread_has_comment(thread_id, comments, comment_id):
                 return thread_id
-        page_info = review_threads["pageInfo"]
-        if not isinstance(page_info, dict):
-            raise ValueError("GitHub response reviewThreads.pageInfo must be an object")
-        if not page_info.get("hasNextPage"):
+        end_cursor = next_threads_cursor(review_threads)
+        if end_cursor is None:
             raise ValueError(
                 "review comment was not found after complete review-thread pagination"
             )
-        end_cursor = page_info.get("endCursor")
-        if not isinstance(end_cursor, str) or not end_cursor:
-            raise ValueError("GitHub response reviewThreads page is missing endCursor")
         fields["threadsAfter"] = end_cursor
 
 
