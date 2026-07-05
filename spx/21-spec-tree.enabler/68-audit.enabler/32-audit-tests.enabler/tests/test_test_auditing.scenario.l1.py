@@ -31,12 +31,14 @@ from outcomeeng_testing.harnesses.audit_tests import (
     rust_lifetime_declarations_are_split,
     rust_loop_declarations_are_detected,
     rust_match_declarations_are_detected,
+    rust_closure_parameter_declarations_are_detected,
     rust_or_pattern_declarations_are_detected,
     rust_raw_string_declarations_are_ignored,
     sourced_literals_pass,
     string_literal_is_rejected,
     owned_declaration_is_rejected,
     testability_passes_to_coupling,
+    typescript_function_parameter_declarations_are_detected,
     typescript_generator_declarations_are_detected,
     typescript_loop_declarations_are_detected,
     typescript_multiline_declarations_are_detected,
@@ -193,6 +195,10 @@ def test_detects_typescript_typed_destructuring_declarations() -> None:
     assert typescript_typed_destructuring_declarations_are_detected()
 
 
+def test_detects_typescript_function_parameter_declarations() -> None:
+    assert typescript_function_parameter_declarations_are_detected()
+
+
 def test_splits_typescript_semicolonless_declarations() -> None:
     assert typescript_semicolonless_declarations_are_split()
 
@@ -239,6 +245,10 @@ def test_detects_rust_loop_declarations() -> None:
 
 def test_detects_rust_match_declarations() -> None:
     assert rust_match_declarations_are_detected()
+
+
+def test_detects_rust_closure_parameter_declarations() -> None:
+    assert rust_closure_parameter_declarations_are_detected()
 
 
 def test_ignores_declarations_inside_rust_raw_strings() -> None:

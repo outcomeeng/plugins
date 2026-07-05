@@ -113,15 +113,12 @@ def _language_for(path: Path) -> str:
 def _scan_python(source: str, path: Path) -> list[Declaration]:
     tree = ast.parse(source, filename=str(path))
     declarations: list[Declaration] = []
-    test_function_nodes = {
-        id(node)
-        for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and node.name.startswith("test_")
-    }
+    test_function_nodes = _python_test_function_nodes(tree)
+    method_nodes = _python_method_nodes(tree)
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if id(node) not in test_function_nodes:
+            test_wrapper = test_function_nodes.get(id(node))
+            if test_wrapper is None:
                 declarations.append(
                     Declaration(
                         path=str(path),
@@ -131,7 +128,13 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
                         language="python",
                     )
                 )
-            declarations.extend(_python_argument_declarations(node.args, path))
+            declarations.extend(
+                _python_argument_declarations(
+                    node.args,
+                    path,
+                    skip_receiver=id(node) in method_nodes,
+                )
+            )
         elif isinstance(node, ast.Assign):
             for target in node.targets:
                 declarations.extend(
@@ -170,9 +173,39 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
     return declarations
 
 
-def _python_argument_declarations(args: ast.arguments, path: Path) -> list[Declaration]:
+def _python_test_function_nodes(tree: ast.Module) -> dict[int, str]:
+    test_nodes: dict[int, str] = {}
+    for node in tree.body:
+        if isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ) and node.name.startswith("test_"):
+            test_nodes[id(node)] = "function"
+        elif isinstance(node, ast.ClassDef):
+            for child in node.body:
+                if isinstance(
+                    child, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ) and child.name.startswith("test_"):
+                    test_nodes[id(child)] = "method"
+    return test_nodes
+
+
+def _python_method_nodes(tree: ast.Module) -> frozenset[int]:
+    method_nodes: set[int] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            for child in node.body:
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    method_nodes.add(id(child))
+    return frozenset(method_nodes)
+
+
+def _python_argument_declarations(
+    args: ast.arguments, path: Path, *, skip_receiver: bool = False
+) -> list[Declaration]:
     declarations: list[Declaration] = []
     arguments = [*args.posonlyargs, *args.args, *args.kwonlyargs]
+    if skip_receiver and arguments and arguments[0].arg in {"self", "cls"}:
+        arguments = arguments[1:]
     if args.vararg is not None:
         arguments.append(args.vararg)
     if args.kwarg is not None:
@@ -269,6 +302,7 @@ def _python_variable_declaration(name: str, path: Path, line: int) -> Declaratio
 
 def _scan_rust(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
+    declarations.extend(_rust_closure_declarations(source, path))
     declarations.extend(_rust_match_declarations(source, path))
     for index, unit in _rust_declaration_units(source):
         stripped = unit.lstrip()
@@ -318,6 +352,88 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
                 )
             )
     return declarations
+
+
+def _rust_closure_declarations(source: str, path: Path) -> list[Declaration]:
+    declarations: list[Declaration] = []
+    lexical_state = _LexicalState()
+    for line_number, raw_line in enumerate(source.splitlines(), start=1):
+        line = _strip_comments(raw_line, lexical_state)
+        index = 0
+        while index < len(line):
+            pipe_index = line.find("|", index)
+            if pipe_index == -1:
+                break
+            if not _rust_pipe_starts_closure(line, pipe_index):
+                index = pipe_index + 1
+                continue
+            end_index = _rust_closure_parameter_end(line, pipe_index + 1)
+            if end_index is None:
+                index = pipe_index + 1
+                continue
+            pattern = line[pipe_index + 1 : end_index].strip()
+            for name in _rust_closure_parameter_names(pattern):
+                declarations.append(
+                    Declaration(
+                        path=str(path),
+                        line=line_number,
+                        kind=_value_kind(name),
+                        name=name,
+                        language="rust",
+                    )
+                )
+            index = end_index + 1
+    return declarations
+
+
+def _rust_pipe_starts_closure(line: str, pipe_index: int) -> bool:
+    if line.startswith("||", pipe_index):
+        return False
+    before = line[:pipe_index].rstrip()
+    if not before:
+        return True
+    if before.endswith("move") and (
+        len(before) == len("move")
+        or (not before[-len("move") - 1].isalnum() and before[-len("move") - 1] != "_")
+    ):
+        return True
+    return before[-1] in "=({[,!:"
+
+
+def _rust_closure_parameter_end(line: str, start: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(line)):
+        char = line[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "`"}:
+            quote = char
+        elif char in "([{<":
+            depth += 1
+        elif char in ")]}>":
+            depth = max(0, depth - 1)
+        elif char == "|" and depth == 0:
+            return index
+    return None
+
+
+def _rust_closure_parameter_names(pattern: str) -> list[str]:
+    if not pattern:
+        return []
+    return _rust_names_from_segments(
+        [
+            _before_top_level(segment, ":")
+            for segment in _split_top_level_commas(pattern)
+        ]
+    )
 
 
 def _rust_declaration_units(source: str) -> list[tuple[int, str]]:
@@ -646,7 +762,11 @@ def _typescript_object_binding_segment(segment: str) -> str:
 
 def _typescript_parameter_declarations(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
-    for line, parameter_list in _typescript_arrow_parameter_lists(source):
+    parameter_lists = [
+        *_typescript_arrow_parameter_lists(source),
+        *_typescript_function_parameter_lists(source),
+    ]
+    for line, parameter_list in parameter_lists:
         for parameter in _split_top_level_commas(parameter_list):
             for name in _typescript_binding_names(parameter):
                 declarations.append(
@@ -659,6 +779,110 @@ def _typescript_parameter_declarations(source: str, path: Path) -> list[Declarat
                     )
                 )
     return declarations
+
+
+def _typescript_function_parameter_lists(source: str) -> list[tuple[int, str]]:
+    parameter_lists: list[tuple[int, str]] = []
+    state = _LexicalState()
+    line = 1
+    index = 0
+    while index < len(source):
+        char = source[index]
+        if char == "\n":
+            line += 1
+        if state.in_block_comment:
+            if source.startswith("*/", index):
+                state.in_block_comment = False
+                index += 2
+                continue
+            index += 1
+            continue
+        if state.quote is not None:
+            if state.escaped:
+                state.escaped = False
+            elif char == "\\":
+                state.escaped = True
+            elif char == state.quote:
+                state.quote = None
+            index += 1
+            continue
+        if state.in_regex:
+            if state.escaped:
+                state.escaped = False
+            elif char == "\\":
+                state.escaped = True
+            elif char == "[":
+                state.regex_char_class = True
+            elif char == "]":
+                state.regex_char_class = False
+            elif char == "/" and not state.regex_char_class:
+                state.in_regex = False
+            index += 1
+            continue
+        if source.startswith("//", index):
+            next_line = source.find("\n", index)
+            if next_line == -1:
+                break
+            index = next_line
+            continue
+        if source.startswith("/*", index):
+            state.in_block_comment = True
+            index += 2
+            continue
+        if char in {"'", '"', "`"}:
+            state.quote = char
+            index += 1
+            continue
+        if char == "/" and _looks_like_regex_literal_start(source, index):
+            state.in_regex = True
+            index += 1
+            continue
+        if _typescript_keyword_at(source, index, "function"):
+            function_line = line
+            parameter_start = _typescript_function_parameter_start(source, index)
+            if parameter_start is not None:
+                parameter_end = _matching_close_paren(source, parameter_start)
+                if parameter_end is not None:
+                    parameter_lists.append(
+                        (
+                            function_line,
+                            source[parameter_start + 1 : parameter_end],
+                        )
+                    )
+                    index = parameter_end + 1
+                    continue
+        index += 1
+    return parameter_lists
+
+
+def _typescript_keyword_at(source: str, index: int, keyword: str) -> bool:
+    if not source.startswith(keyword, index):
+        return False
+    before = source[index - 1] if index > 0 else ""
+    after_index = index + len(keyword)
+    after = source[after_index] if after_index < len(source) else ""
+    return not (
+        (before and (before.isalnum() or before in "_$"))
+        or (after and (after.isalnum() or after in "_$"))
+    )
+
+
+def _typescript_function_parameter_start(
+    source: str, function_index: int
+) -> int | None:
+    index = function_index + len("function")
+    while index < len(source) and source[index].isspace():
+        index += 1
+    if index < len(source) and source[index] == "*":
+        index += 1
+        while index < len(source) and source[index].isspace():
+            index += 1
+    identifier = _TYPESCRIPT_IDENTIFIER.match(source[index:])
+    if identifier is not None:
+        index += len(identifier.group("name"))
+        while index < len(source) and source[index].isspace():
+            index += 1
+    return index if index < len(source) and source[index] == "(" else None
 
 
 def _typescript_arrow_parameter_lists(source: str) -> list[tuple[int, str]]:
@@ -767,6 +991,31 @@ def _matching_open_paren(source: str, close_index: int) -> int | None:
         elif char == ")":
             depth += 1
         elif char == "(":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _matching_close_paren(source: str, open_index: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(open_index, len(source)):
+        char = source[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
             depth -= 1
             if depth == 0:
                 return index
@@ -1376,6 +1625,7 @@ def _looks_like_rust_lifetime(text: str, index: int) -> bool:
 @dataclass
 class _LexicalState:
     in_block_comment: bool = False
+    raw_string_end: str | None = None
     quote: str | None = None
     escaped: bool = False
     in_regex: bool = False
@@ -1385,6 +1635,7 @@ class _LexicalState:
 def _copy_lexical_state(state: _LexicalState) -> _LexicalState:
     return _LexicalState(
         in_block_comment=state.in_block_comment,
+        raw_string_end=state.raw_string_end,
         quote=state.quote,
         escaped=state.escaped,
         in_regex=state.in_regex,
@@ -1396,6 +1647,13 @@ def _strip_comments(line: str, state: _LexicalState) -> str:
     output: list[str] = []
     index = 0
     while index < len(line):
+        if state.raw_string_end is not None:
+            end = line.find(state.raw_string_end, index)
+            if end == -1:
+                return "".join(output)
+            index = end + len(state.raw_string_end)
+            state.raw_string_end = None
+            continue
         if state.in_block_comment:
             end = line.find("*/", index)
             if end == -1:
@@ -1428,6 +1686,15 @@ def _strip_comments(line: str, state: _LexicalState) -> str:
                 state.in_regex = False
             index += 1
             continue
+        raw_string_end = _rust_raw_string_end(line, index)
+        if raw_string_end is not None:
+            index += _rust_raw_string_start_length(line, index)
+            end = line.find(raw_string_end, index)
+            if end == -1:
+                state.raw_string_end = raw_string_end
+                return "".join(output)
+            index = end + len(raw_string_end)
+            continue
         if char in {"'", '"', "`"}:
             if char == "'" and _looks_like_rust_lifetime(line, index):
                 output.append(char)
@@ -1451,6 +1718,22 @@ def _strip_comments(line: str, state: _LexicalState) -> str:
         output.append(char)
         index += 1
     return "".join(output)
+
+
+def _rust_raw_string_end(line: str, index: int) -> str | None:
+    if index > 0 and (line[index - 1].isalnum() or line[index - 1] == "_"):
+        return None
+    match = re.match(r"(?:[bc])?r(?P<hashes>#*)\"", line[index:])
+    if match is None:
+        return None
+    return f'"{match.group("hashes")}'
+
+
+def _rust_raw_string_start_length(line: str, index: int) -> int:
+    match = re.match(r"(?:[bc])?r#*\"", line[index:])
+    if match is None:
+        return 0
+    return len(match.group(0))
 
 
 def _looks_like_regex_literal_start(line: str, index: int) -> bool:

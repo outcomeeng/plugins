@@ -18,6 +18,7 @@ from outcomeeng.test_evidence import (
     FindingTarget,
     LiteralOrigin,
     MIN_COUPLING_TAXONOMY_CATEGORIES,
+    TEST_OWNED_DECLARATION_REMEDIATION_OWNERS,
     UNTESTABLE_SOURCE_SKIPPED_CHECKS,
     audit_case_after_testability,
     audit_case_verdict,
@@ -244,6 +245,7 @@ def owned_declaration_is_rejected() -> bool:
         return (
             verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
             and verdict.finding_target is FindingTarget.TEST_FILE
+            and verdict.remediation_owners == TEST_OWNED_DECLARATION_REMEDIATION_OWNERS
         )
     return False
 
@@ -256,6 +258,7 @@ def local_function_declaration_is_rejected() -> bool:
     return (
         verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
         and verdict.finding_target is FindingTarget.TEST_FILE
+        and verdict.remediation_owners == TEST_OWNED_DECLARATION_REMEDIATION_OWNERS
     )
 
 
@@ -280,6 +283,7 @@ def owned_declaration_categories_are_rejected() -> bool:
         expected_declarations <= observed_declarations
         and verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
         and verdict.finding_target is FindingTarget.TEST_FILE
+        and verdict.remediation_owners == TEST_OWNED_DECLARATION_REMEDIATION_OWNERS
     )
 
 
@@ -357,11 +361,24 @@ def python_test_function_wrappers_are_not_owned_declarations() -> bool:
 
 def helper_case() -> None:
     assert True
+
+
+class TestClassCases:
+    def test_class_case(self, tmp_path: Path) -> None:
+        assert tmp_path
+
+    def class_helper_case(self) -> None:
+        assert True
 """,
         Path("python-test-wrapper.py"),
     )
-    return not _has_function(declarations, "test_property_case") and _has_function(
-        declarations, "helper_case"
+    return (
+        not _has_function(declarations, "test_property_case")
+        and not _has_function(declarations, "test_class_case")
+        and not _has_variable(declarations, "self")
+        and _has_variable(declarations, "tmp_path")
+        and _has_function(declarations, "helper_case")
+        and _has_function(declarations, "class_helper_case")
     )
 
 
@@ -446,6 +463,27 @@ def typescript_typed_destructuring_declarations_are_detected() -> bool:
         and not _has_variable(declarations, "unterminatedTypeOnly")
         and not _has_variable(declarations, "interfaceTypeOnly")
         and not _has_variable(declarations, "typeAnnotationOnly")
+    )
+
+
+def typescript_function_parameter_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """it("uses fixture", function ({ page, request }: Fixtures) {
+  expect(page).toBeDefined();
+});
+
+function helperCase(input: SourceCase, ...rest: readonly SourceCase[]) {
+  return [input, rest];
+}
+""",
+        Path("function-parameters.ts"),
+    )
+    return (
+        _has_variable(declarations, "page")
+        and _has_variable(declarations, "request")
+        and _has_function(declarations, "helperCase")
+        and _has_variable(declarations, "input")
+        and _has_variable(declarations, "rest")
     )
 
 
@@ -665,7 +703,9 @@ def rust_raw_string_declarations_are_ignored() -> bool:
     declarations = _declarations_for_fixture("rust_raw_string_declaration.rs")
     return (
         _has_variable(declarations, "actual")
+        and _has_variable(declarations, "after_raw")
         and not _has_variable(declarations, "expected")
+        and not _has_variable(declarations, "hidden")
         and not _has_function(declarations, "local_function")
     )
 
@@ -708,6 +748,28 @@ def rust_or_pattern_declarations_are_detected() -> bool:
         Path("or-pattern.rs"),
     )
     return _has_variable(declarations, "value")
+
+
+def rust_closure_parameter_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """run_case(|(input, expected): Case| assert_case(input, expected));
+let mapper = move |root: Root, (target, rest): Pair| build(root, target, rest);
+let lifetime_mapper = |borrowed: &'static str| consume(borrowed);
+let value = left | right | fallback;
+let other = _move | not_closure | fallback;
+""",
+        Path("closure-parameters.rs"),
+    )
+    return (
+        _has_variable(declarations, "input")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "root")
+        and _has_variable(declarations, "target")
+        and _has_variable(declarations, "rest")
+        and _has_variable(declarations, "borrowed")
+        and not _has_variable(declarations, "right")
+        and not _has_variable(declarations, "not_closure")
+    )
 
 
 def coupling_taxonomy_has_distinct_failure_modes() -> bool:

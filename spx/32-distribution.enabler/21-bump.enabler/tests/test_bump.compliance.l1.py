@@ -18,6 +18,7 @@ from outcomeeng_testing.harnesses.bump import (
     read_only_modes_never_write_regardless_of_plugin_state,
     tool_availability_is_probed_before_any_other_probe_or_write,
     unchanged_plugins_never_have_manifests_written,
+    unparseable_manifest_returns_diagnostic_without_writes,
 )
 
 
@@ -71,6 +72,10 @@ def test_non_version_content_is_preserved_character_for_character() -> None:
 
 def test_read_only_modes_never_write_regardless_of_plugin_state() -> None:
     assert read_only_modes_never_write_regardless_of_plugin_state()
+
+
+def test_unparseable_manifest_returns_diagnostic_without_writes() -> None:
+    assert unparseable_manifest_returns_diagnostic_without_writes()
 
 
 def test_dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary() -> None:

@@ -65,6 +65,7 @@ from outcomeeng_testing.generators.bump import (
     manifest_fixture_path,
     manifest_relpath,
     manifest_text,
+    malformed_manifest_cases,
     minor_change,
     patch_changes,
     plugin_names,
@@ -635,6 +636,37 @@ def read_only_modes_never_write_regardless_of_plugin_state() -> bool:
                 case.run.run(mode=mode)
             if case.run.manifest_writer.writes != []:
                 return False
+    return True
+
+
+def unparseable_manifest_returns_diagnostic_without_writes() -> bool:
+    plugin = "foo"
+    path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    for case in malformed_manifest_cases(plugin):
+        run = BumpRun(
+            change_probe=ScriptedChangeProbe(changed=patch_changes(plugin)),
+            content_probe=ScriptedContentProbe(
+                content={(base_ref(), path): manifest_text(plugin, "0.4.1")},
+            ),
+            manifest_reader=ScriptedManifestReader(
+                manifests={plugin: (ManifestRecord(path=path, content=case.content),)},
+            ),
+            manifest_writer=RecordingManifestWriter(),
+            tool_probe=RecordingToolProbe(available=all_tools_available()),
+        )
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stderr(stderr):
+            exit_code = run.run()
+
+        output = stderr.getvalue()
+        if (
+            exit_code != 1
+            or run.manifest_writer.writes != []
+            or path not in output
+            or case.expected_diagnostic not in output
+        ):
+            return False
     return True
 
 

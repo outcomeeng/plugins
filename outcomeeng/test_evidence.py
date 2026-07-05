@@ -35,6 +35,14 @@ class FindingTarget(StrEnum):
     TEST_FILE = "test file"
 
 
+class RemediationOwner(StrEnum):
+    EVAL_CASE_DATA = "eval case data"
+    GENERATOR = "spec-governed generator"
+    HARNESS = "spec-governed harness"
+    INERT_FIXTURE = "inert whole-payload fixture"
+    SOURCE_CONTRACT = "source contract"
+
+
 class EvidenceCheck(StrEnum):
     COUPLING = "coupling"
     FALSIFIABILITY = "falsifiability"
@@ -84,6 +92,15 @@ UNTESTABLE_SOURCE_SKIPPED_CHECKS: Final = frozenset(
         EvidenceCheck.COVERAGE,
     )
 )
+TEST_OWNED_DECLARATION_REMEDIATION_OWNERS: Final = frozenset(
+    (
+        RemediationOwner.SOURCE_CONTRACT,
+        RemediationOwner.HARNESS,
+        RemediationOwner.GENERATOR,
+        RemediationOwner.INERT_FIXTURE,
+        RemediationOwner.EVAL_CASE_DATA,
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -108,6 +125,7 @@ class AuditVerdict:
     status: AuditStatus
     finding_category: FindingCategory | None = None
     finding_target: FindingTarget | None = None
+    remediation_owners: frozenset[RemediationOwner] = frozenset()
     skipped_checks: frozenset[EvidenceCheck] = frozenset()
     coverage_trace: CoverageTrace | None = None
 
@@ -133,7 +151,12 @@ def audit_case_verdict(case: AuditCase) -> AuditVerdict:
             skipped_checks=UNTESTABLE_SOURCE_SKIPPED_CHECKS,
         )
     if case.declarations:
-        return reject_test_file(FindingCategory.TEST_OWNED_DECLARATION)
+        return AuditVerdict(
+            status=AuditStatus.REJECT,
+            finding_category=FindingCategory.TEST_OWNED_DECLARATION,
+            finding_target=FindingTarget.TEST_FILE,
+            remediation_owners=TEST_OWNED_DECLARATION_REMEDIATION_OWNERS,
+        )
     if case.coupling is CouplingEvidence.NONE:
         return reject_test_file(FindingCategory.NO_COUPLING)
     if case.coupling is CouplingEvidence.SEVERED:

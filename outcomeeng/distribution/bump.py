@@ -173,6 +173,10 @@ class ToolProbe(Protocol):
     def __call__(self, name: str) -> bool: ...
 
 
+class ManifestVersionError(ValueError):
+    """Raised when a manifest does not expose a parseable string version."""
+
+
 def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
     """Filter diff paths to the set of plugin names changed."""
     plugins: set[str] = set()
@@ -299,13 +303,25 @@ def bump(
         base_ref_versions: list[Version] = []
         lagging_manifest = False
         for record in records:
-            working_tree_version = _version_from_manifest_text(record.content)
+            try:
+                working_tree_version = _version_from_manifest_text(
+                    record.path, record.content
+                )
+            except ManifestVersionError as error:
+                print(str(error), file=sys.stderr)
+                return 1
             working_tree_versions.append(working_tree_version)
             base_ref_content = _base_manifest_content_for_record(
                 content_probe, base_ref, record.path, plugin_changes
             )
             if base_ref_content is not None:
-                base_ref_version = _version_from_manifest_text(base_ref_content)
+                try:
+                    base_ref_version = _version_from_manifest_text(
+                        record.path, base_ref_content
+                    )
+                except ManifestVersionError as error:
+                    print(str(error), file=sys.stderr)
+                    return 1
                 if working_tree_version <= base_ref_version:
                     lagging_manifest = True
                 base_ref_versions.append(base_ref_version)
@@ -384,9 +400,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
 
-def _version_from_manifest_text(content: str) -> Version:
-    data = json.loads(content)
-    return Version.parse(data["version"])
+def _version_from_manifest_text(path: str, content: str) -> Version:
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as error:
+        raise ManifestVersionError(
+            f"Manifest {path} has invalid JSON: {error.msg}"
+        ) from error
+    if not isinstance(data, dict):
+        raise ManifestVersionError(
+            f"Manifest {path} must contain a JSON object with a string version"
+        )
+    version = data.get("version")
+    if not isinstance(version, str):
+        raise ManifestVersionError(f"Manifest {path} must contain a string version")
+    try:
+        return Version.parse(version)
+    except ValueError as error:
+        raise ManifestVersionError(
+            f"Manifest {path} has invalid version {version!r}"
+        ) from error
 
 
 def _base_manifest_content_for_record(
