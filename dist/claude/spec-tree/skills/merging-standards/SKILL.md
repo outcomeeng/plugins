@@ -358,7 +358,7 @@ gh pr view <pr-number> --json reviews,comments \
          comments: [.comments[] | {author: .author.login, createdAt, excerpt: .body[0:160]}]}'
 
 # Review-thread comments tied to specific lines
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate \
   --jq '.[] | {id, node_id, author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
 ```
 
