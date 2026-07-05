@@ -27,7 +27,7 @@ On success the command exits 0 and prints one JSON object — `{"layout": "pool"
 
 <step name="gather">
 
-Gather the provisioning inputs. Infer them; ask only for a genuine gap using the runtime's structured-question tool:
+Gather the provisioning inputs. Infer them; ask only for an operator-owned gap using the runtime's structured-question tool:
 
 - **origin URL** — derive from the prior checkout (`git -C <prior> remote get-url origin`) or take it from the user. The provisioner reads the repository name `<repo>` from this URL; the bare directory and the main checkout are both named for it, so no separate repository name is passed.
 - **container** — the repository-name directory beside the prior checkout: `<parent-of-prior>/<repo>`. In the common case the prior checkout already sits there (a clone names the directory for the repository), so the container **is** the prior checkout's own path and provisioning renames it aside to build the pool in place — never use the prior checkout's parent (the multi-repository workspace) as the container.

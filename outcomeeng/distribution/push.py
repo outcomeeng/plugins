@@ -20,14 +20,35 @@ The module's contract:
 
 from __future__ import annotations
 
-import argparse
 import shutil
 import subprocess
 import sys
 from collections.abc import Sequence
 from typing import Protocol
 
-REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
+GIT_TOOL = "git"
+REQUIRED_TOOLS: tuple[str, ...] = (GIT_TOOL, "claude", "codex", "ps", "uv")
+UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
+DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
+HELP_PUSH_FLAGS: frozenset[str] = frozenset(("-h", "--help"))
+NO_DRY_RUN_PUSH_FLAG = "--no-dry-run"
+PUSH_OPTION_FLAGS: frozenset[str] = frozenset(("-o", "--push-option"))
+INLINE_VALUE_PUSH_FLAGS: frozenset[str] = frozenset(("--recurse-submodules",))
+VALUE_TAKING_PUSH_FLAGS: frozenset[str] = frozenset(
+    (
+        "--exec",
+        "--receive-pack",
+        "--repo",
+        *PUSH_OPTION_FLAGS,
+    )
+)
+SYNC_COMMAND: tuple[str, ...] = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.distribution.sync",
+)
 
 
 class StepRunner(Protocol):
@@ -56,21 +77,23 @@ def push(
     upstream_probe: UpstreamProbe,
 ) -> int:
     """Run the publish-and-sync orchestration. Returns the process exit code."""
+    is_help_request = _is_help_request(push_args)
+    if is_help_request:
+        if not tool_probe(GIT_TOOL):
+            print(f"Missing required tool: {GIT_TOOL}", file=sys.stderr)
+            return 1
+        return runner((GIT_TOOL, "push", *push_args))
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
             return 1
     before_ref = upstream_probe()
-    push_rc = runner(("git", "push", *push_args))
+    push_rc = runner((GIT_TOOL, "push", *push_args))
     if push_rc != 0:
         return push_rc
-    sync_argv: tuple[str, ...] = (
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "outcomeeng.distribution.sync",
-    )
+    if _is_dry_run(push_args):
+        return 0
+    sync_argv: tuple[str, ...] = SYNC_COMMAND
     if before_ref:
         sync_argv = (*sync_argv, before_ref)
     return runner(sync_argv)
@@ -78,12 +101,81 @@ def push(
 
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entrypoint. Forwards positional args to `git push` and runs `push`."""
-    args = _build_parser().parse_args(argv)
     return push(
-        args.push_args,
+        parse_push_args(argv),
         runner=_real_runner,
         tool_probe=_real_tool_probe,
         upstream_probe=_real_upstream_probe,
+    )
+
+
+def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
+    """Return caller arguments exactly as `git push` should receive them."""
+    return tuple(sys.argv[1:] if argv is None else argv)
+
+
+def _is_dry_run(push_args: Sequence[str]) -> bool:
+    is_dry_run = False
+    skip_next = False
+    for arg in push_args:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--":
+            break
+        if arg == NO_DRY_RUN_PUSH_FLAG:
+            is_dry_run = False
+        elif arg in VALUE_TAKING_PUSH_FLAGS:
+            skip_next = True
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS | INLINE_VALUE_PUSH_FLAGS):
+            continue
+        elif arg.startswith("-o") and arg != "-o":
+            continue
+        elif _is_dry_run_arg(arg):
+            is_dry_run = True
+    return is_dry_run
+
+
+def _is_help_request(push_args: Sequence[str]) -> bool:
+    skip_next = False
+    for arg in push_args:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--":
+            break
+        if arg in VALUE_TAKING_PUSH_FLAGS:
+            skip_next = True
+        elif _has_inline_value(arg, VALUE_TAKING_PUSH_FLAGS | INLINE_VALUE_PUSH_FLAGS):
+            continue
+        elif arg.startswith("-o") and arg != "-o":
+            continue
+        elif _is_help_arg(arg):
+            return True
+    return False
+
+
+def _is_help_arg(arg: str) -> bool:
+    if arg == "--help":
+        return True
+    if arg.startswith("--"):
+        return False
+    return arg.startswith("-") and "h" in arg[1:]
+
+
+def _is_dry_run_arg(arg: str) -> bool:
+    if arg == "--dry-run":
+        return True
+    if arg.startswith("--"):
+        return False
+    return arg.startswith("-") and "n" in arg[1:]
+
+
+def _has_inline_value(arg: str, value_taking_flags: frozenset[str]) -> bool:
+    return any(
+        arg.startswith(f"{flag}=")
+        for flag in value_taking_flags
+        if flag.startswith("--")
     )
 
 
@@ -97,7 +189,7 @@ def _real_tool_probe(name: str) -> bool:
 
 def _real_upstream_probe() -> str | None:
     result = subprocess.run(
-        ["git", "rev-parse", "@{upstream}"],
+        list(UPSTREAM_REF_COMMAND),
         capture_output=True,
         text=True,
         check=False,
@@ -108,28 +200,18 @@ def _real_upstream_probe() -> str | None:
     return ref or None
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="outcomeeng.distribution.push",
-        description=(
-            "Push the current branch and refresh the local marketplace install "
-            "when plugin distribution paths changed in the pushed range."
-        ),
-    )
-    parser.add_argument(
-        "push_args",
-        nargs="*",
-        help="Positional arguments forwarded to `git push`.",
-    )
-    return parser
-
-
 __all__ = [
+    "DRY_RUN_PUSH_FLAGS",
+    "GIT_TOOL",
+    "HELP_PUSH_FLAGS",
     "REQUIRED_TOOLS",
+    "SYNC_COMMAND",
     "StepRunner",
     "ToolProbe",
+    "UPSTREAM_REF_COMMAND",
     "UpstreamProbe",
     "main",
+    "parse_push_args",
     "push",
 ]
 

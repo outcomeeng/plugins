@@ -2,41 +2,26 @@
 Move from named, inspectable cases to broader coverage without losing the ability to diagnose failures quickly.
 </overview>
 
-<shared_fixture_values>
-Keep reusable values in a fixture module close to the governed tests.
+<source_contract_values>
+Keep reusable source-owned values in source modules and reusable generated domains in `product-testing`.
 
 ```rust
-pub struct Case<I, E> {
-    pub input: I,
-    pub expected: E,
-}
+use product::inputs::simple_input_case;
 
-pub fn typical_cases() -> Vec<Case<&'static str, usize>> {
-    vec![
-        Case {
-            input: "simple",
-            expected: 6,
-        },
-        Case {
-            input: "with-flags",
-            expected: 10,
-        },
-    ]
+#[test]
+fn processes_simple_input() {
+    product_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
 }
 ```
 
-</shared_fixture_values>
+</source_contract_values>
 
 <named_typical_cases>
 
 ```rust
 #[test]
 fn processes_simple_input() {
-    let case = &typical_cases()[0];
-
-    let result = process(case.input);
-
-    assert_eq!(result, case.expected);
+    product_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
 }
 ```
 
@@ -48,8 +33,7 @@ Each failure names a concrete category, so the failing case is immediately inspe
 ```rust
 #[test]
 fn rejects_empty_input() {
-    let result = process("");
-    assert!(result.is_err());
+    product_testing::harnesses::processing::assert_rejects_empty_input(process);
 }
 ```
 
@@ -57,14 +41,15 @@ Keep boundary cases separate from the happy path. A failing edge case should say
 </named_edge_cases>
 
 <systematic_coverage>
-Use `rstest` or a loop over named cases once the individual scenarios are already clear.
+Use a harness assertion over named cases once the individual scenarios are already clear.
 
 ```rust
-#[rstest::rstest]
-#[case("simple", 6)]
-#[case("with-flags", 10)]
-fn processes_known_cases(#[case] input: &str, #[case] expected: usize) {
-    assert_eq!(process(input).unwrap(), expected);
+#[test]
+fn processes_known_cases() {
+    product_testing::harnesses::processing::assert_processes_known_cases(
+        product_testing::generators::processing::known_process_cases(),
+        process,
+    );
 }
 ```
 
@@ -74,12 +59,12 @@ fn processes_known_cases(#[case] input: &str, #[case] expected: usize) {
 Use `proptest` for true universal claims.
 
 ```rust
-proptest! {
-    #[test]
-    fn canonical_key_roundtrips(input in "[a-z0-9_-]{1,32}") {
-        let parsed = CanonicalKey::parse(&input).unwrap();
-        prop_assert_eq!(parsed.as_str(), input);
-    }
+#[test]
+fn canonical_key_roundtrips() {
+    product_testing::harnesses::properties::assert_canonical_key_roundtrips(
+        product_testing::generators::keys::canonical_key_strings(),
+        CanonicalKey::parse,
+    );
 }
 ```
 

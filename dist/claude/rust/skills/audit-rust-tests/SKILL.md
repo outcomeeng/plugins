@@ -21,7 +21,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 </dispatch_gate>
 
 <objective>
-A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
+A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
 </objective>
 
 <constraints>
@@ -42,7 +42,7 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
-This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The main agent brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
 
@@ -50,6 +50,7 @@ This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
 - **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a finding, do not re-validate it.
+- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `product-testing` harness, `product-testing` generator, inert fixture data, or eval case data.
 - **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Fixture reads under `spx/.../tests/` are fine.
 - **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. The credentialed `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and is not a defect in `.l3.rs` files; outside `.l3.rs` it is misplaced.
 - **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
@@ -120,11 +121,11 @@ Reject with an `oracle` finding when the expected value is derived from the modu
 </step>
 
 <step name="harness_chain">
-Trace every helper or harness import:
+Trace every test-infrastructure import:
 
 - imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
-- non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` helper modules inside a product crate
-- helper functions inside `spx/.../tests/` — these are misplaced infrastructure unless they serve a single test file
+- non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` test-infrastructure modules inside a product crate
+- local functions inside `spx/.../tests/` — these are misplaced infrastructure when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary
 - binary harnesses built around `assert_cmd::Command::cargo_bin(...)`
 
 Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `product-testing` workspace-member crate.
@@ -133,7 +134,7 @@ Open each harness. If the harness replaces the governed module instead of exerci
 <step name="four_properties">
 Apply the Rust supplements:
 
-- Coupling: direct, indirect, transitive, false, partial
+- Coupling: direct, indirect, transitive, false, partial, severed
 - Falsifiability: concrete mutation named for every codebase path or binary contract
 - Alignment: every assertion clause maps to exercised test behavior
 - Coverage: read whether the test drives execution into the governed source path; no coverage tool is run
@@ -142,7 +143,7 @@ First property failure rejects the assertion.
 </step>
 
 <step name="coverage">
-Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the main agent passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
 
 Trace, by reading, whether the test drives execution into the governed source path:
 
@@ -169,7 +170,7 @@ Trigger: two or more in-scope tests share any of these patterns:
 - repeated hook JSON builders
 - repeated transcript fixture writers
 - repeated tempdir/home-directory scaffolding
-- repeated stdout/stderr/exit-code assertion helpers
+- repeated stdout/stderr/exit-code assertion functions
 - repeated tracing/debug capture setup
 
 Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `product-testing` workspace-member crate — `product_testing::harnesses::{name}` for shared resource mediators, `product_testing::generators::{name}` for input factories, or `product_testing::fixtures::{name}` for fixture-loading code.
@@ -186,13 +187,14 @@ Applied during Gate 1.
 
 <supplement property="coupling">
 
-| Category   | Definition                                                         | Verdict                       |
-| ---------- | ------------------------------------------------------------------ | ----------------------------- |
-| Direct     | Test calls the governed Rust function, type, module, or binary     | Proceed                       |
-| Indirect   | Test calls a helper or harness that calls the governed path        | Proceed after harness tracing |
-| Transitive | Test calls a public consumer of the governed path                  | Proceed if the level matches  |
-| False      | Test imports the module but never calls assertion-relevant symbols | REJECT                        |
-| Partial    | Test calls the right module with wrong inputs or wrong path        | REJECT                        |
+| Category   | Definition                                                                                                            | Verdict                       |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Direct     | Test calls the governed Rust function, type, module, or binary                                                        | Proceed                       |
+| Indirect   | Test calls test infrastructure that calls the governed path                                                           | Proceed after harness tracing |
+| Transitive | Test calls a public consumer of the governed path                                                                     | Proceed if the level matches  |
+| False      | Test imports the module but never calls assertion-relevant symbols                                                    | REJECT                        |
+| Partial    | Test calls the right module with wrong inputs or wrong path                                                           | REJECT                        |
+| Severed    | Test or harness replaces the governed behavior with a mock, fake, generated mock, alternate module, or bypassing stub | REJECT                        |
 
 Framework/library imports such as `std`, `tempfile`, `assert_cmd`, `predicates`, `insta`, `tokio`, `proptest`, and `quickcheck` do not count as coupling by themselves. `assert_cmd::Command::cargo_bin(...)` counts as coupling to the named binary contract.
 
@@ -219,7 +221,7 @@ Reject when the test covers a nearby behavior, collapses clauses, uses one examp
 </supplement>
 
 <supplement property="coverage">
-Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — the main agent and CI own coverage measurement.
+Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — the caller and CI own coverage measurement.
 
 Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </supplement>
@@ -237,7 +239,7 @@ This skill composes the base `/audit-tests` verdict: the row names (`gate-1-asse
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
 
-Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture helpers. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
 
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 

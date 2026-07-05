@@ -10,7 +10,7 @@ Do not hide remote complexity inside production modules. Route credentials, base
 
 <test_shape>
 
-- Read documented credentials or managed test-account helpers.
+- Read documented credentials or managed test-account harness functions.
 - Fail loudly when selected evidence requires missing credentials.
 - Never use `it.skip`, `it.skipIf`, or `test.skip`; when credentials or services are absent, throw with a clear diagnostic.
 - Keep remote contract assertions narrow and tied to the spec assertion.
@@ -26,38 +26,18 @@ Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3
 <example>
 
 ```typescript
-import { submitSignedFixture } from "@testing/harnesses/stripe";
-import { resolve } from "node:path";
+import { WEBHOOK_ACCEPTED_STATUS } from "@/stripe-webhook";
+import { assertSignedStripeFixtureAccepted } from "@testing/harnesses/stripe";
 import { describe, expect, it } from "vitest";
-
-type StripeCredentials = {
-  readonly token: string;
-};
-
-function requireStripeCredentials(): StripeCredentials {
-  const token = process.env.STRIPE_TEST_TOKEN;
-  if (!token) {
-    throw new Error(
-      "STRIPE_TEST_TOKEN is required for stripe-webhook.conformance.l3.test.ts.",
-    );
-  }
-  return { token };
-}
 
 describe("Stripe webhook contract", () => {
   it("accepts signed fixture events through the remote contract endpoint", async () => {
-    const credentials = requireStripeCredentials();
-    const response = await submitSignedFixture({
-      token: credentials.token,
-      fixturePath: resolve(process.cwd(), "testing/fixtures/stripe-event.json"),
-    });
-
-    expect(response.status).toBe(200);
+    await expect(assertSignedStripeFixtureAccepted()).resolves.toMatchObject({ status: WEBHOOK_ACCEPTED_STATUS });
   });
 });
 ```
 
-This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly instead of producing a passing test. `submitSignedFixture` reads the illustrative fixture path from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
+This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly from the credential harness instead of producing a passing test. `submitSignedFixture` reads the illustrative fixture path from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
 
 </example>
 

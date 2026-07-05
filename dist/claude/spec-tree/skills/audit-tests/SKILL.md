@@ -2,8 +2,8 @@
 name: audit-tests
 description: >-
   Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
-  Dispatch test-evidence-auditor to audit test evidence against spec assertions;
-  the main conversation reaches this audit only through that agent.
+  The test-evidence-auditor audits test evidence against spec assertions; the
+  main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -15,27 +15,33 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
+A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
 
 </objective>
 
 <essential_principles>
 
-**COUPLING FIRST.**
+**OWNERSHIP SCREEN, THEN COUPLING.**
 
-A test that imports nothing from the codebase will pass forever regardless of what any file contains. Check imports before anything else. This is not a heuristic — it is a prerequisite.
+An executed test file that declares variables or constants has already broken the evidence boundary. Screen declarations first, then check imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
 
 Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
 **JUDGE COVERAGE BY READING.**
 
-A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
+A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
 
-**NO MECHANICAL DETECTION.**
+**NO MECHANICAL SUBSTITUTES.**
 
-Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals.
+Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
 
-The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the main agent and CI own that gate.
+The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the caller and CI own that gate.
+
+**TEST FILES OWN NO DATA OR CONFIGURATION.**
+
+Before coupling, inspect every executed test file for declarations and bindings. Any variable or constant declaration in a test file is an evidence-boundary failure: it owns state in the assertion file, whether that state is test data, expected output, runner settings, property-test configuration, setup policy, reusable cases, fixture path, generator choice, harness handle, diagnostic, or a source-owned singleton shape. Framework-injected fixture parameters and property-generated parameters are test-file bindings too; move them behind harness entrypoints so the assertion file remains a wrapper. Local functions are rejected when they own setup, reusable cases, fixtures, generators, harness behavior, diagnostics, or source-owned vocabulary. Do not classify by naming style or declaration shape: `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same ownership problem when the declaration owns runner policy.
+
+The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Runner settings and property seeds belong in harnesses. Variable input domains belong in generators. Test files keep assertion flow.
 
 **BINARY VERDICT.**
 
@@ -46,7 +52,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the main agent passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
 
@@ -85,9 +91,34 @@ Read the spec's Assertions section. For each assertion, extract:
 
 </step>
 
+<step name="audit_declarations">
+
+**Step 3a: Test-file declarations**
+
+Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, or property-generated parameter and classify the proper owner:
+
+Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
+
+| Declaration                                | Verdict                                   |
+| ------------------------------------------ | ----------------------------------------- |
+| Any variable or constant                   | REJECT — test-file state                  |
+| Framework fixture or property parameter    | REJECT — test-file binding                |
+| Runner settings, seed policy, retries      | REJECT — test-owned configuration         |
+| Test data, boundary bags, expected outputs | REJECT — test-owned data                  |
+| Fixture paths, fixture contents            | REJECT — fixture ownership in test file   |
+| Generator choices, arbitrary domains       | REJECT — generator ownership in test file |
+| Harness setup policy or reusable resources | REJECT — harness ownership in test file   |
+| Source-owned singleton shape or vocabulary | REJECT — source ownership copied to test  |
+
+Do not treat casing as evidence. Renaming `MAPPING_RUNS` to `mappingRuns` only hides a heuristic trigger; it does not change ownership.
+
+For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
+
+</step>
+
 <step name="audit_coupling">
 
-**Step 3a: Coupling**
+**Step 3b: Coupling**
 
 Read the test file's import statements. Classify each import:
 
@@ -101,18 +132,19 @@ Read the test file's import statements. Classify each import:
 
 If codebase imports exist, classify using the coupling taxonomy in `${CLAUDE_SKILL_DIR}/references/evidence-model.md`:
 
-| Category           | Definition                                                                                 | Verdict                                         |
-| ------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| Direct             | Test imports the module under test                                                         | Proceed                                         |
-| Indirect           | Test imports a harness wrapping the module                                                 | Proceed — verify harness has real coupling      |
-| Transitive         | Test imports a consumer of the module                                                      | Proceed — verify test level matches             |
-| Laundered indirect | Imports a test-support module that exists only to expose hardcoded values back to the test | REJECT — laundering                             |
-| False              | Imports module but never calls assertion-relevant functions                                | REJECT                                          |
-| Partial            | Calls functions but on wrong inputs or wrong code paths                                    | REJECT                                          |
-| None               | Test imports only its test framework                                                       | REJECT — tautology                              |
-| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                   | REJECT — couples to authored text, not behavior |
+| Category           | Definition                                                                                        | Verdict                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test imports the module under test                                                                | Proceed                                         |
+| Indirect           | Test imports a harness wrapping the module                                                        | Proceed — verify harness has real coupling      |
+| Transitive         | Test imports a consumer of the module                                                             | Proceed — verify test level matches             |
+| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test | REJECT — laundering                             |
+| False              | Imports module but never calls assertion-relevant functions                                       | REJECT                                          |
+| Partial            | Calls functions but on wrong inputs or wrong code paths                                           | REJECT                                          |
+| None               | Test imports only its test framework                                                              | REJECT — tautology                              |
+| Severed            | Imports the module under test and replaces its behavior with a mock, fake, stub, or monkeypatch   | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                          | REJECT — couples to authored text, not behavior |
 
-Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader helper that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
+Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader function that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
 
 **A test whose evidence is reading an authored prose or documentation body and asserting on its content → REJECT — "prose-coupling."** The claim verifies that prose was authored, not that code behaves; its verification type belongs in `[eval]` (a graded judgment over a producer's structured verdict) or `[audit]` (a semantic constraint), and the spec assertion is retagged accordingly. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
 
@@ -120,7 +152,7 @@ Coupling means exercising executable **behavior**, never reading a document's co
 
 <step name="audit_falsifiability">
 
-**Step 3b: Falsifiability**
+**Step 3c: Falsifiability**
 
 For each codebase import, name a concrete mutation to the imported module that would cause this test to fail. Write it down:
 
@@ -148,7 +180,7 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 <step name="audit_alignment">
 
-**Step 3c: Alignment**
+**Step 3d: Alignment**
 
 Read the spec assertion text. Read the test's expect/assert statements. Answer:
 
@@ -170,9 +202,9 @@ Check assertion-type-to-strategy alignment:
 
 <step name="audit_coverage">
 
-**Step 3d: Coverage**
+**Step 3e: Coverage**
 
-Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Re-running the coverage command here re-pays a cost already paid.
+Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Re-running the coverage command here re-pays a cost already paid.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -186,7 +218,7 @@ Trace, by reading, whether the test drives execution into the assertion-relevant
 - **Imports the module but never drives execution into the assertion-relevant path**: REJECT — "no coverage." Name the specific assertion-relevant path the test fails to reach, traced from the code.
 - **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): annotate as `saturated` in the verdict table. The test's evidentiary value comes from the other three properties.
 
-Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds genuine evidence reading captures and a line count would not.
+Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds behavior-coupled evidence that reading captures and a line count would not.
 
 The judgment is traced from the code and named in the finding — never a measured percentage, and never an unbacked "probably covers."
 
@@ -194,7 +226,7 @@ The judgment is traced from the code and named in the finding — never a measur
 
 <step name="compose_language">
 
-**Step 3e: Compose language-specific test-evidence concerns**
+**Step 3f: Compose language-specific test-evidence concerns**
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
@@ -249,7 +281,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
           "line": null,
           "rule": "<duplication-pattern>",
           "severity": "REJECT",
-          "message": "<extraction target>: <nearest common test-support location>"
+          "message": "<extraction target>: <nearest common test-infrastructure location>"
         }
       ]
     }
@@ -268,19 +300,19 @@ Gate-skipped rows use `status: "UNKNOWN"`. A skill with no Gate 2 omits that row
 
 Claude approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. The tests pass if the entire codebase is deleted. Claude was distracted by clean types, good structure, and comprehensive scenarios, and never checked the imports.
 
-How to avoid: Step 3a checks imports FIRST. Zero codebase imports = instant REJECT.
+How to avoid: Step 3b checks imports before the other evidence properties. Zero codebase imports = instant REJECT.
 
 **Failure 2: Accepted mocking as legitimate coupling**
 
 Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
 
-How to avoid: Step 3b checks for mocking AFTER confirming coupling. Import + mock = coupling severed.
+How to avoid: Step 3c checks for mocking after confirming coupling. Import + mock = coupling severed.
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the main agent already passed before dispatch and CI re-runs over the repository. The dispatched audit runs no deterministic verification.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the caller already passed before dispatch and CI re-runs over the repository. The dispatched audit runs no deterministic verification.
 
-How to avoid: Step 3d traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
+How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
 **Failure 4: Distracted by code quality signals**
 
@@ -292,7 +324,13 @@ How to avoid: Essential principles — no mechanical detection. Check the four e
 
 Claude audited a test that read an authored skill body and asserted that policy substrings were present, and rated coupling PASS — "direct coupling to the artifact; the text is the thing under test" — and falsifiability PASS — "removing the clause from the skill body breaks the test." The test exercises no code; only an edit to the authored prose falsifies it, so it carries no behavioral evidence, yet the four-property model rationalized it as conformance.
 
-How to avoid: Step 3a — after identifying what a test reads, classify by whether the subject is executable behavior or authored prose/documentation, not by whether the path resolves to a repository file. A read of an authored prose or documentation body asserted for its content is prose-coupling → REJECT, however the path is resolved and whatever harness mediates the read.
+How to avoid: Step 3b — after identifying what a test reads, classify by whether the subject is executable behavior or authored prose/documentation, not by whether the path resolves to a repository file. A read of an authored prose or documentation body asserted for its content is prose-coupling → REJECT, however the path is resolved and whatever harness mediates the read.
+
+**Failure 6: Accepted renamed test-local configuration**
+
+Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. The rename only evaded a heuristic.
+
+How to avoid: Step 3a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
 
 </failure_modes>
 
@@ -301,6 +339,7 @@ How to avoid: Step 3a — after identifying what a test reads, classify by wheth
 The verdict is sound when:
 
 - Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
+- Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.

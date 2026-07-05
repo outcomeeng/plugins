@@ -9,7 +9,7 @@ Read `/skill-standards` for the full skill standards before running this workflo
 
 **If user provided context** (e.g., "create a skill for X"):
 → Analyze what's stated, what can be inferred, what's unclear
-→ Skip to asking about genuine gaps only
+→ Skip to asking about operator-owned gaps only
 
 **If user just invoked skill without context:**
 → Ask what they want to build

@@ -10,7 +10,7 @@ Level 1 covers logic that can run with Rust stdlib, normal developer tooling, an
 | tempdir-backed filesystem logic    | `tempfile`                     |
 | deterministic command building     | hand-written trait seams       |
 | finite input/output mappings       | `rstest` or table-driven tests |
-| universal invariants               | `proptest` or `quickcheck`     |
+| universal invariants               | property harness wrapper       |
 
 </what_belongs_here>
 
@@ -77,15 +77,12 @@ impl CommandRunner for RecordingRunner {
 <tempdir_pattern>
 
 ```rust
+use product_testing::fixtures::configs::fast_mode_config;
+use product_testing::harnesses::filesystem::assert_loads_config_from_temp_dir;
+
 #[test]
 fn loads_config_from_temp_dir() {
-    let temp = tempfile::tempdir().unwrap();
-    let path = temp.path().join("app.toml");
-    std::fs::write(&path, "mode = \"fast\"\n").unwrap();
-
-    let config = load_config(&path).unwrap();
-
-    assert_eq!(config.mode, Mode::Fast);
+    assert_loads_config_from_temp_dir(fast_mode_config(), load_config);
 }
 ```
 
@@ -94,12 +91,12 @@ fn loads_config_from_temp_dir() {
 <property_pattern>
 
 ```rust
-proptest! {
-    #[test]
-    fn canonical_key_roundtrips(input in "[a-z0-9_-]{1,32}") {
-        let parsed = CanonicalKey::parse(&input).unwrap();
-        prop_assert_eq!(parsed.as_str(), input);
-    }
+use product_testing::generators::keys::canonical_key_strings;
+use product_testing::harnesses::properties::assert_canonical_key_roundtrips;
+
+#[test]
+fn canonical_key_roundtrips() {
+    assert_canonical_key_roundtrips(canonical_key_strings(), CanonicalKey::parse);
 }
 ```
 

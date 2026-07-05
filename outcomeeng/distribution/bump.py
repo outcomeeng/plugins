@@ -4,8 +4,9 @@ Bumps the manifest version of every plugin whose authored source tree or
 generated runtime tree has changes since a base reference (default
 `origin/main`). Each changed plugin's version is incremented exactly once
 across every manifest it owns (`.claude-plugin/plugin.json` always;
-`.codex-plugin/plugin.json` when present). The increment segment defaults
-to `patch`; `minor` and `major` are explicit opt-ins.
+`.codex-plugin/plugin.json` when present). The increment segment is
+auto-detected per plugin unless the caller explicitly selects `patch`,
+`minor`, or `major`.
 
 The module's contract:
 
@@ -97,7 +98,7 @@ class ChangedPath:
     old_path: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Version:
     """A `MAJOR.MINOR.PATCH` semver triple with segment-specific bumps."""
 
@@ -172,6 +173,10 @@ class ToolProbe(Protocol):
     def __call__(self, name: str) -> bool: ...
 
 
+class ManifestVersionError(ValueError):
+    """Raised when a manifest does not expose a parseable string version."""
+
+
 def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
     """Filter diff paths to the set of plugin names changed."""
     plugins: set[str] = set()
@@ -211,9 +216,15 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     for change in changes:
         if change.status is FileStatus.MODIFIED:
             continue
-        if _is_minor_triggering_path(change.path):
+        if _change_has_minor_triggering_path(change):
             return Segment.MINOR
     return Segment.PATCH
+
+
+def _change_has_minor_triggering_path(change: ChangedPath) -> bool:
+    return _is_minor_triggering_path(change.path) or (
+        change.old_path is not None and _is_minor_triggering_path(change.old_path)
+    )
 
 
 def _is_minor_triggering_path(path: str) -> bool:
@@ -270,9 +281,11 @@ def bump(
     if not changed:
         return 0
 
-    plans: list[tuple[str, ManifestRecord, Version, Segment]] = []
+    plans: list[tuple[str, ManifestRecord, Version]] = []
+    plugin_targets: dict[str, tuple[Version, Segment]] = {}
     already_bumped_plugins: list[str] = []
     unbumped_plugins: list[str] = []
+    out_of_lockstep_plugins: set[str] = set()
     for plugin in sorted(changed):
         records = manifest_reader(plugin)
         if not records:
@@ -286,28 +299,56 @@ def bump(
                 file=sys.stderr,
             )
         resolved = segment if segment is not None else detected
-        plugin_already_bumped = False
+        working_tree_versions: list[Version] = []
+        base_ref_versions: list[Version] = []
+        lagging_manifest = False
         for record in records:
-            working_tree_version = _version_from_manifest_text(record.content)
+            try:
+                working_tree_version = _version_from_manifest_text(
+                    record.path, record.content
+                )
+            except ManifestVersionError as error:
+                print(str(error), file=sys.stderr)
+                return 1
+            working_tree_versions.append(working_tree_version)
             base_ref_content = _base_manifest_content_for_record(
                 content_probe, base_ref, record.path, plugin_changes
             )
             if base_ref_content is not None:
-                base_ref_version = _version_from_manifest_text(base_ref_content)
-                if working_tree_version != base_ref_version:
-                    plugin_already_bumped = True
-            plans.append((plugin, record, working_tree_version, resolved))
-        if plugin_already_bumped:
+                try:
+                    base_ref_version = _version_from_manifest_text(
+                        record.path, base_ref_content
+                    )
+                except ManifestVersionError as error:
+                    print(str(error), file=sys.stderr)
+                    return 1
+                if working_tree_version <= base_ref_version:
+                    lagging_manifest = True
+                base_ref_versions.append(base_ref_version)
+            else:
+                base_ref_versions.append(working_tree_version)
+            plans.append((plugin, record, working_tree_version))
+        plugin_versions_agree = len(set(working_tree_versions)) == 1
+        if not lagging_manifest and plugin_versions_agree:
             already_bumped_plugins.append(plugin)
         else:
+            if not plugin_versions_agree:
+                out_of_lockstep_plugins.add(plugin)
+            segment_target = _SEGMENT_DISPATCH[resolved](max(base_ref_versions))
+            plugin_target = max(segment_target, max(working_tree_versions))
+            plugin_targets[plugin] = (plugin_target, resolved)
             unbumped_plugins.append(plugin)
 
     if mode is Mode.CHECK:
         if unbumped_plugins:
             for plugin in unbumped_plugins:
+                reason = (
+                    "its owned manifests are out of lockstep"
+                    if plugin in out_of_lockstep_plugins
+                    else f"its working-tree version is not ahead of its {base_ref} version"
+                )
                 print(
-                    f"Plugin {plugin} needs a version bump but its "
-                    f"working-tree version still equals its {base_ref} version",
+                    f"Plugin {plugin} needs a version bump because {reason}",
                     file=sys.stderr,
                 )
             return 1
@@ -323,11 +364,10 @@ def bump(
         )
 
     skip = set(already_bumped_plugins)
-    for plugin, record, working_tree_version, resolved in plans:
+    for plugin, record, working_tree_version in plans:
         if plugin in skip:
             continue
-        increment = _SEGMENT_DISPATCH[resolved]
-        new_version = increment(working_tree_version)
+        new_version, resolved = plugin_targets[plugin]
         if mode is Mode.DRY_RUN:
             print(
                 f"{plugin}: {record.path} {working_tree_version} -> "
@@ -360,9 +400,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
 
-def _version_from_manifest_text(content: str) -> Version:
-    data = json.loads(content)
-    return Version.parse(data["version"])
+def _version_from_manifest_text(path: str, content: str) -> Version:
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as error:
+        raise ManifestVersionError(
+            f"Manifest {path} has invalid JSON: {error.msg}"
+        ) from error
+    if not isinstance(data, dict):
+        raise ManifestVersionError(
+            f"Manifest {path} must contain a JSON object with a string version"
+        )
+    version = data.get("version")
+    if not isinstance(version, str):
+        raise ManifestVersionError(f"Manifest {path} must contain a string version")
+    try:
+        return Version.parse(version)
+    except ValueError as error:
+        raise ManifestVersionError(
+            f"Manifest {path} has invalid version {version!r}"
+        ) from error
 
 
 def _base_manifest_content_for_record(
@@ -440,11 +497,23 @@ def _real_change_probe(
     )
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
-        plugin = _plugin_from_changed_path(parsed_change.path)
-        if plugin is None:
+        plugins = _plugins_from_changed_path(parsed_change)
+        if not plugins:
             continue
-        changes.setdefault(plugin, []).append(parsed_change)
+        for plugin in plugins:
+            changes.setdefault(plugin, []).append(parsed_change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
+
+
+def _plugins_from_changed_path(change: ChangedPath) -> frozenset[str]:
+    plugins: set[str] = set()
+    if plugin := _plugin_from_changed_path(change.path):
+        plugins.add(plugin)
+    if change.old_path is not None and (
+        plugin := _plugin_from_changed_path(change.old_path)
+    ):
+        plugins.add(plugin)
+    return frozenset(plugins)
 
 
 def _parse_diff_line(line: str) -> ChangedPath | None:
@@ -538,7 +607,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Exit non-zero if any changed plugin's working-tree version "
-            "still equals its base_ref version. Useful in CI."
+            "is not ahead of its base_ref version. Useful in CI."
         ),
     )
     return parser

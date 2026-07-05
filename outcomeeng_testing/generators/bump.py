@@ -17,6 +17,7 @@ the source module `outcomeeng.distribution.bump`.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -33,6 +34,12 @@ from outcomeeng.distribution.bump import (
 )
 
 _FIXTURES_ROOT: Path = Path(outcomeeng_testing.__file__).parent / "fixtures" / "bump"
+
+
+@dataclass(frozen=True)
+class MalformedManifestCase:
+    content: str
+    expected_diagnostic: str
 
 
 def manifest_relpath(plugin: str, manifest: str) -> str:
@@ -53,6 +60,25 @@ def distribution_relpath(root: str, plugin: str, subpath: str) -> str:
 def manifest_text(name: str, version: str) -> str:
     """Return canonical-form plugin manifest JSON with the given version."""
     return json.dumps({"name": name, "version": version}, indent=2) + "\n"
+
+
+def malformed_manifest_cases(plugin: str) -> tuple[MalformedManifestCase, ...]:
+    """Return manifest payloads that lack a parseable string version."""
+    return (
+        MalformedManifestCase(content="{", expected_diagnostic="invalid JSON"),
+        MalformedManifestCase(
+            content=json.dumps({"name": plugin}),
+            expected_diagnostic="string version",
+        ),
+        MalformedManifestCase(
+            content=json.dumps({"version": 1}),
+            expected_diagnostic="string version",
+        ),
+        MalformedManifestCase(
+            content=json.dumps({"version": "not-semver"}),
+            expected_diagnostic="invalid version",
+        ),
+    )
 
 
 def version_of(manifest_text: str) -> str:
@@ -144,6 +170,8 @@ __all__ = [
     "arbitrary_diff_paths",
     "distribution_relpath",
     "distribution_roots",
+    "malformed_manifest_cases",
+    "MalformedManifestCase",
     "manifest_fixture_path",
     "manifest_relpath",
     "manifest_text",

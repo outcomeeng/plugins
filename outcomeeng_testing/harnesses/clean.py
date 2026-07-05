@@ -5,7 +5,6 @@ The double is a spy (recording calls) and a stub (returning a scripted
 exit code), used by `l1` tests to verify clean's argv contract without
 invoking real `git clean -fdX` against the test machine.
 
-Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 - Stage 5 #2 (Interaction protocols): clean's correctness is the argv it
   passes to `git`.
 - Stage 5 #4 (Safety): real `git clean -fdX` mutates the test machine's

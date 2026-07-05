@@ -21,9 +21,7 @@ import { describe, expect, it } from "vitest";
 
 describe("isAbsentConfigReadResult", () => {
   it("accepts the source-owned absent result", () => {
-    const result = createAbsentConfigReadResult();
-
-    expect(isAbsentConfigReadResult(result)).toBe(true);
+    expect(isAbsentConfigReadResult(createAbsentConfigReadResult())).toBe(true);
   });
 });
 ```
@@ -36,19 +34,13 @@ Use this pattern when the domain has exactly one valid source-owned shape. The c
 
 ```typescript
 import { normalizeSourcePath } from "@/paths";
-import { arbitrarySourceFilePath } from "@testing/generators/paths";
-import * as fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { sourcePathNormalizationProperty } from "@testing/harnesses/paths/properties";
+import { assertProperty } from "@testing/harnesses/properties";
+import { describe, it } from "vitest";
 
 describe("normalizeSourcePath", () => {
   it("normalizes every generated source path idempotently", () => {
-    fc.assert(
-      fc.property(arbitrarySourceFilePath(), (path) => {
-        const normalized = normalizeSourcePath(path);
-
-        expect(normalizeSourcePath(normalized)).toBe(normalized);
-      }),
-    );
+    assertProperty(sourcePathNormalizationProperty(normalizeSourcePath));
   });
 });
 ```
@@ -60,7 +52,7 @@ For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings fr
 </generated_domain_inputs>
 
 <debugging_failures>
-When a property failure exposes a bug, replay fast-check's reported seed and counterexample first. Add a named regression test only when the counterexample identifies a stable source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay helper, not a handwritten shared constant.
+When a property failure exposes a bug, replay the wrapper-reported seed and counterexample first. Add a named regression test only when the counterexample identifies a stable source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay function, not a handwritten shared constant.
 
 ```typescript
 import { normalizeSourcePath } from "@/paths";
@@ -69,12 +61,9 @@ import { describe, expect, it } from "vitest";
 
 describe("normalizeSourcePath", () => {
   it("preserves the normalized form for the seed 87231 Windows path regression", () => {
-    const path = createSourcePath({
-      drive: "C",
-      segments: ["workspace", "src", "index.ts"],
-    });
-
-    expect(normalizeSourcePath(path)).toBe("C:/workspace/src/index.ts");
+    expect(normalizeSourcePath(createSourcePath({ drive: "C", segments: ["workspace", "src", "index.ts"] }))).toBe(
+      "C:/workspace/src/index.ts",
+    );
   });
 });
 ```

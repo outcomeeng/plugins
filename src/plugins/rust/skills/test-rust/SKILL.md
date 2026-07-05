@@ -30,8 +30,9 @@ Before writing or revising tests, also check:
 3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
 5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
-6. Keep test helpers, fixtures, and harnesses in the location prescribed by `/rust-test-standards` and repo-local overlays.
-7. Run the repository's Rust validation commands before reporting the tests complete.
+6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `product-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
+7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the location prescribed by `/rust-test-standards` and repo-local overlays.
+8. Run the repository's Rust validation commands before reporting the tests complete.
 
 </workflow>
 
@@ -44,7 +45,7 @@ After running through `/test`, use the canonical mapping in `/rust-test-standard
 | Stage 2 -> Level 2    | real binaries, local adapters, async runtimes, local services            |
 | Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments |
 | Stage 3A              | direct pure-function tests                                               |
-| Stage 3B              | extracted pure helper plus outer boundary evidence                       |
+| Stage 3B              | extracted pure function plus outer boundary evidence                     |
 | Stage 5 exceptions    | controlled implementations that preserve the real seam                   |
 | compile-time contract | compile-fail evidence                                                    |
 | universal invariant   | property-based evidence                                                  |
@@ -71,6 +72,7 @@ Rust test work is complete when:
 - the source-contract-first gate was applied before test predicates were written or repaired
 - `/rust-standards` and `/rust-test-standards` were loaded before test code was written
 - the test shape follows the canonical Rust test standard and repo-local overlays
+- executed test files declare no `const`, `static`, `let`, fixture parameters, or property-generated parameters
 - controlled implementations preserve coupling to the real seam
 - property claims use property-based testing
 - compile-time claims use compile-fail evidence

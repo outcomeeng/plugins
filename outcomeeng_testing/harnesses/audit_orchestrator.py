@@ -9,9 +9,8 @@ The script is not importable as a package because it lives under
 ``scripts/``. Tests that inspect its pure helpers load it through ``importlib``
 instead of a regular import.
 
-The harness lives in ``outcomeeng_testing/harnesses/`` per
-``spx/15-test-infrastructure.pdr.md`` so shared test scaffolding stays outside
-``tests/`` and outside ``spx/``.
+The harness lives in ``outcomeeng_testing/harnesses/`` so shared test scaffolding
+stays outside ``tests/`` and outside ``spx/``.
 """
 
 from __future__ import annotations

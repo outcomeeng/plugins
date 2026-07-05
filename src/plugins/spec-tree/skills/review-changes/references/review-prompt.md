@@ -52,7 +52,7 @@ There is no sixth concern. If a rule violation is real, classify the resulting d
 Every finding carries exactly one `severity`:
 
 - `blocking` — merge-safety defect: if deployed, the changeset would create a deterministic issue or pose a risk.
-- `debt` — a real defect that does not jeopardize merge safety.
+- `debt` — a real defect that does not jeopardize merge safety: a problem the change carries, but not merge-blocking.
 
 Judge validity and severity only. Whether `debt` is fixed in the current changeset or tracked elsewhere is the author's disposition call. Do not introduce a third, scope-shaped severity.
 

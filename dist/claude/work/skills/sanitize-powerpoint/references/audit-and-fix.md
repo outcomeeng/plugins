@@ -43,7 +43,7 @@ A master also has a `<p:sldMasterId>` in `presentation.xml` and a relationship i
 | Duplicate layout name | Two layouts under one master sharing a `<p:cSld name>`                         | Rename one (dimension 5)                                                                                                    |
 | Unregistered master   | A `slideMasterN.xml` not in `presentation.xml`'s `<p:sldMasterIdLst>`          | Register it (add `<p:sldMasterId>` + relationship) or remove it                                                             |
 
-Structure findings are integrity defects — a deck can fail to open or lose content. Fix all of them. They are mechanical, but re-listing vs. removing an orphan is a judgment call: re-list if a slide needs it, remove if it is genuinely dead.
+Structure findings are integrity defects — a deck can fail to open or lose content. Fix all of them. They are mechanical, but re-listing vs. removing an orphan is a judgment call: re-list if a slide needs it, remove if it is dead.
 
 ## Dimension 2 — Layout type attributes
 
@@ -63,7 +63,7 @@ Fix — add or correct the attribute on the root element:
 <p:sldLayout xmlns:a="…" xmlns:r="…" xmlns:p="…" type="blank" preserve="1">
 ```
 
-Place `type` before `preserve`, matching how PowerPoint writes it. `type="blank"` for a genuinely empty layout is mechanical. Other kinds (`secHead`, `titleOnly`, `obj`) are heuristic — confirm with the user.
+Place `type` before `preserve`, matching how PowerPoint writes it. `type="blank"` for an empty layout is mechanical. Other kinds (`secHead`, `titleOnly`, `obj`) are heuristic — confirm with the user.
 
 ## Dimension 3 — Font hygiene
 

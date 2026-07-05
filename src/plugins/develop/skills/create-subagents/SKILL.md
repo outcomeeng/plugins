@@ -37,7 +37,7 @@ model: sonnet
 ---
 
 <role>
-You are a senior code reviewer focused on quality, security, and best practices.
+Claude is a senior code reviewer focused on quality, security, and best practices.
 </role>
 
 <focus_areas>
@@ -179,7 +179,7 @@ model: sonnet
 ---
 
 <role>
-You are a senior code reviewer specializing in security.
+Claude is a senior code reviewer specializing in security.
 </role>
 
 <focus_areas>
@@ -203,8 +203,8 @@ You are a senior code reviewer specializing in security.
 <principle name="task_specific">
 Tailor instructions to the specific task domain. Don't create generic "helper" subagents.
 
-❌ Bad: "You are a helpful assistant that helps with code"
-✅ Good: "You are a React component refactoring specialist. Analyze components for hooks best practices, performance anti-patterns, and accessibility issues."
+❌ Bad: "Helpful assistant for code"
+✅ Good: "Claude is a React component refactoring specialist. Analyze components for hooks best practices, performance anti-patterns, and accessibility issues."
 </principle>
 </system_prompt_guidelines>
 
@@ -257,7 +257,7 @@ Claude automatically selects subagents based on the `description` field when it 
 </automatic>
 
 <explicit>
-You can explicitly invoke a subagent:
+Explicitly invoke a subagent:
 
 ```
 > Use the code-reviewer subagent to check my recent changes
@@ -281,7 +281,7 @@ Run `/agents` for an interactive interface to:
 </using_agents_command>
 
 <manual_editing>
-You can also edit subagent files directly:
+Edit subagent files directly:
 
 - Product: `.claude/agents/subagent-name.md`
 - User: `~/.claude/agents/subagent-name.md`
@@ -292,7 +292,7 @@ You can also edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [${CLAUDE_SKILL_DIR}/references/subagents.md](references/subagents.md)
+**Subagent usage and configuration**: [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md)
 
 - File format and configuration
 - Skill injection (`skills:` field for preloading skill content)
@@ -301,7 +301,7 @@ You can also edit subagent files directly:
 - Prompt caching optimization
 - Complete examples
 
-**Writing effective prompts**: [${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md](references/write-subagent-prompts.md)
+**Writing effective prompts**: [write-subagent-prompts.md](${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md)
 
 - Core principles and XML structure
 - Description field optimization for routing
@@ -311,35 +311,35 @@ You can also edit subagent files directly:
 
 **Advanced topics**:
 
-**Evaluation and testing**: [${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md](references/evaluation-and-testing.md)
+**Evaluation and testing**: [evaluation-and-testing.md](${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md)
 
 - Evaluation metrics (task completion, tool correctness, robustness)
 - Testing strategies (offline, simulation, online monitoring)
 - Evaluation-driven development
 - G-Eval for custom criteria
 
-**Error handling and recovery**: [${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md](references/error-handling-and-recovery.md)
+**Error handling and recovery**: [error-handling-and-recovery.md](${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md)
 
 - Common failure modes and causes
 - Recovery strategies (graceful degradation, retry, circuit breakers)
 - Structured communication and observability
 - Anti-patterns to avoid
 
-**Context management**: [${CLAUDE_SKILL_DIR}/references/context-management.md](references/context-management.md)
+**Context management**: [context-management.md](${CLAUDE_SKILL_DIR}/references/context-management.md)
 
 - Memory architecture (STM, LTM, working memory)
 - Context strategies (summarization, sliding window, scratchpads)
 - Managing long-running tasks
 - Prompt caching interaction
 
-**Orchestration patterns**: [${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
+**Orchestration patterns**: [orchestration-patterns.md](${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md)
 
 - Sequential, parallel, hierarchical, coordinator patterns
 - Model selection for orchestration roles
 - Multi-agent coordination
 - Pattern selection guidance
 
-**Debugging and troubleshooting**: [${CLAUDE_SKILL_DIR}/references/debugging-agents.md](references/debugging-agents.md)
+**Debugging and troubleshooting**: [debugging-agents.md](${CLAUDE_SKILL_DIR}/references/debugging-agents.md)
 
 - Logging, tracing, and correlation IDs
 - Common failure types (hallucinations, format errors, tool misuse)

@@ -5,7 +5,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
-Tests driven by spec-tree assertions — assertion extraction, evidence-gap analysis, scaffold generation, and deterministic tree context applied through the canonical testing methodology.
+Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
 </objective>
 
 <prerequisite>
@@ -15,6 +15,8 @@ Tests driven by spec-tree assertions — assertion extraction, evidence-gap anal
 That local reference contains:
 
 - non-negotiable testing rules and evidence standards
+- the split between test configuration, test data, harnesses, generators, fixtures, and eval cases
+- property-based seed and replay requirements
 - the pre-test questions and the evidence trap
 - the separation between assertion type, execution level, and runner
 - the 4-part progression
@@ -26,7 +28,7 @@ Then follow the spec-tree workflow below.
 
 </prerequisite>
 
-<spec_tree_workflow>
+<workflow>
 
 <step name="load_context">
 
@@ -123,7 +125,7 @@ For each assertion needing a new test:
 
 Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript`.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. See `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md`.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
 
 </step>
 
@@ -150,7 +152,7 @@ Report which assertions have tests, which do not, and which are stale:
 
 </step>
 
-</spec_tree_workflow>
+</workflow>
 
 <cross_cutting_assertions>
 
@@ -164,16 +166,12 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 <success_criteria>
 
-Testing is complete when:
+Testing output is sound when:
 
-- [ ] Tree context loaded (foundation markers present)
-- [ ] All assertions extracted from spec with types identified
-- [ ] Evidence gaps analyzed and reported
-- [ ] Each assertion routed through the 5-stage methodology
-- [ ] Test scaffolds created for missing assertions
-- [ ] Spec assertion links updated to point to test files
-- [ ] Evidence summary reported
-- [ ] No test doubles without matching exception case
-- [ ] Property-based tests present for parsers, serializers, math operations, and complex algorithms
+- Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
+- Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
+- Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
+- Every spec assertion that receives test evidence links to the evidence file that verifies it.
 
 </success_criteria>

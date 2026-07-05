@@ -8,6 +8,17 @@
 
 </table_of_contents>
 
+<table_of_contents>
+
+- `<common_failure_modes>` — specification, coordination, verification, cascading, and non-determinism failures
+- `<recovery_strategies>` — degradation, retry, circuit breaker, timeout, verification, and reassignment patterns
+- `<structured_communication>` — message types and output validation
+- `<observability>` — logging, correlation IDs, metrics, and evaluator agents
+- `<anti_patterns>` — recovery failures to reject
+- `<recovery_checklist>` — operational checklist before deploying subagents
+
+</table_of_contents>
+
 <common_failure_modes>
 
 Industry research identifies these failure patterns:
@@ -39,7 +50,7 @@ Industry research identifies these failure patterns:
 
 **Symptoms**: Duplicate work, contradictory outputs, infinite loops, tasks falling through cracks.
 
-**Prevention**: Clear orchestration patterns (see [orchestration-patterns.md](orchestration-patterns.md)), explicit handoff protocols.
+**Prevention**: Clear orchestration patterns and explicit handoff protocols.
 </inter_agent_misalignment>
 
 <verification_gaps>
@@ -393,7 +404,7 @@ model: sonnet
 ---
 
 <role>
-You are an output validation specialist. Check subagent outputs for:
+Claude is an output validation specialist. Check subagent outputs for:
 - Schema compliance
 - Completeness
 - Internal consistency

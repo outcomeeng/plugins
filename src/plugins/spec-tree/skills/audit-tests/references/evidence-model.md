@@ -6,9 +6,20 @@ Four properties define test evidence: coupling, falsifiability, alignment, cover
 
 </overview>
 
+<table_of_contents>
+
+- `<coupling_taxonomy>` — coupling categories and examples
+- `<coupling_verification>` — import and execution-path coupling procedure
+- `<test_file_declaration_model>` — test-file ownership screening before coupling
+- `<falsifiability_model>` — mutation analysis and double exceptions
+- `<alignment_verification>` — assertion-to-expectation alignment
+- `<coverage_protocol>` — coverage-by-reading procedure
+
+</table_of_contents>
+
 <coupling_taxonomy>
 
-Six coupling categories with definitions and code examples.
+Coupling categories with definitions and code examples.
 
 **Direct coupling** — Test imports the module under test and calls its functions directly.
 
@@ -89,6 +100,22 @@ it("has correct chroma", () => {
 
 This test passes if every file in the codebase is deleted.
 
+**Severed coupling** — Test imports the module under test and then replaces the imported behavior with a mock, fake, stub, monkeypatch, intercepted response, or equivalent mechanism.
+
+```typescript
+import { queryDatabase } from "../src/database";
+
+vi.mock("../src/database", () => ({
+  queryDatabase: vi.fn().mockResolvedValue([{ id: "test" }]),
+}));
+
+it("loads records", async () => {
+  await expect(loadRecords()).resolves.toHaveLength(1);
+});
+```
+
+The import exists, but the real behavior never runs. REJECT — coupling severed.
+
 **Prose-coupling** — Test reads an authored prose or documentation body — a skill body, a spec body, a prompt, any text the product authors and maintains — and asserts substrings of its content. The test couples to the document's text, never to executable behavior: it passes whatever the document literally contains, and no code runs.
 
 ```python
@@ -101,7 +128,7 @@ def test_skill_declares_the_policy() -> None:
     )  # the prose was authored, not behavior
 ```
 
-This holds full-chain: a harness that exposes the authored path as a constant, or a reader helper that performs the `read_text` inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised. The only mutation that falsifies such a test is an edit to the authored prose, never a change to code, so it carries no behavioral evidence. REJECT — the claim belongs in `[eval]` or `[audit]`, and the spec assertion is retagged. Reading an authored *source-code* file for a structural lint that exercises a rule against it is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
+This holds full-chain: a harness that exposes the authored path as a constant, or a reader function that performs the `read_text` inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised. The only mutation that falsifies such a test is an edit to the authored prose, never a change to code, so it carries no behavioral evidence. REJECT — the claim belongs in `[eval]` or `[audit]`, and the spec assertion is retagged. Reading an authored *source-code* file for a structural lint that exercises a rule against it is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
 
 </coupling_taxonomy>
 
@@ -116,17 +143,48 @@ This holds full-chain: a harness that exposes the authored path as a constant, o
    - Is the imported module the one the assertion is about? → Direct
    - Is it a test harness? → Indirect (follow the chain — verify harness has real coupling)
    - Is it a consumer of the module? → Transitive (verify test level)
-5. Check whether the assertion-relevant function/method is actually called:
+5. Check whether the imported behavior is replaced by a mock, fake, stub, monkeypatch, or equivalent mechanism:
+   - Imported then replaced → Severed coupling
+6. Check whether the assertion-relevant function/method is actually called:
    - Imported but never called → False coupling
    - Called but on wrong inputs or code paths → Partial coupling
 
 </coupling_verification>
 
+<test_file_declaration_model>
+
+Executed test files are assertion files, not data/configuration homes. Read declarations before coupling so ownership failures cannot be hidden behind imports or naming style.
+
+Reject every variable or constant declaration in executed test files. A variable or constant owns state in the assertion file even when the name looks harmless, and the remediation is to move that state to the correct owner. Reject framework fixture parameters and property-generated parameters for the same reason: they bind setup or generated data in the assertion file rather than behind a harness-owned entrypoint.
+
+- runner settings, seed policy, retries, or framework configuration
+- test data, boundary bags, expected outputs, or reusable cases
+- fixture paths or fixture contents
+- generator choices, arbitrary domains, or singleton wrappers
+- harness setup policy, reusable resources, cleanup policy, or diagnostics
+- source-owned singleton shapes, protocol tokens, status values, command names, rule identifiers, or message identifiers
+
+Reject local function declarations when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source-owned vocabulary.
+
+Casing and declaration shape are irrelevant. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` carry the same ownership defect when the declaration owns runner configuration.
+
+Property-based evidence must be reproducible. A property harness or wrapper owns seed selection, run counts, and failure reporting. The failure output must include the seed and replay path. A test file that declares its own seed/run-count or calls a property framework without reproducible seed reporting fails the declaration screen.
+
+Valid remediation targets:
+
+- Source contract for source-owned vocabulary or singleton shapes
+- Spec-governed generator for variable input domains
+- Spec-governed harness for configuration, resource lifecycle, seed policy, and replay diagnostics
+- Inert fixture for real whole-payload samples read, copied, or passed by path
+- Eval case data when curated LLM/eval cases make generated JSONL wasteful and not tractable
+
+</test_file_declaration_model>
+
 <falsifiability_model>
 
 **Mutation analysis**
 
-For each codebase import with genuine coupling, name a concrete mutation:
+For each codebase import with behavior coupling, name a concrete mutation:
 
 ```text
 Module: src/config-parser.ts

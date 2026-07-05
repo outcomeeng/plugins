@@ -9,9 +9,9 @@ The helper is not importable as a package — it lives under ``src/plugins/``
 ``sys.path[0]``. Tests that introspect its dataclasses, constants, and pure
 functions load it through ``importlib`` instead of a regular import.
 
-The harness lives in ``outcomeeng_testing/harnesses/`` per
-``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is production
-code with its home outside ``tests/`` and outside ``spx/``.
+The harness lives in ``outcomeeng_testing/harnesses/`` because shared test
+scaffolding is production code with its home outside ``tests/`` and outside
+``spx/``.
 """
 
 from __future__ import annotations

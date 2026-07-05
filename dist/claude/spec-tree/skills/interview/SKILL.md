@@ -34,8 +34,8 @@ When modifying an existing document, read it first. The coverage map starts from
 A question is the last resort, not the first move. Before composing any question:
 
 - **Reason to a recommendation.** Work the decision through to the answer the code, the specs, the decisions, and sensible defaults point to. Carry that reasoning into the question — never ask a question without first trying to answer it.
-- **Ask only what is genuinely the operator's to decide.** A question is warranted only when the decision is the operator's and the evidence does not settle it — a product bet, a priority call, a preference with real trade-offs. When the code, specs, decisions, or a sensible default already settle it, decide and proceed; do not stage a question to ratify a call already made.
-- **No genuine fork → no question.** If reasoning leaves one defensible answer, take it and state the call. A question with only one real answer wastes a turn and pushes back onto the operator a decision the evidence already made.
+- **Ask only what is operator-owned.** A question is warranted only when the decision is the operator's and the evidence does not settle it — a product bet, a priority call, a preference with real trade-offs. When the code, specs, decisions, or a sensible default already settle it, decide and proceed; do not stage a question to ratify a call already made.
+- **No operator-owned fork → no question.** If reasoning leaves one defensible answer, take it and state the call. A question with only one real answer wastes a turn and pushes back onto the operator a decision the evidence already made.
 
 When a question is warranted, its options obey:
 
@@ -156,7 +156,7 @@ How to avoid: Before each question, check the coverage map. If an area is at 3+ 
 
 User responds with "we'll figure it out later" or "just make it work for the common case." Claude records the non-answer and moves on. The resulting spec has holes that surface during implementation.
 
-How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user genuinely doesn't know, record it as an open decision with a `([audit])` tag, not as a resolved assertion.
+How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user does not know, record it as an open decision with a `([audit])` tag, not as a resolved assertion.
 
 **Failure 3: Losing coverage state in long conversations**
 
@@ -180,7 +180,7 @@ How to avoid: Pre-Analysis Protocol is non-negotiable. Complete the codebase, do
 
 Claude framed a question — "should the parser tolerate trailing commas?" — whose answer the loaded spec and the existing parser already fixed. The operator answered the obvious, and the turn produced nothing the code did not already say. A variant: Claude reasoned to a clear recommendation, then asked anyway "to confirm", staging a decision it had already made.
 
-How to avoid: Decide-First Protocol. Reason the decision through first. Ask only when the answer is genuinely the operator's and the evidence does not settle it. When one defensible answer remains, take it and state the call — do not ask to ratify it.
+How to avoid: Decide-First Protocol. Reason the decision through first. Ask only when the answer is operator-owned and the evidence does not settle it. When one defensible answer remains, take it and state the call — do not ask to ratify it.
 
 **Failure 7: Strawman options and false balance**
 

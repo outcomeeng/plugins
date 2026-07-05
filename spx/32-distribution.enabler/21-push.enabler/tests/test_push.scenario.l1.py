@@ -1,102 +1,105 @@
-"""Level-1 scenario evidence for `spx/32-distribution.enabler/21-push.enabler/`.
-
-Covers the three scenario assertions in `push.md`:
-- Tracked branch: capture upstream, run `git push`, invoke sync with the
-  captured ref as `base_ref`.
-- Untracked branch: run `git push`, invoke sync without a `base_ref`.
-- Push failure: propagate the non-zero exit code and do not invoke sync.
-
-Runner calls and upstream-probe interactions are observed through the
-recording doubles in `outcomeeng_testing.harnesses.sync` and
-`outcomeeng_testing.harnesses.push`.
-"""
+"""Level-1 scenario evidence for `spx/32-distribution.enabler/21-push.enabler/`."""
 
 from __future__ import annotations
 
-from outcomeeng.distribution.push import REQUIRED_TOOLS, push
-from outcomeeng_testing.harnesses.push import ScriptedUpstreamProbe
-from outcomeeng_testing.harnesses.sync import RecordingRunner, ScriptedToolProbe
-
-ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
-SYNC_INVOCATION: tuple[str, ...] = (
-    "uv",
-    "run",
-    "python",
-    "-m",
-    "outcomeeng.distribution.sync",
+from outcomeeng_testing.harnesses.push import (
+    cli_parser_forwards_git_help_flag_verbatim,
+    clustered_git_help_push_does_not_refresh_marketplace,
+    cli_parser_forwards_leading_git_options_verbatim,
+    clustered_short_option_dry_run_does_not_refresh_marketplace,
+    dry_run_push_does_not_refresh_marketplace,
+    failed_git_push_propagates_exit_code_and_skips_sync,
+    git_help_push_forwards_when_only_git_is_available,
+    git_help_push_requires_only_git_and_skips_marketplace_upstream_capture,
+    git_help_push_does_not_refresh_marketplace,
+    long_git_help_push_does_not_refresh_marketplace,
+    no_dry_run_option_restores_marketplace_refresh,
+    no_push_args_forwards_bare_git_push,
+    push_option_operand_named_like_dry_run_still_refreshes_marketplace,
+    recurse_submodules_bare_dry_run_does_not_refresh_marketplace,
+    recurse_submodules_bare_help_requires_only_git_and_skips_upstream_capture,
+    repo_option_operand_named_like_dry_run_still_refreshes_marketplace,
+    separator_repository_named_like_dry_run_still_refreshes_marketplace,
+    tracked_branch_captures_upstream_and_invokes_sync_with_ref,
+    untracked_branch_invokes_sync_without_ref,
 )
 
 
 def test_tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
-
-    exit_code = push(
-        ("origin", "main"),
-        runner=runner,
-        tool_probe=tool_probe,
-        upstream_probe=upstream_probe,
-    )
-
-    assert exit_code == 0
-    assert upstream_probe.calls == 1
-    assert runner.calls == [
-        ("git", "push", "origin", "main"),
-        (*SYNC_INVOCATION, "abc123"),
-    ]
+    assert tracked_branch_captures_upstream_and_invokes_sync_with_ref()
 
 
 def test_untracked_branch_invokes_sync_without_ref() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref=None)
-
-    exit_code = push(
-        ("origin", "feature"),
-        runner=runner,
-        tool_probe=tool_probe,
-        upstream_probe=upstream_probe,
-    )
-
-    assert exit_code == 0
-    assert upstream_probe.calls == 1
-    assert runner.calls == [
-        ("git", "push", "origin", "feature"),
-        SYNC_INVOCATION,
-    ]
+    assert untracked_branch_invokes_sync_without_ref()
 
 
 def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
-    runner = RecordingRunner(exit_codes=(7,))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
-
-    exit_code = push(
-        ("origin", "main"),
-        runner=runner,
-        tool_probe=tool_probe,
-        upstream_probe=upstream_probe,
-    )
-
-    assert exit_code == 7
-    assert runner.calls == [("git", "push", "origin", "main")]
+    assert failed_git_push_propagates_exit_code_and_skips_sync()
 
 
 def test_no_push_args_forwards_bare_git_push() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    assert no_push_args_forwards_bare_git_push()
 
-    exit_code = push(
-        (),
-        runner=runner,
-        tool_probe=tool_probe,
-        upstream_probe=upstream_probe,
-    )
 
-    assert exit_code == 0
-    assert runner.calls == [
-        ("git", "push"),
-        (*SYNC_INVOCATION, "abc123"),
-    ]
+def test_cli_parser_forwards_leading_git_options_verbatim() -> None:
+    assert cli_parser_forwards_leading_git_options_verbatim()
+
+
+def test_cli_parser_forwards_git_help_flag_verbatim() -> None:
+    assert cli_parser_forwards_git_help_flag_verbatim()
+
+
+def test_git_help_push_does_not_refresh_marketplace() -> None:
+    assert git_help_push_does_not_refresh_marketplace()
+
+
+def test_git_help_push_requires_only_git_and_skips_marketplace_upstream_capture() -> (
+    None
+):
+    assert git_help_push_requires_only_git_and_skips_marketplace_upstream_capture()
+
+
+def test_git_help_push_forwards_when_only_git_is_available() -> None:
+    assert git_help_push_forwards_when_only_git_is_available()
+
+
+def test_recurse_submodules_bare_help_requires_only_git_and_skips_upstream_capture() -> (
+    None
+):
+    assert recurse_submodules_bare_help_requires_only_git_and_skips_upstream_capture()
+
+
+def test_long_git_help_push_does_not_refresh_marketplace() -> None:
+    assert long_git_help_push_does_not_refresh_marketplace()
+
+
+def test_clustered_git_help_push_does_not_refresh_marketplace() -> None:
+    assert clustered_git_help_push_does_not_refresh_marketplace()
+
+
+def test_dry_run_push_does_not_refresh_marketplace() -> None:
+    assert dry_run_push_does_not_refresh_marketplace()
+
+
+def test_recurse_submodules_bare_dry_run_does_not_refresh_marketplace() -> None:
+    assert recurse_submodules_bare_dry_run_does_not_refresh_marketplace()
+
+
+def test_clustered_short_option_dry_run_does_not_refresh_marketplace() -> None:
+    assert clustered_short_option_dry_run_does_not_refresh_marketplace()
+
+
+def test_no_dry_run_option_restores_marketplace_refresh() -> None:
+    assert no_dry_run_option_restores_marketplace_refresh()
+
+
+def test_push_option_operand_named_like_dry_run_still_refreshes_marketplace() -> None:
+    assert push_option_operand_named_like_dry_run_still_refreshes_marketplace()
+
+
+def test_repo_option_operand_named_like_dry_run_still_refreshes_marketplace() -> None:
+    assert repo_option_operand_named_like_dry_run_still_refreshes_marketplace()
+
+
+def test_separator_repository_named_like_dry_run_still_refreshes_marketplace() -> None:
+    assert separator_repository_named_like_dry_run_still_refreshes_marketplace()

@@ -102,7 +102,7 @@ After `/test` chooses the evidence and level, implement it with these TypeScript
 | Stage 2 -> `l2`                            | Vitest or Playwright with locally available real APIs      |
 | Stage 2 -> `l3`                            | Vitest or Playwright with credentials or remote real APIs  |
 | Stage 3A: pure computation                 | Direct tests of typed pure functions                       |
-| Stage 3B: extract pure part                | Pure helper at `l1`, boundary at outer level               |
+| Stage 3B: extract pure part                | Pure function at `l1`, boundary at outer level             |
 | Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors                |
 | Stage 5 exception 2: interaction protocols | Spy function or class with typed call recording            |
 | Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`                     |
@@ -145,39 +145,11 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  * Setup: cp .env.test.example .env.test and fill in values
  */
 
-type Credentials = {
-  serverUrl: string;
-  token: string;
-};
-
-function requireCredentials(): Credentials {
-  const serverUrl = process.env.LHCI_SERVER_URL;
-  const token = process.env.LHCI_TOKEN;
-
-  if (!serverUrl || !token) {
-    throw new Error(
-      "Missing LHCI_SERVER_URL or LHCI_TOKEN. See test file header for setup instructions.",
-    );
-  }
-
-  return { serverUrl, token };
-}
+import { createLhciUploadRequest } from "@testing/harnesses/lhci/upload-request";
 
 describe("LHCI", () => {
-  let credentials: Credentials;
-
-  beforeAll(() => {
-    credentials = requireCredentials();
-  });
-
   it("uploads audit results to server", async () => {
-    const result = await uploadAuditResults({
-      serverUrl: credentials.serverUrl,
-      token: credentials.token,
-      results: testResults,
-    });
-
-    expect(result.success).toBe(true);
+    await expect(uploadAuditResults(createLhciUploadRequest())).resolves.toMatchObject({ success: true });
   });
 });
 ```
@@ -193,21 +165,14 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define those doubles in `@testing/harnesses/*`; the executed test file imports the harness assertion.
 
 ```typescript
-interface PaymentGateway {
-  charge(amountCents: number): Promise<ChargeResult>;
-}
+import { assertPaymentGatewayRecordsCharge } from "@testing/harnesses/payments";
 
-class RecordingGateway implements PaymentGateway {
-  readonly charges: number[] = [];
-
-  async charge(amountCents: number): Promise<ChargeResult> {
-    this.charges.push(amountCents);
-    return { id: "test-charge", status: "approved" };
-  }
-}
+test("records charge requests", async () => {
+  await assertPaymentGatewayRecordsCharge(PaymentProcessor);
+});
 ```
 
 </dependency_injection>
@@ -215,14 +180,15 @@ class RecordingGateway implements PaymentGateway {
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
 
-| Code type               | Required property        | Pattern                  |
-| ----------------------- | ------------------------ | ------------------------ |
-| Parsers                 | `parse(format(x)) == x`  | `fc.assert(fc.property)` |
-| Serialization           | `decode(encode(x)) == x` | `fc.assert(fc.property)` |
-| Mathematical operations | algebraic laws           | `fc.assert(fc.property)` |
-| Complex algorithms      | invariant preservation   | `fc.assert(fc.property)` |
+| Code type               | Required property        | Pattern                                            |
+| ----------------------- | ------------------------ | -------------------------------------------------- |
+| Parsers                 | `parse(format(x)) == x`  | `assertProperty(parserRoundtripProperty())`        |
+| Serialization           | `decode(encode(x)) == x` | `assertProperty(serializationRoundtripProperty())` |
+| Mathematical operations | algebraic laws           | `assertProperty(algebraicLawProperty())`           |
+| Complex algorithms      | invariant preservation   | `assertProperty(invariantPreservationProperty())`  |
 
-`fc.assert` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
+An assertion that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
+Route property assertions through a harness or wrapper that owns seed selection, run count, and replay diagnostics; failure output must include the seed and replay path.
 </property_based_testing>
 
 <test_data_policy>
@@ -234,12 +200,14 @@ If a test can only be written by copying source literals, pinning arbitrary exam
 <data_ownership_decision>
 Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
+Executed TypeScript test files do not declare `const`, `let`, or `var` bindings, framework fixture parameters, or property-generated parameters. Every value or configuration choice those bindings would carry belongs in a source contract, `@testing/harnesses/*`, `@testing/generators/*`, an inert fixture read by path, or justified eval case data.
+
 1. **Data that the source imports or should import**
    ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
 
 ALWAYS verify that the code under test imports standard values like HTTP status codes from the canonical source of the runtime (Node) or framework (e.g., React or Next.js).
 
-Reject local constants that rename runtime-owned values. Accept domain constants that add source-owned meaning.
+Reject test-local constants that rename runtime-owned values. Accept production-owned domain constants that add source-owned meaning.
 
 2. **Data that the code under test owns or should own**
 
@@ -247,7 +215,7 @@ Most code under test Claude encounters will hardcode the same numbers and string
 
 This means the code is not testable in a maintainable way because any change to the source file will invalidate the test and lead to churn and extra work.
 
-ALWAYS refactor the code under test so that it defines all constants, including numbers and string literals, in a constant dict or other suitable data structure.
+ALWAYS refactor source-owned domain constants, protocol tokens, command names, status values, rule ids, message ids, option labels, and other closed vocabulary into a semantically named registry, tuple, constructor, schema, or other suitable data structure.
 
 Use a source-owned registry or tuple for status tokens, command names, rule ids, message ids, option labels, and other closed vocabulary. Derive unions, schemas, and arrays from that one declaration.
 
@@ -259,9 +227,7 @@ Reject test-owned copies of source vocabulary.
 
 Tests may need representative input domains that production code does not own. Those domains are still not a license to create shared constant bags.
 
-ALWAYS refactor the code under test so it exports the semantically structured constant the test asserts on.
-
-Then import one or very few of these constant objects into the test file. Any changes to the code under test are automatically reflected and the test requires zero maintenance.
+Variable domains move to generators; runner settings, seed policy, and replay diagnostics move to harnesses. Curated eval cases may live in eval case data when generating a JSONL case set would be wasteful and not tractable.
 
 </data_ownership_decision>
 
@@ -293,9 +259,7 @@ Use the source-owned constructor directly:
 ```typescript
 import { createAbsentConfigReadResult, isAbsentConfigReadResult } from "@/config/read-result";
 
-const result = createAbsentConfigReadResult();
-
-expect(isAbsentConfigReadResult(result)).toBe(true);
+expect(isAbsentConfigReadResult(createAbsentConfigReadResult())).toBe(true);
 ```
 
 Valid direct imports include:
@@ -308,7 +272,7 @@ Valid direct imports include:
 
 <generators>
 
-Use generators for input domains that vary, compose, shrink, or explore more than one meaningful value. A generator is a pure function - it emits values, holds no state, and has no side effects. Use fast-check or faker.js for randomized scalars; use `fc.Arbitrary` for structured domain values.
+Use generators for input domains that vary, compose, shrink, or explore more than one meaningful value. A generator is a pure function - it emits values, holds no state, and has no side effects. Use fast-check for randomized scalars and `fc.Arbitrary` for structured domain values.
 
 ```typescript
 // testing/generators/{domain}.ts
@@ -317,7 +281,7 @@ export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
 ```
 
-Use `arbitrary*()` helpers for tests that should search a domain with `fc.assert`. Use `createGenerated*()` helpers only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
+Use `arbitrary*()` generator functions for tests that should search a domain with `assertProperty`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
 
 Reject generators that only rename constants:
 
@@ -444,7 +408,7 @@ Reject or rewrite these patterns:
 - Deep relative imports into stable shared test infrastructure
 - Importing fixture files into executed tests instead of reading or copying inert files
 - Manual argument parsing in script tests when the repo has a canonical parser
-- `it.skip`, `it.skipIf`, and `test.skip` on credentialed evidence -- use `requireCredentials()` that throws instead
+- `it.skip`, `it.skipIf`, and `test.skip` on credentialed evidence -- use a credential harness wrapper such as `withLhciCredentials()` that throws instead
 
 The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model.
 
@@ -455,14 +419,14 @@ Playwright's `{ request }` fixture uses its own `APIRequestContext` that does NO
 ```typescript
 // WRONG: request fixture -- no cookie inheritance
 test("API returns flag-gated payload", async ({ request }) => {
-  const response = await request.get("/api/data"); // cookie absent
-  expect(await response.json()).toContain(FLAGGED_ITEM); // fails
+  await expect(request.get("/api/data").then((response) => response.json())).resolves.toContain(FLAGGED_ITEM); // fails
 });
 
 // RIGHT: context.request -- shares cookies with browser context
-test("API returns flag-gated payload", async ({ context }) => {
-  const response = await context.request.get("/api/data"); // cookie present
-  expect(await response.json()).toContain(FLAGGED_ITEM);
+import { flagGatedApiPayload } from "@testing/harnesses/browser/api";
+
+test("API returns flag-gated payload", async () => {
+  await expect(flagGatedApiPayload()).resolves.toContain(FLAGGED_ITEM);
 });
 ```
 
@@ -488,9 +452,10 @@ TypeScript test guidance follows this standard when:
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
+- Executed test files declare no `const`, `let`, or `var` bindings, fixture parameters, or property-generated parameters
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
-- Property assertions use meaningful `fast-check` properties
+- Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - Source-owned values come from the owning production module
-- Shared test infrastructure lives in test-owned code behind explicit fixtures or factories
+- Shared test infrastructure lives under `testing/` as spec-governed harnesses, generators, or inert fixtures
 
 </success_criteria>

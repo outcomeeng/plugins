@@ -26,9 +26,9 @@ Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository 
 
 <constraints>
 
-Comprehension is the whole job. This skill runs no deterministic verification of its own — no formatter, linter, or test run. The main agent brings the project's formatting, linting, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository. Read names and signatures first, predict behavior, then read the body and look for surprises. Review time belongs to design and semantics, not restating what `clippy` already checked or re-running what the main agent already passed.
+Comprehension is the whole job. This skill runs no deterministic verification of its own — no formatter, linter, or test run. The caller brings the project's formatting, linting, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository. Read names and signatures first, predict behavior, then read the body and look for surprises. Review time belongs to design and semantics, not restating what `clippy` already checked or re-running what the caller already passed.
 
-This skill audits implementation code. Test evidence quality belongs to `/audit-rust-tests`. If test files are in scope, load `/rust-test-standards` and hand off evidence judgments to the test auditor — do not run the test suite; the main agent already passed it before dispatch.
+This skill audits implementation code. Test evidence quality belongs to `/audit-rust-tests`. If test files are in scope, load `/rust-test-standards` and hand off evidence judgments to the test auditor — do not run the test suite; the caller already passed it before dispatch.
 
 The verdict is binary. APPROVED means every concern passes. REJECTED means at least one concern fails.
 
@@ -147,7 +147,7 @@ Each finding carries `file`, `line`, `rule` (the concern name or specific violat
 
 <failure_modes>
 
-**Failure 1: Approved code on the strength of green mechanical gates.** The main agent's `cargo fmt`, `cargo clippy`, and `cargo test` passed before dispatch, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift — and this audit does not re-run them anyway. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; the green gates are a precondition, not the audit.
+**Failure 1: Approved code on the strength of green mechanical gates.** The caller's `cargo fmt`, `cargo clippy`, and `cargo test` passed before dispatch, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift — and this audit does not re-run them anyway. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; the green gates are a precondition, not the audit.
 
 **Failure 2: Missed a boundary dependency hidden behind a coherent module.** Claude approved a module whose imports looked organized, while a concrete external client was still imported directly inside business logic. Why it failed: import coherence is separate from boundary design; `crate::` paths can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and FFI boundary to an injected trait or narrow function seam.
 

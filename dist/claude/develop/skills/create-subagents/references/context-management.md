@@ -11,6 +11,19 @@
 
 </table_of_contents>
 
+<table_of_contents>
+
+- `<core_problem>` — why subagent context fails
+- `<memory_architecture>` — short-term, long-term, working, core, and archival memory
+- `<context_strategies>` — summarization, sliding windows, semantic switching, scratchpads, and smart memory
+- `<framework_support>` — framework-backed and file-backed memory patterns
+- `<subagent_patterns>` — stateful and stateless subagent prompt patterns
+- `<anti_patterns>` — context-management failures to avoid
+- `<best_practices>` — principles for memory size, summaries, retrieval, and external storage
+- `<prompt_caching_interaction>` — cache-friendly context layout and invalidation
+
+</table_of_contents>
+
 <core_problem>
 
 "Most agent failures are not model failures, they are context failures."
@@ -394,7 +407,7 @@ model: sonnet
 ---
 
 <role>
-You are a system architect maintaining coherent design across product evolution.
+Claude is a system architect maintaining coherent design across product evolution.
 </role>
 
 <memory_management>
@@ -428,7 +441,7 @@ model: sonnet
 ---
 
 <role>
-You are a syntax validator. Check code for syntax errors.
+Claude is a syntax validator. Check code for syntax errors.
 </role>
 
 <workflow>

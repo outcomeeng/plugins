@@ -28,7 +28,7 @@ Standards are pre-loaded above. Check for `spx/local/typescript.md` at the repos
 
 **Comprehension is the whole job.**
 
-This audit reads and judges TypeScript implementation code; it runs no deterministic verification of its own. The main agent brings the project's linters, type-checker, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository — so do NOT run or re-check what those gates already verified. Spend the whole audit on comprehension.
+This audit reads and judges TypeScript implementation code; it runs no deterministic verification of its own. The caller brings the project's linters, type-checker, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository — so do NOT run or re-check what those gates already verified. Spend the whole audit on comprehension.
 
 **Comprehension is the core value.**
 
@@ -36,7 +36,7 @@ Automated tools catch syntax errors, type mismatches, and lint violations. Claud
 
 **Test evidence is out of scope.**
 
-`/audit-typescript-tests` evaluates whether tests provide genuine evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the main agent already passed it before dispatch. Do not duplicate that work.
+`/audit-typescript-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the caller already passed it before dispatch. Do not duplicate that work.
 
 **Binary verdict, no caveats.**
 
@@ -46,7 +46,7 @@ APPROVED means every concern passes. REJECTED means at least one fails. APPROVED
 
 <audit_workflow>
 
-Execute phases IN ORDER. Do not skip. This audit runs no deterministic verification — no linter, type-checker, or test run. The main agent brought the project's validation and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository; re-running them here only re-pays a cost already paid.
+Execute phases IN ORDER. Do not skip. This audit runs no deterministic verification — no linter, type-checker, or test run. The caller brought the project's validation and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository; re-running them here only re-pays a cost already paid.
 
 **Phase 0: Scope and Product Config**
 
@@ -129,11 +129,11 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed linters but had a design flaw.** Claude trusted the green linters (run by the main agent before dispatch) and skimmed comprehension. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
+**Approved code that passed linters but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
 
 **Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` interface contract -- other implementations used it. Before flagging dead parameters, check if the function implements an interface or Protocol.
 
-**Tried to evaluate test evidence instead of delegating.** Claude found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/audit-typescript-tests`' job, and running the test suite is the main agent's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
+**Tried to evaluate test evidence instead of delegating.** Claude found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/audit-typescript-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
 
 **Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and JSDoc completeness. Meanwhile, a branch condition was inverted -- `if (isValid)` should have been `if (!isValid)`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
 
@@ -169,7 +169,7 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 
 <what_to_avoid>
 
-- Do NOT run or re-check the project's linters, type-checker, or tests — the main agent passed them on the changeset before dispatch, and CI re-runs them over the whole repository
+- Do NOT run or re-check the project's linters, type-checker, or tests — the caller passed them on the changeset before dispatch, and CI re-runs them over the whole repository
 - Do NOT evaluate test evidence quality (delegate to `/audit-typescript-tests`)
 - Do NOT commit or modify code (this skill is read-only)
 - Do NOT approve with caveats (binary verdict only)

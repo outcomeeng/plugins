@@ -66,7 +66,7 @@ NEVER use generic AI-generated aesthetics:
 
 INSTEAD: Distinctive fonts. Bold, committed palettes. Layouts that surprise. Bespoke details. Every choice rooted in rich context.
 
-Build creatively on the user's intent, and make unexpected choices that feel genuinely designed for the context. No design should be the same. Vary between light and dark themes, different fonts, different aesthetics. NEVER converge on common choices across generations. Let the specific context drive choices, NOT familiar defaults.
+Build creatively on the user's intent, and make unexpected choices that fit the context. No design should be the same. Vary between light and dark themes, different fonts, different aesthetics. NEVER converge on common choices across generations. Let the specific context drive choices, NOT familiar defaults.
 </anti_patterns>
 
 <implementation_guidance>

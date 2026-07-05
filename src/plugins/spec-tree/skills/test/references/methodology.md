@@ -8,6 +8,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 - [Why tests exist](#why-tests-exist)
 - [Before writing any test](#before-writing-any-test)
 - [Source-contract-first gate](#source-contract-first-gate)
+- [Test files own assertions, not data or configuration](#test-files-own-assertions-not-data-or-configuration)
 - [The evidence trap](#the-evidence-trap)
 - [Separate the axes](#separate-the-axes)
 - [Assertion types](#assertion-types)
@@ -59,6 +60,24 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 - oracle: expected output derived from the input, an independent reference, a source-owned contract, or a real system response
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or mock away behavior the assertion claims to verify.
+
+## Test files own assertions, not data or configuration
+
+An executed test file is a typed assertion file. It owns the assertion flow: arrange the behavior through imported source contracts or infrastructure, execute the behavior, and assert the outcome. It does not own reusable values or execution policy.
+
+Use these ownership rules before writing the test:
+
+| Concern                          | Owner                                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Test configuration               | A spec-governed harness: run counts, property seeds, retry policy, resource setup, cleanup, dependency checks, diagnostics |
+| Variable test input domains      | A spec-governed generator that varies, composes, shrinks, or systematically explores meaningful alternatives               |
+| Source-owned vocabulary or shape | The production module, runtime, framework, or protocol package that owns the contract                                      |
+| Whole-payload samples            | Inert fixtures read, copied, or passed by path when the complete payload shape matters                                     |
+| Curated LLM/eval cases           | Eval case data when generating the case set as JSONL would be wasteful and not tractable                                   |
+
+Do not create variables, constants, fixture parameters, or property-generated parameters in the executed test file. Every value or configuration choice those bindings would carry belongs in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Local functions are rejected when they own runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, harness behavior, or source-owned singleton shapes. Naming a value or wrapping it in a local function does not make it evidence. A renamed test-local declaration is still owned by the wrong layer.
+
+Property-based tests need reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
 
 ## The evidence trap
 
@@ -287,7 +306,7 @@ Focus test effort on:
 | 3. Systematic coverage  | Loops, states, combinations         | Completeness     |
 | 4. Property-based tests | Invariants across generated inputs  | Deep correctness |
 
-Simple utilities often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level evidence.
+Small pure functions often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level evidence.
 
 Property-based tests are mandatory candidates for:
 

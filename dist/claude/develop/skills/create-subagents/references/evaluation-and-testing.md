@@ -11,6 +11,20 @@
 
 </table_of_contents>
 
+<table_of_contents>
+
+- `<evaluation_framework>` — task completion, tool correctness, output quality, robustness, and efficiency metrics
+- `<g_eval>` — evaluator-prompt pattern
+- `<validation_strategies>` — offline testing, simulation, and online monitoring
+- `<evaluation_driven_development>` — iterative evaluation workflow
+- `<testing_checklist>` — pre-deployment checks
+- `<synthetic_data>` — generation approaches and limitations
+- `<llm_as_judge>` — basic and comparative judgment patterns
+- `<test_driven_development>` — subagent TDD approach
+- `<anti_patterns>` — evaluation mistakes to reject
+
+</table_of_contents>
+
 <evaluation_framework>
 
 <task_completion>
@@ -287,7 +301,7 @@ Use LLM to evaluate subagent outputs when human review is impractical at scale.
 **Example evaluation prompt**:
 
 ```markdown
-You are evaluating a security code review performed by an AI subagent.
+Evaluate a security code review performed by an AI subagent.
 
 Review output:
 {subagent_output}

@@ -1,12 +1,11 @@
 """Real controlled children for ``l1`` tests of the bounded capturing subprocess runner.
 
-Backs the scenario assertions in
-``spx/15-validation.enabler/32-plugin-manifest.enabler/plugin-manifest.md`` and the rules in
-``spx/15-validation.enabler/21-subprocess-execution.adr.md``. No test doubles: per the testing
-methodology Stage 4 the real subprocess produces the behavior under test — a child that never
-exits, and a child that exits while a descendant keeps the inherited output stream open —
-reliably, safely, cheaply, and observably at ``l1``. This harness owns the bounded test
-timeout, builds the controlled commands, and guarantees no descendant survives the test.
+Backs the bounded capturing subprocess-runner scenario assertions. No test
+doubles: per the testing methodology Stage 4, the real subprocess produces the
+behavior under test — a child that never exits, and a child that exits while a
+descendant keeps the inherited output stream open — reliably, safely, cheaply,
+and observably at ``l1``. This harness owns the bounded test timeout, builds the
+controlled commands, and guarantees no descendant survives the test.
 
 POSIX only: the controlled children rely on ``os.fork`` and process-group signalling.
 """

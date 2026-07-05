@@ -63,7 +63,7 @@ Each phase dispatches one skill from the `audit-{lang}*` trio per language parti
 | 2     | Test evidence      | Dispatch: `audit-{lang}-tests`        |
 | 3     | ADR/PDR compliance | Dispatch: `audit-{lang}-architecture` |
 
-The audit runs no deterministic verification of its own — it dispatches only the agentic concern audits. Deterministic verification (validate, test, evaluate) is the main agent's responsibility on the changeset before it dispatches the audit, and CI's over the whole repository. Re-running the project's validation or test commands inside every dispatched audit only re-pays a cost the main agent already paid.
+The audit runs no deterministic verification of its own — it dispatches only the agentic concern audits. Deterministic verification (validate, test, evaluate) is the caller's responsibility on the changeset before dispatching the audit, and CI's over the whole repository. Re-running the project's validation or test commands inside every dispatched audit only re-pays a cost the caller already paid.
 
 If any of the three dispatched skills is missing for the target language, halt before any phase runs with `missing required skill: audit-{lang}-{kind}`. The marketplace validation pipeline enforces that every language plugin ships the trio; runtime absence indicates an installation or build issue, not a methodology decision.
 
@@ -301,7 +301,7 @@ The canonical schema is declared in `${CLAUDE_SKILL_DIR}/scripts/verdict.py` (`S
 }
 ```
 
-The full wire format always carries `schema_version`, `skill`, `target`, `overall`, `rows`, `children`, `metadata`, `resolved`, and `reopened`. Each `Row` carries `name`, `status`, and `findings`; each `Finding` carries `id`, `file`, `line`, `rule`, `severity`, and `message`. The wrapper's single row is the orchestrator-owned determinism concern. Per-language implementation, test-evidence, and ADR/PDR concerns live inside the children's `rows` arrays — dispatched skills own those. The audit contributes no deterministic validation- or test-gate row: deterministic verification is the main agent's on the changeset before dispatch and CI's over the whole repository.
+The full wire format always carries `schema_version`, `skill`, `target`, `overall`, `rows`, `children`, `metadata`, `resolved`, and `reopened`. Each `Row` carries `name`, `status`, and `findings`; each `Finding` carries `id`, `file`, `line`, `rule`, `severity`, and `message`. The wrapper's single row is the orchestrator-owned determinism concern. Per-language implementation, test-evidence, and ADR/PDR concerns live inside the children's `rows` arrays — dispatched skills own those. The audit contributes no deterministic validation- or test-gate row: deterministic verification is the caller's on the changeset before dispatch and CI's over the whole repository.
 
 Two `overall` vocabularies coexist: the **orchestrator wrapper** carries `APPROVED` / `REJECTED` / `UNKNOWN` (root-level decision); each **dispatched child** carries `PASS` / `FAIL` / `UNKNOWN` (skill-level contribution). The split is grounded in `verdict.py`'s `ROOT_STATUSES` vs `SKILL_STATUSES` sets. Row statuses use the skill-level vocabulary regardless of where the row sits, since a row is always one skill's contribution.
 
@@ -317,7 +317,7 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 
 **Mid-phase halt without trio verification.** Claude reaches Phase 2, finds `audit-{lang}-tests` missing, and halts there — but Phase 1 (`audit-{lang}`) already dispatched, producing a partial verdict. The trio check belongs in Phase 0 step 3 (partition-by-language), before any phase runs. Halt with `missing required skill: audit-{lang}-{kind}` before Phase 1 dispatches.
 
-**Re-running deterministic verification.** Claude runs the project's validation or test command inside the audit to "confirm" the changeset. The audit dispatches only the agentic concern audits; the main agent passed deterministic verification on the changeset before dispatching, and CI re-runs it over the whole repository. Re-running it inside every dispatched audit multiplies cost for no new signal.
+**Re-running deterministic verification.** Claude runs the project's validation or test command inside the audit to "confirm" the changeset. The audit dispatches only the agentic concern audits; the caller passed deterministic verification on the changeset before dispatching, and CI re-runs it over the whole repository. Re-running it inside every dispatched audit multiplies cost for no new signal.
 
 **Dropped partition in mixed-language scope.** Claude treats a mixed-language scope as one audit, dispatches to whichever language has a plurality of files, and silently skips the others. The contract is one dispatched verdict per partition aggregated into one wrapper; never drop a partition. If a partition's `audit-{lang}*` skills do not exist, halt with the missing-skill error before any phase runs.
 

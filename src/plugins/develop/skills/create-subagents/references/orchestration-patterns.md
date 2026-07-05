@@ -9,6 +9,18 @@
 
 </table_of_contents>
 
+<table_of_contents>
+
+- `<core_concept>` — why orchestration pattern choice matters
+- `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, and hybrid patterns
+- `<implementation_guidance>` — coordinator subagent prompt pattern
+- `<handoff_protocol>` — handoff and synchronization formats
+- `<anti_patterns>` — orchestration failures to reject
+- `<best_practices>` — granularity, responsibility, handoffs, parallelism, coordination, and cost
+- `<pattern_selection>` — decision tree and performance tradeoffs
+
+</table_of_contents>
+
 <core_concept>
 Orchestration defines how multiple subagents coordinate to complete complex tasks.
 
@@ -231,7 +243,7 @@ Coordinator analyzes request → determines relevant agents:
 Coordinator agent prompt:
 
 <role>
-You are an orchestration coordinator. Route tasks to specialized agents based on:
+Claude is an orchestration coordinator. Route tasks to specialized agents based on:
 - Task characteristics
 - Available agents and their capabilities
 - Results from previous agents
@@ -414,7 +426,7 @@ model: sonnet
 ---
 
 <role>
-You are a workflow coordinator. Analyze tasks, identify required agents, orchestrate their execution.
+Claude is a workflow coordinator. Analyze tasks, identify required agents, orchestrate their execution.
 </role>
 
 <available_agents>
@@ -507,7 +519,7 @@ Partial failure handling:
 
 **Example**: Three agents to review 10 lines of code (overkill).
 
-**Fix**: Reserve multi-agent for genuinely complex tasks. Single capable agent often better than coordinating multiple simple agents.
+**Fix**: Reserve multi-agent for complex tasks. Single capable agent often better than coordinating multiple simple agents.
 </anti_pattern>
 
 <anti_pattern name="no_coordination">
@@ -545,7 +557,7 @@ Agent 2: Can't effectively act on vague input
 
 **Problem**: One agent failure causes entire workflow failure.
 
-**Fix**: Graceful degradation, retry logic, alternative agents, partial results (see [error-handling-and-recovery.md](error-handling-and-recovery.md)).
+**Fix**: Graceful degradation, retry logic, alternative agents, and partial results.
 </anti_pattern>
 </anti_patterns>
 

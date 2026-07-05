@@ -100,8 +100,8 @@ Create test files following `/typescript-test-standards`:
 
 - File naming: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Type annotations on all interfaces and function parameters
-- Named constants for all test values -- import from production modules
-- Property-based tests for parsers/serializers/math (`fc.assert`)
+- No test-file `const`, `let`, `var`, fixture-parameter, or property-parameter declarations; import source-owned values from production modules and call harnesses or generators inline
+- Property-based tests for parsers/serializers/math (`assertProperty(parserRoundtripProperty())`)
 - No `vi.mock()` or `vi.fn()` replacing the dependency under test -- use typed DI interfaces
 - Vitest as default runner; `playwright` runner token when needed
 
@@ -161,14 +161,12 @@ Every string or number in a test represents either source-owned protocol data or
 When the value is source-owned, improve the code under test so the owner exports a registry, typed constructor, or source-owned constant, then import that source API directly. When the value is test input with a real domain, use or create an `fc.Arbitrary` for it:
 
 ```typescript
-// ✅ REQUIRED: let fast-check explore the domain
-import { arbitrarySourceFilePath } from "@testing/generators/literal/literal";
+import { arbitrarySourceFilePath } from "@testing/generators/paths";
+import { assertProperty } from "@testing/harnesses/properties";
+import { sourcePathProcessingProperty } from "@testing/harnesses/properties/source-paths";
 
-fc.assert(
-  fc.property(arbitrarySourceFilePath(), (path) => {
-    // now the test exercises all valid source paths, not just "src/foo.ts"
-    expect(processPath(path)).toBe(expectedResult(path));
-  }),
+assertProperty(
+  sourcePathProcessingProperty(arbitrarySourceFilePath(), processPath),
 );
 ```
 
@@ -214,15 +212,15 @@ Find the most recent `/audit-typescript-tests` output. Look for:
 
 For each rejection reason:
 
-| Rejection Category             | Fix Action                                                           |
-| ------------------------------ | -------------------------------------------------------------------- |
-| Evidentiary gap                | Rewrite test to actually verify the assertion                        |
-| `vi.mock()` detected           | Replace with typed DI interface                                      |
-| `vi.fn()` testing call details | Replace with typed spy class or recording object                     |
-| Missing property tests         | Add `fc.assert(fc.property(...))` for parsers/serializers            |
-| Source-owned value redefined   | Import from production module instead                                |
-| Wrong filename axes            | Rename to `<subject>.<evidence>.<level>[.<runner>].test.ts`          |
-| Literal `[dupe]` / `[reuse]`   | See `<literal_reuse_remediation>` — generators, not shared constants |
+| Rejection Category             | Fix Action                                                              |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| Evidentiary gap                | Rewrite test to actually verify the assertion                           |
+| `vi.mock()` detected           | Replace with typed DI interface                                         |
+| `vi.fn()` testing call details | Replace with typed spy class or recording object                        |
+| Missing property tests         | Add `assertProperty(parserRoundtripProperty())` for parsers/serializers |
+| Source-owned value redefined   | Import from production module instead                                   |
+| Wrong filename axes            | Rename to `<subject>.<evidence>.<level>[.<runner>].test.ts`             |
+| Literal `[dupe]` / `[reuse]`   | See `<literal_reuse_remediation>` — generators, not shared constants    |
 
 **Step 3: Verify Fixes**
 
@@ -263,9 +261,10 @@ Before declaring tests complete:
 - [ ] Each spec assertion has at least one test
 - [ ] Assertion type and level match `/test` Stage 2
 - [ ] File names use `<subject>.<evidence>.<level>[.<runner>].test.ts`
+- [ ] Test files contain no `const`, `let`, `var`, fixture-parameter, or property-parameter declarations
 - [ ] No `vi.mock()` or `vi.fn()` replacing the dependency under test
 - [ ] Doubles are typed interfaces passed through DI
-- [ ] Property assertions use meaningful `fast-check` properties
+- [ ] Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - [ ] Source-owned values imported from production modules
 - [ ] Source-owned singleton shapes come from production constructors, not test constants or constant-only generators
 - [ ] Variable input data comes from generators (`fc.Arbitrary`), not hardcoded constants

@@ -93,7 +93,7 @@ Skill has detailed workflow but no `<failure_modes>` section.
 **Failure 1: Approved a test with zero codebase imports**
 - What happened: Agent reviewed `tests/colors.scenario.l1.test.ts` and classified its coupling as Direct because the file sits next to the spec it claims to verify. The test imported only `vitest` and asserted on a constant declared inside the test file itself.
 - Why it failed: Co-location is structural, not evidential. A test with zero codebase imports has no coupling to the module under test — it asserts on values it controls. Any change to the real module is invisible to this test.
-- How to avoid: Step 1 of coupling verification (see `evidence-model.md`) is to enumerate codebase imports. Zero codebase imports → REJECT regardless of file location.
+- How to avoid: enumerate codebase imports before judging coupling. Zero codebase imports → REJECT regardless of file location.
 
 **Failure 2: Missed mock-severed coupling**
 - What happened: Agent saw `import { database } from "../src/database"` at the top of a test and classified the coupling as Direct. Two lines later the file called `vi.mock("../src/database", () => ({ query: vi.fn().mockResolvedValue([]) }))`.

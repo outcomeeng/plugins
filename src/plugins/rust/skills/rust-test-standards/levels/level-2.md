@@ -31,18 +31,12 @@ Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 <cli_binary_pattern>
 
 ```rust
+use product_testing::fixtures::projects::empty_project;
+use product_testing::harnesses::commands::assert_init_command_writes_project_files;
+
 #[test]
 fn init_command_writes_project_files() {
-    let temp = tempfile::tempdir().unwrap();
-
-    assert_cmd::Command::cargo_bin("herder")
-        .unwrap()
-        .current_dir(temp.path())
-        .args(["init", "demo"])
-        .assert()
-        .success();
-
-    assert!(temp.path().join("demo/Cargo.toml").exists());
+    assert_init_command_writes_project_files(empty_project());
 }
 ```
 
@@ -51,15 +45,12 @@ fn init_command_writes_project_files() {
 <async_adapter_pattern>
 
 ```rust
+use product_testing::fixtures::users::valid_user;
+use product_testing::harnesses::database::assert_user_repository_roundtrip;
+
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    let db = test_database().await;
-    let repo = UserRepository::new(db.pool());
-
-    repo.save(&user_fixture()).await.unwrap();
-    let loaded = repo.find(UserId::new(1)).await.unwrap();
-
-    assert_eq!(loaded.email(), "user@example.com");
+    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
 }
 ```
 
@@ -70,12 +61,10 @@ async fn repository_persists_and_loads_user() {
 ```rust
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
-    let harness = queue_harness().await;
-    harness.push(job_fixture()).await;
-
-    let result = run_worker_once(&harness.config).await.unwrap();
-
-    assert_eq!(result.processed, 1);
+    product_testing::harnesses::queue::assert_worker_consumes_real_queue_messages(
+        job_fixture(),
+        run_worker_once,
+    ).await;
 }
 ```
 
