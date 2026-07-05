@@ -121,8 +121,8 @@ def check_repo_access(host: str | None, owner_repo: str) -> bool:
     return code == 0
 
 
-def get_available_accounts() -> list[str]:
-    """Return all logins authenticated with `gh`, across all hosts.
+def get_available_accounts(host: str | None) -> list[str]:
+    """Return logins authenticated with `gh` for the detected host.
 
     Consumes `gh auth status --json hosts` (structured output, stable since
     gh 2.40+). Returns an empty list when gh is unauthenticated or the
@@ -136,7 +136,14 @@ def get_available_accounts() -> list[str]:
     except json.JSONDecodeError:
         return []
     accounts: list[str] = []
-    for host_entries in data.get("hosts", {}).values():
+    hosts = data.get("hosts", {})
+    if not isinstance(hosts, dict):
+        return []
+    if host is None:
+        host_entry_groups = hosts.values()
+    else:
+        host_entry_groups = [hosts.get(host, [])]
+    for host_entries in host_entry_groups:
         if not isinstance(host_entries, list):
             continue
         for entry in host_entries:
@@ -195,7 +202,7 @@ def main(argv: list[str]) -> int:
         "host": host,
         "current_account": get_current_account(host),
         "has_access": has_access,
-        "available_accounts": get_available_accounts(),
+        "available_accounts": get_available_accounts(host),
         "is_tty": sys.stdin.isatty() and sys.stdout.isatty(),
         "error": error,
     }

@@ -16,7 +16,7 @@ A GitHub Actions workflow-run diagnosis from inside a session — status, run di
 
 <step name="orient">
 
-Resolve repository identity, host, and gh authentication state in one call. The helper parses `git remote get-url origin`, extracts `owner_repo` and `host`, probes repo access with the active gh account, lists available authenticated accounts, and reports whether the session is TTY-attached:
+Resolve repository identity, host, and gh authentication state in one call. The helper parses `git remote get-url origin`, extracts `owner_repo` and `host`, probes repo access with the active gh account, lists available authenticated accounts for that host, and reports whether the session is TTY-attached:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/gh_access.py"
@@ -31,13 +31,13 @@ The output is a JSON object with these fields:
 | `host`               | Hostname from the remote (e.g., `github.com`); `null` if not derivable       |
 | `current_account`    | Active gh account, or `null` if `gh` is not authenticated                    |
 | `has_access`         | `true` if the active account can read the repository                         |
-| `available_accounts` | All authenticated gh accounts                                                |
+| `available_accounts` | Authenticated gh accounts for `host`                                         |
 | `is_tty`             | `true` only when both stdin and stdout are TTYs                              |
 | `error`              | Non-null when identity could not be resolved (no GitHub remote, parse error) |
 
 If `error` is non-null or `host` is `null`, stop and report. Otherwise continue; the helper supports `github.com` and GitHub Enterprise hostnames.
 
-If `has_access` is `false`, `is_tty` is `true`, and `available_accounts` is non-empty, ask the user via `request_user_input` which account to switch to. Calling `gh auth switch -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
+If `has_access` is `false`, `is_tty` is `true`, and `available_accounts` is non-empty, ask the user via `request_user_input` which account to switch to. Calling `gh auth switch --hostname <host> -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
 
 If `has_access` is `false`, `is_tty` is `true`, and `available_accounts` is empty, report the active account, the access failure, and the manual remediation commands. Do not ask for an account switch when no account is available.
 

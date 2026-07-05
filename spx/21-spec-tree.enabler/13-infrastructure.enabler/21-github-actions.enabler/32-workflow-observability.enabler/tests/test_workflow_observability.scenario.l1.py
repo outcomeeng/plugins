@@ -175,6 +175,41 @@ def test_gh_access_uses_detected_host_for_enterprise_api_calls(
     ] in calls
 
 
+def test_gh_access_filters_available_accounts_to_detected_host(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    gh_access = _load_gh_access_module()
+
+    def fake_run(cmd: list[str]) -> tuple[int, str, str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return 0, "git@github.example.com:foo/bar.git", ""
+        if cmd[:3] == ["gh", "api", "repos/foo/bar"]:
+            return 1, "", "not found"
+        if cmd[:3] == ["gh", "api", "user"]:
+            return 0, "octocat", ""
+        if cmd == ["gh", "auth", "status", "--json", "hosts"]:
+            return (
+                0,
+                json.dumps(
+                    {
+                        "hosts": {
+                            "github.com": [{"login": "public-account"}],
+                            "github.example.com": [{"login": "enterprise-account"}],
+                        }
+                    }
+                ),
+                "",
+            )
+        return 1, "", "unexpected command"
+
+    monkeypatch.setattr(gh_access, "_run", fake_run)
+
+    assert gh_access.main(["gh_access.py"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["available_accounts"] == ["enterprise-account"]
+
+
 def test_gh_access_emits_owner_repo_null_when_outside_git_repo(
     tmp_path: pathlib.Path,
 ) -> None:
