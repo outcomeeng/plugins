@@ -174,19 +174,19 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
 
     required_summary_fields = (
         "Product outcome",
-        "Changed surface",
+        "Changed product surface",
         "Human-readable change summary",
         "Verification evidence",
-        "Inspection surface",
+        "Inspection references",
         "Delivered state",
         "Remaining work",
     )
     for execute in surfaces:
         product_outcome_index = execute.index("Product outcome")
-        changed_surface_index = execute.index("Changed surface")
+        changed_surface_index = execute.index("Changed product surface")
         human_summary_index = execute.index("Human-readable change summary")
         verification_index = execute.index("Verification evidence")
-        inspection_index = execute.index("Inspection surface")
+        inspection_index = execute.index("Inspection references")
         delivered_state_index = execute.index("Delivered state")
         remaining_work_index = execute.index("Remaining work")
         mechanics_index = execute.index(
@@ -233,17 +233,17 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
             in execute
         )
         assert (
-            "Include whichever surfaces apply; omit unavailable surfaces rather than inventing one."
+            "Include whichever references apply; omit unavailable references rather than inventing one."
             in execute
         )
         assert "State:\n" not in execute[:product_outcome_index]
 
     for spec_field in (
         "product outcome",
-        "changed surface",
+        "changed product surface",
         "human-readable change summary",
         "verification evidence",
-        "inspection surface when available",
+        "inspection references when available",
         "delivered state",
         "remaining work when any exists",
         "compact Remaining Branches section",
