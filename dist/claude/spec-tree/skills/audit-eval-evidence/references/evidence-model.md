@@ -37,7 +37,7 @@ Coupling is the first gate. An eval that does not reach the real producer is a s
 | False            | Metadata names the producer but prompt or harness never uses it.                                   | REJECT                                                               |
 | Unknown          | Artifact path cannot establish how the producer is reached.                                        | REJECT                                                               |
 
-`prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the prompt and must change at least one case result. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
+`prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
 
 For claims about skill, agent, classifier, or script behavior, the mutation test is decisive: replacing the producer with unrelated text must change the eval result. If it does not, the eval is not coupled.
 
