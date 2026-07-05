@@ -2,7 +2,7 @@
 
 PROVIDES a generic Python evaluation runner — the `outcomeeng_evals` package — that replays curated case sets through Claude Code skills and grades structured verdicts against expected fields
 SO THAT spec assertions about LLM-driven skill behavior across any project consuming this marketplace
-CAN carry `[eval]` evidence bounded by per-eval expected-verdict structures declared in each case file, governed by the lane declaration in `spx/14-verification.pdr.md`, and gated by pass@k thresholds
+CAN carry `[eval]` evidence bounded by per-eval expected-verdict structures declared in each case file, governed by the lane declaration in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, and gated by pass@k thresholds
 
 The runner lives under `outcomeeng_evals/`; its test helpers (stubs, factories) ship as the `outcomeeng_evals.testing` subpackage; marketplace-scoped helpers (link-integrity walker, slice-specific fixture builders) live under `outcomeeng_testing/evals/`. The CLI entry point is `outcomeeng-evals` (declared via `[project.scripts]`), and exposes six subcommands: `run`, `history`, `view`, `discover`, `plan`, and `materialize-prompts`. Per-eval directories carry an `eval.toml` declaring the suite alongside `cases.jsonl`, `prompt.md`, an append-only `history.jsonl`, and a gitignored `runs/` directory of full transcripts.
 

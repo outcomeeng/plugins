@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*)
 
 <objective>
 
-A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
+A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, cited methodology-governance decision, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
 
 </objective>
 
@@ -20,6 +20,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Read order: product root → ancestors → target (top-down)
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
+- Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
 - Test files are not read by `/contextualize`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
@@ -197,9 +198,25 @@ Glob: "spx/{target-path}/ISSUES.md"
 
 </step>
 
+<step name="cited_governance">
+
+**Step 4: Read cited methodology-governance decisions**
+
+Scan only the spec files and ADR/PDR files read by context loading for full-path decision citations:
+
+```bash
+Grep: "spx/[^[:space:])]+\\.(adr|pdr)\\.md" in the loaded spec and decision files
+```
+
+Read each cited `spx/.../*.adr.md` or `spx/.../*.pdr.md` file exactly once when it exists and has not already been read. Then scan each newly read cited decision for further full-path ADR/PDR citations, repeating until no unread cited decision remains. Preserve the citing file path for the manifest. Do not scan or trust citations in `PLAN.md`, `ISSUES.md`, or any coordination note; those notes are stale-prone workflow inputs, not context-loading authority.
+
+If a loaded spec or decision cites a missing ADR/PDR path, ABORT with the missing citation path, the citing file, and remediation guidance to fix the stale citation or restore the decision file. A context marker that omits a cited governing decision is partial context.
+
+</step>
+
 <step name="summary">
 
-**Step 4: Emit context marker and summary**
+**Step 5: Emit context marker and summary**
 
 Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 
@@ -215,6 +232,7 @@ Documents loaded:
   Lower-index sibling specs: {count} read
   ADRs: {count} found, {count} read
   PDRs: {count} found, {count} read
+  Cited governance decisions: {list of path cited by path} | none
   Guide files: {list} | none
 Sync-base status: {already_current|rebased|dirty_tree|git_failure plus detail}
 
@@ -284,7 +302,7 @@ Claude read test file imports during `/contextualize` and reported implementatio
 
 **Failure 5: Reported a bare node or decision name**
 
-Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report `spx/.../15-build.adr.md` or `spx/.../32-parser.enabler` so the file can be found.
+Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report the complete path from `spx/`, using the shape `spx/{parent-node}/{target-node}/{decision-file}` or `spx/{parent-node}/{target-node}`, so the file can be found.
 
 **Failure 6: Omitted lifecycle continuation from the context marker**
 
@@ -297,6 +315,10 @@ Claude answered a progress question by reporting the clean worktree and local ve
 **Failure 8: Let sync-base become the task**
 
 Claude invoked `/sync-base`, received `already_current` or completed a clean rebase, then drifted into branch or pull-request lifecycle work before emitting `<SPEC_TREE_CONTEXT>`. The context-grounded question stayed unanswered because the prerequisite displaced the workflow. Clean sync results are recorded only as context-load state; the next action is Step 0 for the same target, and lifecycle work waits until context loading completes.
+
+**Failure 9: Missed cited methodology governance**
+
+Claude loaded the structural ancestor context for a plugin-shipping node and saw full-path citations to methodology-governance decisions under an independent sibling subtree, but did not read the cited PDRs because they were outside the structural ancestor path. The answer used an incomplete methodology model. Scan loaded specs and decision records for full-path ADR/PDR citations, including citations from newly read cited decisions, before emitting `<SPEC_TREE_CONTEXT>`.
 
 </failure_modes>
 
@@ -312,10 +334,12 @@ Context loading is complete when:
 - [ ] Lower-index siblings' specs read at each directory level
 - [ ] Target spec read
 - [ ] Target ADRs/PDRs read
+- [ ] Full-path ADR/PDR citations in loaded specs and decisions read transitively, with citing files recorded
 - [ ] Children enumerated
 - [ ] Test links listed from the target spec and co-located test files listed without reading test bodies
 - [ ] Implementation state reported as unknown unless a prior workflow already established it
 - [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
+- [ ] Coordination-note citations excluded from cited-governance loading
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
 - [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work

@@ -2,7 +2,7 @@
 
 PROVIDES a signal-safe recipe orchestrator with two primitive deterministic verification recipes, `validation` and `test`, plus a `check` wrapper that composes them
 SO THAT the `just validation`, `just test`, and `just check` recipes, contributor workstations, CI, and coding agents
-CAN run conformance and correctness verification with bounded live output, retained failure diagnostics, structured summaries, and verification vocabulary aligned to `spx/14-verification.pdr.md`
+CAN run conformance and correctness verification with bounded live output, retained failure diagnostics, structured summaries, and verification vocabulary aligned to `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`
 
 ## Assertions
 
@@ -30,7 +30,7 @@ CAN run conformance and correctness verification with bounded live output, retai
 ### Compliance
 
 - ALWAYS: the declared step list includes a `fmt-check` (`dprint check`) step, a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, a `spx validation markdown` step, and a hook-safety step — so repository formatting, Python formatting, lint, package type checking, Markdown link integrity, and shipped-hook safety are each enforced on every `just check` ([test](tests/test_gate.compliance.l1.py))
-- ALWAYS: the `validation` primitive recipe reports `verification_type: validation` and `purpose: conformance`, and the `test` primitive recipe reports `verification_type: testing` and `purpose: correctness`, matching `spx/14-verification.pdr.md` and the `/understanding` verification taxonomy ([test](tests/test_gate.compliance.l1.py))
+- ALWAYS: the `validation` primitive recipe reports `verification_type: validation` and `purpose: conformance`, and the `test` primitive recipe reports `verification_type: testing` and `purpose: correctness`, matching `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and the `/understanding` verification taxonomy ([test](tests/test_gate.compliance.l1.py))
 - NEVER: the `check` wrapper introduces a third verification type — it reports aggregate primitive results only ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: the `validation` primitive recipe includes a `fmt-check` (`dprint check`) step, a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, and a `spx validation markdown` step, and excludes the pytest-backed `[test]` evidence step ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: the `test` primitive recipe executes pytest-backed `[test]` evidence through the configured runner and excludes deterministic validation steps ([test](tests/test_gate.compliance.l1.py))

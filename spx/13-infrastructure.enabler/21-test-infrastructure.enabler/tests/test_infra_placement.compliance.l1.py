@@ -1,6 +1,6 @@
 """Compliance: the marketplace's test-infrastructure home is placed per the PDR.
 
-`spx/15-test-infrastructure.pdr.md` places every test-infrastructure
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` places every test-infrastructure
 implementation (harnesses, generators, fixtures) outside `spx/` and outside any
 `tests/` directory; for Python the home is the `<package>_testing/` package at
 the repository root. This verifies the locally decidable subset against the

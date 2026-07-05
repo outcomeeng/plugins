@@ -14,7 +14,7 @@ VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE
 
 The readiness gates become:
 
-- `VERIFICATION_READINESS`: the selected transport's verification predicates hold for the changeset. The predicates are drawn from the verification taxonomy in `spx/14-verification.pdr.md`: `validate`, `test`, `evaluate`, `review`, and `audit`. Generic shipped skills must leave the concrete local command set and verifier set to the consumer project or transport.
+- `VERIFICATION_READINESS`: the selected transport's verification predicates hold for the changeset. The predicates are drawn from the verification taxonomy in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`: `validate`, `test`, `evaluate`, `review`, and `audit`. Generic shipped skills must leave the concrete local command set and verifier set to the consumer project or transport.
 - `MERGE_READINESS`: the selected transport's current-head integration predicates hold: required checks are terminal-green, required integration review state is clean, and branch or pull-request state is acceptable.
 - `DEPLOYMENT_READINESS`: any environment mutation after merge is authorized by the project or transport predicates that govern that environment. When no deploy phase is declared, the phase is a no-op.
 - `RELEASE_READINESS`: any consumer-visible publication or refresh after deployment is authorized by the project or transport predicates that govern release. When no release phase is declared, the phase is a no-op.

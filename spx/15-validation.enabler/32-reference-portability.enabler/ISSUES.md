@@ -8,5 +8,5 @@ declined: the detector's discriminator is a structural partition (numeric-prefix
 repository-segment shape), not a single source-owned constant, so the per-category
 sample strings are domain members the test legitimately owns. Exporting sample data
 from the source module purely for the test is the test-data-in-source anti-pattern
-`spx/15-test-infrastructure.pdr.md` forbids, and the test-evidence audit approved the
+`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` forbids, and the test-evidence audit approved the
 inline samples on that basis.
