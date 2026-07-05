@@ -527,6 +527,20 @@ def typescript_class_declarations_are_detected() -> bool:
     return _has_function(declarations, "RecordingGateway")
 
 
+def typescript_nested_using_and_class_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """it("records", () => { using temp = createTempProject(); class RecordingGateway {}; expect(temp).toBeDefined(); });
+it("records async", async () => { await using disposable = createDisposableHarness(); expect(disposable).toBeDefined(); });
+""",
+        Path("nested-using-class.ts"),
+    )
+    return (
+        _has_variable(declarations, "temp")
+        and _has_variable(declarations, "disposable")
+        and _has_function(declarations, "RecordingGateway")
+    )
+
+
 def typescript_semicolonless_declarations_are_split() -> bool:
     declarations = _scanner().scan_text(
         """const semicolonlessObject = {
@@ -831,6 +845,31 @@ let other = _move | not_closure | fallback;
         and _has_variable(declarations, "borrowed")
         and not _has_variable(declarations, "right")
         and not _has_variable(declarations, "not_closure")
+    )
+
+
+def rust_test_function_wrappers_are_not_owned_declarations() -> bool:
+    declarations = _scanner().scan_text(
+        """#[test]
+fn records_behavior() {
+    assert!(true);
+}
+
+#[tokio::test]
+async fn records_async_behavior() {
+    assert!(true);
+}
+
+fn helper_case() {
+    assert!(true);
+}
+""",
+        Path("rust-test-wrapper.rs"),
+    )
+    return (
+        not _has_function(declarations, "records_behavior")
+        and not _has_function(declarations, "records_async_behavior")
+        and _has_function(declarations, "helper_case")
     )
 
 

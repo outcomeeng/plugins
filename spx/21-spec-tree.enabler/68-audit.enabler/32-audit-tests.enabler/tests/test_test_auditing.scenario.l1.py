@@ -36,6 +36,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     rust_closure_parameter_declarations_are_detected,
     rust_or_pattern_declarations_are_detected,
     rust_raw_string_declarations_are_ignored,
+    rust_test_function_wrappers_are_not_owned_declarations,
     sourced_literals_pass,
     string_literal_is_rejected,
     owned_declaration_is_rejected,
@@ -45,6 +46,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     typescript_generator_declarations_are_detected,
     typescript_loop_declarations_are_detected,
     typescript_multiline_declarations_are_detected,
+    typescript_nested_using_and_class_declarations_are_detected,
     typescript_regex_literal_declarations_are_preserved,
     typescript_semicolonless_declarations_are_split,
     typescript_semicolonless_type_alias_parameters_are_ignored,
@@ -216,6 +218,10 @@ def test_detects_typescript_class_declarations() -> None:
     assert typescript_class_declarations_are_detected()
 
 
+def test_detects_nested_typescript_using_and_class_declarations() -> None:
+    assert typescript_nested_using_and_class_declarations_are_detected()
+
+
 def test_splits_typescript_semicolonless_declarations() -> None:
     assert typescript_semicolonless_declarations_are_split()
 
@@ -274,6 +280,10 @@ def test_detects_rust_inline_match_arm_declarations() -> None:
 
 def test_detects_rust_closure_parameter_declarations() -> None:
     assert rust_closure_parameter_declarations_are_detected()
+
+
+def test_ignores_rust_test_function_wrappers() -> None:
+    assert rust_test_function_wrappers_are_not_owned_declarations()
 
 
 def test_ignores_declarations_inside_rust_raw_strings() -> None:

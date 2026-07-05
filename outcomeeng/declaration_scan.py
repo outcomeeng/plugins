@@ -59,6 +59,9 @@ _RUST_FOR_DECLARATION = re.compile(
 _TYPESCRIPT_IDENTIFIER = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)")
 _RUST_IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 _RUST_PATTERN_PREFIXES: frozenset[str] = frozenset(("mut", "ref"))
+_RUST_TEST_ATTRIBUTE = re.compile(
+    r"^#\[\s*(?:test|(?:tokio|async_std)::test|rstest|test_case)\b"
+)
 
 
 class PathValidationError(ValueError):
@@ -308,6 +311,7 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
     declarations: list[Declaration] = []
     declarations.extend(_rust_closure_declarations(source, path))
     declarations.extend(_rust_match_declarations(source, path))
+    raw_lines = source.splitlines()
     for index, unit in _rust_declaration_units(source):
         stripped = unit.lstrip()
         if stripped.startswith(("//", "#")):
@@ -336,6 +340,8 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
             body = for_match.group("body")
         else:
             continue
+        if kind == "fn" and _rust_function_is_test_wrapper(raw_lines, index):
+            continue
         names = (
             _rust_let_binding_names(body)
             if kind == "let" and for_match is None
@@ -356,6 +362,19 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
                 )
             )
     return declarations
+
+
+def _rust_function_is_test_wrapper(raw_lines: list[str], line_number: int) -> bool:
+    for raw_line in reversed(raw_lines[: line_number - 1]):
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("//"):
+            continue
+        if stripped.startswith("#["):
+            if _RUST_TEST_ATTRIBUTE.match(stripped) is not None:
+                return True
+            continue
+        return False
+    return False
 
 
 def _rust_closure_declarations(source: str, path: Path) -> list[Declaration]:
@@ -1270,7 +1289,17 @@ def _nested_declaration_start_indices(segment: str) -> list[int]:
 
 
 def _declaration_token_at(segment: str, index: int) -> str | None:
-    for token in ("const", "let", "var", "function", "static", "fn"):
+    for token in (
+        "await using",
+        "using",
+        "class",
+        "const",
+        "let",
+        "var",
+        "function",
+        "static",
+        "fn",
+    ):
         if not segment.startswith(token, index):
             continue
         before = segment[index - 1] if index > 0 else ""
