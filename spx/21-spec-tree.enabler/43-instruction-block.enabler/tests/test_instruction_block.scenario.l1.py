@@ -1014,3 +1014,31 @@ def test_write_ignores_inline_marker_example_before_the_block(
         content = (tmp_path / name).read_text(encoding="utf-8")
         assert f"`{marker_example}` — an inline example." in content
         assert content.count(module.ROUTER_BLOCK_END) == 1
+
+
+def test_write_preserves_blank_run_in_prose_when_scaffolding_slots(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    # A root file with a deliberate blank-line run in product prose and a router block but no slot
+    # fences yet — the state of a repo upgraded before command slots existed. Scaffolding the
+    # slots must not collapse the prose's blank run.
+    prose = "# Root\n\n\n\nProduct prose after a deliberate blank run.\n"
+    for name, harness in (
+        (INSTRUCTION_CLAUDE, HARNESS_CLAUDE),
+        (INSTRUCTION_AGENTS, HARNESS_CODEX),
+    ):
+        block = module.render(
+            build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, harness
+        )
+        (tmp_path / name).write_text(
+            module.upsert_managed_block(prose, block), encoding="utf-8"
+        )
+
+    assert run_generator_write_primary(tmp_path, template) == 0
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        content = (tmp_path / name).read_text(encoding="utf-8")
+        assert "# Root\n\n\n\nProduct prose after a deliberate blank run." in content
+        for slot in module.FIXED_COMMAND_SLOTS:
+            assert module.parse_command_slot(content, slot) is not None

@@ -505,13 +505,18 @@ def ensure_slot_fences(text: str) -> str:
             recovered = text[body_start:end].strip("\n")
             if recovered:
                 body = recovered
-            text = f"{text[:start]}{text[end:]}"
+            # Excise the malformed fence, normalizing only the removal junction so a blank run
+            # elsewhere — product prose the render model preserves verbatim — is left untouched.
+            prefix, suffix = text[:start].rstrip("\n"), text[end:].lstrip("\n")
+            text = f"{prefix}\n\n{suffix}" if prefix and suffix else prefix + suffix
         # Drop any stray close marker (a close-only fragment carries no recoverable body).
         text = text.replace(slot_close_marker(slot), "")
         additions.append(_render_slot(slot, body))
     if not additions:
         return text
-    base = _BLANK_RUN.sub("\n\n", text).rstrip("\n")
+    # rstrip only: never collapse blank runs across the whole document, which would mutate
+    # out-of-fence product prose the render model preserves verbatim.
+    base = text.rstrip("\n")
     joined = "\n\n".join(additions)
     return f"{base}\n\n{joined}\n" if base else f"{joined}\n"
 
