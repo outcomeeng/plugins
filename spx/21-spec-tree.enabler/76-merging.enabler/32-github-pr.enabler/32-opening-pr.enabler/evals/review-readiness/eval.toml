@@ -3,7 +3,11 @@ cases = "cases.jsonl"
 prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
+  "AGENTS.md",
+  "CLAUDE.md",
   "spx/15-merging.pdr.md",
+  "spx/local/open-pr.md",
+  "spx/local/merging.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**",
   "src/plugins/spec-tree/skills/manage-github-pr/**",
   "src/plugins/spec-tree/skills/open-pr/**",
