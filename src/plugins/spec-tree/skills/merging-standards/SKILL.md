@@ -461,19 +461,16 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 </auditor_verdicts>
 
 <action_tokens>
-
-Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `AWAIT_APPROVAL:<reason>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, and `POST_MERGE_VERIFY`, including the exact trigger condition and required follow-up for each token.
+Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, and `POST_MERGE_VERIFY`, including the exact trigger condition and required follow-up for each token.
 
 </action_tokens>
 
 <self_reference>
-
 No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.
 
 </self_reference>
 
 <success_criteria>
-
 The flows that consume this vocabulary satisfy their contracts when, at minimum:
 
 - `<branch_hygiene>` predicates hold before every push (initial and every follow-up).

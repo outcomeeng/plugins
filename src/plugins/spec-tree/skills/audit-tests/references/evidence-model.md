@@ -124,7 +124,7 @@ SKILL = repo_root / "authored_skill.md"
 
 def test_skill_declares_the_policy() -> None:
     assert (
-        "PRODUCTION_READINESS" in SKILL.read_text()
+        "MERGE_READINESS" in SKILL.read_text()
     )  # the prose was authored, not behavior
 ```
 
