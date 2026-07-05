@@ -16,6 +16,9 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[4]
 HANDOFF_DIR: Final = REPO_ROOT / "src/plugins/spec-tree/skills/handoff"
 CLAUDE_HANDOFF_DIR: Final = REPO_ROOT / "dist/claude/spec-tree/skills/handoff"
 CODEX_HANDOFF_DIR: Final = REPO_ROOT / "dist/codex/spec-tree/skills/handoff"
+PICKUP_DIR: Final = REPO_ROOT / "src/plugins/spec-tree/skills/pickup"
+CLAUDE_PICKUP_DIR: Final = REPO_ROOT / "dist/claude/spec-tree/skills/pickup"
+CODEX_PICKUP_DIR: Final = REPO_ROOT / "dist/codex/spec-tree/skills/pickup"
 SESSIONS_SPEC: Final = (
     REPO_ROOT / "spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md"
 )
@@ -26,6 +29,10 @@ def _read(relative_path: str) -> str:
 
 
 def _read_handoff_surface(root: Path, relative_path: str) -> str:
+    return (root / relative_path).read_text()
+
+
+def _read_pickup_surface(root: Path, relative_path: str) -> str:
     return (root / relative_path).read_text()
 
 
@@ -236,10 +243,17 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
             "Include whichever references apply; omit unavailable references rather than inventing one."
             in execute
         )
+        assert "Read the product spec when product intent is needed" in execute
+        assert (
+            "A small bug fix or technical-debt cleanup may be described plainly"
+            in execute
+        )
+        assert "keeping the outcome proportional to the change" in execute
         assert "State:\n" not in execute[:product_outcome_index]
 
     for spec_field in (
         "product outcome",
+        "product spec when that context clarifies the result",
         "changed product surface",
         "human-readable change summary",
         "verification evidence",
@@ -247,6 +261,7 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         "delivered state",
         "remaining work when any exists",
         "compact Remaining Branches section",
+        "small bug fixes and technical-debt cleanup remain describable at their natural scale",
     ):
         assert spec_field in sessions_spec
     assert "operator-useful terms before mechanics" in sessions_spec
@@ -260,3 +275,40 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
     for execute in surfaces:
         for receipt in weak_receipts:
             assert receipt not in execute
+
+
+def test_pickup_proposal_and_no_node_anchor_use_portable_labels() -> None:
+    pickup_surfaces = (
+        _read_pickup_surface(PICKUP_DIR, "workflows/pickup.md"),
+        _read_pickup_surface(CLAUDE_PICKUP_DIR, "workflows/pickup.md"),
+        _read_pickup_surface(CODEX_PICKUP_DIR, "workflows/pickup.md"),
+    )
+    anchor_surfaces = (
+        _read("workflows/01-anchor-to-nodes.md"),
+        _read_handoff_surface(CLAUDE_HANDOFF_DIR, "workflows/01-anchor-to-nodes.md"),
+        _read_handoff_surface(CODEX_HANDOFF_DIR, "workflows/01-anchor-to-nodes.md"),
+    )
+    sessions_spec = SESSIONS_SPEC.read_text()
+
+    for pickup in pickup_surfaces:
+        assert "Changed product surface" in pickup
+        assert "Inspection references" in pickup
+        assert (
+            "Branches, PRs, and session records are transport or lifecycle surfaces"
+            in pickup
+        )
+        assert "changed surface" not in pickup
+        assert "Inspection surface" not in pickup
+
+    for anchor in anchor_surfaces:
+        assert "Product-level operations" in anchor
+        assert (
+            "Work changed operational state or product-wide guidance rather than a node-local spec."
+            in anchor
+        )
+        assert "Plugin / methodology work" not in anchor
+
+    assert "changed product surface" in sessions_spec
+    assert "inspection references" in sessions_spec
+    assert "changed surface" not in sessions_spec
+    assert "inspection surface" not in sessions_spec
