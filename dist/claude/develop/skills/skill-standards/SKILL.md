@@ -22,8 +22,6 @@ This is a reference skill. `/create-skills` and `/audit-skills` load these stand
 When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
----
-
 <skill_organization>
 
 Skills follow a **reference pattern** to avoid duplication:
@@ -42,8 +40,6 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 </skill_organization>
 
----
-
 <frontmatter>
 
 Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
@@ -58,7 +54,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit (read-only) and reference skills.                                                               |
 | `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
 | `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
-| `model`                    | No          | Model override for this skill (`opus`, `sonnet`, `haiku`, or `inherit`). Reverts to the session model on the next prompt.                                                                                                         |
+| `model`                    | No          | Model override for this skill (`opus`, `sonnet`, `haiku`, or `inherit`). Marketplace verification-sensitive surfaces use explicit `sonnet` and never use session inheritance.                                                     |
 | `effort`                   | No          | Effort level (`low`, `medium`, `high`, `xhigh`, `max`) — overrides the session effort while the skill is active.                                                                                                                  |
 | `context`                  | No          | `fork` to run the skill in a forked subagent context. Combine with `agent`.                                                                                                                                                       |
 | `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                        |
@@ -155,8 +151,6 @@ name: typescript-unit-framework # Wrong order
 
 </naming_conventions>
 
----
-
 <descriptions>
 
 The description field governs skill selection. Claude has a character budget for all skill metadata — when exceeded, skills become invisible.
@@ -217,8 +211,6 @@ description: >-
 **Conflict resolution:** If Claude picks the wrong skill, descriptions are too similar. Make trigger terms distinct — "sales data in Excel" vs "log files and system metrics".
 
 </descriptions>
-
----
 
 <xml_structure>
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from outcomeeng_evals.definition import DEFAULT_MODEL
 from outcomeeng_evals.runner import ClaudeCliRunner
 
 
@@ -21,12 +22,14 @@ DEFAULT_CLAUDE_BIN = "claude"
 def build_claude_runner(
     *,
     plugin_dir: Path,
+    model: str = DEFAULT_MODEL,
     max_budget_usd: float | None = 0.50,
     timeout_seconds: float = 120.0,
 ) -> ClaudeCliRunner:
     """Build a ``ClaudeCliRunner`` with the binary from the environment."""
     return ClaudeCliRunner(
         plugin_dir=plugin_dir,
+        model=model,
         binary=os.environ.get(CLAUDE_BIN_ENV, DEFAULT_CLAUDE_BIN),
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,

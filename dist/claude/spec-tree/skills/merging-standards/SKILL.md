@@ -183,7 +183,7 @@ git diff --name-only "origin/${base}...HEAD"
 
 **Stacked-gate** (all must hold): the PR base is the previous stack branch (named in the PR body's `Stack` or `Merge order` note); the branch remains draft while the base is unmerged; after the base merges, the branch is rebased onto the updated default branch before final merge.
 
-Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, invoke `AskUserQuestion` rather than guess.
+Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, the consuming workflow asks the operator through its own structured-question tool grant rather than guessing.
 
 ```bash
 base_branch="<previous-stack-branch>"
@@ -307,17 +307,21 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
 
 ```bash
-base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
-branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-# explicit --delete-branch=false — never rely on gh's default for the omitted flag (it
-# varies by gh version and config, unknowable across consumer environments). =false
-# guarantees gh skips its local-branch-delete + switch-to-"${base}" step, which fails
-# when "${base}" is checked out in another worktree.
+base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
+branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
 gh pr merge <pr-number> --rebase --delete-branch=false
-git fetch origin "${base}"
-git switch --detach "origin/${base}"   # step this worktree off the merged branch onto the new base tip
-git branch -D "${branch}" 2>/dev/null || true   # delete the now-unoccupied local branch (tolerate "not found")
-git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
+git fetch origin "$base_from_pr"
+git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
+held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
+if [ -n "$held_worktree" ]; then echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
+elif [ -n "$(git branch --list "$branch_from_pr")" ]; then git branch -D "$branch_from_pr"; fi
+remote_branch_status=0
+git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
+case "$remote_branch_status" in
+  0) git push origin --delete "$branch_from_pr" ;;
+  2) ;;
+  *) exit "$remote_branch_status" ;;
+esac
 git status --porcelain
 ```
 
@@ -354,8 +358,8 @@ gh pr view <pr-number> --json reviews,comments \
          comments: [.comments[] | {author: .author.login, createdAt, excerpt: .body[0:160]}]}'
 
 # Review-thread comments tied to specific lines
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
-  --jq '.[] | {author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate \
+  --jq '.[] | {id, node_id, author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
 ```
 
 **NEVER drop `comments` from the `gh pr view --json` argument list.** The `comments` field carries PR-level issue comments — a distinct surface from `reviews` (formal review submissions) and from `gh api repos/<owner>/<repo>/pulls/<n>/comments` (review-thread comments tied to specific lines). Dropping `comments` to "trim the JSON" silently loses that third surface; a valid `BLOCKING` or `DEBT` finding posted there is invisible to the inspection, and `MERGE_READINESS` evaluates against a partial view. Whatever field list a calling flow constructs — it may add `statusCheckRollup`, `headRefOid`, `baseRefName`, `mergeable`, `mergeStateStatus`, or others for the merge-state predicates — `comments` MUST appear in it on every management pass. Construct the field list explicitly per pass; do not omit fields from an abbreviated re-creation between turns.

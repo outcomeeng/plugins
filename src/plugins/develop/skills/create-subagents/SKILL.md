@@ -89,9 +89,11 @@ Product-scope subagents override user-scope when names conflict.
 </field>
 
 <field name="model">
-- `sonnet`, `opus`, `haiku`, or `inherit`
-- `inherit`: uses same model as main conversation
-- If omitted: defaults to configured subagent model (usually sonnet)
+- `opus`, `sonnet`, `haiku`, or `inherit`
+- Prefer an explicit model alias when reproducibility matters.
+- Use `sonnet` for verification, audit, review, and evidence-producing agents.
+- Use `haiku` only when the owning workflow accepts lower-cost execution for simple or high-volume tasks.
+- NEVER use `inherit` for verification, audit, review, or other reproducibility-sensitive agents.
 
 </field>
 
@@ -294,7 +296,7 @@ You can also edit subagent files directly:
 
 - File format and configuration
 - Skill injection (`skills:` field for preloading skill content)
-- Model selection (Sonnet 4.5 + Haiku 4.5 orchestration)
+- Model selection, including explicit aliases for reproducible agent behavior
 - Tool security and least privilege
 - Prompt caching optimization
 - Complete examples
@@ -333,7 +335,7 @@ You can also edit subagent files directly:
 **Orchestration patterns**: [${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
 
 - Sequential, parallel, hierarchical, coordinator patterns
-- Sonnet + Haiku orchestration for cost/performance
+- Model selection for orchestration roles
 - Multi-agent coordination
 - Pattern selection guidance
 
@@ -355,6 +357,6 @@ A well-configured subagent has:
 - XML-structured system prompt with role, approach, and constraints
 - Description field optimized for automatic routing
 - Successfully tested on representative tasks
-- Model selection appropriate for task complexity (Sonnet for reasoning, Haiku for simple tasks)
+- Model selection appropriate for task complexity, cost, and reproducibility needs
 
 </success_criteria>

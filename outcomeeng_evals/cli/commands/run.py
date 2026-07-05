@@ -14,7 +14,7 @@ import click
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
-from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
+from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition, validate_model
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
 from outcomeeng_evals.runner import ModelRunner, RunMetadata
@@ -37,6 +37,7 @@ class RunnerFactory(Protocol):
         self,
         *,
         plugin_dir: Path,
+        model: str,
         max_budget_usd: float,
         timeout_seconds: int,
     ) -> ModelRunner: ...
@@ -71,6 +72,12 @@ class RunnerFactory(Protocol):
     help="Per-invocation budget passed through to the Claude CLI.",
 )
 @click.option(
+    "--model",
+    type=str,
+    default=None,
+    help="Model passed through to the Claude CLI. Defaults to eval.toml model.",
+)
+@click.option(
     "--timeout-seconds",
     type=click.IntRange(min=1),
     default=120,
@@ -88,14 +95,22 @@ def run_command(
     plugin_dir: Path,
     workers: int,
     max_budget_usd: float,
+    model: str | None,
     timeout_seconds: int,
     case_ids: tuple[str, ...],
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
+    try:
+        selected_model = (
+            validate_model(model, "--model") if model is not None else definition.model
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
     runner_factory = _runner_factory_from_context()
     runner = runner_factory(
         plugin_dir=plugin_dir,
+        model=selected_model,
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
     )
@@ -117,13 +132,14 @@ def run_command(
     timestamp_label = _timestamp_label()
     runs_dir = eval_dir / RUNS_DIRNAME
     html_path = runs_dir / f"{timestamp_label}.html"
-    write_run_reports(result, html_path, title=definition.title)
+    write_run_reports(result, html_path, title=definition.title, model=selected_model)
 
     append_history_row(
         eval_dir / HISTORY_FILENAME,
         _history_row(
             timestamp=timestamp_label,
             result=result,
+            model=selected_model,
             transcript_relative=f"{RUNS_DIRNAME}/{timestamp_label}.json",
         ),
     )
@@ -218,12 +234,14 @@ def _history_row(
     *,
     timestamp: str,
     result: SuiteResult,
+    model: str,
     transcript_relative: str,
 ) -> HistoryRow:
     return {
         "timestamp": timestamp,
         "schema_version": JSON_SCHEMA_VERSION,
         "git_sha": _git_sha(),
+        "model": model,
         "passed": result.passed,
         "pass_rate": result.pass_rate,
         "cases_total": len(result.outcomes),

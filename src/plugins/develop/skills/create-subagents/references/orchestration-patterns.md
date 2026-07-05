@@ -1,4 +1,13 @@
-# Orchestration Patterns for Multi-Agent Systems
+<table_of_contents>
+
+- `<core_concept>` — why orchestration decomposes work across focused agents
+- `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, explicit-model, and hybrid patterns
+- `<implementation_guidance>` — coordinator subagent structure, handoffs, and synchronization
+- `<anti_patterns>` — over-orchestration, missing coordination, serial bottlenecks, unclear handoffs, and missing recovery
+- `<best_practices>` — granularity, responsibilities, handoffs, parallelism, coordinator weight, and model selection
+- `<pattern_selection>` — choosing the right orchestration pattern
+
+</table_of_contents>
 
 <core_concept>
 Orchestration defines how multiple subagents coordinate to complete complex tasks.
@@ -290,37 +299,38 @@ Workers (5 concurrent instances of security-reviewer):
 
 </when_to_use>
 
-<sonnet_haiku_orchestration>
-**Sonnet 4.5 + Haiku 4.5 orchestration**: Optimal cost/performance pattern.
+<explicit_model_orchestration>
+**Explicit model orchestration**: model choices declared per orchestration role.
 
 Research findings:
 
 - Sonnet 4.5: "Best model in the world for agents", exceptional at planning and validation
-- Haiku 4.5: "90% of Sonnet 4.5 performance", one of best coding models, fast and cost-efficient
+- Haiku: lower-cost execution for simple or high-volume work when the owning workflow accepts that trade-off
+- Explicit model aliases keep agent behavior stable when the main conversation model changes
 
 **Pattern**:
 
 ```markdown
-1. Sonnet 4.5 (Orchestrator):
+1. Sonnet (Orchestrator):
    - Analyzes task
    - Creates plan
    - Breaks into subtasks
    - Identifies what can be parallelized
 
-2. Multiple Haiku 4.5 instances (Workers):
+2. Haiku or Sonnet (Workers):
    - Each completes assigned subtask
    - Executes in parallel for speed
    - Returns results to orchestrator
 
-3. Sonnet 4.5 (Orchestrator):
+3. Sonnet (Orchestrator):
    - Integrates results from all workers
    - Validates output quality
    - Ensures coherence
    - Delivers final output
 ```
 
-**Cost/performance optimization**: Expensive Sonnet only for planning/validation, cheap Haiku for execution.
-</sonnet_haiku_orchestration>
+**Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit `sonnet` aliases and avoid session-model inheritance.
+</explicit_model_orchestration>
 </orchestrator_worker>
 </pattern_catalog>
 
@@ -400,7 +410,6 @@ Coordinator:
 ---
 name: workflow-coordinator
 description: Orchestrates multi-agent workflows. Use when task requires multiple specialized agents in coordination.
-tools: all
 model: sonnet
 ---
 
@@ -575,13 +584,13 @@ If agents don't depend on each other's outputs, run them concurrently.
 Heavy coordinator = bottleneck. Coordinator should route and synthesize, not do deep work itself.
 </principle>
 
-<principle name="cost_optimization">
-**Use model tiers strategically**.
+<principle name="explicit_model_selection">
+**Use explicit model choices strategically**.
 
-- Planning/validation: Sonnet 4.5 (needs intelligence)
-- Execution of clear tasks: Haiku 4.5 (fast, cheap, still capable)
-- Highest stakes decisions: Sonnet 4.5
-- Bulk processing: Haiku 4.5
+- Planning and validation: Sonnet
+- Evidence-producing review and audit: Sonnet
+- Highest-stakes decisions: explicit stronger model when warranted
+- Simple or high-volume execution: Haiku when the owning workflow accepts lower-cost execution
 
 </principle>
 </best_practices>

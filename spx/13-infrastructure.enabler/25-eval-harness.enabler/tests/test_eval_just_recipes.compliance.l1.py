@@ -29,6 +29,7 @@ def test_eval_recipe_runs_suite_with_toml_plugin_dir(
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
     assert "--max-budget-usd 0.50" in completed.stdout
+    assert "--model sonnet" in completed.stdout
     assert "--timeout-seconds 120" in completed.stdout
     assert "--case-id" not in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
@@ -52,6 +53,7 @@ def test_eval_case_recipe_runs_selected_case_with_toml_plugin_dir(
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
     assert "--max-budget-usd 0.50" in completed.stdout
+    assert "--model sonnet" in completed.stdout
     assert "--timeout-seconds 120" in completed.stdout
     assert "--case-id case-pass" in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
@@ -75,6 +77,44 @@ def test_eval_recipe_uses_plugin_dir_env_override(
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert f"--plugin-dir {override_plugin_dir}" in completed.stdout
     assert f"--plugin-dir {plugin_dir}" not in completed.stdout
+    assert "suite pass_rate=100.00%" in completed.stdout
+
+
+def test_eval_recipe_uses_model_env_override(
+    tmp_path: Path,
+) -> None:
+    eval_toml, _plugin_dir, fake_claude = _write_eval_fixture(tmp_path)
+
+    completed = _run_just_eval(
+        tmp_path,
+        fake_claude,
+        "eval",
+        str(eval_toml),
+        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "--model claude-sonnet-4-5" in completed.stdout
+    assert "suite pass_rate=100.00%" in completed.stdout
+
+
+def test_eval_case_recipe_uses_model_env_override(
+    tmp_path: Path,
+) -> None:
+    eval_toml, _plugin_dir, fake_claude = _write_eval_fixture(tmp_path)
+
+    completed = _run_just_eval(
+        tmp_path,
+        fake_claude,
+        "eval-case",
+        str(eval_toml),
+        "case-pass",
+        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "--model claude-sonnet-4-5" in completed.stdout
+    assert "--case-id case-pass" in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
 
 

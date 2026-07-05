@@ -18,8 +18,7 @@ PR opening, review-changes, and TypeScript test-ownership evals directly.
 The `OUTCOMEENG_EVAL_STORE` org secret is visible to `outcomeeng/plugins`, and
 the token account can bypass `main` branch protection for commit-back pushes.
 
-Deferred follow-ups tracked in `ISSUES.md` include optional per-eval model
-pinning and cross-suite parallelism.
+Deferred follow-ups tracked in `ISSUES.md` include cross-suite parallelism.
 
 ## Prompt-caching implementation (decided; gated on CLI regression #34629)
 

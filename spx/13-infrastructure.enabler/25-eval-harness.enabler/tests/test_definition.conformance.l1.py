@@ -13,6 +13,7 @@ import pytest
 
 from outcomeeng_evals.definition import (
     CiPolicy,
+    DEFAULT_MODEL,
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
@@ -28,6 +29,8 @@ TITLE = "shared-test-owned-constant-bag"
 CUSTOM_THRESHOLD = 0.95
 CUSTOM_TRIALS = 3
 PLUGIN_DIR = "dist/claude/spec-tree"
+MODEL = "sonnet"
+CUSTOM_MODEL = "claude-sonnet-4-5"
 OWNED_PATH = "src/plugins/spec-tree/skills/manage-pr/**"
 SMOKE_CASE = "happy-path"
 
@@ -125,6 +128,21 @@ def test_applies_default_trials_when_omitted(tmp_path: Path) -> None:
     assert definition.trials == DEFAULT_TRIALS_PER_CASE
 
 
+def test_applies_default_model_when_omitted(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+        ),
+    )
+
+    definition = load_definition(toml_path)
+
+    assert definition.model == DEFAULT_MODEL
+
+
 def test_uses_explicit_threshold_when_set(tmp_path: Path) -> None:
     toml_path = _write_eval_dir(
         tmp_path,
@@ -165,6 +183,7 @@ def test_loads_optional_ci_metadata(tmp_path: Path) -> None:
             f'cases = "{CASES_FILENAME}"\n'
             f'prompt = "{PROMPT_FILENAME}"\n'
             f'plugin_dir = "{PLUGIN_DIR}"\n'
+            f'model = "{MODEL}"\n'
             f'owned_paths = ["{OWNED_PATH}"]\n'
             f'smoke_cases = ["{SMOKE_CASE}"]\n'
             'ci_policy = "manual"\n'
@@ -174,9 +193,56 @@ def test_loads_optional_ci_metadata(tmp_path: Path) -> None:
     definition = load_definition(toml_path)
 
     assert definition.plugin_dir == Path(PLUGIN_DIR)
+    assert definition.model == MODEL
     assert definition.owned_paths == (OWNED_PATH,)
     assert definition.smoke_case_ids == (SMOKE_CASE,)
     assert definition.ci_policy is CiPolicy.MANUAL
+
+
+def test_uses_explicit_model_when_set(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            f'model = "{CUSTOM_MODEL}"\n'
+        ),
+    )
+
+    definition = load_definition(toml_path)
+
+    assert definition.model == CUSTOM_MODEL
+
+
+def test_rejects_inherit_model(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            'model = "inherit"\n'
+        ),
+    )
+
+    with pytest.raises(ValueError, match="model"):
+        load_definition(toml_path)
+
+
+def test_rejects_non_string_model(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            "model = 1\n"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="model"):
+        load_definition(toml_path)
 
 
 def test_accepts_trials_at_cap(tmp_path: Path) -> None:

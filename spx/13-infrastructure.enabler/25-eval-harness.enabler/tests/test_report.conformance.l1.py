@@ -67,10 +67,11 @@ def _suite_result(*, passed: bool, reason: str | None = None) -> SuiteResult:
 
 def test_serialize_result_carries_schema_version_and_suite_summary() -> None:
     result = _suite_result(passed=True)
-    payload = serialize_result(result, title="my-eval")
+    payload = serialize_result(result, title="my-eval", model="claude-sonnet-4-5")
 
     assert payload["schema_version"] == JSON_SCHEMA_VERSION
     assert payload["title"] == "my-eval"
+    assert payload["model"] == "claude-sonnet-4-5"
     assert payload["suite"] == {
         "passed": True,
         "pass_rate": 1.0,
@@ -78,6 +79,12 @@ def test_serialize_result_carries_schema_version_and_suite_summary() -> None:
         "cases_total": 1,
         "cases_passed": 1,
     }
+
+
+def test_serialize_result_defaults_to_concrete_model() -> None:
+    payload = serialize_result(_suite_result(passed=True), title="my-eval")
+
+    assert payload["model"] == "sonnet"
 
 
 def test_serialize_result_preserves_case_expectations() -> None:
@@ -214,13 +221,20 @@ def test_write_json_report_writes_file_and_returns_path(tmp_path: Path) -> None:
 
 def test_write_run_reports_emits_html_and_sidecar_json(tmp_path: Path) -> None:
     target = tmp_path / "report.html"
-    returned = write_run_reports(_suite_result(passed=True), target, title="my-title")
+    returned = write_run_reports(
+        _suite_result(passed=True),
+        target,
+        title="my-title",
+        model="sonnet",
+    )
 
     assert returned == target
     assert target.exists(), "the HTML viewer must be written at the given path"
     sidecar = target.with_suffix(".json")
     assert sidecar.exists(), "sidecar JSON must be written alongside the HTML"
-    assert json.loads(sidecar.read_text(encoding="utf-8"))["title"] == "my-title"
+    sidecar_payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert sidecar_payload["title"] == "my-title"
+    assert sidecar_payload["model"] == "sonnet"
 
 
 def test_write_run_reports_embeds_json_payload_in_script_tag(tmp_path: Path) -> None:

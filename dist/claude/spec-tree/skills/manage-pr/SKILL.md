@@ -1,23 +1,37 @@
 ---
 name: manage-pr
 description: >-
-  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
+  ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
+argument-hint: "[pr-number|url|branch]"
+allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
 ---
 
 <objective>
 The pull request merged into the base branch on origin, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
-<the_managing_flow>
+<step name="pr_wait_and_reentry_policy">
+
+`/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
+
+Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_READY:<head-sha>`, `MERGE_BLOCKED:<reason>`, `AWAIT_APPROVAL:<reason>`, and `POST_MERGE_VERIFY` never store PR state and never authorize a later wait, merge, or closeout without a fresh `/manage-pr` inspection pass. After compaction or when the foundation is absent, restart from Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior action-token authority and return to Step 1 for the PR pointer.
+
+When PR checks or current-head review output are not terminal, `/manage-pr` runs exactly one foreground wait command, `gh pr checks <pr-number> --watch --fail-fast --interval 30`, then discards the pre-wait token authority and re-inspects PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before deciding the next action. Runtime heartbeats, runtime timers, background waits, shell polling, background `sleep`, and `gh run watch` are invalid wait mechanisms for GitHub PR checks.
+
+GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why `/manage-pr` is being re-entered.
+
+</step>
+
+<step name="the_managing_flow">
 
 Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds.
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. Then invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool.
 
-**Step 1 — Identify the PR.**
+**Step 1 — Identify the PR.** Resolve the PR from the passed pointer before inspecting state. A pointer may be a PR number, PR URL, or branch name. Use bare `gh pr view` only when no pointer was passed and the current branch is the intended PR branch.
 
 ```bash
+gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 ```
 
@@ -38,13 +52,13 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 Then re-run /merging-standards `<branch_hygiene>` before the push — hygiene applies on every push, not only at creation. Push via /merging-standards `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form. The PR is ready throughout — a follow-up push goes to the ready PR and re-fires CI; there is no draft toggle.
 
-**Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. Run the exact foreground wait command from /merging-standards `<pr_check_wait>`, then return to Step 1:
+**Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. `/manage-pr` owns PR check and review waits. Run the exact foreground wait command from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
 
 ```bash
 gh pr checks <pr-number> --watch --fail-fast --interval 30
 ```
 
-The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks.
+The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
 
 **Step 8 — Evaluate the merge gates and act.** Apply /merging-standards `<authority_gates>`: `MERGE_READINESS`, then `PRODUCTION_READINESS`.
 
@@ -76,13 +90,13 @@ When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRO
   If the project requires post-merge verification, complete or delegate it and proceed to Step 9 with that result. Do not emit `POST_MERGE_VERIFY` before the Step 9 branch-state closeout record exists.
 - **Production-relevant and not yet approved** -> emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
 
-If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standards `<action_tokens>`. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `AWAIT_APPROVAL` or `MERGE_BLOCKED:<reason>`, stop at the operator boundary or concrete blocker the token names. A base-sync conflict is handled earlier in Step 4 as a structured stop report, not an action token.
+If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standards `<action_tokens>`. The token is valid only for this pass. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `AWAIT_APPROVAL` or `MERGE_BLOCKED:<reason>`, stop at the operator boundary or concrete blocker the token names; when the operator replies, restart this workflow for the PR pointer before acting. A base-sync conflict is handled earlier in Step 4 as a structured stop report, not an action token.
 
 **Step 9 — Closeout routing.** Once the PR is merged and any required post-merge verification, deploy, or release handling is complete, delegated, or blocked by an external condition, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before routing closeout. When post-merge verification cannot complete in this pass, the `POST_MERGE_VERIFY` token carries the branch-state closeout record and **Remaining Branches** groups rather than bypassing them. When this skill was loaded by `/manage-github-pr`, return closeout-ready evidence to `/manage-github-pr` Step 7: PR URL, merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, and any post-merge verification result or `POST_MERGE_VERIFY` external-blocker evidence. `/manage-github-pr` decides whether to continue in-scope work or invoke `/handoff` plain. When this skill is user-invoked directly, apply the same rule here: continue any remaining in-scope work; if the session is genuinely over, Invoke `/handoff` plain and let it produce the operator-useful closeout and continuation disposition, including **Remaining Branches**. Do not emit a receipt-only response made only of PR state, branch cleanup, or merge commit mechanics.
 
 **Exit when:** the PR is closed, Step 9 has returned closeout-ready evidence to `/manage-github-pr`, Step 9 has emitted `POST_MERGE_VERIFY` with branch-state closeout evidence, or Step 9 invoked `/handoff` for a direct invocation. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
-</the_managing_flow>
+</step>
 
 <commands_reference>
 
@@ -90,6 +104,7 @@ For pre-flight, branch topology, push semantics, base sync, the authority gates,
 
 ```bash
 # PR identity
+gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 
 # Checks snapshot
@@ -125,9 +140,8 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
   --field body="Acknowledged — fix in next push."
 
 # Mark a review thread resolved
-gh api graphql --silent \
-  -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
-  -F id=<review-thread-node-id>
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> <review-thread-node-id>
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --repo <owner>/<repo> --pr <pr-number> --review-comment-id <review-comment-id>
 
 # Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
 # rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,
@@ -161,6 +175,7 @@ The managing flow satisfies its contract when, at minimum:
 - The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.
 - Every follow-up push re-establishes `REVIEW_READINESS` on the diff it would publish — local deterministic verification passes per /merging-standards `<local_deterministic_scope>` (or, for a push that only rebased onto an advanced base, the preservation-proof-scoped lane per /merging-standards `<base_sync>`), and the local `changes-reviewer` review (invoked at parity per /merging-standards `<local_review_invocation>`, with no caller narrowing) has converged with no valid finding unaddressed — re-runs /merging-standards `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
 - Pending PR checks or current-head CI review use exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` per /merging-standards `<pr_check_wait>`.
+- Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, `/manage-pr` re-enters from the PR pointer and re-inspects live GitHub and repository state before waiting, merging, or closing.
 - Merge fires autonomously only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, the inspected head SHA matches the fetched remote branch head and status-check head, and the change is non-production-relevant or operator-approved.
 - After merge and required post-merge handling, closeout is routed through `/manage-github-pr` Step 7 when that skill invoked this one, or through `/handoff` plain when `/manage-pr` was invoked directly and the session is over; the branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built, safe cleanup has run, and a merge receipt or cleanup receipt alone is never the terminal response.
 - A production-relevant, unapproved change emits `AWAIT_APPROVAL:<reason>` and waits; Claude does the full `MERGE_READINESS` work regardless.

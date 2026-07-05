@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Skill
+allowed-tools: Read, Glob, Grep, Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Skill
 ---
 
 <objective>
@@ -94,11 +94,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Start the first management pass.** Resolve the PR number, then invoke /manage-pr on that PR. If checks or the CI review are still pending, /manage-pr uses the exact foreground wait command from /merging-standards `<pr_check_wait>`:
-
-```bash
-gh pr checks <pr-number> --watch --fail-fast --interval 30
-```
+**Step 6 — Start the first management pass.** Resolve the PR number, then invoke /manage-pr on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
@@ -189,7 +185,7 @@ The opening flow has succeeded when:
 - Title is one commit-subject line under 70 chars per /commit-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
 - The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- The first management pass starts after the PR opens, and any pending PR checks use /merging-standards `<pr_check_wait>`.
+- The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /merging-standards.
 

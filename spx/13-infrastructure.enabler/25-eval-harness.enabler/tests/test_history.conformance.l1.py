@@ -35,6 +35,7 @@ def _passing_row() -> HistoryRow:
         "timestamp": TIMESTAMP,
         "schema_version": SCHEMA_VERSION,
         "git_sha": GIT_SHA,
+        "model": "sonnet",
         "passed": True,
         "pass_rate": 1.0,
         "cases_total": 4,
@@ -56,6 +57,7 @@ def _failing_row() -> HistoryRow:
         "timestamp": FAILING_TIMESTAMP,
         "schema_version": SCHEMA_VERSION,
         "git_sha": GIT_SHA,
+        "model": "claude-sonnet-4-5",
         "passed": False,
         "pass_rate": 0.75,
         "cases_total": 4,
@@ -126,6 +128,7 @@ def test_row_carries_required_schema_fields(tmp_path: Path) -> None:
 
     row = _read_history(history_path)[0]
     assert set(HISTORY_ROW_FIELDS).issubset(row.keys())
+    assert row["model"] == "sonnet"
 
 
 def test_row_carries_token_aggregates_for_cache_hit_rate(tmp_path: Path) -> None:
@@ -154,8 +157,10 @@ def test_history_row_aggregates_token_counts_across_trials() -> None:
     row = _history_row(
         timestamp=TIMESTAMP,
         result=make_bimodal_cache_suite_result(),
+        model="sonnet",
         transcript_relative=TRANSCRIPT_REL,
     )
+    assert row["model"] == "sonnet"
     assert row["total_input_tokens"] == 22
     assert row["total_output_tokens"] == 12
     assert row["total_cache_read_input_tokens"] == 49600
@@ -199,7 +204,10 @@ def test_history_row_token_aggregates_are_none_without_metadata() -> None:
         passed=True,
     )
     row = _history_row(
-        timestamp=TIMESTAMP, result=result, transcript_relative=TRANSCRIPT_REL
+        timestamp=TIMESTAMP,
+        result=result,
+        model="sonnet",
+        transcript_relative=TRANSCRIPT_REL,
     )
     assert row["total_input_tokens"] is None
     assert row["total_output_tokens"] is None

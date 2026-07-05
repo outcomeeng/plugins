@@ -3,7 +3,7 @@ name: applier
 description: >-
   ALWAYS invoke when running the full spec-tree 8-step flow with three audit gates after the user passes --agent to /apply.
 tools: Read, Write, Edit, Bash, Grep, Glob, Skill
-model: inherit
+model: sonnet
 skills:
   - spec-tree:apply
 ---

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -21,16 +21,19 @@ class RunCliHarness:
     plugin_dir: Path
     runner: CliRunner
     recorder: RecordingRunner
+    models: list[str] = field(default_factory=list)
 
     @property
     def runner_context(self) -> dict[str, object]:
         def runner_factory(
             *,
             plugin_dir: Path,
+            model: str,
             max_budget_usd: float,
             timeout_seconds: int,
         ) -> ModelRunner:
             del plugin_dir, max_budget_usd, timeout_seconds
+            self.models.append(model)
             return self.recorder
 
         return {RUNNER_FACTORY_KEY: runner_factory}
@@ -41,12 +44,14 @@ def build_run_cli_harness(
     *,
     cases_jsonl: str,
     prompt_template: str = "Case {case_id}: {input_json}",
+    model: str | None = None,
 ) -> RunCliHarness:
     """Create a temporary eval suite wired to a recording model runner."""
     eval_dir = tmp_path / "evals" / "rule"
     eval_dir.mkdir(parents=True)
+    model_line = f'model = "{model}"\n' if model is not None else ""
     (eval_dir / EVAL_TOML_FILENAME).write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
+        f'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n{model_line}',
         encoding="utf-8",
     )
     (eval_dir / "cases.jsonl").write_text(cases_jsonl, encoding="utf-8")
