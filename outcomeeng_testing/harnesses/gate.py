@@ -18,13 +18,13 @@ import io
 import json
 import os
 import signal
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
 
-from hypothesis import given, settings
+from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
@@ -109,7 +109,14 @@ from outcomeeng.validation.selected_gate import (
 )
 from outcomeeng_testing.generators.gate import selected_gate_changed_paths
 
-SELECTED_GATE_PROPERTY_SETTINGS = settings(max_examples=40, deadline=None)
+SELECTED_GATE_PROPERTY_SEED = 20260705
+SELECTED_GATE_PROPERTY_REPLAY_PATH = (
+    "just test "
+    "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/tests/"
+    "test_selected_gate.property.l1.py::"
+    "test_selection_is_deterministic_for_path_order_and_duplicates"
+)
+SELECTED_GATE_PROPERTY_EXAMPLES = 40
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
@@ -231,19 +238,60 @@ def selected_gate_changed_path_domain() -> tuple[str, str, str, str]:
     )
 
 
-@SELECTED_GATE_PROPERTY_SETTINGS
-@given(selected_gate_changed_paths())
-def assert_selected_gate_selection_is_deterministic(paths: list[str]) -> None:
-    """Run the selected-gate determinism property with harness-owned settings."""
+def selected_gate_property(
+    test_func: Callable[[list[str]], None],
+) -> Callable[[], None]:
+    """Run the selected-gate property with reproducible failure diagnostics."""
 
-    forward = build_selected_gate_plan(tuple(paths))
-    reverse = build_selected_gate_plan(tuple(reversed(paths * 2)))
-
-    assert forward.changed_paths == reverse.changed_paths
-    assert forward.full_gate == reverse.full_gate
-    assert tuple(item.step.argv for item in forward.selected_steps) == tuple(
-        item.step.argv for item in reverse.selected_steps
+    configured = seed(SELECTED_GATE_PROPERTY_SEED)(
+        settings(max_examples=SELECTED_GATE_PROPERTY_EXAMPLES, deadline=None)(
+            given(paths=selected_gate_changed_paths())(test_func)
+        )
     )
+
+    def wrapper() -> None:
+        try:
+            configured()
+        except AssertionError as error:
+            error.add_note(f"Hypothesis seed: {SELECTED_GATE_PROPERTY_SEED}")
+            error.add_note(f"Replay path: {SELECTED_GATE_PROPERTY_REPLAY_PATH}")
+            raise
+
+    return wrapper
+
+
+def selected_gate_property_failure_notes_include_seed_and_replay() -> bool:
+    """Return whether the selected-gate property wrapper reports replay notes."""
+
+    def always_fails(paths: list[str]) -> None:
+        assert not paths
+
+    try:
+        selected_gate_property(always_fails)()
+    except AssertionError as error:
+        notes = getattr(error, "__notes__", ())
+        return (
+            f"Hypothesis seed: {SELECTED_GATE_PROPERTY_SEED}" in notes
+            and f"Replay path: {SELECTED_GATE_PROPERTY_REPLAY_PATH}" in notes
+        )
+    return False
+
+
+def assert_selected_gate_selection_is_deterministic() -> None:
+    """Run the selected-gate determinism property."""
+
+    @selected_gate_property
+    def assertion(paths: list[str]) -> None:
+        forward = build_selected_gate_plan(tuple(paths))
+        reverse = build_selected_gate_plan(tuple(reversed(paths * 2)))
+
+        assert forward.changed_paths == reverse.changed_paths
+        assert forward.full_gate == reverse.full_gate
+        assert tuple(item.step.argv for item in forward.selected_steps) == tuple(
+            item.step.argv for item in reverse.selected_steps
+        )
+
+    assertion()
 
 
 def expected_full_check_spawn_calls() -> tuple[tuple[str, ...], ...]:
@@ -788,14 +836,15 @@ def _assert_production_step_lists_smoke() -> None:
 def assert_selected_gate_mapping_contract() -> None:
     """Assert selected local gate planning mappings."""
 
-    plan = build_selected_gate_plan((PYTHON_PATTERNS[2],))
-    assert tuple(item.step.argv for item in plan.selected_steps) == (
-        RUFF_FORMAT_ARGV,
-        RUFF_CHECK_ARGV,
-        MYPY_ARGV,
-        PYRIGHT_ARGV,
-    )
-    assert all(item.reason == PYTHON_REASON for item in plan.selected_steps)
+    for python_pattern in PYTHON_PATTERNS[:3]:
+        plan = build_selected_gate_plan((python_pattern,))
+        assert tuple(item.step.argv for item in plan.selected_steps) == (
+            RUFF_FORMAT_ARGV,
+            RUFF_CHECK_ARGV,
+            MYPY_ARGV,
+            PYRIGHT_ARGV,
+        )
+        assert all(item.reason == PYTHON_REASON for item in plan.selected_steps)
 
     plan = build_selected_gate_plan((WORKFLOW_PATTERNS[0],))
     assert tuple(item.step.argv for item in plan.selected_steps) == (
@@ -869,6 +918,8 @@ def assert_selected_gate_mapping_contract() -> None:
 
 def assert_selected_gate_compliance_contract() -> None:
     """Assert selected local gate execution compliance."""
+
+    assert selected_gate_property_failure_notes_include_seed_and_replay()
 
     plan = build_selected_gate_plan(())
     assert plan.steps == ()

@@ -42,6 +42,7 @@ def selected_gate_changed_paths() -> SearchStrategy[list[str]]:
         st.sampled_from(
             (
                 PYTHON_PATTERNS[2],
+                PYTHON_PATTERNS[1],
                 WORKFLOW_PATTERNS[0],
                 PYTHON_ASSERTION_TEST_PATTERNS[0],
                 SKILL_PATTERNS[0],
