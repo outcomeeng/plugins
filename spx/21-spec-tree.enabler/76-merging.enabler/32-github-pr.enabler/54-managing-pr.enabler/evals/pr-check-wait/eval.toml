@@ -24,6 +24,7 @@ smoke_cases = [
   "review-absent-with-check-running-uses-foreground-wait",
   "wait-token-misses-foreground-wait",
   "explicit-pr-pointer-resolved-before-inspection",
+  "current-branch-pr-resolved-before-inspection",
   "stale-merge-ready-token-cannot-authorize-later-merge",
 ]
 threshold = 0.85
