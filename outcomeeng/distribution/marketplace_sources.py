@@ -7,7 +7,7 @@ import json
 import subprocess
 import sys
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -54,6 +54,12 @@ CLAUDE_PLUGIN_DISABLE_COMMAND = (
     "plugin",
     "disable",
 )
+CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT = "already installed"
+CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT = "already enabled"
+CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT = "already disabled"
+CLAUDE_SCOPE_USER = "user"
+CLAUDE_SCOPE_PROJECT = "project"
+CLAUDE_SCOPE_LOCAL = "local"
 CODEX_MARKETPLACE_LIST_COMMAND = (
     "codex",
     "plugin",
@@ -97,6 +103,8 @@ class MarketplaceSource:
     source_type: str
     path: Path | None = None
     url: str | None = None
+    scope: str | None = None
+    project_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -117,10 +125,20 @@ class ClaudeInstalledPlugin:
     scope: str
     enabled: bool
     project_path: Path | None = None
+    restore_cwd: Path | None = None
 
     @property
     def ref(self) -> str:
         return f"{self.name}@{self.marketplace}"
+
+
+@dataclass(frozen=True)
+class ClaudeSettingsPaths:
+    """Claude Code settings files that can declare marketplace sources."""
+
+    user: Path
+    project: Path
+    local: Path
 
 
 @dataclass(frozen=True)
@@ -130,6 +148,15 @@ class MarketplaceConfigRepairResult:
     root: Path
     changed: bool
     commands: tuple[tuple[str, ...], ...]
+
+
+@dataclass(frozen=True)
+class ClaudeMarketplaceRepairTarget:
+    """Claude marketplace declaration whose scope is being repaired."""
+
+    scope: str | None
+    source: MarketplaceSource | None
+    project_path: Path | None = None
 
 
 def run_command_capture(
@@ -230,6 +257,8 @@ def ensure_local_marketplace_sources(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     source_root: Path | None = None,
+    claude_project_root: Path | None = None,
+    claude_settings_paths: ClaudeSettingsPaths | None = None,
     runner: CommandRunner = run_command_capture,
 ) -> MarketplaceConfigRepairResult:
     """Reconcile Claude Code and Codex to one local marketplace source."""
@@ -255,6 +284,8 @@ def ensure_local_marketplace_sources(
             marketplace,
             source=claude_sources.get(marketplace),
             root=root,
+            project_root=claude_project_root,
+            settings_paths=claude_settings_paths,
             runner=runner,
         )
     )
@@ -359,6 +390,8 @@ def _parse_marketplace_sources(
             source_type=source_type,
             path=_path_field(source_entry, source_type),
             url=_url_field(source_entry, source_type),
+            scope=_string_field(source_entry, ("scope",)),
+            project_path=_optional_path(source_entry.get("projectPath")),
         )
     return sources
 
@@ -424,6 +457,15 @@ def _path_field(entry: dict[str, object], source_type: str) -> Path | None:
     if raw is None:
         return None
     return Path(raw).expanduser()
+
+
+def _path_field_relative_to(
+    entry: dict[str, object], source_type: str, base: Path
+) -> Path | None:
+    path = _path_field(entry, source_type)
+    if path is None or path.is_absolute():
+        return path
+    return base / path
 
 
 def _url_field(entry: dict[str, object], source_type: str) -> str | None:
@@ -529,26 +571,55 @@ def _repair_claude_runtime_source(
     *,
     source: MarketplaceSource | None,
     root: Path,
+    project_root: Path | None,
+    settings_paths: ClaudeSettingsPaths | None,
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    if _source_matches(source, root):
+    resolved_project_root = _normalized_path(project_root or root)
+    resolved_settings_paths = (
+        _default_claude_settings_paths(resolved_project_root)
+        if settings_paths is None
+        else settings_paths
+    )
+    scoped_sources = _claude_marketplace_sources_from_settings(
+        marketplace,
+        resolved_settings_paths,
+        project_root=resolved_project_root,
+    )
+    if _claude_runtime_source_matches(source, root, resolved_project_root) and all(
+        _scoped_claude_source_matches(scoped_source, root, resolved_project_root)
+        for scoped_source in scoped_sources
+    ):
         return ()
+    repair_targets = _claude_repair_targets(
+        source=source,
+        scoped_sources=scoped_sources,
+        root=root,
+        project_root=resolved_project_root,
+    )
     preserved = _claude_plugins_to_preserve(
         marketplace,
-        should_preserve=source is not None,
+        repair_targets=repair_targets,
         runner=runner,
     )
     commands: list[tuple[str, ...]] = []
-    commands.extend(
-        _repair_runtime_source(
-            marketplace,
-            source=source,
-            root=root,
-            add_command=CLAUDE_MARKETPLACE_ADD_COMMAND,
-            remove_command=CLAUDE_MARKETPLACE_REMOVE_COMMAND,
-            runner=runner,
+    for target in repair_targets:
+        cwd = _claude_repair_cwd(target)
+        if target.source is not None:
+            remove = _claude_marketplace_repair_command(
+                CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                target=target,
+                argument=marketplace,
+            )
+            _run_json_command(list(remove), runner=runner, cwd=cwd)
+            commands.append(remove)
+        add = _claude_marketplace_repair_command(
+            CLAUDE_MARKETPLACE_ADD_COMMAND,
+            target=target,
+            argument=str(root),
         )
-    )
+        _run_json_command(list(add), runner=runner, cwd=cwd)
+        commands.append(add)
     commands.extend(_restore_claude_plugins(preserved, runner=runner))
     return tuple(commands)
 
@@ -556,13 +627,177 @@ def _repair_claude_runtime_source(
 def _claude_plugins_to_preserve(
     marketplace: str,
     *,
-    should_preserve: bool,
+    repair_targets: tuple[ClaudeMarketplaceRepairTarget, ...],
     runner: CommandRunner,
 ) -> tuple[ClaudeInstalledPlugin, ...]:
-    if not should_preserve:
+    if not repair_targets:
         return ()
-    result = _run_json_command([*CLAUDE_PLUGIN_LIST_COMMAND], runner=runner)
-    return parse_claude_installed_plugins(result.stdout or "", marketplace)
+    snapshot_cwd = _claude_plugin_snapshot_cwd(repair_targets)
+    result = _run_json_command(
+        [*CLAUDE_PLUGIN_LIST_COMMAND],
+        runner=runner,
+        cwd=snapshot_cwd,
+    )
+    return tuple(
+        preserved
+        for plugin in parse_claude_installed_plugins(result.stdout or "", marketplace)
+        if (
+            preserved := _claude_plugin_preserved_for_repair_targets(
+                plugin, repair_targets
+            )
+        )
+        is not None
+    )
+
+
+def _claude_repair_targets(
+    *,
+    source: MarketplaceSource | None,
+    scoped_sources: tuple[MarketplaceSource, ...],
+    root: Path,
+    project_root: Path,
+) -> tuple[ClaudeMarketplaceRepairTarget, ...]:
+    targets: list[ClaudeMarketplaceRepairTarget] = []
+    runtime_source_matches = _claude_runtime_source_matches(source, root, project_root)
+    unscoped_runtime_repair = (
+        source is not None
+        and not runtime_source_matches
+        and source.scope
+        not in {
+            CLAUDE_SCOPE_USER,
+            CLAUDE_SCOPE_PROJECT,
+            CLAUDE_SCOPE_LOCAL,
+        }
+    )
+    for scoped_source in scoped_sources:
+        target = ClaudeMarketplaceRepairTarget(
+            scope=scoped_source.scope or CLAUDE_SCOPE_PROJECT,
+            source=scoped_source,
+            project_path=scoped_source.project_path or project_root,
+        )
+        if not _scoped_claude_source_matches(scoped_source, root, project_root):
+            targets.append(target)
+        elif source is None or unscoped_runtime_repair:
+            targets.append(
+                ClaudeMarketplaceRepairTarget(
+                    scope=target.scope,
+                    source=None,
+                    project_path=target.project_path,
+                )
+            )
+    if runtime_source_matches:
+        return _unique_claude_repair_targets(targets)
+    if source is not None and source.scope in {
+        CLAUDE_SCOPE_USER,
+        CLAUDE_SCOPE_PROJECT,
+        CLAUDE_SCOPE_LOCAL,
+    }:
+        targets.append(
+            ClaudeMarketplaceRepairTarget(
+                scope=source.scope,
+                source=source,
+                project_path=project_root,
+            ),
+        )
+        return _unique_claude_repair_targets(targets)
+    if source is not None:
+        targets.insert(
+            0,
+            ClaudeMarketplaceRepairTarget(
+                scope=None,
+                source=source,
+                project_path=None,
+            ),
+        )
+        return _unique_claude_repair_targets(targets)
+    if targets:
+        return _unique_claude_repair_targets(targets)
+    return (
+        ClaudeMarketplaceRepairTarget(
+            scope=None,
+            source=None,
+            project_path=None,
+        ),
+    )
+
+
+def _unique_claude_repair_targets(
+    targets: list[ClaudeMarketplaceRepairTarget],
+) -> tuple[ClaudeMarketplaceRepairTarget, ...]:
+    unique: list[ClaudeMarketplaceRepairTarget] = []
+    seen: set[tuple[str | None, Path | None]] = set()
+    for target in targets:
+        key = (
+            target.scope,
+            _normalized_path(target.project_path) if target.project_path else None,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(target)
+    return tuple(unique)
+
+
+def _claude_plugin_belongs_to_repair_targets(
+    plugin: ClaudeInstalledPlugin,
+    repair_targets: tuple[ClaudeMarketplaceRepairTarget, ...],
+) -> bool:
+    return (
+        _claude_plugin_preserved_for_repair_targets(plugin, repair_targets) is not None
+    )
+
+
+def _claude_plugin_preserved_for_repair_targets(
+    plugin: ClaudeInstalledPlugin,
+    repair_targets: tuple[ClaudeMarketplaceRepairTarget, ...],
+) -> ClaudeInstalledPlugin | None:
+    if plugin.scope == CLAUDE_SCOPE_USER:
+        if any(target.scope in {None, CLAUDE_SCOPE_USER} for target in repair_targets):
+            return plugin
+        for target in repair_targets:
+            if target.scope in {CLAUDE_SCOPE_PROJECT, CLAUDE_SCOPE_LOCAL}:
+                return replace(plugin, restore_cwd=_claude_repair_cwd(target))
+        return None
+    for target in repair_targets:
+        if target.scope is None:
+            continue
+        if target.scope == CLAUDE_SCOPE_USER and plugin.scope in {
+            CLAUDE_SCOPE_PROJECT,
+            CLAUDE_SCOPE_LOCAL,
+        }:
+            if plugin.project_path is None or target.project_path is None:
+                continue
+            if _normalized_path(plugin.project_path) == _normalized_path(
+                target.project_path
+            ):
+                return plugin
+            continue
+        if target.scope in {
+            CLAUDE_SCOPE_PROJECT,
+            CLAUDE_SCOPE_LOCAL,
+        } and plugin.scope in {
+            CLAUDE_SCOPE_PROJECT,
+            CLAUDE_SCOPE_LOCAL,
+        }:
+            if plugin.project_path is None or target.project_path is None:
+                continue
+            if _normalized_path(plugin.project_path) == _normalized_path(
+                target.project_path
+            ):
+                return plugin
+            continue
+    return None
+
+
+def _claude_marketplace_repair_command(
+    base_command: tuple[str, ...],
+    *,
+    target: ClaudeMarketplaceRepairTarget,
+    argument: str,
+) -> tuple[str, ...]:
+    if target.scope is None:
+        return (*base_command, argument)
+    return (*base_command, "--scope", target.scope, argument)
 
 
 def _restore_claude_plugins(
@@ -574,7 +809,14 @@ def _restore_claude_plugins(
     for plugin in plugins:
         cwd = _claude_restore_cwd(plugin)
         install = (*CLAUDE_PLUGIN_INSTALL_COMMAND, "--scope", plugin.scope, plugin.ref)
-        _run_json_command(list(install), runner=runner, cwd=cwd)
+        _run_claude_plugin_restore_command(
+            install,
+            runner=runner,
+            cwd=cwd,
+            already_satisfied_fragment=CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT,
+            plugin_ref=plugin.ref,
+            plugin_scope=plugin.scope,
+        )
         commands.append(install)
         state_command = (
             CLAUDE_PLUGIN_ENABLE_COMMAND
@@ -582,14 +824,42 @@ def _restore_claude_plugins(
             else CLAUDE_PLUGIN_DISABLE_COMMAND
         )
         restore_state = (*state_command, "--scope", plugin.scope, plugin.ref)
-        _run_json_command(list(restore_state), runner=runner, cwd=cwd)
+        _run_claude_plugin_restore_command(
+            restore_state,
+            runner=runner,
+            cwd=cwd,
+            already_satisfied_fragment=(
+                CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT
+                if plugin.enabled
+                else CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT
+            ),
+            plugin_ref=plugin.ref,
+            plugin_scope=plugin.scope,
+        )
         commands.append(restore_state)
     return tuple(commands)
 
 
+def _claude_plugin_snapshot_cwd(
+    repair_targets: tuple[ClaudeMarketplaceRepairTarget, ...],
+) -> Path | None:
+    for target in repair_targets:
+        if target.project_path is not None:
+            return target.project_path
+    return None
+
+
 def _claude_restore_cwd(plugin: ClaudeInstalledPlugin) -> Path | None:
+    if plugin.restore_cwd is not None:
+        return plugin.restore_cwd
     if plugin.scope in {"project", "local"}:
         return plugin.project_path
+    return None
+
+
+def _claude_repair_cwd(target: ClaudeMarketplaceRepairTarget) -> Path | None:
+    if target.scope in {CLAUDE_SCOPE_PROJECT, CLAUDE_SCOPE_LOCAL}:
+        return target.project_path
     return None
 
 
@@ -600,6 +870,120 @@ def _source_matches(source: MarketplaceSource | None, root: Path) -> bool:
         and source.path is not None
         and _normalized_path(source.path) == root
     )
+
+
+def _scoped_claude_source_matches(
+    source: MarketplaceSource,
+    root: Path,
+    project_root: Path,
+) -> bool:
+    if not _source_matches(source, root):
+        return False
+    if source.scope == CLAUDE_SCOPE_USER:
+        return True
+    if source.scope in {CLAUDE_SCOPE_PROJECT, CLAUDE_SCOPE_LOCAL}:
+        return (
+            source.project_path is not None
+            and _normalized_path(source.project_path) == project_root
+        )
+    return False
+
+
+def _claude_runtime_source_matches(
+    source: MarketplaceSource | None,
+    root: Path,
+    project_root: Path,
+) -> bool:
+    if source is None:
+        return False
+    if source.scope in {CLAUDE_SCOPE_PROJECT, CLAUDE_SCOPE_LOCAL}:
+        return _scoped_claude_source_matches(source, root, project_root)
+    return _source_matches(source, root)
+
+
+def _default_claude_settings_paths(project_root: Path) -> ClaudeSettingsPaths:
+    return ClaudeSettingsPaths(
+        user=Path.home() / ".claude" / "settings.json",
+        project=project_root / ".claude" / "settings.json",
+        local=project_root / ".claude" / "settings.local.json",
+    )
+
+
+def _claude_marketplace_sources_from_settings(
+    marketplace: str,
+    settings_paths: ClaudeSettingsPaths,
+    *,
+    project_root: Path,
+) -> tuple[MarketplaceSource, ...]:
+    sources = (
+        _claude_marketplace_source_from_settings(
+            marketplace,
+            settings_paths.user,
+            scope=CLAUDE_SCOPE_USER,
+            project_root=None,
+        ),
+        _claude_marketplace_source_from_settings(
+            marketplace,
+            settings_paths.project,
+            scope=CLAUDE_SCOPE_PROJECT,
+            project_root=project_root,
+        ),
+        _claude_marketplace_source_from_settings(
+            marketplace,
+            settings_paths.local,
+            scope=CLAUDE_SCOPE_LOCAL,
+            project_root=project_root,
+        ),
+    )
+    return tuple(source for source in sources if source is not None)
+
+
+def _claude_marketplace_source_from_settings(
+    marketplace: str,
+    path: Path,
+    *,
+    scope: str,
+    project_root: Path | None,
+) -> MarketplaceSource | None:
+    settings_file = _claude_settings_file_path(path, project_root=project_root)
+    if not settings_file.is_file():
+        return None
+    try:
+        data = json.loads(settings_file.read_text())
+    except json.JSONDecodeError as exc:
+        raise MarketplaceSourceError(
+            f"Claude Code settings file is not valid JSON: {settings_file}: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise MarketplaceSourceError(
+            f"Claude Code settings file is not an object: {settings_file}"
+        )
+    marketplaces = data.get("extraKnownMarketplaces")
+    if not isinstance(marketplaces, dict):
+        return None
+    entry = marketplaces.get(marketplace)
+    if not isinstance(entry, dict):
+        return None
+    source = entry.get("source")
+    if not isinstance(source, dict):
+        return None
+    source_type = _normalized_source_type(source)
+    path_base = project_root or path.parent
+    return MarketplaceSource(
+        name=marketplace,
+        source_type=source_type,
+        path=_path_field_relative_to(source, source_type, path_base),
+        url=_url_field(source, source_type),
+        scope=scope,
+        project_path=project_root,
+    )
+
+
+def _claude_settings_file_path(path: Path, *, project_root: Path | None) -> Path:
+    expanded = path.expanduser()
+    if expanded.is_absolute() or project_root is None:
+        return expanded
+    return project_root / expanded
 
 
 def _run_json_command(
@@ -619,6 +1003,53 @@ def _run_json_command(
             f"{' '.join(command)} exited {result.returncode}{detail}"
         )
     return result
+
+
+def _run_claude_plugin_restore_command(
+    command: tuple[str, ...],
+    *,
+    runner: CommandRunner,
+    cwd: Path | None,
+    already_satisfied_fragment: str,
+    plugin_ref: str,
+    plugin_scope: str,
+) -> subprocess.CompletedProcess[str]:
+    if cwd is None:
+        result = runner(list(command))
+    else:
+        result = runner(list(command), cwd=cwd)
+    if result.returncode == 0:
+        return result
+    stderr = (result.stderr or "").strip()
+    if _is_claude_plugin_already_satisfied_error(
+        command,
+        stderr=stderr,
+        already_satisfied_fragment=already_satisfied_fragment,
+        plugin_ref=plugin_ref,
+        plugin_scope=plugin_scope,
+    ):
+        return result
+    detail = f": {stderr}" if stderr else ""
+    raise MarketplaceSourceError(
+        f"{' '.join(command)} exited {result.returncode}{detail}"
+    )
+
+
+def _is_claude_plugin_already_satisfied_error(
+    command: tuple[str, ...],
+    *,
+    stderr: str,
+    already_satisfied_fragment: str,
+    plugin_ref: str,
+    plugin_scope: str,
+) -> bool:
+    action = command[2]
+    idempotent_message = (
+        f'Plugin "{plugin_ref}" is {already_satisfied_fragment} at {plugin_scope} scope'
+    )
+    plain = f'Failed to {action} plugin "{plugin_ref}": {idempotent_message}'
+    decorated = f"\u2718 {plain}"
+    return stderr in {plain, decorated}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -671,10 +1102,16 @@ __all__ = [
     "CLAUDE_MARKETPLACE_ADD_COMMAND",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
     "CLAUDE_MARKETPLACE_REMOVE_COMMAND",
+    "CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT",
+    "CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT",
+    "CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT",
     "CLAUDE_PLUGIN_DISABLE_COMMAND",
     "CLAUDE_PLUGIN_ENABLE_COMMAND",
     "CLAUDE_PLUGIN_INSTALL_COMMAND",
     "CLAUDE_PLUGIN_LIST_COMMAND",
+    "CLAUDE_SCOPE_LOCAL",
+    "CLAUDE_SCOPE_PROJECT",
+    "CLAUDE_SCOPE_USER",
     "CODEX_MARKETPLACE_ADD_COMMAND",
     "CODEX_MARKETPLACE_LIST_COMMAND",
     "CODEX_MARKETPLACE_REMOVE_COMMAND",
@@ -684,6 +1121,8 @@ __all__ = [
     "SOURCE_TYPE_GIT",
     "SOURCE_TYPE_LOCAL",
     "ClaudeInstalledPlugin",
+    "ClaudeMarketplaceRepairTarget",
+    "ClaudeSettingsPaths",
     "CodexDistPlugin",
     "CommandRunner",
     "MarketplaceConfigRepairResult",
