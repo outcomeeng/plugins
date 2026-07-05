@@ -135,7 +135,7 @@ If the assertion could be unfulfilled while the suite passes, REJECT — "misali
 Name a concrete mutation to the producing artifact that would make at least one case fail. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization. Write it down:
 
 ```text
-Producer: ${CLAUDE_SKILL_DIR}/../manage-pr/SKILL.md
+Producer: the /manage-pr skill's post-merge guidance section
 Mutation: replace the post-merge marketplace sync rule with unrelated text
 Impact: the post-merge-sync-required case returns REJECT because the producer omits the required follow-up
 ```
