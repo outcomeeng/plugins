@@ -147,8 +147,7 @@ Once unblocked:
 ## Hand-off
 
 The CLI capability is spec-tree-methodology work in the external spx repo, the
-same shape as the spx-CLI hand-offs tracked under
-`spx/21-spec-tree.enabler/76-sessions.enabler/PLAN.md`. Build and test
+same shape as other SPX-CLI methodology hand-offs. Build and test
 `spx spec context` there against the contract above; return here for the
 consumption slice once it is published and the floor is advanced.
 

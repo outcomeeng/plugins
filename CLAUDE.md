@@ -387,7 +387,7 @@ enabled = false
 ```
 
 <!-- BEGIN MANAGED SPEC TREE INSTRUCTIONS -->
-<!-- spec-tree-template-version: 0.21.5 -->
+<!-- spec-tree-template-version: 0.21.6 -->
 <!-- spec-tree-template-source: spec-tree -->
 <!-- spec-tree-languages: python -->
 

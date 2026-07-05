@@ -24,8 +24,8 @@ If NO spec-tree nodes were involved in this session, use `AskUserQuestion`:
     "multiSelect": false,
     "options": [
       { "label": "Create a node now", "description": "Pause handoff to author a node that captures this work, then resume." },
-      { "label": "Exploratory / cross-cutting", "description": "Work doesn't belong to a specific node (infrastructure, tooling, research). Proceed with justification." },
-      { "label": "Plugin / methodology work", "description": "Work was on the plugin or methodology itself, not on product specs." }
+      { "label": "Exploratory / cross-cutting", "description": "Work belongs to the product but not to a specific node. Proceed with justification." },
+      { "label": "Product-level operations", "description": "Work changed operational state or product-wide guidance rather than a node-local spec." }
     ]
   }]
 }

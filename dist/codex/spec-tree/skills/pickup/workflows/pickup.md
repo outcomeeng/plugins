@@ -20,11 +20,11 @@ Before asking the operator to continue, build a no-surprises proposal. The opera
 
 - Expected outcome — what product or workflow state will be true if continuation succeeds.
 - Current classification — `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`.
-- Changed surface — specs, skills, references, scripts, generated output, source files, workflow files, branch, PR, or session surfaces likely affected.
+- Changed product surface — the product-defining artifacts or behaviors likely affected: specs, skills, references, scripts, generated output, source files, workflow files, methodology or skill content when the product ships it, or other domain surfaces. Branches, PRs, and session records are transport or lifecycle surfaces; place them under inspection references or remaining-work expectation instead.
 - Planned skill path — methodology, authoring, testing, audit, review, commit, merge, or lifecycle skills expected before completion.
 - Evidence infrastructure — known test files, harnesses, generators, fixtures, evals, audit agents, review agents, generated artifacts, and validation commands the work is expected to touch or depend on.
 - Verification plan — deterministic commands and agentic gates expected before reporting completion.
-- Inspection surface — where the operator can inspect the result: PR, commit, local file paths, generated `dist/` paths, session id, run token, or command output summary.
+- Inspection references — where the operator can inspect the result: PR, commit, local file paths, generated `dist/` paths, session id, run token, or command output summary.
 - Remaining-work expectation — whether completion leaves no continuation, creates or updates a coordination note, parks on an external blocker, or defers to an existing session owner.
 
 The proposal does not need to enumerate every eventual file. It must name the known surfaces and evidence categories clearly enough that approval does not hide foreseeable work. After the operator approves continuation, avoid surprises: if a new required skill, evidence surface, external dependency, ownership conflict, or verification class appears that was not represented in the proposal, stop at the next safe checkpoint and present the delta before continuing.
@@ -158,11 +158,11 @@ Evidence:
 
 Work proposal:
 - Expected outcome: [plain-English end state]
-- Changed surface: [likely specs / skills / references / scripts / generated output / source / workflow / branch / PR / session surfaces]
+- Changed product surface: [likely specs / skills / references / scripts / generated output / source / workflow / methodology or other domain surfaces]
 - Skill path: [planned skills and lifecycle gates]
 - Evidence infrastructure: [tests / harnesses / generators / fixtures / evals / audit agents / review agents / generated artifacts / validation commands]
 - Verification: [deterministic commands and agentic gates expected]
-- Inspection: [where the operator can inspect the result]
+- Inspection references: [where the operator can inspect the result]
 - Remaining work expectation: [none | coordination note | external blocker | existing owner]
 
 Recommended next action: [specific action]

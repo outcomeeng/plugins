@@ -193,16 +193,16 @@ NEVER delete todo or doing sessions. `--prune` only affects archive.
 </archive_claimed_sessions>
 
 <confirm>
-State a human-readable closeout first, then the session mechanics. The operator has not read the command output, the PR page, or the changed files. A merge receipt or archive receipt alone is not enough.
+State a human-readable closeout first, then the session mechanics. The operator has not read the command output, changed files, rendered result, logs, or external records. A merge receipt or archive receipt alone is not enough.
 
 The closeout MUST include:
 
-- **Product outcome**: what capability, behavior, document, skill, page, test, or infrastructure state is now true in product terms. Say what changed for the user or maintainer, not only which branch or session changed.
-- **Changed surface**: the meaningful files, sections, generated outputs, running service, or deployed surface. For skill and plugin work, name authored source and generated runtime output when both changed. For web app work, name the page or flow and the running URL when one exists. For pull-request work, include the PR URL.
-- **Human-readable change summary**: the key sections, controls, behaviors, checks, or workflow rules changed, written so the operator can inspect the result without reconstructing it from the diff.
-- **Verification evidence**: commands, audits, reviews, CI checks, screenshots, or manual inspections that passed, including exact session ids, run ids, PR numbers, or commit SHAs verbatim when they are part of the evidence.
-- **Inspection surface**: a PR URL, merged commit, local file path, running URL, screenshot path, generated artifact path, or other place the operator can inspect the result. Include whichever surfaces apply; omit unavailable surfaces rather than inventing one.
-- **Delivered state**: one concise field naming where the work now lives — default branch on origin, local branch, running dev server, generated plugin install, archived session state, or intentionally local output. This field never becomes the closeout title or first section.
+- **Product outcome**: what capability, behavior, document, page, test, infrastructure state, or other product-defining artifact or behavior is now true in the repository being worked. Read the product spec when product intent is needed to frame the outcome, then connect the work to that intent only at the level that helps the operator understand it. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. NOT: which branch or session changed.
+- **Changed product surface**: the product-defining artifacts or behaviors that changed: source files, generated outputs, documentation sections, APIs, commands, pages, workflows, services, deployments, data projections, configuration, methodology or skill content when the product ships it, or other domain surfaces. Do not list transport-only records such as pull requests, merge commits, branch deletion, or session archive ids here; those belong under evidence, inspection references, delivered state, or session mechanics.
+- **Human-readable change summary**: the key behaviors, rules, sections, controls, checks, outputs, or workflows changed, written so the operator can understand the result without reconstructing it from the diff.
+- **Verification evidence**: commands, audits, reviews, CI checks, screenshots, manual inspections, run ids, session ids, PR numbers, commit SHAs, or other proof that passed. Reproduce identity values verbatim when they are part of the evidence.
+- **Inspection references**: places the operator can inspect the result or its evidence: local file paths, generated artifact paths, rendered pages, running URLs, deployed URLs, PR URLs, merged commits, screenshots, journal runs, logs, or external records. Include whichever references apply; omit unavailable references rather than inventing one.
+- **Delivered state**: one concise field naming where the work now lives — default branch on origin, local branch, running service, deployed environment, generated install, archived session state, or intentionally local output. This field never becomes the closeout title or first section.
 - **Remaining work**: open follow-up only when one exists, with its owner or tracking location. Say when none remains for this closure.
 - **Remaining Branches**: for merge lifecycle closeout, group branch state under exactly four labels — **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**. Include full branch names and full commit SHAs.
 
@@ -210,7 +210,7 @@ When closing after a default-branch merge, compute or preserve the merge transpo
 
 Apply the cleanup policy before writing the closeout: delete a still-existing remote feature branch through the approved merge lifecycle deletion command; delete a local feature branch only when it exists, tracks a gone upstream, and is fully merged into `origin/<base>`; delete a no-remote preservation branch when all substantive commits are present on `origin/<base>` by ancestry or patch equivalence unless the branch name or operator instruction marks retained evidence. Never delete a branch checked out in another live worktree; report the exact worktree path and branch. Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`; report the unmatched full SHAs and keep it.
 
-Use domain-specific closeout content. In a plugin marketplace repository, a useful closeout usually names the skill or spec-tree behavior changed, authored source paths, generated `dist/` paths when regenerated, verification commands, auditor or reviewer verdict ids, PR URL, merged commit, marketplace sync status, and any active PLAN.md or ISSUES.md continuation. In a web app, a useful closeout usually names the changed page or flow, the running URL, the test page or route, browser verification, screenshots if captured, and any known UI follow-up.
+Adapt the closeout to the product domain. Use the product spec as context for what the product is when that context clarifies the outcome, while keeping the outcome proportional to the change. Examples: an application change names the changed page, flow, API, service, or deployment and the relevant runtime URL or screenshot; a library or CLI change names the changed command, projection, schema, output contract, or public API and the command evidence; a documentation or methodology change names the changed document, workflow, skill, generated output when applicable, and audit or review evidence. Keep transport records separate from product surfaces.
 
 <rejected_delivered_state_receipt>
 
@@ -220,12 +220,12 @@ NEVER replace the product closeout with a section headed `Delivered state` whose
 Delivered state:
 - Merge commit: <full-sha>
 - PR head merged: <full-sha>
-- Marketplace source worktree fast-forwarded
+- Default branch fast-forwarded
 - Sync command passed
 - Session <session-id> archived
 ```
 
-Why it fails: the operator still has to reconstruct the product outcome, changed surface, workflow behavior, verification meaning, inspection surface, and remaining-work state from mechanics. If these facts matter, place them under **Verification evidence**, **Inspection surface**, **Delivered state**, **Remaining work**, **Remaining Branches**, or the session-mechanics block after the product summary.
+Why it fails: the operator still has to reconstruct the product outcome, changed product surface, workflow behavior, verification meaning, inspection references, and remaining-work state from mechanics. If these facts matter, place them under **Verification evidence**, **Inspection references**, **Delivered state**, **Remaining work**, **Remaining Branches**, or the session-mechanics block after the product summary.
 
 </rejected_delivered_state_receipt>
 
