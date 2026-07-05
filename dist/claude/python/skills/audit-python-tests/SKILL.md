@@ -27,7 +27,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 
 <objective>
-A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence.
+A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence gap.
 </objective>
 
 <constraints>
@@ -53,8 +53,12 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 </audit_scope>
 
 <no_deterministic_verification>
-This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The main agent brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the main agent owns, not a step this audit re-pays.
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The caller brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the caller owns, not a step this audit re-pays.
 </no_deterministic_verification>
+
+<test_file_declarations>
+Apply the base `/audit-tests` declaration screen before coupling. Any Python assignment, annotated assignment, named expression, loop binding, context-manager binding, exception binding, pattern binding, pytest fixture parameter, or property-generated parameter in an executed test file is a `test_owned_declaration` finding. Local functions are findings when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary. Name the right owner for the value or configuration: production source contract, `product_testing.harnesses.*`, `product_testing.generators.*`, inert fixture data, or eval case data.
+</test_file_declarations>
 
 <coupling_audit>
 Classify imports by runtime coupling:
@@ -201,7 +205,7 @@ When two or more in-scope tests repeat setup or infrastructure logic, reject the
 | Domain-shaped input construction with variable values | `product_testing.generators.*`      |
 | Real-world payload samples                            | `product_testing/fixtures/` as data |
 
-Do not recommend `tests/helpers`, `tests/support`, node-local helper modules, or fixture body code in `conftest.py`.
+Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructure modules, or fixture body code in `conftest.py`.
 </architectural_dry_audit>
 
 </audit_workflow>

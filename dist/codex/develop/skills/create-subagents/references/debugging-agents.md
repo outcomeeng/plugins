@@ -10,6 +10,19 @@
 
 </table_of_contents>
 
+<table_of_contents>
+
+- `<core_challenges>` — non-determinism, emergent behavior, black-box execution, and context failures
+- `<debugging_approaches>` — logging, tracing, evaluator agents, and dedicated validators
+- `<common_failure_types>` — hallucinations, format errors, prompt injection, workflow gaps, and tool misuse
+- `<diagnostic_procedures>` — systematic diagnosis steps
+- `<quick_diagnostic_checklist>` — compact investigation checklist
+- `<remediation_strategies>` — prompt specificity and issue context
+- `<anti_patterns>` — debugging mistakes to reject
+- `<monitoring>` — metrics, alerting, dashboards, and continuous improvement
+
+</table_of_contents>
+
 <core_challenges>
 
 <non_determinism>
@@ -203,7 +216,7 @@ model: sonnet
 ---
 
 <role>
-You are a validation specialist. Check subagent outputs for quality issues.
+Claude is a validation specialist. Check subagent outputs for quality issues.
 </role>
 
 <validation_checks>
@@ -527,11 +540,11 @@ Before using a tool, ask:
 
 ```markdown
 Before (generic):
-<role>You are a code reviewer.</role>
+<role>Claude is a code reviewer.</role>
 
 After (specific):
 <role>
-You are a senior security engineer specializing in web application vulnerabilities.
+Claude is a senior security engineer specializing in web application vulnerabilities.
 Focus on OWASP Top 10, authentication flaws, and data exposure risks.
 </role>
 ```

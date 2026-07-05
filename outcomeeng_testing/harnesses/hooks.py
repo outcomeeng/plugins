@@ -11,8 +11,7 @@ repository — every run is hermetic. ``spx`` is resolved from the inherited
 ``PATH``; a caller drives the disabled-or-absent guard branches by overriding the
 kill-switch env var or the ``PATH``.
 
-Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
-none.
+Exception case: none.
 """
 
 from __future__ import annotations

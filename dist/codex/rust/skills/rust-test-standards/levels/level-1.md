@@ -78,13 +78,11 @@ impl CommandRunner for RecordingRunner {
 
 ```rust
 use product_testing::fixtures::configs::fast_mode_config;
-use product_testing::harnesses::filesystem::with_temp_config;
+use product_testing::harnesses::filesystem::assert_loads_config_from_temp_dir;
 
 #[test]
 fn loads_config_from_temp_dir() {
-    with_temp_config(fast_mode_config(), |config_path, expected| {
-        assert_eq!(load_config(config_path).unwrap().mode, expected.mode);
-    });
+    assert_loads_config_from_temp_dir(fast_mode_config(), load_config);
 }
 ```
 
@@ -94,14 +92,11 @@ fn loads_config_from_temp_dir() {
 
 ```rust
 use product_testing::generators::keys::canonical_key_strings;
-use product_testing::harnesses::properties::check_property;
+use product_testing::harnesses::properties::assert_canonical_key_roundtrips;
 
 #[test]
 fn canonical_key_roundtrips() {
-    check_property(canonical_key_strings(), |input| {
-        prop_assert_eq!(CanonicalKey::parse(&input).unwrap().as_str(), input);
-        Ok(())
-    });
+    assert_canonical_key_roundtrips(canonical_key_strings(), CanonicalKey::parse);
 }
 ```
 

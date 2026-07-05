@@ -10,7 +10,7 @@ Do not hide remote complexity inside production modules. Route credentials, base
 
 <test_shape>
 
-- Read documented credentials or managed test-account helpers.
+- Read documented credentials or managed test-account harness functions.
 - Fail loudly when selected evidence requires missing credentials.
 - Never use `it.skip`, `it.skipIf`, or `test.skip`; when credentials or services are absent, throw with a clear diagnostic.
 - Keep remote contract assertions narrow and tied to the spec assertion.
@@ -27,22 +27,13 @@ Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3
 
 ```typescript
 import { WEBHOOK_ACCEPTED_STATUS } from "@/stripe-webhook";
-import { stripeEventFixturePath, submitSignedFixture } from "@testing/harnesses/stripe";
-import { withStripeCredentials } from "@testing/harnesses/stripe/credentials";
+import { assertSignedStripeFixtureAccepted } from "@testing/harnesses/stripe";
 import { describe, expect, it } from "vitest";
 
 describe("Stripe webhook contract", () => {
-  it(
-    "accepts signed fixture events through the remote contract endpoint",
-    withStripeCredentials(async (credentials) => {
-      await expect(
-        submitSignedFixture({
-          token: credentials.token,
-          fixturePath: stripeEventFixturePath(),
-        }),
-      ).resolves.toMatchObject({ status: WEBHOOK_ACCEPTED_STATUS });
-    }),
-  );
+  it("accepts signed fixture events through the remote contract endpoint", async () => {
+    await expect(assertSignedStripeFixtureAccepted()).resolves.toMatchObject({ status: WEBHOOK_ACCEPTED_STATUS });
+  });
 });
 ```
 

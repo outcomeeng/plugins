@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, cast
 
 from hypothesis import given, seed, settings
 
+from outcomeeng import declaration_scan
 from outcomeeng.test_evidence import (
     AuditCase,
     AuditStatus,
     COUPLING_TAXONOMY_CATEGORIES,
     CouplingEvidence,
-    FindingTarget,
     FindingCategory,
+    FindingTarget,
     LiteralOrigin,
     MIN_COUPLING_TAXONOMY_CATEGORIES,
     UNTESTABLE_SOURCE_SKIPPED_CHECKS,
@@ -62,6 +61,30 @@ def coupling_taxonomy_property(test_func: Callable[..., None]) -> Callable[[], N
             raise
 
     return wrapper
+
+
+def property_failure_notes_include_seed_and_replay() -> bool:
+    def always_fails(category: CouplingEvidence) -> None:
+        assert category not in COUPLING_TAXONOMY_CATEGORIES
+
+    try:
+        coupling_taxonomy_property(always_fails)()
+    except AssertionError as error:
+        notes = getattr(error, "__notes__", ())
+        return (
+            f"Hypothesis seed: {AUDIT_TESTS_PROPERTY_SEED}" in notes
+            and f"Replay path: {AUDIT_TESTS_PROPERTY_REPLAY_PATH}" in notes
+        )
+    return False
+
+
+def coupling_taxonomy_classifies_distinct_failure_modes() -> bool:
+    @coupling_taxonomy_property
+    def assertion(category: CouplingEvidence) -> None:
+        assert coupling_taxonomy_category_is_distinct_failure_mode(category)
+
+    assertion()
+    return True
 
 
 def untestable_source_targets_source() -> bool:
@@ -211,31 +234,35 @@ def prose_coupling_is_rejected() -> bool:
     )
 
 
-def test_owned_declaration_is_rejected() -> bool:
-    declarations = _declarations_for_fixture("test_owned_declaration.py")
+def owned_declaration_is_rejected() -> bool:
+    declarations = _declarations_for_fixture("python_test_owned_declaration_fixture.py")
     if any(
         declaration.name == "mapping_runs" and declaration.kind == "variable"
         for declaration in declarations
     ):
+        verdict = audit_case_verdict(_audit_case(declarations=True))
         return (
-            audit_case_verdict(_audit_case(declarations=True)).finding_category
-            is FindingCategory.TEST_OWNED_DECLARATION
+            verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
+            and verdict.finding_target is FindingTarget.TEST_FILE
         )
     return False
 
 
-def helper_function_declaration_is_rejected() -> bool:
-    declarations = _declarations_for_fixture("async_helper_declaration.ts")
+def local_function_declaration_is_rejected() -> bool:
+    declarations = _declarations_for_fixture("async_local_function_declaration.ts")
     if not _has_function(declarations, "loadCredentials"):
         return False
+    verdict = audit_case_verdict(_audit_case(declarations=True))
     return (
-        audit_case_verdict(_audit_case(declarations=True)).finding_category
-        is FindingCategory.TEST_OWNED_DECLARATION
+        verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
+        and verdict.finding_target is FindingTarget.TEST_FILE
     )
 
 
 def owned_declaration_categories_are_rejected() -> bool:
-    declarations = _declarations_for_fixture("test_owned_declaration_categories.py")
+    declarations = _declarations_for_fixture(
+        "python_test_owned_declaration_categories_fixture.py"
+    )
     expected_declarations = {
         "test_data",
         "expected_output",
@@ -248,10 +275,11 @@ def owned_declaration_categories_are_rejected() -> bool:
         "harness_behavior",
     }
     observed_declarations = {declaration.name for declaration in declarations}
+    verdict = audit_case_verdict(_audit_case(declarations=True))
     return (
         expected_declarations <= observed_declarations
-        and audit_case_verdict(_audit_case(declarations=True)).finding_category
-        is FindingCategory.TEST_OWNED_DECLARATION
+        and verdict.finding_category is FindingCategory.TEST_OWNED_DECLARATION
+        and verdict.finding_target is FindingTarget.TEST_FILE
     )
 
 
@@ -262,11 +290,12 @@ def positive_pattern_is_reported() -> bool:
     )
 
 
-def async_helper_declarations_are_detected() -> bool:
+def async_local_function_declarations_are_detected() -> bool:
     return _has_function(
-        _declarations_for_fixture("async_helper_declaration.ts"), "loadCredentials"
+        _declarations_for_fixture("async_local_function_declaration.ts"),
+        "loadCredentials",
     ) and _has_function(
-        _declarations_for_fixture("async_helper_declaration.rs"), "setup"
+        _declarations_for_fixture("async_local_function_declaration.rs"), "setup"
     )
 
 
@@ -306,6 +335,34 @@ def python_starred_assignment_declarations_are_detected() -> bool:
 def python_exception_declarations_are_detected() -> bool:
     declarations = _declarations_for_fixture("python_exception_declaration.py")
     return _has_variable(declarations, "error")
+
+
+def python_parameter_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """def test_property_case(tmp_path: Path, category: CouplingEvidence) -> None:
+    assert category
+""",
+        Path("python-parameters.py"),
+    )
+    return _has_variable(declarations, "tmp_path") and _has_variable(
+        declarations, "category"
+    )
+
+
+def python_test_function_wrappers_are_not_owned_declarations() -> bool:
+    declarations = _scanner().scan_text(
+        """def test_property_case() -> None:
+    assert True
+
+
+def helper_case() -> None:
+    assert True
+""",
+        Path("python-test-wrapper.py"),
+    )
+    return not _has_function(declarations, "test_property_case") and _has_function(
+        declarations, "helper_case"
+    )
 
 
 def block_comment_declarations_are_ignored() -> bool:
@@ -354,6 +411,41 @@ def typescript_multiline_declarations_are_detected() -> bool:
         and _has_variable(declarations, "output")
         and _has_variable(declarations, "configured")
         and not _has_variable(declarations, "expected")
+    )
+
+
+def typescript_typed_destructuring_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture(
+        "typescript_typed_destructuring_declaration.ts"
+    )
+    return (
+        _has_variable(declarations, "input")
+        and _has_variable(declarations, "output")
+        and _has_variable(declarations, "root")
+        and _has_variable(declarations, "rest")
+        and _has_variable(declarations, "first")
+        and _has_variable(declarations, "second")
+        and _has_variable(declarations, "loopInput")
+        and _has_variable(declarations, "loopExpected")
+        and _has_variable(declarations, "request")
+        and _has_variable(declarations, "page")
+        and _has_variable(declarations, "propertyInput")
+        and _has_variable(declarations, "propertyExpected")
+        and _has_variable(declarations, "source")
+        and _has_variable(declarations, "checksSource")
+        and _has_variable(declarations, "runtimePredicate")
+        and _has_variable(declarations, "runtimeValue")
+        and _has_variable(declarations, "afterUnterminatedType")
+        and _has_variable(declarations, "afterUnterminatedRuntime")
+        and not _has_variable(declarations, "Case")
+        and not _has_variable(declarations, "Pair")
+        and not _has_variable(declarations, "expected")
+        and not _has_variable(declarations, "nested")
+        and not _has_variable(declarations, "typeOnly")
+        and not _has_variable(declarations, "multilineTypeOnly")
+        and not _has_variable(declarations, "unterminatedTypeOnly")
+        and not _has_variable(declarations, "interfaceTypeOnly")
+        and not _has_variable(declarations, "typeAnnotationOnly")
     )
 
 
@@ -574,7 +666,7 @@ def rust_raw_string_declarations_are_ignored() -> bool:
     return (
         _has_variable(declarations, "actual")
         and not _has_variable(declarations, "expected")
-        and not _has_function(declarations, "helper")
+        and not _has_function(declarations, "local_function")
     )
 
 
@@ -681,19 +773,7 @@ def _audit_case(
 
 
 def _scanner() -> DeclarationScanner:
-    module_path = Path(
-        Path(__file__).resolve().parents[2],
-        "src/plugins/spec-tree/skills/audit-tests/scripts/declaration_scan.py",
-    )
-    spec = importlib.util.spec_from_file_location(
-        "audit_tests_declaration_scan", module_path
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load declaration scanner from {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return cast(DeclarationScanner, module)
+    return cast(DeclarationScanner, declaration_scan)
 
 
 def _fixture(name: str) -> Path:

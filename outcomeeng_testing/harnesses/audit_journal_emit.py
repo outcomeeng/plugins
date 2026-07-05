@@ -14,9 +14,9 @@ sibling (``verdict.py``) and cross-skill (``journal_projection.py``) imports
 relative to its ``__file__``, so loading it here triggers no ``sys.path``
 dependency.
 
-The harness lives in ``outcomeeng_testing/harnesses/`` per
-``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is production
-code with its home outside ``tests/`` and outside ``spx/``.
+The harness lives in ``outcomeeng_testing/harnesses/`` because shared test
+scaffolding is production code with its home outside ``tests/`` and outside
+``spx/``.
 """
 
 from __future__ import annotations

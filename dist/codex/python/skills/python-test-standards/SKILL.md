@@ -80,7 +80,7 @@ Where the *values* the cases use live:
 | Whole-payload real-world sample                              | An inert fixture file under `product_testing/fixtures/`, read by path         |
 | One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                              |
 
-Executed Python test files are typed assertion files. They do not own variable or constant declarations for test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, or source-owned singleton shapes. Put those choices in `product_testing/harnesses/`, `product_testing/generators/`, inert whole-payload fixtures, source contracts, or justified eval case data.
+Executed Python test files are typed assertion files. They do not declare variables, constants, pytest fixture parameters, or property-generated parameters; every value or configuration choice those bindings would carry belongs in `product_testing/harnesses/`, `product_testing/generators/`, inert whole-payload fixtures, source contracts, or justified eval case data.
 
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary — a hand-written key is a hand-picked case for the parser or consumer. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed.
 
@@ -245,12 +245,13 @@ Reject or rewrite these patterns:
 - Source-owned values copied into local constants
 - Test-file-local constants for values the production module owns
 - Variable or constant declarations in executed test files for data, expected outputs, runner settings, setup policy, fixture paths, generator choices, harness handles, diagnostics, or source-owned shapes
+- Pytest fixture parameters or property-generated parameters in executed test files; the harness owns fixture access and generated-case binding
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer
 - Hand-copied artifact field names from YAML, HCL, bash, JSON schema, or IaC templates as substitutes for imports from the Python module that should render or consume the artifact
 - Test-runner tuning values (timeouts, retries, polling intervals) declared at test scope when the harness that owns the resource should own the value
 - Hypothesis settings, seeds, run counts, deadlines, or replay policy declared in a test file instead of the property-test harness
 - Production modules created only to aggregate values for tests
-- Co-located helpers under `tests/`, `tests/helpers/`, `tests/support/`, or node-local support modules
+- Co-located test-infrastructure modules under `tests/`, `tests/helpers/`, `tests/support/`, or node-local support modules
 - Fixture body code in `conftest.py`
 - Pytest fixture body code under `product_testing/fixtures/`
 - Importing inert fixture files as Python modules
@@ -264,6 +265,7 @@ Python test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `test_<subject>.<evidence>.<level>[.<runner>].py`
+- Executed test files declare no variables, constants, fixture parameters, or property-generated parameters
 - Source architecture is improved before tests accept copied values, replacement mocks, or fixture laundering
 - Every test case has a documentable source outside the author's head — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
 - Source-owned values come from the owning production module; container keys are imported, not hand-written; runner-tuning values live on the harness that owns the resource

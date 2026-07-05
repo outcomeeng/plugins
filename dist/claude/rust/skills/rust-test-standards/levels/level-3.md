@@ -44,11 +44,7 @@ Remote API contract:
 ```rust
 #[tokio::test]
 async fn package_can_be_published_and_fetched() {
-    product_testing::harnesses::registry::with_sandbox_package(async |client, package_name| {
-        client.publish_fixture(package_name).await.unwrap();
-
-        assert_eq!(client.fetch_package(package_name).await.unwrap().name, package_name);
-    }).await;
+    product_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
 }
 ```
 
@@ -57,15 +53,7 @@ CLI against a real sandbox:
 ```rust
 #[test]
 fn sync_command_uploads_to_remote_sandbox() {
-    product_testing::harnesses::sandbox::with_sync_project(|project| {
-        assert_cmd::Command::cargo_bin("syncer")
-            .unwrap()
-            .current_dir(project.root())
-            .args(project.sync_args())
-            .assert()
-            .success()
-            .stdout(predicates::str::contains(project.success_output()));
-    });
+    product_testing::harnesses::sandbox::assert_sync_command_uploads_to_remote_sandbox();
 }
 ```
 

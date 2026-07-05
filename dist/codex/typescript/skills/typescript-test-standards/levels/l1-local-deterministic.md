@@ -45,18 +45,13 @@ This remains `l1` because the test calls deterministic source logic directly. Th
 
 ```typescript
 import { normalizeSourcePath } from "@/paths";
-import { arbitrarySourceFilePath } from "@testing/generators/paths";
+import { sourcePathNormalizationProperty } from "@testing/harnesses/paths/properties";
 import { assertProperty } from "@testing/harnesses/properties";
-import * as fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 describe("normalizeSourcePath", () => {
   it("normalizes generated source paths idempotently", () => {
-    assertProperty(
-      fc.property(arbitrarySourceFilePath(), (path) => {
-        expect(normalizeSourcePath(normalizeSourcePath(path))).toBe(normalizeSourcePath(path));
-      }),
-    );
+    assertProperty(sourcePathNormalizationProperty(normalizeSourcePath));
   });
 });
 ```
@@ -70,15 +65,12 @@ This remains `l1` because the test calls deterministic source logic directly and
 ```typescript
 import { writeNormalizedSourceManifest } from "@/manifest";
 import { createManifestScenario } from "@testing/generators/manifests";
-import { withTempManifestProject } from "@testing/harnesses/manifest";
-import { describe, expect, it } from "vitest";
+import { assertWritesNormalizedSourceManifest } from "@testing/harnesses/manifest";
+import { describe, it } from "vitest";
 
 describe("writeNormalizedSourceManifest", () => {
   it("writes normalized source paths in a temp product", async () => {
-    await withTempManifestProject(createManifestScenario(), async (project) => {
-      await writeNormalizedSourceManifest(project.writeOptions);
-      await expect(project.readManifest()).resolves.toEqual(project.expectedManifest);
-    });
+    await assertWritesNormalizedSourceManifest(createManifestScenario(), writeNormalizedSourceManifest);
   });
 });
 ```

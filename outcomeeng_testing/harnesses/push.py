@@ -4,7 +4,8 @@
 trace list so tests can assert invocation order across tool probes,
 upstream-ref capture, git push, and marketplace sync.
 
-Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
+Exception cases:
+
 - Stage 5 #2 (Interaction protocols): push's correctness depends on the
   presence and ordering of git/upstream/sync calls.
 - Stage 5 #4 (Safety): real push mutates origin and triggers marketplace
@@ -19,11 +20,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from outcomeeng.distribution.push import (
-    DRY_RUN_PUSH_FLAGS,
     GIT_TOOL,
-    HELP_PUSH_FLAGS,
-    NO_DRY_RUN_PUSH_FLAG,
-    PUSH_OPTION_FLAGS,
     REQUIRED_TOOLS,
     SYNC_COMMAND,
     UPSTREAM_REF_COMMAND,
@@ -32,6 +29,23 @@ from outcomeeng.distribution.push import (
     UpstreamProbe,
     parse_push_args,
     push,
+)
+from outcomeeng_testing.generators.push import (
+    clustered_dry_run_push_args,
+    clustered_git_help_push_args,
+    dry_run_push_args,
+    dry_run_then_no_dry_run_push_args,
+    force_with_lease_push_args,
+    git_help_push_args,
+    long_git_help_push_args,
+    push_failure_exit_code,
+    push_option_with_dry_run_operand_args,
+    recurse_submodules_bare_dry_run_args,
+    recurse_submodules_bare_help_args,
+    repo_option_with_dry_run_operand_args,
+    separator_repository_named_like_dry_run_args,
+    sync_failure_exit_code,
+    tracked_upstream_ref,
 )
 
 
@@ -53,120 +67,6 @@ def all_tool_probe_invocations() -> tuple[tuple[str, str], ...]:
 def sync_invocation(*args: str) -> tuple[str, ...]:
     """Return the sync command shape the push orchestrator invokes."""
     return (*SYNC_COMMAND, *args)
-
-
-def tracked_upstream_ref() -> str:
-    """Return a representative upstream ref captured before push."""
-    return "abc123"
-
-
-def push_failure_exit_code() -> int:
-    """Return a representative non-zero git-push failure code."""
-    return 7
-
-
-def sync_skip_failure_exit_code() -> int:
-    """Return a representative failure code for no-sync assertions."""
-    return 13
-
-
-def force_with_lease_push_args() -> tuple[str, ...]:
-    """Return a representative post-rebase git-push argument vector."""
-    return (
-        "--force-with-lease",
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def git_help_push_args() -> tuple[str, ...]:
-    """Return the git-push help flag that must pass through the wrapper."""
-    return ("-h",)
-
-
-def clustered_git_help_push_args() -> tuple[str, ...]:
-    """Return a clustered short option that Git treats as help."""
-    return ("-vh",)
-
-
-def long_git_help_push_args() -> tuple[str, ...]:
-    """Return the long git-push help flag."""
-    return (next(iter(sorted(HELP_PUSH_FLAGS - {"-h"}))),)
-
-
-def dry_run_push_args() -> tuple[str, ...]:
-    """Return representative git-push dry-run arguments."""
-    return (
-        next(iter(sorted(DRY_RUN_PUSH_FLAGS))),
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def clustered_dry_run_push_args() -> tuple[str, ...]:
-    """Return representative clustered short-option dry-run arguments."""
-    return (
-        "-vn",
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def dry_run_then_no_dry_run_push_args() -> tuple[str, ...]:
-    """Return push arguments where Git's positive dry-run flag is later cleared."""
-    return (
-        "--dry-run",
-        NO_DRY_RUN_PUSH_FLAG,
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def push_option_with_dry_run_operand_args() -> tuple[str, ...]:
-    """Return push arguments where a push-option value looks like dry-run."""
-    return (
-        next(iter(sorted(PUSH_OPTION_FLAGS))),
-        "-n",
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def repo_option_with_dry_run_operand_args() -> tuple[str, ...]:
-    """Return push arguments where a repository option value looks like dry-run."""
-    return (
-        "--repo",
-        "-n",
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def separator_repository_named_like_dry_run_args() -> tuple[str, ...]:
-    """Return push args where a post-separator repository looks like dry-run."""
-    return (
-        "--",
-        "-n",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def recurse_submodules_bare_dry_run_args() -> tuple[str, ...]:
-    """Return dry-run args after bare recurse-submodules."""
-    return (
-        "--recurse-submodules",
-        "--dry-run",
-        "origin",
-        "HEAD:refs/heads/feature",
-    )
-
-
-def recurse_submodules_bare_help_args() -> tuple[str, ...]:
-    """Return help args after bare recurse-submodules."""
-    return (
-        "--recurse-submodules",
-        "--help",
-    )
 
 
 def missing_required_tool_fails_fast_with_diagnostic() -> bool:
@@ -247,7 +147,7 @@ def upstream_probe_runs_before_git_push() -> bool:
 
 
 def sync_not_invoked_when_push_fails() -> bool:
-    runner = TracedRunner(exit_codes=(sync_skip_failure_exit_code(),))
+    runner = TracedRunner(exit_codes=(sync_failure_exit_code(),))
     tool_probe = TracedToolProbe(
         available=all_required_tools_available(), trace=runner.trace
     )
@@ -261,7 +161,7 @@ def sync_not_invoked_when_push_fails() -> bool:
     )
 
     return (
-        exit_code == sync_skip_failure_exit_code()
+        exit_code == sync_failure_exit_code()
         and runner.calls == [("git", "push", "origin", "main")]
         and all(call[:3] != sync_invocation()[:3] for call in runner.calls)
     )
@@ -385,7 +285,7 @@ def clustered_git_help_push_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(clustered_git_help_push_args())
 
 
-def git_help_push_checks_tools_and_skips_marketplace_upstream_capture() -> bool:
+def git_help_push_requires_only_git_and_skips_marketplace_upstream_capture() -> bool:
     runner = TracedRunner()
     tool_probe = TracedToolProbe(available=frozenset(), trace=runner.trace)
     upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
@@ -409,15 +309,34 @@ def git_help_push_checks_tools_and_skips_marketplace_upstream_capture() -> bool:
     )
 
 
+def git_help_push_forwards_when_only_git_is_available() -> bool:
+    runner = TracedRunner()
+    tool_probe = TracedToolProbe(available=frozenset((GIT_TOOL,)), trace=runner.trace)
+    upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
+    args = git_help_push_args()
+
+    exit_code = push(
+        args,
+        runner=runner,
+        tool_probe=tool_probe,
+        upstream_probe=upstream_probe,
+    )
+
+    return (
+        exit_code == 0
+        and tool_probe.queries == [GIT_TOOL]
+        and upstream_probe.calls == 0
+        and runner.trace == [tool_probe_invocation(GIT_TOOL), (GIT_TOOL, "push", *args)]
+    )
+
+
 def recurse_submodules_bare_dry_run_does_not_refresh_marketplace() -> bool:
     return _push_does_not_refresh_marketplace(recurse_submodules_bare_dry_run_args())
 
 
-def recurse_submodules_bare_help_checks_tools_and_skips_upstream_capture() -> bool:
+def recurse_submodules_bare_help_requires_only_git_and_skips_upstream_capture() -> bool:
     runner = TracedRunner()
-    tool_probe = TracedToolProbe(
-        available=all_required_tools_available(), trace=runner.trace
-    )
+    tool_probe = TracedToolProbe(available=frozenset((GIT_TOOL,)), trace=runner.trace)
     upstream_probe = ScriptedUpstreamProbe(tracked_upstream_ref(), runner.trace)
     args = recurse_submodules_bare_help_args()
 
@@ -430,9 +349,9 @@ def recurse_submodules_bare_help_checks_tools_and_skips_upstream_capture() -> bo
 
     return (
         exit_code == 0
-        and tool_probe.queries == list(REQUIRED_TOOLS)
+        and tool_probe.queries == [GIT_TOOL]
         and upstream_probe.calls == 0
-        and runner.trace == [*all_tool_probe_invocations(), (GIT_TOOL, "push", *args)]
+        and runner.trace == [tool_probe_invocation(GIT_TOOL), (GIT_TOOL, "push", *args)]
     )
 
 
@@ -549,16 +468,17 @@ __all__ = [
     "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",
-    "git_help_push_checks_tools_and_skips_marketplace_upstream_capture",
+    "git_help_push_forwards_when_only_git_is_available",
+    "git_help_push_requires_only_git_and_skips_marketplace_upstream_capture",
     "push_option_with_dry_run_operand_args",
     "recurse_submodules_bare_dry_run_args",
     "recurse_submodules_bare_dry_run_does_not_refresh_marketplace",
     "recurse_submodules_bare_help_args",
-    "recurse_submodules_bare_help_checks_tools_and_skips_upstream_capture",
+    "recurse_submodules_bare_help_requires_only_git_and_skips_upstream_capture",
     "repo_option_with_dry_run_operand_args",
     "separator_repository_named_like_dry_run_args",
     "push_failure_exit_code",
-    "sync_skip_failure_exit_code",
+    "sync_failure_exit_code",
     "sync_invocation",
     "tool_probe_invocation",
     "tracked_upstream_ref",

@@ -7,10 +7,9 @@ needs a real repo whose ``dist/`` and ``src/plugins/`` baselines are committed,
 so a test can introduce drift and an optional source edit and observe the report.
 
 ``dist_drift_repo()`` provisions that repo and tears it down on every exit path.
-Exception case per ``plugins/spec-tree/skills/test/references/methodology.md``:
-none. This is a real local git repository (L1: git plus tmp dirs), not a test
-double. The harness owns resource setup, teardown, and cleanup; it does not
-replace the behavior under test.
+Exception case: none. This is a real local git repository (L1: git plus tmp
+dirs), not a test double. The harness owns resource setup, teardown, and
+cleanup; it does not replace the behavior under test.
 """
 
 from __future__ import annotations

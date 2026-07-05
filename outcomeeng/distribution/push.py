@@ -78,12 +78,15 @@ def push(
 ) -> int:
     """Run the publish-and-sync orchestration. Returns the process exit code."""
     is_help_request = _is_help_request(push_args)
+    if is_help_request:
+        if not tool_probe(GIT_TOOL):
+            print(f"Missing required tool: {GIT_TOOL}", file=sys.stderr)
+            return 1
+        return runner((GIT_TOOL, "push", *push_args))
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
             return 1
-    if is_help_request:
-        return runner((GIT_TOOL, "push", *push_args))
     before_ref = upstream_probe()
     push_rc = runner((GIT_TOOL, "push", *push_args))
     if push_rc != 0:

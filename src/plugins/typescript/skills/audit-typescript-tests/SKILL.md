@@ -22,7 +22,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 
 <objective>
 
-A verdict on TypeScript test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
+A verdict on TypeScript test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
 
 </objective>
 
@@ -44,7 +44,7 @@ Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded sk
 
 3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
-This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The main agent brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
+This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The caller brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
 
 </prerequisites>
 
@@ -63,7 +63,7 @@ A test literal that re-declares a production-owned value instead of importing it
 
 <test_file_declarations>
 
-Executed TypeScript test files are typed assertion files. They do not own data or configuration. Before judging the assertion method, read the test file for `const`, `let`, `var`, and local `function` declarations. Reject declarations that bind test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, credential loading, or source-owned singleton shapes.
+Executed TypeScript test files are typed assertion files. Before judging the assertion method, read the test file for `const`, `let`, `var`, framework fixture parameters, property-generated parameters, and local `function` declarations. Reject every `const`, `let`, or `var` declaration as test-file state; reject fixture and generated-case parameters as test-file bindings. Name the right owner for the value it binds: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert whole-payload fixture, or eval case data. Reject local `function` declarations when they own setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, credential loading, or source-owned singleton shapes.
 
 Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count. The finding code is `test_owned_declaration`; the message names the right owner: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert fixture path, or eval case data.
 
@@ -108,7 +108,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 **Step 3 — Test-file declarations**
 
-Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, or local `function` declaration that owns data or configuration is a `test_owned_declaration` finding. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
+Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, framework fixture parameter, or property-generated parameter is a `test_owned_declaration` finding. Any local `function` declaration that owns data, configuration, setup, reusable cases, fixtures, generators, harness behavior, diagnostics, credentials, or source vocabulary is also a `test_owned_declaration` finding. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
 
 </step>
 
@@ -116,13 +116,13 @@ Apply `<test_file_declarations>` to each linked TypeScript test file before insp
 
 **Step 4 — Assertion type and method**
 
-| Type        | Required TypeScript pattern                                              | REJECT if                                               |
-| ----------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
-| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state      | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
-| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                  | Single example for a claimed mapping                    |
-| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                       | Manual `toEqual({...hardcoded...})` with no validator   |
-| Property    | `assertProperty(fc.property(arb, pred))` — meaningful arbitrary and body | `fc.constant`, body `return true`, only "doesn't throw" |
-| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit     | `[test]` with no violating fixture                      |
+| Type        | Required TypeScript pattern                                                                                                             | REJECT if                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state                                                                     | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
+| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                                                                                 | Single example for a claimed mapping                    |
+| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                                                                                      | Manual `toEqual({...hardcoded...})` with no validator   |
+| Property    | `assertProperty(namedProperty())` — meaningful arbitrary, invariant body, seed, and replay output live in the imported property harness | `fc.constant`, body `return true`, only "doesn't throw" |
+| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit                                                                    | `[test]` with no violating fixture                      |
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 
@@ -195,7 +195,7 @@ The test's own imports look clean when the mock lives in a harness, the hardcode
 
 Apply the supplements in `<typescript_supplements>` for each property:
 
-- **Coupling** — 5-category taxonomy (Direct / Indirect / Transitive / False / Partial), barrel resolution, type-only import handling.
+- **Coupling** — executable coupling categories (Direct / Indirect / Transitive / False / Partial / Severed), barrel resolution, type-only import handling.
 - **Falsifiability** — incorporates step 5 (mocks) and step 6 (oracle) judgments, plus snapshot rules.
 - **Alignment** — incorporates step 2 (clause enumeration) and step 4 (assertion type).
 - **Coverage** — read whether the test drives execution into the assertion-relevant path; no coverage tooling is run.
@@ -240,15 +240,16 @@ Applied at step 8 of Gate 1.
 
 <supplement property="coupling">
 
-Restate the foundation's 5-category taxonomy — do not delegate to `/audit-tests`:
+Restate the executable coupling categories this supplement applies to TypeScript imports — do not delegate to `/audit-tests`:
 
-| Category   | Definition                                                    | Verdict                           |
-| ---------- | ------------------------------------------------------------- | --------------------------------- |
-| Direct     | Test imports the module under test                            | Proceed                           |
-| Indirect   | Test imports a harness wrapping the module                    | Proceed — step 7 traced the chain |
-| Transitive | Test imports a consumer of the module                         | Proceed — verify test level       |
-| False      | Imports the module but never calls assertion-relevant symbols | REJECT                            |
-| Partial    | Calls functions on wrong inputs or wrong code paths           | REJECT                            |
+| Category   | Definition                                                                       | Verdict                           |
+| ---------- | -------------------------------------------------------------------------------- | --------------------------------- |
+| Direct     | Test imports the module under test                                               | Proceed                           |
+| Indirect   | Test imports a harness wrapping the module                                       | Proceed — step 7 traced the chain |
+| Transitive | Test imports a consumer of the module                                            | Proceed — verify test level       |
+| False      | Imports the module but never calls assertion-relevant symbols                    | REJECT                            |
+| Partial    | Calls functions on wrong inputs or wrong code paths                              | REJECT                            |
+| Severed    | Imports the module and replaces behavior with `vi.mock`, stubbed spies, or fakes | REJECT                            |
 
 **Type-only imports do not count.**
 
@@ -267,7 +268,7 @@ All codebase imports are `import type` → tautology → REJECT.
 
 If the test imports from a barrel and the assertion-relevant symbol is a sibling never called → False coupling → REJECT.
 
-**Deep relative imports** (`../../../../testing/`) are not themselves a coupling failure, but they signal the test may be reaching a harness that wraps a different module. Step 6 traces the chain regardless.
+**Deep relative imports** (`../../../../testing/`) are a tracing cue. They signal the test may be reaching a harness that wraps a different module. Step 6 traces the chain regardless.
 
 </supplement>
 
@@ -310,7 +311,7 @@ Alignment fails when clauses are collapsed, evidence method mismatches the type,
 
 <supplement property="coverage">
 
-Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the main agent passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 

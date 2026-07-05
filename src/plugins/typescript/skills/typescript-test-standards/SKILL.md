@@ -102,7 +102,7 @@ After `/test` chooses the evidence and level, implement it with these TypeScript
 | Stage 2 -> `l2`                            | Vitest or Playwright with locally available real APIs      |
 | Stage 2 -> `l3`                            | Vitest or Playwright with credentials or remote real APIs  |
 | Stage 3A: pure computation                 | Direct tests of typed pure functions                       |
-| Stage 3B: extract pure part                | Pure helper at `l1`, boundary at outer level               |
+| Stage 3B: extract pure part                | Pure function at `l1`, boundary at outer level             |
 | Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors                |
 | Stage 5 exception 2: interaction protocols | Spy function or class with typed call recording            |
 | Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`                     |
@@ -145,20 +145,12 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  * Setup: cp .env.test.example .env.test and fill in values
  */
 
-import { withLhciCredentials } from "@testing/harnesses/lhci/credentials";
-import { createLhciAuditResults } from "@testing/harnesses/lhci/results";
+import { createLhciUploadRequest } from "@testing/harnesses/lhci/upload-request";
 
 describe("LHCI", () => {
-  it(
-    "uploads audit results to server",
-    withLhciCredentials(async (credentials) => {
-      await expect(uploadAuditResults({
-        serverUrl: credentials.serverUrl,
-        token: credentials.token,
-        results: createLhciAuditResults(),
-      })).resolves.toMatchObject({ success: true });
-    }),
-  );
+  it("uploads audit results to server", async () => {
+    await expect(uploadAuditResults(createLhciUploadRequest())).resolves.toMatchObject({ success: true });
+  });
 });
 ```
 
@@ -173,21 +165,14 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define those doubles in `@testing/harnesses/*`; the executed test file imports the harness assertion.
 
 ```typescript
-interface PaymentGateway {
-  charge(amountCents: number): Promise<ChargeResult>;
-}
+import { assertPaymentGatewayRecordsCharge } from "@testing/harnesses/payments";
 
-class RecordingGateway implements PaymentGateway {
-  readonly charges: number[] = [];
-
-  async charge(amountCents: number): Promise<ChargeResult> {
-    this.charges.push(amountCents);
-    return { id: "test-charge", status: "approved" };
-  }
-}
+test("records charge requests", async () => {
+  await assertPaymentGatewayRecordsCharge(PaymentProcessor);
+});
 ```
 
 </dependency_injection>
@@ -195,12 +180,12 @@ class RecordingGateway implements PaymentGateway {
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
 
-| Code type               | Required property        | Pattern                            |
-| ----------------------- | ------------------------ | ---------------------------------- |
-| Parsers                 | `parse(format(x)) == x`  | `assertProperty(fc.property(...))` |
-| Serialization           | `decode(encode(x)) == x` | `assertProperty(fc.property(...))` |
-| Mathematical operations | algebraic laws           | `assertProperty(fc.property(...))` |
-| Complex algorithms      | invariant preservation   | `assertProperty(fc.property(...))` |
+| Code type               | Required property        | Pattern                                            |
+| ----------------------- | ------------------------ | -------------------------------------------------- |
+| Parsers                 | `parse(format(x)) == x`  | `assertProperty(parserRoundtripProperty())`        |
+| Serialization           | `decode(encode(x)) == x` | `assertProperty(serializationRoundtripProperty())` |
+| Mathematical operations | algebraic laws           | `assertProperty(algebraicLawProperty())`           |
+| Complex algorithms      | invariant preservation   | `assertProperty(invariantPreservationProperty())`  |
 
 An assertion that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
 Route property assertions through a harness or wrapper that owns seed selection, run count, and replay diagnostics; failure output must include the seed and replay path.
@@ -215,12 +200,14 @@ If a test can only be written by copying source literals, pinning arbitrary exam
 <data_ownership_decision>
 Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
+Executed TypeScript test files do not declare `const`, `let`, or `var` bindings, framework fixture parameters, or property-generated parameters. Every value or configuration choice those bindings would carry belongs in a source contract, `@testing/harnesses/*`, `@testing/generators/*`, an inert fixture read by path, or justified eval case data.
+
 1. **Data that the source imports or should import**
    ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
 
 ALWAYS verify that the code under test imports standard values like HTTP status codes from the canonical source of the runtime (Node) or framework (e.g., React or Next.js).
 
-Reject local constants that rename runtime-owned values. Accept domain constants that add source-owned meaning.
+Reject test-local constants that rename runtime-owned values. Accept production-owned domain constants that add source-owned meaning.
 
 2. **Data that the code under test owns or should own**
 
@@ -436,8 +423,10 @@ test("API returns flag-gated payload", async ({ request }) => {
 });
 
 // RIGHT: context.request -- shares cookies with browser context
-test("API returns flag-gated payload", async ({ context }) => {
-  await expect(context.request.get("/api/data").then((response) => response.json())).resolves.toContain(FLAGGED_ITEM);
+import { flagGatedApiPayload } from "@testing/harnesses/browser/api";
+
+test("API returns flag-gated payload", async () => {
+  await expect(flagGatedApiPayload()).resolves.toContain(FLAGGED_ITEM);
 });
 ```
 
@@ -463,6 +452,7 @@ TypeScript test guidance follows this standard when:
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
+- Executed test files declare no `const`, `let`, or `var` bindings, fixture parameters, or property-generated parameters
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
 - Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - Source-owned values come from the owning production module

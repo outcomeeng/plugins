@@ -13,8 +13,6 @@ each call appends a `"{kind}:{payload}"` string in invocation order.
 The shared log is the only observable ordering channel across distinct
 Protocol boundaries (per-probe `queries`/`writes` lists are local).
 
-Exception cases per `plugins/spec-tree/skills/test/references/methodology.md`:
-
 - Stage 5 #2 (Interaction protocols): bump's correctness depends on the
   sequence and presence of probe calls, manifest reads, and manifest
   writes — the read-then-write phase split and the tool-first ordering
@@ -30,9 +28,13 @@ import io
 import os
 import pathlib
 import subprocess
+from tempfile import TemporaryDirectory
 from dataclasses import dataclass, field
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+
+from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
 from outcomeeng.distribution.bump import (
     ChangedPath,
@@ -53,15 +55,28 @@ from outcomeeng.distribution.bump import (
     _real_change_probe,
     auto_segment,
     bump,
+    changed_plugins_from_diff,
     main,
 )
 from outcomeeng_testing.generators.bump import (
+    arbitrary_diff_paths,
+    distribution_relpath,
+    distribution_roots,
     manifest_fixture_path,
     manifest_relpath,
     manifest_text,
     minor_change,
     patch_changes,
+    plugin_names,
+    relative_subpaths,
     version_of,
+)
+
+BUMP_PROPERTY_SEED = 20260704
+BUMP_PROPERTY_EXAMPLES = 50
+BUMP_PROPERTY_REPLAY_PATH = (
+    "just test "
+    "spx/32-distribution.enabler/21-bump.enabler/tests/test_bump.property.l1.py"
 )
 
 
@@ -449,6 +464,7 @@ def mixed_dual_manifest_plugin_fails_check() -> bool:
         exit_code == 1
         and case.run.manifest_writer.writes == []
         and case.plugin in stderr.getvalue()
+        and "out of lockstep" in stderr.getvalue()
     )
 
 
@@ -939,7 +955,16 @@ def explicit_segment_patch_overrides_detected_minor_with_warning() -> bool:
     )
 
 
-def real_change_probe_detects_untracked_new_skill_as_added(repo: pathlib.Path) -> bool:
+def real_change_probe_detects_untracked_new_skill_as_added() -> bool:
+    with TemporaryDirectory() as directory:
+        return _real_change_probe_detects_untracked_new_skill_as_added(
+            pathlib.Path(directory) / "repo"
+        )
+
+
+def _real_change_probe_detects_untracked_new_skill_as_added(
+    repo: pathlib.Path,
+) -> bool:
     handle = build_repo_with_untracked_new_skill(repo)
 
     changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
@@ -951,7 +976,14 @@ def real_change_probe_detects_untracked_new_skill_as_added(repo: pathlib.Path) -
     )
 
 
-def real_change_probe_detects_rename_away_from_structural_path(
+def real_change_probe_detects_rename_away_from_structural_path() -> bool:
+    with TemporaryDirectory() as directory:
+        return _real_change_probe_detects_rename_away_from_structural_path(
+            pathlib.Path(directory) / "repo"
+        )
+
+
+def _real_change_probe_detects_rename_away_from_structural_path(
     repo: pathlib.Path,
 ) -> bool:
     handle = build_repo_with_renamed_structural_path(repo)
@@ -967,7 +999,14 @@ def real_change_probe_detects_rename_away_from_structural_path(
     )
 
 
-def real_change_probe_detects_cross_plugin_structural_rename(
+def real_change_probe_detects_cross_plugin_structural_rename() -> bool:
+    with TemporaryDirectory() as directory:
+        return _real_change_probe_detects_cross_plugin_structural_rename(
+            pathlib.Path(directory) / "repo"
+        )
+
+
+def _real_change_probe_detects_cross_plugin_structural_rename(
     repo: pathlib.Path,
 ) -> bool:
     handle = build_repo_with_cross_plugin_structural_rename(repo)
@@ -1222,6 +1261,94 @@ def build_repo_with_cross_plugin_structural_rename(
     )
 
 
+def bump_property(test_func: Callable[..., None]) -> Callable[[], None]:
+    configured = seed(BUMP_PROPERTY_SEED)(
+        settings(max_examples=BUMP_PROPERTY_EXAMPLES)(test_func)
+    )
+
+    def wrapper() -> None:
+        try:
+            configured()
+        except AssertionError as error:
+            error.add_note(f"Hypothesis seed: {BUMP_PROPERTY_SEED}")
+            error.add_note(f"Replay path: {BUMP_PROPERTY_REPLAY_PATH}")
+            raise
+
+    return wrapper
+
+
+def bump_property_failure_notes_include_seed_and_replay() -> bool:
+    @bump_property
+    @given(path=arbitrary_diff_paths())
+    def always_fails(path: str) -> None:
+        assert path == ""
+
+    try:
+        always_fails()
+    except AssertionError as error:
+        notes = getattr(error, "__notes__", ())
+        return (
+            f"Hypothesis seed: {BUMP_PROPERTY_SEED}" in notes
+            and f"Replay path: {BUMP_PROPERTY_REPLAY_PATH}" in notes
+        )
+    return False
+
+
+def any_path_under_recognized_distribution_root_extracts_that_plugin() -> bool:
+    @bump_property
+    @given(
+        root=st.sampled_from(distribution_roots()),
+        plugin=plugin_names(),
+        subpath=relative_subpaths(),
+    )
+    def assertion(root: str, plugin: str, subpath: str) -> None:
+        path = distribution_relpath(root, plugin, subpath)
+        assert changed_plugins_from_diff([path]) == frozenset({plugin})
+
+    assertion()
+    return True
+
+
+def changed_plugins_match_spec_oracle_over_arbitrary_diff_paths() -> bool:
+    @bump_property
+    @given(path=arbitrary_diff_paths())
+    def assertion(path: str) -> None:
+        assert changed_plugins_from_diff([path]) == _expected_plugins([path])
+
+    assertion()
+    return True
+
+
+def changed_plugin_aggregation_is_union_of_per_path_results() -> bool:
+    @bump_property
+    @given(paths=st.lists(arbitrary_diff_paths(), max_size=12))
+    def assertion(paths: list[str]) -> None:
+        aggregated = changed_plugins_from_diff(paths)
+        per_path_union: frozenset[str] = frozenset()
+        for path in paths:
+            per_path_union = per_path_union | changed_plugins_from_diff([path])
+        assert aggregated == per_path_union
+
+    assertion()
+    return True
+
+
+def _expected_plugins(paths: list[str]) -> frozenset[str]:
+    plugins: set[str] = set()
+    root_prefixes = tuple(f"{root}/" for root in distribution_roots())
+    for path in paths:
+        for prefix in root_prefixes:
+            if not path.startswith(prefix):
+                continue
+            rest = path[len(prefix) :]
+            next_slash = rest.find("/")
+            name = rest if next_slash == -1 else rest[:next_slash]
+            if name:
+                plugins.add(name)
+            break
+    return frozenset(plugins)
+
+
 __all__ = [
     "CrossPluginRenameRepo",
     "RecordingManifestWriter",
@@ -1234,9 +1361,13 @@ __all__ = [
     "UntrackedSkillRepo",
     "all_tools_available",
     "base_ref",
+    "bump_property_failure_notes_include_seed_and_replay",
     "build_repo_with_cross_plugin_structural_rename",
     "build_repo_with_renamed_structural_path",
     "build_repo_with_untracked_new_skill",
+    "any_path_under_recognized_distribution_root_extracts_that_plugin",
+    "changed_plugin_aggregation_is_union_of_per_path_results",
+    "changed_plugins_match_spec_oracle_over_arbitrary_diff_paths",
     "new_plugin_without_base_manifest_passes_check",
     "real_change_probe_detects_cross_plugin_structural_rename",
     "real_change_probe_detects_rename_away_from_structural_path",

@@ -27,25 +27,19 @@ Examples: `postgres-user-store.scenario.l2.test.ts`, `checkout.scenario.l2.playw
 
 ```typescript
 import { createGeneratedUser } from "@testing/generators/users";
-import { withPostgresHarness } from "@testing/harnesses/postgres";
-import { describe, expect, it } from "vitest";
+import { assertPostgresUserRoundtrip } from "@testing/harnesses/postgres";
+import { describe, it } from "vitest";
 
 describe("UserStore", () => {
   it("persists and reloads users through the local database", async () => {
-    await withPostgresHarness(createGeneratedUser(), async (postgres, user) => {
-      await new UserStore(postgres.connectionString).save(user);
-
-      await expect(
-        new UserStore(postgres.connectionString).findById(user.id),
-      ).resolves.toMatchObject(user);
-    });
+    await assertPostgresUserRoundtrip(createGeneratedUser(), UserStore);
   });
 });
 ```
 
 This is `l2` because the evidence depends on a real local database. The harness module owns setup, missing-Docker diagnostics, and cleanup. The generated user comes from `@testing/generators/`, not from fixture exports.
 
-`createGeneratedUser()` is a single-sample helper backed by a fast-check arbitrary. Use that form when infrastructure setup cost makes a full property loop inappropriate, and keep pure `fc.Arbitrary<T>` helpers for tests that should search a variable domain.
+`createGeneratedUser()` is a single-sample generator function backed by a fast-check arbitrary. Use that form when infrastructure setup cost makes a full property loop inappropriate, and keep pure `fc.Arbitrary<T>` factories for tests that should search a variable domain.
 
 </example>
 

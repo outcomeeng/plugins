@@ -32,20 +32,11 @@ Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 
 ```rust
 use product_testing::fixtures::projects::empty_project;
-use product_testing::harnesses::commands::with_temp_project;
+use product_testing::harnesses::commands::assert_init_command_writes_project_files;
 
 #[test]
 fn init_command_writes_project_files() {
-    with_temp_project(empty_project(), |project| {
-        assert_cmd::Command::cargo_bin("herder")
-            .unwrap()
-            .current_dir(project.root())
-            .args(project.init_args())
-            .assert()
-            .success();
-
-        assert!(project.expected_manifest().exists());
-    });
+    assert_init_command_writes_project_files(empty_project());
 }
 ```
 
@@ -55,18 +46,11 @@ fn init_command_writes_project_files() {
 
 ```rust
 use product_testing::fixtures::users::valid_user;
-use product_testing::harnesses::database::with_test_database;
+use product_testing::harnesses::database::assert_user_repository_roundtrip;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    with_test_database(valid_user(), async |db, user| {
-        UserRepository::new(db.pool()).save(&user).await.unwrap();
-
-        assert_eq!(
-            UserRepository::new(db.pool()).find(user.id()).await.unwrap().email(),
-            user.email(),
-        );
-    }).await;
+    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
 }
 ```
 
@@ -77,14 +61,10 @@ async fn repository_persists_and_loads_user() {
 ```rust
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
-    product_testing::harnesses::queue::with_queue_harness(job_fixture(), async |queue| {
-        queue.push_fixture().await;
-
-        assert_eq!(
-            run_worker_once(queue.config()).await.unwrap().processed,
-            queue.expected_processed_count(),
-        );
-    }).await;
+    product_testing::harnesses::queue::assert_worker_consumes_real_queue_messages(
+        job_fixture(),
+        run_worker_once,
+    ).await;
 }
 ```
 

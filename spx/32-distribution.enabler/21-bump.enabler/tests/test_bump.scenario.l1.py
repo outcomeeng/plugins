@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pathlib
-
 from outcomeeng_testing.harnesses.bump import (
     auto_detected_segment_is_minor_for_new_skill_addition,
     auto_detected_segment_is_patch_for_modification_only_changes,
@@ -96,23 +94,13 @@ def test_explicit_segment_patch_overrides_detected_minor_with_warning() -> None:
     assert explicit_segment_patch_overrides_detected_minor_with_warning()
 
 
-def test_real_change_probe_detects_untracked_new_skill_as_added(
-    tmp_path: pathlib.Path,
-) -> None:
-    assert real_change_probe_detects_untracked_new_skill_as_added(tmp_path / "repo")
+def test_real_change_probe_detects_untracked_new_skill_as_added() -> None:
+    assert real_change_probe_detects_untracked_new_skill_as_added()
 
 
-def test_real_change_probe_detects_rename_away_from_structural_path(
-    tmp_path: pathlib.Path,
-) -> None:
-    assert real_change_probe_detects_rename_away_from_structural_path(
-        tmp_path / "repo",
-    )
+def test_real_change_probe_detects_rename_away_from_structural_path() -> None:
+    assert real_change_probe_detects_rename_away_from_structural_path()
 
 
-def test_real_change_probe_detects_cross_plugin_structural_rename(
-    tmp_path: pathlib.Path,
-) -> None:
-    assert real_change_probe_detects_cross_plugin_structural_rename(
-        tmp_path / "repo",
-    )
+def test_real_change_probe_detects_cross_plugin_structural_rename() -> None:
+    assert real_change_probe_detects_cross_plugin_structural_rename()

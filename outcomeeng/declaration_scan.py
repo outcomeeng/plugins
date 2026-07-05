@@ -113,17 +113,25 @@ def _language_for(path: Path) -> str:
 def _scan_python(source: str, path: Path) -> list[Declaration]:
     tree = ast.parse(source, filename=str(path))
     declarations: list[Declaration] = []
+    test_function_nodes = {
+        id(node)
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    }
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            declarations.append(
-                Declaration(
-                    path=str(path),
-                    line=node.lineno,
-                    kind=DeclarationKind.FUNCTION,
-                    name=node.name,
-                    language="python",
+            if id(node) not in test_function_nodes:
+                declarations.append(
+                    Declaration(
+                        path=str(path),
+                        line=node.lineno,
+                        kind=DeclarationKind.FUNCTION,
+                        name=node.name,
+                        language="python",
+                    )
                 )
-            )
+            declarations.extend(_python_argument_declarations(node.args, path))
         elif isinstance(node, ast.Assign):
             for target in node.targets:
                 declarations.extend(
@@ -159,6 +167,24 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
                 declarations.extend(
                     _python_pattern_declarations(case.pattern, path, node.lineno)
                 )
+    return declarations
+
+
+def _python_argument_declarations(args: ast.arguments, path: Path) -> list[Declaration]:
+    declarations: list[Declaration] = []
+    arguments = [*args.posonlyargs, *args.args, *args.kwonlyargs]
+    if args.vararg is not None:
+        arguments.append(args.vararg)
+    if args.kwarg is not None:
+        arguments.append(args.kwarg)
+    for argument in arguments:
+        declarations.append(
+            _python_variable_declaration(
+                argument.arg,
+                path,
+                getattr(argument, "lineno", 0),
+            )
+        )
     return declarations
 
 
@@ -204,22 +230,30 @@ def _python_pattern_declarations(
             else []
         )
     if isinstance(pattern, ast.MatchMapping):
-        declarations: list[Declaration] = []
+        mapping_declarations: list[Declaration] = []
         for subpattern in pattern.patterns:
-            declarations.extend(_python_pattern_declarations(subpattern, path, line))
+            mapping_declarations.extend(
+                _python_pattern_declarations(subpattern, path, line)
+            )
         if pattern.rest is not None:
-            declarations.append(_python_variable_declaration(pattern.rest, path, line))
-        return declarations
+            mapping_declarations.append(
+                _python_variable_declaration(pattern.rest, path, line)
+            )
+        return mapping_declarations
     if isinstance(pattern, (ast.MatchSequence, ast.MatchOr)):
-        declarations: list[Declaration] = []
+        sequence_declarations: list[Declaration] = []
         for subpattern in pattern.patterns:
-            declarations.extend(_python_pattern_declarations(subpattern, path, line))
-        return declarations
+            sequence_declarations.extend(
+                _python_pattern_declarations(subpattern, path, line)
+            )
+        return sequence_declarations
     if isinstance(pattern, ast.MatchClass):
-        declarations: list[Declaration] = []
+        class_declarations: list[Declaration] = []
         for subpattern in [*pattern.patterns, *pattern.kwd_patterns]:
-            declarations.extend(_python_pattern_declarations(subpattern, path, line))
-        return declarations
+            class_declarations.extend(
+                _python_pattern_declarations(subpattern, path, line)
+            )
+        return class_declarations
     return []
 
 
@@ -253,14 +287,17 @@ def _scan_rust(source: str, path: Path) -> list[Declaration]:
         )
         if item_match is None and conditional_match is None and for_match is None:
             continue
-        kind = item_match.group("kind") if item_match is not None else "let"
-        body = (
-            item_match.group("body")
-            if item_match is not None
-            else conditional_match.group("body")
-            if conditional_match is not None
-            else for_match.group("body")
-        )
+        if item_match is not None:
+            kind = item_match.group("kind")
+            body = item_match.group("body")
+        elif conditional_match is not None:
+            kind = "let"
+            body = conditional_match.group("body")
+        elif for_match is not None:
+            kind = "let"
+            body = for_match.group("body")
+        else:
+            continue
         names = (
             _rust_let_binding_names(body)
             if kind == "let" and for_match is None
@@ -526,6 +563,7 @@ def _scan_typescript(source: str, path: Path) -> list[Declaration]:
                         language="typescript",
                     )
                 )
+    declarations.extend(_typescript_parameter_declarations(source, path))
     return declarations
 
 
@@ -568,18 +606,23 @@ def _typescript_binding_names(pattern: str) -> list[str]:
     pattern = _before_top_level(pattern.strip(), "=").strip()
     if not pattern:
         return []
+    pattern = _strip_typescript_binding_type(pattern)
     while pattern.startswith("..."):
         pattern = pattern[3:].strip()
+        pattern = _strip_typescript_binding_type(pattern)
     if pattern[0] in "[{":
         inner = _strip_enclosing_pattern(pattern)
         return _typescript_names_from_segments(
             _split_top_level_commas(inner),
             object_pattern=pattern[0] == "{",
         )
-    if ":" in pattern:
-        pattern = _before_top_level(pattern, ":").strip()
     name_match = _TYPESCRIPT_IDENTIFIER.fullmatch(pattern)
     return [pattern] if name_match is not None else []
+
+
+def _strip_typescript_binding_type(pattern: str) -> str:
+    parts = _split_top_level(pattern, ":", maxsplit=1)
+    return parts[0].strip() if len(parts) == 2 else pattern
 
 
 def _typescript_names_from_segments(
@@ -599,6 +642,156 @@ def _typescript_object_binding_segment(segment: str) -> str:
     if len(parts) == 1:
         return segment
     return parts[1]
+
+
+def _typescript_parameter_declarations(source: str, path: Path) -> list[Declaration]:
+    declarations: list[Declaration] = []
+    for line, parameter_list in _typescript_arrow_parameter_lists(source):
+        for parameter in _split_top_level_commas(parameter_list):
+            for name in _typescript_binding_names(parameter):
+                declarations.append(
+                    Declaration(
+                        path=str(path),
+                        line=line,
+                        kind=_value_kind(name),
+                        name=name,
+                        language="typescript",
+                    )
+                )
+    return declarations
+
+
+def _typescript_arrow_parameter_lists(source: str) -> list[tuple[int, str]]:
+    parameter_lists: list[tuple[int, str]] = []
+    state = _LexicalState()
+    line = 1
+    index = 0
+    while index < len(source):
+        char = source[index]
+        if char == "\n":
+            line += 1
+        if state.in_block_comment:
+            if source.startswith("*/", index):
+                state.in_block_comment = False
+                index += 2
+                continue
+            index += 1
+            continue
+        if state.quote is not None:
+            if state.escaped:
+                state.escaped = False
+            elif char == "\\":
+                state.escaped = True
+            elif char == state.quote:
+                state.quote = None
+            index += 1
+            continue
+        if state.in_regex:
+            if state.escaped:
+                state.escaped = False
+            elif char == "\\":
+                state.escaped = True
+            elif char == "[":
+                state.regex_char_class = True
+            elif char == "]":
+                state.regex_char_class = False
+            elif char == "/" and not state.regex_char_class:
+                state.in_regex = False
+            index += 1
+            continue
+        if source.startswith("//", index):
+            next_line = source.find("\n", index)
+            if next_line == -1:
+                break
+            index = next_line
+            continue
+        if source.startswith("/*", index):
+            state.in_block_comment = True
+            index += 2
+            continue
+        if char in {"'", '"', "`"}:
+            state.quote = char
+            index += 1
+            continue
+        if char == "/" and _looks_like_regex_literal_start(source, index):
+            state.in_regex = True
+            index += 1
+            continue
+        if source.startswith("=>", index):
+            parameter = _typescript_arrow_parameter_list_before(source, index)
+            if parameter is not None and not _typescript_arrow_is_type_alias(
+                source, parameter[0]
+            ):
+                parameter_lists.append((line, parameter[1]))
+            index += 2
+            continue
+        index += 1
+    return parameter_lists
+
+
+def _typescript_arrow_parameter_list_before(
+    source: str, arrow_index: int
+) -> tuple[int, str] | None:
+    end = arrow_index
+    while end > 0 and source[end - 1].isspace():
+        end -= 1
+    if end == 0:
+        return None
+    if source[end - 1] == ")":
+        start = _matching_open_paren(source, end - 1)
+        if start is None:
+            return None
+        return start, source[start + 1 : end - 1]
+    match = re.search(r"[A-Za-z_$][\w$]*\s*$", source[:end])
+    if match is None:
+        return None
+    return match.start(), match.group(0).strip()
+
+
+def _matching_open_paren(source: str, close_index: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(close_index, -1, -1):
+        char = source[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        elif char == ")":
+            depth += 1
+        elif char == "(":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _typescript_arrow_is_type_alias(source: str, parameter_start: int) -> bool:
+    statement_start = source.rfind(";", 0, parameter_start) + 1
+    prefix = source[statement_start:parameter_start].strip()
+    if _typescript_runtime_arrow_prefix(prefix):
+        return False
+    return (
+        prefix.startswith("type ")
+        or prefix.startswith("interface ")
+        or prefix.endswith(":")
+    )
+
+
+def _typescript_runtime_arrow_prefix(prefix: str) -> bool:
+    return (
+        re.search(r"\b(?:const|let|var)\b[\s\S]*=\s*$", prefix) is not None
+        or re.search(r"\breturn\s*$", prefix) is not None
+        or prefix.endswith(",")
+        or prefix.endswith("(")
+    )
 
 
 def _declaration_units(

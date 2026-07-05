@@ -1,4 +1,4 @@
-def test_declares_owned_evidence_categories() -> None:
+def declares_owned_evidence_categories() -> None:
     test_data = "input"
     expected_output = "output"
     RUNNER_SETTINGS = 12
@@ -16,6 +16,6 @@ def test_declares_owned_evidence_categories() -> None:
     assert RUNNER_SETTINGS
     assert PROPERTY_CONFIGURATION
     assert setup_policy
-    assert reusable_cases
+    assert reusable_cases[0] == "case"
     assert fixture_path
     assert generator_choice

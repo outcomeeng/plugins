@@ -4,8 +4,9 @@ Bumps the manifest version of every plugin whose authored source tree or
 generated runtime tree has changes since a base reference (default
 `origin/main`). Each changed plugin's version is incremented exactly once
 across every manifest it owns (`.claude-plugin/plugin.json` always;
-`.codex-plugin/plugin.json` when present). The increment segment defaults
-to `patch`; `minor` and `major` are explicit opt-ins.
+`.codex-plugin/plugin.json` when present). The increment segment is
+auto-detected per plugin unless the caller explicitly selects `patch`,
+`minor`, or `major`.
 
 The module's contract:
 
@@ -280,6 +281,7 @@ def bump(
     plugin_targets: dict[str, tuple[Version, Segment]] = {}
     already_bumped_plugins: list[str] = []
     unbumped_plugins: list[str] = []
+    out_of_lockstep_plugins: set[str] = set()
     for plugin in sorted(changed):
         records = manifest_reader(plugin)
         if not records:
@@ -314,6 +316,8 @@ def bump(
         if not lagging_manifest and plugin_versions_agree:
             already_bumped_plugins.append(plugin)
         else:
+            if not plugin_versions_agree:
+                out_of_lockstep_plugins.add(plugin)
             segment_target = _SEGMENT_DISPATCH[resolved](max(base_ref_versions))
             plugin_target = max(segment_target, max(working_tree_versions))
             plugin_targets[plugin] = (plugin_target, resolved)
@@ -322,9 +326,13 @@ def bump(
     if mode is Mode.CHECK:
         if unbumped_plugins:
             for plugin in unbumped_plugins:
+                reason = (
+                    "its owned manifests are out of lockstep"
+                    if plugin in out_of_lockstep_plugins
+                    else f"its working-tree version is not ahead of its {base_ref} version"
+                )
                 print(
-                    f"Plugin {plugin} needs a version bump but its "
-                    f"working-tree version is not ahead of its {base_ref} version",
+                    f"Plugin {plugin} needs a version bump because {reason}",
                     file=sys.stderr,
                 )
             return 1

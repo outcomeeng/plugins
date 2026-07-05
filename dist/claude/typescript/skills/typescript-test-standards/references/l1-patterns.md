@@ -6,9 +6,9 @@ Table of contents: [pure_function](#pure_function) · [typed_factory](#typed_fac
 
 ```typescript
 import { ARCHIVE_FLAGS } from "@/archive-command";
-import { arbitraryArchiveCommandCase, archiveCommandCase } from "@testing/generators/archive-command";
+import { archiveCommandCase } from "@testing/generators/archive-command";
+import { archiveCommandIncludesSourcePathProperty } from "@testing/harnesses/archive-command/properties";
 import { assertProperty } from "@testing/harnesses/properties";
-import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 describe("buildCommand", () => {
@@ -17,11 +17,7 @@ describe("buildCommand", () => {
   });
 
   it("preserves generated source paths", () => {
-    assertProperty(
-      fc.property(arbitraryArchiveCommandCase(), (archiveCase) => {
-        expect(buildCommand(archiveCase.options)).toContain(archiveCase.sourcePath);
-      }),
-    );
+    assertProperty(archiveCommandIncludesSourcePathProperty(buildCommand));
   });
 });
 ```
@@ -49,14 +45,12 @@ describe("analyzeResults", () => {
 Temp dirs are not external dependencies -- use them freely at `l1`.
 
 ```typescript
-import { withTempConfig } from "@testing/harnesses/config";
-import { describe, expect, it } from "vitest";
+import { assertLoadsTempConfig } from "@testing/harnesses/config";
+import { describe, it } from "vitest";
 
 describe("loadConfig", () => {
   it("loads YAML config file", async () => {
-    await withTempConfig(async (configPath, expectedConfig) => {
-      await expect(loadConfig(configPath)).resolves.toMatchObject(expectedConfig);
-    });
+    await assertLoadsTempConfig(loadConfig);
   });
 });
 ```

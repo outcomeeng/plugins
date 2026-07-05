@@ -96,7 +96,7 @@ After `/test` chooses the evidence and level, implement it with these Rust patte
 | Stage 2 -> Level 2                         | `assert_cmd`, real local adapters, `tokio::test`, local services                     |
 | Stage 2 -> Level 3                         | live API probes, deployed workflow tests, browser automation, remote contract checks |
 | Stage 3A: pure computation                 | direct function tests with structural assertions                                     |
-| Stage 3B: extract pure part                | pure helper at Level 1, boundary at the outer level                                  |
+| Stage 3B: extract pure part                | pure function at Level 1, boundary at the outer level                                |
 | Stage 5 exception 1: failure simulation    | trait impl returning deterministic errors                                            |
 | Stage 5 exception 2: interaction protocols | recorder struct capturing calls                                                      |
 | Stage 5 exception 3: time/concurrency      | injected clock, paused runtime time, deterministic channels                          |
@@ -159,7 +159,7 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
-Executed Rust test files are typed assertion files. They do not own `const`, `static`, `let`, or helper declarations for test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, or source-owned singleton shapes. Put those choices in the `product-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
+Executed Rust test files are typed assertion files. They do not declare `const`, `static`, or `let` bindings; every value or configuration choice those declarations would bind belongs in the `product-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
 
 **1. Source-owned values**
 
@@ -228,14 +228,14 @@ Harnesses, generators, and inert fixtures are production code. They live in a se
 - `product-testing/src/fixtures/<name>.rs` — fixture-loading code that reads inert data files by path.
 - `product-testing/fixtures/` (data subdirectory) — inert input files.
 
-Co-located helper modules are acceptable only when the helper serves a single test file. Anything shared across two or more test files belongs in `product-testing/`. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
+Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `product-testing/` even when one test file consumes them today. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
 
 - Do not read production source files as test input to prove behavior
 
 </test_data_policy>
 
 <script_testing>
-Checked-in Rust script or helper binary entrypoints get thin tests:
+Checked-in Rust script or utility binary entrypoints get thin tests:
 
 - argument parsing through the repository's canonical parser
 - dispatch into the imported orchestrator
@@ -290,13 +290,11 @@ Tempdir example:
 
 ```rust
 use product_testing::fixtures::configs::valid_site_config;
-use product_testing::harnesses::filesystem::with_temp_config;
+use product_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
 
 #[test]
 fn loads_yaml_from_temp_dir() {
-    with_temp_config(valid_site_config(), |config_path, expected| {
-        assert_eq!(load_config(config_path).unwrap().site_dir, expected.site_dir);
-    });
+    assert_loads_yaml_from_temp_config(valid_site_config(), load_config);
 }
 ```
 
@@ -307,14 +305,11 @@ Use `proptest` for universal invariants:
 
 ```rust
 use product_testing::generators::configs::valid_config_strategy;
-use product_testing::harnesses::properties::check_property;
+use product_testing::harnesses::properties::assert_config_roundtrips;
 
 #[test]
 fn config_roundtrips() {
-    check_property(valid_config_strategy(), |input| {
-        prop_assert_eq!(decode_config(&encode_config(&input).unwrap()).unwrap(), input);
-        Ok(())
-    });
+    assert_config_roundtrips(valid_config_strategy(), encode_config, decode_config);
 }
 ```
 
@@ -341,20 +336,11 @@ CLI binary example:
 
 ```rust
 use product_testing::fixtures::projects::empty_project;
-use product_testing::harnesses::commands::with_temp_project;
+use product_testing::harnesses::commands::assert_init_command_writes_project_files;
 
 #[test]
 fn init_command_writes_project_files() {
-    with_temp_project(empty_project(), |project| {
-        assert_cmd::Command::cargo_bin("herder")
-            .unwrap()
-            .current_dir(project.root())
-            .args(project.init_args())
-            .assert()
-            .success();
-
-        assert!(project.expected_manifest().exists());
-    });
+    assert_init_command_writes_project_files(empty_project());
 }
 ```
 
@@ -362,18 +348,11 @@ Async L2 example:
 
 ```rust
 use product_testing::fixtures::users::valid_user;
-use product_testing::harnesses::database::with_test_database;
+use product_testing::harnesses::database::assert_user_repository_roundtrip;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    with_test_database(valid_user(), async |db, user| {
-        UserRepository::new(db.pool()).save(&user).await.unwrap();
-
-        assert_eq!(
-            UserRepository::new(db.pool()).find(user.id()).await.unwrap().email(),
-            user.email(),
-        );
-    }).await;
+    assert_user_repository_roundtrip(valid_user(), UserRepository::new).await;
 }
 ```
 
@@ -387,9 +366,7 @@ Remote API example:
 ```rust
 #[tokio::test]
 async fn published_package_is_fetchable_from_registry() {
-    product_testing::harnesses::registry::with_registry_client(async |client, package_name| {
-        assert_eq!(client.fetch_package(package_name).await.unwrap().name, package_name);
-    }).await;
+    product_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
 }
 ```
 
@@ -398,13 +375,7 @@ Browser workflow example:
 ```rust
 #[tokio::test]
 async fn login_flow_reaches_dashboard() {
-    product_testing::harnesses::browser::with_login_flow(async |browser, flow| {
-        browser.goto(flow.login_path()).await.unwrap();
-        browser.fill(flow.email_selector(), flow.email()).await.unwrap();
-        browser.click(flow.submit_selector()).await.unwrap();
-
-        assert!(browser.text(flow.main_selector()).await.unwrap().contains(flow.dashboard_text()));
-    }).await;
+    product_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
 }
 ```
 
@@ -434,18 +405,18 @@ Coverage is evidence only when measured against the exercised module:
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                                      | Why it fails                                                                    |
-| ------------------------------------------------- | ------------------------------------------------------------------------------- |
-| generated mocks for the main seam                 | severs evidence from the real interface                                         |
-| snapshots of hand-written values                  | proves serialization of the fixture more than governed logic                    |
-| example-only tests for property claims            | misses the universal claim stated by the spec                                   |
-| async tests holding locks across await            | creates deadlocks and hides the real concurrency design                         |
-| browser tooling for non-browser code              | adds cost without stronger evidence                                             |
-| compile-time claims tested at runtime             | misses the actual contract                                                      |
-| source text read from tests                       | proves implementation text rather than behavior                                 |
-| missing harness cleanup                           | leaves shared state that changes later test outcomes                            |
-| test-file-local constants for source-owned values | production module should export the value; refactor it                          |
-| property runner tuning in a test file             | the property harness owns seed, case count, persistence, and replay diagnostics |
+| Anti-pattern                            | Why it fails                                                                     |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| generated mocks for the main seam       | severs evidence from the real interface                                          |
+| snapshots of hand-written values        | proves serialization of the fixture more than governed logic                     |
+| example-only tests for property claims  | misses the universal claim stated by the spec                                    |
+| async tests holding locks across await  | creates deadlocks and hides the real concurrency design                          |
+| browser tooling for non-browser code    | adds cost without stronger evidence                                              |
+| compile-time claims tested at runtime   | misses the actual contract                                                       |
+| source text read from tests             | proves implementation text rather than behavior                                  |
+| missing harness cleanup                 | leaves shared state that changes later test outcomes                             |
+| test-file-local bindings and parameters | source contracts, harnesses, generators, inert fixtures, or eval data own values |
+| property runner tuning in a test file   | the property harness owns seed, case count, persistence, and replay diagnostics  |
 
 Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 

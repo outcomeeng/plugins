@@ -5,7 +5,7 @@ Recap of the standards stated normatively in `python-standards/SKILL.md`, indexe
 | Issue                             | Example                           | Rule    |
 | --------------------------------- | --------------------------------- | ------- |
 | Missing `-> None` on test         | `def test_foo(self):`             | ANN201  |
-| Untyped fixture parameter         | `def test_foo(self, tmp_path):`   | ANN001  |
+| Fixture parameter in test file    | `def test_foo(tmp_path: Path):`   | review  |
 | Missing `-> None` on init         | `def __init__(self, x: int):`     | ANN204  |
 | Magic values in assertions        | `assert result == 42`             | PLR2004 |
 | Uppercase argument names          | `def __init__(self, WIDTH=8):`    | N803    |

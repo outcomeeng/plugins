@@ -6,7 +6,6 @@ declared in `outcomeeng.distribution.sync`. The doubles are spies
 tests to verify sync's orchestration without invoking real subprocesses
 or mutating marketplace state.
 
-Exception cases per `plugins/spec-tree/skills/test/references/methodology.md`:
 - Stage 5 #2 (Interaction protocols): sync's correctness depends on the
   sequence and presence of step calls.
 - Stage 5 #4 (Safety): real sync mutates the marketplace cache and shells

@@ -37,11 +37,12 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Import source-owned values from the owning module.
-8. Import variable input domains from `product_testing.generators.*`.
-9. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
-10. Consume inert fixture files only by path, reading, or copying.
-11. Run the node's canonical pytest command and the repository's lint/type commands.
+7. Do not declare variables, constants, pytest fixture parameters, or property-generated parameters in the executed test file.
+8. Import source-owned values from the owning module.
+9. Import variable input domains from `product_testing.generators.*`.
+10. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
+11. Consume inert fixture files only by path, reading, or copying.
+12. Run the node's canonical pytest command and the repository's lint/type commands.
 
 </write_workflow>
 
@@ -51,11 +52,11 @@ Run this workflow for rejected Python tests:
 1. Read the rejection and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim.
 2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
 3. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
-4. Replace test-owned constants with source-owned exports or variable generators.
+4. Replace test-file variables and constants with source-owned exports, harness-owned configuration, or variable generators.
 5. Replace constant-only generators with direct source imports or meaningful variable domains.
 6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
 7. Keep `product_testing.fixtures/` for inert files only.
-8. Remove `tests/helpers`, `tests/support`, node-local helper modules, and fixture body code from `conftest.py`.
+8. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
 9. Rerun the focused tests and repository-canonical Python validation commands.
 
 </fix_workflow>
@@ -100,7 +101,7 @@ Python test work satisfies this skill when:
 
 - Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
-- Tests import source-owned values instead of defining local constants
+- Tests declare no variables, constants, pytest fixture parameters, or property-generated parameters; values come from source contracts, generators, harnesses, inert fixtures, or eval case data
 - Generators represent meaningful variable domains
 - Harnesses manage resource lifecycle and pytest fixture body code
 - Inert fixtures are consumed only as files

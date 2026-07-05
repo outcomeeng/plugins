@@ -41,9 +41,7 @@ def test_mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump() ->
     assert mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump()
 
 
-def test_mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max() -> (
-    None
-):
+def test_mixed_dual_manifest_aligns_owned_manifests_to_current_max() -> None:
     assert mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max()
 
 
