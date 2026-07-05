@@ -2,13 +2,13 @@
 name: inspect-github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
-allowed-tools: Bash(python3:*gh_access.py*), Bash(git branch:*), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh auth switch:*), Read, Grep, request_user_input
-model: sonnet
+allowed-tools: Bash(python3:*gh_access.py*), Bash(git branch --show-current), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh auth switch:*), Read, Grep, request_user_input
+model: haiku
 ---
 
 <objective>
 
-A read-only diagnosis of GitHub Actions workflow runs from inside a session — status, run discovery, log triage, and authentication-state.
+A GitHub Actions workflow-run diagnosis from inside a session — status, run discovery, log triage, authentication state, and operator-approved account switching when needed.
 
 </objective>
 
@@ -35,9 +35,11 @@ The output is a JSON object with these fields:
 | `is_tty`             | `true` only when both stdin and stdout are TTYs                              |
 | `error`              | Non-null when identity could not be resolved (no GitHub remote, parse error) |
 
-If `error` is non-null or `host` is not `github.com`, stop and report — this skill handles `github.com` only.
+If `error` is non-null or `host` is `null`, stop and report. Otherwise continue; the helper supports `github.com` and GitHub Enterprise hostnames.
 
-If `has_access` is `false` and `is_tty` is `true`, ask the user via `request_user_input` which of `available_accounts` to switch to. Calling `gh auth switch -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
+If `has_access` is `false`, `is_tty` is `true`, and `available_accounts` is non-empty, ask the user via `request_user_input` which account to switch to. Calling `gh auth switch -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
+
+If `has_access` is `false`, `is_tty` is `true`, and `available_accounts` is empty, report the active account, the access failure, and the manual remediation commands. Do not ask for an account switch when no account is available.
 
 If `has_access` is `false` and `is_tty` is `false` (CI, scripts, batch), report the active account, the access failure, and the manual remediation commands. Do not attempt a switch.
 
