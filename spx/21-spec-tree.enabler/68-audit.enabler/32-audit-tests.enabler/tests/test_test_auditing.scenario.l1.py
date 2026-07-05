@@ -20,6 +20,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     prose_coupling_is_rejected,
     property_failure_notes_include_seed_and_replay,
     python_binding_declarations_are_detected,
+    python_comprehension_declarations_are_detected,
     python_exception_declarations_are_detected,
     python_parameter_declarations_are_detected,
     python_pattern_declarations_are_detected,
@@ -39,6 +40,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     string_literal_is_rejected,
     owned_declaration_is_rejected,
     testability_passes_to_coupling,
+    typescript_class_declarations_are_detected,
     typescript_function_parameter_declarations_are_detected,
     typescript_generator_declarations_are_detected,
     typescript_loop_declarations_are_detected,
@@ -52,6 +54,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     typescript_same_line_statement_declarations_are_detected,
     typescript_jsx_closing_declarations_are_split,
     typescript_template_literal_declarations_are_ignored,
+    typescript_using_declarations_are_detected,
     unfalsifiable_evidence_is_rejected,
     untestable_source_targets_source,
 )
@@ -173,6 +176,10 @@ def test_detects_python_parameter_declarations() -> None:
     assert python_parameter_declarations_are_detected()
 
 
+def test_detects_python_comprehension_declarations() -> None:
+    assert python_comprehension_declarations_are_detected()
+
+
 def test_ignores_python_test_function_wrappers() -> None:
     assert python_test_function_wrappers_are_not_owned_declarations()
 
@@ -199,6 +206,14 @@ def test_detects_typescript_typed_destructuring_declarations() -> None:
 
 def test_detects_typescript_function_parameter_declarations() -> None:
     assert typescript_function_parameter_declarations_are_detected()
+
+
+def test_detects_typescript_using_declarations() -> None:
+    assert typescript_using_declarations_are_detected()
+
+
+def test_detects_typescript_class_declarations() -> None:
+    assert typescript_class_declarations_are_detected()
 
 
 def test_splits_typescript_semicolonless_declarations() -> None:

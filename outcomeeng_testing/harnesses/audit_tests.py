@@ -353,6 +353,21 @@ def python_parameter_declarations_are_detected() -> bool:
     )
 
 
+def python_comprehension_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """def test_comprehension_cases() -> None:
+    assert all(check(case) for case in cases)
+    expected_values = [expected for expected in cases]
+""",
+        Path("python-comprehensions.py"),
+    )
+    return (
+        _has_variable(declarations, "case")
+        and _has_variable(declarations, "expected")
+        and _has_variable(declarations, "expected_values")
+    )
+
+
 def python_test_function_wrappers_are_not_owned_declarations() -> bool:
     declarations = _scanner().scan_text(
         """def test_property_case() -> None:
@@ -485,6 +500,31 @@ function helperCase(input: SourceCase, ...rest: readonly SourceCase[]) {
         and _has_variable(declarations, "input")
         and _has_variable(declarations, "rest")
     )
+
+
+def typescript_using_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """using temp = createTempProject();
+await using disposable = createDisposableHarness();
+""",
+        Path("using-declarations.ts"),
+    )
+    return _has_variable(declarations, "temp") and _has_variable(
+        declarations, "disposable"
+    )
+
+
+def typescript_class_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """class RecordingGateway {
+  send(input: Payload): Response {
+    return record(input);
+  }
+}
+""",
+        Path("class-declarations.ts"),
+    )
+    return _has_function(declarations, "RecordingGateway")
 
 
 def typescript_semicolonless_declarations_are_split() -> bool:

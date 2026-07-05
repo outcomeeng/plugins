@@ -30,7 +30,7 @@ class Declaration:
 
 
 _TYPESCRIPT_DECLARATION = re.compile(
-    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:(?P<value_kind>const|let|var)\s+|(?P<function_kind>function)\s*\*?\s+)(?P<body>.+)",
+    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:(?P<value_kind>const|let|var|using|await\s+using)\s+|(?P<function_kind>function|class)\s*\*?\s+)(?P<body>.+)",
     re.DOTALL,
 )
 _TYPESCRIPT_FOR_DECLARATION = re.compile(
@@ -170,6 +170,10 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
                 declarations.extend(
                     _python_pattern_declarations(case.pattern, path, node.lineno)
                 )
+        elif isinstance(node, ast.comprehension):
+            declarations.extend(
+                _python_target_declarations(node.target, path, node.target.lineno)
+            )
     return declarations
 
 
@@ -670,7 +674,7 @@ def _scan_typescript(source: str, path: Path) -> list[Declaration]:
         kind = (
             _typescript_declaration_kind(match) if not is_catch_declaration else "let"
         )
-        if kind == "function":
+        if kind in {"function", "class"}:
             name_match = _TYPESCRIPT_IDENTIFIER.match(match.group("body"))
             if name_match is not None:
                 declarations.append(
@@ -707,10 +711,10 @@ def _typescript_declaration_units(source: str) -> list[tuple[int, str]]:
     return _declaration_units(
         source,
         start_pattern=re.compile(
-            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function\s*\*?)|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|using|await\s+using|function\s*\*?|class)|for\s+(?:await\s+)?\()"
         ),
         header_only_pattern=re.compile(
-            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?|for\s+(?:await\s+)?\()"
+            r"^\s*(?:}?\s*catch\s*\(|(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s*\*?|class)|for\s+(?:await\s+)?\()"
         ),
         conditional_header_pattern=None,
         continuation_line=_typescript_line_continues_declaration,
