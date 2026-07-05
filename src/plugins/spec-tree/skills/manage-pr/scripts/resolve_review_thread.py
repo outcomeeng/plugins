@@ -52,6 +52,7 @@ NODE_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{8,256}")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 NUMBER_PATTERN = re.compile(r"[1-9]\d*")
 COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{1,256}")
+HOST_PATTERN = re.compile(r"[A-Za-z0-9.-]+")
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,6 +65,7 @@ def parse_args() -> argparse.Namespace:
         help="GitHub review thread node ID to resolve",
     )
     parser.add_argument("--repo", help="Repository in owner/name form")
+    parser.add_argument("--host", help="GitHub host for gh api --hostname")
     parser.add_argument("--pr", help="Pull request number")
     parser.add_argument(
         "--review-comment-id",
@@ -97,10 +99,36 @@ def validate_comment_id(comment_id: str | None) -> str:
     return comment_id
 
 
-def run_graphql(query: str, fields: dict[str, str | int]) -> dict[str, object]:
-    argv = ["gh", "api", "graphql", "-f", f"query={query}"]
+def validate_host(host: str | None) -> str | None:
+    if host is None:
+        return None
+    if not HOST_PATTERN.fullmatch(host):
+        raise ValueError("host must be a GitHub hostname")
+    return host
+
+
+def graphql_argv(
+    query: str,
+    fields: dict[str, str | int],
+    host: str | None,
+    *,
+    silent: bool = False,
+) -> list[str]:
+    argv = ["gh", "api", "graphql"]
+    if host is not None:
+        argv.extend(["--hostname", host])
+    if silent:
+        argv.append("--silent")
+    argv.extend(["-f", f"query={query}"])
     for key, value in fields.items():
         argv.extend(["-F", f"{key}={value}"])
+    return argv
+
+
+def run_graphql(
+    query: str, fields: dict[str, str | int], host: str | None
+) -> dict[str, object]:
+    argv = graphql_argv(query, fields, host)
     completed = subprocess.run(
         argv,
         check=False,
@@ -113,6 +141,12 @@ def run_graphql(query: str, fields: dict[str, str | int]) -> dict[str, object]:
     return json.loads(completed.stdout)
 
 
+def require_object(value: object, message: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise ValueError(message)
+    return value
+
+
 def comment_matches(comment: dict[str, object], comment_id: str) -> bool:
     return (
         str(comment.get("databaseId")) == comment_id or comment.get("id") == comment_id
@@ -120,7 +154,7 @@ def comment_matches(comment: dict[str, object], comment_id: str) -> bool:
 
 
 def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
-    nodes = comments["nodes"]
+    nodes = comments.get("nodes")
     if not isinstance(nodes, list):
         raise ValueError("GitHub response comments.nodes must be a list")
     for comment in nodes:
@@ -130,7 +164,7 @@ def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
 
 
 def thread_has_comment(
-    thread_id: str, comments: dict[str, object], comment_id: str
+    thread_id: str, comments: dict[str, object], comment_id: str, host: str | None
 ) -> bool:
     if find_comment_in_page(comments, comment_id):
         return True
@@ -144,22 +178,41 @@ def thread_has_comment(
         payload = run_graphql(
             THREAD_COMMENTS_QUERY,
             {"threadId": thread_id, "commentsAfter": end_cursor},
+            host,
         )
-        node = payload["data"]["node"]  # type: ignore[index]
-        comments = node["comments"]  # type: ignore[index]
+        data = require_object(
+            payload.get("data"), "GitHub response data must be an object"
+        )
+        node = require_object(
+            data.get("node"),
+            "GitHub response node must be a PullRequestReviewThread object",
+        )
+        comments = require_object(
+            node.get("comments"),
+            "GitHub response node.comments must be an object",
+        )
         if find_comment_in_page(comments, comment_id):
             return True
-        page_info = comments["pageInfo"]
+        page_info = comments.get("pageInfo")
         if not isinstance(page_info, dict):
             raise ValueError("GitHub response comments.pageInfo must be an object")
     return False
 
 
 def review_threads_from_payload(payload: dict[str, object]) -> dict[str, object]:
-    review_threads = payload["data"]["repository"]["pullRequest"]["reviewThreads"]  # type: ignore[index]
-    if not isinstance(review_threads, dict):
-        raise ValueError("GitHub response reviewThreads must be an object")
-    return review_threads
+    data = require_object(payload.get("data"), "GitHub response data must be an object")
+    repository = require_object(
+        data.get("repository"),
+        "GitHub response repository must be an object",
+    )
+    pull_request = require_object(
+        repository.get("pullRequest"),
+        "GitHub response pullRequest must be an object",
+    )
+    return require_object(
+        pull_request.get("reviewThreads"),
+        "GitHub response reviewThreads must be an object",
+    )
 
 
 def iter_thread_comments(
@@ -171,14 +224,14 @@ def iter_thread_comments(
     for thread in threads:
         if not isinstance(thread, dict):
             continue
-        thread_id = validate_thread_id(str(thread["id"]))
-        comments = thread["comments"]
+        thread_id = validate_thread_id(str(thread.get("id")))
+        comments = thread.get("comments")
         if isinstance(comments, dict):
             yield thread_id, comments
 
 
 def next_threads_cursor(review_threads: dict[str, object]) -> str | None:
-    page_info = review_threads["pageInfo"]
+    page_info = review_threads.get("pageInfo")
     if not isinstance(page_info, dict):
         raise ValueError("GitHub response reviewThreads.pageInfo must be an object")
     if not page_info.get("hasNextPage"):
@@ -189,13 +242,19 @@ def next_threads_cursor(review_threads: dict[str, object]) -> str | None:
     return end_cursor
 
 
-def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> str:
+def find_thread_id(
+    owner: str,
+    repo: str,
+    pr_number: int,
+    comment_id: str,
+    host: str | None,
+) -> str:
     fields: dict[str, str | int] = {"owner": owner, "repo": repo, "number": pr_number}
     while True:
-        payload = run_graphql(THREADS_QUERY, fields)
+        payload = run_graphql(THREADS_QUERY, fields, host)
         review_threads = review_threads_from_payload(payload)
         for thread_id, comments in iter_thread_comments(review_threads):
-            if thread_has_comment(thread_id, comments, comment_id):
+            if thread_has_comment(thread_id, comments, comment_id, host):
                 return thread_id
         end_cursor = next_threads_cursor(review_threads)
         if end_cursor is None:
@@ -208,6 +267,7 @@ def find_thread_id(owner: str, repo: str, pr_number: int, comment_id: str) -> st
 def main() -> int:
     args = parse_args()
     try:
+        host = validate_host(args.host)
         if args.thread_id is not None:
             if (
                 args.repo is not None
@@ -222,21 +282,12 @@ def main() -> int:
             owner, repo = validate_repository(args.repo)
             pr_number = validate_number(args.pr, "pr")
             comment_id = validate_comment_id(args.review_comment_id)
-            thread_id = find_thread_id(owner, repo, pr_number, comment_id)
+            thread_id = find_thread_id(owner, repo, pr_number, comment_id, host)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
     completed = subprocess.run(
-        [
-            "gh",
-            "api",
-            "graphql",
-            "--silent",
-            "-f",
-            f"query={QUERY}",
-            "-F",
-            f"id={thread_id}",
-        ],
+        graphql_argv(QUERY, {"id": thread_id}, host, silent=True),
         check=False,
     )
     return completed.returncode

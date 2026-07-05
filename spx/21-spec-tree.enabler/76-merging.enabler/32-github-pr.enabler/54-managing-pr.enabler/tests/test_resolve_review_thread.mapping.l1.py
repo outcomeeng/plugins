@@ -82,6 +82,8 @@ def test_review_comment_id_discovers_thread_before_resolving(
         "argv",
         [
             str(SCRIPT),
+            "--host",
+            "ghe.example.com",
             "--repo",
             "outcomeeng/plugins",
             "--pr",
@@ -93,6 +95,8 @@ def test_review_comment_id_discovers_thread_before_resolving(
 
     assert module.main() == 0
     assert calls[0][:3] == ["gh", "api", "graphql"]
+    assert "--hostname" in calls[0]
+    assert "ghe.example.com" in calls[0]
     assert "owner=outcomeeng" in calls[0]
     assert "repo=plugins" in calls[0]
     assert "number=405" in calls[0]
@@ -100,6 +104,8 @@ def test_review_comment_id_discovers_thread_before_resolving(
         "gh",
         "api",
         "graphql",
+        "--hostname",
+        "ghe.example.com",
         "--silent",
         "-f",
         f"query={module.QUERY}",
@@ -119,7 +125,11 @@ def test_direct_thread_id_resolves_without_discovery(
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "PRRT_thread0002"])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(SCRIPT), "--host", "ghe.example.com", "PRRT_thread0002"],
+    )
 
     assert module.main() == 0
     assert calls == [
@@ -127,6 +137,8 @@ def test_direct_thread_id_resolves_without_discovery(
             "gh",
             "api",
             "graphql",
+            "--hostname",
+            "ghe.example.com",
             "--silent",
             "-f",
             f"query={module.QUERY}",
@@ -217,6 +229,8 @@ def test_review_thread_discovery_pages_threads_until_comment_is_found(
         "argv",
         [
             str(SCRIPT),
+            "--host",
+            "ghe.example.com",
             "--repo",
             "outcomeeng/plugins",
             "--pr",
@@ -295,6 +309,8 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
         "argv",
         [
             str(SCRIPT),
+            "--host",
+            "ghe.example.com",
             "--repo",
             "outcomeeng/plugins",
             "--pr",
@@ -306,6 +322,11 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
 
     assert module.main() == 0
     assert any("commentsAfter=comment-cursor-1" in call for call in calls)
+    graphql_calls = [call for call in calls if call[:3] == ["gh", "api", "graphql"]]
+    assert graphql_calls
+    assert all(
+        "--hostname" in call and "ghe.example.com" in call for call in graphql_calls
+    )
     assert calls[-1][-1] == "id=PRRT_thread0005"
 
 
@@ -338,6 +359,14 @@ def test_review_thread_discovery_pages_comments_until_comment_is_found(
                 "bad!",
             ],
             "review_comment_id must be a database ID or GitHub node ID",
+        ),
+        (
+            [
+                "--host",
+                "bad/host",
+                "PRRT_thread0007",
+            ],
+            "host must be a GitHub hostname",
         ),
         (
             [
@@ -431,6 +460,115 @@ def test_review_comment_not_found_after_complete_pagination_returns_error(
         in capsys.readouterr().err
     )
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    (
+        (
+            {"data": {"repository": None}},
+            "GitHub response repository must be an object",
+        ),
+        (
+            {"data": {"repository": {"pullRequest": None}}},
+            "GitHub response pullRequest must be an object",
+        ),
+    ),
+)
+def test_null_review_thread_discovery_payload_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    payload: dict[str, object],
+    message: str,
+) -> None:
+    module = load_script()
+
+    def fake_run(_argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "909",
+        ],
+    )
+
+    assert module.main() == 2
+    assert message in capsys.readouterr().err
+
+
+def test_null_paginated_thread_node_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = load_script()
+    threads_page = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "id": "PRRT_thread0009",
+                                "comments": {
+                                    "pageInfo": {
+                                        "hasNextPage": True,
+                                        "endCursor": "comment-cursor-2",
+                                    },
+                                    "nodes": [
+                                        {
+                                            "id": "PRRC_comment0009",
+                                            "databaseId": 909,
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+    null_node_page = {"data": {"node": None}}
+
+    def fake_run(argv: list[str], **_kwargs: Any) -> SimpleNamespace:
+        if "threadId=PRRT_thread0009" in argv:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(null_node_page),
+                stderr="",
+            )
+        return SimpleNamespace(returncode=0, stdout=json.dumps(threads_page), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPT),
+            "--repo",
+            "outcomeeng/plugins",
+            "--pr",
+            "405",
+            "--review-comment-id",
+            "1001",
+        ],
+    )
+
+    assert module.main() == 2
+    assert (
+        "GitHub response node must be a PullRequestReviewThread object"
+        in capsys.readouterr().err
+    )
 
 
 def test_malformed_paginated_response_returns_error(

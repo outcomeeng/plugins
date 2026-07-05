@@ -140,8 +140,8 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
   --field body="Acknowledged — fix in next push."
 
 # Mark a review thread resolved
-python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" <review-thread-node-id>
-python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --repo <owner>/<repo> --pr <pr-number> --review-comment-id <review-comment-id>
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> <review-thread-node-id>
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --repo <owner>/<repo> --pr <pr-number> --review-comment-id <review-comment-id>
 
 # Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
 # rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,

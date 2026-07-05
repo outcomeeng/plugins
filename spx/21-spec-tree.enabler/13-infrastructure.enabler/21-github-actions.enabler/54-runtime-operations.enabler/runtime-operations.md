@@ -10,7 +10,7 @@ CAN diagnose failed runs and act on them when the user explicitly requests actio
 
 - Given a GitHub repository with workflow runs on the active branch, when the skill handles a status request, then the response names repository, branch, run id, workflow name, status, conclusion, and commit SHA before narrative ([test](tests/test_runtime_operations.scenario.l1.py))
 - Given a workflow run with conclusion `failure`, when the skill triages it, then `gh run view <run-id> --log-failed` runs before any full-log retrieval and the response surfaces failing job, failing step, and at least one error excerpt ([test](tests/test_runtime_operations.scenario.l1.py))
-- Given the active `gh` account lacks repository access, when the skill detects the failure on a TTY-attached session, then it lists authenticated accounts and prompts for an account switch via `gh auth switch -u <account>`; on a non-TTY session it reports the active account and manual remediation commands without prompting ([test](tests/test_runtime_operations.scenario.l1.py))
+- Given the active `gh` account lacks repository access, when the skill detects the failure on a TTY-attached session with authenticated accounts for the repository host, then it lists those host-scoped accounts and prompts for an account switch via `gh auth switch --hostname <host> -u <account>`; when no account is available or the session is non-TTY, it reports the active account and manual remediation commands without prompting ([test](tests/test_runtime_operations.scenario.l1.py))
 
 ### Properties
 
