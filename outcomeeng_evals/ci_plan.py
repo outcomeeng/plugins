@@ -10,7 +10,11 @@ from pathlib import Path
 from outcomeeng_evals.definition import CiPolicy, EVAL_TOML_FILENAME, load_definition
 
 
-UNIVERSAL_OWNED_PATHS = ("outcomeeng_evals/**", "outcomeeng_testing/evals/**")
+UNIVERSAL_OWNED_PATHS = (
+    "outcomeeng_evals/**",
+    "outcomeeng_testing/evals/**",
+    "outcomeeng_testing/harnesses/**",
+)
 
 
 class CiMode(StrEnum):
