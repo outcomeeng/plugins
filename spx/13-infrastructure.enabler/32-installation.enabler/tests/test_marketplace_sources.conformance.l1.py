@@ -16,7 +16,6 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_replaces_mismatched_codex_path,
     source_reconciliation_explicit_root_replaces_stale_runtime_paths,
     source_reconciliation_preserves_claude_plugin_installs_when_source_changes,
-    source_reconciliation_accepts_already_enabled_claude_plugin_restore,
     source_reconciliation_rejects_scoped_claude_plugin_without_project_path,
     source_reconciliation_failed_codex_add_surfaces_error,
     with_temporary_marketplace_path,
@@ -108,12 +107,6 @@ def test_source_reconciliation_preserves_claude_plugin_installs_when_source_chan
 ):
     assert with_temporary_marketplace_path(
         source_reconciliation_preserves_claude_plugin_installs_when_source_changes
-    )
-
-
-def test_source_reconciliation_accepts_already_enabled_claude_plugin_restore() -> None:
-    assert with_temporary_marketplace_path(
-        source_reconciliation_accepts_already_enabled_claude_plugin_restore
     )
 
 

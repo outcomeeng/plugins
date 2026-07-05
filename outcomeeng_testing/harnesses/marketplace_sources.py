@@ -19,9 +19,6 @@ import pytest
 from outcomeeng.distribution.marketplace_sources import (
     CLAUDE_MARKETPLACE_ADD_COMMAND,
     CLAUDE_MARKETPLACE_REMOVE_COMMAND,
-    CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT,
-    CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT,
-    CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT,
     CLAUDE_PLUGIN_DISABLE_COMMAND,
     CLAUDE_PLUGIN_ENABLE_COMMAND,
     CLAUDE_PLUGIN_INSTALL_COMMAND,
@@ -557,45 +554,6 @@ def source_reconciliation_preserves_claude_plugin_installs_when_source_changes(
     }
     runner = RecordingCommandRunner(
         stdout_by_command=stdout_by_command,
-        returncode_by_command={
-            spec_tree_install: 1,
-            spec_tree_enable: 1,
-            rust_install: 1,
-            rust_disable: 1,
-        },
-        stderr_by_command={
-            # Claude Code CLI currently exits zero for this already-installed
-            # install case; this fixture keeps older non-zero shapes bounded by
-            # the same plugin-ref and scope guard as state restoration.
-            spec_tree_install: (
-                f'Failed to install plugin "spec-tree@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "spec-tree@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT} at project scope"
-            ),
-            # Message body matches Claude Code CLI stderr observed from:
-            # claude plugin enable --scope project spec-tree@outcomeeng
-            spec_tree_enable: (
-                f'\u2718 Failed to enable plugin "spec-tree@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "spec-tree@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT} at project scope"
-            ),
-            # Claude Code CLI currently exits zero for this already-installed
-            # install case; this fixture keeps older non-zero shapes bounded by
-            # the same plugin-ref and scope guard as state restoration.
-            rust_install: (
-                f'Failed to install plugin "rust@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "rust@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT} at user scope"
-            ),
-            # Message body follows Claude Code CLI stderr observed from:
-            # claude plugin disable --scope project rust@outcomeeng, with
-            # the restored plugin scope substituted into the final phrase.
-            rust_disable: (
-                f'\u2718 Failed to disable plugin "rust@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "rust@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT} at user scope"
-            ),
-        },
     )
 
     result = ensure_local_marketplace_sources(
@@ -628,141 +586,6 @@ def source_reconciliation_preserves_claude_plugin_installs_when_source_changes(
         None,
     ]
 
-    def assert_restore_failure_surfaces(
-        command: tuple[str, ...],
-        stderr: str,
-        command_fragment: str,
-    ) -> None:
-        rejecting_runner = RecordingCommandRunner(
-            stdout_by_command=stdout_by_command,
-            returncode_by_command={command: 1},
-            stderr_by_command={command: stderr},
-        )
-
-        with pytest.raises(MarketplaceSourceError) as exc_info:
-            ensure_local_marketplace_sources(
-                DEFAULT_MARKETPLACE,
-                source_root=canonical_root,
-                runner=rejecting_runner,
-            )
-
-        message = str(exc_info.value)
-        assert command_fragment in message
-        assert stderr in message
-
-    for command, stderr, command_fragment in (
-        (
-            spec_tree_install,
-            (
-                f'Failed to install plugin "spec-tree@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "spec-tree@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT} at user scope"
-            ),
-            "claude plugin install --scope project",
-        ),
-        (
-            spec_tree_enable,
-            (
-                f'Failed to enable plugin "typescript@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "typescript@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT} at project scope"
-            ),
-            "claude plugin enable --scope project",
-        ),
-        (
-            spec_tree_enable,
-            (
-                f'Failed to enable plugin "spec-tree@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "spec-tree@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT} at user scope"
-            ),
-            "claude plugin enable --scope project",
-        ),
-        (
-            rust_disable,
-            (
-                f'Failed to disable plugin "rust@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "rust@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT} at project scope"
-            ),
-            "claude plugin disable --scope user",
-        ),
-        (
-            rust_disable,
-            (
-                f'Failed to disable plugin "rust@{DEFAULT_MARKETPLACE}": '
-                f'Plugin "rust@{DEFAULT_MARKETPLACE}" is '
-                f"{CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT} at user scope; "
-                "permission update failed"
-            ),
-            "claude plugin disable --scope user",
-        ),
-    ):
-        assert_restore_failure_surfaces(command, stderr, command_fragment)
-    return True
-
-
-def source_reconciliation_accepts_already_enabled_claude_plugin_restore(
-    tmp_path: Path,
-) -> bool:
-    canonical_root = tmp_path / "canonical-marketplace"
-    stale_root = tmp_path / "old-marketplace"
-    project_path = tmp_path / "consumer-project"
-    spec_tree_enable = (
-        *CLAUDE_PLUGIN_ENABLE_COMMAND,
-        "--scope",
-        "project",
-        f"spec-tree@{DEFAULT_MARKETPLACE}",
-    )
-    runner = RecordingCommandRunner(
-        stdout_by_command={
-            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
-                [
-                    {
-                        "name": DEFAULT_MARKETPLACE,
-                        "source": "Directory",
-                        "path": str(stale_root),
-                    }
-                ]
-            ),
-            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
-                [
-                    {
-                        "name": DEFAULT_MARKETPLACE,
-                        "sourceType": "local",
-                        "path": str(canonical_root),
-                    }
-                ]
-            ),
-            (*CLAUDE_PLUGIN_LIST_COMMAND,): json.dumps(
-                [
-                    {
-                        "id": f"spec-tree@{DEFAULT_MARKETPLACE}",
-                        "scope": "project",
-                        "enabled": True,
-                        "projectPath": str(project_path),
-                    }
-                ]
-            ),
-        },
-        returncode_by_command={spec_tree_enable: 1},
-        stderr_by_command={
-            spec_tree_enable: (
-                'Failed to enable plugin "spec-tree@outcomeeng": '
-                'Plugin "spec-tree@outcomeeng" is already enabled at project scope'
-            )
-        },
-    )
-
-    result = ensure_local_marketplace_sources(
-        DEFAULT_MARKETPLACE,
-        source_root=canonical_root,
-        runner=runner,
-    )
-
-    assert result.changed is True
-    assert spec_tree_enable in runner.calls
-    assert result.commands[-1] == spec_tree_enable
     return True
 
 

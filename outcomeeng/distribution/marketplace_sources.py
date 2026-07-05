@@ -54,9 +54,6 @@ CLAUDE_PLUGIN_DISABLE_COMMAND = (
     "plugin",
     "disable",
 )
-CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT = "already installed"
-CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT = "already enabled"
-CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT = "already disabled"
 CODEX_MARKETPLACE_LIST_COMMAND = (
     "codex",
     "plugin",
@@ -577,14 +574,7 @@ def _restore_claude_plugins(
     for plugin in plugins:
         cwd = _claude_restore_cwd(plugin)
         install = (*CLAUDE_PLUGIN_INSTALL_COMMAND, "--scope", plugin.scope, plugin.ref)
-        _run_claude_plugin_restore_command(
-            install,
-            runner=runner,
-            cwd=cwd,
-            already_satisfied_fragment=CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT,
-            plugin_ref=plugin.ref,
-            plugin_scope=plugin.scope,
-        )
+        _run_json_command(list(install), runner=runner, cwd=cwd)
         commands.append(install)
         state_command = (
             CLAUDE_PLUGIN_ENABLE_COMMAND
@@ -592,18 +582,7 @@ def _restore_claude_plugins(
             else CLAUDE_PLUGIN_DISABLE_COMMAND
         )
         restore_state = (*state_command, "--scope", plugin.scope, plugin.ref)
-        _run_claude_plugin_restore_command(
-            restore_state,
-            runner=runner,
-            cwd=cwd,
-            already_satisfied_fragment=(
-                CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT
-                if plugin.enabled
-                else CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT
-            ),
-            plugin_ref=plugin.ref,
-            plugin_scope=plugin.scope,
-        )
+        _run_json_command(list(restore_state), runner=runner, cwd=cwd)
         commands.append(restore_state)
     return tuple(commands)
 
@@ -640,53 +619,6 @@ def _run_json_command(
             f"{' '.join(command)} exited {result.returncode}{detail}"
         )
     return result
-
-
-def _run_claude_plugin_restore_command(
-    command: tuple[str, ...],
-    *,
-    runner: CommandRunner,
-    cwd: Path | None,
-    already_satisfied_fragment: str,
-    plugin_ref: str,
-    plugin_scope: str,
-) -> subprocess.CompletedProcess[str]:
-    if cwd is None:
-        result = runner(list(command))
-    else:
-        result = runner(list(command), cwd=cwd)
-    if result.returncode == 0:
-        return result
-    stderr = (result.stderr or "").strip()
-    if _is_claude_plugin_already_satisfied_error(
-        command,
-        stderr=stderr,
-        already_satisfied_fragment=already_satisfied_fragment,
-        plugin_ref=plugin_ref,
-        plugin_scope=plugin_scope,
-    ):
-        return result
-    detail = f": {stderr}" if stderr else ""
-    raise MarketplaceSourceError(
-        f"{' '.join(command)} exited {result.returncode}{detail}"
-    )
-
-
-def _is_claude_plugin_already_satisfied_error(
-    command: tuple[str, ...],
-    *,
-    stderr: str,
-    already_satisfied_fragment: str,
-    plugin_ref: str,
-    plugin_scope: str,
-) -> bool:
-    action = command[2]
-    idempotent_message = (
-        f'Plugin "{plugin_ref}" is {already_satisfied_fragment} at {plugin_scope} scope'
-    )
-    plain = f'Failed to {action} plugin "{plugin_ref}": {idempotent_message}'
-    decorated = f"\u2718 {plain}"
-    return stderr in {plain, decorated}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -739,9 +671,6 @@ __all__ = [
     "CLAUDE_MARKETPLACE_ADD_COMMAND",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
     "CLAUDE_MARKETPLACE_REMOVE_COMMAND",
-    "CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT",
-    "CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT",
-    "CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT",
     "CLAUDE_PLUGIN_DISABLE_COMMAND",
     "CLAUDE_PLUGIN_ENABLE_COMMAND",
     "CLAUDE_PLUGIN_INSTALL_COMMAND",
