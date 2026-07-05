@@ -4,17 +4,22 @@
 
 The architecture is decided in
 `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
-context loading derives a target's read-set from `spx spec context --json`, the
-deterministic tree walk and cited-governance decision resolver living in the SPX
-CLI as a trusted third party per `spx/12-shipped-scripting.adr.md`.
-`context-loading.md` is re-founded on that ADR.
+the target architecture derives a target's complete read-set from
+`spx spec context --json`, with the deterministic tree walk and
+cited-governance decision resolver living in the SPX CLI as a trusted third
+party per `spx/12-shipped-scripting.adr.md`. The current `/contextualize` skill
+keeps structural enumeration locally until that CLI capability publishes, but it
+already reads cited full-path ADR/PDR governance decisions from loaded specs and
+decisions.
 
-What remains is implementation, and it is BLOCKED: the CLI capability does not yet
-exist, and the published-floor rule (`AGENTS.md`;
+What remains is the CLI-backed structural enumeration implementation, and it is
+BLOCKED: the CLI capability does not yet exist, and the published-floor rule
+(`AGENTS.md`;
 `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`)
 forbids the consuming skill or its tests from depending on an unpublished `spx`
-capability. No manual fallback in the skill closes this gap — the ADR's NEVER
-rules forbid reconstructing the read-set outside the CLI.
+capability. The current skill-level cited-decision read closes the
+cross-methodology-governance loading gap for moved PDRs while the broader
+structural enumeration target remains blocked.
 
 ## The data already exists in spx
 
@@ -108,7 +113,7 @@ Contract specifics:
   non-zero exit with the missing path on stderr — the CLI surfaces the abort the
   skill currently raises.
 
-## Plugins-side consumption (BLOCKED on publish + floor advance)
+## Plugins-side structural-enumeration consumption (BLOCKED on publish + floor advance)
 
 This slice cannot ship until:
 
@@ -125,7 +130,8 @@ Once unblocked:
   "run `spx spec context <target> --json`; read every path in `read_order`, then
   read the `guides` and the lifecycle overlay (`spx/local/merging.md`) outside the
   `read_order` loop while listing the remaining `local_overlays` without reading
-  them; the `<SPEC_TREE_CONTEXT>` manifest enumerates exactly those paths."
+  them; the `<SPEC_TREE_CONTEXT>` manifest enumerates exactly those paths and
+  cited-governance provenance."
   Preserving the guide and `merging.md` reads keeps the product guide and
   lifecycle overlay in every context load without pulling in unrelated skill
   overlays. The agent no longer eyeballs the file set, so the skip and the
@@ -149,8 +155,11 @@ consumption slice once it is published and the floor is advanced.
 ## Done in this changeset
 
 - Authored `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`
-  deciding the SPX-CLI enumeration architecture and forbidding any manual
-  read-set reconstruction.
-- Re-founded `context-loading.md` on the ADR: the read-set is derived from
-  `spx spec context`, and the "read every ADR/PDR" assertion no longer names the
-  agent-glob mechanism.
+  deciding the SPX-CLI structural enumeration target and the cited-governance
+  decision loading rule.
+- Re-founded `context-loading.md` on the ADR: the read-set includes cited
+  methodology-governance decisions, while full structural enumeration through
+  `spx spec context` remains blocked on the published CLI capability.
+- Updated `src/plugins/spec-tree/skills/contextualize/SKILL.md` so the current
+  runtime reads explicit full-path ADR/PDR citations from loaded specs and
+  decisions before emitting `<SPEC_TREE_CONTEXT>`.
