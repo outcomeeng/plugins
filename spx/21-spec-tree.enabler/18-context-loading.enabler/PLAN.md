@@ -5,8 +5,9 @@
 The architecture is decided in
 `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
 context loading derives a target's read-set from `spx spec context --json`, the
-deterministic tree walk living in the SPX CLI as a trusted third party per
-`spx/12-shipped-scripting.adr.md`. `context-loading.md` is re-founded on that ADR.
+deterministic tree walk and cited-governance decision resolver living in the SPX
+CLI as a trusted third party per `spx/12-shipped-scripting.adr.md`.
+`context-loading.md` is re-founded on that ADR.
 
 What remains is implementation, and it is BLOCKED: the CLI capability does not yet
 exist, and the published-floor rule (`AGENTS.md`;
@@ -24,12 +25,14 @@ rules forbid reconstructing the read-set outside the CLI.
 - `decisions` — a flat array of every ADR/PDR with its full-path `id`, `kind`,
   `order`, `slug`.
 
-From those two structures the read-set for any target is a pure function: walk
-`nodes` to the target for the ancestor chain; for each ancestor and the target,
-take its `{id}/{slug}.md` spec, the `decisions` whose `id` sits directly in that
-directory, and the lower-`order` sibling specs at that level; add product spec,
-coordination notes, and local overlays. No new traversal is needed — only the
-derivation.
+From those two structures the structural read-set for any target is a pure
+function: walk `nodes` to the target for the ancestor chain; for each ancestor
+and the target, take its `{id}/{slug}.md` spec, the `decisions` whose `id` sits
+directly in that directory, and the lower-`order` sibling specs at that level;
+add product spec, coordination notes, and local overlays. The CLI then resolves
+full-path ADR/PDR citations from the loaded specs and decisions, adding cited
+methodology-governance decisions to the read-set once with citing-file
+provenance. Coordination notes never drive citation loading.
 
 ## Target capability (spx repo `~/Code/outcomeeng/spx/`)
 
@@ -53,6 +56,11 @@ Output contract (ordered, top-down — the read order `/contextualize` follows):
     ...                                  # repeated per level down to the target
     {"path": "spx/{target}/{slug}.md", "role": "target-spec"},
     {"path": "spx/{target}/{adr-or-pdr}", "role": "decision", "level": "target"},
+    {
+      "path": "spx/{governance}/{adr-or-pdr}",
+      "role": "cited-governance-decision",
+      "cited_by": "spx/{citing-spec-or-decision}"
+    },
     {"path": "spx/{target}/PLAN.md", "role": "coordination-note"},
     {"path": "spx/{target}/ISSUES.md", "role": "coordination-note"}
   ],
@@ -71,14 +79,20 @@ Contract specifics:
 - **Read order is deterministic and total**: product → each ancestor top-down →
   target; within a level, spec before its decisions before its lower-index
   siblings. Entries sharing an `order` index are tie-broken by `slug`, so the same
-  tree and target always produce byte-identical `read_order` even where indices
-  repeat.
+  tree contents and target always produce byte-identical `read_order` even where
+  indices repeat.
 - **All decisions at a level are emitted** — never filtered by title or by the
   lower-index rule. Decision ordering within a level follows `order`, then `slug`.
 - **Lower-index siblings only** carry their spec; same-index and higher-index
   siblings go to `siblings_listed_not_read`, never into `read_order`.
 - **Coordination notes** (`PLAN.md`/`ISSUES.md`) present at any level on the path
   are emitted with `role: coordination-note`.
+- **Cited governance decisions** are emitted when a loaded spec or decision names
+  a full `spx/.../*.adr.md` or `spx/.../*.pdr.md` path to a methodology
+  governance decision outside the structural ancestry. They are ordered by first
+  citation in the already-derived read order, de-duplicated by path, and carry
+  `cited_by`. `PLAN.md`, `ISSUES.md`, and other coordination notes never add
+  cited decisions.
 - **Guides and overlays sit outside `read_order`**: the active runtime's product
   guide (`CLAUDE.md` for Claude Code or `AGENTS.md` for Codex, plus any
   same-runtime subdirectory guide on the path) is emitted in `guides` and the
