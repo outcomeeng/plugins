@@ -549,6 +549,19 @@ const afterTernaryStatement = buildConfig()
     )
 
 
+def typescript_semicolonless_type_alias_parameters_are_ignored() -> bool:
+    declarations = _scanner().scan_text(
+        """import { expect } from "vitest"
+type Predicate = (typeOnly: string) => boolean
+const runtimeValue = buildRuntimeValue()
+""",
+        Path("type-alias.ts"),
+    )
+    return not _has_variable(declarations, "typeOnly") and _has_variable(
+        declarations, "runtimeValue"
+    )
+
+
 def typescript_same_line_statement_declarations_are_detected() -> bool:
     declarations = _scanner().scan_text(
         (
@@ -748,6 +761,15 @@ def rust_or_pattern_declarations_are_detected() -> bool:
         Path("or-pattern.rs"),
     )
     return _has_variable(declarations, "value")
+
+
+def rust_inline_match_arm_declarations_are_detected() -> bool:
+    declarations = _scanner().scan_text(
+        """match result { Ok(value) => assert_value(value), Err(error) => assert_error(error) }
+""",
+        Path("inline-match.rs"),
+    )
+    return _has_variable(declarations, "value") and _has_variable(declarations, "error")
 
 
 def rust_closure_parameter_declarations_are_detected() -> bool:

@@ -10,7 +10,7 @@ Level 1 covers logic that can run with Rust stdlib, normal developer tooling, an
 | tempdir-backed filesystem logic    | `tempfile`                     |
 | deterministic command building     | hand-written trait seams       |
 | finite input/output mappings       | `rstest` or table-driven tests |
-| universal invariants               | `proptest` or `quickcheck`     |
+| universal invariants               | property harness wrapper       |
 
 </what_belongs_here>
 

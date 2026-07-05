@@ -27,6 +27,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     python_test_function_wrappers_are_not_owned_declarations,
     rust_conditional_declarations_are_detected,
     rust_destructuring_declarations_are_detected,
+    rust_inline_match_arm_declarations_are_detected,
     rust_lifetime_before_block_comment_declarations_are_ignored,
     rust_lifetime_declarations_are_split,
     rust_loop_declarations_are_detected,
@@ -44,6 +45,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     typescript_multiline_declarations_are_detected,
     typescript_regex_literal_declarations_are_preserved,
     typescript_semicolonless_declarations_are_split,
+    typescript_semicolonless_type_alias_parameters_are_ignored,
     typescript_typed_destructuring_declarations_are_detected,
     typescript_catch_declarations_are_detected,
     typescript_comparison_initializer_declarators_are_split,
@@ -203,6 +205,10 @@ def test_splits_typescript_semicolonless_declarations() -> None:
     assert typescript_semicolonless_declarations_are_split()
 
 
+def test_ignores_typescript_semicolonless_type_alias_parameters() -> None:
+    assert typescript_semicolonless_type_alias_parameters_are_ignored()
+
+
 def test_detects_typescript_same_line_statement_declarations() -> None:
     assert typescript_same_line_statement_declarations_are_detected()
 
@@ -245,6 +251,10 @@ def test_detects_rust_loop_declarations() -> None:
 
 def test_detects_rust_match_declarations() -> None:
     assert rust_match_declarations_are_detected()
+
+
+def test_detects_rust_inline_match_arm_declarations() -> None:
+    assert rust_inline_match_arm_declarations_are_detected()
 
 
 def test_detects_rust_closure_parameter_declarations() -> None:

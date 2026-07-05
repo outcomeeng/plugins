@@ -16,7 +16,7 @@ Rust test guidance follows this standard when:
 - `/rust-standards` is loaded before this reference
 - co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
-- property assertions use meaningful `proptest` or `quickcheck` properties
+- property assertions run through a harness that owns `proptest` / `quickcheck` runner policy and emits replay evidence
 - compile-time claims use compile-fail evidence
 - shared harnesses, generators, and fixtures live in a separate workspace-member crate as test-infrastructure production code
 - coverage claims are measured with the repository's real coverage tool or recorded as unavailable
@@ -45,7 +45,7 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 | `scenario`    | Scenario       | Concrete inputs and outputs through the governed function, module, or binary |
 | `mapping`     | Mapping        | Table-driven or parameterized cases over a finite input/output mapping       |
 | `conformance` | Conformance    | Parser, schema, protocol, CLI contract, or `trybuild` compile-time check     |
-| `property`    | Property       | `proptest` or `quickcheck` invariant over a generated domain                 |
+| `property`    | Property       | Harness-owned property invariant over a generated domain                     |
 | `compliance`  | Compliance     | Violating fixture, lint harness, or architecture review marker               |
 
 **Level tokens** — the infrastructure required to run the test:
@@ -105,7 +105,7 @@ After `/test` chooses the evidence and level, implement it with these Rust patte
 | Stage 5 exception 6: observability         | capture struct for spans, logs, events, or serialized output                         |
 | Stage 5 exception 7: contract probes       | local stub validated against the same contract schema                                |
 | compile-time contract                      | `trybuild`                                                                           |
-| universal invariant                        | `proptest` or `quickcheck`                                                           |
+| universal invariant                        | property harness backed by `proptest` or `quickcheck`                                |
 
 </router_mapping>
 
@@ -136,7 +136,7 @@ Use the lightest Rust-native tool that preserves evidence:
 | L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps |
 | temp files or dirs            | `tempfile`                                                    |
 | async tests                   | `#[tokio::test]` or runtime-specific test macro               |
-| property testing              | `proptest` or `quickcheck`                                    |
+| property testing              | harness wrapper backed by `proptest` or `quickcheck`          |
 | CLI binaries                  | `assert_cmd` and `predicates`                                 |
 | textual golden output         | `insta` when the output surface itself is the assertion       |
 | compile-fail or diagnostics   | `trybuild`                                                    |
@@ -178,7 +178,7 @@ assert_eq!(GateStatus::Pass.as_str(), product::audit::PASS_STATUS_TOKEN);
 
 Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects.
 
-- Use `proptest` or `quickcheck` strategies for randomized inputs
+- Use generator strategies for randomized inputs consumed by the property harness
 - Write strategy factories for domain-shaped values
 
 ```rust
@@ -251,7 +251,7 @@ Match test strategy to assertion type:
 | -------------- | --------------------------------------------------------------------- |
 | Scenario       | example-based tests with concrete inputs and outputs                  |
 | Mapping        | table-driven tests or `rstest` case matrices                          |
-| Property       | `proptest` or `quickcheck` with meaningful invariants                 |
+| Property       | property harness over generated domains with meaningful invariants    |
 | Conformance    | validator tooling, parsers, schema checks, `trybuild` if compile-time |
 | Compliance     | targeted assertions, lint harnesses, or architecture review markers   |
 
@@ -301,7 +301,7 @@ fn loads_yaml_from_temp_dir() {
 </level_1_patterns>
 
 <property_and_compile_time_patterns>
-Use `proptest` for universal invariants:
+Use the product property harness for universal invariants:
 
 ```rust
 use product_testing::generators::configs::valid_config_strategy;

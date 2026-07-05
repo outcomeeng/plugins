@@ -495,6 +495,10 @@ def _rust_match_arm_units(source: str) -> list[tuple[int, str]]:
         line = _strip_comments(raw_line, lexical_state)
         stripped = line.strip()
         if not current:
+            inline_units = _rust_inline_match_arm_units(stripped)
+            if inline_units:
+                units.extend((index, unit) for unit in inline_units)
+                continue
             if _rust_match_arm_start_is_skippable(stripped):
                 continue
             current = [line]
@@ -510,6 +514,22 @@ def _rust_match_arm_units(source: str) -> list[tuple[int, str]]:
             current = []
             start_line = 0
     return units
+
+
+def _rust_inline_match_arm_units(line: str) -> list[str]:
+    if not line.startswith("match "):
+        return []
+    open_brace = line.find("{")
+    if open_brace == -1:
+        return []
+    close_brace = line.rfind("}")
+    body_end = close_brace if close_brace > open_brace else len(line)
+    body = line[open_brace + 1 : body_end]
+    return [
+        segment.strip()
+        for segment in _split_top_level_commas(body)
+        if _top_level_token_index(segment, "=>") is not None
+    ]
 
 
 def _rust_match_arm_start_is_skippable(line: str) -> bool:
@@ -1023,7 +1043,10 @@ def _matching_close_paren(source: str, open_index: int) -> int | None:
 
 
 def _typescript_arrow_is_type_alias(source: str, parameter_start: int) -> bool:
-    statement_start = source.rfind(";", 0, parameter_start) + 1
+    statement_start = max(
+        source.rfind(";", 0, parameter_start) + 1,
+        source.rfind("\n", 0, parameter_start) + 1,
+    )
     prefix = source[statement_start:parameter_start].strip()
     if _typescript_runtime_arrow_prefix(prefix):
         return False
