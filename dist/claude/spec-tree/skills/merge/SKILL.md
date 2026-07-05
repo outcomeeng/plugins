@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Read
+allowed-tools: Skill, Agent, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Read
 ---
 
 <objective>
