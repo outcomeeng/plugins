@@ -241,7 +241,11 @@ def build_selected_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan
         for step in VALIDATION_STEPS
         if step.argv in selected_argvs
     ]
-    test_paths = tuple(path for path in normalized if _is_python_assertion_test(path))
+    test_paths = tuple(
+        path
+        for path in normalized
+        if _is_python_assertion_test(path) and Path(path).exists()
+    )
     if test_paths:
         selected_steps.append(
             SelectedGateStep(

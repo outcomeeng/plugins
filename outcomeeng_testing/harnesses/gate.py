@@ -883,8 +883,12 @@ def assert_selected_gate_mapping_contract() -> None:
 
     test_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
     plan = build_selected_gate_plan((test_path,))
+    assert all(item.reason != TEST_REASON for item in plan.selected_steps)
+    existing_test_target = PYTEST_TARGET_ARG
+    plan = build_selected_gate_plan((test_path, existing_test_target))
+
     assert plan.selected_steps[-1].reason == TEST_REASON
-    assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, test_path)
+    assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, existing_test_target)
 
     plans = [build_selected_gate_plan((pattern,)) for pattern in FULL_GATE_PATTERNS]
     for full_plan in plans:
