@@ -13,7 +13,7 @@ A claimed handoff session — loaded, reconciled against current repository stat
 
 - Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
-- Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed surface, skill path, evidence infrastructure, verification plan, inspection surface, and remaining-work expectation.
+- Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
 
 </constraints>
@@ -233,7 +233,7 @@ A successful pickup:
 - [ ] Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
 - [ ] Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
 - [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
-- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed surface, skill path, evidence infrastructure, verification plan, inspection surface, and remaining-work expectation
+- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation
 - [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
 - [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
