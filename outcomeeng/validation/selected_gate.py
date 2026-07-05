@@ -58,8 +58,12 @@ FULL_GATE_PATTERNS: Final = (
     "uv.lock",
     "justfile",
     "Justfile",
+    "README.md",
+    "outcomeeng/catalog/**",
+    "outcomeeng/distribution/**",
     "outcomeeng/validation/**",
-    "outcomeeng_testing/harnesses/gate.py",
+    "outcomeeng_evals/**",
+    "outcomeeng_testing/harnesses/**",
     ".github/workflows/check.yml",
 )
 PYTHON_PATTERNS: Final = (
@@ -101,23 +105,26 @@ _STEP_REASONS: Final = {
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
     "diff",
-    "--name-only",
+    "--name-status",
     "--diff-filter=ACDMRT",
 )
 GIT_DIFF_STAGED_ARGV: Final = (
     "git",
     "diff",
     "--cached",
-    "--name-only",
+    "--name-status",
     "--diff-filter=ACDMRT",
 )
 GIT_DIFF_UNSTAGED_ARGV: Final = (
     "git",
     "diff",
-    "--name-only",
+    "--name-status",
     "--diff-filter=ACDMRT",
 )
 GIT_LS_UNTRACKED_ARGV: Final = ("git", "ls-files", "--others", "--exclude-standard")
+DELETED_GIT_STATUS_PREFIX: Final = "D"
+RENAMED_GIT_STATUS_PREFIX: Final = "R"
+COPIED_GIT_STATUS_PREFIX: Final = "C"
 
 
 @dataclass(frozen=True)
@@ -139,6 +146,18 @@ class SelectedGatePlan:
     @property
     def steps(self) -> tuple[Step, ...]:
         return tuple(item.step for item in self.selected_steps)
+
+
+@dataclass(frozen=True)
+class ChangedPath:
+    """One changed path with its git status preserved."""
+
+    path: str
+    status: str
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.status.startswith(DELETED_GIT_STATUS_PREFIX)
 
 
 class GitDiscoveryError(RuntimeError):
@@ -170,24 +189,38 @@ def collect_changed_paths(
 ) -> tuple[str, ...]:
     """Return branch, staged, unstaged, and untracked paths for local gate selection."""
 
+    entries = collect_changed_path_entries(repo, base_ref=base_ref, runner=runner)
+    return tuple(sorted({entry.path for entry in entries}))
+
+
+def collect_changed_path_entries(
+    repo: Path,
+    *,
+    base_ref: str = DEFAULT_BASE_REF,
+    runner: GitRunner = run_git_command,
+) -> tuple[ChangedPath, ...]:
+    """Return branch, staged, unstaged, and untracked paths with git status."""
+
     commands = (
         (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD"),
         GIT_DIFF_STAGED_ARGV,
         GIT_DIFF_UNSTAGED_ARGV,
         GIT_LS_UNTRACKED_ARGV,
     )
-    paths: set[str] = set()
+    entries: set[ChangedPath] = set()
     for command in commands:
         completed = runner(command, repo)
         if completed.returncode != 0:
             raise GitDiscoveryError(command, completed)
-        paths.update(
-            line.strip() for line in completed.stdout.splitlines() if line.strip()
-        )
-    return tuple(sorted(paths))
+        entries.update(_changed_path_entries_from_output(command, completed.stdout))
+    return tuple(sorted(entries, key=lambda entry: (entry.path, entry.status)))
 
 
-def build_selected_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan:
+def build_selected_gate_plan(
+    changed_paths: tuple[str, ...],
+    *,
+    deleted_paths: tuple[str, ...] = (),
+) -> SelectedGatePlan:
     """Build the selected local gate plan for changed paths."""
 
     normalized = tuple(sorted(set(changed_paths)))
@@ -241,10 +274,11 @@ def build_selected_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan
         for step in VALIDATION_STEPS
         if step.argv in selected_argvs
     ]
+    deleted_path_set = set(deleted_paths)
     test_paths = tuple(
         path
         for path in normalized
-        if _is_python_assertion_test(path) and Path(path).exists()
+        if _is_python_assertion_test(path) and path not in deleted_path_set
     )
     if test_paths:
         selected_steps.append(
@@ -272,11 +306,16 @@ def run_selected_check(
     """Run the selected local check through the recipe orchestrator."""
 
     try:
-        changed_paths = collect_changed_paths(repo, runner=runner)
+        changed_path_entries = collect_changed_path_entries(repo, runner=runner)
     except GitDiscoveryError as exc:
         _write_git_discovery_error(sink, exc)
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
-    plan = build_selected_gate_plan(changed_paths)
+    plan = build_selected_gate_plan(
+        tuple(entry.path for entry in changed_path_entries),
+        deleted_paths=tuple(
+            entry.path for entry in changed_path_entries if entry.is_deleted
+        ),
+    )
     _write_plan(sink, plan)
     if plan.full_gate:
         return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
@@ -320,3 +359,42 @@ def _matches_any(paths: tuple[str, ...], patterns: tuple[str, ...]) -> bool:
 
 def _is_python_assertion_test(path: str) -> bool:
     return _matches_any((path,), PYTHON_ASSERTION_TEST_PATTERNS)
+
+
+def _changed_path_entries_from_output(
+    command: tuple[str, ...],
+    output: str,
+) -> tuple[ChangedPath, ...]:
+    entries: list[ChangedPath] = []
+    status_output = command != GIT_LS_UNTRACKED_ARGV
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if status_output:
+            entries.extend(_parse_name_status_line(stripped))
+        else:
+            entries.append(ChangedPath(path=stripped, status="A"))
+    return tuple(entries)
+
+
+def _parse_name_status_line(line: str) -> tuple[ChangedPath, ...]:
+    parts = line.split("\t")
+    status = parts[0]
+    if len(parts) < 2:
+        return ()
+    if status.startswith(RENAMED_GIT_STATUS_PREFIX):
+        if len(parts) < 3:
+            return ()
+        return (
+            ChangedPath(path=parts[1], status=DELETED_GIT_STATUS_PREFIX),
+            ChangedPath(path=parts[2], status=status),
+        )
+    if status.startswith(COPIED_GIT_STATUS_PREFIX):
+        if len(parts) < 3:
+            return ()
+        return (
+            ChangedPath(path=parts[1], status=status),
+            ChangedPath(path=parts[2], status=status),
+        )
+    return (ChangedPath(path=parts[1], status=status),)

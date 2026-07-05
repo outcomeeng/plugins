@@ -15,6 +15,8 @@ UNIVERSAL_OWNED_PATHS = (
     "outcomeeng_testing/evals/**",
     "outcomeeng_testing/harnesses/**",
 )
+RENAMED_GIT_STATUS_PREFIX = "R"
+COPIED_GIT_STATUS_PREFIX = "C"
 
 
 class CiMode(StrEnum):
@@ -86,15 +88,30 @@ def plan_to_jsonable(items: list[EvalPlanItem]) -> list[dict[str, object]]:
 
 
 def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
-    """Read repository-relative changed paths from a newline-delimited file."""
+    """Read repository-relative changed paths from a git changed-path file."""
 
     if path is None:
         return ()
     return tuple(
-        line.strip()
+        changed_path
         for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        for changed_path in _changed_paths_from_line(line)
     )
+
+
+def _changed_paths_from_line(line: str) -> tuple[str, ...]:
+    stripped = line.strip()
+    if not stripped:
+        return ()
+    parts = stripped.split("\t")
+    status = parts[0]
+    if len(parts) == 1:
+        return (stripped,)
+    if status.startswith((RENAMED_GIT_STATUS_PREFIX, COPIED_GIT_STATUS_PREFIX)):
+        if len(parts) < 3:
+            return ()
+        return (parts[1], parts[2])
+    return (parts[1],)
 
 
 def _pr_selection(

@@ -54,6 +54,14 @@ eval-node node_path:
         exit 1
     fi
 
+# Materialize producer-derived eval prompts under a root directory
+eval-materialize-prompts root:
+    uv run outcomeeng-evals materialize-prompts "{{root}}" --repo-root .
+
+# Check producer-derived eval prompts under a root directory for drift
+eval-materialize-prompts-check root:
+    uv run outcomeeng-evals materialize-prompts "{{root}}" --repo-root . --check
+
 # Run deterministic validation only
 validation:
     python3 -m outcomeeng.validation validation

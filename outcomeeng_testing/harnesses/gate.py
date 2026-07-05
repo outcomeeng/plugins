@@ -128,6 +128,7 @@ HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200)
 PYTEST_TARGET_ARG = (
     "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py"
 )
+SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
 
 
 def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
@@ -190,9 +191,15 @@ def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
 def selected_gate_runner_for_paths(
     *,
     branch_path: str = "",
+    branch_old_path: str = "",
     staged_path: str = "",
+    staged_old_path: str = "",
     unstaged_path: str = "",
+    unstaged_old_path: str = "",
     untracked_path: str = "",
+    branch_status: str = "M",
+    staged_status: str = "M",
+    unstaged_status: str = "M",
     branch_returncode: int = 0,
 ) -> RecordingGitRunner:
     """Build a git runner for selected-gate path discovery tests."""
@@ -202,16 +209,28 @@ def selected_gate_runner_for_paths(
             (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{DEFAULT_BASE_REF}...HEAD"): (
                 GitCommandResult(
                     returncode=branch_returncode,
-                    stdout=f"{branch_path}\n" if branch_path else "",
+                    stdout=_selected_gate_name_status_output(
+                        status=branch_status,
+                        path=branch_path,
+                        old_path=branch_old_path,
+                    ),
                 )
             ),
             GIT_DIFF_STAGED_ARGV: GitCommandResult(
                 returncode=0,
-                stdout=f"{staged_path}\n" if staged_path else "",
+                stdout=_selected_gate_name_status_output(
+                    status=staged_status,
+                    path=staged_path,
+                    old_path=staged_old_path,
+                ),
             ),
             GIT_DIFF_UNSTAGED_ARGV: GitCommandResult(
                 returncode=0,
-                stdout=f"{unstaged_path}\n" if unstaged_path else "",
+                stdout=_selected_gate_name_status_output(
+                    status=unstaged_status,
+                    path=unstaged_path,
+                    old_path=unstaged_old_path,
+                ),
             ),
             GIT_LS_UNTRACKED_ARGV: GitCommandResult(
                 returncode=0,
@@ -219,6 +238,19 @@ def selected_gate_runner_for_paths(
             ),
         }
     )
+
+
+def _selected_gate_name_status_output(
+    *,
+    status: str,
+    path: str,
+    old_path: str = "",
+) -> str:
+    if not path:
+        return ""
+    if old_path:
+        return f"{status}\t{old_path}\t{path}\n"
+    return f"{status}\t{path}\n"
 
 
 def selected_gate_branch_discovery_argv() -> tuple[str, ...]:
@@ -836,7 +868,7 @@ def _assert_production_step_lists_smoke() -> None:
 def assert_selected_gate_mapping_contract() -> None:
     """Assert selected local gate planning mappings."""
 
-    for python_pattern in PYTHON_PATTERNS[:3]:
+    for python_pattern in PYTHON_PATTERNS[:2]:
         plan = build_selected_gate_plan((python_pattern,))
         assert tuple(item.step.argv for item in plan.selected_steps) == (
             RUFF_FORMAT_ARGV,
@@ -882,10 +914,13 @@ def assert_selected_gate_mapping_contract() -> None:
     )
 
     test_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
-    plan = build_selected_gate_plan((test_path,))
+    plan = build_selected_gate_plan((test_path,), deleted_paths=(test_path,))
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
     existing_test_target = PYTEST_TARGET_ARG
-    plan = build_selected_gate_plan((test_path, existing_test_target))
+    plan = build_selected_gate_plan(
+        (test_path, existing_test_target),
+        deleted_paths=(test_path,),
+    )
 
     assert plan.selected_steps[-1].reason == TEST_REASON
     assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, existing_test_target)
@@ -918,6 +953,59 @@ def assert_selected_gate_mapping_contract() -> None:
             sorted((branch_path, staged_path, unstaged_path, untracked_path))
         )
         assert runner.repos == [repo] * len(runner.outputs)
+
+    with TemporaryDirectory() as tmp:
+        source_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
+        runner = selected_gate_runner_for_paths(
+            branch_old_path=source_path,
+            branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
+            branch_status="R100",
+        )
+
+        assert collect_changed_paths(Path(tmp), runner=runner) == tuple(
+            sorted((source_path, SELECTED_GATE_RENAMED_TARGET_ARG))
+        )
+
+        spawner = RecordingSpawner(exit_codes=[os.EX_OK])
+        sink = io.StringIO()
+
+        exit_code = run_selected_check(
+            spawner=spawner,
+            sink=sink,
+            repo=Path(tmp),
+            runner=runner,
+        )
+
+        assert exit_code == os.EX_OK
+        assert "python source or test path changed" in sink.getvalue()
+        assert all(
+            PYTEST_ARGV != call[: len(PYTEST_ARGV)] for call in spawner.spawn_calls
+        )
+
+    with TemporaryDirectory() as tmp:
+        source_path = PYTHON_ASSERTION_TEST_PATTERNS[0]
+        runner = selected_gate_runner_for_paths(
+            branch_old_path=source_path,
+            branch_path=SELECTED_GATE_RENAMED_TARGET_ARG,
+            branch_status="C100",
+        )
+
+        assert collect_changed_paths(Path(tmp), runner=runner) == tuple(
+            sorted((source_path, SELECTED_GATE_RENAMED_TARGET_ARG))
+        )
+
+        spawner = RecordingSpawner(exit_codes=[os.EX_OK])
+        sink = io.StringIO()
+
+        exit_code = run_selected_check(
+            spawner=spawner,
+            sink=sink,
+            repo=Path(tmp),
+            runner=runner,
+        )
+
+        assert exit_code == os.EX_OK
+        assert (*PYTEST_ARGV, source_path) in spawner.spawn_calls
 
 
 def assert_selected_gate_compliance_contract() -> None:
@@ -971,6 +1059,28 @@ def assert_selected_gate_compliance_contract() -> None:
         assert "full gate surface changed" in output
         assert "Recipe validation" in output
         assert "Recipe test" in output
+
+    with TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        spawner = RecordingSpawner(exit_codes=[os.EX_OK])
+        runner = selected_gate_runner_for_paths(
+            branch_path=PYTHON_ASSERTION_TEST_PATTERNS[0],
+            branch_status="D",
+        )
+        sink = io.StringIO()
+
+        exit_code = run_selected_check(
+            spawner=spawner,
+            sink=sink,
+            repo=repo,
+            runner=runner,
+        )
+
+        assert exit_code == os.EX_OK
+        assert all(
+            PYTEST_ARGV != call[: len(PYTEST_ARGV)] for call in spawner.spawn_calls
+        )
+        assert "changed python assertion tests" not in sink.getvalue()
 
     _assert_selected_gate_git_discovery_failure()
 

@@ -1,7 +1,7 @@
 title = "review-inspection-comments"
 cases = "cases.jsonl"
 prompt = "prompt.md"
-plugin_dir = "dist/claude/spec-tree/skills/merging-standards"
+plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
   "spx/15-merging.pdr.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**",
@@ -16,6 +16,6 @@ trials = 1
 
 [prompt_source]
 kind = "producer-section"
-producer = "dist/claude/spec-tree/skills/merging-standards/SKILL.md"
-section = "review_inspection"
+producer = "dist/claude/spec-tree/skills/manage-pr/SKILL.md"
+section = "pr_identity_fields"
 template = "prompt.template.md"

@@ -4,9 +4,10 @@ Use the producer section from `{producer_path}` section `{producer_section_name}
 
 Producer section:
 
-```text
+<!-- dprint-ignore -->
+````text
 {producer_section}
-```
+````
 
 Inspection plan:
 

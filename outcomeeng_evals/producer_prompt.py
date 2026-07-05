@@ -157,28 +157,22 @@ def extract_named_producer_section(
         _SECTION_NAME_PATTERN.format(name=re.escape(section_name)),
     )
     matches: list[str] = []
-    open_match: re.Match[str] | None = None
-    open_attrs = ""
+    open_sections: list[tuple[int, str]] = []
     for delimiter in re.finditer(_STEP_DELIMITER_PATTERN, producer_text, re.DOTALL):
         attrs = delimiter.group("attrs")
         if attrs is not None:
-            if open_match is not None:
-                msg = f"{producer_path}: nested step delimiters are not supported"
-                raise ProducerPromptError(msg)
-            open_match = delimiter
-            open_attrs = attrs
+            open_sections.append((delimiter.start(), attrs))
             continue
 
-        if open_match is None:
+        if not open_sections:
             msg = f"{producer_path}: unmatched step closing delimiter"
             raise ProducerPromptError(msg)
-        section_text = producer_text[open_match.start() : delimiter.end()]
+        section_start, open_attrs = open_sections.pop()
+        section_text = producer_text[section_start : delimiter.end()]
         if name_re.search(open_attrs):
             matches.append(section_text)
-        open_match = None
-        open_attrs = ""
 
-    if open_match is not None:
+    if open_sections:
         msg = f"{producer_path}: unclosed step delimiter"
         raise ProducerPromptError(msg)
     if len(matches) != 1:
