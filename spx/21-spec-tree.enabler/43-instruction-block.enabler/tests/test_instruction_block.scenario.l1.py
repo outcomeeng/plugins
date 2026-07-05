@@ -986,3 +986,31 @@ def test_write_normalizes_divergent_placeholder_bodies(
     )
     assert claude_body == agents_body
     assert not module.is_slot_filled(claude_body)
+
+
+def test_write_ignores_inline_marker_example_before_the_block(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    assert run_generator_write_primary(tmp_path, template) == 0
+
+    # Prepend product prose that quotes the literal router marker inline, before the real block.
+    # An unanchored match would treat the quoted example as the opener and replace from it through
+    # the real closing fence, corrupting the prose.
+    marker_example = module.router_marker(NEW_VERSION, (LANG_PRIMARY,))
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        path = tmp_path / name
+        path.write_text(
+            f"# Root\n\nThe opening marker is `{marker_example}` — an inline example.\n\n"
+            + path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    # A re-write matches only the real fence line: the inline example prose survives and the
+    # block is re-rendered exactly once.
+    assert run_generator_write_primary(tmp_path, template) == 0
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        content = (tmp_path / name).read_text(encoding="utf-8")
+        assert f"`{marker_example}` — an inline example." in content
+        assert content.count(module.ROUTER_BLOCK_END) == 1

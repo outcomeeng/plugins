@@ -54,8 +54,13 @@ DEFAULT_TEMPLATE_SOURCE = "spec-tree"
 ROUTER_MARKER_PREFIX = "<!-- SPEC-TREE v"
 ROUTER_BLOCK_END = "<!-- /SPEC-TREE -->"
 ROUTER_LANGS_KEY = "langs:"
+# Anchored to a full fence line (``re.MULTILINE``) so an inline marker example in product prose
+# never opens the block: the shipped instruction block teaches the literal marker, so a consumer
+# may quote it in prose, and an unanchored match would replace from that quote through the real
+# closing fence and corrupt the document.
 _ROUTER_MARKER_RE = re.compile(
-    r"<!--\s*SPEC-TREE\s+v(?P<version>\S+)\s+langs:(?P<langs>\S*)\s*-->"
+    r"^<!--\s*SPEC-TREE\s+v(?P<version>\S+)\s+langs:(?P<langs>\S*)\s*-->\s*$",
+    re.MULTILINE,
 )
 
 # Retired marker pairs. A managed surface delimited by one of these is generated content from a
