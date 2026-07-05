@@ -13,7 +13,12 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from outcomeeng_evals.cli import main
+from outcomeeng_evals.cli import (
+    EXIT_GENERAL_ERROR,
+    EXIT_INVOCATION_ERROR,
+    EXIT_SUCCESS,
+    main,
+)
 from outcomeeng_evals.cli.commands.run import (
     MAX_WORKERS,
     MIN_WORKERS,
@@ -21,13 +26,8 @@ from outcomeeng_evals.cli.commands.run import (
     _runner_factory_from_context,
     build_claude_runner,
 )
-from outcomeeng_evals.definition import CiPolicy
 from outcomeeng_evals.testing.cli import build_run_cli_harness
-
-
-EXIT_SUCCESS = 0
-EXIT_GENERAL_ERROR = 1
-EXIT_INVOCATION_ERROR = 2
+from outcomeeng_evals.testing.factories import make_eval_dir
 
 
 def test_main_group_exposes_documented_subcommands() -> None:
@@ -426,10 +426,12 @@ def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
     tmp_path: Path,
 ) -> None:
     runner = CliRunner()
-    eval_toml = _write_planned_eval(
-        tmp_path,
+    eval_toml = make_eval_dir(
+        tmp_path / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
@@ -464,10 +466,12 @@ def test_plan_subcommand_selects_full_suite_when_harness_change_follows_owned_pa
     tmp_path: Path,
 ) -> None:
     runner = CliRunner()
-    eval_toml = _write_planned_eval(
-        tmp_path,
+    eval_toml = make_eval_dir(
+        tmp_path / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
@@ -503,10 +507,12 @@ def test_plan_subcommand_selects_full_suite_when_harness_change_follows_owned_pa
 
 def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -> None:
     runner = CliRunner()
-    eval_toml = _write_planned_eval(
-        tmp_path,
+    eval_toml = make_eval_dir(
+        tmp_path / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text("outcomeeng_evals/suite.py\n", encoding="utf-8")
@@ -538,10 +544,12 @@ def test_plan_subcommand_selects_full_suite_for_absolute_eval_definition_change(
     tmp_path: Path,
 ) -> None:
     runner = CliRunner()
-    eval_toml = _write_planned_eval(
-        tmp_path,
+    eval_toml = make_eval_dir(
+        tmp_path / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
@@ -579,10 +587,12 @@ def test_plan_subcommand_selects_full_suite_for_eval_definition_change(
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     eval_root = Path("spx")
-    eval_toml = _write_planned_eval(
-        eval_root,
+    eval_toml = make_eval_dir(
+        eval_root / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = Path("changed.txt")
     changed_paths.write_text(
@@ -615,18 +625,20 @@ def test_plan_subcommand_selects_full_suite_for_eval_definition_change(
 
 def test_plan_subcommand_full_mode_excludes_manual_evals(tmp_path: Path) -> None:
     runner = CliRunner()
-    automatic_eval = _write_planned_eval(
-        tmp_path,
-        rule="automatic",
+    automatic_eval = make_eval_dir(
+        tmp_path / "evals" / "automatic",
+        title="automatic",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
-    _write_planned_eval(
-        tmp_path,
-        rule="manual",
+    make_eval_dir(
+        tmp_path / "evals" / "manual",
+        title="manual",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/review-changes/**",),
-        smoke_cases=("manual-smoke",),
-        ci_policy=CiPolicy.MANUAL,
+        smoke_case_ids=("manual-smoke",),
+        ci_policy="manual",
     )
 
     result = runner.invoke(
@@ -652,10 +664,12 @@ def test_plan_subcommand_full_mode_excludes_manual_evals(tmp_path: Path) -> None
 
 def test_plan_subcommand_skips_unrelated_pr_change(tmp_path: Path) -> None:
     runner = CliRunner()
-    _write_planned_eval(
-        tmp_path,
+    make_eval_dir(
+        tmp_path / "evals" / "rule",
+        title="rule",
+        plugin_dir="dist/claude/spec-tree",
         owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
-        smoke_cases=("happy-path",),
+        smoke_case_ids=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text("README.md\n", encoding="utf-8")
@@ -674,35 +688,3 @@ def test_plan_subcommand_skips_unrelated_pr_change(tmp_path: Path) -> None:
 
     assert result.exit_code == EXIT_SUCCESS
     assert json.loads(result.output) == []
-
-
-def _write_planned_eval(
-    root: Path,
-    *,
-    rule: str = "rule",
-    owned_paths: tuple[str, ...],
-    smoke_cases: tuple[str, ...],
-    ci_policy: CiPolicy | None = None,
-) -> Path:
-    eval_dir = root / "evals" / rule
-    eval_dir.mkdir(parents=True)
-    owned_paths_toml = ", ".join(f'"{path}"' for path in owned_paths)
-    smoke_cases_toml = ", ".join(f'"{case_id}"' for case_id in smoke_cases)
-    eval_toml = eval_dir / "eval.toml"
-    lines = [
-        f'title = "{rule}"',
-        'cases = "cases.jsonl"',
-        'prompt = "prompt.md"',
-        'plugin_dir = "dist/claude/spec-tree"',
-        f"owned_paths = [{owned_paths_toml}]",
-        f"smoke_cases = [{smoke_cases_toml}]",
-    ]
-    if ci_policy is not None:
-        lines.append(f'ci_policy = "{ci_policy.value}"')
-    eval_toml.write_text(
-        "\n".join(lines),
-        encoding="utf-8",
-    )
-    (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
-    (eval_dir / "prompt.md").write_text("", encoding="utf-8")
-    return eval_toml

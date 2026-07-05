@@ -14,6 +14,8 @@ The ``main`` group exposes these subcommands:
 
 from __future__ import annotations
 
+import os
+
 import click
 
 from outcomeeng_evals.cli.commands.discover import discover_command
@@ -25,6 +27,10 @@ from outcomeeng_evals.cli.commands.materialize_prompts import (
 from outcomeeng_evals.cli.commands.plan import plan_command
 from outcomeeng_evals.cli.commands.run import run_command
 from outcomeeng_evals.cli.commands.view import view_command
+
+EXIT_SUCCESS = os.EX_OK
+EXIT_GENERAL_ERROR = 1
+EXIT_INVOCATION_ERROR = 2
 
 
 @click.group()

@@ -8,6 +8,8 @@ eval directory tree with one call.
 from __future__ import annotations
 
 import json
+import os
+from tempfile import TemporaryDirectory
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,10 @@ from outcomeeng_evals.ci_plan import EvalPlanItem
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
+from outcomeeng_evals.testing.fakes import (
+    RecordingUvExecutable,
+    make_recording_uv_executable,
+)
 
 
 _DEFAULT_CASE_ID = "test-case"
@@ -51,6 +57,16 @@ class EvalPlanCommandCase:
     """Harness-owned CI plan item with its expected command contract."""
 
     item: EvalPlanItem
+    expected_command: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DefaultCiCommandHarness:
+    """Harness-owned CI command setup with expected command evidence."""
+
+    eval_root: Path
+    changed_paths_file: Path
+    fake_uv: RecordingUvExecutable
     expected_command: tuple[str, ...]
 
 
@@ -210,6 +226,60 @@ def write_default_ci_changed_paths_file(tmp_path: Path) -> Path:
     changed_paths_file = tmp_path / "changed-paths.txt"
     changed_paths_file.write_text(f"{DEFAULT_CI_CHANGED_PATH}\n", encoding="utf-8")
     return changed_paths_file
+
+
+def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
+    eval_root = tmp_path / "evals"
+    eval_toml = make_eval_dir(
+        eval_root / "rule",
+        plugin_dir="dist/claude/spec-tree",
+        owned_paths=(DEFAULT_CI_OWNED_PATH,),
+        smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
+    )
+    changed_paths_file = write_default_ci_changed_paths_file(tmp_path)
+    fake_uv = make_recording_uv_executable(tmp_path)
+    return DefaultCiCommandHarness(
+        eval_root=eval_root,
+        changed_paths_file=changed_paths_file,
+        fake_uv=fake_uv,
+        expected_command=expected_default_ci_command(eval_toml),
+    )
+
+
+def assert_main_group_exposes_ci_subcommand() -> None:
+    from click.testing import CliRunner
+
+    from outcomeeng_evals.cli import main
+
+    result = CliRunner().invoke(main, ["--help"])
+
+    assert result.exit_code == os.EX_OK
+    assert "ci" in result.output
+
+
+def assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings() -> None:
+    from click.testing import CliRunner
+
+    from outcomeeng_evals.cli import main
+
+    with TemporaryDirectory() as tmp:
+        harness = make_default_ci_command_harness(Path(tmp))
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "ci",
+                str(harness.eval_root),
+                "--mode",
+                "pr",
+                "--changed-paths-file",
+                str(harness.changed_paths_file),
+            ],
+            env=harness.fake_uv.env,
+        )
+
+        assert result.exit_code == os.EX_OK
+        assert harness.fake_uv.commands() == (harness.expected_command,)
 
 
 def make_bimodal_cache_suite_result() -> SuiteResult:
