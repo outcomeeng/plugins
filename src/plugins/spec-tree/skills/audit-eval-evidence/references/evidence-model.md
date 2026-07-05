@@ -115,6 +115,14 @@ Read `history.jsonl` and the referenced run summary when available. Confirm:
 - The recorded outcome is passing.
 - The row is not budget-exhausted, timed out, interrupted, or infrastructure-failed.
 
+When the newest passing row's `git_sha` names a direct ancestor of HEAD, inspect
+the diff from that SHA to HEAD before rejecting it as stale. Accept the row only
+when every changed path is the audited suite's own `history.jsonl` append and no
+`eval.toml`, `prompt.md`, `cases.jsonl`, producer artifact, grader, harness, or
+threshold-affecting code changed. This history-only exception is required
+because committing an append-only history row necessarily advances HEAD after
+the run records `git rev-parse HEAD`.
+
 Budget-exhausted and other operational failures are neither passes nor behavioral rejections. They only show the suite did not produce complete evidence.
 
 </run_evidence>
