@@ -302,7 +302,7 @@ Claude read test file imports during `/contextualize` and reported implementatio
 
 **Failure 5: Reported a bare node or decision name**
 
-Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report the complete path from `spx/`, such as `spx/21-build.enabler/15-build.adr.md` or `spx/21-infrastructure.enabler/32-parser.enabler`, so the file can be found.
+Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report the complete path from `spx/`, using the shape `spx/{parent-node}/{target-node}/{decision-file}` or `spx/{parent-node}/{target-node}`, so the file can be found.
 
 **Failure 6: Omitted lifecycle continuation from the context marker**
 
