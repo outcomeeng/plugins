@@ -85,8 +85,10 @@ sibling-fill, no `--fill-slot`, no cross-file reconcile heuristics. Deletes
 `reconcile_command_slots`, `command_slot_conflicts`, `_find_fence_line`,
 `_next_fence_index`, and the whole edge-case class.
 
-Also resolves the standing ISSUES.md debt ("generator complexity belongs in the SPX
-CLI") — the deterministic surface shrinks to a small validator.
+Shrinks — but does not resolve — the standing ISSUES.md debt ("generator complexity
+belongs in the SPX CLI"): deleting the command-slot parser reduces the surface, while the
+shared-region reconcile and bootstrap keep enough complexity that ISSUES.md still tracks the
+SPX-CLI migration as accepted debt.
 
 ## Implementation sequence
 
@@ -129,9 +131,10 @@ CLI") — the deterministic surface shrinks to a small validator.
      `CLAUDE.md`/`AGENTS.md`. The migrated root files carry the v0.23.0 router first and a
      byte-identical `SPEC-TREE:shared commands` region (dead slot fences removed) — dogfooding the
      new shared-region feature; `shared_region_drift` is empty.
-   - **Remaining before merge:** skill-auditor + subagent-auditor gates on the rewritten
-     `update-instruction-block` SKILL and `instruction-block-updater` agent; then commit (lefthook
-     regenerates + validates) and drive `/merge`.
-5. Decide PR #408's fate (close/supersede) — its branch carries the superseded model. The net
-   `origin/main...HEAD` diff is already the clean redesign (slot code added then removed nets out);
-   only the commit history carries the slot commits.
+   - **Gates run:** `develop:skill-auditor` and `develop:subagent-auditor` both pass on the
+     rewritten `update-instruction-block` SKILL and `instruction-block-updater` agent, and
+     `just check` is green. The change is committed on `work/instruction-block-render-model` as
+     PR #412, driving `/merge`.
+5. PR #408 (the superseded command-slot model) is closed as superseded by #412. The net
+   `origin/main...HEAD` diff is the clean redesign (slot code added then removed nets out); only
+   #408's commit history carried the slot commits.

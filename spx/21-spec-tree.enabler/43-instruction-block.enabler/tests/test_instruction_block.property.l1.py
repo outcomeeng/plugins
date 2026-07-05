@@ -11,6 +11,8 @@ Python tuple ordering and string equality are the independent oracles.
 
 from __future__ import annotations
 
+from types import ModuleType
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -49,7 +51,7 @@ def _to_version(parts: tuple[int, int, int]) -> str:
     return ".".join(str(part) for part in parts)
 
 
-def _shared_document(module: object, name: str, body: str) -> str:
+def _shared_document(module: ModuleType, name: str, body: str) -> str:
     return (
         f"{module.shared_open_marker(name)}\n\n{body}\n\n"
         f"{module.shared_close_marker(name)}\n"

@@ -65,6 +65,55 @@ SHARED_REGION_NAME: Final = "root"
 SHARED_REGION_BODY: Final = "Build: `product build --all`"
 SHARED_REGION_BODY_ALT: Final = "Build: `product build --changed`"
 
+# Two near-identical root-file bodies for the bootstrap line-boundary guard: more than 80%
+# identical but diverging mid-line on a harness-specific word, so the longest contiguous common
+# span ends mid-line. The bootstrap must snap to line boundaries rather than split the divergent
+# line across the shared-region fence.
+_NEAR_IDENTICAL_COMMON: Final = (
+    "\n".join(
+        f"Common line {index} with plenty of words to be substantial here."
+        for index in range(30)
+    )
+    + "\n"
+)
+ROOT_NEAR_IDENTICAL_CLAUDE: Final = (
+    _NEAR_IDENTICAL_COMMON + "Shared opening words then CLAUDE specific tail here.\n"
+)
+ROOT_NEAR_IDENTICAL_CODEX: Final = (
+    _NEAR_IDENTICAL_COMMON + "Shared opening words then CODEX specific tail here.\n"
+)
+
+# A pair for the bootstrap span-maximality guard: a whole-line-identical block plus a longer
+# near-duplicate single line diverging mid-line. The byte-level-longest match is that long line,
+# which snaps away to nothing at a line boundary — so the biggest whole-line span is the block
+# elsewhere, and the wrap must find it rather than under-detect from the single longest byte match.
+_STRADDLING_BLOCK: Final = (
+    "\n".join(
+        f"Common whole line number {index} shared across both files."
+        for index in range(6)
+    )
+    + "\n"
+)
+# The long prefix and the diverging tail form ONE line (no newline between them), so the
+# byte-longest match is that line's shared prefix — which straddles the line and snaps away.
+_STRADDLING_LONG_PREFIX: Final = "x" * 480
+ROOT_STRADDLING_CLAUDE: Final = (
+    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "AAAAA claude-specific tail here.\n"
+)
+ROOT_STRADDLING_CODEX: Final = (
+    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "BBBBB codex-specific tail here.\n"
+)
+
+# A pair whose shared content starts at a line boundary in one file but mid-line in the other: the
+# second file carries a harness-specific prefix on the otherwise-shared first line. The bootstrap
+# must snap the span to line boundaries in BOTH files, never splitting the prefixed line.
+_MIDLINE_COMMON: Final = "".join(
+    f"identical line {index} here with plenty of content to dominate.\n"
+    for index in range(20)
+)
+ROOT_MIDLINE_CLAUDE: Final = "shared prose here\n" + _MIDLINE_COMMON
+ROOT_MIDLINE_CODEX: Final = "harness-prefix shared prose here\n" + _MIDLINE_COMMON
+
 # The retired session-result tokens the shipped instruction block must never teach. No
 # production module owns a removed token, so the regression guard declares the forbidden
 # strings here and asserts they are absent from the real rendered output.
@@ -384,7 +433,7 @@ def root_document_with_shared_region(
         f"{module.shared_open_marker(name)}\n\n{region_body}\n\n"
         f"{module.shared_close_marker(name)}"
     )
-    return module.prepend_router_block(block, fenced)
+    return cast(str, module.prepend_router_block(block, fenced))
 
 
 def write_both_root_files_with_shared_region(
@@ -434,10 +483,16 @@ def git_command(
 
 
 def init_git_identity(repo_root: pathlib.Path) -> None:
-    """Initialize a git repository with a committed-safe identity for drift-gate tests."""
+    """Initialize a git repository with a committed-safe identity for drift-gate tests.
+
+    ``commit.gpgsign`` is forced off in local config so a committer whose global config enables GPG
+    signing — the norm this repository's git-safety protocol protects — does not fail the throwaway
+    ``Test User`` commits these tests make; the local setting overrides the ambient global one.
+    """
     git_command(repo_root, "init")
     git_command(repo_root, "config", "user.name", "Test User")
     git_command(repo_root, "config", "user.email", "test@example.com")
+    git_command(repo_root, "config", "commit.gpgsign", "false")
 
 
 def git_commit_at(

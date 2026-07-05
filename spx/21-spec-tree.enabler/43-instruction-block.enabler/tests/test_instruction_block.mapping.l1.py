@@ -10,6 +10,7 @@ harness's topology fixtures; the test file owns no boundary values.
 from __future__ import annotations
 
 import pathlib
+from collections.abc import Callable
 
 import pytest
 
@@ -121,7 +122,8 @@ def test_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> Non
     ],
 )
 def test_topology_maps_to_bootstrap_outcome(
-    tmp_path: pathlib.Path, topology_factory: object
+    tmp_path: pathlib.Path,
+    topology_factory: Callable[[], harness.RootInstructionTopology],
 ) -> None:
     repo = tmp_path / "repo"
     seeds = harness.materialize_root_instruction_topology(repo, topology_factory())

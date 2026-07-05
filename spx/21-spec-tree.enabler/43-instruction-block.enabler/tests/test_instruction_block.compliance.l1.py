@@ -52,11 +52,20 @@ def test_router_is_first_and_carries_read_whole_file_instruction(
     assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
-def test_generation_reads_dist_templates() -> None:
+def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
+    expected: dict[str, str] = {}
     for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
         path = dist.dist_template_path(agent_harness)
         assert dist.DIST_DIR_NAME in path.parts
         assert agent_harness in path.parts
+        # write a distinct synthetic per-harness dist template, then load it through the production
+        # loader the build recipes call — asserting per-harness template content, not just path shape
+        template = harness.build_template(f"{harness.NEW_VERSION}-{agent_harness}")
+        expected[agent_harness] = template
+        dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
+        dist_path.parent.mkdir(parents=True, exist_ok=True)
+        dist_path.write_text(template, encoding="utf-8")
+    assert dist.load_harness_templates(MODULE, repo_root=tmp_path) == expected
 
 
 def test_justfile_binds_build_and_check_recipes() -> None:
@@ -70,8 +79,11 @@ def test_justfile_binds_build_and_check_recipes() -> None:
 
 def test_lefthook_regenerates_through_build_instructions() -> None:
     lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
-    # the hook's run directive regenerates through the recipe, not a direct generator invocation
+    # the hook's run directive regenerates through the recipe
     assert "run: just build-instructions" in lefthook
+    # NEVER a direct generator invocation against the authored src template
+    assert "--template src/plugins" not in lefthook
+    assert "--repo-root ." not in lefthook
 
 
 def test_drift_gate_reports_a_missing_root_instruction_file(
@@ -90,6 +102,103 @@ def test_drift_gate_reports_a_missing_root_instruction_file(
 
     drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
     assert harness.INSTRUCTION_CLAUDE in drift
+
+
+def test_drift_gate_marks_untracked_root_file_intent_to_add(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    # both root files written but never committed — a plain git diff would miss them
+    harness.write_both_root_files_with_shared_region(
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+    )
+    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    # --intent-to-add registers each never-committed root file as drift
+    assert harness.INSTRUCTION_CLAUDE in drift
+    assert harness.INSTRUCTION_AGENTS in drift
+
+
+def test_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    harness.write_both_root_files_with_shared_region(
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+    )
+    harness.git_commit_at(
+        repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
+    )
+    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    # committed root files do not drift, and a never-tracked obsolete spx/ file is not reported
+    assert drift == []
+    assert "spx/CLAUDE.md" not in drift
+    assert "spx/AGENTS.md" not in drift
+
+
+def test_refresh_pr_step_exits_cleanly_without_drift(tmp_path: pathlib.Path) -> None:
+    gh_log = tmp_path / "gh.log"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    harness.git_command(repo, "config", "commit.gpgsign", "false")
+    (repo / harness.INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
+    (repo / harness.INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
+    harness.git_command(repo, "add", ".")
+    harness.git_command(repo, "commit", "-m", "seed instruction files")
+
+    output = harness.run_refresh_pr_step(repo, gh_log)
+    # no drift -> the PR step reports current and never invokes gh
+    assert output == "Root instruction blocks are current.\n"
+    assert not gh_log.exists()
+
+
+def test_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> None:
+    remote = tmp_path / "remote.git"
+    repo = tmp_path / "repo"
+    gh_log = tmp_path / "gh.log"
+    harness.git_command(tmp_path, "init", "--bare", str(remote))
+    harness.git_command(tmp_path, "clone", str(remote), str(repo))
+    harness.git_command(repo, "config", "user.name", "Test User")
+    harness.git_command(repo, "config", "user.email", "test@example.com")
+    harness.git_command(repo, "config", "commit.gpgsign", "false")
+    spx_dir = repo / "spx"
+    spx_dir.mkdir()
+    for path in (
+        repo / harness.INSTRUCTION_CLAUDE,
+        repo / harness.INSTRUCTION_AGENTS,
+        spx_dir / harness.INSTRUCTION_CLAUDE,
+        spx_dir / harness.INSTRUCTION_AGENTS,
+    ):
+        path.write_text(f"{path.name}\n", encoding="utf-8")
+    harness.git_command(repo, "add", ".")
+    harness.git_command(repo, "commit", "-m", "seed instruction files")
+    harness.git_command(repo, "branch", "-M", "main")
+    harness.git_command(repo, "push", "-u", "origin", "main")
+
+    (repo / harness.INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
+    (repo / harness.INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
+    (spx_dir / harness.INSTRUCTION_CLAUDE).unlink()
+    (spx_dir / harness.INSTRUCTION_AGENTS).unlink()
+
+    harness.run_refresh_pr_step(repo, gh_log)
+
+    committed = harness.git_command(
+        repo,
+        "show",
+        "--name-status",
+        "--format=%s",
+        "automation/refresh-instruction-blocks",
+    ).stdout
+    assert "Refresh root instruction blocks" in committed
+    assert f"M\t{harness.INSTRUCTION_CLAUDE}" in committed
+    assert f"M\t{harness.INSTRUCTION_AGENTS}" in committed
+    assert f"D\tspx/{harness.INSTRUCTION_CLAUDE}" in committed
+    assert f"D\tspx/{harness.INSTRUCTION_AGENTS}" in committed
+    gh_calls = gh_log.read_text(encoding="utf-8")
+    assert "pr list" in gh_calls
+    assert "pr create" in gh_calls
 
 
 def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
@@ -129,18 +238,27 @@ def test_refresh_workflow_checks_out_main() -> None:
 def test_refresh_workflow_verifies_just_download() -> None:
     install = harness.workflow_run_block("Install just")
     just_sha256 = harness.workflow_env_value("JUST_SHA256")
-    # the pinned checksum is declared and the install verifies the download against it
+    # the pinned checksum is declared
     assert len(just_sha256) == 64
     assert "$JUST_SHA256" in install
-    assert "sha256sum" in install.lower()
+    # the download lands in a temp dir with a cleanup trap
+    assert "mktemp -d" in install
+    assert "trap " in install
+    assert "rm -rf" in install
+    # the checksum is verified against the download BEFORE the binary is installed
+    assert install.index("sha256sum -c") < install.index("install -m 0755")
+    # NEVER the insecure pattern: a fixed cwd download file extracted without the temp path
+    assert "-o just.tar.gz" not in install
+    assert "tar -xzf just.tar.gz" not in install
 
 
 def test_refresh_workflow_installs_dprint() -> None:
     install = harness.workflow_run_block("Install dprint")
     dprint_version = harness.workflow_env_value("DPRINT_VERSION")
-    # the pinned version is declared and the install references it
     assert dprint_version
-    assert "${DPRINT_VERSION}" in install
+    # the pinned version is installed via bun and then verified
+    assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install
+    assert "dprint --version" in install
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:
@@ -195,9 +313,17 @@ def test_rendered_router_omits_retired_session_tokens() -> None:
 
 
 def test_unresolved_build_macro_is_rejected() -> None:
+    # exercise the production pipeline function the build recipes call, not just the primitive: one
+    # harness's dist template still carries an unresolved build macro, and the guard must propagate
+    # through render_instruction_blocks_from_harness_templates
+    harness_templates = {
+        agent_harness: harness.build_template(harness.NEW_VERSION)
+        for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    harness_templates[harness.HARNESS_CODEX] += harness.render_build_macro()
     with pytest.raises(dist.UnresolvedInstructionTemplateError):
-        dist.assert_no_unresolved_build_macros(
-            harness.render_build_macro(), path="synthetic-template"
+        dist.render_instruction_blocks_from_harness_templates(
+            MODULE, harness_templates, (harness.LANG_PRIMARY,)
         )
 
 
