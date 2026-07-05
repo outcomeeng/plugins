@@ -10,6 +10,8 @@ import subprocess
 import sys
 from types import ModuleType
 
+import pytest
+
 # parents[6] = repo root (this file lives 6 levels deep: spx/21-spec-tree/
 # 13-infrastructure/21-github-actions/32-workflow-observability/tests/<file>).
 # Tree surgery that changes the enabler's depth must update this index.
@@ -130,6 +132,47 @@ def test_gh_access_parse_remote_recognizes_scp_and_url_forms() -> None:
         "github.com",
         "foo/bar",
     )
+
+
+def test_gh_access_uses_detected_host_for_enterprise_api_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gh_access = _load_gh_access_module()
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str]) -> tuple[int, str, str]:
+        calls.append(cmd)
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return 0, "git@github.example.com:foo/bar.git", ""
+        if cmd[:3] == ["gh", "api", "repos/foo/bar"]:
+            return 0, "bar", ""
+        if cmd[:3] == ["gh", "api", "user"]:
+            return 0, "octocat", ""
+        if cmd == ["gh", "auth", "status", "--json", "hosts"]:
+            return 0, '{"hosts": {}}', ""
+        return 1, "", "unexpected command"
+
+    monkeypatch.setattr(gh_access, "_run", fake_run)
+
+    assert gh_access.main(["gh_access.py"]) == 0
+    assert [
+        "gh",
+        "api",
+        "repos/foo/bar",
+        "--jq",
+        ".name",
+        "--hostname",
+        "github.example.com",
+    ] in calls
+    assert [
+        "gh",
+        "api",
+        "user",
+        "--jq",
+        ".login",
+        "--hostname",
+        "github.example.com",
+    ] in calls
 
 
 def test_gh_access_emits_owner_repo_null_when_outside_git_repo(

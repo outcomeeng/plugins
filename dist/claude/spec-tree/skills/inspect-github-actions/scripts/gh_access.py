@@ -105,13 +105,19 @@ def parse_remote(remote: str) -> tuple[str, str] | None:
     return match["host"], f"{match['owner']}/{match['repo']}"
 
 
-def get_current_account() -> str | None:
-    code, out, _ = _run(["gh", "api", "user", "--jq", ".login"])
+def get_current_account(host: str | None) -> str | None:
+    cmd = ["gh", "api", "user", "--jq", ".login"]
+    if host is not None:
+        cmd.extend(["--hostname", host])
+    code, out, _ = _run(cmd)
     return out if code == 0 and out else None
 
 
-def check_repo_access(owner_repo: str) -> bool:
-    code, _, _ = _run(["gh", "api", f"repos/{owner_repo}", "--jq", ".name"])
+def check_repo_access(host: str | None, owner_repo: str) -> bool:
+    cmd = ["gh", "api", f"repos/{owner_repo}", "--jq", ".name"]
+    if host is not None:
+        cmd.extend(["--hostname", host])
+    code, _, _ = _run(cmd)
     return code == 0
 
 
@@ -181,13 +187,13 @@ def main(argv: list[str]) -> int:
             # enterprise host so detect_remote_url() picks it up.
             host = "github.com"
 
-    has_access = check_repo_access(owner_repo) if owner_repo else False
+    has_access = check_repo_access(host, owner_repo) if owner_repo else False
 
     result = {
         "schema_version": SCHEMA_VERSION,
         "owner_repo": owner_repo,
         "host": host,
-        "current_account": get_current_account(),
+        "current_account": get_current_account(host),
         "has_access": has_access,
         "available_accounts": get_available_accounts(),
         "is_tty": sys.stdin.isatty() and sys.stdout.isatty(),
