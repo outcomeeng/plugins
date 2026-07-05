@@ -150,6 +150,46 @@ def codex_cache_property_failure_notes_include_seed_and_replay() -> bool:
     return False
 
 
+def local_refresh_never_invokes_marketplace_upgrade() -> bool:
+    with codex_cache_workspace() as workspace:
+        plugin_name = "spec-tree"
+        version = "0.1.0"
+        write_dist_codex_manifest(workspace.repo_root, plugin_name, version)
+        history = StaticHistory(
+            plugins=frozenset([plugin_name]),
+            versions_by_plugin={plugin_name: frozenset([version])},
+            current_by_plugin={plugin_name: version},
+        )
+        runner = MaterializingAddRunner(
+            cache_root=workspace.cache_root,
+            versions={plugin_name: version},
+        )
+
+        result = preserve_codex_plugin_cache.refresh_installed_plugins(
+            DEFAULT_MARKETPLACE,
+            repo_root=workspace.repo_root,
+            cache_root=workspace.cache_root,
+            history=history,
+            installed=StaticInstalled({plugin_name: version}),
+            runner=runner,
+        )
+
+    return (
+        runner.calls
+        == [
+            (
+                *preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND,
+                f"{plugin_name}@{DEFAULT_MARKETPLACE}",
+            )
+        ]
+        and all(
+            command[:3] != ("codex", "plugin", "marketplace")
+            for command in runner.calls
+        )
+        and result.refresh_returncode == 0
+    )
+
+
 @codex_cache_refresh_property
 def successful_refresh_reconciles_to_generated_codex_manifest_version(
     refresh: StaleAfterSuccessfulRefresh,
@@ -311,6 +351,7 @@ __all__ = [
     "StaticInstalled",
     "codex_cache_refresh_property",
     "codex_cache_workspace",
+    "local_refresh_never_invokes_marketplace_upgrade",
     "successful_refresh_preserves_absent_stale_codex_reported_version",
     "successful_refresh_reconciles_to_generated_codex_manifest_version",
     "write_dist_codex_manifest",
