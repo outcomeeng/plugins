@@ -297,6 +297,10 @@ def test_pickup_proposal_and_no_node_anchor_use_portable_labels() -> None:
             "Branches, PRs, and session records are transport or lifecycle surfaces"
             in pickup
         )
+        assert (
+            "stop at the next safe checkpoint and present the delta before continuing"
+            in pickup
+        )
         assert "changed surface" not in pickup
         assert "Inspection surface" not in pickup
 
