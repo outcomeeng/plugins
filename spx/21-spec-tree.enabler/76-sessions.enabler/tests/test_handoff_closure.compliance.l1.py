@@ -310,5 +310,7 @@ def test_pickup_proposal_and_no_node_anchor_use_portable_labels() -> None:
 
     assert "changed product surface" in sessions_spec
     assert "inspection references" in sessions_spec
+    assert "Product-level operations" in sessions_spec
+    assert "operational state or product-wide guidance" in sessions_spec
     assert "changed surface" not in sessions_spec
     assert "inspection surface" not in sessions_spec
