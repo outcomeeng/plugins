@@ -148,7 +148,7 @@ The PR body is markdown prose passed to gh on stdin. Default template:
 
 ## Refs
 
-- <spec nodes touched, e.g. spx/55-example.enabler/21-bar.outcome>
+- <full spec node path>
 - <issue refs, e.g. Closes #123>
 ```
 
