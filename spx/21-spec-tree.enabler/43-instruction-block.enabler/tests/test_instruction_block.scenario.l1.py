@@ -1042,3 +1042,61 @@ def test_write_preserves_blank_run_in_prose_when_scaffolding_slots(
         assert "# Root\n\n\n\nProduct prose after a deliberate blank run." in content
         for slot in module.FIXED_COMMAND_SLOTS:
             assert module.parse_command_slot(content, slot) is not None
+
+
+def test_write_ignores_slot_fence_example_in_prose(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    assert run_generator_write_primary(tmp_path, template) == 0
+
+    # Prepend product prose quoting a literal slot fence inline, before the real slots.
+    fence_example = module.slot_open_marker(module.SLOT_MERGE)
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        path = tmp_path / name
+        path.write_text(
+            f"# Root\n\nA slot fence looks like `{fence_example}` — an inline example.\n\n"
+            + path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+    # A re-write matches only the real fence line: the quoted example prose survives and the real
+    # merge slot (still a placeholder) is parsed correctly rather than swallowed from the quote.
+    assert run_generator_write_primary(tmp_path, template) == 0
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        content = (tmp_path / name).read_text(encoding="utf-8")
+        assert f"`{fence_example}` — an inline example." in content
+        body = module.parse_command_slot(content, module.SLOT_MERGE)
+        assert body is not None
+        assert not module.is_slot_filled(body)
+
+
+def test_write_recovers_malformed_slot_body_quoting_a_marker(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_instruction_block_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    assert run_generator_write_primary(tmp_path, template) == 0
+
+    # Fill the last slot with a body that quotes a literal marker substring, then corrupt it into
+    # an open-only fence. Recovery must bound the body at the next real fence line, not the quote.
+    body = "Run `just merge`; the fence is `<!-- SPEC-TREE:merge -->` here."
+    agents = tmp_path / INSTRUCTION_AGENTS
+    filled = module.set_command_slot(
+        agents.read_text(encoding="utf-8"), module.SLOT_MERGE, body
+    )
+    agents.write_text(
+        filled.replace(module.slot_close_marker(module.SLOT_MERGE), ""),
+        encoding="utf-8",
+    )
+    assert (
+        module.parse_command_slot(agents.read_text(encoding="utf-8"), module.SLOT_MERGE)
+        is None
+    )
+
+    assert run_generator_write_primary(tmp_path, template) == 0
+    assert (
+        module.parse_command_slot(agents.read_text(encoding="utf-8"), module.SLOT_MERGE)
+        == body
+    )

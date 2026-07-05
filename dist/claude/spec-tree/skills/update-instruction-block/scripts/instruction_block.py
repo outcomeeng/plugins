@@ -434,14 +434,32 @@ def _render_slot(slot: str, body: str) -> str:
     return f"{slot_open_marker(slot)}\n\n{body}\n\n{slot_close_marker(slot)}"
 
 
+def _find_fence_line(text: str, marker: str, start: int = 0) -> int:
+    """Return the offset of ``marker`` where it stands alone on its own line, or -1.
+
+    A fence marker in the managed surface occupies a whole line; a copy of the marker quoted
+    inside product prose or a slot body does not. Matching only a standalone-line occurrence keeps
+    such a quoted marker from being taken for a real fence.
+    """
+    index = text.find(marker, start)
+    while index != -1:
+        at_line_start = index == 0 or text[index - 1] == "\n"
+        line_end = index + len(marker)
+        at_line_end = line_end == len(text) or text[line_end] == "\n"
+        if at_line_start and at_line_end:
+            return index
+        index = text.find(marker, index + 1)
+    return -1
+
+
 def parse_command_slot(text: str, slot: str) -> str | None:
     """Return a command slot's body, or None when the slot fence is absent."""
     open_marker, close_marker = slot_open_marker(slot), slot_close_marker(slot)
-    start = text.find(open_marker)
+    start = _find_fence_line(text, open_marker)
     if start == -1:
         return None
     body_start = start + len(open_marker)
-    end = text.find(close_marker, body_start)
+    end = _find_fence_line(text, close_marker, body_start)
     if end == -1:
         return None
     return text[body_start:end].strip("\n")
@@ -455,11 +473,11 @@ def is_slot_filled(body: str | None) -> bool:
 def set_command_slot(text: str, slot: str, body: str) -> str:
     """Return ``text`` with the command slot's body replaced; unchanged when the fence is absent."""
     open_marker, close_marker = slot_open_marker(slot), slot_close_marker(slot)
-    start = text.find(open_marker)
+    start = _find_fence_line(text, open_marker)
     if start == -1:
         return text
     body_start = start + len(open_marker)
-    end = text.find(close_marker, body_start)
+    end = _find_fence_line(text, close_marker, body_start)
     if end == -1:
         return text
     # Blank lines around the body match the dprint-compliant fence shape from ``_render_slot``.
@@ -467,18 +485,23 @@ def set_command_slot(text: str, slot: str, body: str) -> str:
 
 
 def _next_fence_index(text: str, pos: int) -> int:
-    """Return the earliest offset at or after ``pos`` of any fence marker, or ``len(text)``.
+    """Return the earliest offset at or after ``pos`` of a line that opens with a fence marker, or
+    ``len(text)``.
 
-    Both the router markers (``<!-- SPEC-TREE`` / ``<!-- /SPEC-TREE``) and the slot markers
-    share these prefixes, so this bounds a malformed open-only fence's orphaned body at the
-    next fence of any kind or the end of the document.
+    Both the router markers (``<!-- SPEC-TREE`` / ``<!-- /SPEC-TREE``) and the slot markers share
+    these prefixes. Anchoring to a marker that opens its own line keeps a ``<!-- SPEC-TREE``
+    substring inside a product-owned slot body from bounding — and so truncating — a recovered
+    orphaned body at that substring rather than at the next real fence.
     """
-    found = [
-        index
-        for marker in ("<!-- SPEC-TREE", "<!-- /SPEC-TREE")
-        if (index := text.find(marker, pos)) != -1
-    ]
-    return min(found) if found else len(text)
+    candidates = []
+    for prefix in ("<!-- SPEC-TREE", "<!-- /SPEC-TREE"):
+        index = pos
+        while (index := text.find(prefix, index)) != -1:
+            if index == 0 or text[index - 1] == "\n":
+                candidates.append(index)
+                break
+            index += 1
+    return min(candidates) if candidates else len(text)
 
 
 def ensure_slot_fences(text: str) -> str:
@@ -498,7 +521,7 @@ def ensure_slot_fences(text: str) -> str:
         if parse_command_slot(text, slot) is not None:
             continue
         body = slot_placeholder(slot)
-        start = text.find(slot_open_marker(slot))
+        start = _find_fence_line(text, slot_open_marker(slot))
         if start != -1:
             body_start = start + len(slot_open_marker(slot))
             end = _next_fence_index(text, body_start)
@@ -509,8 +532,16 @@ def ensure_slot_fences(text: str) -> str:
             # elsewhere — product prose the render model preserves verbatim — is left untouched.
             prefix, suffix = text[:start].rstrip("\n"), text[end:].lstrip("\n")
             text = f"{prefix}\n\n{suffix}" if prefix and suffix else prefix + suffix
-        # Drop any stray close marker (a close-only fragment carries no recoverable body).
-        text = text.replace(slot_close_marker(slot), "")
+        # Drop a stray close-marker line (a close-only fragment carries no recoverable body);
+        # anchored to a fence line so a quoted marker in a body is never excised.
+        close_line = _find_fence_line(text, slot_close_marker(slot))
+        if close_line != -1:
+            close_end = close_line + len(slot_close_marker(slot))
+            prefix, suffix = (
+                text[:close_line].rstrip("\n"),
+                text[close_end:].lstrip("\n"),
+            )
+            text = f"{prefix}\n\n{suffix}" if prefix and suffix else prefix + suffix
         additions.append(_render_slot(slot, body))
     if not additions:
         return text
