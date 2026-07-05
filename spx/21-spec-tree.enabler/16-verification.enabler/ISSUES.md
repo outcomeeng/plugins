@@ -16,7 +16,7 @@ Use `PLAN.md` as the authoritative continuation map.
 
 ## Downstream enforcement for `[audit]` decision-rule modes (deferred)
 
-`spx/14-verification.pdr.md` carries four `[audit]` rules under `## Verification` / `### Audit` (an activity declares its type and purpose; a type's verdict mode is fixed by definition; a model never judges a deterministic type's verdict; the type set and the two verdict modes are closed). `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` asserts that a decision record's rules flow into spec assertions that enforce them somewhere in the governed subtree — but an `[audit]`-mode rule is enforced by an audit skill's judgment, not by a `[test]`/`[eval]` spec assertion, and no node spec yet enforces these four rules individually.
+`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` carries four `[audit]` rules under `## Verification` / `### Audit` (an activity declares its type and purpose; a type's verdict mode is fixed by definition; a model never judges a deterministic type's verdict; the type set and the two verdict modes are closed). `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` asserts that a decision record's rules flow into spec assertions that enforce them somewhere in the governed subtree — but an `[audit]`-mode rule is enforced by an audit skill's judgment, not by a `[test]`/`[eval]` spec assertion, and no node spec yet enforces these four rules individually.
 
 Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an audit skill checks against each rule, or refine the `decisions.md` flow rule so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes. This is a methodology question broader than the verification-taxonomy change that introduced the modes.
 
@@ -61,7 +61,7 @@ Every verification skill conforming to the contract in `verification.md` is an L
 **Fix:**
 
 1. Reconcile `verification-kinds.md` so the `review` entry emphasizes open-ended changeset review over quality, risk, consistency, evidence, and architecture, without implying standards-conformance audit.
-2. Keep `spx/14-verification.pdr.md` on the five-type taxonomy; amend only if the grounding text needs the same boundary clarification.
+2. Keep `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` on the five-type taxonomy; amend only if the grounding text needs the same boundary clarification.
 3. Reconcile the review node with the active `review-changes` prompt and schema so any remaining review taxonomy buckets match what `review-changes` can actually judge.
 4. Gate the change with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, and `just docs-check`.
 
@@ -80,7 +80,7 @@ Assertions 5 and 9 in `verification.md` (model-field presence) were retagged to 
 - PR #43 — first eval pattern instance: `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/`
 - Eval-harness contract: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
-- Verification PDR (taxonomy + lanes): `spx/14-verification.pdr.md`
+- Verification PDR (taxonomy + lanes): `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`
 - Result-delivery PDR (incremental reveal, same shape on local and PR surfaces): `spx/15-audit-result-delivery.pdr.md`
 - Verdict JSON schema (the prior XSD-based node has been removed): `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/verdict-toolchain.md`
 - Precedent eval: `spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/evals/shared-constant-bag/`

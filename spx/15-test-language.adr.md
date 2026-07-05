@@ -1,6 +1,6 @@
 # Test Language Selection
 
-Python (pytest) is the language and runner for all `[test]` evidence in the spec tree. Test files follow `test_{subject}.{evidence}.{level}[.{runner}].py` and live under each node's `tests/` directory. The `[test]` lane is one of the evidence-execution lanes declared in `spx/14-verification.pdr.md`; this decision selects its language and runner. `[eval]` evidence lives in a separate lane this decision does not govern.
+Python (pytest) is the language and runner for all `[test]` evidence in the spec tree. Test files follow `test_{subject}.{evidence}.{level}[.{runner}].py` and live under each node's `tests/` directory. The `[test]` lane is one of the evidence-execution lanes declared in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`; this decision selects its language and runner. `[eval]` evidence lives in a separate lane this decision does not govern.
 
 ## Rationale
 
@@ -14,5 +14,5 @@ Two categories of artifact produce `[test]` evidence: infrastructure scripts (va
 - ALWAYS: reference Python test files with a `[test]` link whose path matches `tests/test_{subject}.{evidence}.{level}.py` ([audit])
 - ALWAYS: `pytest.ini` (or `pyproject.toml` `[tool.pytest.ini_options]`) declares `testpaths` covering `spx/` so pytest discovers every `test_*.py` under any `spx/**/tests/` directory ([audit])
 - NEVER: use a non-pytest runner for `[test]` evidence in the spec tree — the lane is single-runner by decision ([audit])
-- NEVER: route `[eval]` evidence through pytest as its primary execution surface — `[eval]` belongs to the lane governed by `spx/14-verification.pdr.md` ([audit])
+- NEVER: route `[eval]` evidence through pytest as its primary execution surface — `[eval]` belongs to the lane governed by `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
 - NEVER: reference a `[test]` link from a spec assertion to a path outside `spx/**/tests/` — co-location is mandatory for `[test]`-lane evidence ([audit])

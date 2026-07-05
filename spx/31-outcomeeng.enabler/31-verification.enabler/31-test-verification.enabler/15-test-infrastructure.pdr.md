@@ -32,6 +32,8 @@ The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares 
 
 **Harnesses manage context and resources.** A harness mediates access to real behavior or real local/remote infrastructure. It owns setup, teardown, lifecycle, cleanup, mandatory dependency checks, and diagnostics for resources such as temporary filesystems, browsers, product binaries, local services, APIs, databases, Docker containers, and remote credentialed endpoints. It does not own arbitrary domain data and does not replace the behavior an assertion claims to verify.
 
+Property-based test harnesses own execution configuration: seed selection, run counts, replay input, and failure diagnostics. A failing property run reports enough replay data for the same generated case to run again, and the executed test file does not own those settings through local variables, constants, or framework options.
+
 Language skills may teach these examples:
 
 | Language       | Acceptable harness shape                                                                                                                                                                 | Rejected shape                                                                                                                  |
@@ -70,7 +72,7 @@ Evidence includes the full chain from a spec assertion to the executed test file
 
 Test infrastructure cannot make a weaker evidence shape impersonate a stronger one:
 
-- A Property assertion requires a generator or source-owned enumerable domain with meaningful variation; property-framework syntax around one example is scenario evidence.
+- A Property assertion requires a generator or source-owned enumerable domain with meaningful variation and a replayable property-run harness; property-framework syntax around one example is scenario evidence.
 - A Mapping assertion requires a finite source-owned mapping or a generated finite domain with independently derived expectations; a copied expected-output table is a tautology.
 - A Scenario assertion requires a behavior-relevant case whose inputs and expected outputs are owned by source contracts, generated domains, or whole-payload fixtures; arbitrary example bags do not establish domain truth.
 - A Compliance assertion with `[test]` evidence exercises a real violating case or rule oracle; a passing-only example does not prove enforcement.
@@ -116,7 +118,7 @@ The decision accepts these trade-offs:
 ## Product properties
 
 - **Placement and derivability**: every test-infrastructure artifact lives at the language's normative path outside `spx/` and outside any `tests/` directory, and every such artifact is governed by a naturally placed spec node — so a methodology user derives the category from the implementation home or artifact behavior, derives the governing node from the evidence chain, and scans a test's imports to know whether each imported artifact is governed by this PDR.
-- **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, and harnesses manage resources and access to behavior; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
+- **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, and harnesses manage resources, access to behavior, property-run configuration, replay, and diagnostics; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
 - **Full-chain audit**: test audits inspect the complete test-infrastructure chain before approving evidence, naming the exact artifact that weakens evidence and the evidence property affected — not only the visible test file.
 
 ## Verification
@@ -127,6 +129,7 @@ The decision accepts these trade-offs:
 - ALWAYS: test harness, generator, and fixture implementations live at the language's normative path, outside `spx/` and outside any `tests/` directory ([audit])
 - ALWAYS: source modules expose the protocol values, registries, constructors, schemas, typed factories, or other observable contracts that tests need; tests and test infrastructure consume those source contracts instead of recreating them ([audit])
 - ALWAYS: harnesses manage setup, teardown, cleanup, resource lifecycle, dependency checks, and access to real behavior, preserving coupling to the behavior an assertion claims to verify ([audit])
+- ALWAYS: property-based tests route seed selection, run counts, replay input, and failure diagnostics through spec-governed harnesses; executed test files do not own property-run configuration ([audit])
 - ALWAYS: generators represent variable input domains with meaningful variation, composition, shrinking, or systematic exploration; source-owned singleton shapes come from source constructors, registries, or typed factories ([audit])
 - ALWAYS: fixtures are inert whole-payload inputs read from disk, copied into temporary products, or passed by path to the code or tool under test; executed tests do not consume fixture exports ([audit])
 - ALWAYS: test audits inspect imported harnesses, generators, and fixture references before approving evidence, and findings name the exact test-infrastructure artifact plus the evidence property affected ([audit])

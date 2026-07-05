@@ -19,7 +19,7 @@ The tests under `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-chan
 Required handling:
 
 - Rewrite the test evidence through `/test` and run the required test-evidence audit before accepting it.
-- Align the evidence chain with `spx/15-test-infrastructure.pdr.md`, `spx/15-test-language.adr.md`, and the Python test standards.
+- Align the evidence chain with `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`, `spx/15-test-language.adr.md`, and the Python test standards.
 - Keep `tests/` limited to typed assertion files; move harness, generator, fixture, and source-owned vocabulary responsibilities to their governed homes.
 
 ## 3. Review finding validation belongs in SPX

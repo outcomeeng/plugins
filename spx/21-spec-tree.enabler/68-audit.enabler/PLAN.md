@@ -43,14 +43,14 @@ Whether the audit `message` carries a caller-requested output shape.
 - The `changes-reviewer` transformation went the other way — it forbids caller-side output steering
   because output shape is fixed and agent-owned.
 - Recommendation: **drop** "requested output shape" from the audit `message` for symmetry, grounded in
-  `spx/14-verification.pdr.md` property 2 (each output surface is a projection) and
+  `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` property 2 (each output surface is a projection) and
   `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` (every output surface is a
   projection rendered from the journal event history). Keeping the literal `AGENTS.md` wording would
   reintroduce the steering the reviewer change removed.
 
 ## Governing context
 
-- `spx/14-verification.pdr.md`, `spx/15-audit-result-delivery.pdr.md`,
+- `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, `spx/15-audit-result-delivery.pdr.md`,
   `spx/21-spec-tree.enabler/17-audit.adr.md`,
   `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`.
 - Reference implementation to mirror: the `changes-reviewer` contract in the `instruction-block.md` guide

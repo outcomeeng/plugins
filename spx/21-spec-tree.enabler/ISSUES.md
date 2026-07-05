@@ -48,7 +48,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 
 `outcomeeng/spec_tree_structure.py` exports both `NodeKind.ENABLER` / `NodeKind.OUTCOME` and module-level aliases `NODE_KIND_ENABLER` / `NODE_KIND_OUTCOME`. Tests import the alias form. The dual spelling is harmless but leaves unclear whether the aliases are intentional source-owned protocol constants or convenience names.
 
-Governed by `spx/21-spec-tree.enabler/spec-tree.md` and the source-ownership rules in `spx/15-test-infrastructure.pdr.md`.
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and the source-ownership rules in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`.
 
 Required handling:
 
@@ -62,7 +62,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 
 `spx/21-spec-tree.enabler/tests/test_spec_tree.mapping.l1.py` constructs invalid node names through inline transformations such as removing separators, stripping the kind suffix, and prefixing a formatted valid name. The tests are behaviorally correct, but some cases are hard to audit because the invalid shape is implicit in string operations rather than named by a source-owned invalid-case generator or a small explanatory comment.
 
-Governed by `spx/21-spec-tree.enabler/spec-tree.md` and `spx/15-test-infrastructure.pdr.md`.
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`.
 
 Required handling:
 

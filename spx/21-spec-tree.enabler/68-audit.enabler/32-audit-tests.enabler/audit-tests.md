@@ -47,7 +47,7 @@ Mocking severs coupling. A test that imports a module then replaces it with a mo
 
 ## Coverage Verification
 
-The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
+The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
 
 The auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -118,17 +118,17 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ### Compliance
 
-- ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
+- ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - ALWAYS: `/audit-tests` invokes `/contextualize` on the target spec node before any audit phase ([review])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([review])
-- ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the caller and CI own coverage measurement, per `spx/14-verification.pdr.md` ([review])
+- ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the caller and CI own coverage measurement, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])
 - ALWAYS: detect every variable, constant, framework fixture parameter, and property-generated parameter in executed test files before approving evidence, reject every such binding, and name the proper owner for the value or configuration: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable ([review])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([review])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([review])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([review])
-- NEVER: run the project's coverage command, test command, or any other deterministic verification inside the audit — re-running what the caller passed before dispatch is the duplication prohibited by `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`; trace the exercised path by reading instead ([review])
+- NEVER: run the project's coverage command, test command, or any other deterministic verification inside the audit — re-running what the caller passed before dispatch is the duplication prohibited by `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`; trace the exercised path by reading instead ([review])
 - NEVER: accept static-literal fixture files as a valid origin — fixtures that export hardcoded literals recreate laundered indirect coupling under a fixture name ([review])

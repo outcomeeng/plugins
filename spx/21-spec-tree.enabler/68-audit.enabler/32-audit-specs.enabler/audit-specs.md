@@ -36,5 +36,5 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 - ALWAYS: check section structure, atemporal voice, and per-assertion tag fitness in that order ([review])
 - ALWAYS: verify each `[test]` assertion's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario` — without relitigating a choice the router leaves open ([review])
 - ALWAYS: flag a `[test]` tag on a claim whose subject is authored prose or documentation content — the verification belongs in `[eval]` or `[audit]`, and the check holds whether the would-be evidence reads the authored artifact directly or through test infrastructure ([review])
-- ALWAYS: `/audit-specs` is reached only by dispatching the `spec-auditor` agent; the main conversation does not invoke `/audit-specs` in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
+- ALWAYS: `/audit-specs` is reached only by dispatching the `spec-auditor` agent; the main conversation does not invoke `/audit-specs` in place — the agent's isolated context produces the verdict, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - NEVER: classify a node's content as architecture-versus-product-behavior — that classification is the decision-record audits' concern, not the node audit's ([review])
