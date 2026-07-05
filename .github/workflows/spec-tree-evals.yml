@@ -87,6 +87,7 @@ on:
       - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
+      - "outcomeeng_testing/harnesses/**"
   push:
     branches: [main]
     # Same scope as the PR filter — a change to this workflow file itself does
@@ -131,6 +132,7 @@ on:
       - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
+      - "outcomeeng_testing/harnesses/**"
   schedule:
     # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
     - cron: "0 6 * * 1"

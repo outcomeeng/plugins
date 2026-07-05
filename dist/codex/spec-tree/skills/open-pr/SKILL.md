@@ -28,6 +28,8 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
+<step name="verification_readiness_decision">
+
 **Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
 
 *(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a temporary log path and inspect only the exit status, summary, and failing sections. It must report success; fix failures and re-run until green.
@@ -41,6 +43,8 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 - **Converged** when the working diff carries no unapplied valid finding that belongs. Severity never decides; validity and the before-open phase do.
 
 The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run local deterministic verification, re-run required evidence-auditor predicates for touched evidence surfaces, and re-run the local review — all `VERIFICATION_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes all predicates (the joint fixpoint of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, an evidence-audit fix changes the evidence surface, and a review-driven fix is a tree verification has not covered). `VERIFICATION_READINESS` holds only when (a), (b), and (c) hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no unresolved valid `BLOCKING` or `DEBT` finding.
+
+</step>
 
 **Step 4 — GATE: Push.** Use the explicit destination ref form from /merging-standards `<push_semantics>`:
 
@@ -70,7 +74,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 ## Test plan
 
-- [ ] <step>
+- [ ] <verification step>
 
 ## Refs
 
@@ -81,7 +85,7 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
 ```
 
 Flag rationale:

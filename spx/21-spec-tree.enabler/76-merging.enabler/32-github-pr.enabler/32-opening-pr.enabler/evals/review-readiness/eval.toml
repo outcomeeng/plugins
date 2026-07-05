@@ -12,6 +12,12 @@ owned_paths = [
   "dist/claude/spec-tree/skills/open-pr/**",
   "dist/claude/spec-tree/skills/merging-standards/**",
 ]
-smoke_cases = ["deterministic-green-review-converged-opens", "deterministic-failed-withholds"]
+smoke_cases = ["verification-green-review-converged-opens", "deterministic-failed-withholds"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "dist/claude/spec-tree/skills/open-pr/SKILL.md"
+section = "verification_readiness_decision"
+template = "prompt.template.md"
