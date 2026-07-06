@@ -240,10 +240,36 @@ def configured_local_marketplace_root(
         [*CODEX_MARKETPLACE_LIST_COMMAND],
         runner=runner,
     )
+    claude_source_groups = _parse_marketplace_source_groups(
+        claude_result.stdout or "",
+        runtime="Claude Code",
+    )
+    codex_source_groups = _parse_marketplace_source_groups(
+        codex_result.stdout or "",
+        runtime="Codex",
+    )
+    claude_sources = _select_marketplace_sources(claude_source_groups)
+    codex_sources = _select_marketplace_sources(codex_source_groups)
+    root = _canonical_source_root(
+        marketplace,
+        explicit_root=None,
+        claude_sources=claude_sources,
+        codex_sources=codex_sources,
+        claude_source_groups=claude_source_groups,
+        codex_source_groups=codex_source_groups,
+    )
+    if _source_groups_contain_local_root(
+        claude_source_groups.get(marketplace, ()),
+        root,
+    ) and _source_groups_contain_local_root(
+        codex_source_groups.get(marketplace, ()),
+        root,
+    ):
+        return root
     return require_matching_local_sources(
         marketplace,
-        claude_sources=parse_claude_marketplace_sources(claude_result.stdout or ""),
-        codex_sources=parse_codex_marketplace_sources(codex_result.stdout or ""),
+        claude_sources=claude_sources,
+        codex_sources=codex_sources,
     )
 
 
@@ -262,19 +288,29 @@ def ensure_local_marketplace_sources(
         [*CODEX_MARKETPLACE_LIST_COMMAND],
         runner=runner,
     )
-    claude_sources = parse_claude_marketplace_sources(claude_result.stdout or "")
-    codex_sources = parse_codex_marketplace_sources(codex_result.stdout or "")
+    claude_source_groups = _parse_marketplace_source_groups(
+        claude_result.stdout or "",
+        runtime="Claude Code",
+    )
+    claude_sources = _select_marketplace_sources(claude_source_groups)
+    codex_source_groups = _parse_marketplace_source_groups(
+        codex_result.stdout or "",
+        runtime="Codex",
+    )
+    codex_sources = _select_marketplace_sources(codex_source_groups)
     root = _canonical_source_root(
         marketplace,
         explicit_root=source_root,
         claude_sources=claude_sources,
         codex_sources=codex_sources,
+        claude_source_groups=claude_source_groups,
+        codex_source_groups=codex_source_groups,
     )
     commands: list[tuple[str, ...]] = []
     commands.extend(
         _repair_claude_runtime_source(
             marketplace,
-            source=claude_sources.get(marketplace),
+            sources=claude_source_groups.get(marketplace, ()),
             root=root,
             runner=runner,
         )
@@ -282,7 +318,7 @@ def ensure_local_marketplace_sources(
     commands.extend(
         _repair_runtime_source(
             marketplace,
-            source=codex_sources.get(marketplace),
+            sources=codex_source_groups.get(marketplace, ()),
             root=root,
             add_command=CODEX_MARKETPLACE_ADD_COMMAND,
             remove_command=CODEX_MARKETPLACE_REMOVE_COMMAND,
@@ -359,6 +395,14 @@ def available_codex_plugins(repo_root: Path) -> tuple[CodexDistPlugin, ...]:
 def _parse_marketplace_sources(
     payload: str, *, runtime: str
 ) -> dict[str, MarketplaceSource]:
+    return _select_marketplace_sources(
+        _parse_marketplace_source_groups(payload, runtime=runtime)
+    )
+
+
+def _parse_marketplace_source_groups(
+    payload: str, *, runtime: str
+) -> dict[str, tuple[MarketplaceSource, ...]]:
     try:
         data = json.loads(payload)
     except json.JSONDecodeError as exc:
@@ -366,31 +410,51 @@ def _parse_marketplace_sources(
             f"{runtime} marketplace list output is not valid JSON: {exc}"
         ) from exc
     entries = tuple(_marketplace_entries(data, runtime=runtime))
-    sources: dict[str, MarketplaceSource] = {}
+    sources: dict[str, list[MarketplaceSource]] = {}
     for entry in entries:
-        name = entry.get(MARKETPLACE_FIELD_NAME)
-        if not isinstance(name, str):
-            raise MarketplaceSourceError(
-                f"{runtime} marketplace entry has no string name"
-            )
-        source_entry = _source_entry(entry)
-        source_type = _normalized_source_type(source_entry)
-        source = MarketplaceSource(
-            name=name,
-            source_type=source_type,
-            path=_path_field(source_entry, source_type),
-            url=_url_field(source_entry, source_type),
-            scope=_string_field(source_entry, (MARKETPLACE_FIELD_SCOPE,)),
-            project_path=_optional_path(
-                source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH)
-            ),
-        )
-        selected = sources.get(name)
+        source = _marketplace_source_from_entry(entry, runtime=runtime)
+        sources.setdefault(source.name, []).append(source)
+    return {name: tuple(group) for name, group in sources.items()}
+
+
+def _marketplace_source_from_entry(
+    entry: dict[str, object], *, runtime: str
+) -> MarketplaceSource:
+    name = entry.get(MARKETPLACE_FIELD_NAME)
+    if not isinstance(name, str):
+        raise MarketplaceSourceError(f"{runtime} marketplace entry has no string name")
+    source_entry = _source_entry(entry)
+    source_type = _normalized_source_type(source_entry)
+    return MarketplaceSource(
+        name=name,
+        source_type=source_type,
+        path=_path_field(source_entry, source_type),
+        url=_url_field(source_entry, source_type),
+        scope=_string_field(source_entry, (MARKETPLACE_FIELD_SCOPE,)),
+        project_path=_optional_path(source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH)),
+    )
+
+
+def _select_marketplace_sources(
+    grouped_sources: dict[str, tuple[MarketplaceSource, ...]],
+) -> dict[str, MarketplaceSource]:
+    return {
+        name: selected
+        for name, sources in grouped_sources.items()
+        if (selected := _select_marketplace_source(sources)) is not None
+    }
+
+
+def _select_marketplace_source(
+    sources: tuple[MarketplaceSource, ...],
+) -> MarketplaceSource | None:
+    selected: MarketplaceSource | None = None
+    for source in sources:
         if selected is None or _source_selection_rank(source) > _source_selection_rank(
             selected
         ):
-            sources[name] = source
-    return sources
+            selected = source
+    return selected
 
 
 def _source_selection_rank(source: MarketplaceSource) -> int:
@@ -539,9 +603,37 @@ def _canonical_source_root(
     explicit_root: Path | None,
     claude_sources: dict[str, MarketplaceSource],
     codex_sources: dict[str, MarketplaceSource],
+    claude_source_groups: dict[str, tuple[MarketplaceSource, ...]] | None = None,
+    codex_source_groups: dict[str, tuple[MarketplaceSource, ...]] | None = None,
 ) -> Path:
     if explicit_root is not None:
         return _normalized_path(explicit_root)
+    shared_root = _shared_local_source_root(
+        claude_source_groups.get(marketplace, ())
+        if claude_source_groups is not None
+        else tuple(claude_sources.values()),
+        codex_source_groups.get(marketplace, ())
+        if codex_source_groups is not None
+        else tuple(codex_sources.values()),
+    )
+    if shared_root is not None:
+        return shared_root
+    claude_group_root = _single_runtime_local_source_root(
+        claude_source_groups.get(marketplace, ())
+        if claude_source_groups is not None
+        else tuple(claude_sources.values()),
+        runtime="Claude Code",
+    )
+    if claude_group_root is not None:
+        return claude_group_root
+    codex_group_root = _single_runtime_local_source_root(
+        codex_source_groups.get(marketplace, ())
+        if codex_source_groups is not None
+        else tuple(codex_sources.values()),
+        runtime="Codex",
+    )
+    if codex_group_root is not None:
+        return codex_group_root
     claude = claude_sources.get(marketplace)
     if (
         claude is not None
@@ -559,19 +651,78 @@ def _canonical_source_root(
     return _normalized_path(Path.cwd())
 
 
+def _shared_local_source_root(
+    claude_sources: tuple[MarketplaceSource, ...],
+    codex_sources: tuple[MarketplaceSource, ...],
+) -> Path | None:
+    codex_roots = set(_local_source_roots(codex_sources))
+    shared_roots = tuple(
+        root for root in _local_source_roots(claude_sources) if root in codex_roots
+    )
+    if not shared_roots:
+        return None
+    unique_roots = tuple(dict.fromkeys(shared_roots))
+    if len(unique_roots) > 1:
+        formatted = ", ".join(str(root) for root in unique_roots)
+        raise MarketplaceSourceError(
+            f"multiple shared local marketplace roots reported: {formatted}"
+        )
+    return next(iter(unique_roots))
+
+
+def _single_runtime_local_source_root(
+    sources: tuple[MarketplaceSource, ...],
+    *,
+    runtime: str,
+) -> Path | None:
+    roots = tuple(dict.fromkeys(_local_source_roots(sources)))
+    if not roots:
+        return None
+    if len(roots) > 1:
+        formatted = ", ".join(str(root) for root in roots)
+        raise MarketplaceSourceError(
+            f"{runtime} reported multiple local marketplace roots: {formatted}"
+        )
+    return next(iter(roots))
+
+
+def _source_groups_contain_local_root(
+    sources: tuple[MarketplaceSource, ...],
+    root: Path,
+) -> bool:
+    return _normalized_path(root) in set(_local_source_roots(sources))
+
+
+def _local_source_roots(sources: tuple[MarketplaceSource, ...]) -> tuple[Path, ...]:
+    return tuple(
+        _normalized_path(source.path)
+        for source in sources
+        if source.source_type == SOURCE_TYPE_LOCAL and source.path is not None
+    )
+
+
 def _repair_runtime_source(
     marketplace: str,
     *,
-    source: MarketplaceSource | None,
+    sources: tuple[MarketplaceSource, ...],
     root: Path,
     add_command: tuple[str, ...],
     remove_command: tuple[str, ...],
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    if _user_registration_source_matches(source, root, accept_unscoped=True):
+    canonical_source_exists = any(
+        _user_registration_source_matches(source, root, accept_unscoped=True)
+        for source in sources
+    )
+    stale_sources = tuple(
+        source
+        for source in sources
+        if not _user_registration_source_matches(source, root, accept_unscoped=True)
+    )
+    if canonical_source_exists and not stale_sources:
         return ()
     commands: list[tuple[str, ...]] = []
-    if source is not None:
+    if sources:
         remove = (*remove_command, marketplace)
         _run_json_command(list(remove), runner=runner)
         commands.append(remove)
@@ -584,35 +735,98 @@ def _repair_runtime_source(
 def _repair_claude_runtime_source(
     marketplace: str,
     *,
-    source: MarketplaceSource | None,
+    sources: tuple[MarketplaceSource, ...],
     root: Path,
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    if _user_registration_source_matches(source, root, accept_unscoped=False):
-        return ()
-    if (
-        source is not None
-        and source.scope == CLAUDE_SCOPE_MANAGED
-        and not _source_matches(source, root)
-    ):
+    stale_managed_sources = tuple(
+        source
+        for source in sources
+        if source.scope == CLAUDE_SCOPE_MANAGED and not _source_matches(source, root)
+    )
+    if stale_managed_sources:
+        source = stale_managed_sources[0]
         raise MarketplaceSourceError(
             f"Claude Code marketplace `{marketplace}` is managed at "
             f"{source.path or source.source_type} and cannot be repaired to {root}"
         )
-    preserved = _claude_user_plugins_to_preserve(
-        marketplace,
-        runner=runner,
+    canonical_user_source_exists = any(
+        _user_registration_source_matches(
+            source,
+            root,
+            accept_unscoped=False,
+        )
+        for source in sources
+    )
+    editable_sources = tuple(
+        source
+        for source in sources
+        if source.scope != CLAUDE_SCOPE_MANAGED
+        and not _user_registration_source_matches(
+            source,
+            root,
+            accept_unscoped=False,
+        )
+    )
+    if canonical_user_source_exists and not editable_sources:
+        return ()
+    user_affecting_removal = any(
+        _claude_source_removal_can_affect_user_plugins(source)
+        for source in editable_sources
+    )
+    preserved = (
+        _claude_user_plugins_to_preserve(
+            marketplace,
+            runner=runner,
+        )
+        if user_affecting_removal
+        else ()
     )
     commands: list[tuple[str, ...]] = []
-    if source is not None and source.scope != CLAUDE_SCOPE_MANAGED:
-        remove = (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace)
-        _run_json_command(list(remove), runner=runner)
+    seen_removals: set[tuple[tuple[str, ...], Path | None]] = set()
+    for source in editable_sources:
+        remove = _claude_marketplace_remove_command(marketplace, source)
+        remove_cwd = _claude_marketplace_remove_cwd(source)
+        removal_key = (remove, remove_cwd)
+        if removal_key in seen_removals:
+            continue
+        seen_removals.add(removal_key)
+        _run_json_command(
+            list(remove),
+            runner=runner,
+            cwd=remove_cwd,
+        )
         commands.append(remove)
-    add = (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(root))
-    _run_json_command(list(add), runner=runner)
-    commands.append(add)
+    if not canonical_user_source_exists or user_affecting_removal:
+        add = (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(root))
+        _run_json_command(list(add), runner=runner)
+        commands.append(add)
     commands.extend(_restore_claude_plugins(preserved, runner=runner))
     return tuple(commands)
+
+
+def _claude_source_removal_can_affect_user_plugins(source: MarketplaceSource) -> bool:
+    return source.scope in {None, CLAUDE_SCOPE_USER}
+
+
+def _claude_marketplace_remove_command(
+    marketplace: str,
+    source: MarketplaceSource,
+) -> tuple[str, ...]:
+    if source.scope is None:
+        return (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace)
+    return (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace, "--scope", source.scope)
+
+
+def _claude_marketplace_remove_cwd(source: MarketplaceSource) -> Path | None:
+    if source.scope not in _CLAUDE_PROJECT_PATH_SCOPES:
+        return None
+    if source.project_path is None:
+        raise MarketplaceSourceError(
+            f"Claude Code marketplace `{source.name}` with {source.scope} scope has "
+            f"no {MARKETPLACE_FIELD_PROJECT_PATH}"
+        )
+    return _normalized_path(source.project_path)
 
 
 def _claude_user_plugins_to_preserve(
