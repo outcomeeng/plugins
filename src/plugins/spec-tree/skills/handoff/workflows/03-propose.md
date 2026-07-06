@@ -8,15 +8,15 @@ Use the six reflection perspectives from workflow 02 as the proposal input. Impe
 Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
 
 ```text
-Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none (--no-session)>
+Canonical continuation: <new handoff | none (--no-session)>
 Sessions to archive after closure: <id-1>, <id-2>, ...
 ```
 
-The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
+The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus superseded same-conversation artifacts in `artifact_ids`. If both attributes are empty, write `Sessions to archive after closure: none`.
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
-When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is allowed only if continuation by Claude is impossible now. Do not present "create handoff" as a normal option for actionable coordination notes. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, closure is blocked while Claude can still reconcile or execute the note. If a real stop condition exists, workflow 04 may create or rewrite the canonical continuation only after `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"` confirms the queue will not receive a duplicate.
+When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is allowed only if continuation by Claude is impossible now. Do not present "create handoff" as a normal option for actionable coordination notes. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, closure is blocked while Claude can still reconcile or execute the note. If a real stop condition exists, workflow 04 may create the canonical continuation only after `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"` confirms the queue will not receive a duplicate.
 
 If `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` exists, report that an existing session already owns the continuation and do not propose a new session. If `status="ambiguous"` exists, STOP and ask the operator to resolve ownership before any continuation proposal.
 

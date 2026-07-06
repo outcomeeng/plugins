@@ -73,15 +73,15 @@ Resolve which sessions are in this conversation's claimed sessions and locate an
 Read `${SKILL_DIR}/references/claimed-session-resolution.md` and follow every step of the algorithm. After resolving, emit a marker into the conversation so workflow 04 reads the claimed sessions from context rather than re-running the algorithm:
 
 ```text
-<RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_id="id-or-none">
+<RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_ids="id-1,id-2,...">
 claimed_sessions: id-1, id-2, ...
-mid_session_artifact: id-or-none
+mid_session_artifacts: id-1, id-2, ...
 </RESOLVED_CLAIMED_SESSIONS>
 ```
 
-Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_id="none"` when no mid-session artifact exists.
+Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists.
 
-For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, AGENTS.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by rewrite-in-place or archival.
+For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, AGENTS.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by creating a fresh continuation when one is needed, then archiving superseded same-conversation artifacts after the fresh session is verified.
 
 A handoff replaces incorporated context. The existence of any session is not, by itself, permission to archive a claimed session — permission flows from completing this workflow.
 
@@ -103,7 +103,7 @@ Compare every `todo` and `doing` session against this closure's anchored nodes a
 
 Classify overlaps:
 
-- **same-owner-continuation** — this conversation created the TODO artifact or claimed the doing session; workflow 04 may rewrite or archive it according to the claimed-session rules.
+- **same-owner-continuation** — this conversation created the TODO artifact or claimed the doing session; workflow 04 may create a fresh continuation and archive superseded same-conversation artifacts according to the claimed-session rules.
 - **existing-owner** — another `todo` or `doing` session already owns the continuation; do not create another session. Reconcile any facts into durable artifacts if needed, then leave the existing session untouched and close only if no other blocker remains.
 - **unrelated** — no overlapping node and topic.
 - **ambiguous** — overlap exists but ownership or topic match is unclear; STOP and ask the operator before any continuation session is proposed.
@@ -116,7 +116,7 @@ summary: [what the queue search found]
 </EXISTING_SESSION_RECONCILIATION>
 ```
 
-`status="none"` is the only state that permits a new Path C session, and only when continuation by Claude is impossible now. `status="existing-owner"` blocks Path C because adding a session would duplicate queue state.
+`status="none"` is the only state that permits a fresh session when there is no same-owner artifact, and only when continuation by Claude is impossible now. `status="existing-owner"` blocks fresh-session creation because adding a session would duplicate queue state.
 
 </perspective_existing_sessions>
 

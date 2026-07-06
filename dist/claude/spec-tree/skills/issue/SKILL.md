@@ -77,7 +77,7 @@ git -C <target-dir> branch --show-current
 git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>
 ```
 
-If the target checkout is detached or its current branch does not exist on origin, ask the user for the pushed target branch that should own the follow-up. NEVER file a Path C handoff with an empty or guessed `git_ref`; `/pickup` uses `git_ref` as the branch it fetches and checks out in the dependency repository.
+If the target checkout is detached or its current branch does not exist on origin, ask the user for the pushed target branch that should own the follow-up. NEVER file a fresh handoff with an empty or guessed `git_ref`; `/pickup` uses `git_ref` as the branch it fetches and checks out in the dependency repository.
 
 </git_ref_resolution>
 
@@ -128,7 +128,7 @@ EOF
 
 **Failure 1: Claude filed a target-dependency handoff without a stable branch anchor.**
 
-What happened: Claude wrote a Path C handoff header with `priority`, `goal`, `next_step`, `specs`, and `files`, but omitted `git_ref`.
+What happened: Claude wrote a fresh handoff header with `priority`, `goal`, `next_step`, `specs`, and `files`, but omitted `git_ref`.
 
 Why it failed: The target repository's `/pickup` workflow uses `git_ref` as the origin branch it fetches and checks out. Without it, a dependency follow-up can anchor to the wrong checkout state or fail to resume.
 

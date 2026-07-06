@@ -1,39 +1,21 @@
 <template>
 ## Contents
 
-- Path C JSON header and stdin form
-- Path B stored-file format
-- Body template shared by Path B and Path C
+- JSON header and stdin form
+- Body template
 - Field guidance for frontmatter and body sections
 
-The session file content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
+The session file content has two parts: a header of caller-supplied fields and the markdown body below.
 
-**Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying it exists on `origin`. The JSON header carries the caller-supplied fields:
-
-```text
-{"priority": "medium", "goal": "[Output-shaped deliverable or target end-state]", "next_step": "[The first concrete action for pickup]", "git_ref": "[work branch the work is pushed to — the stable anchor /pickup checks out]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
-```
-
-Path C chooses its stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc; programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `spx session handoff`. Both forms send the same bytes to stdin. Never assemble the body through temporary files, helper files, command substitution, or post-hoc text substitution.
-
-**Path B (rewrite in place)** writes the stored-file format directly to the existing artifact, preserving its existing `created_at`, `agent_session_id`, and `git_ref` values. The stored format is YAML frontmatter followed by the body:
+Creating a new session file pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at` and `agent_session_id`. When the handoff points at a pushed work branch, the header supplies `git_ref` and the CLI verifies it exists on `origin`; when the work has already reached the default branch or a detached/pool-worktree anchor, omit `git_ref` and let the CLI derive the branch name or commit SHA from git context. The JSON header carries the caller-supplied fields:
 
 ```text
----
-created_at: [preserve on rewrite]
-agent_session_id: [preserve on rewrite]
-priority: medium
-git_ref: [preserve on rewrite]
-goal: [Output-shaped deliverable or target end-state]
-next_step: [The first concrete action for pickup]
-specs:
-  - spx/{path-to-node}/{node-file}.md
-files:
-  - src/{path-to-file}
----
+{"priority": "medium", "goal": "[Output-shaped deliverable or target end-state]", "next_step": "[The first concrete action for pickup]", "git_ref": "[optional pushed work branch]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
 ```
 
-**Body (both paths)** — for Path C this is the content piped after the JSON header; for Path B it follows the YAML frontmatter above:
+The workflow chooses its stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc; programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `spx session handoff`. Both forms send the same bytes to stdin. Never assemble the body through temporary files, helper files, command substitution, or post-hoc text substitution.
+
+**Body** — the content piped after the JSON header:
 
 ```text
 <metadata>
@@ -122,17 +104,17 @@ history.
   - `Fix spec-tree /contextualize so explicit full-path governing references load` -> `spec-tree /contextualize that loads explicit full-path governing references`
   - `Author the instructions plugin's first audit-skills [eval] suite` -> `The instructions plugin's first audit-skills [eval] suite`
 - **`next_step`**: Required, non-empty first action for pickup. Write this field imperatively: name the skill, command, review step, or file inspection that should happen first.
-- **Path C JSON header**: Carries the caller-supplied fields — `priority`, `goal`, `next_step`, `git_ref`, optional `specs`, optional `files`. Do not put `created_at` or `agent_session_id` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
-- **Path C stdin form**: In interactive Claude Code and Codex sessions, use a quoted heredoc whose first line is the JSON header and whose remaining lines are the body. In programmatic runners that require one physical command line, use `printf '%s\n'` with each argument representing one output line and pipe it to `spx session handoff`; keep the pipeline on one physical shell line. Literal apostrophes inside a single-quoted `printf` line use `'"'"'`.
-- **`git_ref`**: For Path C, supply the pushed work branch in the JSON header; `spx session handoff` records it after verifying the branch exists on `origin` (omit it only when the work landed on the default branch with no feature branch, and the command derives the base from git context — a branch name for a main checkout, a commit SHA for a detached or pool-worktree handoff). `git_ref` is the single anchor `/pickup` reads: it fetches and checks out the branch `git_ref` names in a pool worktree, and reads in place when `git_ref` is the default branch or a commit SHA. The persistence precondition (`workflows/04-execute.md` `<release_work_branch>`) guarantees the work branch exists on origin and is not behind local. Preserve the value as written; do not overwrite it during Path B rewrites.
-- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `git_ref` identify the session context.
-- **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
+- **JSON header**: Carries the caller-supplied fields — `priority`, `goal`, `next_step`, `git_ref`, optional `specs`, optional `files`. Do not put `created_at` or `agent_session_id` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
+- **Stdin form**: In interactive Claude Code and Codex sessions, use a quoted heredoc whose first line is the JSON header and whose remaining lines are the body. In programmatic runners that require one physical command line, use `printf '%s\n'` with each argument representing one output line and pipe it to `spx session handoff`; keep the pipeline on one physical shell line. Literal apostrophes inside a single-quoted `printf` line use `'"'"'`.
+- **`git_ref`**: For feature-branch handoffs, supply the pushed work branch in the JSON header; `spx session handoff` records it after verifying the branch exists on `origin`, and `/pickup` fetches and checks out that branch in a pool worktree. For default-branch or commit-SHA handoffs, omit `git_ref`; the command derives a branch name for a main checkout or a commit SHA for a detached or pool-worktree handoff, and `/pickup` reads that anchor in place. The persistence precondition (`${CLAUDE_SKILL_DIR}/workflows/04-execute.md` `<release_work_branch>`) guarantees any supplied work branch exists on origin and is not behind local.
+- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Do not supply it in the JSON header.
+- **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Do not supply it in the JSON header.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
 - **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
 - **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next session cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next session needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
 - **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or {{! file('root_guide') !}}, not a per-session file.
 - **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
-- **`<incorporated_sessions>`**: Include ONLY when the claimed-session set resolved by `<resolve_claimed_sessions>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.
+- **`<incorporated_sessions>`**: Include ONLY when the claimed-session set resolved by `<resolve_claimed_sessions>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04.
 
 </field_guidance>
