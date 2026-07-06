@@ -248,29 +248,47 @@ def configured_local_marketplace_root(
         codex_result.stdout or "",
         runtime="Codex",
     )
+    shared_root = _shared_local_source_root(
+        claude_source_groups.get(marketplace, ()),
+        codex_source_groups.get(marketplace, ()),
+    )
+    if shared_root is not None:
+        return shared_root
     claude_sources = _select_marketplace_sources(claude_source_groups)
     codex_sources = _select_marketplace_sources(codex_source_groups)
-    root = _canonical_source_root(
-        marketplace,
-        explicit_root=None,
-        claude_sources=claude_sources,
-        codex_sources=codex_sources,
-        claude_source_groups=claude_source_groups,
-        codex_source_groups=codex_source_groups,
-    )
-    if _source_groups_contain_local_root(
-        claude_source_groups.get(marketplace, ()),
-        root,
-    ) and _source_groups_contain_local_root(
-        codex_source_groups.get(marketplace, ()),
-        root,
-    ):
-        return root
     return require_matching_local_sources(
         marketplace,
         claude_sources=claude_sources,
         codex_sources=codex_sources,
     )
+
+
+def configured_claude_directory_marketplace_root(
+    marketplace: str = DEFAULT_MARKETPLACE,
+    *,
+    runner: CommandRunner = run_command_capture,
+) -> Path:
+    """Return the Claude Code Directory source root without validating Codex."""
+    claude_result = _run_json_command(
+        [*CLAUDE_MARKETPLACE_LIST_COMMAND],
+        runner=runner,
+    )
+    claude_source_groups = _parse_marketplace_source_groups(
+        claude_result.stdout or "",
+        runtime="Claude Code",
+    )
+    root = _single_runtime_local_source_root(
+        claude_source_groups.get(marketplace, ()),
+        runtime="Claude Code",
+    )
+    if root is None:
+        claude_sources = _select_marketplace_sources(claude_source_groups)
+        claude = _required_source(claude_sources, marketplace, runtime="Claude Code")
+        raise MarketplaceSourceError(
+            f"Claude Code marketplace `{marketplace}` must be a local Directory "
+            f"source with a path; found {claude.source_type}"
+        )
+    return root
 
 
 def ensure_local_marketplace_sources(
@@ -427,6 +445,11 @@ def _marketplace_source_from_entry(
     source_type = _normalized_source_type(source_entry)
     scope = _string_field(source_entry, (MARKETPLACE_FIELD_SCOPE,))
     project_path = _optional_path(source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH))
+    path = _path_field(source_entry, source_type)
+    if source_type == SOURCE_TYPE_LOCAL and path is None:
+        raise MarketplaceSourceError(
+            f"{runtime} marketplace `{name}` local source has no usable path"
+        )
     if (
         runtime == "Claude Code"
         and scope in _CLAUDE_PROJECT_PATH_SCOPES
@@ -439,7 +462,7 @@ def _marketplace_source_from_entry(
     return MarketplaceSource(
         name=name,
         source_type=source_type,
-        path=_path_field(source_entry, source_type),
+        path=path,
         url=_url_field(source_entry, source_type),
         scope=scope,
         project_path=project_path,
@@ -472,11 +495,11 @@ def _source_selection_rank(source: MarketplaceSource) -> int:
     if source.source_type != SOURCE_TYPE_LOCAL:
         return 0
     if source.scope == CLAUDE_SCOPE_USER:
-        return 4
+        return 5
     if source.scope is None:
-        return 3
+        return 4
     if source.scope == CLAUDE_SCOPE_MANAGED:
-        return 1
+        return 3
     return 2
 
 
@@ -534,7 +557,7 @@ def _normalized_source_type(entry: dict[str, object]) -> str:
             return SOURCE_TYPE_LOCAL
         return ""
     lowered = raw.strip().lower()
-    if lowered.startswith("directory") or lowered in {"local", "path"}:
+    if _local_source_type_token(raw):
         return SOURCE_TYPE_LOCAL
     if lowered in {SOURCE_TYPE_GIT, "github"} or lowered.startswith("http"):
         return SOURCE_TYPE_GIT
@@ -552,7 +575,9 @@ def _path_field(entry: dict[str, object], source_type: str) -> Path | None:
         ),
     )
     if raw is None and source_type == SOURCE_TYPE_LOCAL:
-        raw = _string_field(entry, (MARKETPLACE_FIELD_SOURCE,))
+        source = _string_field(entry, (MARKETPLACE_FIELD_SOURCE,))
+        if source is not None and not _local_source_type_token(source):
+            raw = source
     if raw is None:
         return None
     return Path(raw).expanduser()
@@ -576,6 +601,11 @@ def _string_field(entry: dict[str, object], names: tuple[str, ...]) -> str | Non
         if isinstance(value, str):
             return value
     return None
+
+
+def _local_source_type_token(value: str) -> bool:
+    lowered = value.strip().lower()
+    return lowered.startswith("directory") or lowered in {"local", "path"}
 
 
 def _optional_path(value: object) -> Path | None:
@@ -697,13 +727,6 @@ def _single_runtime_local_source_root(
     return next(iter(roots))
 
 
-def _source_groups_contain_local_root(
-    sources: tuple[MarketplaceSource, ...],
-    root: Path,
-) -> bool:
-    return _normalized_path(root) in set(_local_source_roots(sources))
-
-
 def _local_source_roots(sources: tuple[MarketplaceSource, ...]) -> tuple[Path, ...]:
     return tuple(
         _normalized_path(source.path)
@@ -785,7 +808,7 @@ def _repair_claude_runtime_source(
     )
     if canonical_user_source_exists and not editable_sources:
         return ()
-    user_affecting_removal = any(
+    source_readd_required = not canonical_user_source_exists or any(
         _claude_source_removal_can_affect_user_plugins(source)
         for source in editable_sources
     )
@@ -794,7 +817,7 @@ def _repair_claude_runtime_source(
             marketplace,
             runner=runner,
         )
-        if user_affecting_removal
+        if source_readd_required
         else ()
     )
     commands: list[tuple[str, ...]] = []
@@ -812,7 +835,7 @@ def _repair_claude_runtime_source(
             cwd=remove_cwd,
         )
         commands.append(remove)
-    if not canonical_user_source_exists or user_affecting_removal:
+    if source_readd_required:
         add = (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(root))
         _run_json_command(list(add), runner=runner)
         commands.append(add)
@@ -1000,7 +1023,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "command",
-        choices=(MARKETPLACE_FIELD_ROOT, "ensure"),
+        choices=(MARKETPLACE_FIELD_ROOT, "claude-root", "ensure"),
         help="Inspect or reconcile the shared local marketplace root",
     )
     parser.add_argument(
@@ -1018,6 +1041,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == MARKETPLACE_FIELD_ROOT:
             root = configured_local_marketplace_root(args.marketplace)
+            print(root)
+            return 0
+        if args.command == "claude-root":
+            root = configured_claude_directory_marketplace_root(args.marketplace)
             print(root)
             return 0
         result = ensure_local_marketplace_sources(args.marketplace)
@@ -1081,6 +1108,7 @@ __all__ = [
     "PLUGIN_FIELD_ID",
     "PLUGIN_MANIFEST_FIELD_VERSION",
     "available_codex_plugins",
+    "configured_claude_directory_marketplace_root",
     "configured_local_marketplace_root",
     "ensure_local_marketplace_sources",
     "main",

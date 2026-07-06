@@ -40,8 +40,7 @@ The Claude marketplace is registered as a **Directory source** at the authoritat
 After a merge lands on `origin/main`, fast-forward the **marketplace-source worktree's** `main`, then refresh installs:
 
 ```bash
-src=$(claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and str(e.get("source", "")).lower()=="directory"), ""))')
-[ -n "$src" ] || { echo "outcomeeng is not registered as a directory source" >&2; exit 1; }
+src=$(just marketplace-source-root outcomeeng)
 git -C "$src" fetch origin main
 git -C "$src" merge --ff-only origin/main   # the source worktree is on main; fast-forward it to the merged tip
 (cd "$src" && just sync-marketplace <previous-main-ref>)   # run FROM the source worktree

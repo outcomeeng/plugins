@@ -22,7 +22,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_removes_project_duplicate_without_readding_user_source,
     source_reconciliation_restores_enabled_user_scope_claude_plugins,
     source_reconciliation_user_restore_already_enabled_response_is_accepted,
-    source_reconciliation_unscoped_default_adds_user_registration_without_restore,
+    source_reconciliation_unscoped_default_adds_user_registration_and_restores_user_plugins,
     source_reconciliation_user_restore_idempotent_errors_are_accepted,
     source_reconciliation_user_restore_non_idempotent_errors_surface,
     with_temporary_marketplace_path,
@@ -34,7 +34,7 @@ def test_source_reconciliation_repairs_user_registration_paths() -> None:
         source_reconciliation_adds_absent_runtime_sources
     )
     assert with_temporary_marketplace_path(
-        source_reconciliation_unscoped_default_adds_user_registration_without_restore
+        source_reconciliation_unscoped_default_adds_user_registration_and_restores_user_plugins
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_explicit_root_replaces_stale_runtime_paths

@@ -232,6 +232,9 @@ def local_refresh_reads_addable_codex_plugins_from_dist_codex(
         }
         for plugin, version in generated_versions.items():
             write_dist_codex_manifest(workspace.repo_root, plugin, version)
+        (workspace.repo_root / DIST_CODEX_PLUGINS_DIR / "missing-manifest").mkdir(
+            parents=True
+        )
         working_tree_only_version = "0.9.0"
         history = StaticHistory(
             plugins=frozenset(
@@ -273,6 +276,9 @@ def local_refresh_reads_addable_codex_plugins_from_dist_codex(
         for plugin in plugin_set.generated_plugins
     ]
     assert result.refresh_returncode == 0
+    assert "missing-manifest" not in {
+        plugin.name for plugin in available_codex_plugins(workspace.repo_root)
+    }
 
 
 @codex_cache_refresh_property

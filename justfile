@@ -129,6 +129,10 @@ check-installed marketplace="outcomeeng":
     fi
     echo "✔ installed skills valid"
 
+# Print the Claude Code Directory marketplace source root without validating Codex
+marketplace-source-root marketplace="outcomeeng":
+    uv run python -m outcomeeng.distribution.marketplace_sources claude-root {{marketplace}}
+
 # Refresh local Claude and Codex marketplace installs after plugin distribution changes
 sync-marketplace base_ref="":
     uv run python -m outcomeeng.distribution.sync {{base_ref}}
