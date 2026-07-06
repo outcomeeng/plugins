@@ -1,4 +1,12 @@
-"""Scenario evidence for the instruction-block root managed-block generator."""
+"""Scenario evidence for the instruction-block render model.
+
+Each scenario exercises one concrete interaction of the generator and its shared-region
+reconcile: rendering both root files, preserving a shared region and independent prose across a
+re-render, the router marker format, per-harness divergence, new-section propagation, template
+path rejection, staleness of an unparseable version, symlink and legacy-block migration,
+quoted-marker safety, blank-run preservation, and the git-recency reconcile of a diverged shared
+region. The harness owns all fixture setup — templates, topologies, git commits at fixed dates.
+"""
 
 from __future__ import annotations
 
@@ -6,667 +14,897 @@ import pathlib
 
 import pytest
 
-from outcomeeng_testing.harnesses.instruction_block import (
-    INSTRUCTION_AGENTS,
-    INSTRUCTION_CLAUDE,
-    LANG_PRIMARY,
-    LANG_SECONDARY,
-    NEW_SECTION,
-    HARNESS_CLAUDE,
-    HARNESS_CODEX,
-    ROOT_SHARED_BODY,
-    build_template,
-    load_instruction_block_module,
-    root_instruction_topology_symlinked,
-    harness_line,
-    write_spx_tree_with_tests,
-    write_template,
-)
+from outcomeeng_testing.harnesses import instruction_block as harness
 
-OLD_VERSION = "0.17.0"
-NEW_VERSION = "0.18.0"
+MODULE = harness.load_instruction_block_module()
 
 
-def _write_both_instruction_files(
-    module: object,
-    repo_root: pathlib.Path,
-    languages: tuple[str, ...],
-    version: str,
-) -> None:
-    """Render and write root CLAUDE.md and AGENTS.md with instruction blocks."""
-    template = build_template(version)
-    for harness, filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
-        block = module.render(template, languages, version, harness)
-        (repo_root / filename).write_text(
-            module.upsert_managed_block("", block),
-            encoding="utf-8",
-        )
-
-
-def test_scaffold_renders_only_enabled_language() -> None:
-    module = load_instruction_block_module()
-    rendered = module.render(
-        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE
-    )
-    assert f"### {LANG_PRIMARY.capitalize()}" in rendered
-    assert f"### {LANG_SECONDARY.capitalize()}" not in rendered
-
-
-def test_harness_block_renders_only_for_its_harness() -> None:
-    module = load_instruction_block_module()
-    template = build_template(NEW_VERSION)
-    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE)
-    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CODEX)
-
-    assert HARNESS_CLAUDE.upper() in claude
-    assert HARNESS_CODEX.upper() not in claude
-    assert HARNESS_CODEX.upper() in codex
-    assert HARNESS_CLAUDE.upper() not in codex
-
-
-def test_both_blocks_share_body_and_differ_only_in_harness_spans() -> None:
-    module = load_instruction_block_module()
-    template = build_template(NEW_VERSION)
-    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE)
-    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CODEX)
-
-    harness_lines = {harness_line(HARNESS_CLAUDE), harness_line(HARNESS_CODEX)}
-    claude_shared = [line for line in claude.splitlines() if line not in harness_lines]
-    codex_shared = [line for line in codex.splitlines() if line not in harness_lines]
-    assert claude_shared == codex_shared
-    assert claude != codex
-
-
-def test_update_propagates_new_section_and_preserves_languages() -> None:
-    module = load_instruction_block_module()
-    instructions = module.upsert_managed_block(
-        ROOT_SHARED_BODY,
-        module.render(
-            build_template(OLD_VERSION), (LANG_PRIMARY,), OLD_VERSION, HARNESS_CLAUDE
-        ),
+def _template(tmp_path: pathlib.Path, *, extra_section: bool = False) -> pathlib.Path:
+    return harness.write_template(
+        tmp_path, harness.NEW_VERSION, extra_section=extra_section
     )
 
-    new_template = build_template(NEW_VERSION, extra_section=True)
-    languages = module.parse_languages(instructions)
 
-    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
-        updated = module.render(new_template, languages, NEW_VERSION, harness)
-        assert f"## {NEW_SECTION}" in updated
-        assert f"### {LANG_PRIMARY.capitalize()}" in updated
-        assert f"### {LANG_SECONDARY.capitalize()}" not in updated
-
-
-def test_cli_check_reports_absent_stale_and_current(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-    supplied = [*base, "--languages", LANG_PRIMARY]
-
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "absent"
-
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), OLD_VERSION)
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "stale"
-
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    assert module.main(supplied) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_reports_language_drift(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-
-    assert module.main([*base, "--languages", LANG_PRIMARY]) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_check_treats_language_order_as_a_set(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    _write_both_instruction_files(
-        module, tmp_path, (LANG_SECONDARY, LANG_PRIMARY), NEW_VERSION
-    )
-    base = ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-
-    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
-    assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_ignores_unmanaged_metadata_comments(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    unmanaged_metadata = (
-        f"{ROOT_SHARED_BODY}\n"
-        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {NEW_VERSION} -->\n"
-        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_PRIMARY} -->\n"
-    )
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / instruction_name).write_text(unmanaged_metadata, encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--check",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_check_treats_markerless_legacy_instructions_as_stale(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    legacy_instructions = (
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{NEW_VERSION}"\n'
-        f"{module.LANGUAGES_KEY}: [{LANG_PRIMARY}]\n"
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        "\n# Legacy Spec Tree Instructions\n"
-    )
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / instruction_name).write_text(legacy_instructions, encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--check",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_check_treats_legacy_marker_block_as_stale(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    legacy_start, legacy_end = module.LEGACY_MANAGED_BLOCK_MARKERS[0]
-    legacy_block = (
-        f"{ROOT_SHARED_BODY}\n"
-        f"{legacy_start}\n"
-        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {NEW_VERSION} -->\n"
-        f"{module.MANAGED_TEMPLATE_SOURCE_PREFIX} {module.DEFAULT_TEMPLATE_SOURCE} -->\n"
-        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_PRIMARY} -->\n\n"
-        "Legacy body.\n\n"
-        f"{legacy_end}\n"
-    )
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / instruction_name).write_text(legacy_block, encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--check",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_write_migrates_legacy_marker_block_in_place(
+def test_write_produces_both_files_language_and_harness_filtered(
     tmp_path: pathlib.Path,
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    legacy_start, legacy_end = module.LEGACY_MANAGED_BLOCK_MARKERS[0]
-    legacy_block = (
-        f"{ROOT_SHARED_BODY}\n"
-        f"{legacy_start}\n"
-        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {OLD_VERSION} -->\n"
-        f"{module.MANAGED_TEMPLATE_SOURCE_PREFIX} {module.DEFAULT_TEMPLATE_SOURCE} -->\n"
-        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_PRIMARY} -->\n\n"
-        "Legacy body.\n\n"
-        f"{legacy_end}\n"
-    )
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / instruction_name).write_text(legacy_block, encoding="utf-8")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    agents = (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
 
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
-        )
-        == 0
-    )
-
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        content = (tmp_path / instruction_name).read_text(encoding="utf-8")
-        assert content.count(module.MANAGED_BLOCK_START) == 1
-        assert legacy_start not in content
-        assert "Legacy body." not in content
-        assert ROOT_SHARED_BODY.rstrip("\n") in content
+    assert f"### {harness.LANG_PRIMARY.capitalize()}" in claude
+    assert f"### {harness.LANG_SECONDARY.capitalize()}" not in claude
+    assert harness.harness_line(harness.HARNESS_CLAUDE) in claude
+    assert harness.harness_line(harness.HARNESS_CODEX) not in claude
+    assert harness.harness_line(harness.HARNESS_CODEX) in agents
+    assert harness.harness_line(harness.HARNESS_CLAUDE) not in agents
 
 
-def test_cli_write_replaces_markerless_generated_instructions_body(
+def test_write_preserves_shared_region_and_independent_prose(
     tmp_path: pathlib.Path,
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    legacy_instructions = (
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{OLD_VERSION}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{module.LANGUAGES_KEY}: [{LANG_PRIMARY}]\n"
-        f"{module.FRONTMATTER_DELIMITER}\n\n"
-        "# spx/ Directory Guide (Spec Tree)\n\n"
-        "Legacy generated guidance.\n"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.write_both_root_files_with_shared_region(
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        (tmp_path / instruction_name).write_text(legacy_instructions, encoding="utf-8")
+    marker = "INDEPENDENT PROSE MARKER"
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        claude.read_text(encoding="utf-8") + f"\n{marker}\n", encoding="utf-8"
+    )
 
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = claude.read_text(encoding="utf-8")
+    assert marker in result
     assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--write",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
+        MODULE.parse_shared_regions(result)[harness.SHARED_REGION_NAME]
+        == harness.SHARED_REGION_BODY
     )
 
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        content = (tmp_path / instruction_name).read_text(encoding="utf-8")
-        assert content.startswith(module.MANAGED_BLOCK_START)
-        assert "Legacy generated guidance." not in content
+
+def test_router_marker_format(tmp_path: pathlib.Path) -> None:
+    rendered = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    assert rendered.startswith(
+        MODULE.router_marker(harness.NEW_VERSION, (harness.LANG_PRIMARY,))
+    )
+    assert MODULE.ROUTER_BLOCK_END in rendered
+    assert MODULE.TEMPLATE_SOURCE_KEY not in rendered
 
 
-def test_cli_check_uses_managed_metadata_not_root_prose_comments(
+def test_both_files_identical_except_harness_spans(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    agents = (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    placeholder = "HARNESS-SPAN"
+    claude_norm = claude.replace(
+        harness.harness_line(harness.HARNESS_CLAUDE), placeholder
+    )
+    agents_norm = agents.replace(
+        harness.harness_line(harness.HARNESS_CODEX), placeholder
+    )
+    assert claude_norm == agents_norm
+
+
+def test_newer_template_adds_section_preserving_shared_region(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.write_both_root_files_with_shared_region(
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+    )
+    harness.run_generator_write_primary(repo, _template(tmp_path, extra_section=True))
+    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert f"## {harness.NEW_SECTION}" in claude
+    assert (
+        MODULE.parse_shared_regions(claude)[harness.SHARED_REGION_NAME]
+        == harness.SHARED_REGION_BODY
+    )
+
+
+def test_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
+    real = _template(tmp_path)
+    link = tmp_path / "link-template.md"
+    link.symlink_to(real)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    code = MODULE.main(
+        [
+            "--template",
+            str(link),
+            "--repo-root",
+            str(repo),
+            "--languages",
+            harness.LANG_PRIMARY,
+            "--write",
+        ]
+    )
+    assert code == 2
+
+
+def test_cli_rejects_missing_repo_root(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    unmanaged_metadata = (
-        f"{ROOT_SHARED_BODY}\n"
-        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {OLD_VERSION} -->\n"
-        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_SECONDARY} -->\n"
+    code = MODULE.main(
+        [
+            "--template",
+            str(_template(tmp_path)),
+            "--repo-root",
+            str(tmp_path / "does-not-exist"),
+            "--write",
+        ]
     )
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        instruction_path = tmp_path / instruction_name
-        instruction_path.write_text(
-            f"{unmanaged_metadata}\n{instruction_path.read_text(encoding='utf-8')}",
-            encoding="utf-8",
-        )
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--check",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_uses_managed_metadata_not_root_frontmatter(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    misleading_frontmatter = (
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{OLD_VERSION}"\n'
-        f"{module.LANGUAGES_KEY}: [{LANG_SECONDARY}]\n"
-        f"{module.FRONTMATTER_DELIMITER}\n\n"
-    )
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    for instruction_name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-        instruction_path = tmp_path / instruction_name
-        instruction_path.write_text(
-            f"{misleading_frontmatter}{instruction_path.read_text(encoding='utf-8')}",
-            encoding="utf-8",
-        )
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--check",
-                "--languages",
-                LANG_PRIMARY,
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "current"
-
-
-def test_cli_check_reports_stale_from_detected_language_drift(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    _write_both_instruction_files(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
-    extensions = tuple(
-        next(ext for ext, lang in module.LANGUAGE_BY_EXTENSION.items() if lang == want)
-        for want in (LANG_PRIMARY, LANG_SECONDARY)
-    )
-    write_spx_tree_with_tests(tmp_path / "spx", extensions)
-
-    assert (
-        module.main(
-            ["--template", str(template), "--repo-root", str(tmp_path), "--check"]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == "stale"
-
-
-def test_cli_check_reports_absent_when_one_instruction_file_is_missing(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    claude_name = module.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CLAUDE]
-    block = module.render(
-        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE
-    )
-    (tmp_path / claude_name).write_text(
-        module.upsert_managed_block(ROOT_SHARED_BODY, block),
-        encoding="utf-8",
-    )
-    check = [
-        "--template",
-        str(template),
-        "--repo-root",
-        str(tmp_path),
-        "--check",
-        "--languages",
-        LANG_PRIMARY,
-    ]
-    assert module.main(check) == 0
-    assert capsys.readouterr().out.strip() == "absent"
-
-
-def test_cli_write_without_repo_root_exits_2(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    assert module.main(["--template", str(template), "--write"]) == 2
+    assert code == 2
+    assert "--repo-root does not exist" in capsys.readouterr().err
 
 
 def test_cli_rejects_non_directory_repo_root(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    repo_root = tmp_path / "not-a-directory"
-    repo_root.write_text("not a directory\n", encoding="utf-8")
-
-    exit_code = module.main(
-        [
-            "--template",
-            str(template),
-            "--repo-root",
-            str(repo_root),
-            "--check",
-        ]
+    plain = tmp_path / "plain.txt"
+    plain.write_text("x", encoding="utf-8")
+    code = MODULE.main(
+        ["--template", str(_template(tmp_path)), "--repo-root", str(plain), "--write"]
     )
-
-    assert exit_code == 2
-    assert "--repo-root is not a directory" in capsys.readouterr().err
+    assert code == 2
+    assert "is not a directory" in capsys.readouterr().err
 
 
 def test_cli_rejects_missing_template(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    missing = tmp_path / "nonexistent-template.md"
-
-    exit_code = module.main(
-        ["--template", str(missing), "--repo-root", str(tmp_path), "--check"]
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    code = MODULE.main(
+        ["--template", str(tmp_path / "gone.md"), "--repo-root", str(repo), "--write"]
     )
-
-    assert exit_code == 2
+    assert code == 2
     assert "--template does not exist" in capsys.readouterr().err
-
-
-def test_cli_rejects_symlinked_template(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    module = load_instruction_block_module()
-    real_template = write_template(tmp_path, NEW_VERSION)
-    linked = tmp_path / "linked-template.md"
-    linked.symlink_to(real_template)
-
-    exit_code = module.main(
-        ["--template", str(linked), "--repo-root", str(tmp_path), "--check"]
-    )
-
-    assert exit_code == 2
-    assert "--template is a symlink" in capsys.readouterr().err
 
 
 def test_cli_rejects_directory_template(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    directory = tmp_path / "template-dir"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    directory = tmp_path / "as-template"
     directory.mkdir()
-
-    exit_code = module.main(
-        ["--template", str(directory), "--repo-root", str(tmp_path), "--check"]
+    code = MODULE.main(
+        ["--template", str(directory), "--repo-root", str(repo), "--write"]
     )
+    assert code == 2
+    assert "is not a regular file" in capsys.readouterr().err
 
-    assert exit_code == 2
-    assert "--template is not a regular file" in capsys.readouterr().err
 
-
-def test_cli_rejects_root_instruction_symlink_escaping_repo_root(
+def test_cli_rejects_root_symlink_escaping_repo(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    outside = tmp_path.parent / f"{tmp_path.name}-outside-instructions.md"
-    outside.write_text(ROOT_SHARED_BODY, encoding="utf-8")
-    (tmp_path / INSTRUCTION_CLAUDE).symlink_to(outside)
-
-    exit_code = module.main(
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside = tmp_path / "outside.md"
+    outside.write_text("secret", encoding="utf-8")
+    (repo / harness.INSTRUCTION_CLAUDE).symlink_to(outside)
+    (repo / harness.INSTRUCTION_AGENTS).write_text(
+        harness.ROOT_SHARED_BODY, encoding="utf-8"
+    )
+    code = MODULE.main(
         [
             "--template",
-            str(template),
+            str(_template(tmp_path)),
             "--repo-root",
-            str(tmp_path),
+            str(repo),
             "--languages",
-            LANG_PRIMARY,
+            harness.LANG_PRIMARY,
             "--write",
         ]
     )
-
-    assert exit_code == 2
-    assert "symlink target escapes --repo-root" in capsys.readouterr().err
+    assert code == 2
+    assert "escapes --repo-root" in capsys.readouterr().err
 
 
 def test_cli_rejects_spx_symlink_during_language_detection(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    outside = tmp_path.parent / f"{tmp_path.name}-outside-spx"
-    outside.mkdir()
-    (tmp_path / "spx").symlink_to(outside)
-
-    exit_code = module.main(
-        [
-            "--template",
-            str(template),
-            "--repo-root",
-            str(tmp_path),
-            "--write",
-        ]
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(harness.ROOT_SHARED_BODY, encoding="utf-8")
+    (repo / "spx").symlink_to(tmp_path)
+    # no --languages forces detection, which resolves <repo-root>/spx and rejects the symlink
+    code = MODULE.main(
+        ["--template", str(_template(tmp_path)), "--repo-root", str(repo), "--write"]
     )
-
-    assert exit_code == 2
+    assert code == 2
     assert "spx directory is a symlink" in capsys.readouterr().err
 
 
-def test_cli_write_creates_both_root_instruction_files(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    exit_code = module.main(
+def test_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> None:
+    spx_dir = tmp_path / "spx"
+    harness.write_spx_tree_with_tests(spx_dir, ("py", "ts"))
+    assert MODULE.detect_languages_from_tree(spx_dir) == ("python", "typescript")
+
+
+def test_cli_write_without_repo_root_exits(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = MODULE.main(["--template", str(_template(tmp_path)), "--write"])
+    assert code == 2
+    assert "--write requires --repo-root" in capsys.readouterr().err
+
+
+def test_cli_check_reports_absent_when_one_file_missing(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
+    harness.run_generator_write_primary(repo, template)
+    (repo / harness.INSTRUCTION_CLAUDE).unlink()
+    code = MODULE.main(
         [
             "--template",
             str(template),
             "--repo-root",
-            str(tmp_path),
+            str(repo),
             "--languages",
-            LANG_PRIMARY,
-            "--write",
+            harness.LANG_PRIMARY,
+            "--check",
         ]
     )
-    assert exit_code == 0
-    for filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
-        instruction_file = tmp_path / filename
-        assert instruction_file.is_file()
-        content = instruction_file.read_text(encoding="utf-8")
-        assert module.MANAGED_BLOCK_START in content
-        assert f"### {LANG_PRIMARY.capitalize()}" in content
-        assert content.endswith("\n")
+    assert code == 0
+    # absent dominates: one missing file makes the worst-across-both status absent
+    assert capsys.readouterr().out.strip() == "absent"
 
 
-def test_cli_write_preserves_root_content_outside_instruction_block(
+def test_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None:
+    languages = (harness.LANG_PRIMARY, harness.LANG_SECONDARY)
+    block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        languages,
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(MODULE.prepend_router_block(block, ""), encoding="utf-8")
+    # the recorded language set is order-insensitive: a reversed detected order still reads current
+    assert (
+        MODULE.instruction_status(
+            claude, harness.NEW_VERSION, tuple(reversed(languages)), repo
+        )
+        == "current"
+    )
+
+
+def test_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> None:
+    block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    claude = repo / harness.INSTRUCTION_CLAUDE
+
+    def check() -> str:
+        return MODULE.instruction_status(
+            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
+        )
+
+    # router first -> current
+    claude.write_text(MODULE.prepend_router_block(block, "PRODUCT"), encoding="utf-8")
+    assert check() == "current"
+    # product prose before the router -> stale; the router must be the first content of the file
+    claude.write_text(
+        "PRODUCT PROSE FIRST\n\n" + MODULE.prepend_router_block(block, "PRODUCT"),
+        encoding="utf-8",
+    )
+    assert check() == "stale"
+
+
+def test_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    corrupted = block.replace(f"v{harness.NEW_VERSION}", "vNOT-NUMERIC")
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(MODULE.prepend_router_block(corrupted, ""), encoding="utf-8")
+    assert (
+        MODULE.instruction_status(
+            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
+        )
+        == "stale"
+    )
+
+
+def test_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / harness.INSTRUCTION_AGENTS).write_text(
+        harness.ROOT_SHARED_BODY, encoding="utf-8"
+    )
+    (repo / harness.INSTRUCTION_CLAUDE).symlink_to(harness.INSTRUCTION_AGENTS)
+    assert (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
+
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    assert not (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
+    assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        assert (
+            (repo / name)
+            .read_text(encoding="utf-8")
+            .startswith(MODULE.ROUTER_MARKER_PREFIX)
+        )
+
+
+def test_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    heading = MODULE.RETIRED_GENERATED_INSTRUCTION_HEADINGS[0]
+    legacy = (
+        f'---\n{MODULE.TEMPLATE_VERSION_KEY}: "0.1.0"\n'
+        f"{MODULE.TEMPLATE_SOURCE_KEY}: {MODULE.DEFAULT_TEMPLATE_SOURCE}\n---\n"
+        f"{heading}\n\nretired generated body\n"
+    )
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(legacy, encoding="utf-8")
+
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert "retired generated body" not in result
+    assert result.startswith(MODULE.ROUTER_MARKER_PREFIX)
+
+
+def test_legacy_marker_block_reported_stale_and_replaced(
     tmp_path: pathlib.Path,
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    (tmp_path / INSTRUCTION_AGENTS).write_text(ROOT_SHARED_BODY, encoding="utf-8")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    open_marker, close_marker = MODULE.LEGACY_MANAGED_BLOCK_MARKERS[0]
+    legacy_doc = (
+        f"{open_marker}\n{MODULE.MANAGED_TEMPLATE_VERSION_PREFIX} 0.1.0 -->\n"
+        f"retired block body\n{close_marker}\n\nproduct prose kept\n"
+    )
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(legacy_doc, encoding="utf-8")
 
+    claude = repo / harness.INSTRUCTION_CLAUDE
     assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
+        MODULE.instruction_status(
+            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
         )
-        == 0
+        == "stale"
     )
 
-    for filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
-        content = (tmp_path / filename).read_text(encoding="utf-8")
-        assert ROOT_SHARED_BODY.rstrip("\n") in content
-        assert content.count(module.MANAGED_BLOCK_START) == 1
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = claude.read_text(encoding="utf-8")
+    assert open_marker not in result
+    assert result.startswith(MODULE.ROUTER_MARKER_PREFIX)
+    assert "product prose kept" in result
 
 
-def test_cli_write_replaces_symlinked_root_instruction_with_regular_file(
+def test_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    quoted = (
+        f"The router opening marker is "
+        f"`{MODULE.router_marker(harness.NEW_VERSION, (harness.LANG_PRIMARY,))}` in prose.\n"
+    )
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(quoted, encoding="utf-8")
+
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert "in prose." in result
+    assert result.count(MODULE.ROUTER_BLOCK_END) == 1
+
+
+def test_quoted_router_closing_marker_after_block_is_preserved(
     tmp_path: pathlib.Path,
 ) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    topology = root_instruction_topology_symlinked()
-    for name, body in topology.files.items():
-        (tmp_path / name).write_text(body, encoding="utf-8")
-    for name, target in topology.symlinks.items():
-        (tmp_path / name).symlink_to(target)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    # independent content after a real router block that inline-quotes the closing marker in prose
+    independent = f"Doc note: the router closes with `{MODULE.ROUTER_BLOCK_END}` on its own line.\n"
+    doc = MODULE.prepend_router_block(block, independent)
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(doc, encoding="utf-8")
 
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    # the real standalone closing fence bounds the block; the inline-quoted marker in independent
+    # content is not mistaken for the block end, so the note survives and the block is single
+    assert "Doc note: the router closes with" in result
+    assert result.count(MODULE.ROUTER_MARKER_PREFIX) == 1
+
+
+def test_quoted_shared_fence_in_prose_is_not_a_region() -> None:
+    inline = f"Use `{MODULE.shared_open_marker('example')}` inline to open a region.\n"
+    assert MODULE.parse_shared_regions(inline) == {}
+
+
+def test_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    # a shared open fence with no matching close: parse_shared_regions skips it, so drift/check
+    # would report current unless the malformed fence is surfaced
+    body = f"{MODULE.shared_open_marker('commands')}\n\nbody with no closing fence\n"
+    doc = MODULE.prepend_router_block(block, body)
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(doc, encoding="utf-8")
+
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    assert MODULE.parse_shared_regions(doc) == {}
     assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
+        MODULE.instruction_status(
+            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
         )
-        == 0
+        == "stale"
+    )
+    assert "commands" in MODULE.shared_region_drift(repo)
+
+
+def test_bootstrap_refuses_a_malformed_seed_fence() -> None:
+    # The sixth initial topology: both seeds carry the same malformed (unclosed) shared fence.
+    # parse_shared_regions reads them as region-free, so a naive bootstrap would wrap the dangling
+    # marker into a new region and bury it in a permanently stuck stale state. The bootstrap must
+    # refuse and leave the fence as independent content, which --check/drift surface as malformed.
+    open_marker = MODULE.shared_open_marker("commands")
+    seed = f"# Head\n\n{open_marker}\n\nbody with no close\n\nmore product content.\n"
+    blocks = {
+        harness_name: MODULE.render(
+            harness.build_template(harness.NEW_VERSION),
+            (harness.LANG_PRIMARY,),
+            harness.NEW_VERSION,
+            harness_name,
+        )
+        for harness_name in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    docs = MODULE.build_root_instruction_documents(
+        {"claude": seed, "codex": seed}, blocks
+    )
+    claude_doc = docs["claude"]
+    # the malformed fence is not wrapped into a region; it stays surfaced as malformed
+    assert MODULE.parse_shared_regions(claude_doc) == {}
+    assert "commands" in MODULE.malformed_shared_regions(claude_doc)
+    assert claude_doc.startswith(MODULE.ROUTER_MARKER_PREFIX)
+
+
+def test_duplicate_shared_region_name_is_malformed() -> None:
+    open_marker = MODULE.shared_open_marker("commands")
+    close_marker = MODULE.shared_close_marker("commands")
+    # the same name opened twice: parse_shared_regions silently collapses to the last body, so the
+    # duplicate must be surfaced as malformed rather than allowing a diverged earlier region to hide
+    duplicated = (
+        f"# Head\n\n{open_marker}\n\nfirst\n\n{close_marker}\n\n"
+        f"{open_marker}\n\nsecond\n\n{close_marker}\n"
+    )
+    assert MODULE.parse_shared_regions(duplicated) == {"commands": "second"}
+    assert "commands" in MODULE.malformed_shared_regions(duplicated)
+
+
+def test_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    seed = "# Product\n\nfirst\n\n\n\nsecond\n"
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(seed, encoding="utf-8")
+
+    harness.run_generator_write_primary(repo, _template(tmp_path))
+    result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert "first\n\n\n\nsecond" in result
+
+
+def test_bootstrap_preserves_lines_when_common_span_ends_mid_line() -> None:
+    # Two root files more than 80% identical whose longest common span ends mid-line, at a
+    # harness-specific word — the case a byte-level span would split across the fence.
+    claude = harness.ROOT_NEAR_IDENTICAL_CLAUDE
+    codex = harness.ROOT_NEAR_IDENTICAL_CODEX
+    _, ratio = MODULE.biggest_identical_span(claude, codex)
+    assert ratio > MODULE.BOOTSTRAP_SHARED_THRESHOLD
+
+    wrapped_claude, wrapped_codex = MODULE.bootstrap_wrap(claude, codex)
+    region_claude = MODULE.parse_shared_regions(wrapped_claude)[
+        MODULE.BOOTSTRAP_SHARED_REGION_NAME
+    ]
+    region_codex = MODULE.parse_shared_regions(wrapped_codex)[
+        MODULE.BOOTSTRAP_SHARED_REGION_NAME
+    ]
+    # the shared region is byte-identical across the two files
+    assert region_claude == region_codex
+    # every original line survives intact in each wrapped file — no line split across the fence
+    for line in (candidate for candidate in claude.splitlines() if candidate.strip()):
+        assert line in wrapped_claude
+    for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
+        assert line in wrapped_codex
+    # the divergent line stays whole in independent content, never inside the shared region
+    assert "CLAUDE specific tail" not in region_claude
+    assert "CODEX specific tail" not in region_codex
+
+
+def test_bootstrap_finds_whole_line_block_over_longer_straddling_match() -> None:
+    # The byte-level-longest common substring is the long near-duplicate line, which snaps away to
+    # nothing at a line boundary; the biggest *whole-line* span is the block elsewhere. The span
+    # must be that block, not empty — proving the search considers more than the single longest
+    # byte match.
+    claude = harness.ROOT_STRADDLING_CLAUDE
+    codex = harness.ROOT_STRADDLING_CODEX
+    span, _ = MODULE.biggest_identical_span(claude, codex)
+    assert "Common whole line number 0" in span
+    assert "Common whole line number 5" in span
+    # the straddling divergent line never enters the span
+    assert "x" * 480 not in span
+    assert "claude-specific tail" not in span
+    assert "codex-specific tail" not in span
+
+
+def test_bootstrap_snaps_span_to_line_boundaries_in_both_files() -> None:
+    # The shared content starts at a line boundary in one file but mid-line in the other — the
+    # second file carries a harness-specific prefix on the otherwise-shared first line. Snapping to
+    # line boundaries in only the first file would place the fence mid-line in the second and split
+    # its line; the span must be whole lines in both files.
+    claude = harness.ROOT_MIDLINE_CLAUDE
+    codex = harness.ROOT_MIDLINE_CODEX
+    wrapped_claude, wrapped_codex = MODULE.bootstrap_wrap(claude, codex)
+    region_claude = MODULE.parse_shared_regions(wrapped_claude)[
+        MODULE.BOOTSTRAP_SHARED_REGION_NAME
+    ]
+    region_codex = MODULE.parse_shared_regions(wrapped_codex)[
+        MODULE.BOOTSTRAP_SHARED_REGION_NAME
+    ]
+    assert region_claude == region_codex
+    # every whole line survives intact in both files — the prefixed line is never split
+    for line in (candidate for candidate in claude.splitlines() if candidate.strip()):
+        assert line in wrapped_claude
+    for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
+        assert line in wrapped_codex
+    # the divergent prefixed line stays whole in independent content, never inside the region
+    assert "harness-prefix shared prose here" in wrapped_codex
+    assert "harness-prefix" not in region_codex
+
+
+def _init_repo_with_committed_shared_region(
+    tmp_path: pathlib.Path,
+    *,
+    claude_region: str,
+    agents_region: str,
+    timestamp: int,
+) -> pathlib.Path:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    harness.write_both_root_files_with_shared_region(
+        MODULE,
+        repo,
+        languages=(harness.LANG_PRIMARY,),
+        version=harness.NEW_VERSION,
+        claude_region=claude_region,
+        agents_region=agents_region,
+    )
+    harness.git_commit_at(
+        repo, timestamp, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
+    )
+    return repo
+
+
+def test_diverged_shared_region_reconciles_to_more_recent_side(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY,
+        timestamp=1000,
+    )
+    # diverge CLAUDE's region and commit only CLAUDE at a later date, making it the newer side
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        MODULE.set_shared_region(
+            claude.read_text(encoding="utf-8"),
+            harness.SHARED_REGION_NAME,
+            harness.SHARED_REGION_BODY_ALT,
+        ),
+        encoding="utf-8",
+    )
+    harness.git_commit_at(repo, 2000, harness.INSTRUCTION_CLAUDE)
+
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert harness.SHARED_REGION_NAME in report.reconciled
+    agents_regions = MODULE.parse_shared_regions(
+        (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    )
+    assert agents_regions[harness.SHARED_REGION_NAME] == harness.SHARED_REGION_BODY_ALT
+
+
+def test_reconcile_replaces_losing_region_whole_without_blending(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY,
+        timestamp=1000,
+    )
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        MODULE.set_shared_region(
+            claude.read_text(encoding="utf-8"),
+            harness.SHARED_REGION_NAME,
+            harness.SHARED_REGION_BODY_ALT,
+        ),
+        encoding="utf-8",
+    )
+    harness.git_commit_at(repo, 2000, harness.INSTRUCTION_CLAUDE)
+
+    MODULE.reconcile_root_shared_regions(repo)
+    agents_region = MODULE.parse_shared_regions(
+        (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    )[harness.SHARED_REGION_NAME]
+    # the winning body is present whole; no trace of the losing body survives
+    assert agents_region == harness.SHARED_REGION_BODY_ALT
+    assert harness.SHARED_REGION_BODY not in agents_region
+
+
+def test_reconcile_uses_region_recency_not_whole_file_recency(
+    tmp_path: pathlib.Path,
+) -> None:
+    # AGENTS's region is edited more recently than CLAUDE's, but CLAUDE's file then gets a later
+    # commit touching only its independent content — so CLAUDE is the newer *file* while AGENTS
+    # holds the newer *region*. Whole-file recency would keep CLAUDE's stale region and discard
+    # AGENTS's genuine edit; region recency must keep AGENTS's more-current body.
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY,
+        timestamp=1000,
+    )
+    agents = repo / harness.INSTRUCTION_AGENTS
+    agents.write_text(
+        MODULE.set_shared_region(
+            agents.read_text(encoding="utf-8"),
+            harness.SHARED_REGION_NAME,
+            harness.SHARED_REGION_BODY_ALT,
+        ),
+        encoding="utf-8",
+    )
+    harness.git_commit_at(repo, 2000, harness.INSTRUCTION_AGENTS)
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        claude.read_text(encoding="utf-8") + "\nIndependent note appended later.\n",
+        encoding="utf-8",
+    )
+    harness.git_commit_at(repo, 3000, harness.INSTRUCTION_CLAUDE)
+
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert harness.SHARED_REGION_NAME in report.reconciled
+    claude_region = MODULE.parse_shared_regions(claude.read_text(encoding="utf-8"))[
+        harness.SHARED_REGION_NAME
+    ]
+    assert claude_region == harness.SHARED_REGION_BODY_ALT
+
+
+def test_region_line_range_covers_content_lines_only() -> None:
+    # opening fence line 2, blank 3, body lines 4-5, blank 6, close fence line 7. The range that
+    # feeds `git log -L` must be the body lines (4, 5) only — a fence or separator line inside the
+    # range would let a fence-only commit read as a region-content change and flip the recency.
+    name = harness.SHARED_REGION_NAME
+    text = (
+        "head\n"
+        f"{MODULE.shared_open_marker(name)}\n"
+        "\n"
+        "body line four\n"
+        "body line five\n"
+        "\n"
+        f"{MODULE.shared_close_marker(name)}\n"
+    )
+    assert MODULE._region_line_range(text, name) == (4, 5)
+
+
+def test_recency_tie_is_reported_ambiguous(tmp_path: pathlib.Path) -> None:
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY_ALT,
+        timestamp=1000,
+    )
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert harness.SHARED_REGION_NAME in report.tie
+    assert report.reconciled == ()
+
+
+def test_one_sided_shared_region_is_reported_ambiguous(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    (repo / harness.INSTRUCTION_CLAUDE).write_text(
+        harness.root_document_with_shared_region(
+            MODULE,
+            harness.HARNESS_CLAUDE,
+            harness.SHARED_REGION_BODY,
+            languages=(harness.LANG_PRIMARY,),
+            version=harness.NEW_VERSION,
+        ),
+        encoding="utf-8",
+    )
+    codex_block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CODEX,
+    )
+    (repo / harness.INSTRUCTION_AGENTS).write_text(
+        MODULE.prepend_router_block(codex_block, harness.ROOT_AGENTS_BODY),
+        encoding="utf-8",
+    )
+    harness.git_commit_at(
+        repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
     )
 
-    claude_path = tmp_path / INSTRUCTION_CLAUDE
-    agents_path = tmp_path / INSTRUCTION_AGENTS
-    assert claude_path.is_file()
-    assert agents_path.is_file()
-    assert not claude_path.is_symlink()
-    assert not agents_path.is_symlink()
-    assert ROOT_SHARED_BODY.rstrip("\n") in claude_path.read_text(encoding="utf-8")
-    assert ROOT_SHARED_BODY.rstrip("\n") in agents_path.read_text(encoding="utf-8")
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert harness.SHARED_REGION_NAME in report.one_sided
+    assert report.reconciled == ()
 
 
-def test_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> None:
-    module = load_instruction_block_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    py_ext = next(
-        ext
-        for ext, lang in module.LANGUAGE_BY_EXTENSION.items()
-        if lang == LANG_PRIMARY
+def test_reconcile_reports_malformed_fence_as_ambiguous(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    # both files carry a shared open fence with no matching close — a malformed region the
+    # reconcile must surface rather than pass over, so the closing --check has a resolution path
+    doc = f"# Head\n\n{MODULE.shared_open_marker('commands')}\n\nbody with no close\n"
+    for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
+        (repo / name).write_text(doc, encoding="utf-8")
+    harness.git_commit_at(
+        repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
     )
-    write_spx_tree_with_tests(tmp_path / "spx", (py_ext,))
-    exit_code = module.main(
-        ["--template", str(template), "--repo-root", str(tmp_path), "--write"]
+
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert "commands" in report.malformed
+    assert report.ambiguous
+
+
+def test_reconcile_skips_a_malformed_duplicate_name(tmp_path: pathlib.Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.init_git_identity(repo)
+    open_marker = MODULE.shared_open_marker("commands")
+    close_marker = MODULE.shared_close_marker("commands")
+    # both files open the same name twice with different last bodies: parse collapses to the last
+    # body and the collapsed bodies diverge, but the duplicate is malformed and must be reported,
+    # never reconciled from its unreliable collapsed body
+    (repo / harness.INSTRUCTION_CLAUDE).write_text(
+        f"# H\n\n{open_marker}\n\na1\n\n{close_marker}\n\n"
+        f"{open_marker}\n\nclaude-last\n\n{close_marker}\n",
+        encoding="utf-8",
     )
-    assert exit_code == 0
-    content = (tmp_path / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-    assert f"### {LANG_PRIMARY.capitalize()}" in content
-    assert f"### {LANG_SECONDARY.capitalize()}" not in content
+    (repo / harness.INSTRUCTION_AGENTS).write_text(
+        f"# H\n\n{open_marker}\n\nb1\n\n{close_marker}\n\n"
+        f"{open_marker}\n\ncodex-last\n\n{close_marker}\n",
+        encoding="utf-8",
+    )
+    harness.git_commit_at(
+        repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
+    )
+
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert "commands" in report.malformed
+    assert report.reconciled == ()
 
 
-def test_is_stale_treats_a_malformed_version_as_stale() -> None:
-    module = load_instruction_block_module()
-    assert module.is_stale("0.18.0-beta", NEW_VERSION) is True
-    assert module.is_stale(OLD_VERSION, "not-a-version") is True
+def test_cli_reconcile_requires_repo_root(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = MODULE.main(["--template", str(_template(tmp_path)), "--reconcile"])
+    assert code == 2
+    assert "--reconcile requires --repo-root" in capsys.readouterr().err
+
+
+def test_cli_reconcile_from_applies_operator_tie_break(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # a diverged region committed at the same time is a recency tie; `--from claude` resolves it,
+    # exercising main()'s --reconcile/--from branch end to end — the interface the skill documents
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY_ALT,
+        timestamp=1000,
+    )
+    code = MODULE.main(
+        [
+            "--template",
+            str(_template(tmp_path)),
+            "--repo-root",
+            str(repo),
+            "--reconcile",
+            "--from",
+            "claude",
+        ]
+    )
+    assert code == 0
+    assert f"reconciled: {harness.SHARED_REGION_NAME}" in capsys.readouterr().out
+    agents_region = MODULE.parse_shared_regions(
+        (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    )[harness.SHARED_REGION_NAME]
+    assert agents_region == harness.SHARED_REGION_BODY
+
+
+def test_cli_reconcile_reports_no_change_when_regions_agree(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY,
+        timestamp=1000,
+    )
+    code = MODULE.main(
+        [
+            "--template",
+            str(_template(tmp_path)),
+            "--repo-root",
+            str(repo),
+            "--reconcile",
+        ]
+    )
+    assert code == 0
+    assert capsys.readouterr().out.strip() == ""
+
+
+def test_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) -> None:
+    repo = _init_repo_with_committed_shared_region(
+        tmp_path,
+        claude_region=harness.SHARED_REGION_BODY,
+        agents_region=harness.SHARED_REGION_BODY,
+        timestamp=1000,
+    )
+    # diverge CLAUDE in the working tree WITHOUT committing -> dirty
+    claude = repo / harness.INSTRUCTION_CLAUDE
+    claude.write_text(
+        MODULE.set_shared_region(
+            claude.read_text(encoding="utf-8"),
+            harness.SHARED_REGION_NAME,
+            harness.SHARED_REGION_BODY_ALT,
+        ),
+        encoding="utf-8",
+    )
+    report = MODULE.reconcile_root_shared_regions(repo)
+    assert harness.INSTRUCTION_CLAUDE in report.dirty
+    # AGENTS untouched, still carrying its committed body
+    agents_region = MODULE.parse_shared_regions(
+        (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+    )[harness.SHARED_REGION_NAME]
+    assert agents_region == harness.SHARED_REGION_BODY

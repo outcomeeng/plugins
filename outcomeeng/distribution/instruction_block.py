@@ -36,6 +36,11 @@ DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
+SHARED_DRIFT_HEADER: Final = "root instruction blocks carry a shared region that diverges or is present in only one file."
+SHARED_DRIFT_REMEDIATION: Final = (
+    "Reconcile the shared region with `/update-instruction-block`, which takes the "
+    "git-more-recent side, then commit the reconciled root CLAUDE.md and AGENTS.md."
+)
 UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
 BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
@@ -75,6 +80,8 @@ class InstructionBlockModule(Protocol):
 
     def remove_obsolete_spx_instruction_files(self, repo_root: Path) -> None: ...
 
+    def shared_region_drift(self, repo_root: Path) -> tuple[str, ...]: ...
+
 
 def _run(
     args: Sequence[str], *, cwd: Path = REPO_ROOT
@@ -86,10 +93,15 @@ def _run(
 
 def load_instruction_block_module() -> InstructionBlockModule:
     """Load the shipped instruction-block generator to reuse its pure render contract."""
+    cached = sys.modules.get("instruction_block")
+    if cached is not None:
+        return cast(InstructionBlockModule, cached)
     spec = importlib.util.spec_from_file_location("instruction_block", _GENERATOR)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load instruction_block from {_GENERATOR}")
     module = importlib.util.module_from_spec(spec)
+    # Register before exec so dataclass type introspection can resolve the module by name.
+    sys.modules["instruction_block"] = module
     spec.loader.exec_module(module)
     return cast(InstructionBlockModule, module)
 
@@ -235,9 +247,39 @@ def drifting_instruction_files(
     return sorted({*missing_root_paths, *drift})
 
 
-def render_report(drift: Sequence[str]) -> str:
-    """Render the actionable drift report from the drifting instruction-file paths."""
-    return "\n".join([HEADER, "", *(f"  {path}" for path in drift), "", REMEDIATION])
+def drifting_shared_regions(
+    *, repo_root: Path = REPO_ROOT, module: InstructionBlockModule | None = None
+) -> tuple[str, ...]:
+    """Return the shared regions that diverge or are present in only one root file.
+
+    A shared region is kept byte-identical across the two files; a body that differs between them,
+    or a region present in only one, is drift the deterministic writer leaves unresolved for the
+    update skill's git-recency reconcile. Reporting it keeps the gate from passing over a region
+    that carries one body for Claude Code and a different one — or none — for Codex.
+    """
+    instruction_module = module or load_instruction_block_module()
+    return instruction_module.shared_region_drift(repo_root)
+
+
+def render_report(
+    drift: Sequence[str],
+    shared_drift: Sequence[str] = (),
+) -> str:
+    """Render the actionable drift report from drifting paths and drifting shared regions."""
+    sections: list[str] = []
+    if drift:
+        sections += [HEADER, "", *(f"  {path}" for path in drift), "", REMEDIATION]
+    if shared_drift:
+        if sections:
+            sections.append("")
+        sections += [
+            SHARED_DRIFT_HEADER,
+            "",
+            *(f"  {name}" for name in shared_drift),
+            "",
+            SHARED_DRIFT_REMEDIATION,
+        ]
+    return "\n".join(sections)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -255,6 +297,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.write:
             return 0
         drift = drifting_instruction_files()
+        shared_drift = drifting_shared_regions()
     except InstructionBlockRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -266,9 +309,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{HEADER}\n  the root instruction-block gate failed; see the error above."
         )
         return 1
-    if not drift:
+    if not drift and not shared_drift:
         return 0
-    print(render_report(drift))
+    print(render_report(drift, shared_drift))
     return 1
 
 
