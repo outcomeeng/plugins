@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_preserves_user_scope_claude_plugin_installs,
     source_reconciliation_repairs_scoped_matching_codex_source,
     source_reconciliation_repairs_scoped_runtime_source_as_user_registration,
+    source_reconciliation_repairs_unscoped_matching_claude_runtime_source,
     source_reconciliation_repairs_unscoped_stale_claude_runtime_source,
     source_reconciliation_restores_enabled_user_scope_claude_plugins,
     source_reconciliation_user_restore_already_enabled_response_is_accepted,
@@ -33,6 +34,9 @@ def test_source_reconciliation_repairs_user_registration_paths() -> None:
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_repairs_unscoped_stale_claude_runtime_source
+    )
+    assert with_temporary_marketplace_path(
+        source_reconciliation_repairs_unscoped_matching_claude_runtime_source
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_repairs_scoped_runtime_source_as_user_registration

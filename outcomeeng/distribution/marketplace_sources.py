@@ -551,7 +551,7 @@ def _repair_runtime_source(
     remove_command: tuple[str, ...],
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    if _user_registration_source_matches(source, root):
+    if _user_registration_source_matches(source, root, accept_unscoped=True):
         return ()
     commands: list[tuple[str, ...]] = []
     if source is not None:
@@ -571,7 +571,7 @@ def _repair_claude_runtime_source(
     root: Path,
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    if _user_registration_source_matches(source, root):
+    if _user_registration_source_matches(source, root, accept_unscoped=False):
         return ()
     preserved = _claude_user_plugins_to_preserve(
         marketplace,
@@ -654,15 +654,16 @@ def _source_matches(source: MarketplaceSource | None, root: Path) -> bool:
 def _user_registration_source_matches(
     source: MarketplaceSource | None,
     root: Path,
+    *,
+    accept_unscoped: bool,
 ) -> bool:
     return (
         _source_matches(source, root)
         and source is not None
-        and source.scope
-        in {
-            None,
-            CLAUDE_SCOPE_USER,
-        }
+        and (
+            source.scope == CLAUDE_SCOPE_USER
+            or (accept_unscoped and source.scope is None)
+        )
     )
 
 

@@ -516,8 +516,9 @@ def source_reconciliation_accepts_matching_runtime_sources(
     marketplace_root = tmp_path / "marketplace"
     runner = RecordingCommandRunner(
         stdout_by_command={
-            CLAUDE_MARKETPLACE_LIST_CALL: _claude_directory_marketplace_payload(
-                marketplace_root
+            CLAUDE_MARKETPLACE_LIST_CALL: _scoped_claude_directory_marketplace_payload(
+                marketplace_root,
+                scope=CLAUDE_SCOPE_USER,
             ),
             CODEX_MARKETPLACE_LIST_CALL: _codex_local_marketplace_payload(
                 marketplace_root
@@ -543,8 +544,9 @@ def source_reconciliation_replaces_git_backed_codex_source(
     marketplace_root = tmp_path / "marketplace"
     runner = RecordingCommandRunner(
         stdout_by_command={
-            CLAUDE_MARKETPLACE_LIST_CALL: _claude_directory_marketplace_payload(
-                marketplace_root
+            CLAUDE_MARKETPLACE_LIST_CALL: _scoped_claude_directory_marketplace_payload(
+                marketplace_root,
+                scope=CLAUDE_SCOPE_USER,
             ),
             CODEX_MARKETPLACE_LIST_CALL: json.dumps(
                 [
@@ -578,8 +580,9 @@ def source_reconciliation_replaces_mismatched_codex_path(
     codex_root = tmp_path / "codex-marketplace"
     runner = RecordingCommandRunner(
         stdout_by_command={
-            CLAUDE_MARKETPLACE_LIST_CALL: _claude_directory_marketplace_payload(
-                claude_root
+            CLAUDE_MARKETPLACE_LIST_CALL: _scoped_claude_directory_marketplace_payload(
+                claude_root,
+                scope=CLAUDE_SCOPE_USER,
             ),
             CODEX_MARKETPLACE_LIST_CALL: _codex_local_marketplace_payload(codex_root),
         }
@@ -604,8 +607,9 @@ def source_reconciliation_repairs_scoped_matching_codex_source(
     marketplace_root = tmp_path / "marketplace"
     runner = RecordingCommandRunner(
         stdout_by_command={
-            CLAUDE_MARKETPLACE_LIST_CALL: _claude_directory_marketplace_payload(
-                marketplace_root
+            CLAUDE_MARKETPLACE_LIST_CALL: _scoped_claude_directory_marketplace_payload(
+                marketplace_root,
+                scope=CLAUDE_SCOPE_USER,
             ),
             CODEX_MARKETPLACE_LIST_CALL: _scoped_codex_local_marketplace_payload(
                 marketplace_root,
@@ -747,6 +751,31 @@ def source_reconciliation_repairs_unscoped_stale_claude_runtime_source(
     return True
 
 
+def source_reconciliation_repairs_unscoped_matching_claude_runtime_source(
+    tmp_path: Path,
+) -> bool:
+    marketplace_root = tmp_path / "marketplace"
+    runner = _source_repair_runner(
+        claude_payload=_claude_directory_marketplace_payload(marketplace_root),
+        codex_root=marketplace_root,
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=marketplace_root,
+        expected_calls=[
+            *_expected_discovery_calls(),
+            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+        ],
+        expected_cwd=[None, None, None, None, None],
+    )
+    return True
+
+
 def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
     tmp_path: Path,
 ) -> bool:
@@ -813,8 +842,9 @@ def source_reconciliation_failed_codex_add_surfaces_error(
     codex_add = (*CODEX_MARKETPLACE_ADD_COMMAND, str(claude_root.resolve(strict=False)))
     runner = RecordingCommandRunner(
         stdout_by_command={
-            CLAUDE_MARKETPLACE_LIST_CALL: _claude_directory_marketplace_payload(
-                claude_root
+            CLAUDE_MARKETPLACE_LIST_CALL: _scoped_claude_directory_marketplace_payload(
+                claude_root,
+                scope=CLAUDE_SCOPE_USER,
             ),
             CODEX_MARKETPLACE_LIST_CALL: _codex_local_marketplace_payload(codex_root),
         },
