@@ -86,9 +86,19 @@ def _parse_session_file(stdout: str) -> Path:
 
 
 def _read_git_ref(session_file: Path) -> str:
+    lines = session_file.read_text().splitlines()
+    assert lines and lines[0] == "---", f"no YAML frontmatter in {session_file}"
+    closing_index = next(
+        (index for index, line in enumerate(lines[1:], start=1) if line == "---"),
+        None,
+    )
+    assert closing_index is not None, (
+        f"no closing YAML frontmatter fence in {session_file}"
+    )
+    frontmatter = "\n".join(lines[1:closing_index])
     match = re.search(
         r'^\s*"?git_ref"?:\s*"?([^"\n]+?)"?\s*$',
-        session_file.read_text(),
+        frontmatter,
         re.MULTILINE,
     )
     assert match, f"no git_ref in frontmatter of {session_file}"

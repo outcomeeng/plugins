@@ -641,7 +641,11 @@ def malformed_session_metadata_fields_are_unverifiable() -> bool:
         {"git_ref": None, "specs": "spx/21-x.enabler/x.md", "files": []},
         {"git_ref": None, "specs": [], "files": [123]},
         {"git_ref": None, "files": []},
-        {"git_ref": None, "specs": ["/tmp/escape.md"], "files": []},
+        {
+            "git_ref": None,
+            "specs": [pathlib.PurePosixPath("/", "escape.md").as_posix()],
+            "files": [],
+        },
         {"git_ref": None, "specs": [], "files": ["../escape.md"]},
         {"git_ref": None, "specs": [""], "files": []},
     )
