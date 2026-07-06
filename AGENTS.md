@@ -746,7 +746,7 @@ enabled = false
 
 - **author** — Regenerate the generated trees after `src/plugins/` edits: `just build-skills`. Regenerate the root instruction blocks after instruction-template edits: `just build-instructions`.
 - **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown` and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
-- **gate** — Full local deterministic gate: `just check`.
+- **gate** — Full local deterministic gate: `just check-full`.
 - **merge** — Ship to the default branch through `/merge`; the GitHub-PR transport merges with `gh pr merge <pr-number> --merge --delete-branch=false`.
 
 <!-- /SPEC-TREE:shared commands -->

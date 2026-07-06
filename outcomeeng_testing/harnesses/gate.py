@@ -190,6 +190,7 @@ def summary_recipes(summary: dict[str, object]) -> list[dict[str, object]]:
 
 def selected_gate_runner_for_paths(
     *,
+    base_ref: str = DEFAULT_BASE_REF,
     branch_path: str = "",
     branch_old_path: str = "",
     staged_path: str = "",
@@ -206,7 +207,7 @@ def selected_gate_runner_for_paths(
 
     return RecordingGitRunner(
         outputs={
-            (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{DEFAULT_BASE_REF}...HEAD"): (
+            (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD"): (
                 GitCommandResult(
                     returncode=branch_returncode,
                     stdout=_selected_gate_name_status_output(
@@ -253,10 +254,12 @@ def _selected_gate_name_status_output(
     return f"{status}\t{path}\n"
 
 
-def selected_gate_branch_discovery_argv() -> tuple[str, ...]:
+def selected_gate_branch_discovery_argv(
+    base_ref: str = DEFAULT_BASE_REF,
+) -> tuple[str, ...]:
     """Return the branch discovery argv used first by changed-path collection."""
 
-    return (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{DEFAULT_BASE_REF}...HEAD")
+    return (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD")
 
 
 def selected_gate_changed_path_domain() -> tuple[str, str, str, str]:
@@ -868,7 +871,7 @@ def _assert_production_step_lists_smoke() -> None:
 def assert_selected_gate_mapping_contract() -> None:
     """Assert selected local gate planning mappings."""
 
-    for python_pattern in PYTHON_PATTERNS[:2]:
+    for python_pattern in (PYTHON_PATTERNS[0],):
         plan = build_selected_gate_plan((python_pattern,))
         assert tuple(item.step.argv for item in plan.selected_steps) == (
             RUFF_FORMAT_ARGV,
@@ -933,6 +936,18 @@ def assert_selected_gate_mapping_contract() -> None:
         )
         assert all(item.reason == FULL_GATE_REASON for item in full_plan.selected_steps)
 
+    full_gate_specific_paths = (
+        ".github/workflows/spec-tree-evals.yml",
+        "outcomeeng_testing/generators/gate.py",
+        "outcomeeng_testing/evals/just_recipes.py",
+    )
+    for full_gate_path in full_gate_specific_paths:
+        full_plan = build_selected_gate_plan((full_gate_path,))
+        assert full_plan.full_gate is True
+        assert tuple(item.step for item in full_plan.selected_steps) == tuple(
+            (*VALIDATION_STEPS, *TEST_STEPS)
+        )
+
     plan = build_selected_gate_plan((SKILL_PATTERNS[0],))
     assert tuple(item.step.label for item in plan.selected_steps) == SKILL_STEP_LABELS
     assert all(item.reason == SKILL_REASON for item in plan.selected_steps)
@@ -953,6 +968,31 @@ def assert_selected_gate_mapping_contract() -> None:
             sorted((branch_path, staged_path, unstaged_path, untracked_path))
         )
         assert runner.repos == [repo] * len(runner.outputs)
+
+    with TemporaryDirectory() as tmp:
+        branch_path = PYTHON_PATTERNS[0]
+        repo = Path(tmp)
+        resolved_base_ref = "origin/release"
+        resolver_repos: list[Path] = []
+
+        def resolve_base_ref(candidate_repo: Path) -> str:
+            resolver_repos.append(candidate_repo)
+            return resolved_base_ref
+
+        runner = selected_gate_runner_for_paths(
+            base_ref=resolved_base_ref,
+            branch_path=branch_path,
+        )
+
+        assert collect_changed_paths(
+            repo,
+            base_ref_resolver=resolve_base_ref,
+            runner=runner,
+        ) == (branch_path,)
+        assert resolver_repos == [repo]
+        assert runner.calls[0] == selected_gate_branch_discovery_argv(
+            base_ref=resolved_base_ref
+        )
 
     with TemporaryDirectory() as tmp:
         source_path = PYTHON_ASSERTION_TEST_PATTERNS[0]

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import fnmatch
+import importlib.util
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, TextIO
+from typing import Final, Protocol, TextIO, cast
 
 from outcomeeng.validation._engine import run_check, run_recipe
 from outcomeeng.validation._git import GitCommandResult, GitRunner, run_git_command
@@ -32,6 +34,16 @@ from outcomeeng.validation._steps import (
 
 RECIPE_CHECK_FULL: Final = "check-full"
 DEFAULT_BASE_REF: Final = "origin/main"
+CHANGESET_SCOPE_SCRIPT: Final = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "scope-changeset"
+    / "scripts"
+    / "changeset_scope.py"
+)
 SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
 NO_CHANGED_PATHS_REASON: Final = "no changed paths"
 GIT_DISCOVERY_FAILURE_EXIT_CODE: Final = 1
@@ -63,8 +75,9 @@ FULL_GATE_PATTERNS: Final = (
     "outcomeeng/distribution/**",
     "outcomeeng/validation/**",
     "outcomeeng_evals/**",
-    "outcomeeng_testing/harnesses/**",
+    "outcomeeng_testing/**",
     ".github/workflows/check.yml",
+    ".github/workflows/spec-tree-evals.yml",
 )
 PYTHON_PATTERNS: Final = (
     "outcomeeng/**",
@@ -181,28 +194,51 @@ class GitDiscoveryError(RuntimeError):
         )
 
 
+class ChangesetScopeModule(Protocol):
+    """Typed subset of the canonical changeset-scope helper."""
+
+    def detect_base_ref(self, repo: Path, *, strict: bool = False) -> str: ...
+
+    def remote_tracking_ref(self, base_ref: str) -> str: ...
+
+
+class BaseRefResolver(Protocol):
+    """Resolve the remote-tracking base ref for selected-gate path discovery."""
+
+    def __call__(self, repo: Path, /) -> str: ...
+
+
 def collect_changed_paths(
     repo: Path,
     *,
-    base_ref: str = DEFAULT_BASE_REF,
+    base_ref: str | None = None,
+    base_ref_resolver: BaseRefResolver | None = None,
     runner: GitRunner = run_git_command,
 ) -> tuple[str, ...]:
     """Return branch, staged, unstaged, and untracked paths for local gate selection."""
 
-    entries = collect_changed_path_entries(repo, base_ref=base_ref, runner=runner)
+    entries = collect_changed_path_entries(
+        repo,
+        base_ref=base_ref,
+        base_ref_resolver=base_ref_resolver,
+        runner=runner,
+    )
     return tuple(sorted({entry.path for entry in entries}))
 
 
 def collect_changed_path_entries(
     repo: Path,
     *,
-    base_ref: str = DEFAULT_BASE_REF,
+    base_ref: str | None = None,
+    base_ref_resolver: BaseRefResolver | None = None,
     runner: GitRunner = run_git_command,
 ) -> tuple[ChangedPath, ...]:
     """Return branch, staged, unstaged, and untracked paths with git status."""
 
+    resolver = base_ref_resolver or resolve_default_base_ref
+    resolved_base_ref = base_ref if base_ref is not None else resolver(repo)
     commands = (
-        (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{base_ref}...HEAD"),
+        (*GIT_DIFF_BRANCH_ARGV_PREFIX, f"{resolved_base_ref}...HEAD"),
         GIT_DIFF_STAGED_ARGV,
         GIT_DIFF_UNSTAGED_ARGV,
         GIT_LS_UNTRACKED_ARGV,
@@ -301,12 +337,19 @@ def run_selected_check(
     spawner: ProcessSpawner,
     sink: TextIO,
     repo: Path,
+    base_ref: str | None = None,
+    base_ref_resolver: BaseRefResolver | None = None,
     runner: GitRunner = run_git_command,
 ) -> int:
     """Run the selected local check through the recipe orchestrator."""
 
     try:
-        changed_path_entries = collect_changed_path_entries(repo, runner=runner)
+        changed_path_entries = collect_changed_path_entries(
+            repo,
+            base_ref=base_ref,
+            base_ref_resolver=base_ref_resolver,
+            runner=runner,
+        )
     except GitDiscoveryError as exc:
         _write_git_discovery_error(sink, exc)
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
@@ -330,6 +373,29 @@ def run_selected_check(
             steps=plan.steps,
         ),
     )
+
+
+def resolve_default_base_ref(repo: Path) -> str:
+    """Return the canonical remote-tracking base ref for this repository."""
+
+    changeset_scope = _load_changeset_scope()
+    bare_base = changeset_scope.detect_base_ref(repo)
+    return changeset_scope.remote_tracking_ref(bare_base)
+
+
+def _load_changeset_scope() -> ChangesetScopeModule:
+    cached = sys.modules.get("changeset_scope")
+    if cached is not None:
+        return cast("ChangesetScopeModule", cached)
+    spec = importlib.util.spec_from_file_location(
+        "changeset_scope", CHANGESET_SCOPE_SCRIPT
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load changeset_scope from {CHANGESET_SCOPE_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["changeset_scope"] = module
+    spec.loader.exec_module(module)
+    return cast("ChangesetScopeModule", module)
 
 
 def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
