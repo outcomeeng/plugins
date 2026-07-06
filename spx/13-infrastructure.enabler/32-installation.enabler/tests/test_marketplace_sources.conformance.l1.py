@@ -7,6 +7,8 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     parse_claude_installed_plugins_keeps_scope_state_and_project_path,
     parse_codex_marketplace_sources_accepts_nested_git_source,
     parse_codex_marketplace_sources_accepts_empty_marketplace_array,
+    parse_claude_marketplace_sources_prefers_user_directory_source,
+    parse_codex_marketplace_sources_prefers_local_source,
     require_matching_local_sources_rejects_git_backed_codex,
     require_matching_local_sources_rejects_path_mismatch,
     source_reconciliation_accepts_matching_runtime_sources,
@@ -31,6 +33,18 @@ def test_parse_codex_marketplace_sources_accepts_nested_local_source() -> None:
 def test_parse_claude_marketplace_sources_normalizes_directory_source() -> None:
     assert with_temporary_marketplace_path(
         parse_claude_marketplace_sources_normalizes_directory_source
+    )
+
+
+def test_parse_claude_marketplace_sources_prefers_user_directory_source() -> None:
+    assert with_temporary_marketplace_path(
+        parse_claude_marketplace_sources_prefers_user_directory_source
+    )
+
+
+def test_parse_codex_marketplace_sources_prefers_local_source() -> None:
+    assert with_temporary_marketplace_path(
+        parse_codex_marketplace_sources_prefers_local_source
     )
 
 

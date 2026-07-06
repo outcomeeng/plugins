@@ -375,7 +375,7 @@ def _parse_marketplace_sources(
             )
         source_entry = _source_entry(entry)
         source_type = _normalized_source_type(source_entry)
-        sources[name] = MarketplaceSource(
+        source = MarketplaceSource(
             name=name,
             source_type=source_type,
             path=_path_field(source_entry, source_type),
@@ -385,7 +385,24 @@ def _parse_marketplace_sources(
                 source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH)
             ),
         )
+        selected = sources.get(name)
+        if selected is None or _source_selection_rank(source) > _source_selection_rank(
+            selected
+        ):
+            sources[name] = source
     return sources
+
+
+def _source_selection_rank(source: MarketplaceSource) -> int:
+    if source.source_type != SOURCE_TYPE_LOCAL:
+        return 0
+    if source.scope == CLAUDE_SCOPE_USER:
+        return 4
+    if source.scope is None:
+        return 3
+    if source.scope == CLAUDE_SCOPE_MANAGED:
+        return 1
+    return 2
 
 
 def _marketplace_entries(data: object, *, runtime: str) -> Iterable[dict[str, object]]:

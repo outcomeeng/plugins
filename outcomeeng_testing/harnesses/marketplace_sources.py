@@ -298,6 +298,67 @@ def parse_claude_marketplace_sources_normalizes_directory_source(
     return True
 
 
+def parse_claude_marketplace_sources_prefers_user_directory_source(
+    tmp_path: Path,
+) -> bool:
+    user_root = tmp_path / "user-marketplace"
+    managed_root = tmp_path / "managed-marketplace"
+    payload = json.dumps(
+        [
+            {
+                MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                MARKETPLACE_FIELD_SOURCE: "Directory",
+                MARKETPLACE_FIELD_PATH: str(managed_root),
+                MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_MANAGED,
+            },
+            {
+                MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                MARKETPLACE_FIELD_SOURCE: "Git",
+                MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+            },
+            {
+                MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                MARKETPLACE_FIELD_SOURCE: "Directory",
+                MARKETPLACE_FIELD_PATH: str(user_root),
+                MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
+            },
+        ]
+    )
+
+    sources = parse_claude_marketplace_sources(payload)
+
+    assert sources[DEFAULT_MARKETPLACE].source_type == SOURCE_TYPE_LOCAL
+    assert sources[DEFAULT_MARKETPLACE].path == user_root
+    assert sources[DEFAULT_MARKETPLACE].scope == CLAUDE_SCOPE_USER
+    return True
+
+
+def parse_codex_marketplace_sources_prefers_local_source(
+    tmp_path: Path,
+) -> bool:
+    local_root = tmp_path / "local-marketplace"
+    payload = json.dumps(
+        [
+            {
+                MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_GIT,
+                MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+            },
+            {
+                MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_LOCAL,
+                MARKETPLACE_FIELD_PATH: str(local_root),
+            },
+        ]
+    )
+
+    sources = parse_codex_marketplace_sources(payload)
+
+    assert sources[DEFAULT_MARKETPLACE].source_type == SOURCE_TYPE_LOCAL
+    assert sources[DEFAULT_MARKETPLACE].path == local_root
+    return True
+
+
 def parse_claude_installed_plugins_keeps_scope_state_and_project_path(
     tmp_path: Path,
 ) -> bool:
