@@ -58,6 +58,8 @@ CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT = "already installed"
 CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT = "already enabled"
 CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT = "already disabled"
 CLAUDE_SCOPE_USER = "user"
+CLAUDE_SCOPE_MANAGED = "managed"
+_CLAUDE_PROJECT_PATH_SCOPES = frozenset({"project", "local"})
 CODEX_MARKETPLACE_LIST_COMMAND = (
     "codex",
     "plugin",
@@ -136,7 +138,6 @@ class ClaudeInstalledPlugin:
     scope: str
     enabled: bool
     project_path: Path | None = None
-    restore_cwd: Path | None = None
 
     @property
     def ref(self) -> str:
@@ -203,7 +204,7 @@ def parse_claude_installed_plugins(
                 f"Claude Code plugin `{plugin_id}` has no boolean enabled state"
             )
         project_path = _optional_path(entry.get(MARKETPLACE_FIELD_PROJECT_PATH))
-        if scope != CLAUDE_SCOPE_USER and project_path is None:
+        if scope in _CLAUDE_PROJECT_PATH_SCOPES and project_path is None:
             raise MarketplaceSourceError(
                 f"Claude Code plugin `{plugin_id}` with {scope} scope has no "
                 f"{MARKETPLACE_FIELD_PROJECT_PATH}"
@@ -611,12 +612,10 @@ def _restore_claude_plugins(
 ) -> tuple[tuple[str, ...], ...]:
     commands: list[tuple[str, ...]] = []
     for plugin in plugins:
-        cwd = _claude_restore_cwd(plugin)
         install = (*CLAUDE_PLUGIN_INSTALL_COMMAND, "--scope", plugin.scope, plugin.ref)
         _run_claude_plugin_restore_command(
             install,
             runner=runner,
-            cwd=cwd,
             already_satisfied_fragment=CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT,
             plugin_ref=plugin.ref,
             plugin_scope=plugin.scope,
@@ -631,7 +630,6 @@ def _restore_claude_plugins(
         _run_claude_plugin_restore_command(
             restore_state,
             runner=runner,
-            cwd=cwd,
             already_satisfied_fragment=(
                 CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT
                 if plugin.enabled
@@ -642,14 +640,6 @@ def _restore_claude_plugins(
         )
         commands.append(restore_state)
     return tuple(commands)
-
-
-def _claude_restore_cwd(plugin: ClaudeInstalledPlugin) -> Path | None:
-    if plugin.restore_cwd is not None:
-        return plugin.restore_cwd
-    if plugin.scope != CLAUDE_SCOPE_USER:
-        return plugin.project_path
-    return None
 
 
 def _source_matches(source: MarketplaceSource | None, root: Path) -> bool:
@@ -699,10 +689,10 @@ def _run_claude_plugin_restore_command(
     command: tuple[str, ...],
     *,
     runner: CommandRunner,
-    cwd: Path | None,
     already_satisfied_fragment: str,
     plugin_ref: str,
     plugin_scope: str,
+    cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     if cwd is None:
         result = runner(list(command))
@@ -799,6 +789,7 @@ __all__ = [
     "CLAUDE_PLUGIN_ENABLE_COMMAND",
     "CLAUDE_PLUGIN_INSTALL_COMMAND",
     "CLAUDE_PLUGIN_LIST_COMMAND",
+    "CLAUDE_SCOPE_MANAGED",
     "CLAUDE_SCOPE_USER",
     "CODEX_MARKETPLACE_ADD_COMMAND",
     "CODEX_MARKETPLACE_LIST_COMMAND",

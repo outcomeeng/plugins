@@ -16,11 +16,13 @@ from outcomeeng.distribution.marketplace_sources import (
     CLAUDE_MARKETPLACE_LIST_COMMAND,
     CLAUDE_MARKETPLACE_REMOVE_COMMAND,
     CLAUDE_PLUGIN_ALREADY_DISABLED_FRAGMENT,
+    CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT,
     CLAUDE_PLUGIN_ALREADY_INSTALLED_FRAGMENT,
     CLAUDE_PLUGIN_DISABLE_COMMAND,
     CLAUDE_PLUGIN_ENABLE_COMMAND,
     CLAUDE_PLUGIN_INSTALL_COMMAND,
     CLAUDE_PLUGIN_LIST_COMMAND,
+    CLAUDE_SCOPE_MANAGED,
     CLAUDE_SCOPE_USER,
     CODEX_MARKETPLACE_ADD_COMMAND,
     CODEX_MARKETPLACE_LIST_COMMAND,
@@ -874,6 +876,90 @@ def source_reconciliation_user_restore_idempotent_errors_are_accepted(
     assert result.changed is True
     assert rust_install in runner.calls
     assert rust_disable in runner.calls
+    return True
+
+
+def source_reconciliation_user_restore_already_enabled_response_is_accepted(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    _python_install, python_enable = _user_scope_python_enable_calls()
+    runner = _source_repair_runner(
+        claude_payload=_claude_directory_marketplace_payload(stale_root),
+        codex_root=canonical_root,
+        plugin_payload=json.dumps(
+            [
+                _claude_plugin_payload(
+                    "python",
+                    scope=CLAUDE_SCOPE_USER,
+                    enabled=True,
+                )
+            ]
+        ),
+        returncode_by_command={python_enable: 1},
+        stderr_by_command={
+            python_enable: (
+                f'\u2718 Failed to enable plugin "python@{DEFAULT_MARKETPLACE}": '
+                f'Plugin "python@{DEFAULT_MARKETPLACE}" is '
+                f"{CLAUDE_PLUGIN_ALREADY_ENABLED_FRAGMENT} at user scope"
+            ),
+        },
+    )
+
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
+    )
+
+    assert result.changed is True
+    assert python_enable in runner.calls
+    return True
+
+
+def source_reconciliation_ignores_managed_scope_claude_plugins_without_project_path(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = _source_repair_runner(
+        claude_payload=_claude_directory_marketplace_payload(stale_root),
+        codex_root=canonical_root,
+        plugin_payload=json.dumps(
+            [
+                _claude_plugin_payload(
+                    "spec-tree",
+                    scope=CLAUDE_SCOPE_MANAGED,
+                    enabled=True,
+                ),
+                _claude_plugin_payload(
+                    "rust",
+                    scope=CLAUDE_SCOPE_USER,
+                    enabled=False,
+                ),
+            ]
+        ),
+    )
+
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
+    )
+
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=canonical_root,
+        expected_calls=[
+            *_expected_discovery_calls(),
+            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            *_user_scope_rust_restore_calls(),
+        ],
+        expected_cwd=[None, None, None, None, None, None, None],
+    )
     return True
 
 
