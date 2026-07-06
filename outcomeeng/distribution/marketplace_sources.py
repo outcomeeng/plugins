@@ -425,13 +425,24 @@ def _marketplace_source_from_entry(
         raise MarketplaceSourceError(f"{runtime} marketplace entry has no string name")
     source_entry = _source_entry(entry)
     source_type = _normalized_source_type(source_entry)
+    scope = _string_field(source_entry, (MARKETPLACE_FIELD_SCOPE,))
+    project_path = _optional_path(source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH))
+    if (
+        runtime == "Claude Code"
+        and scope in _CLAUDE_PROJECT_PATH_SCOPES
+        and project_path is None
+    ):
+        raise MarketplaceSourceError(
+            f"{runtime} marketplace `{name}` with {scope} scope has no "
+            f"{MARKETPLACE_FIELD_PROJECT_PATH}"
+        )
     return MarketplaceSource(
         name=name,
         source_type=source_type,
         path=_path_field(source_entry, source_type),
         url=_url_field(source_entry, source_type),
-        scope=_string_field(source_entry, (MARKETPLACE_FIELD_SCOPE,)),
-        project_path=_optional_path(source_entry.get(MARKETPLACE_FIELD_PROJECT_PATH)),
+        scope=scope,
+        project_path=project_path,
     )
 
 
@@ -714,10 +725,14 @@ def _repair_runtime_source(
         _user_registration_source_matches(source, root, accept_unscoped=True)
         for source in sources
     )
-    stale_sources = tuple(
-        source
-        for source in sources
-        if not _user_registration_source_matches(source, root, accept_unscoped=True)
+    stale_sources = (
+        tuple(source for source in sources if not _source_matches(source, root))
+        if canonical_source_exists
+        else tuple(
+            source
+            for source in sources
+            if not _user_registration_source_matches(source, root, accept_unscoped=True)
+        )
     )
     if canonical_source_exists and not stale_sources:
         return ()
@@ -784,7 +799,7 @@ def _repair_claude_runtime_source(
     )
     commands: list[tuple[str, ...]] = []
     seen_removals: set[tuple[tuple[str, ...], Path | None]] = set()
-    for source in editable_sources:
+    for source in _claude_removal_order(editable_sources):
         remove = _claude_marketplace_remove_command(marketplace, source)
         remove_cwd = _claude_marketplace_remove_cwd(source)
         removal_key = (remove, remove_cwd)
@@ -803,6 +818,12 @@ def _repair_claude_runtime_source(
         commands.append(add)
     commands.extend(_restore_claude_plugins(preserved, runner=runner))
     return tuple(commands)
+
+
+def _claude_removal_order(
+    sources: tuple[MarketplaceSource, ...],
+) -> tuple[MarketplaceSource, ...]:
+    return tuple(sorted(sources, key=lambda source: source.scope is None))
 
 
 def _claude_source_removal_can_affect_user_plugins(source: MarketplaceSource) -> bool:

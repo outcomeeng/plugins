@@ -11,6 +11,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     parse_codex_marketplace_sources_prefers_local_source,
     require_matching_local_sources_rejects_git_backed_codex,
     require_matching_local_sources_rejects_path_mismatch,
+    source_reconciliation_accepts_duplicate_lower_priority_matching_sources,
     source_reconciliation_accepts_matching_runtime_sources,
     source_reconciliation_rejects_ambiguous_claude_roots,
     source_reconciliation_rejects_ambiguous_shared_roots,
@@ -79,6 +80,14 @@ def test_require_matching_local_sources_rejects_path_mismatch() -> None:
 def test_source_reconciliation_accepts_matching_runtime_sources() -> None:
     assert with_temporary_marketplace_path(
         source_reconciliation_accepts_matching_runtime_sources
+    )
+
+
+def test_source_reconciliation_accepts_duplicate_lower_priority_matching_sources() -> (
+    None
+):
+    assert with_temporary_marketplace_path(
+        source_reconciliation_accepts_duplicate_lower_priority_matching_sources
     )
 
 
