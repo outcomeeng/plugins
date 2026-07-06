@@ -573,12 +573,21 @@ def _repair_claude_runtime_source(
 ) -> tuple[tuple[str, ...], ...]:
     if _user_registration_source_matches(source, root, accept_unscoped=False):
         return ()
+    if (
+        source is not None
+        and source.scope == CLAUDE_SCOPE_MANAGED
+        and not _source_matches(source, root)
+    ):
+        raise MarketplaceSourceError(
+            f"Claude Code marketplace `{marketplace}` is managed at "
+            f"{source.path or source.source_type} and cannot be repaired to {root}"
+        )
     preserved = _claude_user_plugins_to_preserve(
         marketplace,
         runner=runner,
     )
     commands: list[tuple[str, ...]] = []
-    if source is not None:
+    if source is not None and source.scope != CLAUDE_SCOPE_MANAGED:
         remove = (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace)
         _run_json_command(list(remove), runner=runner)
         commands.append(remove)

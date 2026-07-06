@@ -776,6 +776,60 @@ def source_reconciliation_repairs_unscoped_matching_claude_runtime_source(
     return True
 
 
+def source_reconciliation_adds_user_registration_for_managed_claude_source(
+    tmp_path: Path,
+) -> bool:
+    marketplace_root = tmp_path / "marketplace"
+    runner = _source_repair_runner(
+        claude_payload=_scoped_claude_directory_marketplace_payload(
+            marketplace_root,
+            scope=CLAUDE_SCOPE_MANAGED,
+        ),
+        codex_root=marketplace_root,
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=marketplace_root,
+        expected_calls=[
+            *_expected_discovery_calls(),
+            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+        ],
+        expected_cwd=[None, None, None, None],
+    )
+    return True
+
+
+def source_reconciliation_rejects_stale_managed_claude_source(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    managed_root = tmp_path / "managed-marketplace"
+    runner = _source_repair_runner(
+        claude_payload=_scoped_claude_directory_marketplace_payload(
+            managed_root,
+            scope=CLAUDE_SCOPE_MANAGED,
+        ),
+        codex_root=canonical_root,
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        ensure_local_marketplace_sources(
+            DEFAULT_MARKETPLACE,
+            source_root=canonical_root,
+            runner=runner,
+        )
+
+    message = str(exc_info.value)
+    assert "managed" in message
+    assert str(canonical_root.resolve(strict=False)) in message
+    assert (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE) not in runner.calls
+    return True
+
+
 def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
     tmp_path: Path,
 ) -> bool:
