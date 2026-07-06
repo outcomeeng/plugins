@@ -18,19 +18,30 @@ from outcomeeng.distribution.marketplace_sources import (
     CODEX_PLUGIN_MANIFEST,
     DEFAULT_MARKETPLACE,
     DIST_CODEX_PLUGINS_DIR,
+    MARKETPLACE_FIELD_NAME,
+    PLUGIN_MANIFEST_FIELD_VERSION,
     available_codex_plugins,
 )
 from outcomeeng_testing.generators.codex_cache import (
+    AddableCodexPluginSet,
     StaleAfterSuccessfulRefresh,
+    addable_codex_plugin_sets,
     stale_after_successful_refreshes,
 )
 
 CODEX_CACHE_PROPERTY_SEED = 20260704
 CODEX_CACHE_PROPERTY_EXAMPLES = 40
+CODEX_CACHE_COMPLIANCE_SEED = 20260706
+CODEX_CACHE_COMPLIANCE_EXAMPLES = 40
 CODEX_CACHE_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/32-installation.enabler/tests/"
     "test_codex_plugin_cache.property.l1.py"
+)
+CODEX_CACHE_COMPLIANCE_REPLAY_PATH = (
+    "just test "
+    "spx/13-infrastructure.enabler/32-installation.enabler/tests/"
+    "test_codex_plugin_cache.compliance.l1.py"
 )
 
 
@@ -135,6 +146,26 @@ def codex_cache_refresh_property(
     return wrapper
 
 
+def codex_cache_addable_compliance(
+    test: Callable[[AddableCodexPluginSet], None],
+) -> Callable[[], None]:
+    configured = seed(CODEX_CACHE_COMPLIANCE_SEED)(
+        settings(max_examples=CODEX_CACHE_COMPLIANCE_EXAMPLES)(
+            given(plugin_set=addable_codex_plugin_sets())(test)
+        )
+    )
+
+    def wrapper() -> None:
+        try:
+            configured()
+        except AssertionError as error:
+            error.add_note(f"Hypothesis seed: {CODEX_CACHE_COMPLIANCE_SEED}")
+            error.add_note(f"Replay path: {CODEX_CACHE_COMPLIANCE_REPLAY_PATH}")
+            raise
+
+    return wrapper
+
+
 def codex_cache_property_failure_notes_include_seed_and_replay() -> bool:
     def always_fails(refresh: StaleAfterSuccessfulRefresh) -> None:
         assert refresh.plugin == ""
@@ -188,6 +219,60 @@ def local_refresh_never_invokes_marketplace_upgrade() -> bool:
         )
         and result.refresh_returncode == 0
     )
+
+
+@codex_cache_addable_compliance
+def local_refresh_reads_addable_codex_plugins_from_dist_codex(
+    plugin_set: AddableCodexPluginSet,
+) -> None:
+    with codex_cache_workspace() as workspace:
+        generated_versions = {
+            plugin: f"0.2.{index}"
+            for index, plugin in enumerate(plugin_set.generated_plugins)
+        }
+        for plugin, version in generated_versions.items():
+            write_dist_codex_manifest(workspace.repo_root, plugin, version)
+        working_tree_only_version = "0.9.0"
+        history = StaticHistory(
+            plugins=frozenset(
+                [*plugin_set.generated_plugins, plugin_set.working_tree_only_plugin]
+            ),
+            versions_by_plugin={
+                **{
+                    plugin: frozenset([version])
+                    for plugin, version in generated_versions.items()
+                },
+                plugin_set.working_tree_only_plugin: frozenset(
+                    [working_tree_only_version]
+                ),
+            },
+            current_by_plugin={
+                **generated_versions,
+                plugin_set.working_tree_only_plugin: working_tree_only_version,
+            },
+        )
+        runner = MaterializingAddRunner.from_dist_manifests(
+            cache_root=workspace.cache_root,
+            repo_root=workspace.repo_root,
+        )
+
+        result = preserve_codex_plugin_cache.refresh_installed_plugins(
+            DEFAULT_MARKETPLACE,
+            repo_root=workspace.repo_root,
+            cache_root=workspace.cache_root,
+            history=history,
+            installed=StaticInstalled({}),
+            runner=runner,
+        )
+
+    assert runner.calls == [
+        (
+            *preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND,
+            f"{plugin}@{DEFAULT_MARKETPLACE}",
+        )
+        for plugin in plugin_set.generated_plugins
+    ]
+    assert result.refresh_returncode == 0
 
 
 @codex_cache_refresh_property
@@ -330,7 +415,11 @@ def write_plugin_root(
     skill_file.write_text(text)
     manifest = plugin_root / CODEX_PLUGIN_MANIFEST
     manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+    manifest.write_text(
+        json.dumps(
+            {MARKETPLACE_FIELD_NAME: plugin, PLUGIN_MANIFEST_FIELD_VERSION: version}
+        )
+    )
 
 
 def write_dist_codex_manifest(
@@ -340,7 +429,11 @@ def write_dist_codex_manifest(
 ) -> None:
     manifest = repo_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST
     manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+    manifest.write_text(
+        json.dumps(
+            {MARKETPLACE_FIELD_NAME: plugin, PLUGIN_MANIFEST_FIELD_VERSION: version}
+        )
+    )
 
 
 __all__ = [
@@ -351,6 +444,7 @@ __all__ = [
     "StaticInstalled",
     "codex_cache_refresh_property",
     "codex_cache_workspace",
+    "local_refresh_reads_addable_codex_plugins_from_dist_codex",
     "local_refresh_never_invokes_marketplace_upgrade",
     "successful_refresh_preserves_absent_stale_codex_reported_version",
     "successful_refresh_reconciles_to_generated_codex_manifest_version",
