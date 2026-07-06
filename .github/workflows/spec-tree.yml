@@ -29,9 +29,14 @@ permissions:
 
 jobs:
   spec-tree:
-    # Pinned to a full outcomeeng/gh-actions commit SHA. Update this reference
-    # deliberately when accepting upstream reusable workflow changes.
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree.yml@b9307e58feea1093341c20be286faba202d354fb
+    # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
+    # Renovate keeps this SHA current; the trailing `# main` comment is the branch
+    # Renovate tracks. See the outcomeeng/gh-actions README "Security" for the full rationale.
+    #
+    # Beta-tester consumers (internal repos deliberately tracking-latest) MAY
+    # swap this for `@main` with a `# BETA TESTER:` marker comment — see the
+    # documented exception in the outcomeeng/gh-actions README "Security → Documented exception".
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree.yml@a113491956c710dcdb7cb54174b4a52f9f6609d4 # main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -54,7 +59,10 @@ jobs:
       # untrusted contributors.
       runner: ${{ vars.SPEC_TREE_RUNNER || 'ubuntu-slim' }}
 
-      # Mention trigger phrase. Defaults to `@spec-tree`.
+      # Mention trigger phrase. Defaults to `@spec-tree`. The reusable's
+      # authorize job rejects empty or whitespace-only values with a clear
+      # error (defends against `vars.SPEC_TREE_TRIGGER_PHRASE=' '` causing
+      # `contains(comment, ' ')` to match nearly every comment).
       trigger_phrase: ${{ vars.SPEC_TREE_TRIGGER_PHRASE || '@spec-tree' }}
 
       # Cancel in-progress mention runs when a new mention arrives. Reusable

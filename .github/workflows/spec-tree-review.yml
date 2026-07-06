@@ -31,9 +31,14 @@ permissions:
 
 jobs:
   spec-tree-review:
-    # Pinned to a full outcomeeng/gh-actions commit SHA. Update this reference
-    # deliberately when accepting upstream reusable workflow changes.
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@b9307e58feea1093341c20be286faba202d354fb
+    # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
+    # Renovate keeps this SHA current; the trailing `# main` comment is the branch
+    # Renovate tracks. See the outcomeeng/gh-actions README "Security" for the full rationale.
+    #
+    # Beta-tester consumers (internal repos deliberately tracking-latest) MAY
+    # swap this for `@main` with a `# BETA TESTER:` marker comment — see the
+    # documented exception in the outcomeeng/gh-actions README "Security → Documented exception".
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@a113491956c710dcdb7cb54174b4a52f9f6609d4 # main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -59,6 +64,8 @@ jobs:
       # Trigger phrase forwarded to the action. The review fires on every
       # `pull_request` event regardless of this value; it is used for
       # content matching inside the action prompt. Defaults to `@spec-tree`.
+      # The reusable's authorize job rejects empty or whitespace-only
+      # values with a clear error.
       trigger_phrase: ${{ vars.SPEC_TREE_REVIEW_TRIGGER_PHRASE || '@spec-tree' }}
 
       # Cancel in-progress reviews when the PR is updated. Reusable default:
@@ -68,10 +75,10 @@ jobs:
       concurrency_cancel: ${{ vars.SPEC_TREE_REVIEW_CONCURRENCY_CANCEL != 'false' }}
 
       # Wall-clock budget (minutes) for the Run Claude Code Review step.
-      # Reusable default: 15. Minimum 1; GitHub Actions silently rejects
+      # Reusable default: 30. Minimum 1; GitHub Actions silently rejects
       # '0' at runtime. Typed as a string so quoted forms pass through
       # unchanged.
-      timeout_minutes: ${{ vars.SPEC_TREE_REVIEW_TIMEOUT_MINUTES || '15' }}
+      timeout_minutes: ${{ vars.SPEC_TREE_REVIEW_TIMEOUT_MINUTES || '30' }}
 
       # Claude model id (e.g. `claude-opus-4-7`). Empty = action default.
       # Folded into claude_args as `--model <id>`.
