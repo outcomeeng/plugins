@@ -30,8 +30,8 @@ permissions:
 jobs:
   spec-tree:
     # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
-    # Renovate keeps this SHA current; the trailing `# main` comment is the branch
-    # Renovate tracks. See the outcomeeng/gh-actions README "Security" for the full rationale.
+    # This caller's release-lane SHA tracks outcomeeng/gh-actions examples/caller-workflows/manifest.yaml.
+    # Renovate keeps the copied SHA current with the shared preset in renovate.json.
     #
     # Beta-tester consumers (internal repos deliberately tracking-latest) MAY
     # swap this for `@main` with a `# BETA TESTER:` marker comment — see the

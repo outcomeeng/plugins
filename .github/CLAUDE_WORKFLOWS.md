@@ -1,9 +1,9 @@
 # Claude Code GitHub Workflows
 
-This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are copy-and-pin templates from `outcomeeng/gh-actions/examples/caller-workflows/` with the `@main` ref replaced by a pinned commit SHA:
+This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are release-lane consumers of the templates from `outcomeeng/gh-actions/examples/caller-workflows/`, pinned by full commit SHA with a trailing `# main` tracked-branch comment:
 
-1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable with `use_project_plugins: true` so the methodology skills declared in `.claude/settings.json` (`/contextualizing`, `/authoring`, `/decomposing`, etc.) are installed for every mention.
-2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the generic `claude-code-review.yml` reusable with the `REVIEW.md`-aware prompt and the `Bash(sed:*),Bash(grep:*),Bash(head:*)` allowlist extension the prompt's diff-chunking patterns rely on.
+1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable. `use_project_plugins` is controlled by `vars.SPEC_TREE_USE_PROJECT_PLUGINS == 'true'`, so the methodology skills declared in `.claude/settings.json` are installed only when the repository variable opts in.
+2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the `spec-tree-review.yml` reusable, which uses the shipped `review-changes` prompt and the findings-only `blocking` / `debt` taxonomy governed in the spec-tree plugin.
 
 A separate `distribute-skills.yml` workflow handles plugin distribution and is unrelated to the Claude callers.
 
@@ -12,10 +12,6 @@ A separate `distribute-skills.yml` workflow handles plugin distribution and is u
 ### Secrets
 
 Add `CLAUDE_CODE_OAUTH_TOKEN` to repository secrets (Settings → Secrets and variables → Actions → Secrets).
-
-### `REVIEW.md` taxonomy
-
-`spec-tree-review.yml` reads `REVIEW.md` from the repository root when present and uses it as the finding-classification taxonomy and comment shape. Absent the file, the embedded `BLOCKING` / `DEBT` / `FOLLOW-UP` taxonomy is used.
 
 ### Customization
 
@@ -29,18 +25,20 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     with:
       concurrency_cancel: true
-      timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || 15 }}
+      timeout_minutes: ${{ vars.SPEC_TREE_REVIEW_TIMEOUT_MINUTES || '30' }}
       # append_allow_list: "Read,Grep,Glob,Bash(git:*)"   # extends defaults
       # use_project_plugins: true                         # install plugins from .claude/settings.json
 ```
 
 `spec-tree-review.yml` deliberately does not expose `custom_prompt` — the prompt is baked in. Call `outcomeeng/gh-actions/.github/workflows/claude-code-review.yml` directly when full prompt control is needed.
 
-`spec-tree.yml` (the @-mention caller) accepts `trigger_phrase` (default `@spec-tree`), `concurrency_cancel`, `claude_args`, and `use_project_plugins` (defaults to `true`). See the inline comments in each workflow file for the full set and their trade-offs.
+`spec-tree.yml` (the @-mention caller) accepts `trigger_phrase` (default `@spec-tree`), `concurrency_cancel`, `claude_args`, and `use_project_plugins` (default disabled unless `vars.SPEC_TREE_USE_PROJECT_PLUGINS == 'true'`). See the inline comments in each workflow file for the full set and their trade-offs.
 
 ### Pinning
 
 Both callers pin the upstream reusable by full commit SHA (not `@main`). The reusable's `validate-workflow` job compares the caller workflow file at the PR head against the file on the default branch; pinning by SHA ensures the composite actions the reusable checks out stay in lockstep with the workflow content. Update the pin by editing the `@<sha>` in both files when consuming a new upstream release.
+
+Routine release-lane updates come from Renovate. `renovate.json` extends `github>outcomeeng/gh-actions//renovate-presets/gh-actions-consumer`, which keeps `outcomeeng/gh-actions` reusable workflow references SHA-pinned and grouped. The trailing `# main` comment on each `uses:` line is the tracked branch Renovate advances.
 
 ## Authorization
 

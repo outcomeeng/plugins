@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests",
+    "github>outcomeeng/gh-actions//renovate-presets/gh-actions-consumer",
     ":semanticCommitTypeAll(ci)",
     ":dependencyDashboard"
   ],
@@ -16,6 +17,12 @@
       "description": "Group GitHub Actions and reusable-workflow updates. Digest pinning itself is enforced by the helpers:pinGitHubActionDigests preset above; this rule only adds the grouping.",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"
+    },
+    {
+      "description": "Group outcomeeng/gh-actions reusable workflow updates from the shared consumer preset.",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["outcomeeng/gh-actions"],
+      "groupName": "outcomeeng/gh-actions reusable workflows"
     }
   ],
   "customManagers": [
