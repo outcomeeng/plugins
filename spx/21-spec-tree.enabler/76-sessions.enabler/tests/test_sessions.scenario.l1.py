@@ -5,7 +5,7 @@ from outcomeeng_testing.harnesses.session_scenarios import (
     explicit_work_branch_ref_absent_from_origin_is_refused,
     explicit_work_branch_ref_records_branch_name,
     handoff_preserves_incorporated_session_reference,
-    handoff_file_appears_in_todo,
+    handoff_file_contains_repository_tree_state_and_active_node_path,
     handoff_preserves_full_body_payload,
     issues_md_excerpt_preserved,
     linked_worktree_at_origin_tip_records_tip_sha,
@@ -26,8 +26,8 @@ from outcomeeng_testing.harnesses.session_scenarios import (
 )
 
 
-def test_handoff_file_appears_in_todo() -> None:
-    assert handoff_file_appears_in_todo()
+def test_handoff_file_contains_repository_tree_state_and_active_node_path() -> None:
+    assert handoff_file_contains_repository_tree_state_and_active_node_path()
 
 
 def test_session_file_contains_active_node_path() -> None:

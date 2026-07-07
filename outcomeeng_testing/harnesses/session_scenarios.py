@@ -130,24 +130,21 @@ def _single_todo_file(sessions_dir: Path) -> Path:
     return todo_files[0]
 
 
-def handoff_file_appears_in_todo() -> bool:
+def handoff_file_contains_repository_tree_state_and_active_node_path() -> bool:
     with TemporaryDirectory() as directory, accepted_git_context() as repo:
         sessions_dir = Path(directory) / "sessions"
+        active_node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
         result = _handoff(
             sessions_dir,
-            textwrap.dedent(
-                """\
-                # Test session
-
-                Active node: spx/21-spec-tree.enabler/76-sessions.enabler/
-                """
-            ),
+            f"Active node: {active_node}\n",
             cwd=repo,
-            goal="Verify handoff writes a file to todo/",
-            next_step="Inspect the todo directory listing",
+            goal="Verify handoff writes recoverable repository state",
+            next_step="Inspect the session file repository anchor and active node",
         )
         assert result.returncode == 0, result.stderr
-        _single_todo_file(sessions_dir)
+        session_file = _single_todo_file(sessions_dir)
+        assert active_node in session_file.read_text()
+        assert _read_git_ref(session_file) == "main"
         return True
 
 
