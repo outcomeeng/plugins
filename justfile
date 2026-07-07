@@ -18,7 +18,10 @@ eval eval_toml:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}")
+    workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
+    max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
+    timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --model "$model" --timeout-seconds "$timeout_seconds")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'
@@ -30,7 +33,10 @@ eval-case eval_toml case_id:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}" --case-id "{{case_id}}")
+    workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
+    max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
+    timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --model "$model" --timeout-seconds "$timeout_seconds" --case-id "{{case_id}}")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'

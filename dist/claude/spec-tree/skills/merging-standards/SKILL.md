@@ -4,7 +4,7 @@ user-invocable: false
 description: >-
   Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, authority gates, review classification, integration review surfaces, action tokens, delivered-value boundary, closeout, and repo-local overlay topics.
   Loaded by /merge, /manage-github-pr, /open-pr, and /manage-pr.
-allowed-tools: Read, AskUserQuestion
+allowed-tools: Read
 ---
 
 <objective>
@@ -18,7 +18,7 @@ This is a reference skill. /merge, /manage-github-pr, /open-pr, and /manage-pr l
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
-`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, post-merge steps) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`CLAUDE.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
+`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, deployment actions, and release actions) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`CLAUDE.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
 
 Topics the overlay MAY refine:
 
@@ -46,7 +46,7 @@ When a status assessment finds a determined changeset with commits ahead of its 
 
 <close_phase>
 
-`CLOSE` is the lifecycle disposition phase after the selected transport reaches the default branch on origin and every declared post-merge phase has completed, no-oped, or stopped at an explicit readiness gate. Close is not a receipt. Close has two valid outcomes:
+`CLOSE` is the lifecycle disposition phase after the selected transport reaches the default branch on origin and every declared deploy or release phase has completed, no-oped, or stopped at an explicit readiness gate. Close is not a receipt. Close has two valid outcomes:
 
 - continue remaining in-scope work directly when the user's stated goal still has do-able work; or
 - close by invoking `/handoff` plain when the session is complete or continuation by Claude is impossible.
@@ -71,7 +71,7 @@ The closeout record includes:
 - For each preservation branch, whether its commits are exact ancestors of `origin/<base>`.
 - For each non-ancestor preservation branch, `git cherry -v --abbrev=40 origin/<base> <branch>` output as patch-equivalence evidence.
 - Final worktree state: clean or dirty, branch or detached, and current full HEAD SHA.
-- Release-source worktree state when a post-merge release or marketplace refresh used a separate source worktree: path, branch, full HEAD SHA, clean or dirty, and sync status.
+- Release-source worktree state when a declared release or marketplace refresh used a separate source worktree: path, branch, full HEAD SHA, clean or dirty, and sync status.
 
 Use full branch names and full commit SHAs. Do not abbreviate identity values in the record, in commands, or in the final closeout.
 
@@ -296,6 +296,7 @@ Review-kind check outcomes map before non-review required-check outcomes. Missin
 
 **`RELEASE_READINESS`** authorizes declared consumer-visible publication or refresh after deployment. It holds when every project- or transport-declared release predicate authorizes the publication or refresh. When no release action is declared, `RELEASE` is a no-op phase and never blocks close.
 
+When a declared deploy action exists but its authorization predicate is unsatisfied, the delivery decision is `DEPLOYMENT_READINESS = WITHHOLD` with action token `AWAIT_DEPLOYMENT_AUTHORIZATION`; when a declared release action exists but its authorization predicate is unsatisfied, the delivery decision is `RELEASE_READINESS = WITHHOLD` with action token `AWAIT_RELEASE_AUTHORIZATION`. The transport preserves the branch-state closeout record, stops before the unauthorized action, and does not continue until the operator supplies the project-declared authorization and the managing flow re-inspects state.
 Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or pause. The merge is a mechanical consequence of `MERGE_READINESS` plus the mutation-point guard returning `MERGE_READY:<head-sha>`, not a decision to surface; the only operator-facing pauses the lifecycle carries are the explicit `<action_tokens>` an unresolved condition emits.
 
 **terminal-green.** A required check in `statusCheckRollup` is a check run (`status` reaches `COMPLETED`, then a `conclusion`) or a status context (`state`). It is **terminal-green** only when terminal — `status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}` — AND successful — `conclusion == SUCCESS`, or `state == SUCCESS`. A check that is non-terminal (`QUEUED` / `IN_PROGRESS` / `PENDING` / `EXPECTED`), terminal-but-not-success (`FAILURE` / `CANCELLED` / `TIMED_OUT` / `SKIPPED` / `NEUTRAL` / `ACTION_REQUIRED` / `ERROR`), or absent from the rollup is not terminal-green and blocks `MERGE_READINESS`.
@@ -461,8 +462,7 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 </auditor_verdicts>
 
 <action_tokens>
-Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, and `POST_MERGE_VERIFY`, including the exact trigger condition and required follow-up for each token.
-
+Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`, including the exact trigger condition and required follow-up for each token.
 </action_tokens>
 
 <self_reference>

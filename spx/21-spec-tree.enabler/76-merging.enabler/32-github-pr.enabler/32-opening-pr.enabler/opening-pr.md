@@ -8,7 +8,7 @@ CAN publish a changeset as a ready-for-review pull request the moment `VERIFICAT
 
 ### Scenarios
 
-- Given the selected transport's verification predicates hold — deterministic verification passes, required evidence-auditor predicates pass, and the local `changes-reviewer` review has converged when local review is declared — when `/open-pr` evaluates `VERIFICATION_READINESS`, then it creates the pull request `ready_for_review`, never as a draft gating step ([eval](evals/review-readiness/eval.toml))
+- Given the selected transport's verification predicates hold — deterministic verification passes, required evidence-auditor predicates pass, and the local `changes-reviewer` review has converged when local review is declared — when `/open-pr` evaluates `VERIFICATION_READINESS`, then it creates the pull request `ready_for_review`, never as a draft gating step ([audit])
 
 ### Compliance
 

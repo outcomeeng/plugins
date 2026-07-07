@@ -54,6 +54,7 @@ MARKDOWN_REASON: Final = "markdown or spec path changed"
 WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill source or generated runtime changed"
 TEST_REASON: Final = "changed python assertion tests"
+ROOT_README_PATH: Final = "README.md"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -70,7 +71,6 @@ FULL_GATE_PATTERNS: Final = (
     "uv.lock",
     "justfile",
     "Justfile",
-    "README.md",
     "outcomeeng/catalog/**",
     "outcomeeng/distribution/**",
     "outcomeeng/validation/**",
@@ -87,6 +87,7 @@ PYTHON_PATTERNS: Final = (
 )
 PYTHON_ASSERTION_TEST_PATTERNS: Final = ("spx/**/tests/test_*.py",)
 MARKDOWN_PATTERNS: Final = (
+    ROOT_README_PATH,
     "*.md",
     "spx/**",
     "src/plugins/**/*.md",

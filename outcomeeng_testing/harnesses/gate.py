@@ -96,6 +96,7 @@ from outcomeeng.validation.selected_gate import (
     PYTHON_ASSERTION_TEST_PATTERNS,
     PYTHON_PATTERNS,
     PYTHON_REASON,
+    ROOT_README_PATH,
     SELECTED_CHECK_PLAN_HEADER,
     SKILL_PATTERNS,
     SKILL_REASON,
@@ -935,6 +936,14 @@ def assert_selected_gate_mapping_contract() -> None:
             (*VALIDATION_STEPS, *TEST_STEPS)
         )
         assert all(item.reason == FULL_GATE_REASON for item in full_plan.selected_steps)
+
+    readme_plan = build_selected_gate_plan((ROOT_README_PATH,))
+    assert readme_plan.full_gate is False
+    assert tuple(item.step.argv for item in readme_plan.selected_steps) == (
+        FMT_CHECK_ARGV,
+        SPX_MARKDOWN_ARGV,
+    )
+    assert all(item.reason == MARKDOWN_REASON for item in readme_plan.selected_steps)
 
     full_gate_specific_paths = (
         ".github/workflows/spec-tree-evals.yml",
