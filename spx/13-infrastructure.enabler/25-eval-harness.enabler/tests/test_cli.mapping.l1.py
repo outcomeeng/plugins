@@ -15,6 +15,7 @@ from outcomeeng_evals.testing.cli import (
     assert_plan_selects_full_suite_for_eval_definition_change,
     assert_plan_selects_full_suite_for_harness_change,
     assert_plan_selects_full_suite_for_test_harness_change,
+    assert_plan_selects_full_suite_for_test_generator_change,
     assert_plan_selects_full_suite_when_harness_change_follows_owned_path,
     assert_plan_selects_smoke_cases_for_owned_path_change,
     assert_plan_selects_smoke_cases_for_renamed_owned_path,
@@ -140,6 +141,10 @@ def test_plan_subcommand_selects_full_suite_for_copied_harness_path() -> None:
 
 def test_plan_subcommand_selects_full_suite_for_test_harness_change() -> None:
     assert_plan_selects_full_suite_for_test_harness_change()
+
+
+def test_plan_subcommand_selects_full_suite_for_test_generator_change() -> None:
+    assert_plan_selects_full_suite_for_test_generator_change()
 
 
 def test_plan_subcommand_selects_full_suite_for_absolute_eval_definition_change() -> (

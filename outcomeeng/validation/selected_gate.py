@@ -18,6 +18,7 @@ from outcomeeng.validation._steps import (
     CHECK_RECIPES,
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
+    INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
     PREFLIGHT_STEPS,
     PYRIGHT_ARGV,
@@ -48,11 +49,14 @@ SELECTED_CHECK_PLAN_HEADER: Final = "━━━ Selected check plan ━━━"
 NO_CHANGED_PATHS_REASON: Final = "no changed paths"
 GIT_DISCOVERY_FAILURE_EXIT_CODE: Final = 1
 GIT_DISCOVERY_ERROR_PREFIX: Final = "error: selected gate git discovery failed"
+GIT_DISCOVERY_STDOUT_LABEL: Final = "git stdout"
+GIT_DISCOVERY_STDERR_LABEL: Final = "git stderr"
 FULL_GATE_REASON: Final = "full gate surface changed"
 PYTHON_REASON: Final = "python source or test path changed"
 MARKDOWN_REASON: Final = "markdown or spec path changed"
 WORKFLOW_REASON: Final = "workflow or shell surface changed"
-SKILL_REASON: Final = "plugin skill source or generated runtime changed"
+SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
+INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 TEST_REASON: Final = "changed python assertion tests"
 ROOT_README_PATH: Final = "README.md"
 SKILL_STEP_LABELS: Final = (
@@ -98,10 +102,20 @@ WORKFLOW_PATTERNS: Final = (
 )
 SKILL_PATTERNS: Final = (
     "src/plugins/**",
+    "src/_shared/**",
     "dist/claude/**",
     "dist/codex/**",
     ".claude-plugin/**",
     ".agents/plugins/**",
+)
+INSTRUCTION_BLOCK_PATTERNS: Final = (
+    "AGENTS.md",
+    "CLAUDE.md",
+    "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
+    "src/plugins/spec-tree/skills/update-instruction-block/**",
+    "dist/claude/spec-tree/skills/understand/templates/instruction-block.md",
+    "dist/codex/spec-tree/skills/understand/templates/instruction-block.md",
+    "outcomeeng/distribution/instruction_block.py",
 )
 
 _STEP_REASONS: Final = {
@@ -169,10 +183,6 @@ class ChangedPath:
     path: str
     status: str
 
-    @property
-    def is_deleted(self) -> bool:
-        return self.status.startswith(DELETED_GIT_STATUS_PREFIX)
-
 
 class GitDiscoveryError(RuntimeError):
     """A git path-discovery command failed before the gate could select steps."""
@@ -181,6 +191,7 @@ class GitDiscoveryError(RuntimeError):
         self.command: tuple[str, ...] = tuple(command)
         self.returncode = result.returncode
         self.stdout = result.stdout
+        self.stderr = result.stderr
         super().__init__(self.message)
 
     @property
@@ -189,9 +200,19 @@ class GitDiscoveryError(RuntimeError):
 
     @property
     def message(self) -> str:
-        return (
+        base_message = (
             f"{GIT_DISCOVERY_ERROR_PREFIX}: {self.command_text} "
             f"exited {self.returncode}"
+        )
+        diagnostic = self.diagnostic_text
+        if not diagnostic:
+            return base_message
+        return f"{base_message}: {diagnostic}"
+
+    @property
+    def diagnostic_text(self) -> str:
+        return "\n".join(
+            output for output in (self.stdout.strip(), self.stderr.strip()) if output
         )
 
 
@@ -225,6 +246,23 @@ def collect_changed_paths(
         runner=runner,
     )
     return tuple(sorted({entry.path for entry in entries}))
+
+
+def deleted_paths_after_status_resolution(
+    entries: Sequence[ChangedPath],
+) -> tuple[str, ...]:
+    """Return paths whose observed statuses are all deleted."""
+
+    statuses_by_path: dict[str, set[str]] = {}
+    for entry in entries:
+        statuses_by_path.setdefault(entry.path, set()).add(entry.status)
+    return tuple(
+        sorted(
+            path
+            for path, statuses in statuses_by_path.items()
+            if all(status.startswith(DELETED_GIT_STATUS_PREFIX) for status in statuses)
+        )
+    )
 
 
 def collect_changed_path_entries(
@@ -305,6 +343,9 @@ def build_selected_gate_plan(
             if step.label in SKILL_STEP_LABELS:
                 selected_argvs.add(step.argv)
                 reasons[step.argv] = SKILL_REASON
+    if _matches_any(normalized, INSTRUCTION_BLOCK_PATTERNS):
+        selected_argvs.add(INSTRUCTION_BLOCK_ARGV)
+        reasons[INSTRUCTION_BLOCK_ARGV] = INSTRUCTION_BLOCK_REASON
 
     selected_steps = [
         SelectedGateStep(step=step, reason=reasons[step.argv])
@@ -356,9 +397,7 @@ def run_selected_check(
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_selected_gate_plan(
         tuple(entry.path for entry in changed_path_entries),
-        deleted_paths=tuple(
-            entry.path for entry in changed_path_entries if entry.is_deleted
-        ),
+        deleted_paths=deleted_paths_after_status_resolution(changed_path_entries),
     )
     _write_plan(sink, plan)
     if plan.full_gate:
@@ -412,9 +451,12 @@ def _write_plan(sink: TextIO, plan: SelectedGatePlan) -> None:
 
 def _write_git_discovery_error(sink: TextIO, exc: GitDiscoveryError) -> None:
     sink.write(f"{exc.message}\n")
-    output = exc.stdout.strip()
-    if output:
-        sink.write(f"git output:\n{output}\n")
+    stdout = exc.stdout.strip()
+    stderr = exc.stderr.strip()
+    if stdout:
+        sink.write(f"{GIT_DISCOVERY_STDOUT_LABEL}:\n{stdout}\n")
+    if stderr:
+        sink.write(f"{GIT_DISCOVERY_STDERR_LABEL}:\n{stderr}\n")
     sink.flush()
 
 

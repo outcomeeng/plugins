@@ -42,6 +42,7 @@ PLAN_RENAMED_OWNED_PATH_CHANGE: Final = (
     "R100\tsrc/plugins/spec-tree/skills/manage-pr/SKILL.md\tdocs/manage-pr.md\n"
 )
 PLAN_HARNESS_PATH_CHANGE: Final = "outcomeeng_evals/suite.py\n"
+PLAN_TEST_GENERATOR_PATH_CHANGE: Final = "outcomeeng_testing/generators/gate.py\n"
 PLAN_TEST_HARNESS_PATH_CHANGE: Final = "outcomeeng_testing/harnesses/gate.py\n"
 PLAN_COPIED_HARNESS_PATH_CHANGE: Final = (
     "C100\toutcomeeng_evals/suite.py\tdocs/copied-suite.py\n"
@@ -482,6 +483,17 @@ def assert_plan_selects_full_suite_for_test_harness_change() -> None:
         _assert_plan_for_changed_paths(
             Path(tmp),
             changed_paths_text=PLAN_TEST_HARNESS_PATH_CHANGE,
+            expected_case_ids=(),
+        )
+
+
+def assert_plan_selects_full_suite_for_test_generator_change() -> None:
+    """Assert shared test-generator changes select full eval suites."""
+
+    with TemporaryDirectory() as tmp:
+        _assert_plan_for_changed_paths(
+            Path(tmp),
+            changed_paths_text=PLAN_TEST_GENERATOR_PATH_CHANGE,
             expected_case_ids=(),
         )
 

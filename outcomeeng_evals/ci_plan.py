@@ -13,6 +13,7 @@ from outcomeeng_evals.definition import CiPolicy, EVAL_TOML_FILENAME, load_defin
 UNIVERSAL_OWNED_PATHS = (
     "outcomeeng_evals/**",
     "outcomeeng_testing/evals/**",
+    "outcomeeng_testing/generators/**",
     "outcomeeng_testing/harnesses/**",
 )
 RENAMED_GIT_STATUS_PREFIX = "R"

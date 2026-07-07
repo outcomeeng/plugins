@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 from typing import cast
-from unittest.mock import patch
 
 from hypothesis import given, seed, settings
 
@@ -37,6 +36,7 @@ ResolverResponder = Callable[
     [list[str], dict[str, object]],
     subprocess.CompletedProcess[str],
 ]
+InjectedCommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 MALFORMED_INPUT_PROPERTY_SEED = 20260707
 MALFORMED_INPUT_PROPERTY_EXAMPLES = 50
 
@@ -371,14 +371,19 @@ def _run_resolver(argv: list[str], responder: ResolverResponder) -> ResolverRun:
         calls.append(tuple(command))
         return responder(command, kwargs)
 
-    main = cast("Callable[[], int]", getattr(module, "main"))
+    main = cast(
+        "Callable[[list[str], InjectedCommandRunner], int]",
+        getattr(module, "main"),
+    )
     with (
-        patch.object(module.subprocess, "run", side_effect=fake_run),
-        patch.object(sys, "argv", [str(SCRIPT), *argv]),
         redirect_stdout(stdout),
         redirect_stderr(stderr),
     ):
-        returncode = main()
+        try:
+            returncode = main(argv, fake_run)
+        except SystemExit as exc:
+            code = exc.code
+            returncode = code if isinstance(code, int) else 1
     return ResolverRun(
         returncode=returncode,
         stdout=stdout.getvalue(),

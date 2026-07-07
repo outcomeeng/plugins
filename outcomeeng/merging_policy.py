@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+DEFAULT_REVIEW_TRIGGER_PHRASE = "@spec-tree"
+MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
+
 
 FIELD_CONCLUSION = "conclusion"
 FIELD_FINDINGS = "findings"
@@ -15,6 +18,7 @@ FIELD_KIND = "kind"
 FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
 FIELD_ROWS = "rows"
+FIELD_REVIEWER_WORKFLOW_MODIFIED = "reviewer_workflow_modified"
 FIELD_STATE = "state"
 FIELD_STATE_CATEGORY = "state_category"
 FIELD_STATUS = "status"
@@ -167,6 +171,19 @@ class ReviewCheckDecision:
     """Decision for the current-head review-kind check."""
 
     required_action: ReviewCheckAction
+    review_trigger_phrase: str = DEFAULT_REVIEW_TRIGGER_PHRASE
+
+    @property
+    def required_action_token(self) -> str:
+        """Action token emitted by the PR management flow."""
+
+        if self.required_action is ReviewCheckAction.MENTION_REVIEW_NEEDED:
+            return (
+                f"{self.required_action.value}"
+                f"{MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR}"
+                f"{self.review_trigger_phrase}"
+            )
+        return self.required_action.value
 
 
 CHECK_RUN_NON_TERMINAL_STATUSES = frozenset(
@@ -284,11 +301,13 @@ def decide_review_check(
     check: Mapping[str, object],
     *,
     current_head_review_present: bool,
+    review_trigger_phrase: str = DEFAULT_REVIEW_TRIGGER_PHRASE,
 ) -> ReviewCheckDecision:
     """Decide how merge readiness handles the current-head review-kind check."""
     if state_category_decision := _decide_review_check_state_category(
         check,
         current_head_review_present=current_head_review_present,
+        review_trigger_phrase=review_trigger_phrase,
     ):
         return state_category_decision
     required_check = classify_required_check(check)
@@ -314,6 +333,7 @@ def _decide_review_check_state_category(
     check: Mapping[str, object],
     *,
     current_head_review_present: bool,
+    review_trigger_phrase: str,
 ) -> ReviewCheckDecision | None:
     state_category = check.get(FIELD_STATE_CATEGORY)
     if state_category in {
@@ -325,13 +345,14 @@ def _decide_review_check_state_category(
         return ReviewCheckDecision(
             required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
         )
-    if state_category == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW:
+    if _is_self_modifying_workflow_skip(check, state_category):
         if current_head_review_present:
             return ReviewCheckDecision(
                 required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
             )
         return ReviewCheckDecision(
             required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
+            review_trigger_phrase=review_trigger_phrase,
         )
     if state_category == ReviewCheckStateCategory.SKIPPED_NON_EXCEPTION:
         return ReviewCheckDecision(
@@ -342,6 +363,19 @@ def _decide_review_check_state_category(
             required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
         )
     return None
+
+
+def _is_self_modifying_workflow_skip(
+    check: Mapping[str, object],
+    state_category: object,
+) -> bool:
+    return (
+        state_category == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
+        or (
+            check.get(FIELD_CONCLUSION) == CheckRunConclusion.SKIPPED
+            and check.get(FIELD_REVIEWER_WORKFLOW_MODIFIED) is True
+        )
+    )
 
 
 def _classify_check_run(

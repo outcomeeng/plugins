@@ -27,6 +27,7 @@ class CapturedProcessResult:
 
     returncode: int
     stdout: str
+    stderr: str
 
 
 def _restore_child_signal_mask() -> None:
@@ -96,4 +97,5 @@ def run_captured(
     return CapturedProcessResult(
         returncode=completed.returncode,
         stdout=completed.stdout,
+        stderr=completed.stderr,
     )

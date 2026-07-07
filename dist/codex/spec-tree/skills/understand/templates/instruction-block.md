@@ -89,7 +89,7 @@ Before proposing or performing a repository mutation, name:
 - why the action is local enough or gate-authorized enough to proceed;
 - the next validation command, review, audit, check wait, or merge gate the action feeds.
 
-Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship it path" when the exact file, PR state, or command is known. A terse user prompt such as "check", "continue", or "ship it" still gets the live state first: full head SHA when a PR exists, current-head review state, required-check state, production-readiness rule, and the next autonomous action.
+Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship it path" when the exact file, PR state, or command is known. A terse user prompt such as "check", "continue", or "ship it" still gets the live state first: full head SHA when a PR exists, current-head review state, required-check state, deployment-readiness and release-readiness rules, and the next autonomous action.
 
 ## Quick Reference: Skills and Agents
 

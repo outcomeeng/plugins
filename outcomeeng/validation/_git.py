@@ -18,6 +18,7 @@ class GitCommandResult:
 
     returncode: int
     stdout: str
+    stderr: str = ""
 
 
 class GitRunner(Protocol):
@@ -34,4 +35,8 @@ def run_git_command(command: Sequence[str], repo: Path) -> GitCommandResult:
         cwd=repo,
         timeout_seconds=GIT_COMMAND_TIMEOUT_SECONDS,
     )
-    return GitCommandResult(returncode=completed.returncode, stdout=completed.stdout)
+    return GitCommandResult(
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+    )
