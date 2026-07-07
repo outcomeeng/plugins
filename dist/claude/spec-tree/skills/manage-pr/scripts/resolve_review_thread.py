@@ -168,7 +168,7 @@ def thread_has_comment(
 ) -> bool:
     if find_comment_in_page(comments, comment_id):
         return True
-    page_info = comments["pageInfo"]
+    page_info = comments.get("pageInfo")
     if not isinstance(page_info, dict):
         raise ValueError("GitHub response comments.pageInfo must be an object")
     while page_info.get("hasNextPage"):
