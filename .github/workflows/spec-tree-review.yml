@@ -27,14 +27,12 @@ permissions:
 
 jobs:
   spec-tree-review:
-    # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
-    # This caller's release-lane SHA tracks outcomeeng/gh-actions examples/caller-workflows/manifest.yaml.
-    # Renovate keeps the copied SHA current with the shared preset in renovate.json.
-    #
-    # Beta-tester consumers (internal repos deliberately tracking-latest) MAY
-    # swap this for `@main` with a `# BETA TESTER:` marker comment — see the
-    # documented exception in the outcomeeng/gh-actions README "Security → Documented exception".
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@a113491956c710dcdb7cb54174b4a52f9f6609d4 # main
+    # BETA TESTER: deliberately tracks outcomeeng/gh-actions @main to surface
+    # upstream changes early without a per-release follow-up PR. Production
+    # callers must SHA-pin per the gh-actions README "Security" section.
+    # Renovate cannot advance this reference; pin it back to a SHA when this
+    # repo graduates to production-caller usage.
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 

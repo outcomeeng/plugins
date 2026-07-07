@@ -1,11 +1,13 @@
 # Claude Code GitHub Workflows
 
-This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are release-lane consumers of the templates from `outcomeeng/gh-actions/examples/caller-workflows/`, pinned by full commit SHA with a trailing `# main` tracked-branch comment:
+This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are beta-test consumers of the templates from `outcomeeng/gh-actions/examples/caller-workflows/`, pinned to `@main` with an explicit `# BETA TESTER:` marker:
 
 1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable. `use_project_plugins` is controlled by `vars.SPEC_TREE_USE_PROJECT_PLUGINS == 'true'`, so the methodology skills declared in `.claude/settings.json` are installed only when the repository variable opts in.
 2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the `spec-tree-review.yml` reusable, which uses the shipped `review-changes` prompt and the findings-only `blocking` / `debt` taxonomy governed in the spec-tree plugin.
 
 A separate `distribute-skills.yml` workflow handles plugin distribution and is unrelated to the Claude callers.
+
+The generic `claude.yml` and `claude-code-review.yml` callers are deliberately absent from `.github/workflows/`. Keeping them active alongside the spec-tree callers would run multiple agent workflows on the same issue and pull-request events, spending tokens without adding a distinct product signal. If a copy is needed for reference, keep it outside the active workflow directory or disable it before merge.
 
 ## Configuration
 
@@ -36,9 +38,9 @@ jobs:
 
 ### Pinning
 
-Both callers pin the upstream reusable by full commit SHA (not `@main`). The reusable's `validate-workflow` job compares the caller workflow file at the PR head against the file on the default branch; pinning by SHA ensures the composite actions the reusable checks out stay in lockstep with the workflow content. Update the pin by editing the `@<sha>` in both files when consuming a new upstream release.
+This repository intentionally uses the `outcomeeng/gh-actions` beta-tester exception: both active callers track `@main` so upstream reusable changes are exercised here before production consumers receive a SHA-pinned release update. The trade-off is explicit in each workflow file with the `# BETA TESTER:` marker required by the upstream README's Security section.
 
-Routine release-lane updates come from Renovate. `renovate.json` extends `github>outcomeeng/gh-actions//renovate-presets/gh-actions-consumer`, which keeps `outcomeeng/gh-actions` reusable workflow references SHA-pinned and grouped. The trailing `# main` comment on each `uses:` line is the tracked branch Renovate advances.
+Production consumers should pin the upstream reusable by full commit SHA with a trailing tracked-branch comment. Renovate can advance SHA-pinned callers; it cannot advance this repo's `@main` beta references, which is the intended beta behavior. Pin both callers back to full SHAs when this repository graduates from beta-tester usage to production-caller usage.
 
 ## Authorization
 
