@@ -10,6 +10,7 @@ import pytest
 from outcomeeng.distribution.agents import (
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
+    DEFAULT_SOURCE_ROOT,
     GENERATED_MANIFEST_FILENAME,
     AgentConversionError,
     ClaudeAgent,
@@ -52,6 +53,10 @@ def test_manual_guidance_preserves_claude_only_fields(tmp_path: Path) -> None:
     assert "permissionMode: bypassPermissions" in instructions
     assert "unknownField" in instructions
     assert "sandbox_mode" not in parsed
+
+
+def test_default_source_root_uses_rendered_codex_agents() -> None:
+    assert DEFAULT_SOURCE_ROOT == Path("dist") / "codex"
 
 
 def test_generated_toml_stays_outside_codex_plugin_manifest_content(

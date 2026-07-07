@@ -18,7 +18,7 @@ A custom agent configured for an isolated, focused role — its developer instru
 2. Define the custom agent:
    - **name**: unique identifier Codex uses when spawning or referring to this agent
    - **description**: human-facing guidance for when Codex should use this agent
-   - **developer_instructions**: core instructions that define the agent's behavior
+   - **developer_instructions**: core instructions that define the custom agent's behavior
    - **model**: Optional model override
    - **model_reasoning_effort**: Optional reasoning setting
    - **sandbox_mode**, **mcp_servers**: Optional runtime configuration overrides
@@ -76,7 +76,7 @@ Product-scope custom agents override user-scope when names conflict.
 <field name="name">
 
 - Unique identifier Codex uses when spawning or referring to this agent
-- Matching the filename to the agent name is the simplest convention
+- Matching the filename to the custom agent name is the simplest convention
 
 </field>
 
@@ -89,7 +89,7 @@ Product-scope custom agents override user-scope when names conflict.
 
 <field name="developer_instructions">
 
-- Required multiline TOML string that defines the agent's behavior
+- Required multiline TOML string that defines the custom agent's behavior
 - Use clear role, constraints, workflow, and output expectations
 - Prefer XML structure inside the string for prompt clarity
 
@@ -176,14 +176,12 @@ Clearly define the custom agent's role, capabilities, and constraints.
 <principle name="use_pure_xml_structure">
 Structure the developer instructions with pure XML tags. Remove ALL markdown headings from the body.
 
-```text
----
-name: security-reviewer
-description: Reviews code for security vulnerabilities
-tools: Read, Grep, Glob, Bash
-model: gpt-5.4
----
-
+```toml
+name = "security_reviewer"
+description = "Reviews code for security vulnerabilities."
+tools = ["Read", "Grep", "Glob", "Bash"]
+model = "gpt-5.4"
+developer_instructions = """
 <role>
 Claude is a senior code reviewer specializing in security.
 </role>
@@ -194,7 +192,8 @@ Claude is a senior code reviewer specializing in security.
 - XSS attack vectors
 - Authentication/authorization issues
 - Sensitive data exposure
-  </focus_areas>
+
+</focus_areas>
 
 <workflow>
 1. Read the modified files
@@ -202,6 +201,7 @@ Claude is a senior code reviewer specializing in security.
 3. Provide specific remediation steps
 4. Rate severity (Critical/High/Medium/Low)
 </workflow>
+"""
 ```
 
 </principle>
@@ -301,61 +301,27 @@ Edit custom agent files directly:
 <reference>
 **Core references**:
 
-**Custom agent usage and configuration**: [subagents.md](${SKILL_DIR}/references/subagents.md)
-
-- File format and configuration
-- Skill injection (`skills:` field for preloading skill content)
-- Model selection, including explicit aliases for reproducible agent behavior
-- Tool security and least privilege
-- Prompt caching optimization
-- Complete examples
-
-**Writing effective prompts**: [write-subagent-prompts.md](${SKILL_DIR}/references/write-subagent-prompts.md)
-
-- Core principles and XML structure
-- Description field optimization for routing
-- Extended thinking for complex reasoning
-- Security constraints and strong modal verbs
-- Success criteria definition
-
-**Advanced topics**:
-
-**Evaluation and testing**: [evaluation-and-testing.md](${SKILL_DIR}/references/evaluation-and-testing.md)
-
-- Evaluation metrics (task completion, tool correctness, robustness)
-- Testing strategies (offline, simulation, online monitoring)
-- Evaluation-driven development
-- G-Eval for custom criteria
-
-**Error handling and recovery**: [error-handling-and-recovery.md](${SKILL_DIR}/references/error-handling-and-recovery.md)
-
-- Common failure modes and causes
-- Recovery strategies (graceful degradation, retry, circuit breakers)
-- Structured communication and observability
-- Anti-patterns to avoid
-
-**Context management**: [context-management.md](${SKILL_DIR}/references/context-management.md)
-
-- Memory architecture (STM, LTM, working memory)
-- Context strategies (summarization, sliding window, scratchpads)
-- Managing long-running tasks
-- Prompt caching interaction
-
-**Orchestration patterns**: [orchestration-patterns.md](${SKILL_DIR}/references/orchestration-patterns.md)
-
-- Sequential, parallel, hierarchical, coordinator patterns
-- Model selection for orchestration roles
-- Multi-agent coordination
-- Pattern selection guidance
-
-**Debugging and troubleshooting**: [debugging-agents.md](${SKILL_DIR}/references/debugging-agents.md)
-
-- Logging, tracing, and correlation IDs
-- Common failure types (hallucinations, format errors, tool misuse)
-- Diagnostic procedures
-- Continuous monitoring
+- [subagents.md](${SKILL_DIR}/references/subagents.md): file format, configuration, skill injection, model selection, tool security, prompt caching, complete examples.
+- [write-subagent-prompts.md](${SKILL_DIR}/references/write-subagent-prompts.md): prompt structure, description routing, extended thinking, security constraints, success criteria.
+- [evaluation-and-testing.md](${SKILL_DIR}/references/evaluation-and-testing.md): evaluation metrics, testing strategies, evaluation-driven development, G-Eval.
+- [error-handling-and-recovery.md](${SKILL_DIR}/references/error-handling-and-recovery.md): failure causes, recovery strategies, observability, anti-patterns.
+- [context-management.md](${SKILL_DIR}/references/context-management.md): memory architecture, context strategies, long-running tasks, prompt caching.
+- [orchestration-patterns.md](${SKILL_DIR}/references/orchestration-patterns.md): sequential, parallel, hierarchical, and coordinator patterns with model-selection guidance.
+- [debugging-agents.md](${SKILL_DIR}/references/debugging-agents.md): logging, tracing, hallucinations, format errors, tool misuse, diagnostic procedures.
 
 </reference>
+
+<failure_modes>
+
+**Failure: Runtime-specific examples made SKILL.md exceed the line budget**
+
+What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source exceeded `/skill-standards`' 500-line cap.
+
+Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
+
+How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${SKILL_DIR}/SKILL.md"` before audit.
+
+</failure_modes>
 
 <success_criteria>
 A well-configured custom agent has:
@@ -366,7 +332,7 @@ A well-configured custom agent has:
 - XML-structured developer instructions with role, approach, and constraints
 
 - Description field optimized for automatic routing
-- Successfully tested on representative tasks
+- At least one verification run or documented dry-run against the custom agent's intended workflow
 - Model selection appropriate for task complexity, cost, and reproducibility needs
 
 </success_criteria>

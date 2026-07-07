@@ -6,7 +6,7 @@
 - `<tool_configuration>` — inherited and specific tool grants
 - `<model_selection>` — model aliases and reproducibility-sensitive inheritance boundaries
 - `<invocation>` — automatic and explicit subagent use
-- `<management>` — `/agents`, direct files, and CLI configuration
+- `<management>` — runtime management surfaces, direct files, and CLI configuration
 - `<example_subagents>` — test-writer and debugger examples
 - `<tool_security>` — least privilege and audit checklist
 - `<skill_injection>` — startup skill preloading
@@ -51,7 +51,7 @@ Required fields:
 
 - `name`: agent name Codex uses when spawning or referring to this agent
 - `description`: human-facing guidance for when Codex should use this agent
-- `developer_instructions`: core instructions that define the agent's behavior
+- `developer_instructions`: core instructions that define the custom agent's behavior
 
 Optional fields:
 
@@ -138,11 +138,14 @@ Main chat: Present subagent results to user
 <inherit_all_tools>
 Omit the `tools` field to inherit all tools from main thread:
 
-```yaml
----
-name: code-reviewer
-description: Reviews code for quality and security
----
+```toml
+name = "code_reviewer"
+description = "Reviews code for quality and security."
+developer_instructions = """
+<role>
+Review code for quality and security.
+</role>
+"""
 ```
 
 Subagent has access to all tools, including MCP tools.
@@ -151,15 +154,19 @@ Subagent has access to all tools, including MCP tools.
 <specific_tools>
 Specify tools as comma-separated list for granular control:
 
-```yaml
----
-name: read-only-analyzer
-description: Analyzes code without making changes
-tools: Read, Grep, Glob
----
+```toml
+name = "read_only_analyzer"
+description = "Analyzes code without making changes."
+tools = ["Read", "Grep", "Glob"]
+developer_instructions = """
+<role>
+Analyze code without making changes.
+</role>
+"""
 ```
 
-Use `/agents` command to see full list of available tools.
+Consult Codex custom-agent documentation or existing `.codex/agents/*.toml` files to choose runtime-supported tools.
+
 </specific_tools>
 </tool_configuration>
 
@@ -278,14 +285,12 @@ Follow the TOML file format specified above.
 <example_subagents>
 <test_writer>
 
-```text
----
-name: test-writer
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
-tools: Read, Write, Grep, Glob, Bash
-model: gpt-5.4
----
-
+```toml
+name = "test_writer"
+description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
+tools = ["Read", "Write", "Grep", "Glob", "Bash"]
+model = "gpt-5.4"
+developer_instructions = """
 <role>
 Role: test automation specialist creating thorough, maintainable test suites.
 </role>
@@ -305,19 +310,19 @@ Role: test automation specialist creating thorough, maintainable test suites.
 - Include edge cases and error conditions
 - Avoid test interdependencies
   </test_quality_criteria>
+"""
 ```
 
 </test_writer>
 
 <debugger>
-```markdown
----
-name: debugger
-description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.
-tools: Read, Edit, Bash, Grep, Glob
-model: gpt-5.4
----
 
+```toml
+name = "debugger"
+description = "Investigates and fixes bugs. Use when errors occur or behavior is unexpected."
+tools = ["Read", "Edit", "Bash", "Grep", "Glob"]
+model = "gpt-5.4"
+developer_instructions = """
 <role>
 Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
@@ -339,8 +344,9 @@ Role: debugging specialist skilled at root cause analysis and systematic problem
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
   </debugging_techniques>
+  """
+```
 
-````
 </debugger>
 </example_subagents>
 
@@ -353,19 +359,21 @@ Treat tool access like production IAM: start from deny-all, allowlist only what'
 
 <why_it_matters>
 **Security risks of over-permissioning**:
+
 - Agent could modify wrong code (production instead of tests)
 - Agent could run dangerous commands (rm -rf, data deletion)
 - Agent could expose protected information
 - Agent could skip critical steps (linting, testing, validation)
 
 **Example vulnerability**:
+
 ```markdown
 ❌ Bad: Agent drafting sales email has full access to all tools
 Risk: Could access revenue dashboard data, customer financial info
 
 ✅ Good: Agent drafting sales email has Read access to Salesforce only
 Scope: Can draft email, cannot access sensitive financial data
-````
+```
 
 </why_it_matters>
 
@@ -401,13 +409,13 @@ Scope: Can draft email, cannot access sensitive financial data
 
 <skill_injection>
 
-Codex custom agents do not preload individual skill bodies by name. Put the durable role, workflow, and standards the agent needs in `developer_instructions`, and use a main conversation workflow when the agent needs to choose skills dynamically.
+Codex custom agents do not preload individual skill bodies by name. Put the durable role, workflow, and standards the custom agent needs in `developer_instructions`, and use a main conversation workflow when the custom agent needs to choose skills dynamically.
 
 <how_it_works>
 
 - Codex custom agent files carry prompt guidance rather than a skill-preload field
 - Put required standards and workflow constraints directly in `developer_instructions`
-- Use a main conversation workflow when the agent needs to choose skills dynamically
+- Use a main conversation workflow when the custom agent needs to choose skills dynamically
 
 </how_it_works>
 
@@ -469,14 +477,12 @@ Prompt caching for frequently-invoked subagents:
 <cache_structure>
 **Structure prompts for caching**:
 
-```text
----
-name: security-reviewer
-description: ...
-tools: ...
-model: gpt-5.4
----
-
+```toml
+name = "security_reviewer"
+description = "..."
+tools = ["Read", "Grep", "Glob"]
+model = "gpt-5.4"
+developer_instructions = """
 [CACHEABLE SECTION - Stable content]
 <role>
 Role: senior security engineer...
@@ -504,6 +510,7 @@ Role: senior security engineer...
 [VARIABLE SECTION - Task-specific content]
 Current task: {dynamic context}
 Recent changes: {varies per invocation}
+"""
 ```
 
 **Principle**: Stable instructions at beginning (cached), variable context at end (fresh).

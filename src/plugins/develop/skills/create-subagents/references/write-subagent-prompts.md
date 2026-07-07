@@ -518,7 +518,7 @@ Task is complete when:
 ```toml
 name = "agent-name"
 description = "What it does and when to use it. Include trigger keywords."
-model = "gpt-5.4"
+model = "{{! term('configured_agent_standard_model') !}}"
 model_reasoning_effort = "high"
 {{! field('configured_agent_prompt') !}} = """
 <role>

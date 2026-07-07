@@ -304,61 +304,27 @@ Edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md)
-
-- File format and configuration
-- Skill injection (`skills:` field for preloading skill content)
-- Model selection, including explicit aliases for reproducible agent behavior
-- Tool security and least privilege
-- Prompt caching optimization
-- Complete examples
-
-**Writing effective prompts**: [write-subagent-prompts.md](${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md)
-
-- Core principles and XML structure
-- Description field optimization for routing
-- Extended thinking for complex reasoning
-- Security constraints and strong modal verbs
-- Success criteria definition
-
-**Advanced topics**:
-
-**Evaluation and testing**: [evaluation-and-testing.md](${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md)
-
-- Evaluation metrics (task completion, tool correctness, robustness)
-- Testing strategies (offline, simulation, online monitoring)
-- Evaluation-driven development
-- G-Eval for custom criteria
-
-**Error handling and recovery**: [error-handling-and-recovery.md](${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md)
-
-- Common failure modes and causes
-- Recovery strategies (graceful degradation, retry, circuit breakers)
-- Structured communication and observability
-- Anti-patterns to avoid
-
-**Context management**: [context-management.md](${CLAUDE_SKILL_DIR}/references/context-management.md)
-
-- Memory architecture (STM, LTM, working memory)
-- Context strategies (summarization, sliding window, scratchpads)
-- Managing long-running tasks
-- Prompt caching interaction
-
-**Orchestration patterns**: [orchestration-patterns.md](${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md)
-
-- Sequential, parallel, hierarchical, coordinator patterns
-- Model selection for orchestration roles
-- Multi-agent coordination
-- Pattern selection guidance
-
-**Debugging and troubleshooting**: [debugging-agents.md](${CLAUDE_SKILL_DIR}/references/debugging-agents.md)
-
-- Logging, tracing, and correlation IDs
-- Common failure types (hallucinations, format errors, tool misuse)
-- Diagnostic procedures
-- Continuous monitoring
+- [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md): file format, configuration, skill injection, model selection, tool security, prompt caching, complete examples.
+- [write-subagent-prompts.md](${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md): prompt structure, description routing, extended thinking, security constraints, success criteria.
+- [evaluation-and-testing.md](${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md): evaluation metrics, testing strategies, evaluation-driven development, G-Eval.
+- [error-handling-and-recovery.md](${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md): failure causes, recovery strategies, observability, anti-patterns.
+- [context-management.md](${CLAUDE_SKILL_DIR}/references/context-management.md): memory architecture, context strategies, long-running tasks, prompt caching.
+- [orchestration-patterns.md](${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md): sequential, parallel, hierarchical, and coordinator patterns with model-selection guidance.
+- [debugging-agents.md](${CLAUDE_SKILL_DIR}/references/debugging-agents.md): logging, tracing, hallucinations, format errors, tool misuse, diagnostic procedures.
 
 </reference>
+
+<failure_modes>
+
+**Failure: Runtime-specific examples made SKILL.md exceed the line budget**
+
+What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source exceeded `/skill-standards`' 500-line cap.
+
+Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
+
+How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
+
+</failure_modes>
 
 <success_criteria>
 A well-configured subagent has:
@@ -369,7 +335,7 @@ A well-configured subagent has:
 - XML-structured system prompt with role, approach, and constraints
 
 - Description field optimized for automatic routing
-- Successfully tested on representative tasks
+- At least one verification run or documented dry-run against the subagent's intended workflow
 - Model selection appropriate for task complexity, cost, and reproducibility needs
 
 </success_criteria>

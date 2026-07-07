@@ -6,7 +6,7 @@
 - `<tool_configuration>` — inherited and specific tool grants
 - `<model_selection>` — model aliases and reproducibility-sensitive inheritance boundaries
 - `<invocation>` — automatic and explicit subagent use
-- `<management>` — `/agents`, direct files, and CLI configuration
+- `<management>` — runtime management surfaces, direct files, and CLI configuration
 - `<example_subagents>` — test-writer and debugger examples
 - `<tool_security>` — least privilege and audit checklist
 - `<skill_injection>` — startup skill preloading
@@ -159,6 +159,7 @@ tools: Read, Grep, Glob
 ```
 
 Use `/agents` command to see full list of available tools.
+
 </specific_tools>
 </tool_configuration>
 
@@ -329,6 +330,7 @@ Role: test automation specialist creating thorough, maintainable test suites.
 </test_writer>
 
 <debugger>
+
 ```markdown
 ---
 name: debugger
@@ -358,8 +360,8 @@ Role: debugging specialist skilled at root cause analysis and systematic problem
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
   </debugging_techniques>
+```
 
-````
 </debugger>
 </example_subagents>
 
@@ -372,19 +374,21 @@ Treat tool access like production IAM: start from deny-all, allowlist only what'
 
 <why_it_matters>
 **Security risks of over-permissioning**:
+
 - Agent could modify wrong code (production instead of tests)
 - Agent could run dangerous commands (rm -rf, data deletion)
 - Agent could expose protected information
 - Agent could skip critical steps (linting, testing, validation)
 
 **Example vulnerability**:
+
 ```markdown
 ❌ Bad: Agent drafting sales email has full access to all tools
 Risk: Could access revenue dashboard data, customer financial info
 
 ✅ Good: Agent drafting sales email has Read access to Salesforce only
 Scope: Can draft email, cannot access sensitive financial data
-````
+```
 
 </why_it_matters>
 

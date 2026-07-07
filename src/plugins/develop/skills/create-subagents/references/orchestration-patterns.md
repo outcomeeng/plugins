@@ -451,7 +451,7 @@ Coordinator:
 ```toml
 name = "workflow_coordinator"
 description = "Orchestrates multi-agent workflows. Use when a task requires multiple specialized agents in coordination."
-model = "gpt-5.4"
+model = "{{! term('configured_agent_standard_model') !}}"
 model_reasoning_effort = "high"
 {{! field('configured_agent_prompt') !}} = """
 <role>

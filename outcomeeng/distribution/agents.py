@@ -1,4 +1,4 @@
-"""Convert rendered Claude agent definitions into local Codex custom agents."""
+"""Convert rendered plugin agent definitions into local Codex custom agents."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     }
 )
 GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
-DEFAULT_SOURCE_ROOT: Final = Path("dist") / "claude"
+DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
 DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
 MODEL_MAPPINGS: Final = (
     ("claude-opus", "gpt-5.4"),
@@ -96,7 +96,7 @@ class TomlMultilineString:
 
 
 def iter_agent_files(source_root: Path) -> tuple[Path, ...]:
-    """Return rendered Claude agent markdown files under ``source_root``."""
+    """Return rendered agent markdown files under ``source_root``."""
     if not source_root.is_dir():
         return ()
     return tuple(sorted(source_root.glob("*/agents/*.md")))
@@ -283,7 +283,7 @@ def render_agent_toml(agent: CodexAgent) -> str:
 
 
 def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent, ...]:
-    """Convert all rendered Claude agents under ``source_root``."""
+    """Convert all rendered plugin agents under ``source_root``."""
     converted: list[CodexAgent] = []
     seen: set[str] = set()
     for source_file in iter_agent_files(source_root):

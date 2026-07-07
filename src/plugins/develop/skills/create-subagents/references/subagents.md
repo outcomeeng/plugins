@@ -6,7 +6,7 @@
 - `<tool_configuration>` — inherited and specific tool grants
 - `<model_selection>` — model aliases and reproducibility-sensitive inheritance boundaries
 - `<invocation>` — automatic and explicit subagent use
-- `<management>` — `/agents`, direct files, and CLI configuration
+- `<management>` — runtime management surfaces, direct files, and CLI configuration
 - `<example_subagents>` — test-writer and debugger examples
 - `<tool_security>` — least privilege and audit checklist
 - `<skill_injection>` — startup skill preloading
@@ -23,7 +23,7 @@
 ```toml
 name = "reviewer"
 description = "PR reviewer focused on correctness, security, and missing tests."
-model = "gpt-5.4"
+model = "{{! term('configured_agent_standard_model') !}}"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 {{! field('configured_agent_prompt') !}} = """
@@ -82,7 +82,7 @@ Required fields:
 
 - `name`: agent name Codex uses when spawning or referring to this agent
 - `description`: human-facing guidance for when Codex should use this agent
-- `{{! field('configured_agent_prompt') !}}`: core instructions that define the agent's behavior
+- `{{! field('configured_agent_prompt') !}}`: core instructions that define the {{! term('configured_agent') !}}'s behavior
 
 Optional fields:
 
@@ -202,6 +202,20 @@ Main chat: Present subagent results to user
 <inherit_all_tools>
 Omit the `tools` field to inherit all tools from main thread:
 
+{!% if target == 'codex' %!}
+
+```toml
+name = "code_reviewer"
+description = "Reviews code for quality and security."
+{{! field('configured_agent_prompt') !}} = """
+<role>
+Review code for quality and security.
+</role>
+"""
+```
+
+{!% else %!}
+
 ```yaml
 ---
 name: code-reviewer
@@ -209,11 +223,28 @@ description: Reviews code for quality and security
 ---
 ```
 
+{!% endif %!}
+
 Subagent has access to all tools, including MCP tools.
 </inherit_all_tools>
 
 <specific_tools>
 Specify tools as comma-separated list for granular control:
+
+{!% if target == 'codex' %!}
+
+```toml
+name = "read_only_analyzer"
+description = "Analyzes code without making changes."
+tools = ["Read", "Grep", "Glob"]
+{{! field('configured_agent_prompt') !}} = """
+<role>
+Analyze code without making changes.
+</role>
+"""
+```
+
+{!% else %!}
 
 ```yaml
 ---
@@ -223,7 +254,13 @@ tools: Read, Grep, Glob
 ---
 ```
 
+{!% endif %!}
+
+{!% if target == 'codex' %!}
+Consult Codex custom-agent documentation or existing `.codex/agents/*.toml` files to choose runtime-supported tools.
+{!% else %!}
 Use `/agents` command to see full list of available tools.
+{!% endif %!}
 </specific_tools>
 </tool_configuration>
 
@@ -427,6 +464,38 @@ Useful for testing configurations before saving them.
 <example_subagents>
 <test_writer>
 
+{!% if target == 'codex' %!}
+
+```toml
+name = "test_writer"
+description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
+tools = ["Read", "Write", "Grep", "Glob", "Bash"]
+model = "{{! term('configured_agent_standard_model') !}}"
+{{! field('configured_agent_prompt') !}} = """
+<role>
+Role: test automation specialist creating thorough, maintainable test suites.
+</role>
+
+<workflow>
+1. Analyze the code to understand functionality
+2. Identify test cases (happy path, edge cases, error conditions)
+3. Write tests using the product's testing framework
+4. Run tests to verify they pass
+</workflow>
+
+<test_quality_criteria>
+
+- Test one behavior per test
+- Use descriptive test names
+- Follow AAA pattern (Arrange, Act, Assert)
+- Include edge cases and error conditions
+- Avoid test interdependencies
+  </test_quality_criteria>
+"""
+```
+
+{!% else %!}
+
 ```text
 ---
 name: test-writer
@@ -456,9 +525,43 @@ Role: test automation specialist creating thorough, maintainable test suites.
   </test_quality_criteria>
 ```
 
+{!% endif %!}
+
 </test_writer>
 
 <debugger>
+{!% if target == 'codex' %!}
+```toml
+name = "debugger"
+description = "Investigates and fixes bugs. Use when errors occur or behavior is unexpected."
+tools = ["Read", "Edit", "Bash", "Grep", "Glob"]
+model = "{{! term('configured_agent_standard_model') !}}"
+{{! field('configured_agent_prompt') !}} = """
+<role>
+Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
+</role>
+
+<workflow>
+1. **Reproduce**: Understand and reproduce the issue
+2. **Isolate**: Identify the failing component
+3. **Analyze**: Examine code, logs, and stack traces
+4. **Hypothesize**: Form theories about the cause
+5. **Test**: Verify hypotheses systematically
+6. **Fix**: Implement and verify the solution
+</workflow>
+
+<debugging_techniques>
+
+- Add logging/print statements to trace execution
+- Use binary search to isolate the problem
+- Check assumptions (inputs, state, environment)
+- Review recent changes that might have introduced the bug
+- Verify fix doesn't break other functionality
+  </debugging_techniques>
+  """
+
+````
+{!% else %!}
 ```markdown
 ---
 name: debugger
@@ -488,8 +591,9 @@ Role: debugging specialist skilled at root cause analysis and systematic problem
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
   </debugging_techniques>
-
 ````
+
+{!% endif %!}
 </debugger>
 </example_subagents>
 
@@ -502,19 +606,21 @@ Treat tool access like production IAM: start from deny-all, allowlist only what'
 
 <why_it_matters>
 **Security risks of over-permissioning**:
+
 - Agent could modify wrong code (production instead of tests)
 - Agent could run dangerous commands (rm -rf, data deletion)
 - Agent could expose protected information
 - Agent could skip critical steps (linting, testing, validation)
 
 **Example vulnerability**:
+
 ```markdown
 ❌ Bad: Agent drafting sales email has full access to all tools
 Risk: Could access revenue dashboard data, customer financial info
 
 ✅ Good: Agent drafting sales email has Read access to Salesforce only
 Scope: Can draft email, cannot access sensitive financial data
-````
+```
 
 </why_it_matters>
 
@@ -550,7 +656,7 @@ Scope: Can draft email, cannot access sensitive financial data
 
 <skill_injection>
 {!% if target == 'codex' %!}
-Codex custom agents do not preload individual skill bodies by name. Put the durable role, workflow, and standards the agent needs in `{{! field('configured_agent_prompt') !}}`, and use a main conversation workflow when the agent needs to choose skills dynamically.
+Codex custom agents do not preload individual skill bodies by name. Put the durable role, workflow, and standards the {{! term('configured_agent') !}} needs in `{{! field('configured_agent_prompt') !}}`, and use a main conversation workflow when the {{! term('configured_agent') !}} needs to choose skills dynamically.
 {!% else %!}
 Subagents can preload skills via the `skills:` frontmatter field. The full SKILL.md content of each listed skill is injected into the subagent's context at startup — not lazily loaded or dynamically invoked.
 {!% endif %!}
@@ -561,7 +667,7 @@ Subagents can preload skills via the `skills:` frontmatter field. The full SKILL
 
 - Codex custom agent files carry prompt guidance rather than a skill-preload field
 - Put required standards and workflow constraints directly in `{{! field('configured_agent_prompt') !}}`
-- Use a main conversation workflow when the agent needs to choose skills dynamically
+- Use a main conversation workflow when the {{! term('configured_agent') !}} needs to choose skills dynamically
 
 {!% else %!}
 
@@ -613,7 +719,7 @@ Subagents can preload skills via the `skills:` frontmatter field. The full SKILL
 ```toml
 name = "reviewer"
 description = "PR reviewer focused on correctness, security, and missing tests."
-model = "gpt-5.4"
+model = "{{! term('configured_agent_standard_model') !}}"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 {{! field('configured_agent_prompt') !}} = """
@@ -684,6 +790,46 @@ Prompt caching for frequently-invoked subagents:
 <cache_structure>
 **Structure prompts for caching**:
 
+{!% if target == 'codex' %!}
+
+```toml
+name = "security_reviewer"
+description = "..."
+tools = ["Read", "Grep", "Glob"]
+model = "{{! term('configured_agent_standard_model') !}}"
+{{! field('configured_agent_prompt') !}} = """
+[CACHEABLE SECTION - Stable content]
+<role>
+Role: senior security engineer...
+</role>
+
+<focus_areas>
+
+- SQL injection
+- XSS attacks
+  ...
+  </focus_areas>
+
+<workflow>
+1. Read modified files
+2. Identify risks
+...
+</workflow>
+
+<severity_ratings>
+...
+</severity_ratings>
+
+--- [CACHE BREAKPOINT] ---
+
+[VARIABLE SECTION - Task-specific content]
+Current task: {dynamic context}
+Recent changes: {varies per invocation}
+"""
+```
+
+{!% else %!}
+
 ```text
 ---
 name: security-reviewer
@@ -720,6 +866,8 @@ Role: senior security engineer...
 Current task: {dynamic context}
 Recent changes: {varies per invocation}
 ```
+
+{!% endif %!}
 
 **Principle**: Stable instructions at beginning (cached), variable context at end (fresh).
 </cache_structure>
