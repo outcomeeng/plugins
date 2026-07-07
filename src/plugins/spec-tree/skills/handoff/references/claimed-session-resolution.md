@@ -31,7 +31,7 @@ The claimed-session set grows ONLY by user confirmation. Do NOT auto-scan the to
 Did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
 
 - **Zero artifacts in TODO** → no artifact reconciliation needed; workflow 04 creates a fresh continuation when one is required.
-- **One or more artifacts in TODO** → they become supersession candidates. Workflow 04 creates a fresh continuation when one is required, verifies it, then archives the superseded same-conversation artifacts. Archive only artifacts this conversation created; never touch artifacts created by other conversations.
+- **One or more artifacts in TODO** → they become supersession candidates. Workflow 04 partitions them by independent continuation thread using each artifact's `goal`, `next_step`, `specs`, and `files` against the canonical continuation plan from workflow 03. A fresh continuation archives only the artifacts in its own partition; Path A archives all same-conversation artifacts only when no continuation reader remains or an existing owner already carries the continuation. If an artifact maps to zero threads or multiple threads, STOP and ask the operator to confirm the artifact-to-thread mapping before creating or archiving any session. Archive only artifacts this conversation created; never touch artifacts created by other conversations.
 
 **Step 5 — Emit the RESOLVED_CLAIMED_SESSIONS marker.**
 

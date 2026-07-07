@@ -81,8 +81,8 @@ Every closure ends with **zero, one, or several** session files — one canonica
 **Fresh session path — new handoff**:
 
 0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"`, plus a real stop condition. Creating a fresh session is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
-1. Compose the canonical continuation using `${CLAUDE_SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
-2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
+1. Compose the canonical continuation using `${CLAUDE_SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, optional `git_ref` for a pushed work branch) and the markdown body.
+2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`. Supply `git_ref` only for a pushed work branch; the command records it after verifying that branch exists on `origin`. Omit `git_ref` for default-branch, detached-HEAD, or pool-worktree-tip handoffs, where the command derives the branch name or commit-SHA anchor from git context.
 
    **Choose the stdin form by harness.**
 
