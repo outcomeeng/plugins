@@ -29,8 +29,8 @@ DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
 MODEL_MAPPINGS: Final = (
     ("claude-opus", "gpt-5.4"),
     ("opus", "gpt-5.4"),
-    ("claude-sonnet", "gpt-5.4-mini"),
-    ("sonnet", "gpt-5.4-mini"),
+    ("claude-sonnet", "gpt-5.4"),
+    ("sonnet", "gpt-5.4"),
     ("claude-haiku", "gpt-5.4-mini"),
     ("haiku", "gpt-5.4-mini"),
 )

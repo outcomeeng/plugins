@@ -42,7 +42,7 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
 
     assert parsed["name"] == AGENT_NAME
     assert parsed["description"] == AGENT_DESCRIPTION
-    assert parsed["model"] == "gpt-5.4-mini"
+    assert parsed["model"] == "gpt-5.4"
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert "sandbox_mode" not in parsed
     assert parsed["shell_environment_policy"]["set"] == {

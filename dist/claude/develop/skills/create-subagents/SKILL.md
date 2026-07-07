@@ -89,6 +89,7 @@ Product-scope subagents override user-scope when names conflict.
 </field>
 
 <field name="tools">
+
 - Comma-separated list: `Read, Write, Edit, Bash, Grep`
 - If omitted: inherits all tools from main thread
 - Use `/agents` interface to see all available tools

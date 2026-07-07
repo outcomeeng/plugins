@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,7 +46,10 @@ BEGIN_SENTINEL = (
 )
 END_SENTINEL = "<!-- END PLUGIN CATALOG -->"
 SOURCE_PLUGINS_ROOT = Path("src") / "plugins"
-CATALOG_TARGET = Target.CLAUDE
+CATALOG_TARGET_LABELS: dict[Target, str] = {
+    Target.CLAUDE: "Claude",
+    Target.CODEX: "Codex",
+}
 
 # Description prefixes stripped from auto-emitted catalog rows. Each entry is
 # matched case-sensitively at the start of the flattened description. The
@@ -90,13 +94,47 @@ def _frontmatter_text(text: str) -> str:
     return text[: end + len("\n---")]
 
 
-def _render_catalog_frontmatter(text: str) -> str:
+def _render_catalog_frontmatter(text: str, target: Target) -> str:
     return render_text(
         _frontmatter_text(text),
         variables={
-            "target": CATALOG_TARGET.value,
+            "target": target.value,
             "spx_floor": REQUIRED_SPX_VERSION,
         },
+    )
+
+
+def _catalog_frontmatter_variants(text: str) -> dict[Target, dict[str, str]]:
+    return {
+        target: parse_frontmatter(_render_catalog_frontmatter(text, target))
+        for target in Target
+    }
+
+
+def _catalog_name(
+    variants: Mapping[Target, dict[str, str]],
+    default: str,
+) -> str:
+    names = {target: meta.get("name") or default for target, meta in variants.items()}
+    first = names[Target.CLAUDE]
+    if all(name == first for name in names.values()):
+        return first
+    return "; ".join(
+        f"{CATALOG_TARGET_LABELS[target]}: {name}" for target, name in names.items()
+    )
+
+
+def _catalog_purpose(variants: Mapping[Target, dict[str, str]]) -> str:
+    purposes = {
+        target: shorten_purpose(meta.get("description", ""))
+        for target, meta in variants.items()
+    }
+    first = purposes[Target.CLAUDE]
+    if all(purpose == first for purpose in purposes.values()):
+        return first
+    return "; ".join(
+        f"{CATALOG_TARGET_LABELS[target]}: {purpose}"
+        for target, purpose in purposes.items()
     )
 
 
@@ -176,7 +214,7 @@ def shorten_purpose(description: str) -> str:
         if idx != -1 and flat[:idx].count("(") == flat[:idx].count(")"):
             flat = flat[:idx]
             break
-    return flat.replace(" — ", ": ").replace("—", ":").rstrip(" .")
+    return flat.rstrip(" .")
 
 
 def collect_skills(plugin_dir: Path) -> list[CatalogEntry]:
@@ -188,11 +226,9 @@ def collect_skills(plugin_dir: Path) -> list[CatalogEntry]:
         skill_md = skill_dir / "SKILL.md"
         if not skill_md.is_file():
             continue
-        meta = parse_frontmatter(
-            _render_catalog_frontmatter(skill_md.read_text(encoding="utf-8"))
-        )
-        name = meta.get("name") or skill_dir.name
-        purpose = shorten_purpose(meta.get("description", ""))
+        variants = _catalog_frontmatter_variants(skill_md.read_text(encoding="utf-8"))
+        name = _catalog_name(variants, skill_dir.name)
+        purpose = _catalog_purpose(variants)
         entries.append(CatalogEntry(kind="Skill", name=f"`/{name}`", purpose=purpose))
     return entries
 
@@ -207,11 +243,9 @@ def collect_md_dir(
     for path in sorted(target.iterdir()):
         if path.suffix != ".md" or not path.is_file():
             continue
-        meta = parse_frontmatter(
-            _render_catalog_frontmatter(path.read_text(encoding="utf-8"))
-        )
-        name = meta.get("name") or path.stem
-        purpose = shorten_purpose(meta.get("description", ""))
+        variants = _catalog_frontmatter_variants(path.read_text(encoding="utf-8"))
+        name = _catalog_name(variants, path.stem)
+        purpose = _catalog_purpose(variants)
         display = f"`/{name}`" if slash_prefix else f"`{name}`"
         entries.append(CatalogEntry(kind=kind, name=display, purpose=purpose))
     return entries

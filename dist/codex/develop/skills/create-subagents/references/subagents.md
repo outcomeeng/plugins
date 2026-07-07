@@ -60,7 +60,6 @@ Optional fields:
 - `model_reasoning_effort`: reasoning setting
 - `sandbox_mode`: sandbox override, such as `read-only`
 - `mcp_servers`: MCP server overrides
-- `skills.config`: skill configuration inherited from the parent session if omitted
 
 </codex_configuration_fields>
 
@@ -402,27 +401,26 @@ Scope: Can draft email, cannot access sensitive financial data
 
 <skill_injection>
 
-Custom agents can override skill configuration via `skills.config`. When omitted, the custom agent inherits the parent session's skill configuration.
+Codex custom agents do not preload individual skill bodies by name. Put the durable role, workflow, and standards the agent needs in `developer_instructions`, and use a main conversation workflow when the agent needs to choose skills dynamically.
 
 <how_it_works>
 
-- Codex custom agent files can include `skills.config` when they need a skill configuration different from the parent session
-- Omit `skills.config` to inherit the parent session's skill configuration
+- Codex custom agent files carry prompt guidance rather than a skill-preload field
+- Put required standards and workflow constraints directly in `developer_instructions`
 - Use a main conversation workflow when the agent needs to choose skills dynamically
 
 </how_it_works>
 
 <when_to_use>
 
-**Use `skills.config` when the custom agent needs a different skill surface from the parent session:**
+**Use explicit `developer_instructions` when the custom agent needs durable guidance:**
 
-- Read-only custom agents that should only see audit or review skills
-- Documentation-research custom agents that need a docs-focused skill configuration
-- Worker custom agents that need fewer skills than the parent context
+- Read-only custom agents that must produce verdicts rather than edits
+- Documentation-research custom agents that need repository-specific source guidance
+- Worker custom agents that need a narrowed role and output contract
 
-**Do NOT use `skills.config` when:**
+**Do NOT duplicate skill bodies when:**
 
-- Parent-session skill inheritance is sufficient
 - The agent needs to dynamically choose which skill to load
 - A normal main conversation workflow can keep the decision clearer
 
@@ -451,7 +449,7 @@ MUST produce concrete findings with file references.
 
 <relationship_to_context_fork>
 
-`skills.config` is a custom-agent configuration override. It does not preload individual skill bodies by name.
+Codex custom-agent configuration does not provide a per-agent `skills:` preload equivalent. Treat skill requirements as prompt guidance unless local Codex configuration gains an explicit, tested skill surface.
 
 </relationship_to_context_fork>
 

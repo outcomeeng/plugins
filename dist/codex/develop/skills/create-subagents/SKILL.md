@@ -21,7 +21,7 @@ A custom agent configured for an isolated, focused role — its developer instru
    - **developer_instructions**: core instructions that define the agent's behavior
    - **model**: Optional model override
    - **model_reasoning_effort**: Optional reasoning setting
-   - **sandbox_mode**, **mcp_servers**, **skills.config**: Optional inherited configuration overrides
+   - **sandbox_mode**, **mcp_servers**: Optional runtime configuration overrides
 3. Write the developer instructions with clear role, constraints, workflow, and output expectations.
 
 </workflow>
@@ -113,12 +113,6 @@ Product-scope custom agents override user-scope when names conflict.
 <field name="sandbox_mode">
 - Optional sandbox override
 - Use `read-only` for exploration, audit, and review agents that must not edit files
-
-</field>
-
-<field name="skills.config">
-- Optional skill configuration inherited from the parent session when omitted
-- Configure only when the custom agent needs a different skill surface from the parent session
 
 </field>
 

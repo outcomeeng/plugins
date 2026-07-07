@@ -59,17 +59,10 @@ Example:
 </core_principles>
 
 <structure_with_xml>
-Use XML tags to structure subagent prompts for clarity:
+Use XML tags to structure custom agent prompt bodies for clarity:
 
 <example type="security_reviewer">
 ```text
----
-name: security-reviewer
-description: ALWAYS use this subagent after code changes involving authentication, data access, or user input.
-tools: Read, Grep, Glob, Bash
-model: gpt-5.4
----
-
 <role>
 Role: senior security engineer specializing in web application security.
 </role>
@@ -119,13 +112,6 @@ For each issue found:
 
 <example type="test_writer">
 ```text
----
-name: test-writer
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
-tools: Read, Write, Grep, Glob, Bash
-model: gpt-5.4
----
-
 <role>
 Role: test automation specialist creating thorough, maintainable test suites.
 </role>
@@ -162,27 +148,20 @@ Follow AAA pattern:
 - Descriptive test names that explain what's being tested
 - Clear failure messages
 - No test interdependencies
-- Fast execution (mock external dependencies)
+- Fast execution at the lowest evidence level the product's testing standards allow
 - Clean up after tests (no side effects)
   </quality_criteria>
 
 <constraints>
 - Do not modify production code
 - Do not run tests without confirming setup is complete
-- Do not create tests that depend on external services without mocking
+- Do not replace dependencies unless the product's testing standards select an approved test double
 </constraints>
 ```
 </example>
 
 <example type="debugger">
 ```text
----
-name: debugger
-description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.
-tools: Read, Edit, Bash, Grep, Glob
-model: gpt-5.4
----
-
 <role>
 Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>

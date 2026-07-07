@@ -23,7 +23,7 @@ A {{! term('configured_agent') !}} configured for an isolated, focused role — 
    - **{{! field('configured_agent_prompt') !}}**: core instructions that define the agent's behavior
    - **model**: Optional model override
    - **model_reasoning_effort**: Optional reasoning setting
-   - **sandbox_mode**, **mcp_servers**, **skills.config**: Optional inherited configuration overrides
+   - **sandbox_mode**, **mcp_servers**: Optional runtime configuration overrides
 3. Write the developer instructions with clear role, constraints, workflow, and output expectations.
    {!% else %!}
 4. Run `/agents` command
@@ -177,13 +177,9 @@ Product-scope {{! term('configured_agents') !}} override user-scope when names c
 
 </field>
 
-<field name="skills.config">
-- Optional skill configuration inherited from the parent session when omitted
-- Configure only when the custom agent needs a different skill surface from the parent session
-
-</field>
 {!% else %!}
 <field name="tools">
+
 - Comma-separated list: `Read, Write, Edit, Bash, Grep`
 - If omitted: inherits all tools from main thread
 - Use `/agents` interface to see all available tools
