@@ -28,7 +28,9 @@ from outcomeeng.distribution.marketplace_sources import (
     CODEX_PLUGIN_MANIFEST,
     DEFAULT_MARKETPLACE,
     DIST_CODEX_PLUGINS_DIR,
+    MARKETPLACE_FIELD_NAME,
     MarketplaceSourceError,
+    PLUGIN_MANIFEST_FIELD_VERSION,
 )
 from outcomeeng_testing.harnesses.codex_cache import (
     MaterializingAddRunner,
@@ -117,13 +119,21 @@ def _write_partial_hook_root(cache_root: Path, plugin: str, version: str) -> Non
 def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
     manifest = repo_root / "src" / "plugins" / plugin / ".claude-plugin" / "plugin.json"
     manifest.parent.mkdir(parents=True)
-    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+    manifest.write_text(
+        json.dumps(
+            {MARKETPLACE_FIELD_NAME: plugin, PLUGIN_MANIFEST_FIELD_VERSION: version}
+        )
+    )
 
 
 def _write_dist_codex_manifest(repo_root: Path, plugin: str, version: str) -> None:
     manifest = repo_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST
     manifest.parent.mkdir(parents=True)
-    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+    manifest.write_text(
+        json.dumps(
+            {MARKETPLACE_FIELD_NAME: plugin, PLUGIN_MANIFEST_FIELD_VERSION: version}
+        )
+    )
 
 
 def _repo_with_dist_codex_plugin(tmp_path: Path, plugin: str, version: str) -> Path:

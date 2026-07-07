@@ -16,6 +16,31 @@ class StaleAfterSuccessfulRefresh:
     desired_version: str
 
 
+@dataclass(frozen=True)
+class AddableCodexPluginSet:
+    """Generated addable plugin set plus one working-tree-only plugin."""
+
+    generated_plugins: tuple[str, ...]
+    working_tree_only_plugin: str
+
+
+def addable_codex_plugin_sets() -> st.SearchStrategy[AddableCodexPluginSet]:
+    """Generate plugin sets that make hardcoded refresh lists falsifiable."""
+    plugin_names = st.from_regex(
+        r"[a-z][a-z0-9]*(?:-[a-z0-9]+){0,3}",
+        fullmatch=True,
+    )
+    return st.sets(plugin_names, min_size=1, max_size=4).flatmap(
+        lambda generated: st.builds(
+            _addable_codex_plugin_set,
+            generated=st.just(frozenset(generated)),
+            working_tree_only_plugin=plugin_names.filter(
+                lambda name: name not in generated
+            ),
+        )
+    )
+
+
 def stale_after_successful_refreshes() -> st.SearchStrategy[
     StaleAfterSuccessfulRefresh
 ]:
@@ -53,7 +78,20 @@ def _stale_after_successful_refresh(
     )
 
 
+def _addable_codex_plugin_set(
+    *,
+    generated: frozenset[str],
+    working_tree_only_plugin: str,
+) -> AddableCodexPluginSet:
+    return AddableCodexPluginSet(
+        generated_plugins=tuple(sorted(generated)),
+        working_tree_only_plugin=working_tree_only_plugin,
+    )
+
+
 __all__ = [
+    "AddableCodexPluginSet",
     "StaleAfterSuccessfulRefresh",
+    "addable_codex_plugin_sets",
     "stale_after_successful_refreshes",
 ]
