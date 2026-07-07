@@ -1,16 +1,6 @@
 <table_of_contents>
 
 - `<common_failure_modes>` — specification, coordination, verification, cascading, and non-determinism failures
-- `<recovery_strategies>` — degradation, retries, circuit breakers, timeouts, alternate verification, reassignment, and communication
-- `<observability>` — logging, correlation IDs, metrics, and evaluator agents
-- `<anti_patterns>` — silent failures, missing fallback paths, infinite retry, cascading errors, and missing context
-- `<recovery_checklist>` — pre-deployment recovery checks
-
-</table_of_contents>
-
-<table_of_contents>
-
-- `<common_failure_modes>` — specification, coordination, verification, cascading, and non-determinism failures
 - `<recovery_strategies>` — degradation, retry, circuit breaker, timeout, verification, and reassignment patterns
 - `<structured_communication>` — message types and output validation
 - `<observability>` — logging, correlation IDs, metrics, and evaluator agents
@@ -187,7 +177,11 @@ For long-running operations:
 </timeout_handling>
 ```
 
+{!% if target == 'codex' %!}
+**Note**: Codex has bounded tool-call execution. Subagent prompts should include guidance on what to do when operations approach reasonable time limits.
+{!% else %!}
 **Note**: Claude Code has built-in timeouts for tool calls. Subagent prompts should include guidance on what to do when operations approach reasonable time limits.
+{!% endif %!}
 </implementation>
 </timeouts>
 
@@ -335,7 +329,7 @@ Before returning output:
 Invocation ID: abc-123-def
 Timestamp: 2025-11-15T14:23:01Z
 Subagent: security-reviewer
-Model: sonnet-4.5
+Model: {{! term('configured_agent_standard_model') !}}
 Input: "Review changes in commit a3f2b1c"
 Tool calls:
   1. git diff a3f2b1c (success, 234 lines)
@@ -400,7 +394,7 @@ Main chat [abc123]:
 name: output-validator
 description: Validates subagent outputs against expected schemas and quality criteria. Use after any subagent produces structured output.
 tools: Read
-model: sonnet
+model: {{! term('configured_agent_standard_model') !}}
 ---
 
 <role>

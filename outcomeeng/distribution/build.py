@@ -137,6 +137,57 @@ class RuntimeTokenKind:
     names: dict[str, dict[str, str]]
 
 
+@dataclass(frozen=True)
+class RuntimeTokenResolverCase:
+    """A source-owned registry coordinate the resolver must render."""
+
+    kind: str
+    capability: str
+    runtime: str
+
+
+CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
+    "configured_agent": {"claude": "subagent", "codex": "custom agent"},
+    "configured_agents": {"claude": "subagents", "codex": "custom agents"},
+    "configured_agent_file": {
+        "claude": "subagent file",
+        "codex": "custom agent file",
+    },
+    "configured_agent_files": {
+        "claude": "subagent files",
+        "codex": "custom agent files",
+    },
+    "configured_agent_prompt": {
+        "claude": "system prompt",
+        "codex": "developer instructions",
+    },
+    "configured_agent_prompts": {
+        "claude": "system prompts",
+        "codex": "developer instructions",
+    },
+    "configured_agent_standard_model": {
+        "claude": "sonnet",
+        "codex": "gpt-5.4",
+    },
+    "configured_agent_fast_model": {
+        "claude": "haiku",
+        "codex": "gpt-5.4-mini",
+    },
+    "configured_agent_auditor_model": {
+        "claude": "sonnet",
+        "codex": "gpt-5.4",
+    },
+    "configured_agent_strong_models": {
+        "claude": "Sonnet",
+        "codex": "gpt-5.5 or gpt-5.4",
+    },
+    "configured_agent_fast_or_standard_models": {
+        "claude": "Haiku or Sonnet",
+        "codex": "gpt-5.4-mini or gpt-5.4",
+    },
+}
+
+
 # Source-owned registry of runtime-divergent names, keyed by token kind, then by
 # capability, then by runtime. Authored source names a capability via a per-kind
 # template token (`tool('<capability>')`, `field(...)`, `term(...)`); the build
@@ -158,8 +209,19 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
             "schedule_wakeup": {"claude": "ScheduleWakeup"},
         },
     ),
-    "field": RuntimeTokenKind(lint_enforced=True, names={}),
-    "term": RuntimeTokenKind(lint_enforced=False, names={}),
+    "field": RuntimeTokenKind(
+        lint_enforced=True,
+        names={
+            "configured_agent_prompt": {
+                "claude": "system prompt",
+                "codex": "developer_instructions",
+            },
+        },
+    ),
+    "term": RuntimeTokenKind(
+        lint_enforced=False,
+        names=CONFIGURED_AGENT_TERM_NAMES,
+    ),
     "file": RuntimeTokenKind(
         lint_enforced=True,
         names={
@@ -167,6 +229,22 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         },
     ),
 }
+
+
+def runtime_token_resolver_cases(
+    registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> tuple[RuntimeTokenResolverCase, ...]:
+    """Return every registry coordinate the runtime-token resolver must cover."""
+    return tuple(
+        RuntimeTokenResolverCase(
+            kind=kind,
+            capability=capability,
+            runtime=runtime,
+        )
+        for kind, kind_entry in registry.items()
+        for capability, runtime_names in kind_entry.names.items()
+        for runtime in runtime_names
+    )
 
 
 def resolve_runtime_token(

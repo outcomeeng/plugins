@@ -1,6 +1,6 @@
 <table_of_contents>
 
-- `<file_format>` — subagent frontmatter, body shape, and configuration fields
+- `<file_format>` — custom agent file shape and configuration fields
 - `<storage_locations>` — product, user, CLI, and plugin placement
 - `<execution_model>` — black-box execution and workflow implications
 - `<tool_configuration>` — inherited and specific tool grants
@@ -16,57 +16,70 @@
 </table_of_contents>
 
 <file_format>
-Subagent file structure:
+Custom agent file structure:
 
-```markdown
----
-name: your-subagent-name
-description: Description of when this subagent should be invoked
-tools: tool1, tool2, tool3 # Optional - inherits all tools if omitted
-model: sonnet # Optional - opus, sonnet, haiku, or inherit
-skills: # Optional - inject skill content at startup
-  - skill-name-one
-  - skill-name-two
----
-
+```toml
+name = "reviewer"
+description = "PR reviewer focused on correctness, security, and missing tests."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """
 <role>
-Your subagent's system prompt using pure XML structure. This defines the subagent's role, capabilities, and approach.
+Review code like an owner.
 </role>
 
 <constraints>
-Hard rules using NEVER/MUST/ALWAYS for critical boundaries.
+MUST prioritize correctness, security, behavior regressions, and missing test coverage.
 </constraints>
 
 <workflow>
-Step-by-step process for consistency.
+1. Read the scoped change.
+2. Inspect the relevant code paths.
+3. Return concrete findings with file references.
 </workflow>
+"""
 ```
 
 **Critical**: Use pure XML structure in the body. Remove ALL markdown headings (##, ###). Keep markdown formatting within content (bold, lists, code blocks).
 
 <configuration_fields>
 
-| Field         | Required | Description                                                                                |
-| ------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `name`        | Yes      | Unique identifier using lowercase letters and hyphens                                      |
-| `description` | Yes      | Natural language description of purpose. Include when Claude should invoke this.           |
-| `tools`       | No       | Comma-separated list. If omitted, inherits all tools from main thread                      |
-| `model`       | No       | `opus`, `sonnet`, `haiku`, or `inherit`; use explicit aliases when reproducibility matters |
-| `skills`      | No       | Array of skill names. Full skill content injected into subagent context at startup         |
+<codex_configuration_fields>
+
+Required fields:
+
+- `name`: agent name Codex uses when spawning or referring to this agent
+- `description`: human-facing guidance for when Codex should use this agent
+- `developer_instructions`: core instructions that define the agent's behavior
+
+Optional fields:
+
+- `nickname_candidates`: display nicknames for spawned agents
+- `model`: model override
+- `model_reasoning_effort`: reasoning setting
+- `sandbox_mode`: sandbox override, such as `read-only`
+- `mcp_servers`: MCP server overrides
+- `skills.config`: skill configuration inherited from the parent session if omitted
+
+</codex_configuration_fields>
 
 </configuration_fields>
 </file_format>
 
 <storage_locations>
 
-| Type        | Location               | Scope                | Priority |
-| ----------- | ---------------------- | -------------------- | -------- |
-| **Product** | `.claude/agents/`      | Current product only | Highest  |
-| **User**    | `~/.claude/agents/`    | All projects         | Lower    |
-| **CLI**     | `--agents` flag        | Current session      | Medium   |
-| **Plugin**  | Plugin's `agents/` dir | All projects         | Lowest   |
+<codex_storage_locations>
 
-When subagent names conflict, higher priority takes precedence.
+Priority order:
+
+1. Product: `.codex/agents/` for the current product
+2. User: `~/.codex/agents/` for all projects
+3. Plugin: plugin `agents/` directory for all projects
+
+</codex_storage_locations>
+
+When custom agent names conflict, higher priority takes precedence.
 </storage_locations>
 
 <execution_model>
@@ -153,46 +166,45 @@ Use `/agents` command to see full list of available tools.
 
 <model_selection>
 <model_capabilities>
-**Sonnet 4.5** (`sonnet`):
 
-- "Best model in the world for agents" (Anthropic)
-- Exceptional at agentic tasks: 64% problem-solving on coding benchmarks
-- SWE-bench Verified: 49.0%
-- **Use for**: Planning, complex reasoning, validation, critical decisions
+**gpt-5.5**:
 
-**Haiku** (`haiku`):
+- Strongest recommended Codex model for complex coding, computer use, knowledge work, and research workflows
+- Use for demanding agents that need planning, tool use, validation, and follow-through across larger context
 
-- Fast, lower-cost model alias
-- **Use for**: simple transformations, high-volume processing, and clear execution tasks when the owning workflow accepts lower-cost execution
+**gpt-5.4**:
 
-**Opus** (`opus`):
+- Strong coding, reasoning, tool use, and broader workflow capability
+- Use when a workflow is pinned to GPT-5.4 or needs strong reasoning with a stable explicit choice
 
-- Highest performance on evaluation benchmarks
-- Most capable but slowest and most expensive
-- **Use for**: Highest-stakes decisions, most complex reasoning
+**gpt-5.4-mini**:
 
-**Session inheritance** (`inherit`):
+- Fast, efficient model for responsive coding tasks and subagents
+- Use for read-heavy scans, large-file review, document processing, and lighter subagent work
 
-- Uses the same model as the main conversation.
-- NEVER use for verification, audit, review, or other reproducibility-sensitive agents.
+**model_reasoning_effort**:
+
+- `high`: complex logic, reviewer or security-focused agents, edge-case analysis
+- `medium`: balanced default for most agents
+- `low`: straightforward tasks where speed matters most
 
 </model_capabilities>
 
 <orchestration_strategy>
 **Explicit model orchestration pattern**:
 
-```markdown
-1. Sonnet (Coordinator):
+```text
+1. gpt-5.5 or gpt-5.4 (Coordinator):
    - Creates plan
    - Breaks task into subtasks
    - Identifies parallelizable work
 
-2. Haiku or Sonnet (Workers):
+2. gpt-5.4-mini or gpt-5.4 (Workers):
    - Execute subtasks in parallel
-   - Use `haiku` for simple or high-volume tasks when the owning workflow accepts lower-cost execution
-   - Use `sonnet` when comparable evidence quality or higher reasoning capability matters
+   - Use the faster model for simple or high-volume tasks when the owning workflow accepts lower-cost execution
+   - Use the stronger model when comparable evidence quality or higher reasoning capability matters
 
-3. Sonnet (Validator):
+3. gpt-5.5 or gpt-5.4 (Validator):
    - Integrates results
    - Validates output quality
    - Ensures coherence
@@ -204,25 +216,27 @@ Use `/agents` command to see full list of available tools.
 <decision_framework>
 **When to use each model**:
 
-| Task Type           | Recommended Model | Rationale                               |
-| ------------------- | ----------------- | --------------------------------------- |
-| Simple validation   | Haiku             | Fast lower-cost execution               |
-| Clear execution     | Haiku             | Efficient for bounded tasks             |
-| Complex analysis    | Sonnet            | Superior reasoning, worth the cost      |
-| Multi-step planning | Sonnet            | Best for breaking down complexity       |
-| Quality validation  | Sonnet            | Critical checkpoint, needs intelligence |
-| Batch processing    | Haiku             | Cost efficiency for high volume         |
-| Critical security   | Sonnet            | High stakes require best model          |
-| Output synthesis    | Sonnet            | Ensuring coherence across inputs        |
+<codex_decision_framework>
+
+- Simple validation: `gpt-5.4-mini` for fast lower-cost execution
+- Clear execution: `gpt-5.4-mini` for bounded tasks
+- Complex analysis: `gpt-5.4` or `gpt-5.5` for stronger reasoning
+- Multi-step planning: `gpt-5.5` for breaking down complexity
+- Quality validation: `gpt-5.4` or `gpt-5.5` when the checkpoint needs more capability
+- Batch processing: `gpt-5.4-mini` for cost efficiency at high volume
+- Critical security: `gpt-5.5` for high-stakes review
+- Output synthesis: `gpt-5.4` or `gpt-5.5` for coherence across inputs
+
+</codex_decision_framework>
 
 </decision_framework>
 </model_selection>
 
 <invocation>
 <automatic>
-Claude automatically selects subagents based on:
+The runtime automatically selects custom agents based on:
 - Task description in user's request
-- `description` field in subagent configuration
+- `description` field in custom agent configuration
 - Current context
 
 </automatic>
@@ -240,55 +254,41 @@ Users can explicitly request a subagent:
 
 <management>
 <using_agents_command>
-**Recommended**: Use `/agents` command for interactive management:
-- View all available subagents (built-in, user, product, plugin)
-- Create new subagents with guided setup
-- Edit existing subagents and their tool access
-- Delete custom subagents
-- See which subagents take priority when names conflict
+
+Manage project and user custom agents by editing TOML files directly:
+
+- Project scope: `.codex/agents/*.toml`
+- User scope: `~/.codex/agents/*.toml`
+
+Use `/agent` to switch between active agent threads and inspect running subagents.
 
 </using_agents_command>
 
 <direct_file_management>
-**Alternative**: Edit subagent files directly:
+**Alternative**: Edit custom agent files directly:
 
-- Product: `.claude/agents/subagent-name.md`
-- User: `~/.claude/agents/subagent-name.md`
+- Product: `.codex/agents/agent-name.toml`
+- User: `~/.codex/agents/agent-name.toml`
 
-Follow the file format specified above (YAML frontmatter + system prompt).
+Follow the TOML file format specified above.
+
 </direct_file_management>
 
-<cli_based_configuration>
-**Temporary**: Define subagents via CLI for session-specific use:
-
-```bash
-claude --agents '{
-  "code-reviewer": {
-    "description": "Expert code reviewer. Use proactively after code changes.",
-    "prompt": "You are a senior code reviewer. Focus on quality, security, and best practices.",
-    "tools": ["Read", "Grep", "Glob", "Bash"],
-    "model": "sonnet"
-  }
-}'
-```
-
-Useful for testing configurations before saving them.
-</cli_based_configuration>
 </management>
 
 <example_subagents>
 <test_writer>
 
-```markdown
+```text
 ---
 name: test-writer
 description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
 tools: Read, Write, Grep, Glob, Bash
-model: sonnet
+model: gpt-5.4
 ---
 
 <role>
-You are a test automation specialist creating thorough, maintainable test suites.
+Role: test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <workflow>
@@ -316,11 +316,11 @@ You are a test automation specialist creating thorough, maintainable test suites
 name: debugger
 description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.
 tools: Read, Edit, Bash, Grep, Glob
-model: sonnet
+model: gpt-5.4
 ---
 
 <role>
-You are a debugging specialist skilled at root cause analysis and systematic problem-solving.
+Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <workflow>
@@ -401,66 +401,57 @@ Scope: Can draft email, cannot access sensitive financial data
 </tool_security>
 
 <skill_injection>
-Subagents can preload skills via the `skills:` frontmatter field. The full SKILL.md content of each listed skill is injected into the subagent's context at startup — not lazily loaded or dynamically invoked.
+
+Custom agents can override skill configuration via `skills.config`. When omitted, the custom agent inherits the parent session's skill configuration.
 
 <how_it_works>
 
-- Claude Code reads each skill's SKILL.md and injects the content before the subagent runs
-- The subagent sees the skill content as reference material in its context
-- The subagent does NOT invoke skills at runtime with `/skill-name` — the content is already there
-- Subagents do NOT inherit skills from the parent conversation — every needed skill must be listed explicitly
+- Codex custom agent files can include `skills.config` when they need a skill configuration different from the parent session
+- Omit `skills.config` to inherit the parent session's skill configuration
+- Use a main conversation workflow when the agent needs to choose skills dynamically
 
 </how_it_works>
 
 <when_to_use>
 
-**Use `skills:` when the subagent needs domain methodology:**
+**Use `skills.config` when the custom agent needs a different skill surface from the parent session:**
 
-- Audit subagents that need the full audit methodology (phases, evidence models, verdict format)
-- Builder subagents that need coding standards or architecture conventions
-- Any subagent that would otherwise duplicate what a skill already provides
+- Read-only custom agents that should only see audit or review skills
+- Documentation-research custom agents that need a docs-focused skill configuration
+- Worker custom agents that need fewer skills than the parent context
 
-**Do NOT use `skills:` when:**
+**Do NOT use `skills.config` when:**
 
-- The subagent's system prompt already contains all needed instructions
-- The skill content is too large and would consume excessive context
-- The subagent needs to dynamically choose which skill to load (use main conversation instead)
+- Parent-session skill inheritance is sufficient
+- The agent needs to dynamically choose which skill to load
+- A normal main conversation workflow can keep the decision clearer
 
 </when_to_use>
 
 <example>
 
-```yaml
----
-name: adr-auditor
-description: Audit an ADR for structure, atemporal voice, and tag validity
-tools: Read, Glob, Grep, Skill
-skills:
-  - spec-tree:audit-adr
----
-
+```toml
+name = "reviewer"
+description = "PR reviewer focused on correctness, security, and missing tests."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """
 <role>
-Adversarial ADR auditor. Follow the injected audit methodology exactly.
+Review code like an owner.
 </role>
 
 <constraints>
-- Read-only — produce verdicts, not code changes
-- Output structured APPROVED or REJECTED verdict
+MUST produce concrete findings with file references.
 </constraints>
+"""
 ```
-
-The `audit-adr` skill content (audit workflow, evidence model, verdict format) is available in the subagent's context from the start.
 
 </example>
 
 <relationship_to_context_fork>
 
-The `skills:` field is the inverse of a skill's `context: fork` property:
-
-- **`skills:` in subagent**: Subagent pulls skill content in (subagent controls the system prompt)
-- **`context: fork` in skill**: Skill pushes its content into a subagent (skill controls the system prompt)
-
-Both use the same underlying mechanism — eager injection of skill content at startup.
+`skills.config` is a custom-agent configuration override. It does not preload individual skill bodies by name.
 
 </relationship_to_context_fork>
 
@@ -480,17 +471,17 @@ Prompt caching for frequently-invoked subagents:
 <cache_structure>
 **Structure prompts for caching**:
 
-```markdown
+```text
 ---
 name: security-reviewer
 description: ...
 tools: ...
-model: sonnet
+model: gpt-5.4
 ---
 
 [CACHEABLE SECTION - Stable content]
 <role>
-You are a senior security engineer...
+Role: senior security engineer...
 </role>
 
 <focus_areas>
@@ -558,14 +549,14 @@ Recent changes: {varies per invocation}
 Create task-specific subagents, not generic helpers.
 
 ❌ Bad: "You are a helpful assistant"
-✅ Good: "You are a React performance optimizer specializing in hooks and memoization"
+✅ Good: "React performance optimizer specializing in hooks and memoization"
 </be_specific>
 
 <clear_triggers>
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "Reviews code for security vulnerabilities. Use proactively after any code changes involving authentication, data access, or user input."
+✅ Good: "ALWAYS use this subagent after code changes involving authentication, data access, or user input."
 </clear_triggers>
 
 <focused_tools>
@@ -579,11 +570,11 @@ Grant only the tools needed for the task (least privilege):
 </focused_tools>
 
 <structured_prompts>
-Use XML tags to structure the system prompt for clarity:
+Use XML tags to structure the developer instructions for clarity:
 
 ```markdown
 <role>
-You are a senior security engineer specializing in web application security.
+Role: senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>

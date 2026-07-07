@@ -26,22 +26,15 @@ declares the full symmetric model.
 `RuntimeTokenKind(lint_enforced, names)` carries each kind's per-runtime names and whether
 the source-layer guard enforces them. The `tool`, `field`, `term`, and `file` kinds are each
 exposed as their own build template global (`tool(…)`, `field(…)`, `term(…)`, `file(…)`)
-rendering through one `resolve_runtime_token` path. The runtime-token lint
+rendering through one `resolve_runtime_token` path. The configured-agent concept terms and
+the configured-agent prompt field are populated in the source-owned registry and consumed by
+the `develop` plugin sources. The runtime-token lint
 (`outcomeeng/validation/runtime_tokens.py`, `forbidden_names`) derives its forbidden set from
 the lint-enforced kinds (`tool`, `field`, `file`) only — the review-only `term` kind is
-excluded because its common-word concept terms would false-positive across prose. The `field`
-and `term` registries ship empty; their consumers populate them.
+excluded because its common-word concept terms would false-positive across prose.
 
 ### Remaining (declared ahead of implementation)
 
-- **`term` registry population + concept-term conversion in `develop`.** Unblocked by the
-  `term()` token now existing. The subagent model (~224 mentions) and fact-level claims need
-  term mappings plus per-runtime conditional blocks; needs the consolidated Codex agent-model
-  facts before the `term` registry can be seeded and `develop` converted.
-- **`field` registry population.** Gated on a real per-runtime-*renamed* frontmatter field
-  existing — today's frontmatter divergence is handled by stripping, not renaming, so the
-  `field` registry stays empty until a renamed field appears (parallels the symmetric-strip
-  gate below).
 - **Symmetric frontmatter strip.** `spx/18-plugin-build.enabler/43-target-emission.enabler`
   strips Claude-only fields from Codex today. Generalize `strip_frontmatter_fields` to a
   per-target frontmatter schema (strip fields not in the target's schema, either direction)

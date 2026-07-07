@@ -30,22 +30,22 @@ For XML structure principles, read `/skill-standards` — they apply to subagent
 Define exactly what the subagent does and how it approaches tasks.
 
 ❌ Bad: "You are a helpful coding assistant"
-✅ Good: "You are a React performance optimizer. Analyze components for hooks best practices, unnecessary re-renders, and memoization opportunities."
+✅ Good: "React performance optimizer. Analyze components for hooks best practices, unnecessary re-renders, and memoization opportunities."
 </principle>
 
 <principle name="clarity">
 State the role, focus areas, and approach explicitly.
 
 ❌ Bad: "Help with tests"
-✅ Good: "You are a test automation specialist. Write comprehensive test suites using the product's testing framework. Focus on edge cases and error conditions."
+✅ Good: "Test automation specialist. Write comprehensive test suites using the product's testing framework. Focus on edge cases and error conditions."
 </principle>
 
 <principle name="constraints">
-Include what the subagent should NOT do. Use strong modal verbs (MUST, SHOULD, NEVER, ALWAYS) to reinforce behavioral guidelines.
+Include what the subagent must never do. Use strong modal verbs (MUST, NEVER, ALWAYS) to reinforce behavioral guidelines.
 
 Example:
 
-```markdown
+```text
 <constraints>
 - NEVER modify production code, ONLY test files
 - MUST verify tests pass before completing
@@ -62,16 +62,16 @@ Example:
 Use XML tags to structure subagent prompts for clarity:
 
 <example type="security_reviewer">
-```markdown
+```text
 ---
 name: security-reviewer
-description: Reviews code for security vulnerabilities. Use proactively after any code changes involving authentication, data access, or user input.
+description: ALWAYS use this subagent after code changes involving authentication, data access, or user input.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 <role>
-You are a senior security engineer specializing in web application security.
+Role: senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>
@@ -118,7 +118,7 @@ For each issue found:
 </example>
 
 <example type="test_writer">
-```markdown
+```text
 ---
 name: test-writer
 description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
@@ -127,7 +127,7 @@ model: sonnet
 ---
 
 <role>
-You are a test automation specialist creating thorough, maintainable test suites.
+Role: test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <testing_philosophy>
@@ -175,7 +175,7 @@ Follow AAA pattern:
 </example>
 
 <example type="debugger">
-```markdown
+```text
 ---
 name: debugger
 description: Investigates and fixes bugs. Use when errors occur or behavior is unexpected.
@@ -184,7 +184,7 @@ model: sonnet
 ---
 
 <role>
-You are a debugging specialist skilled at root cause analysis and systematic problem-solving.
+Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <debugging_methodology>
@@ -380,7 +380,7 @@ Begin with a clear role statement:
 
 ```markdown
 <role>
-You are a [specific expertise] specializing in [specific domain].
+Role: [specific expertise] specializing in [specific domain].
 </role>
 ```
 
@@ -534,7 +534,7 @@ Task is complete when:
 
 <quick_reference>
 
-```markdown
+```text
 ---
 name: subagent-name
 description: What it does and when to use it. Include trigger keywords.
@@ -543,7 +543,7 @@ model: sonnet
 ---
 
 <role>
-You are a [specific role] specializing in [domain].
+Role: [specific role] specializing in [domain].
 </role>
 
 <focus_areas>

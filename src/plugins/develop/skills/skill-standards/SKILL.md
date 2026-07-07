@@ -336,7 +336,7 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 <conciseness>
 
-The context window is shared. A skill competes for tokens with the system prompt, conversation history, other skills' metadata, and the user's request.
+The context window is shared. A skill competes for tokens with the {{! term('configured_agent_prompt') !}}, conversation history, other skills' metadata, and the user's request.
 
 **Test every sentence:** "Does removing this reduce Claude's effectiveness at the task?" If no — cut it.
 

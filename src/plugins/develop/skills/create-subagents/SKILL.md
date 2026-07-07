@@ -1,39 +1,80 @@
 ---
 name: create-subagents
 description: >-
-  ALWAYS invoke this skill when creating, editing, or configuring subagents.
-  NEVER create subagents without this skill.
+  ALWAYS invoke this skill when creating, editing, or configuring {{! term('configured_agents') !}}.
+  NEVER create {{! term('configured_agents') !}} without this skill.
 ---
 
 {!% require_skill 'develop:agent-prompt-standards' %!}
 
 <objective>
-A subagent configured for an isolated, focused role — its system prompt, tool access, and Task-tool orchestration.
+A {{! term('configured_agent') !}} configured for an isolated, focused role — its {{! term('configured_agent_prompt') !}}, tool access, and subagent-workflow orchestration.
 </objective>
 
 <quick_start>
 <workflow>
 
-1. Run `/agents` command
-2. Select "Create New Agent"
-3. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
-4. Define the subagent:
+{!% if target == 'codex' %!}
+
+1. Create a standalone TOML file under `.codex/agents/` for product scope or `~/.codex/agents/` for user scope.
+2. Define the custom agent:
+   - **name**: unique identifier Codex uses when spawning or referring to this agent
+   - **description**: human-facing guidance for when Codex should use this agent
+   - **{{! field('configured_agent_prompt') !}}**: core instructions that define the agent's behavior
+   - **model**: Optional model override
+   - **model_reasoning_effort**: Optional reasoning setting
+   - **sandbox_mode**, **mcp_servers**, **skills.config**: Optional inherited configuration overrides
+3. Write the developer instructions with clear role, constraints, workflow, and output expectations.
+   {!% else %!}
+4. Run `/agents` command
+5. Select "Create New Agent"
+6. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
+7. Define the {{! term('configured_agent') !}}:
    - **name**: lowercase-with-hyphens
-   - **description**: When should this subagent be used?
+   - **description**: When should this {{! term('configured_agent') !}} be used?
    - **tools**: Optional comma-separated list (inherits all if omitted)
    - **model**: Optional (`opus`, `sonnet`, `haiku`, or `inherit`)
    - **skills**: Optional array of skill names to inject at startup
-5. Write the system prompt (the subagent's instructions)
+8. Write the {{! term('configured_agent_prompt') !}} (the {{! term('configured_agent') !}}'s instructions)
+   {!% endif %!}
 
 </workflow>
 
 <example>
+{!% if target == 'codex' %!}
+```toml
+name = "code_reviewer"
+description = "Code reviewer focused on quality, security, and maintainability."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+{{! field('configured_agent_prompt') !}} = """
+<role>
+Review code for quality, security, and maintainability.
+</role>
+
+<focus_areas>
+
+- Correctness and behavior regressions
+- Security vulnerabilities
+- Maintainability risks
+- Missing test coverage
+
+</focus_areas>
+
+<output_format>
+Provide concrete findings with file:line references.
+</output_format>
+"""
+
+````
+{!% else %!}
 ```markdown
 ---
 name: code-reviewer
 description: Expert code reviewer. Use proactively after code changes to review for quality, security, and best practices.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: {{! term('configured_agent_standard_model') !}}
 ---
 
 <role>
@@ -52,35 +93,96 @@ Claude is a senior code reviewer focused on quality, security, and best practice
 <output_format>
 Provide specific, actionable feedback with file:line references.
 </output_format>
-
 ````
+
+{!% endif %!}
 </example>
 </quick_start>
 
 <file_structure>
-| Type | Location | Scope | Priority |
-|------|----------|-------|----------|
-| **Product** | `.claude/agents/` | Current product only | Highest |
-| **User** | `~/.claude/agents/` | All projects | Lower |
-| **Plugin** | Plugin's `agents/` dir | All projects | Lowest |
 
-Product-scope subagents override user-scope when names conflict.
+{!% if target == 'codex' %!}
+<codex_storage_locations>
+
+Priority order:
+
+1. Product: `.codex/agents/` for the current product
+2. User: `~/.codex/agents/` for all projects
+3. Plugin: plugin `agents/` directory for all projects
+
+</codex_storage_locations>
+{!% endif %!}
+
+{!% if target == 'claude' %!}
+<claude_storage_locations>
+
+Priority order:
+
+1. Product: `.claude/agents/` for the current product
+2. User: `~/.claude/agents/` for all projects
+3. Plugin: plugin `agents/` directory for all projects
+
+</claude_storage_locations>
+{!% endif %!}
+
+Product-scope {{! term('configured_agents') !}} override user-scope when names conflict.
 </file_structure>
 
 <configuration>
 <field name="name">
+{!% if target == 'codex' %!}
+- Unique identifier Codex uses when spawning or referring to this agent
+- Matching the filename to the agent name is the simplest convention
+{!% else %!}
 - Lowercase letters and hyphens only
 - Must be unique
+{!% endif %!}
 
 </field>
 
 <field name="description">
 - Natural language description of purpose
-- Include when Claude should invoke this subagent
-- Used for automatic subagent selection
+- Include when the runtime should invoke this {{! term('configured_agent') !}}
+- Used for automatic {{! term('configured_agent') !}} selection
 
 </field>
 
+{!% if target == 'codex' %!}
+<field name="{{! field('configured_agent_prompt') !}}">
+
+- Required multiline TOML string that defines the agent's behavior
+- Use clear role, constraints, workflow, and output expectations
+- Prefer XML structure inside the string for prompt clarity
+
+</field>
+
+<field name="model">
+- Optional model override
+- Use explicit models for verification, audit, review, and evidence-producing agents
+- Choose a faster, lower-cost model only when the owning workflow accepts that tradeoff
+
+</field>
+
+<field name="model_reasoning_effort">
+- Optional reasoning setting
+- Use `high` for complex logic, security review, or edge-case analysis
+- Use `medium` as the default for most custom agents
+- Use `low` only for straightforward work where speed matters
+
+</field>
+
+<field name="sandbox_mode">
+- Optional sandbox override
+- Use `read-only` for exploration, audit, and review agents that must not edit files
+
+</field>
+
+<field name="skills.config">
+- Optional skill configuration inherited from the parent session when omitted
+- Configure only when the custom agent needs a different skill surface from the parent session
+
+</field>
+{!% else %!}
 <field name="tools">
 - Comma-separated list: `Read, Write, Edit, Bash, Grep`
 - If omitted: inherits all tools from main thread
@@ -98,34 +200,41 @@ Product-scope subagents override user-scope when names conflict.
 </field>
 
 <field name="skills">
-- Array of skill names to inject into the subagent's context at startup
+- Array of skill names to inject into the {{! term('configured_agent') !}}'s context at startup
 - The full SKILL.md content of each listed skill is loaded before the subagent runs
 - Subagents do NOT inherit skills from the parent conversation — list every needed skill explicitly
-- The subagent receives skill content as reference material, not as dynamically invocable skills
+- The {{! term('configured_agent') !}} receives skill content as reference material, not as dynamically invocable skills
 - If omitted: no skills injected
 
 ```yaml
 skills:
   - audit-typescript
   - testing
-````
+```
 
 </field>
+{!% endif %!}
 </configuration>
 
 <execution_model>
 <critical_constraint>
+{!% if target == 'codex' %!}
+**Subagent workflows are black boxes that cannot interact with users.**
+
+Custom agents launched as subagents run in isolated contexts and return their final output to the main conversation. They:
+{!% else %!}
 **Subagents are black boxes that cannot interact with users.**
 
 Subagents run in isolated contexts and return their final output to the main conversation. They:
+{!% endif %!}
 
 - ✅ Can use tools like Read, Write, Edit, Bash, Grep, Glob
 - ✅ Can access MCP servers and other non-interactive tools
 - ❌ **Cannot use {{! tool('ask_user') !}}** or any tool requiring user interaction
 - ❌ **Cannot present options or wait for user input**
-- ❌ **User never sees subagent's intermediate steps**
+- ❌ **User never sees subagent-workflow intermediate steps**
 
-The main conversation sees only the subagent's final report/output.
+The main conversation sees only the subagent workflow's final report/output.
 </critical_constraint>
 
 <workflow_design>
@@ -164,18 +273,18 @@ Main Chat: Present results, handle testing/deployment
 
 <system_prompt_guidelines>
 <principle name="be_specific">
-Clearly define the subagent's role, capabilities, and constraints.
+Clearly define the {{! term('configured_agent') !}}'s role, capabilities, and constraints.
 </principle>
 
 <principle name="use_pure_xml_structure">
-Structure the system prompt with pure XML tags. Remove ALL markdown headings from the body.
+Structure the {{! term('configured_agent_prompt') !}} with pure XML tags. Remove ALL markdown headings from the body.
 
-```markdown
+```text
 ---
 name: security-reviewer
 description: Reviews code for security vulnerabilities
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: {{! term('configured_agent_standard_model') !}}
 ---
 
 <role>
@@ -209,7 +318,7 @@ Tailor instructions to the specific task domain. Don't create generic "helper" s
 </system_prompt_guidelines>
 
 <subagent_xml_structure>
-Subagent.md files are system prompts consumed only by Claude. Like skills and slash commands, they should use pure XML structure for optimal parsing and token efficiency.
+{{! term('configured_agent_file') !}} bodies are {{! term('configured_agent_prompts') !}} consumed by the target runtime. Like skills and slash commands, they should use pure XML structure for parsing and token efficiency.
 
 <recommended_tags>
 Common tags for subagent structure:
@@ -225,17 +334,17 @@ Common tags for subagent structure:
 </recommended_tags>
 
 <intelligence_rules>
-**Simple subagents** (single focused task):
+**Simple {{! term('configured_agents') !}}** (single focused task):
 
 - Use role + constraints + workflow minimum
 - Example: code-reviewer, test-runner
 
-**Medium subagents** (multi-step process):
+**Medium {{! term('configured_agents') !}}** (multi-step process):
 
 - Add workflow steps, output_format, success_criteria
 - Example: api-researcher, documentation-generator
 
-**Complex subagents** (research + generation + validation):
+**Complex {{! term('configured_agents') !}}** (research + generation + validation):
 
 - Add all tags as appropriate including validation, examples
 - Example: mcp-api-researcher, comprehensive-auditor
@@ -243,17 +352,17 @@ Common tags for subagent structure:
 </intelligence_rules>
 
 <critical_rule>
-**Remove ALL markdown headings (##, ###) from subagent body.** Use semantic XML tags instead.
+**Remove ALL markdown headings (##, ###) from {{! term('configured_agent') !}} body.** Use semantic XML tags instead.
 
 Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links).
 
-For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to subagents.
+For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to {{! term('configured_agents') !}}.
 </critical_rule>
 </subagent_xml_structure>
 
 <invocation>
 <automatic>
-Claude automatically selects subagents based on the `description` field when it matches the current task.
+The runtime automatically selects {{! term('configured_agents') !}} based on the `description` field when it matches the current task.
 </automatic>
 
 <explicit>
@@ -272,19 +381,35 @@ Explicitly invoke a subagent:
 
 <management>
 <using_agents_command>
+{!% if target == 'codex' %!}
+Edit `.codex/agents/*.toml` or `~/.codex/agents/*.toml` files to:
+- Create new custom agents
+- Edit existing custom agents and their configuration
+- Choose project-scoped or user-scoped behavior
+
+Use `/agent` to switch between active agent threads and inspect running subagents.
+{!% else %!}
 Run `/agents` for an interactive interface to:
+
 - View all available subagents
 - Create new subagents
 - Edit existing subagents
 - Delete custom subagents
+  {!% endif %!}
 
 </using_agents_command>
 
 <manual_editing>
-Edit subagent files directly:
+Edit {{! term('configured_agent_files') !}} directly:
 
+{!% if target == 'codex' %!}
+
+- Product: `.codex/agents/agent-name.toml`
+- User: `~/.codex/agents/agent-name.toml`
+  {!% else %!}
 - Product: `.claude/agents/subagent-name.md`
 - User: `~/.claude/agents/subagent-name.md`
+  {!% endif %!}
 
 </manual_editing>
 </management>
@@ -292,7 +417,7 @@ Edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md)
+**{{! term('configured_agent') | capitalize !}} usage and configuration**: [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md)
 
 - File format and configuration
 - Skill injection (`skills:` field for preloading skill content)
@@ -349,12 +474,20 @@ Edit subagent files directly:
 </reference>
 
 <success_criteria>
-A well-configured subagent has:
+A well-configured {{! term('configured_agent') !}} has:
 
+{!% if target == 'codex' %!}
+
+- Valid TOML file with `name`, `description`, and `{{! field('configured_agent_prompt') !}}`
+- Clear role definition in {{! term('configured_agent_prompt') !}}
+- Appropriate sandbox and tool-surface restrictions
+- XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
+  {!% else %!}
 - Valid YAML frontmatter (name matches file, description includes triggers)
-- Clear role definition in system prompt
+- Clear role definition in {{! term('configured_agent_prompt') !}}
 - Appropriate tool restrictions (least privilege)
-- XML-structured system prompt with role, approach, and constraints
+- XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
+  {!% endif %!}
 - Description field optimized for automatic routing
 - Successfully tested on representative tasks
 - Model selection appropriate for task complexity, cost, and reproducibility needs

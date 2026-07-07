@@ -19,7 +19,7 @@ A skill that operates on user-supplied input handles it explicitly:
 - **`argument-hint`** — free-text autocomplete hint shown after `/skill-name`. Present whenever the skill takes arguments; omit for self-contained skills.
 - **`$ARGUMENTS`** — consumes the full raw instruction string. Use it when preserving whitespace and multi-word intent matters, including forwarding instructions between lifecycle skills.
 - **`$ARGUMENTS[N]` or `$N`** — consumes a numbered positional value when the position is stable and a name would add no clarity.
-- **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$subagent_path`.
+- **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$configured_agent_path`.
 - **Integration** — reference each declared `$name` where the body consumes it (e.g. "Audit the skill at `$skill_path`"), never as unused decoration. An argument declared but never substituted, or substituted but never declared, is a defect.
 - **Empty arguments** — a skill that requires input states the requirement and what it does when input is absent; a skill that works with or without input states the fallback (e.g. "operate on the current selection when `$target` is empty" or "use the current changeset when `$ARGUMENTS` is empty").
 
@@ -32,7 +32,7 @@ A skill that operates on user-supplied input handles it explicitly:
 Examples:
 
 - Free-form forwarding: `/merge` reads `$ARGUMENTS` and forwards `$ARGUMENTS` verbatim to `/manage-github-pr`, preserving multi-word instructions.
-- Stable token: `arguments: subagent_path` with `$subagent_path` names one path-like positional value for an audit skill.
+- Stable token: `arguments: configured_agent_path` with `$configured_agent_path` names one path-like positional value for an audit skill.
 
 </arguments>
 

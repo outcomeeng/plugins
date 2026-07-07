@@ -1,18 +1,5 @@
 <table_of_contents>
 
-- `<evaluation_framework>` — task completion, tool correctness, output quality, robustness, efficiency, and G-Eval
-- `<validation_strategies>` — offline testing, simulation, and online monitoring
-- `<evaluation_driven_development>` — test-driven prompt and subagent iteration
-- `<testing_checklist>` — deployment readiness checks
-- `<synthetic_data>` — generated case data and limitations
-- `<llm_as_judge>` — judge patterns for qualitative outputs
-- `<test_driven_development>` — prompt-first test design
-- `<anti_patterns>` — missing tests, happy-path-only checks, missing metrics, and one-time testing
-
-</table_of_contents>
-
-<table_of_contents>
-
 - `<evaluation_framework>` — task completion, tool correctness, output quality, robustness, and efficiency metrics
 - `<g_eval>` — evaluator-prompt pattern
 - `<validation_strategies>` — offline testing, simulation, and online monitoring
