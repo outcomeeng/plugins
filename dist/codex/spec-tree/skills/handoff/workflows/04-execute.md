@@ -117,7 +117,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 - `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
 - `<constraints>` (optional) — session-specific normative rules; omit when there are none
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context
-- `<incorporated_sessions>` — include ONLY when the claimed-session set is non-empty; list each session id with its archive disposition
+- `<incorporated_sessions>` — include when the claimed-session set or `artifact_ids` set is non-empty; list each claimed session id and superseded same-conversation artifact id with archive disposition
 
 </write_canonical_continuation>
 

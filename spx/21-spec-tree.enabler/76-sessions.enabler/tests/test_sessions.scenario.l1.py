@@ -1,8 +1,10 @@
 """Scenario evidence for ``spx/21-spec-tree.enabler/76-sessions.enabler``."""
 
 from outcomeeng_testing.harnesses.session_scenarios import (
+    archive_moves_todo_session_to_archive,
     explicit_work_branch_ref_absent_from_origin_is_refused,
     explicit_work_branch_ref_records_branch_name,
+    handoff_preserves_incorporated_session_reference,
     handoff_file_appears_in_todo,
     handoff_preserves_full_body_payload,
     issues_md_excerpt_preserved,
@@ -66,6 +68,14 @@ def test_release_does_not_modify_content() -> None:
 
 def test_release_multiple_ids_in_single_invocation() -> None:
     assert release_multiple_ids_in_single_invocation()
+
+
+def test_archive_moves_todo_session_to_archive() -> None:
+    assert archive_moves_todo_session_to_archive()
+
+
+def test_handoff_preserves_incorporated_session_reference() -> None:
+    assert handoff_preserves_incorporated_session_reference()
 
 
 def test_plan_md_excerpt_preserved() -> None:

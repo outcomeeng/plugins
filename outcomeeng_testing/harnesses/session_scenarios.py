@@ -73,6 +73,25 @@ def _release(
     )
 
 
+def _archive(
+    sessions_dir: Path, session_id: str, *, cwd: Path
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "spx",
+            "session",
+            "archive",
+            "--sessions-dir",
+            str(sessions_dir),
+            session_id,
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(cwd),
+        check=False,
+    )
+
+
 def _parse_handoff_id(stdout: str) -> str:
     match = re.search(r"<HANDOFF_ID>(.+?)</HANDOFF_ID>", stdout)
     assert match, f"no <HANDOFF_ID> in: {stdout}"
@@ -312,6 +331,59 @@ def release_multiple_ids_in_single_invocation() -> bool:
         for session_id in (first_id, second_id):
             assert not (sessions_dir / "doing" / f"{session_id}.md").exists()
             assert (sessions_dir / "todo" / f"{session_id}.md").exists()
+        return True
+
+
+def archive_moves_todo_session_to_archive() -> bool:
+    with TemporaryDirectory() as directory, accepted_git_context() as repo:
+        sessions_dir = Path(directory) / "sessions"
+        result = _handoff(
+            sessions_dir,
+            "# Session to archive\n",
+            cwd=repo,
+            goal="Verify archive moves a todo session",
+            next_step="Archive the created session",
+        )
+        assert result.returncode == 0, result.stderr
+        session_id = _parse_handoff_id(result.stdout)
+        archive_result = _archive(sessions_dir, session_id, cwd=repo)
+        assert archive_result.returncode == 0, archive_result.stderr
+
+        assert not (sessions_dir / "todo" / f"{session_id}.md").exists()
+        assert (sessions_dir / "archive" / f"{session_id}.md").exists()
+        return True
+
+
+def handoff_preserves_incorporated_session_reference() -> bool:
+    with TemporaryDirectory() as directory, accepted_git_context() as repo:
+        sessions_dir = Path(directory) / "sessions"
+        prior = _handoff(
+            sessions_dir,
+            "# Prior session\n",
+            cwd=repo,
+            goal="Create prior session reference",
+            next_step="Use the emitted id in a replacement session",
+        )
+        assert prior.returncode == 0, prior.stderr
+        prior_id = _parse_handoff_id(prior.stdout)
+        replacement_body = textwrap.dedent(
+            f"""\
+            # Canonical continuation
+
+            <incorporated_sessions>
+            - {prior_id}
+            </incorporated_sessions>
+            """
+        )
+        result = _handoff(
+            sessions_dir,
+            replacement_body,
+            cwd=repo,
+            goal="Verify incorporated-session body preservation",
+            next_step="Read the created replacement session",
+        )
+        assert result.returncode == 0, result.stderr
+        assert replacement_body in _parse_session_file(result.stdout).read_text()
         return True
 
 
