@@ -12,49 +12,24 @@ A subagent configured for an isolated, focused role — its system prompt, tool 
 </objective>
 
 <quick_start>
+
 <workflow>
 
-4. Run `/agents` command
-5. Select "Create New Agent"
-6. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
-7. Define the subagent:
+1. Run `/agents` command
+2. Select "Create New Agent"
+3. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
+4. Define the subagent:
    - **name**: lowercase-with-hyphens
    - **description**: When should this subagent be used?
    - **tools**: Optional comma-separated list (inherits all if omitted)
    - **model**: Optional (`opus`, `sonnet`, `haiku`, or `inherit`)
    - **skills**: Optional array of skill names to inject at startup
-8. Write the system prompt (the subagent's instructions)
+5. Write the system prompt (the subagent's instructions)
 
 </workflow>
 
 <example>
-
-```markdown
----
-name: code-reviewer
-description: Expert code reviewer. Use proactively after code changes to review for quality, security, and best practices.
-tools: Read, Grep, Glob, Bash
-model: sonnet
----
-
-<role>
-Claude is a senior code reviewer focused on quality, security, and best practices.
-</role>
-
-<focus_areas>
-
-- Code quality and maintainability
-- Security vulnerabilities
-- Performance issues
-- Best practices adherence
-
-</focus_areas>
-
-<output_format>
-Provide specific, actionable feedback with file:line references.
-</output_format>
-```
-
+Read `${CLAUDE_SKILL_DIR}/references/subagents.md` for complete subagent file examples and field references.
 </example>
 </quick_start>
 

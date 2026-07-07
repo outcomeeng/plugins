@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.runtime_parameterization import (
     conditional_renders_absent_capability_only_where_present,
+    configured_agent_model_terms_match_converter_models,
     field_global_is_wired_to_the_resolver,
     field_kind_renders_live_registry_name_per_target,
     file_kind_renders_guide_filename_per_target,
@@ -53,6 +54,10 @@ def test_registry_keyed_by_kind_with_explicit_guard_enforcement() -> None:
 
 def test_term_registry_names_configured_agent_concepts() -> None:
     assert term_registry_names_configured_agent_concepts()
+
+
+def test_configured_agent_model_terms_match_converter_models() -> None:
+    assert configured_agent_model_terms_match_converter_models()
 
 
 def test_resolve_renders_each_kind_from_its_own_sub_registry() -> None:

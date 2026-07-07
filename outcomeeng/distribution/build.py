@@ -30,6 +30,11 @@ from jinja2 import (
 )
 from jinja2.runtime import Context
 
+from outcomeeng.distribution.agents import (
+    CODEX_FAST_MODEL,
+    CODEX_STANDARD_MODEL,
+    CODEX_STRONG_MODEL,
+)
 from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
@@ -167,23 +172,23 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
     },
     "configured_agent_standard_model": {
         "claude": "sonnet",
-        "codex": "gpt-5.4",
+        "codex": CODEX_STANDARD_MODEL,
     },
     "configured_agent_fast_model": {
         "claude": "haiku",
-        "codex": "gpt-5.4-mini",
+        "codex": CODEX_FAST_MODEL,
     },
     "configured_agent_auditor_model": {
         "claude": "sonnet",
-        "codex": "gpt-5.4",
+        "codex": CODEX_STANDARD_MODEL,
     },
     "configured_agent_strong_models": {
         "claude": "Sonnet",
-        "codex": "gpt-5.5 or gpt-5.4",
+        "codex": f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}",
     },
     "configured_agent_fast_or_standard_models": {
         "claude": "Haiku or Sonnet",
-        "codex": "gpt-5.4-mini or gpt-5.4",
+        "codex": f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}",
     },
 }
 

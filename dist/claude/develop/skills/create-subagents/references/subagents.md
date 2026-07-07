@@ -145,9 +145,11 @@ description: Reviews code for quality and security
 ```
 
 Subagent has access to all tools, including MCP tools.
+
 </inherit_all_tools>
 
 <specific_tools>
+
 Specify tools as comma-separated list for granular control:
 
 ```yaml

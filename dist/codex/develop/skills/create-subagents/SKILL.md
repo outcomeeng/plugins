@@ -12,6 +12,7 @@ A custom agent configured for an isolated, focused role — its developer instru
 </objective>
 
 <quick_start>
+
 <workflow>
 
 1. Create a standalone TOML file under `.codex/agents/` for product scope or `~/.codex/agents/` for user scope.
@@ -27,33 +28,7 @@ A custom agent configured for an isolated, focused role — its developer instru
 </workflow>
 
 <example>
-
-```toml
-name = "code_reviewer"
-description = "Code reviewer focused on quality, security, and maintainability."
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"
-developer_instructions = """
-<role>
-Review code for quality, security, and maintainability.
-</role>
-
-<focus_areas>
-
-- Correctness and behavior regressions
-- Security vulnerabilities
-- Maintainability risks
-- Missing test coverage
-
-</focus_areas>
-
-<output_format>
-Provide concrete findings with file:line references.
-</output_format>
-"""
-```
-
+Read `${SKILL_DIR}/references/subagents.md` for complete custom agent file examples and field references.
 </example>
 </quick_start>
 
@@ -65,7 +40,6 @@ Priority order:
 
 1. Product: `.codex/agents/` for the current product
 2. User: `~/.codex/agents/` for all projects
-3. Plugin: plugin `agents/` directory for all projects
 
 </codex_storage_locations>
 
@@ -179,7 +153,7 @@ Structure the developer instructions with pure XML tags. Remove ALL markdown hea
 ```toml
 name = "security_reviewer"
 description = "Reviews code for security vulnerabilities."
-tools = ["Read", "Grep", "Glob", "Bash"]
+sandbox_mode = "read-only"
 model = "gpt-5.4"
 developer_instructions = """
 <role>

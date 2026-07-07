@@ -225,18 +225,26 @@ description: Reviews code for quality and security
 
 {!% endif %!}
 
+{!% if target == 'codex' %!}
+The custom agent inherits the parent session's available tools, sandbox, and MCP configuration unless supported Codex config keys override them.
+{!% else %!}
 Subagent has access to all tools, including MCP tools.
+{!% endif %!}
 </inherit_all_tools>
 
 <specific_tools>
+{!% if target == 'codex' %!}
+Configure sandbox and MCP permission settings through supported Codex config keys:
+{!% else %!}
 Specify tools as comma-separated list for granular control:
+{!% endif %!}
 
 {!% if target == 'codex' %!}
 
 ```toml
 name = "read_only_analyzer"
 description = "Analyzes code without making changes."
-tools = ["Read", "Grep", "Glob"]
+sandbox_mode = "read-only"
 {{! field('configured_agent_prompt') !}} = """
 <role>
 Analyze code without making changes.
@@ -469,7 +477,7 @@ Useful for testing configurations before saving them.
 ```toml
 name = "test_writer"
 description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
-tools = ["Read", "Write", "Grep", "Glob", "Bash"]
+sandbox_mode = "workspace-write"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>
@@ -534,7 +542,7 @@ Role: test automation specialist creating thorough, maintainable test suites.
 ```toml
 name = "debugger"
 description = "Investigates and fixes bugs. Use when errors occur or behavior is unexpected."
-tools = ["Read", "Edit", "Bash", "Grep", "Glob"]
+sandbox_mode = "workspace-write"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>
@@ -795,7 +803,7 @@ Prompt caching for frequently-invoked subagents:
 ```toml
 name = "security_reviewer"
 description = "..."
-tools = ["Read", "Grep", "Glob"]
+sandbox_mode = "read-only"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 [CACHEABLE SECTION - Stable content]

@@ -6,6 +6,11 @@ from collections.abc import Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.agents import (
+    CODEX_FAST_MODEL,
+    CODEX_STANDARD_MODEL,
+    CODEX_STRONG_MODEL,
+)
 from outcomeeng.distribution.build import (
     CONFIGURED_AGENT_TERM_NAMES,
     IMPLEMENTED,
@@ -131,6 +136,20 @@ def term_registry_names_configured_agent_concepts() -> bool:
     return all(
         terms[capability] == names
         for capability, names in CONFIGURED_AGENT_TERM_NAMES.items()
+    )
+
+
+def configured_agent_model_terms_match_converter_models() -> bool:
+    _require_implemented()
+    terms = RUNTIME_TOKEN_REGISTRY[TERM_KIND].names
+    return (
+        terms["configured_agent_standard_model"]["codex"] == CODEX_STANDARD_MODEL
+        and terms["configured_agent_fast_model"]["codex"] == CODEX_FAST_MODEL
+        and terms["configured_agent_auditor_model"]["codex"] == CODEX_STANDARD_MODEL
+        and terms["configured_agent_strong_models"]["codex"]
+        == f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}"
+        and terms["configured_agent_fast_or_standard_models"]["codex"]
+        == f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}"
     )
 
 

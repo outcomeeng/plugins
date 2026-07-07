@@ -16,7 +16,11 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "name",
         "description",
         "model",
+        "model_reasoning_effort",
         "effort",
+        "sandbox_mode",
+        "nickname_candidates",
+        "mcp_servers",
         "permissionMode",
         "skills",
         "tools",
@@ -26,13 +30,16 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
 GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
 DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
 DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
+CODEX_STRONG_MODEL: Final = "gpt-5.5"
+CODEX_STANDARD_MODEL: Final = "gpt-5.4"
+CODEX_FAST_MODEL: Final = "gpt-5.4-mini"
 MODEL_MAPPINGS: Final = (
-    ("claude-opus", "gpt-5.4"),
-    ("opus", "gpt-5.4"),
-    ("claude-sonnet", "gpt-5.4"),
-    ("sonnet", "gpt-5.4"),
-    ("claude-haiku", "gpt-5.4-mini"),
-    ("haiku", "gpt-5.4-mini"),
+    ("claude-opus", CODEX_STRONG_MODEL),
+    ("opus", CODEX_STRONG_MODEL),
+    ("claude-sonnet", CODEX_STANDARD_MODEL),
+    ("sonnet", CODEX_STANDARD_MODEL),
+    ("claude-haiku", CODEX_FAST_MODEL),
+    ("haiku", CODEX_FAST_MODEL),
 )
 EFFORT_MAPPINGS: Final = {
     "low": "low",
@@ -50,6 +57,9 @@ UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
+MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
+MANUAL_REVIEW_GUIDANCE_CLOSE: Final = f"</{MANUAL_REVIEW_GUIDANCE_TAG}>"
 READ_ONLY_SANDBOX_MODE: Final = "read-only"
 WEB_SEARCH_DISABLED: Final = "disabled"
 READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "Read"})
@@ -63,15 +73,19 @@ class AgentConversionError(Exception):
 
 
 @dataclass(frozen=True)
-class ClaudeAgent:
-    """Parsed Claude agent markdown."""
+class SourceAgent:
+    """Parsed rendered plugin agent markdown."""
 
     source_path: Path
     name: str
     description: str
     body: str
     model: str | None = None
+    model_reasoning_effort: str | None = None
     effort: str | None = None
+    sandbox_mode: str | None = None
+    nickname_candidates: tuple[str, ...] = ()
+    mcp_servers: Mapping[str, object] | None = None
     permission_mode: str | None = None
     skills: tuple[str, ...] = ()
     tools: tuple[str, ...] = ()
@@ -102,23 +116,27 @@ def iter_agent_files(source_root: Path) -> tuple[Path, ...]:
     return tuple(sorted(source_root.glob("*/agents/*.md")))
 
 
-def parse_agent_markdown(path: Path) -> ClaudeAgent:
-    """Parse one Claude agent markdown file."""
+def parse_agent_markdown(path: Path) -> SourceAgent:
+    """Parse one rendered plugin agent markdown file."""
     frontmatter, body = _split_frontmatter(path.read_text(encoding="utf-8"))
     name = _optional_string(frontmatter, "name") or path.stem
     description = _optional_string(frontmatter, "description") or (
-        f"Converted Claude agent from {path.name}."
+        f"Converted source agent from {path.name}."
     )
     unsupported_fields = tuple(
         sorted(key for key in frontmatter if key not in SUPPORTED_FRONTMATTER_FIELDS)
     )
-    return ClaudeAgent(
+    return SourceAgent(
         source_path=path,
         name=name,
         description=description,
         body=body,
         model=_optional_string(frontmatter, "model"),
+        model_reasoning_effort=_optional_string(frontmatter, "model_reasoning_effort"),
         effort=_optional_string(frontmatter, "effort"),
+        sandbox_mode=_optional_string(frontmatter, "sandbox_mode"),
+        nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
+        mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
         permission_mode=_optional_string(frontmatter, "permissionMode"),
         skills=_string_tuple(frontmatter, "skills"),
         tools=_string_tuple(frontmatter, "tools"),
@@ -128,8 +146,8 @@ def parse_agent_markdown(path: Path) -> ClaudeAgent:
     )
 
 
-def convert_agent(agent: ClaudeAgent) -> CodexAgent:
-    """Convert one Claude agent into a Codex custom-agent representation."""
+def convert_agent(agent: SourceAgent) -> CodexAgent:
+    """Convert one rendered plugin agent into a Codex custom-agent representation."""
     values: dict[str, object] = {
         "name": agent.name,
         "description": agent.description,
@@ -137,10 +155,10 @@ def convert_agent(agent: ClaudeAgent) -> CodexAgent:
     model = map_model(agent.model)
     if model is not None:
         values["model"] = model
-    effort = map_effort(agent.effort)
+    effort = agent.model_reasoning_effort or map_effort(agent.effort)
     if effort is not None:
         values["model_reasoning_effort"] = effort
-    sandbox_mode = map_permission_mode(agent.permission_mode)
+    sandbox_mode = agent.sandbox_mode or map_permission_mode(agent.permission_mode)
     if sandbox_mode is None:
         sandbox_mode = infer_sandbox_mode(
             agent.tools,
@@ -152,6 +170,10 @@ def convert_agent(agent: ClaudeAgent) -> CodexAgent:
     web_search = map_web_search(agent.tools, tools_declared=agent.tools_declared)
     if web_search is not None:
         values["web_search"] = web_search
+    if agent.nickname_candidates:
+        values["nickname_candidates"] = agent.nickname_candidates
+    if agent.mcp_servers:
+        values["mcp_servers"] = agent.mcp_servers
     values["shell_environment_policy"] = {
         "set": {
             CODEX_AGENT_ENV_VAR: agent_environment_marker(agent),
@@ -164,7 +186,7 @@ def convert_agent(agent: ClaudeAgent) -> CodexAgent:
 
 
 def map_model(model: str | None) -> str | None:
-    """Map Claude model names to Codex model slugs."""
+    """Map source model names to Codex model slugs."""
     if model is None or model == INHERIT_MODEL_VALUE:
         return None
     for source_prefix, target_model in MODEL_MAPPINGS:
@@ -173,7 +195,7 @@ def map_model(model: str | None) -> str | None:
     return model
 
 
-def agent_environment_marker(agent: ClaudeAgent) -> str:
+def agent_environment_marker(agent: SourceAgent) -> str:
     """Return the stable Codex policy marker for a converted agent."""
     plugin_name = _source_plugin_name(agent.source_path)
     if plugin_name is None:
@@ -182,14 +204,14 @@ def agent_environment_marker(agent: ClaudeAgent) -> str:
 
 
 def map_effort(effort: str | None) -> str | None:
-    """Map Claude effort values to Codex reasoning effort values."""
+    """Map source effort values to Codex reasoning effort values."""
     if effort is None:
         return None
     return EFFORT_MAPPINGS.get(effort, effort)
 
 
 def map_permission_mode(permission_mode: str | None) -> str | None:
-    """Map supported Claude permission modes to Codex sandbox modes."""
+    """Map supported source permission modes to Codex sandbox modes."""
     if permission_mode is None:
         return None
     return PERMISSION_MODE_MAPPINGS.get(permission_mode)
@@ -200,7 +222,7 @@ def map_web_search(
     *,
     tools_declared: bool = True,
 ) -> str | None:
-    """Return the Codex web-search mode implied by an explicit Claude tool allowlist."""
+    """Return the Codex web-search mode implied by an explicit source tool allowlist."""
     tool_set = set(tools)
     if not tools_declared or ALL_TOOLS_SENTINEL in tool_set:
         return None
@@ -215,7 +237,7 @@ def infer_sandbox_mode(
     *,
     tools_declared: bool = True,
 ) -> str | None:
-    """Infer a Codex sandbox from an explicit Claude tool allowlist."""
+    """Infer a Codex sandbox from an explicit source tool allowlist."""
     tool_set = set(tools)
     if (
         permission_mode is not None
@@ -230,21 +252,21 @@ def infer_sandbox_mode(
     return None
 
 
-def render_developer_instructions(agent: ClaudeAgent) -> str:
+def render_developer_instructions(agent: SourceAgent) -> str:
     """Render the Codex developer-instruction body."""
     sections = [agent.body.strip()]
     guidance: list[str] = []
 
     if agent.skills:
         guidance.append(
-            "Claude `skills` preload semantics were preserved as prompt guidance. "
+            "Source `skills` entries were preserved as prompt guidance. "
             "Invoke these skills before relying on this agent's specialized "
             f"behavior: {', '.join(f'`{skill}`' for skill in agent.skills)}."
         )
 
     if agent.tools:
         guidance.append(
-            "Claude `tools` allowlists can map only to Codex configuration "
+            "Source `tools` allowlists can map only to Codex configuration "
             "boundaries with matching semantics. Treat command-level meanings "
             "inside allowed shell tools as manual-review guidance: "
             f"{', '.join(f'`{tool}`' for tool in agent.tools)}."
@@ -252,7 +274,7 @@ def render_developer_instructions(agent: ClaudeAgent) -> str:
 
     if agent.disallowed_tools:
         guidance.append(
-            "Claude `disallowedTools` deny lists do not enforce Codex permissions. "
+            "Source `disallowedTools` deny lists do not enforce Codex permissions. "
             "Treat these tools as manual-review guidance unless runtime policy "
             "enforces them: "
             f"{', '.join(f'`{tool}`' for tool in agent.disallowed_tools)}."
@@ -260,7 +282,7 @@ def render_developer_instructions(agent: ClaudeAgent) -> str:
 
     if agent.permission_mode and map_permission_mode(agent.permission_mode) is None:
         guidance.append(
-            f"Claude `permissionMode: {agent.permission_mode}` has no direct "
+            f"Source `permissionMode: {agent.permission_mode}` has no direct "
             "Codex mapping. Choose the appropriate sandbox, permissions, MCP "
             "tool filters, or app tool filters before relying on this agent for "
             "write or network behavior."
@@ -268,12 +290,16 @@ def render_developer_instructions(agent: ClaudeAgent) -> str:
 
     if agent.unsupported_fields:
         guidance.append(
-            "Review unsupported Claude agent fields manually: "
+            "Review unsupported source agent fields manually: "
             f"{', '.join(f'`{field}`' for field in agent.unsupported_fields)}."
         )
 
     if guidance:
-        sections.append("## Manual Review Guidance\n\n" + "\n\n".join(guidance))
+        sections.append(
+            f"{MANUAL_REVIEW_GUIDANCE_OPEN}\n"
+            + "\n\n".join(guidance)
+            + f"\n{MANUAL_REVIEW_GUIDANCE_CLOSE}"
+        )
     return "\n\n".join(section for section in sections if section).strip() + "\n"
 
 
@@ -290,7 +316,7 @@ def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent,
         converted_agent = convert_agent(parse_agent_markdown(source_file))
         if converted_agent.filename in seen:
             raise AgentConversionError(
-                f"multiple Claude agents convert to {converted_agent.filename}"
+                f"multiple source agents convert to {converted_agent.filename}"
             )
         seen.add(converted_agent.filename)
         converted.append(converted_agent)
@@ -360,7 +386,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="outcomeeng.distribution.agents",
-        description="Convert rendered Claude agents into Codex custom-agent TOML.",
+        description="Convert rendered plugin agents into Codex custom-agent TOML.",
     )
     subparsers = parser.add_subparsers(dest="command")
     install = subparsers.add_parser("install")
@@ -490,6 +516,12 @@ def _fold_yaml_lines(lines: Sequence[str]) -> str:
 
 
 def _parse_yaml_scalar(value: str) -> object:
+    if value.startswith("{") and value.endswith("}"):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return value
+        return parsed
     if value.startswith("[") and value.endswith("]"):
         return [
             _parse_yaml_scalar(part)
@@ -540,6 +572,18 @@ def _string_tuple(values: Mapping[str, object], key: str) -> tuple[str, ...]:
     return tuple(
         part for part in (part.strip() for part in str(value).split(",")) if part
     )
+
+
+def _optional_mapping(
+    values: Mapping[str, object],
+    key: str,
+) -> Mapping[str, object] | None:
+    value = values.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        return None
+    return {str(map_key): map_value for map_key, map_value in value.items()}
 
 
 def _slugify(value: str) -> str:
@@ -623,8 +667,8 @@ __all__ = [
     "WEB_SEARCH_DISABLED",
     "WRITE_CAPABLE_TOOLS",
     "AgentConversionError",
-    "ClaudeAgent",
     "CodexAgent",
+    "SourceAgent",
     "agent_environment_marker",
     "convert_agent",
     "convert_agents",

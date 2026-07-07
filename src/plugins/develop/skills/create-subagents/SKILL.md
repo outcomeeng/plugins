@@ -12,9 +12,8 @@ A {{! term('configured_agent') !}} configured for an isolated, focused role — 
 </objective>
 
 <quick_start>
-<workflow>
-
 {!% if target == 'codex' %!}
+<workflow>
 
 1. Create a standalone TOML file under `.codex/agents/` for product scope or `~/.codex/agents/` for user scope.
 2. Define the custom agent:
@@ -25,77 +24,27 @@ A {{! term('configured_agent') !}} configured for an isolated, focused role — 
    - **model_reasoning_effort**: Optional reasoning setting
    - **sandbox_mode**, **mcp_servers**: Optional runtime configuration overrides
 3. Write the developer instructions with clear role, constraints, workflow, and output expectations.
-   {!% else %!}
-4. Run `/agents` command
-5. Select "Create New Agent"
-6. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
-7. Define the {{! term('configured_agent') !}}:
+
+</workflow>
+{!% else %!}
+<workflow>
+
+1. Run `/agents` command
+2. Select "Create New Agent"
+3. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
+4. Define the {{! term('configured_agent') !}}:
    - **name**: lowercase-with-hyphens
    - **description**: When should this {{! term('configured_agent') !}} be used?
    - **tools**: Optional comma-separated list (inherits all if omitted)
    - **model**: Optional (`opus`, `sonnet`, `haiku`, or `inherit`)
    - **skills**: Optional array of skill names to inject at startup
-8. Write the {{! term('configured_agent_prompt') !}} (the {{! term('configured_agent') !}}'s instructions)
-   {!% endif %!}
+5. Write the {{! term('configured_agent_prompt') !}} (the {{! term('configured_agent') !}}'s instructions)
 
 </workflow>
+{!% endif %!}
 
 <example>
-{!% if target == 'codex' %!}
-```toml
-name = "code_reviewer"
-description = "Code reviewer focused on quality, security, and maintainability."
-model = "{{! term('configured_agent_standard_model') !}}"
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"
-{{! field('configured_agent_prompt') !}} = """
-<role>
-Review code for quality, security, and maintainability.
-</role>
-
-<focus_areas>
-
-- Correctness and behavior regressions
-- Security vulnerabilities
-- Maintainability risks
-- Missing test coverage
-
-</focus_areas>
-
-<output_format>
-Provide concrete findings with file:line references.
-</output_format>
-"""
-
-````
-{!% else %!}
-```markdown
----
-name: code-reviewer
-description: Expert code reviewer. Use proactively after code changes to review for quality, security, and best practices.
-tools: Read, Grep, Glob, Bash
-model: {{! term('configured_agent_standard_model') !}}
----
-
-<role>
-Claude is a senior code reviewer focused on quality, security, and best practices.
-</role>
-
-<focus_areas>
-
-- Code quality and maintainability
-- Security vulnerabilities
-- Performance issues
-- Best practices adherence
-
-</focus_areas>
-
-<output_format>
-Provide specific, actionable feedback with file:line references.
-</output_format>
-````
-
-{!% endif %!}
+Read `${CLAUDE_SKILL_DIR}/references/subagents.md` for complete {{! term('configured_agent') !}} file examples and field references.
 </example>
 </quick_start>
 
@@ -108,7 +57,6 @@ Priority order:
 
 1. Product: `.codex/agents/` for the current product
 2. User: `~/.codex/agents/` for all projects
-3. Plugin: plugin `agents/` directory for all projects
 
 </codex_storage_locations>
 {!% endif %!}
@@ -280,7 +228,7 @@ Structure the {{! term('configured_agent_prompt') !}} with pure XML tags. Remove
 ```toml
 name = "security_reviewer"
 description = "Reviews code for security vulnerabilities."
-tools = ["Read", "Grep", "Glob", "Bash"]
+sandbox_mode = "read-only"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>

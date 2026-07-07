@@ -148,16 +148,18 @@ Review code for quality and security.
 """
 ```
 
-Subagent has access to all tools, including MCP tools.
+The custom agent inherits the parent session's available tools, sandbox, and MCP configuration unless supported Codex config keys override them.
+
 </inherit_all_tools>
 
 <specific_tools>
-Specify tools as comma-separated list for granular control:
+
+Configure sandbox and MCP permission settings through supported Codex config keys:
 
 ```toml
 name = "read_only_analyzer"
 description = "Analyzes code without making changes."
-tools = ["Read", "Grep", "Glob"]
+sandbox_mode = "read-only"
 developer_instructions = """
 <role>
 Analyze code without making changes.
@@ -288,7 +290,7 @@ Follow the TOML file format specified above.
 ```toml
 name = "test_writer"
 description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
-tools = ["Read", "Write", "Grep", "Glob", "Bash"]
+sandbox_mode = "workspace-write"
 model = "gpt-5.4"
 developer_instructions = """
 <role>
@@ -320,7 +322,7 @@ Role: test automation specialist creating thorough, maintainable test suites.
 ```toml
 name = "debugger"
 description = "Investigates and fixes bugs. Use when errors occur or behavior is unexpected."
-tools = ["Read", "Edit", "Bash", "Grep", "Glob"]
+sandbox_mode = "workspace-write"
 model = "gpt-5.4"
 developer_instructions = """
 <role>
@@ -480,7 +482,7 @@ Prompt caching for frequently-invoked subagents:
 ```toml
 name = "security_reviewer"
 description = "..."
-tools = ["Read", "Grep", "Glob"]
+sandbox_mode = "read-only"
 model = "gpt-5.4"
 developer_instructions = """
 [CACHEABLE SECTION - Stable content]
