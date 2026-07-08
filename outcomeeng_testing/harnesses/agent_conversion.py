@@ -109,6 +109,29 @@ tools: Read
 
 {AGENT_BODY}
 """
+CODEX_RENDERED_BLOCK_MCP_AGENT: Final = f"""---
+name: {CHANGES_REVIEWER_NAME}
+description: {AGENT_DESCRIPTION}
+model: {CODEX_STANDARD_MODEL}
+mcp_servers:
+  docs:
+    command: npx
+    args:
+      - -y
+      - @modelcontextprotocol/server-docs
+---
+
+{AGENT_BODY}
+"""
+CODEX_RENDERED_FLOW_MCP_AGENT: Final = f"""---
+name: {CHANGES_REVIEWER_NAME}
+description: {AGENT_DESCRIPTION}
+model: {CODEX_STANDARD_MODEL}
+mcp_servers: {{docs: {{command: npx, args: [-y, @modelcontextprotocol/server-docs]}}}}
+---
+
+{AGENT_BODY}
+"""
 FOLDED_DESCRIPTION_AGENT: Final = """---
 name: changes-reviewer
 description: >-
@@ -232,6 +255,20 @@ def converted_codex_rendered_agent_toml(root: Path) -> dict[str, object]:
         root,
         PLUGIN_NAME,
         {CHANGES_REVIEWER_NAME: CODEX_RENDERED_AGENT},
+    )
+    (converted,) = convert_agent_tree(source_root)
+    return tomllib.loads(render_agent_toml(converted))
+
+
+def converted_codex_agent_with_yaml_mcp_toml(
+    root: Path,
+    source: str,
+) -> dict[str, object]:
+    """Convert a Codex target fixture with YAML MCP mapping syntax."""
+    source_root = write_agent_tree(
+        root,
+        PLUGIN_NAME,
+        {CHANGES_REVIEWER_NAME: source},
     )
     (converted,) = convert_agent_tree(source_root)
     return tomllib.loads(render_agent_toml(converted))
@@ -449,6 +486,27 @@ def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
     instructions = toml_string(parsed, "developer_instructions")
     assert AGENT_BODY in instructions
     assert "spec-tree:review-changes" in instructions
+
+
+def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
+    """Assert YAML mapping syntax for MCP servers preserves nested config."""
+    with TemporaryDirectory() as tmp:
+        block_parsed = converted_codex_agent_with_yaml_mcp_toml(
+            Path(tmp),
+            CODEX_RENDERED_BLOCK_MCP_AGENT,
+        )
+        flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
+            Path(tmp),
+            CODEX_RENDERED_FLOW_MCP_AGENT,
+        )
+
+    for parsed in (block_parsed, flow_parsed):
+        docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
+        assert toml_string(docs_server, "command") == "npx"
+        assert toml_string_list(docs_server, "args") == [
+            "-y",
+            "@modelcontextprotocol/server-docs",
+        ]
 
 
 def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config() -> (

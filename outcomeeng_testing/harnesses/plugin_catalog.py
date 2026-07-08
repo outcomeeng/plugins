@@ -71,6 +71,24 @@ def runtime_divergent_skill_descriptions_name_each_target() -> bool:
         )
 
 
+def catalog_frontmatter_includes_use_shared_root() -> bool:
+    with TemporaryDirectory() as tmp:
+        repo_root = Path(tmp)
+        shared_dir = repo_root / "src" / "_shared" / "catalog"
+        shared_dir.mkdir(parents=True)
+        (shared_dir / "fragment.md").write_text(
+            "ALWAYS invoke this skill when creating {{! term('configured_agents') !}}.",
+            encoding="utf-8",
+        )
+        plugin_dir = repo_root / SOURCE_PLUGINS_ROOT / PLUGIN_NAME
+        _write_skill_with_description_include(plugin_dir / "skills" / SKILL_NAME)
+
+        (entry,) = collect_skills(plugin_dir)
+        return entry.purpose == (
+            "Claude: Creating subagents; Codex: Creating custom agents"
+        )
+
+
 def purpose_shortening_preserves_untrimmed_em_dash() -> bool:
     return shorten_purpose("Build — ships runtime output") == (
         "Build — ships runtime output"
@@ -98,6 +116,23 @@ def _write_skill(skill_dir: Path, *, skill_name: str = SKILL_NAME) -> None:
 name: {skill_name}
 description: >-
   ALWAYS invoke this skill when creating {{{{! term('configured_agents') !}}}}.
+---
+
+<objective>
+Example output.
+</objective>
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_skill_with_description_include(skill_dir: Path) -> None:
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        f"""---
+name: {SKILL_NAME}
+description: >-
+  {{!% include 'catalog/fragment.md' %!}}
 ---
 
 <objective>

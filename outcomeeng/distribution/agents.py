@@ -456,7 +456,14 @@ def _parse_yaml_mapping(text: str) -> dict[str, object]:
             block_lines, index = _collect_yaml_block(lines, index + 1)
             values[current_key] = _parse_yaml_block_scalar(value, block_lines)
             continue
-        values[current_key] = _parse_yaml_scalar(value) if value else []
+        if not value:
+            block_lines, next_index = _collect_yaml_indented_block(lines, index + 1)
+            values[current_key] = (
+                _parse_yaml_nested_block(block_lines) if block_lines else []
+            )
+            index = next_index if block_lines else index + 1
+            continue
+        values[current_key] = _parse_yaml_scalar(value)
         index += 1
     return values
 
@@ -478,6 +485,34 @@ def _collect_yaml_block(
             continue
         break
     return tuple(block), index
+
+
+def _collect_yaml_indented_block(
+    lines: Sequence[str],
+    start: int,
+) -> tuple[tuple[str, ...], int]:
+    block: list[str] = []
+    index = start
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith((" ", "\t")) or not line.strip():
+            block.append(line)
+            index += 1
+            continue
+        break
+    return tuple(block), index
+
+
+def _parse_yaml_nested_block(raw_lines: Sequence[str]) -> object:
+    lines = _dedent_yaml_block(raw_lines)
+    first = next((line.strip() for line in lines if line.strip()), "")
+    if first.startswith("- "):
+        return tuple(
+            _parse_yaml_scalar(line.strip()[2:])
+            for line in lines
+            if line.strip().startswith("- ")
+        )
+    return _parse_yaml_mapping("\n".join(lines))
 
 
 def _parse_yaml_block_scalar(style: str, raw_lines: Sequence[str]) -> str:
@@ -520,7 +555,9 @@ def _parse_yaml_scalar(value: str) -> object:
         try:
             parsed = json.loads(value)
         except json.JSONDecodeError:
-            return value
+            parsed = _parse_yaml_flow_mapping(value)
+            if parsed is None:
+                return value
         return parsed
     if value.startswith("[") and value.endswith("]"):
         return [
@@ -533,10 +570,52 @@ def _parse_yaml_scalar(value: str) -> object:
     return value
 
 
+def _parse_yaml_flow_mapping(value: str) -> dict[str, object] | None:
+    body = value[1:-1].strip()
+    if not body:
+        return {}
+    parsed: dict[str, object] = {}
+    for part in _split_delimited(body):
+        key, separator, raw_value = _partition_flow_pair(part)
+        if not separator:
+            return None
+        parsed[_strip_yaml_quotes(key.strip())] = _parse_yaml_scalar(raw_value.strip())
+    return parsed
+
+
+def _partition_flow_pair(value: str) -> tuple[str, str, str]:
+    quote: str | None = None
+    depth = 0
+    for index, char in enumerate(value):
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            continue
+        if char in "{[":
+            depth += 1
+            continue
+        if char in "}]":
+            depth -= 1
+            continue
+        if char == ":" and depth == 0:
+            return value[:index], char, value[index + 1 :]
+    return value, "", ""
+
+
+def _strip_yaml_quotes(value: str) -> str:
+    if value.startswith(("'", '"')) and value.endswith(value[0]):
+        return value[1:-1]
+    return value
+
+
 def _split_delimited(text: str) -> tuple[str, ...]:
     values: list[str] = []
     token: list[str] = []
     quote: str | None = None
+    depth = 0
     for char in text:
         if quote:
             token.append(char)
@@ -547,7 +626,15 @@ def _split_delimited(text: str) -> tuple[str, ...]:
             quote = char
             token.append(char)
             continue
-        if char == ",":
+        if char in "{[":
+            depth += 1
+            token.append(char)
+            continue
+        if char in "}]":
+            depth -= 1
+            token.append(char)
+            continue
+        if char == "," and depth == 0:
             values.append("".join(token).strip())
             token = []
             continue

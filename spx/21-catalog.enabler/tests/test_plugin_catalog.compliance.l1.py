@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.plugin_catalog import (
     check_mode_fails_when_readme_catalog_drifts,
+    catalog_frontmatter_includes_use_shared_root,
     generated_catalog_is_deterministic,
     generated_catalog_uses_declared_sentinels,
     purpose_shortening_preserves_untrimmed_em_dash,
@@ -25,6 +26,10 @@ def test_check_mode_fails_when_readme_catalog_drifts() -> None:
 
 def test_runtime_divergent_skill_descriptions_name_each_target() -> None:
     assert runtime_divergent_skill_descriptions_name_each_target()
+
+
+def test_catalog_frontmatter_includes_use_shared_root() -> None:
+    assert catalog_frontmatter_includes_use_shared_root()
 
 
 def test_purpose_shortening_preserves_untrimmed_em_dash() -> None:
