@@ -31,9 +31,11 @@ jobs:
   spec-tree:
     # BETA TESTER: deliberately tracks outcomeeng/gh-actions @main to surface
     # upstream changes early without a per-release follow-up PR. Production
-    # callers must SHA-pin per the gh-actions README "Security" section.
-    # Renovate cannot advance this reference; pin it back to a SHA when this
-    # repo graduates to production-caller usage.
+    # callers must SHA-pin per the gh-actions README "Security" section. Risk:
+    # unreviewed upstream main commits execute with this workflow's repository
+    # permissions before release review. renovate.json disables digest pinning
+    # for this beta caller; pin it back to a SHA when this repo graduates to
+    # production-caller usage.
     uses: outcomeeng/gh-actions/.github/workflows/spec-tree.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

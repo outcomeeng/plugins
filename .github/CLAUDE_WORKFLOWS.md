@@ -40,7 +40,7 @@ jobs:
 
 This repository intentionally uses the `outcomeeng/gh-actions` beta-tester exception: both active callers track `@main` so upstream reusable changes are exercised here before production consumers receive a SHA-pinned release update. The trade-off is explicit in each workflow file with the `# BETA TESTER:` marker required by the upstream README's Security section.
 
-Production consumers should pin the upstream reusable by full commit SHA with a trailing tracked-branch comment. Renovate can advance SHA-pinned callers; it cannot advance this repo's `@main` beta references, which is the intended beta behavior. Pin both callers back to full SHAs when this repository graduates from beta-tester usage to production-caller usage.
+Production consumers should pin the upstream reusable by full commit SHA with a trailing tracked-branch comment. Renovate can advance SHA-pinned callers; this repository disables Renovate updates for `outcomeeng/gh-actions` in the two beta caller files so the `@main` lane keeps exercising upstream changes. Pin both callers back to full SHAs and remove the Renovate exemption when this repository graduates from beta-tester usage to production-caller usage.
 
 ## Authorization
 
