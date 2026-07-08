@@ -96,7 +96,9 @@ Classify how the eval reaches the producer:
 | False            | Metadata names the producer but the prompt or harness never uses it                         | REJECT                                                                 |
 | Unknown          | The artifact path cannot establish how the producer is reached                              | REJECT                                                                 |
 
-For skill, agent, classifier, or script behavior claims, changing the real producer to unrelated text must change the eval result. If the eval would still pass after such a mutation, classify as Simulation or False and REJECT.
+When `eval.toml` declares `prompt_source.kind = "producer-section"`, treat the materialized prompt as Prompt-loaded only after verifying the producer path, selected section, and prompt template exist and `prompt.md` is current with that source. The selected producer section is the artifact under audit for that suite; a mutation to that section must change the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior: the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same policy without `prompt_source` remains Simulation.
+
+For skill, agent, classifier, or script behavior claims, changing the real producer to unrelated text must change the eval result. For `producer-section` suites, evaluate that mutation through the materialization path: mutate the selected section, materialize the prompt, and then the suite's result must change when the mutation removes behavior the cases exercise. If the eval would still pass after that producer mutation, classify as Simulation or False and REJECT.
 
 </step>
 
@@ -130,10 +132,10 @@ If the assertion could be unfulfilled while the suite passes, REJECT — "misali
 
 **Step 3d: Falsifiability**
 
-Name a concrete mutation to the producing artifact that would make at least one case fail. Write it down:
+Name a concrete mutation to the producing artifact that would make at least one case fail. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization. Write it down:
 
 ```text
-Producer: ${CLAUDE_SKILL_DIR}/../manage-pr/SKILL.md
+Producer: the /manage-pr skill's post-merge guidance section
 Mutation: replace the post-merge marketplace sync rule with unrelated text
 Impact: the post-merge-sync-required case returns REJECT because the producer omits the required follow-up
 ```

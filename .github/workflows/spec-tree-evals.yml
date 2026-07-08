@@ -26,7 +26,7 @@
 # claude to exfiltrate the token, so only trusted authors' PRs execute.
 #
 # Scope: the workflow discovers eval.toml files under EVALS_ROOT and asks the
-# `outcomeeng-evals plan` command which suites and cases to run. PR runs use
+# `outcomeeng-evals ci` command which suites and cases to run. PR runs use
 # changed paths and each suite's `owned_paths` / `smoke_cases` metadata, so a
 # skill-only edit runs a small canary set. Eval-definition changes and harness
 # changes run the full affected suites. Push, schedule, and manual runs use the
@@ -51,28 +51,64 @@ on:
       - "spx/21-spec-tree.enabler/79-diagnostics.enabler/**"
       - "src/plugins/spec-tree/skills/diagnose/**"
       - "dist/claude/spec-tree/skills/diagnose/**"
+      - "spx/13-plugin-and-runtime-conventions.adr.md"
       - "spx/15-merging.pdr.md"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "spx/local/commit-changes.md"
+      - "spx/local/open-pr.md"
+      - "spx/local/merging.md"
+      - "spx/21-spec-tree.enabler/43-instruction-block.enabler/**"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
       - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
-      - "src/plugins/spec-tree/skills/github-pr/**"
-      - "src/plugins/spec-tree/skills/managing-pr/**"
-      - "src/plugins/spec-tree/skills/opening-pr/**"
-      - "src/plugins/spec-tree/skills/reviewing-changes/**"
-      - "src/plugins/spec-tree/skills/standardizing-merging/**"
+      - "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
+      - "src/plugins/spec-tree/skills/update-instruction-block/**"
+      - "src/plugins/spec-tree/skills/merge/**"
+      - "src/plugins/spec-tree/skills/manage-github-pr/**"
+      - "src/plugins/spec-tree/skills/manage-pr/**"
+      - "src/plugins/spec-tree/skills/open-pr/**"
+      - "src/plugins/spec-tree/skills/review-changes/**"
+      - "src/plugins/spec-tree/skills/scope-changeset/**"
+      - "src/plugins/spec-tree/skills/merging-standards/**"
+      - "src/plugins/spec-tree/skills/task-tracking-standards/**"
       - "src/plugins/spec-tree/agents/changes-reviewer.md"
+      - "src/plugins/spec-tree/.claude-plugin/plugin.json"
+      - "src/plugins/spec-tree/.codex-plugin/plugin.json"
       - "src/plugins/typescript/skills/standardizing-typescript-tests/**"
       - "src/plugins/typescript/skills/testing-typescript/**"
-      - "dist/claude/spec-tree/skills/github-pr/**"
-      - "dist/claude/spec-tree/skills/managing-pr/**"
-      - "dist/claude/spec-tree/skills/opening-pr/**"
-      - "dist/claude/spec-tree/skills/reviewing-changes/**"
-      - "dist/claude/spec-tree/skills/standardizing-merging/**"
+      - "dist/claude/spec-tree/.claude-plugin/plugin.json"
+      - "dist/claude/spec-tree/.codex-plugin/plugin.json"
+      - "dist/claude/spec-tree/skills/merge/**"
+      - "dist/claude/spec-tree/skills/manage-github-pr/**"
+      - "dist/claude/spec-tree/skills/manage-pr/**"
+      - "dist/claude/spec-tree/skills/open-pr/**"
+      - "dist/claude/spec-tree/skills/review-changes/**"
+      - "dist/claude/spec-tree/skills/scope-changeset/**"
+      - "dist/claude/spec-tree/skills/merging-standards/**"
+      - "dist/claude/spec-tree/skills/task-tracking-standards/**"
+      - "dist/claude/spec-tree/skills/update-instruction-block/**"
+      - "dist/claude/spec-tree/skills/understand/templates/instruction-block.md"
       - "dist/claude/spec-tree/agents/changes-reviewer.md"
+      - "dist/codex/spec-tree/.claude-plugin/plugin.json"
+      - "dist/codex/spec-tree/.codex-plugin/plugin.json"
+      - "dist/codex/spec-tree/agents/**"
+      - "dist/codex/spec-tree/skills/merge/**"
+      - "dist/codex/spec-tree/skills/manage-github-pr/**"
+      - "dist/codex/spec-tree/skills/manage-pr/**"
+      - "dist/codex/spec-tree/skills/open-pr/**"
+      - "dist/codex/spec-tree/skills/review-changes/**"
+      - "dist/codex/spec-tree/skills/scope-changeset/**"
+      - "dist/codex/spec-tree/skills/merging-standards/**"
+      - "dist/codex/spec-tree/skills/task-tracking-standards/**"
+      - "dist/codex/spec-tree/skills/update-instruction-block/**"
+      - "dist/codex/spec-tree/skills/understand/templates/instruction-block.md"
       - "dist/claude/typescript/skills/standardizing-typescript-tests/**"
       - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
+      - "outcomeeng_testing/generators/**"
+      - "outcomeeng_testing/harnesses/**"
   push:
     branches: [main]
     # Same scope as the PR filter — a change to this workflow file itself does
@@ -81,28 +117,64 @@ on:
       - "spx/21-spec-tree.enabler/79-diagnostics.enabler/**"
       - "src/plugins/spec-tree/skills/diagnose/**"
       - "dist/claude/spec-tree/skills/diagnose/**"
+      - "spx/13-plugin-and-runtime-conventions.adr.md"
       - "spx/15-merging.pdr.md"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "spx/local/commit-changes.md"
+      - "spx/local/open-pr.md"
+      - "spx/local/merging.md"
+      - "spx/21-spec-tree.enabler/43-instruction-block.enabler/**"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
       - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
-      - "src/plugins/spec-tree/skills/github-pr/**"
-      - "src/plugins/spec-tree/skills/managing-pr/**"
-      - "src/plugins/spec-tree/skills/opening-pr/**"
-      - "src/plugins/spec-tree/skills/reviewing-changes/**"
-      - "src/plugins/spec-tree/skills/standardizing-merging/**"
+      - "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
+      - "src/plugins/spec-tree/skills/update-instruction-block/**"
+      - "src/plugins/spec-tree/skills/merge/**"
+      - "src/plugins/spec-tree/skills/manage-github-pr/**"
+      - "src/plugins/spec-tree/skills/manage-pr/**"
+      - "src/plugins/spec-tree/skills/open-pr/**"
+      - "src/plugins/spec-tree/skills/review-changes/**"
+      - "src/plugins/spec-tree/skills/scope-changeset/**"
+      - "src/plugins/spec-tree/skills/merging-standards/**"
+      - "src/plugins/spec-tree/skills/task-tracking-standards/**"
       - "src/plugins/spec-tree/agents/changes-reviewer.md"
+      - "src/plugins/spec-tree/.claude-plugin/plugin.json"
+      - "src/plugins/spec-tree/.codex-plugin/plugin.json"
       - "src/plugins/typescript/skills/standardizing-typescript-tests/**"
       - "src/plugins/typescript/skills/testing-typescript/**"
-      - "dist/claude/spec-tree/skills/github-pr/**"
-      - "dist/claude/spec-tree/skills/managing-pr/**"
-      - "dist/claude/spec-tree/skills/opening-pr/**"
-      - "dist/claude/spec-tree/skills/reviewing-changes/**"
-      - "dist/claude/spec-tree/skills/standardizing-merging/**"
+      - "dist/claude/spec-tree/.claude-plugin/plugin.json"
+      - "dist/claude/spec-tree/.codex-plugin/plugin.json"
+      - "dist/claude/spec-tree/skills/merge/**"
+      - "dist/claude/spec-tree/skills/manage-github-pr/**"
+      - "dist/claude/spec-tree/skills/manage-pr/**"
+      - "dist/claude/spec-tree/skills/open-pr/**"
+      - "dist/claude/spec-tree/skills/review-changes/**"
+      - "dist/claude/spec-tree/skills/scope-changeset/**"
+      - "dist/claude/spec-tree/skills/merging-standards/**"
+      - "dist/claude/spec-tree/skills/task-tracking-standards/**"
+      - "dist/claude/spec-tree/skills/update-instruction-block/**"
+      - "dist/claude/spec-tree/skills/understand/templates/instruction-block.md"
       - "dist/claude/spec-tree/agents/changes-reviewer.md"
+      - "dist/codex/spec-tree/.claude-plugin/plugin.json"
+      - "dist/codex/spec-tree/.codex-plugin/plugin.json"
+      - "dist/codex/spec-tree/agents/**"
+      - "dist/codex/spec-tree/skills/merge/**"
+      - "dist/codex/spec-tree/skills/manage-github-pr/**"
+      - "dist/codex/spec-tree/skills/manage-pr/**"
+      - "dist/codex/spec-tree/skills/open-pr/**"
+      - "dist/codex/spec-tree/skills/review-changes/**"
+      - "dist/codex/spec-tree/skills/scope-changeset/**"
+      - "dist/codex/spec-tree/skills/merging-standards/**"
+      - "dist/codex/spec-tree/skills/task-tracking-standards/**"
+      - "dist/codex/spec-tree/skills/update-instruction-block/**"
+      - "dist/codex/spec-tree/skills/understand/templates/instruction-block.md"
       - "dist/claude/typescript/skills/standardizing-typescript-tests/**"
       - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
+      - "outcomeeng_testing/generators/**"
+      - "outcomeeng_testing/harnesses/**"
   schedule:
     # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
     - cron: "0 6 * * 1"
@@ -266,7 +338,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            git diff --name-only --diff-filter=ACDMRT \
+            git diff --name-status --diff-filter=ACDMRT \
               "${{ github.event.pull_request.base.sha }}" \
               "${{ github.event.pull_request.head.sha }}" \
               > changed-paths.txt
@@ -274,69 +346,18 @@ jobs:
             : > changed-paths.txt
           fi
 
-      - name: Plan eval suites
+      - name: Run eval suites
         env:
           CI_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
         run: |
           set -euo pipefail
-          uv run outcomeeng-evals plan "$EVALS_ROOT" \
+          uv run outcomeeng-evals ci "$EVALS_ROOT" \
             --mode "$CI_MODE" \
             --changed-paths-file changed-paths.txt \
             --default-plugin-dir "$PLUGIN_DIR" \
-            > eval-plan.json
-          python3 -m json.tool eval-plan.json
-
-      - name: Run eval suites
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          import json
-          import os
-          import subprocess
-          import sys
-
-          with open("eval-plan.json", encoding="utf-8") as fh:
-              plan = json.load(fh)
-
-          if not plan:
-              print("No eval suites selected for this change.")
-              sys.exit(0)
-
-          print(f"Selected {len(plan)} eval suite invocation(s):")
-          for item in plan:
-              case_suffix = ""
-              if item["case_ids"]:
-                  case_suffix = " cases=" + ",".join(item["case_ids"])
-              print(f"  {item['eval_toml']} plugin={item['plugin_dir']}{case_suffix}")
-
-          failed = False
-          for item in plan:
-              print(f"::group::eval {item['eval_toml']}")
-              command = [
-                  "uv",
-                  "run",
-                  "outcomeeng-evals",
-                  "run",
-                  item["eval_toml"],
-                  "--plugin-dir",
-                  item["plugin_dir"],
-                  "--workers",
-                  os.environ["WORKERS"],
-                  "--max-budget-usd",
-                  os.environ["MAX_BUDGET_USD"],
-                  "--timeout-seconds",
-                  os.environ["TIMEOUT_SECONDS"],
-              ]
-              for case_id in item["case_ids"]:
-                  command.extend(("--case-id", case_id))
-              completed = subprocess.run(command, check=False)
-              if completed.returncode != 0:
-                  print(f"::error::Eval suite below threshold or errored: {item['eval_toml']}")
-                  failed = True
-              print("::endgroup::")
-
-          sys.exit(1 if failed else 0)
-          PY
+            --workers "$WORKERS" \
+            --max-budget-usd "$MAX_BUDGET_USD" \
+            --timeout-seconds "$TIMEOUT_SECONDS"
 
       - name: Commit history.jsonl appends
         # Runs even when a suite fails (a failed run still records a history

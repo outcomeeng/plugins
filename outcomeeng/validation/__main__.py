@@ -3,6 +3,7 @@
 Usage::
 
     python3 -m outcomeeng.validation check
+    python3 -m outcomeeng.validation check-full
     python3 -m outcomeeng.validation validation
     python3 -m outcomeeng.validation test -- -k gate
 
@@ -15,8 +16,10 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from outcomeeng.validation import ProductionSpawner, run_check, run_recipe
+from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL, run_selected_check
 from outcomeeng.validation._steps import (
     CHECK_RECIPES,
     RECIPE_CHECK,
@@ -32,7 +35,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "recipe",
         nargs="?",
-        choices=(RECIPE_CHECK, RECIPE_VALIDATION, RECIPE_TEST),
+        choices=(RECIPE_CHECK, RECIPE_CHECK_FULL, RECIPE_VALIDATION, RECIPE_TEST),
         default=RECIPE_CHECK,
     )
     parser.add_argument("recipe_args", nargs=argparse.REMAINDER)
@@ -56,7 +59,9 @@ def main(argv: list[str] | None = None) -> int:
             sink=sys.stdout,
             recipe=test_recipe(_recipe_args(parsed.recipe_args)),
         )
-    return run_check(spawner=spawner, sink=sys.stdout, recipes=CHECK_RECIPES)
+    if parsed.recipe == RECIPE_CHECK_FULL:
+        return run_check(spawner=spawner, sink=sys.stdout, recipes=CHECK_RECIPES)
+    return run_selected_check(spawner=spawner, sink=sys.stdout, repo=Path.cwd())
 
 
 if __name__ == "__main__":

@@ -86,7 +86,7 @@ Before proposing or performing a repository mutation, name:
 - why the action is local enough or gate-authorized enough to proceed;
 - the next validation command, review, audit, check wait, or merge gate the action feeds.
 
-Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship it path" when the exact file, PR state, or command is known. A terse user prompt such as "check", "continue", or "ship it" still gets the live state first: full head SHA when a PR exists, current-head review state, required-check state, production-readiness rule, and the next autonomous action.
+Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship it path" when the exact file, PR state, or command is known. A terse user prompt such as "check", "continue", or "ship it" still gets the live state first: full head SHA when a PR exists, current-head review state, required-check state, deployment-readiness and release-readiness rules, and the next autonomous action.
 
 ## Quick Reference: Skills and Agents
 
@@ -429,7 +429,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
 - ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. Review and audit enforce this convention; no automated lint rule covers the shorthand form. (The separate `reference-portability` gate step catches real-digit `spx/<digits>-…` node paths and product roots in shipped `src/plugins/` content, not bare `ADR-21` shorthand.)
 - ⚠️ **No docstring-length or "no comments" rule exists** - The spec-reference rule above is the *only* prohibition on code comments and docstrings. Multi-line module/function docstrings and explanatory comments that capture non-obvious invariants are expected (clarity over brevity); peer code carries them — `outcomeeng/validation/reference_portability.py` opens with a multi-paragraph module docstring. A review finding that cites a CLAUDE.md/AGENTS.md rule such as "default to writing no comments", "one short line max", or "never multi-paragraph docstrings/multi-line comment blocks" is **unbacked** — no such rule exists in this repository (`grep` it and see). Refute such a finding on the thread; do **not** collapse docstrings or comments to satisfy it. (A reviewer may be importing a personal-scope style preference that does not govern this repo.)
-- ⚠️ **Depend on an `spx` CLI capability only after it is PUBLISHED and the floor is advanced** - The shipped skills and their tests invoke the `@outcomeeng/spx` CLI; a skill or test that assumes a capability merged only to spx `main` (not yet published to npm) ships a contract the consumer's installed CLI cannot honor, and surfaces as an opaque CI test failure or a consumer regression. Merged-to-spx-main is **not** "available." A capability is available only when (1) an `@outcomeeng/spx` release containing it is published to npm, (2) `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` is advanced to that version, and (3) `SPX_VERSION` in `.github/workflows/check.yml` is bumped to a published version at or above the floor. The `spx-version` gate step enforces pin ≥ floor, and the pin can only reach a published version — so a dependency on an unpublished capability fails `just check` locally with a named gap, governed by `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`.
+- ⚠️ **Depend on an `spx` CLI capability only after it is PUBLISHED and the floor is advanced** - The shipped skills and their tests invoke the `@outcomeeng/spx` CLI; a skill or test that assumes a capability merged only to spx `main` (not yet published to npm) ships a contract the consumer's installed CLI cannot honor, and surfaces as an opaque CI test failure or a consumer regression. Merged-to-spx-main is **not** "available." A capability is available only when (1) an `@outcomeeng/spx` release containing it is published to npm, (2) `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` is advanced to that version, and (3) `SPX_VERSION` in `.github/workflows/check.yml` is bumped to a published version at or above the floor. The `spx-version` gate step enforces pin ≥ floor, and the pin can only reach a published version — so a dependency on an unpublished capability fails `just check-full` in CI with a named gap, governed by `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`.
 - ⚠️ **NEVER manually delete untracked files** - use `just clean` (`git clean -fdX`) to remove gitignored caches such as `.DS_Store` and `__pycache__`; it does not touch non-gitignored untracked files or empty directories, and git-untracked empty dirs are invisible to version control and harmless, so leave them be
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
 - ⚠️ **The methodology is multi-language** - Skill content shipped under `dist/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each language plugin's `{language}-test-standards` skill for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
@@ -447,7 +447,8 @@ Historical plugin implementations are pruned from this repository. The history t
   - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/open-pr.md`.
   - Python formatting: `just fmt-python <changed-python-file>...`. Pass every changed Python file that ruff formats.
   - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
-  - Full local deterministic gate: `just check`. Run this only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate, such as shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
+  - Selected local deterministic gate: `just check`. This automatically selects the gate steps that cover the changed paths and prints the selected steps with reasons before running them through the recipe runner.
+  - Full deterministic gate: `just check-full`. CI invokes this full gate on `pull_request` and push to `main`; run it locally only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate.
   - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
   - Generated root Spec Tree instruction blocks after instruction-block-template or distribution-render changes: `just build-skills`, then `just build-instructions`. Do not hand-edit the managed instruction blocks in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just instructions-check`.
   - Marketplace install refresh after merged plugin-distribution changes: `just sync-marketplace <previous-main-ref>` from the marketplace-source worktree, as directed by `spx/local/merging.md`.
@@ -483,7 +484,7 @@ Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one
 
 ### Heavy subprocess trees: sparingly, serially, load-aware
 
-`just check`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime` and compare the sustained loadavg (the 5- and 15-minute figures) to the host's core count (`nproc`, or `sysctl -n hw.ncpu` on macOS): if loadavg exceeds it the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run `just check` once before committing, not repeatedly "to be sure".
+`just check-full`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime` and compare the sustained loadavg (the 5- and 15-minute figures) to the host's core count (`nproc`, or `sysctl -n hw.ncpu` on macOS): if loadavg exceeds it the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run the targeted local gate first; reserve `just check-full` for CI parity or explicit full-gate requirements.
 
 ### Other forks add up
 
@@ -561,7 +562,7 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 
 ## Plugin Catalog
 
-Every skill, agent, and command across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate; `just check` enforces freshness. Do not maintain plugin tables in this file.
+Every skill, agent, and command across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
 
 ## Spec Tree Methodology
 
@@ -603,7 +604,7 @@ Everything under `src/plugins/` is authored source; the installed trees under `d
 just build-skills   # uv run python -m outcomeeng.distribution.build src dist
 ```
 
-The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Because the hook regenerates `dist/` at commit time, an uncommitted working tree that has `src/plugins/` edits but no matching `dist/` change is the **expected** mid-edit state — never report it as a defect, a review finding, or a merge blocker (for example "the generated trees have not been rebuilt" or "`dist/` is out of sync"). Only a `src/`↔`dist/` divergence that survives into a commit is a problem, and the hook prevents that. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
+The pre-commit hook runs `build-skills` automatically, and `just check-full`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Because the hook regenerates `dist/` at commit time, an uncommitted working tree that has `src/plugins/` edits but no matching `dist/` change is the **expected** mid-edit state — never report it as a defect, a review finding, or a merge blocker (for example "the generated trees have not been rebuilt" or "`dist/` is out of sync"). Only a `src/`↔`dist/` divergence that survives into a commit is a problem, and the hook prevents that. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
 
 Continue through [Git workflow](#git-workflow) when the change is destined for the default branch. `/merge` dispatches to the selected transport; for the GitHub-PR transport it delegates to `/manage-github-pr`, which routes committing, opening, management, merge, and closure.
 
@@ -614,7 +615,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 | `.claude-plugin/marketplace.json`  | Claude Code |
 | `.agents/plugins/marketplace.json` | Codex       |
 
-`just check` will fail if a plugin directory is missing from either catalog.
+`just check-full` will fail if a plugin directory is missing from either catalog.
 
 ### Top-level layout
 
@@ -745,7 +746,7 @@ enabled = false
 
 - **author** — Regenerate the generated trees after `src/plugins/` edits: `just build-skills`. Regenerate the root instruction blocks after instruction-template edits: `just build-instructions`.
 - **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown` and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
-- **gate** — Full local deterministic gate: `just check`.
+- **gate** — Full local deterministic gate: `just check-full`.
 - **merge** — Ship to the default branch through `/merge`; the GitHub-PR transport merges with `gh pr merge <pr-number> --merge --delete-branch=false`.
 
 <!-- /SPEC-TREE:shared commands -->

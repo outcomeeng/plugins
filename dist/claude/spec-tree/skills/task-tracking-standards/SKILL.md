@@ -83,7 +83,7 @@ Keep tracking active when state is queued, in progress, pending, retry-after-cla
 
 Convert tracking to a repair path when a failure is deterministic and can be fixed locally. The next fire re-sends the same skills-and-pointers prompt unchanged; the failed layer, the log source, and the next repair checkpoint are written to `PLAN.md` / `ISSUES.md` so the next fire reconstructs them from there.
 
-Delete tracking when the PR is merged and post-merge verification is green, the work item is closed, the task acceptance condition is met, or the only remaining step is operator approval and the owning workflow says to stop for approval.
+Delete tracking when the PR is merged and every declared deploy or release phase has completed or no-oped, the work item is closed, the task acceptance condition is met, or the only remaining step is operator approval and the owning workflow says to stop for approval.
 </lifecycle>
 
 <runtime_timer>

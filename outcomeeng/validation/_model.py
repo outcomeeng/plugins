@@ -2,8 +2,7 @@
 
 Defines the Step and Recipe records plus the process Protocols. These are the
 only types the orchestrator's main loop depends on; the production adapter that
-binds them to subprocess.Popen lives in _spawner.py, the sole module in this
-package that imports subprocess.
+binds gate-step execution to subprocess.Popen lives in _spawner.py.
 """
 
 from __future__ import annotations

@@ -20,7 +20,7 @@ from typing import Final
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
     DIST_DIFF_ARGV,
-    INSTRUCTION_BLOCK_ARGV,
+    INSTRUCTION_BLOCK_ARGV as _INSTRUCTION_BLOCK_ARGV,
     ORCHESTRATION_VALIDATION_ARGV,
     TEXT_FILE_SUFFIXES,
 )
@@ -28,6 +28,7 @@ from outcomeeng.validation._model import Recipe, Step
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
+INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
 
 RECIPE_VALIDATION: Final = "validation"
 RECIPE_TEST: Final = "test"

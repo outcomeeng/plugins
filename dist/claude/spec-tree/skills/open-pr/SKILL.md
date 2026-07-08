@@ -2,8 +2,8 @@
 name: open-pr
 user-invocable: false
 description: >-
-  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Skill
+  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
+allowed-tools: Read, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Skill
 ---
 
 <objective>
@@ -13,7 +13,7 @@ A pull request opened ready for review.
 <project_specialization>
 After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
 
-The overlay MUST NOT: skip or weaken the local deterministic-verification or local-review predicates of `REVIEW_READINESS`, open the PR before `REVIEW_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
+The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
 Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
@@ -28,17 +28,23 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
-**Step 3 — GATE: Evaluate `REVIEW_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `REVIEW_READINESS` holds — both predicates below.
+<step name="verification_readiness_decision">
+
+**Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
 
 *(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a temporary log path and inspect only the exit status, summary, and failing sections. It must report success; fix failures and re-run until green.
 
-*(b) Local review to convergence.* Run the `changes-reviewer` agent on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main context has been doing. Invoke it per /merging-standards `<local_review_invocation>`: let it resolve its own scope — the worktree it runs in and the working diff — with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize; the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process its findings by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
+*(b) Evidence-auditor predicates.* Dispatch every evidence auditor /merging-standards `<authority_gates>` requires for the diff: `test-evidence-auditor` for changed `[test]` assertions, linked tests, or imported test-infrastructure artifacts; `eval-evidence-auditor` for changed `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions. Handle rejected, failing, or unknown verdicts per /merging-standards `<auditor_verdicts>`, re-running deterministic verification and the relevant auditor until the evidence predicate is clean.
+
+*(c) Local review to convergence.* Run the `changes-reviewer` agent on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main context has been doing. Invoke it per /merging-standards `<local_review_invocation>`: let it resolve its own scope — the worktree it runs in and the working diff — with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize; the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process its findings by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
 
 - **Validate each finding** against its cited rule, the product-local / language / spec-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
 - **Apply every valid finding that belongs.** Treat each valid finding as defect-class evidence: sweep the touched node(s) for parallel instances with the same rule, source contract, evidence pattern, lifecycle step, or generated-source relationship. Fix the cited site and every in-scope parallel instance, commit via /commit-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
 - **Converged** when the working diff carries no unapplied valid finding that belongs. Severity never decides; validity and the before-open phase do.
 
-The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run local deterministic verification, and re-run the local review — both `REVIEW_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes both (the joint fixpoint of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, and a review-driven fix is a tree verification has not covered). `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no unresolved valid `BLOCKING` or `DEBT` finding.
+The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run local deterministic verification, re-run required evidence-auditor predicates for touched evidence surfaces, and re-run the local review — all `VERIFICATION_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes all predicates (the joint fixpoint of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, an evidence-audit fix changes the evidence surface, and a review-driven fix is a tree verification has not covered). `VERIFICATION_READINESS` holds only when (a), (b), and (c) hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no unresolved valid `BLOCKING` or `DEBT` finding.
+
+</step>
 
 **Step 4 — GATE: Push.** Use the explicit destination ref form from /merging-standards `<push_semantics>`:
 
@@ -49,7 +55,7 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `REVIEW_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc:
 
@@ -68,7 +74,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 ## Test plan
 
-- [ ] <step>
+- [ ] <verification step>
 
 ## Refs
 
@@ -79,12 +85,12 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
 ```
 
 Flag rationale:
 
-- No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `REVIEW_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
+- No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /commit-changes conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
@@ -142,7 +148,7 @@ The PR body is markdown prose passed to gh on stdin. Default template:
 
 ## Refs
 
-- <spec nodes touched, e.g. spx/55-example.enabler/21-bar.outcome>
+- <full spec node path>
 - <issue refs, e.g. Closes #123>
 ```
 
@@ -162,15 +168,15 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 <failure_modes>
 
-**Opened a PR gated on an earlier tree.** Claude established `REVIEW_READINESS`, then committed review-driven fixes during the convergence loop, and opened the PR without re-running local deterministic verification and the local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, local deterministic verification, AND the local review, treating `REVIEW_READINESS` as holding only when both predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3b).
+**Opened a PR gated on an earlier tree.** Claude established `VERIFICATION_READINESS`, then committed fixes during the convergence loop, and opened the PR without re-running deterministic verification, required evidence-auditor predicates, and local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, local deterministic verification, required evidence-auditor predicates, and the local review, treating `VERIFICATION_READINESS` as holding only when all predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3).
 
-**Push rejection after local readiness.** Claude reached `REVIEW_READINESS`, then the explicit destination push was rejected because the remote branch advanced or credentials failed. Re-run /sync-base for a remote advancement, re-establish `REVIEW_READINESS` on the resulting tree, and push again; for credentials or permission failure, stop with the exact command output and no PR mutation.
+**Push rejection after local readiness.** Claude reached `VERIFICATION_READINESS`, then the explicit destination push was rejected because the remote branch advanced or credentials failed. Re-run /sync-base for a remote advancement, re-establish `VERIFICATION_READINESS` on the resulting tree, and push again; for credentials or permission failure, stop with the exact command output and no PR mutation.
 
 **Duplicate PR already exists.** Claude attempted `gh pr create` even though the branch already had an open PR. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
 
-**Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `REVIEW_READINESS` against the wrong base.
+**Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `VERIFICATION_READINESS` against the wrong base.
 
-**Convergence stall.** Claude repeated deterministic fixes and review fixes without reaching one tree where both predicates held. Stop the loop when the next fix would expand the changeset beyond the requested scope, record the split-out concern in the owning node's coordination note, and run one final deterministic verification and review on the narrowed branch before opening.
+**Convergence stall.** Claude repeated deterministic, evidence-audit, and review fixes without reaching one tree where all predicates held. Stop the loop when the next fix would expand the changeset beyond the requested scope, record the split-out concern in the owning node's coordination note, and run one final deterministic verification, required evidence-auditor predicates, and review on the narrowed branch before opening.
 
 </failure_modes>
 
@@ -180,12 +186,12 @@ The opening flow has succeeded when:
 
 - /merging-standards and /commit-changes are loaded before the flow begins.
 - /merging-standards `<branch_hygiene>` and `<branch_topology>` gates pass before push.
-- `REVIEW_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
+- `VERIFICATION_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, every required evidence-auditor predicate passed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /commit-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
-- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
+- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
+- The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence, including /merging-standards `<pr_check_wait>`.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /merging-standards.
 

@@ -19,7 +19,7 @@ Two modes:
 
 * ``--write``  rewrites ``README.md`` in place between the sentinels.
 * ``--check``  emits the regenerated content to stdout and exits non-zero if
-  the on-disk README differs. Suitable as a CI / ``just check`` gate.
+  the on-disk README differs. Suitable as a CI / ``just check-full`` gate.
 
 Default (no flag) prints the generated block to stdout without touching files.
 

@@ -7,7 +7,12 @@ from pathlib import Path
 
 import click
 
-from outcomeeng_evals.ci_plan import CiMode, build_ci_plan, plan_to_jsonable
+from outcomeeng_evals.ci_plan import (
+    CiMode,
+    build_ci_plan,
+    plan_to_jsonable,
+    read_changed_paths_file,
+)
 
 
 @click.command(name="plan")
@@ -39,7 +44,7 @@ def plan_command(
     default_plugin_dir: Path | None,
 ) -> None:
     """Build a JSON eval execution plan for CI."""
-    changed_paths = _read_changed_paths(changed_paths_file)
+    changed_paths = read_changed_paths_file(changed_paths_file)
     plan = build_ci_plan(
         root,
         mode=CiMode(mode),
@@ -47,13 +52,3 @@ def plan_command(
         default_plugin_dir=default_plugin_dir,
     )
     click.echo(json.dumps(plan_to_jsonable(plan), indent=2))
-
-
-def _read_changed_paths(path: Path | None) -> tuple[str, ...]:
-    if path is None:
-        return ()
-    return tuple(
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )

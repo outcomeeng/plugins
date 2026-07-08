@@ -18,7 +18,10 @@ eval eval_toml:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}")
+    workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
+    max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
+    timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --model "$model" --timeout-seconds "$timeout_seconds")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'
@@ -30,7 +33,10 @@ eval-case eval_toml case_id:
     set -euo pipefail
     plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
-    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --model "$model" --timeout-seconds "${TIMEOUT_SECONDS:-120}" --case-id "{{case_id}}")
+    workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
+    max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
+    timeout_seconds="${TIMEOUT_SECONDS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_TIMEOUT_SECONDS; print(DEFAULT_CI_TIMEOUT_SECONDS)')}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "$workers" --max-budget-usd "$max_budget_usd" --model "$model" --timeout-seconds "$timeout_seconds" --case-id "{{case_id}}")
     printf 'Running:'
     printf ' %q' "${command[@]}"
     printf '\n'
@@ -53,6 +59,14 @@ eval-node node_path:
         echo "No eval.toml files found under {{node_path}}/evals" >&2
         exit 1
     fi
+
+# Materialize producer-derived eval prompts under a root directory
+eval-materialize-prompts root:
+    uv run outcomeeng-evals materialize-prompts "{{root}}" --repo-root .
+
+# Check producer-derived eval prompts under a root directory for drift
+eval-materialize-prompts-check root:
+    uv run outcomeeng-evals materialize-prompts "{{root}}" --repo-root . --check
 
 # Run deterministic validation only
 validation:
@@ -99,9 +113,13 @@ fmt *args:
 fmt-check:
     dprint check
 
-# Run validation, then test, through the signal-safe recipe orchestrator
+# Run selected local gate steps through the signal-safe recipe orchestrator
 check:
     python3 -m outcomeeng.validation check
+
+# Run validation, then test, through the signal-safe recipe orchestrator
+check-full:
+    python3 -m outcomeeng.validation check-full
 
 # Install lefthook git hooks
 hooks-install:
@@ -159,7 +177,7 @@ clean:
     uv run python -m outcomeeng.hygiene.clean
 
 # Hard-reset the uv environment: remove .venv and Python tool caches, re-sync, verify
-# Use when `just check` reports a broken uv environment (stale .venv after a Python upgrade)
+# Use when `just check-full` reports a broken uv environment (stale .venv after a Python upgrade)
 reset-uv:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -171,7 +189,7 @@ reset-uv:
     uv sync
     echo "Verifying environment..."
     if uv run python -c 'import outcomeeng' >/dev/null 2>&1; then
-        echo "✔ uv environment healthy — outcomeeng importable. Run 'just check' to verify the gate."
+        echo "✔ uv environment healthy — outcomeeng importable. Run 'just check-full' to verify the full gate."
     else
         echo "✗ outcomeeng still not importable after reset — inspect the 'uv sync' output above."
         exit 1

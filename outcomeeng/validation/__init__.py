@@ -62,6 +62,7 @@ from outcomeeng.validation._steps import (
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
+    PREFLIGHT_STEPS,
     PYRIGHT_ARGV,
     PYTHON_SOURCE_PATHS,
     PYTEST_ARGV,
@@ -83,6 +84,14 @@ from outcomeeng.validation._steps import (
     VERIFICATION_TYPE_VALIDATION,
     test_recipe,
 )
+from outcomeeng.validation.selected_gate import (
+    RECIPE_CHECK_FULL,
+    SelectedGatePlan,
+    SelectedGateStep,
+    build_selected_gate_plan,
+    collect_changed_paths,
+    run_selected_check,
+)
 
 __all__ = [
     "ACTIONLINT_ARGV",
@@ -97,6 +106,7 @@ __all__ = [
     "MYPY_ARGV",
     "PHASE_COMPLETE",
     "PHASE_PREFLIGHT",
+    "PREFLIGHT_STEPS",
     "PHASE_RECIPE",
     "PYRIGHT_ARGV",
     "PYTHON_SOURCE_PATHS",
@@ -106,6 +116,7 @@ __all__ = [
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
     "RECIPE_CHECK",
+    "RECIPE_CHECK_FULL",
     "RECIPE_AD_HOC",
     "RECIPE_TEST",
     "RECIPE_VALIDATION",
@@ -144,8 +155,13 @@ __all__ = [
     "PRIMITIVE_SUMMARY_SCHEMA",
     "Recipe",
     "Step",
+    "SelectedGatePlan",
+    "SelectedGateStep",
     "assert_json_schema",
+    "build_selected_gate_plan",
+    "collect_changed_paths",
     "run",
     "run_check",
     "run_recipe",
+    "run_selected_check",
 ]

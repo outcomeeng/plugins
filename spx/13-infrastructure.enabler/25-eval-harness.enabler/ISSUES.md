@@ -2,6 +2,29 @@
 
 Open items carried forward from the eval-harness refactor. None block the harness as shipped; each is a follow-up decision or enhancement.
 
+## Parent-node test evidence hygiene
+
+The broad `test-evidence-auditor` run
+`019f3e93-ffb8-7c81-99ec-ff093c4dda8f` against
+`spx/13-infrastructure.enabler/25-eval-harness.enabler` reported that several
+existing parent-node tests keep setup data and helper builders in executed test
+files instead of `outcomeeng_evals.testing`, `outcomeeng_testing/`, or inert
+fixtures:
+
+- `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval_harness.compliance.l1.py`
+- `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_definition.conformance.l1.py`
+- `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_report.conformance.l1.py`
+- `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_runner.compliance.l1.py`
+
+This is a parent-node migration rather than a single selector repair: each file
+needs its setup policy and source-owned sample data moved into the existing
+eval-harness testing packages while preserving its assertion wrapper shape.
+
+Revisit condition: run `/apply` on
+`spx/13-infrastructure.enabler/25-eval-harness.enabler` for parent-node test
+evidence hygiene, then rerun `test-evidence-auditor` across the affected
+parent-node evidence files.
+
 ## Cross-suite parallelism
 
 The harness supports `--workers` for parallelism within a suite. `run --all` could also parallelize across suites. Defer; today's use case is one eval at a time.
@@ -9,15 +32,16 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 ## CI integration
 
 The CI workflow `.github/workflows/spec-tree-evals.yml` runs planned eval
-suites. It discovers each `eval.toml` under the configured root, filters out
-`ci_policy = "manual"` suites, and chooses full-suite, smoke-case, or skipped
-execution from the trigger mode and changed paths. PRs run smoke cases when a
-changed file matches a suite's `owned_paths`, run a full suite when the suite
-definition or eval harness changed, and skip unrelated suites. `push` to main,
-the weekly schedule, and `workflow_dispatch` run every non-manual suite under
-the configured root. Each selected suite runs through `outcomeeng-evals run`,
-using the suite's `plugin_dir` or the workflow fallback, and the job gates on
-each selected suite's exit code.
+suites through `outcomeeng-evals ci`. It discovers each `eval.toml` under the
+configured root, filters out `ci_policy = "manual"` suites, and chooses
+full-suite, smoke-case, or skipped execution from the trigger mode and
+changed paths. PRs run smoke cases when a changed file matches a suite's
+`owned_paths`, run a full suite when the suite definition or eval harness
+changed, and skip unrelated suites. `push` to main, the weekly schedule, and
+`workflow_dispatch` run every non-manual suite under the configured root.
+Each selected suite runs through the Python CI executor, which constructs the
+`outcomeeng-evals run` command using the suite's `plugin_dir` or the workflow
+fallback, and the job gates on the aggregate exit code.
 
 The workflow triggers on PRs touching declared eval ownership surfaces, pushes
 to `main` for the same surfaces, a weekly `schedule`, and `workflow_dispatch`.
@@ -38,11 +62,11 @@ The eval CI workflow (`spec-tree-evals.yml`) scopes to trusted triggers: `push` 
 
 ## FOLLOW-UP: no PR-time guarantee that `dist/claude/spec-tree` matches `src/plugins/spec-tree` (RESOLVED)
 
-`spec-tree-evals.yml` loads `--plugin-dir dist/claude/spec-tree` — the committed runtime tree, which is what consumers install, so grading the committed `dist` is the correct surface for the eval. But a PR that edits `src/plugins/spec-tree/**` while committing a stale `dist/` (a `--no-verify` bypass of the `build-skills` pre-commit hook) would have the eval grade the old runtime, hiding a source-only regression. The repo has no deterministic CI gate on PRs (`just check`'s `dist-diff` step runs only locally and in the pre-commit hook), so nothing on the PR independently enforces `dist == build(src)`.
+`spec-tree-evals.yml` loads `--plugin-dir dist/claude/spec-tree` — the committed runtime tree, which is what consumers install, so grading the committed `dist` is the correct surface for the eval. But a PR that edits `src/plugins/spec-tree/**` while committing a stale `dist/` (a `--no-verify` bypass of the `build-skills` pre-commit hook) would have the eval grade the old runtime, hiding a source-only regression. The repo has no deterministic CI gate on PRs (`just check-full`'s `dist-diff` step runs only locally and in the pre-commit hook), so nothing on the PR independently enforces `dist == build(src)`.
 
-The right fix is a repo-wide deterministic CI gate (run `just check`, including `dist-diff`, on `pull_request`), not a `dist`-freshness step bolted onto the eval workflow — the eval's job is to grade the shipped artifact, not to police build freshness. Track here until that gate exists.
+The right fix is a repo-wide deterministic CI gate (run `just check-full`, including `dist-diff`, on `pull_request`), not a `dist`-freshness step bolted onto the eval workflow — the eval's job is to grade the shipped artifact, not to police build freshness. Track here until that gate exists.
 
-Resolved 2026-06-16: `.github/workflows/check.yml` now runs the validation package on `pull_request` and `push` to `main`; the check recipe includes `build-skills` and `dist-diff`, so PR-time deterministic verification enforces `dist == build(src)`.
+Resolved 2026-06-16: `.github/workflows/check.yml` now runs the validation package on `pull_request` and `push` to `main`; the full gate recipe includes `build-skills` and `dist-diff`, so PR-time deterministic verification enforces `dist == build(src)`.
 
 `.github/workflows/spec-tree-evals.yml` commits the appended `history.jsonl`
 rows back to `main` using the org-level PAT secret `OUTCOMEENG_EVAL_STORE`

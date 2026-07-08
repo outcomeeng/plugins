@@ -1,8 +1,7 @@
 """Production adapter binding ProcessSpawner to subprocess.Popen.
 
-This module is the only file in the check_pipeline package that imports
-subprocess. The compliance test `TestSubprocessImportContainment` enforces
-this — moving the import anywhere else breaks the test.
+This module is the validation package subprocess boundary. The compliance test
+`TestSubprocessImportContainment` enforces this boundary for validation code.
 
 The adapter passes `start_new_session=True` so that the child runs in its
 own process group, enabling `os.killpg` to forward signals to the entire
@@ -20,6 +19,15 @@ from pathlib import Path
 from typing import Final
 
 _CHILD_UNBLOCK_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+
+
+@dataclass(frozen=True)
+class CapturedProcessResult:
+    """Captured output from a bounded subprocess run."""
+
+    returncode: int
+    stdout: str
+    stderr: str
 
 
 def _restore_child_signal_mask() -> None:
@@ -68,3 +76,26 @@ class ProductionSpawner:
                 preexec_fn=_restore_child_signal_mask,
             )
         return _PopenHandle(_proc=proc)
+
+
+def run_captured(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    timeout_seconds: int,
+) -> CapturedProcessResult:
+    """Run a bounded command and capture stdout through the package subprocess seam."""
+
+    completed = subprocess.run(
+        tuple(argv),
+        cwd=cwd,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+    )
+    return CapturedProcessResult(
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+    )

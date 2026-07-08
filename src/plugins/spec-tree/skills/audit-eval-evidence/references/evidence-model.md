@@ -37,7 +37,9 @@ Coupling is the first gate. An eval that does not reach the real producer is a s
 | False            | Metadata names the producer but prompt or harness never uses it.                                   | REJECT                                                               |
 | Unknown          | Artifact path cannot establish how the producer is reached.                                        | REJECT                                                               |
 
-For claims about skill, agent, classifier, or script behavior, the mutation test is decisive: replacing the producer with unrelated text must change the eval result. If it does not, the eval is not coupled.
+`prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior; the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
+
+For claims about skill, agent, classifier, or script behavior, the mutation test is decisive: replacing the producer with unrelated text must change the eval result. For `producer-section` suites, evaluate that mutation through the materialization path: mutate the selected section, materialize the prompt, and then the suite's result must change when the mutation removes behavior the cases exercise. If it does not, the eval is not coupled.
 
 </producer_coupling>
 
@@ -80,7 +82,7 @@ If the assertion could be unfulfilled while the suite passes, REJECT as misalign
 
 <falsifiability_model>
 
-For each suite, name one concrete mutation to the producer that would fail at least one case.
+For each suite, name one concrete mutation to the producer that would fail at least one case. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization.
 
 Valid mutation:
 
@@ -112,6 +114,14 @@ Read `history.jsonl` and the referenced run summary when available. Confirm:
 - The run completed enough cases/trials to satisfy the threshold.
 - The recorded outcome is passing.
 - The row is not budget-exhausted, timed out, interrupted, or infrastructure-failed.
+
+When the newest passing row's `git_sha` names a direct ancestor of HEAD, inspect
+the diff from that SHA to HEAD before rejecting it as stale. Accept the row only
+when every changed path is the audited suite's own `history.jsonl` append and no
+`eval.toml`, `prompt.md`, `cases.jsonl`, producer artifact, grader, harness, or
+threshold-affecting code changed. This history-only exception is required
+because committing an append-only history row necessarily advances HEAD after
+the run records `git rev-parse HEAD`.
 
 Budget-exhausted and other operational failures are neither passes nor behavioral rejections. They only show the suite did not produce complete evidence.
 

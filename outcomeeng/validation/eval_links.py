@@ -4,7 +4,7 @@ Walks the project's spec tree, finds every ``[eval](path)`` and
 ``[test](path)`` reference in markdown files, and asserts each target
 exists and matches its expected shape (``eval.toml`` for eval links,
 pytest collectable for test links). Exit 0 when all links resolve,
-exit 1 otherwise. Wired into ``just check``.
+exit 1 otherwise. Wired into ``just check-full``.
 """
 
 from __future__ import annotations

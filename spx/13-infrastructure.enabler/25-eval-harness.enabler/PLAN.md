@@ -1,13 +1,15 @@
 # Eval Harness: Plan — prompt-caching implementation (gated)
 
 `.github/workflows/spec-tree-evals.yml` is authored and lint-clean. It
-plans each suite before running it: PRs use changed paths plus `owned_paths`
-and `smoke_cases` from each `eval.toml`, while `push` to main, the weekly
+collects changed paths, then delegates planning and execution to
+`outcomeeng-evals ci`: PRs use changed paths plus `owned_paths` and
+`smoke_cases` from each `eval.toml`, while `push` to main, the weekly
 schedule, and manual dispatch run the full non-manual suite set under the
-configured root. Each selected suite runs through `outcomeeng-evals run`,
-using the suite's declared `plugin_dir` or the workflow fallback, and the job
-gates on each selected suite's exit code. On main the appended `history.jsonl`
-rows are committed back via the `OUTCOMEENG_EVAL_STORE` PAT.
+configured root. Each selected suite runs through Python-owned
+`outcomeeng-evals run` command construction, using the suite's declared
+`plugin_dir` or the workflow fallback, and the job gates on the aggregate
+exit code. On main the appended `history.jsonl` rows are committed back via
+the `OUTCOMEENG_EVAL_STORE` PAT.
 
 The root merge-gate policy probes moved out of LLM evals and into
 deterministic mapping tests at

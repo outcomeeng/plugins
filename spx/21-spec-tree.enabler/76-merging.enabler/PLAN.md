@@ -75,10 +75,7 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Replace `POST_MERGE_VERIFY` with phase progression. A merged PR with a declared release continues to `RELEASE`; it does not exit at merge.
    - Keep `/open-pr` focused on publishing once `VERIFICATION_READINESS` holds; keep `/manage-pr` focused on current-head integration plus later declared phases.
    - Update direct-push to use the same phase sequence, with its transport-specific predicates bound locally.
-   - Replace the current production-readiness implementation and tests together:
-     - `outcomeeng/merging_policy.py` production-readiness helpers;
-     - `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py` functions `test_production_readiness_permissive_or_approved_inputs_map_to_merge` and `test_production_relevant_unapproved_change_maps_to_await_approval`.
-   - Keep the existing production-readiness tests until this transport PR because removing them in the decision PR reduces coverage for the still-installed `merging-standards` and `outcomeeng/merging_policy.py` behavior before the replacement implementation exists.
+   - Remove the retired production-readiness implementation and tests once the transport flow and shared methodology use `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
    - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
 
 4. **Repo-local release PR: marketplace refresh as `RELEASE`**
@@ -159,12 +156,11 @@ The `/merge` dispatcher and the direct-push variant-1 execution path (direct to 
 
 ## Prose-grep-test lint (next session, validation gate)
 
-Several "conformance" tests in this restructure were prose-greps — `assert "<heading>" in skill_body` — that verify a string was typed, not that the skill behaves. They were deleted this PR, but nothing prevents the anti-pattern from returning. Add a validation gate (the `reference-portability` gate is the model) that flags a test asserting the presence/absence of a string in a *skill/spec body* (a `.md` read into a `[test]`-lane Python test) as a non-coupling test. Home: the validation enabler (`spx/15-validation.enabler/`). Like the transport-selection eval suite that replaced the deleted prose-grep conformance tests, this gate restores real coupling where a prose-grep would otherwise stand in.
+Prose-grep conformance tests — `assert "<heading>" in skill_body` — verify a string was typed, not that the skill behaves. Add a validation gate (the `reference-portability` gate is the model) that flags a test asserting the presence/absence of a string in a *skill/spec body* (a `.md` read into a `[test]`-lane Python test) as a non-coupling test. Home: the validation enabler (`spx/15-validation.enabler/`). Like the transport-selection eval suite that replaced prose-grep conformance tests, this gate restores real coupling where a prose-grep would otherwise stand in.
 
-Two `### Conformance` assertions in `merging.md` carry this debt and need the same rework. A whole-node spec-audit on PR #333 flagged both; a separate merging-node pass owns the fix:
+One `### Conformance` assertion in `merging.md` still carries adjacent evidence debt and needs the same rework. A whole-node spec-audit on PR #333 flagged it; a separate merging-node pass owns the fix:
 
 - The dispatcher assertion `… never re-deriving the base ref or diff range inline … ([test](tests/test_classify_changeset.scenario.l1.py))` pairs a universal "never inline" claim with a `.scenario` test that can only prove one positive path — an evidence-type mismatch. Rework: keep the behavioral classification as the scenario `[test]`, and carry the universal "never re-derive inline" structural guarantee as the `[audit]` claim it already cites (`spx/21-spec-tree.enabler/17-audit.adr.md`).
-- The assertion `the shipped merging-standards skill text preserves the … policy clauses … ([test](tests/test_merge_gate_policy.conformance.l1.py))` is the prose-grep coupling pattern above — the `[test]` reads the skill body and asserts substrings. Rework: replace the substring check with a real coupling test (parse the merge-policy helper's mapped values and the skill's stated policy, compare), or fold it into the validation gate.
 
 ## Add an explicit absent-overlay case to the transport-selection eval
 

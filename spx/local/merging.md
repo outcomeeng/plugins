@@ -2,9 +2,9 @@
 
 Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-specific values the merge skills read; the gates, transport selection, and protocols are injected by those skills.
 
-## Production-relevance recognition
+## Deployment and release recognition
 
-None. Every change is treated as not production-relevant, so `PRODUCTION_READINESS` holds and `MERGE_READINESS` alone authorizes the merge — never ask the operator whether to merge.
+No deployment action is declared. Every change proceeds without deployment authorization. Release is declared as the marketplace-source refresh in the release marketplace sync section, governed by `RELEASE_READINESS`; the command owns distribution-change detection. Never ask the operator whether to merge.
 
 ## Merge command
 
@@ -23,7 +23,7 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 
 - Spec-only (specs, decisions, coordination notes, Markdown): `spx validation markdown` and `spx spec status --format json`.
 - Skill/doc Markdown under `src/plugins/` or `dist/`: `just check-skills` and `just docs-check`.
-- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
+- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check-full` for shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
 
 ## Governance surfaces (base-sync review reuse)
 
@@ -33,7 +33,7 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 `@spec-tree` (configured in `.github/workflows/spec-tree-review.yml` `trigger_phrase`; repository-variable override `SPEC_TREE_REVIEW_TRIGGER_PHRASE`).
 
-## Post-merge marketplace sync
+## Release marketplace sync
 
 The Claude marketplace is registered as a **Directory source** at the authoritative default-branch worktree — the checkout named like the remote (for example `~/Code/outcomeeng/plugins/plugins`), which stays on branch `main`. That worktree's `dist/` is what every Claude session and `claude plugin marketplace update` reads, so the marketplace serves current content only when **that worktree's `main` is current**.
 

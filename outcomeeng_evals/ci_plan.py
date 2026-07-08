@@ -10,7 +10,14 @@ from pathlib import Path
 from outcomeeng_evals.definition import CiPolicy, EVAL_TOML_FILENAME, load_definition
 
 
-UNIVERSAL_OWNED_PATHS = ("outcomeeng_evals/**", "outcomeeng_testing/evals/**")
+UNIVERSAL_OWNED_PATHS = (
+    "outcomeeng_evals/**",
+    "outcomeeng_testing/evals/**",
+    "outcomeeng_testing/generators/**",
+    "outcomeeng_testing/harnesses/**",
+)
+RENAMED_GIT_STATUS_PREFIX = "R"
+COPIED_GIT_STATUS_PREFIX = "C"
 
 
 class CiMode(StrEnum):
@@ -79,6 +86,32 @@ def plan_to_jsonable(items: list[EvalPlanItem]) -> list[dict[str, object]]:
         }
         for item in items
     ]
+
+
+def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
+    """Read repository-relative changed paths from a git changed-path file."""
+
+    if path is None:
+        return ()
+    return tuple(
+        changed_path
+        for line in path.read_text(encoding="utf-8").splitlines()
+        for changed_path in _changed_paths_from_line(line)
+    )
+
+
+def _changed_paths_from_line(line: str) -> tuple[str, ...]:
+    if not line:
+        return ()
+    parts = line.split("\t")
+    status = parts[0]
+    if len(parts) == 1:
+        return (line,)
+    if status.startswith((RENAMED_GIT_STATUS_PREFIX, COPIED_GIT_STATUS_PREFIX)):
+        if len(parts) < 3:
+            return ()
+        return (parts[1], parts[2])
+    return (parts[1],)
 
 
 def _pr_selection(

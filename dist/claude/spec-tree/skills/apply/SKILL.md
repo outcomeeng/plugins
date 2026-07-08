@@ -3,10 +3,12 @@ name: apply
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
+argument-hint: "[--agent] [node-path]"
+allowed-tools: Read, Skill, Agent, AskUserQuestion
 ---
 
 <objective>
-A work item implemented through the spec-tree TDD flow — its node declared, specified, and passing its tests with every audit gate APPROVED — and, for default-branch work, the change merged to the default branch on origin.
+A spec-tree work item implemented and ready for the delivery boundary the user requested.
 
 </objective>
 
@@ -18,7 +20,7 @@ A work item implemented through the spec-tree TDD flow — its node declared, sp
 3. Architect -> audit until APPROVED (Steps 3–4)
 4. Test -> audit until APPROVED (Steps 5–6)
 5. Implement -> audit until APPROVED (Steps 7–8)
-6. Whole-changeset review when the change reaches beyond the target node (Step 9)
+6. Evidence-auditor gates for touched `[test]` and `[eval]` evidence, then whole-changeset review when the change reaches beyond the target node (Step 9)
 7. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
 
 </quick_start>
@@ -27,7 +29,7 @@ A work item implemented through the spec-tree TDD flow — its node declared, sp
 
 An optional argument controls what runs before the per-node flow below:
 
-- `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The agent does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The `applier` role does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
 - `[node-path]` → the work queue is that single node.
 - no argument → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
 
@@ -69,13 +71,27 @@ When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at
 
 <stabilized_diff_rule>
 
-Before any audit gate or whole-changeset review runs, self-converge the diff: read the changed specs, tests, and implementation together; confirm the model is coherent; and fix obvious contradictions before asking an auditor or reviewer to find them. Audit gates confirm a stabilized design. They are not the design loop.
+Before any audit gate or whole-changeset review runs, self-converge the diff: read the changed specs, tests, and implementation together; confirm the design is coherent; and fix obvious contradictions before asking an auditor or reviewer to find them. Audit gates confirm a stabilized design. They are not the design loop.
 
 When a gate returns `REJECT` or a review surfaces a valid finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. Same-class means the same rule, source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary. A patch to the cited line alone is sufficient only when the sweep proves the defect isolated.
 
-Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree. If repeated findings keep reopening the same design area, stop patching and refactor the model before the next gate.
+Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree. If repeated findings keep reopening the same design area, stop patching and refactor Claude's approach before the next gate.
 
 </stabilized_diff_rule>
+
+<evidence_auditor_gate>
+
+Before Step 9 invokes `changes-reviewer`, run the applicable artifact-type evidence auditors over the stabilized diff. This gate is separate from the language-specific Step 6 test audit: Step 6 checks the tests written for the target node in the TDD flow; this pre-review gate checks any evidence artifacts the final changeset would publish.
+
+Run deterministic verification first. The main conversation brings local validation, tests, and required eval runs to passing for the touched scope before dispatching evidence auditors. A dispatched evidence auditor reads and judges evidence quality; it never runs deterministic verification.
+
+Dispatch `test-evidence-auditor` before Step 9 when the diff creates or modifies any `[test]` assertion, linked test file, or test-infrastructure artifact imported by a linked test. Include the governing node, assertion text or spec path plus assertion headings, and the test files in the dispatch prompt. If the auditor returns `REJECTED`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run deterministic verification, and re-dispatch before Step 9.
+
+Dispatch `eval-evidence-auditor` before Step 9 when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. Include the governing node, assertion text or spec path plus assertion headings, the eval artifacts, and the producer artifacts in the dispatch prompt. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch before Step 9.
+
+When both evidence classes changed, dispatch both auditors before Step 9. Step 9 starts only after every applicable evidence-auditor verdict is clean on the exact diff it reviews.
+
+</evidence_auditor_gate>
 
 <skill_map>
 
@@ -92,6 +108,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 6    | Test audit               | `Skill("audit-typescript-tests")`                       | `Skill("audit-python-tests")`        |
 | 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`               |
 | 8    | Code audit               | `Skill("audit-typescript")`                             | `Skill("audit-python")`              |
+| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                                 |
 | 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                                 |
 | 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                                 |
 
@@ -191,6 +208,8 @@ Before invoking the audit, apply `<stabilized_diff_rule>`.
 
 Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
 
+Before invoking the review, run `<evidence_auditor_gate>`. The reviewer must see a diff whose touched evidence artifacts have already passed their artifact-type evidence audits.
+
 Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
 
 Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding it surfaces, including every in-scope same-class instance found by the same-class sweep, then re-run. **Unaddressed valid finding -> fix the defect class -> re-run this step.** Loop until the review converges.
@@ -225,7 +244,7 @@ Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or
 
 On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the defect class, re-invoke the same skill, and scan again.
 
-**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the model is unstable; refactor the model before asking the same gate again.
+**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
 
 </review_gates>
 
@@ -246,7 +265,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 **Failure 2: Claude patched the cited line instead of the defect class.** An audit gate or the Step 9 review cited one instance; Claude fixed that line, re-ran the gate, and the same class reopened on the next iteration elsewhere. Signal: repeated REJECTs reopening the same rule, source contract, or evidence pattern. Avoid: per `<stabilized_diff_rule>`, treat each finding as defect-class evidence — sweep the touched node(s), fix every in-scope instance, then run the gate once on the stabilized tree.
 
-**Failure 3: Claude kept running the flow in the main context after dispatching `--agent`.** Invoked with `--agent`, Claude launched the `applier` agent and then also ran Steps 1–8 in the main context, duplicating the work. Signal: main-context architect/test/code steps after an `applier` dispatch. Avoid: after `--agent` dispatch, stop the per-node steps in the main context; resume only at Step 9 (when cross-node) and Step 10 once the agent returns.
+**Failure 3: Claude kept running the flow in the main context after dispatching `--agent`.** Invoked with `--agent`, Claude launched the `applier` role and then also ran Steps 1–8 in the main context, duplicating the work. Signal: main-context architect/test/code steps after an `applier` dispatch. Avoid: after `--agent` dispatch, stop the per-node steps in the main context; resume only at Step 9 (when cross-node) and Step 10 once the `applier` returns.
 
 </failure_modes>
 
@@ -259,6 +278,8 @@ Scan the conversation for these markers before declaring done:
 - [ ] Step 4 audit skill emitted `APPROVED`
 - [ ] Step 6 audit skill emitted `APPROVED`
 - [ ] Step 8 audit skill emitted `APPROVED`
+- [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
+- [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9
 - [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
 - [ ] All tests pass
 - [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
