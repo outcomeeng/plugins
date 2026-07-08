@@ -124,8 +124,8 @@ def parse_session(record: dict[str, object], text: str) -> Session:
     return Session(
         git_ref=git_ref if isinstance(git_ref, str) else None,
         git_status=_body_git_status(text),
-        specs=_string_tuple(payload["specs"]),
-        files=_string_tuple(payload["files"]),
+        specs=_string_tuple(payload.get("specs", [])),
+        files=_string_tuple(payload.get("files", [])),
         pr_numbers=_pr_numbers(text),
     )
 
@@ -149,14 +149,13 @@ def _single_session_record(data: object) -> dict[str, object]:
 
 
 def _metadata_shape_error(payload: dict[str, object]) -> str | None:
-    for key in ("git_ref", "specs", "files"):
-        if key not in payload:
-            return f"{key} is absent"
+    if "git_ref" not in payload:
+        return "git_ref is absent"
     git_ref = payload["git_ref"]
     if git_ref is not None and not isinstance(git_ref, str):
         return "git_ref is not a string or null"
     for key in ("specs", "files"):
-        value = payload[key]
+        value = payload.get(key, [])
         if not isinstance(value, list) or not all(
             isinstance(item, str) for item in value
         ):

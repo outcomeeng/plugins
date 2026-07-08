@@ -106,11 +106,11 @@ Every closure ends with **zero, one, or several** session files — one canonica
    printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '<metadata>' '  timestamp: [UTC timestamp]' '  product: [Product name from cwd]' '  git_ref: [work branch]' '  git_status: clean' '</metadata>' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
-4. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available, and the `git_ref` work branch.
+4. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available. When the JSON header supplied `git_ref`, also confirm the stored file contains that work-branch anchor.
 
 **Content of the canonical continuation:**
 
-- Header — a JSON header object of caller fields (`priority`, `goal`, `next_step`, `git_ref` naming the pushed work branch, optional `specs`, optional `files`)
+- Header — a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `git_ref` naming the pushed work branch when one must be preserved, optional `specs`, optional `files`)
 - `<nodes>` — from workflow 01 (anchored nodes)
 - `next_step` header — from `<perspective_next_context>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, coordination notes created

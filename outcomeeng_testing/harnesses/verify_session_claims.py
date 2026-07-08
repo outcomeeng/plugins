@@ -640,7 +640,6 @@ def malformed_session_metadata_fields_are_unverifiable() -> bool:
         {"git_ref": 123, "specs": [], "files": []},
         {"git_ref": None, "specs": "spx/21-x.enabler/x.md", "files": []},
         {"git_ref": None, "specs": [], "files": [123]},
-        {"git_ref": None, "files": []},
         {
             "git_ref": None,
             "specs": [pathlib.PurePosixPath("/", "escape.md").as_posix()],
@@ -688,6 +687,28 @@ def metadata_loading_does_not_require_local_session_file_body() -> bool:
         assert len(verdicts) == 1
         assert verdicts[0].kind == module.ClaimKind.GIT_REF
         assert verdicts[0].verdict == module.Verdict.CONFIRMED
+        return True
+
+
+def optional_session_injection_lists_default_to_empty() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={
+                ("spx", "session", "show", "--json", SESSION_ID): (
+                    0,
+                    json.dumps({"git_ref": None}),
+                    "",
+                ),
+                ("spx", "session", "show", SESSION_ID): (
+                    0,
+                    "<metadata>\n</metadata>\n",
+                    "",
+                ),
+            },
+        )
+        assert module.verify(SESSION_ID, repo, runner) == []
         return True
 
 

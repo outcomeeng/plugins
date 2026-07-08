@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.verify_session_claims import (
     malformed_session_metadata_fields_are_unverifiable,
     metadata_loading_does_not_require_local_session_file_body,
     node_status_evidence_keeps_target_node_scalar_fields_only,
+    optional_session_injection_lists_default_to_empty,
     script_imports_are_stdlib_only,
     verification_is_read_only_and_uses_spec_status,
     verify_accepts_injected_runner,
@@ -52,3 +53,7 @@ def test_malformed_session_metadata_fields_are_unverifiable() -> None:
 
 def test_metadata_loading_does_not_require_local_session_file_body() -> None:
     assert metadata_loading_does_not_require_local_session_file_body()
+
+
+def test_optional_session_injection_lists_default_to_empty() -> None:
+    assert optional_session_injection_lists_default_to_empty()
