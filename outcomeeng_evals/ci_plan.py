@@ -6,11 +6,14 @@ import fnmatch
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Final
 
 from outcomeeng_evals.definition import CiPolicy, EVAL_TOML_FILENAME, load_definition
 
 
+ROOT_INSTRUCTION_PATHS: Final = ("AGENTS.md", "CLAUDE.md")
 UNIVERSAL_OWNED_PATHS = (
+    *ROOT_INSTRUCTION_PATHS,
     "outcomeeng_evals/**",
     "outcomeeng_testing/evals/**",
     "outcomeeng_testing/generators/**",
@@ -18,10 +21,11 @@ UNIVERSAL_OWNED_PATHS = (
 )
 CHANGED_PATHS_FILE_HELP = (
     "File containing git diff --name-status rows, or one repository-relative "
-    "path per line."
+    "path per line. Mixed formats are rejected."
 )
 RENAMED_GIT_STATUS_PREFIX = "R"
 COPIED_GIT_STATUS_PREFIX = "C"
+SIMPLE_GIT_STATUS_CODES: Final = frozenset(("A", "B", "D", "M", "T", "U", "X"))
 
 
 class CiMode(StrEnum):
@@ -97,25 +101,45 @@ def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
 
     if path is None:
         return ()
+    lines = tuple(
+        line for line in path.read_text(encoding="utf-8").splitlines() if line
+    )
+    if not lines:
+        return ()
+    has_tabbed_rows = any("\t" in line for line in lines)
+    if not has_tabbed_rows:
+        return lines
     return tuple(
         changed_path
-        for line in path.read_text(encoding="utf-8").splitlines()
-        for changed_path in _changed_paths_from_line(line)
+        for line in lines
+        for changed_path in _changed_paths_from_name_status_line(line)
     )
 
 
-def _changed_paths_from_line(line: str) -> tuple[str, ...]:
-    if not line:
-        return ()
+def _changed_paths_from_name_status_line(line: str) -> tuple[str, ...]:
+    if "\t" not in line:
+        msg = f"changed paths file mixes git name-status rows with plain path row: {line!r}"
+        raise ValueError(msg)
     parts = line.split("\t")
     status = parts[0]
-    if len(parts) == 1:
-        return (line,)
+    if not _is_git_name_status(status):
+        msg = f"changed paths file tabbed row is not git name-status: {line!r}"
+        raise ValueError(msg)
     if status.startswith((RENAMED_GIT_STATUS_PREFIX, COPIED_GIT_STATUS_PREFIX)):
-        if len(parts) < 3:
-            return ()
+        if len(parts) != 3:
+            msg = f"changed paths file rename/copy row must contain status, old path, and new path: {line!r}"
+            raise ValueError(msg)
         return (parts[1], parts[2])
+    if len(parts) != 2:
+        msg = f"changed paths file status row must contain status and path: {line!r}"
+        raise ValueError(msg)
     return (parts[1],)
+
+
+def _is_git_name_status(status: str) -> bool:
+    if status.startswith((RENAMED_GIT_STATUS_PREFIX, COPIED_GIT_STATUS_PREFIX)):
+        return status[1:].isdigit()
+    return status in SIMPLE_GIT_STATUS_CODES
 
 
 def _pr_selection(
