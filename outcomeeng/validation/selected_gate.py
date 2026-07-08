@@ -71,6 +71,7 @@ SKILL_STEP_LABELS: Final = (
 )
 
 FULL_GATE_PATTERNS: Final = (
+    ".github/workflows/check.yml",
     "pyproject.toml",
     "uv.lock",
     "justfile",

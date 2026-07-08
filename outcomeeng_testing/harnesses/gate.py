@@ -108,6 +108,7 @@ from outcomeeng.validation.selected_gate import (
     run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
+    SELECTED_GATE_CHECK_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,
     SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
@@ -962,6 +963,7 @@ def assert_selected_gate_mapping_contract() -> None:
 
     full_gate_examples = (
         SELECTED_GATE_FULL_GATE_PATH,
+        SELECTED_GATE_CHECK_WORKFLOW_PATH,
         "outcomeeng/validation/selected_gate.py",
         "outcomeeng_testing/generators/gate.py",
         "outcomeeng_testing/evals/just_recipes.py",
