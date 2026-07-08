@@ -23,9 +23,10 @@ Adversarial {{! term('configured_agent') !}} auditor. Evaluate {{! term('configu
 - Read the provided {{! term('configured_agent') !}} configuration files and any governing references named by the prompt.
   {!% if target == 'codex' %!}
 - Apply this audit methodology to the scoped files:
-  - Verify frontmatter validity, lowercase-hyphenated names, descriptions with clear invocation triggers, and tool boundaries.
+  - Verify Codex TOML fields: `name`, `description`, and `{{! field('configured_agent_prompt') !}}`; accept `name` as a TOML string and do not require YAML frontmatter or lowercase-hyphenated filenames.
+  - Verify configured sandbox, model, reasoning-effort, web-search, MCP server, and shell-environment fields against Codex custom-agent semantics when those fields are present.
   - Check prompt voice, XML structure, role specificity, constraints, workflow, output contract, and success criteria.
-  - Treat `skills:` entries as required methodology guidance preserved for the main runtime to resolve, not as Codex custom-agent preload behavior.
+  - Treat any preserved source `skills:` guidance as required methodology context for the main runtime to resolve, not as Codex custom-agent preload behavior.
   - Reject unsupported model settings, unsafe tool access, generic helper roles, prompt text that assumes another runtime, and verdict formats outside this output contract.
     {!% else %!}
 - Apply the preloaded `develop:audit-subagents` methodology to the scoped files.

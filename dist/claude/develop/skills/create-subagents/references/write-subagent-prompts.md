@@ -64,7 +64,7 @@ Use XML tags to structure subagent prompt bodies for clarity:
 <example type="security_reviewer">
 ```text
 <role>
-Role: senior security engineer specializing in web application security.
+Claude is a senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>
@@ -113,7 +113,7 @@ For each issue found:
 <example type="test_writer">
 ```text
 <role>
-Role: test automation specialist creating thorough, maintainable test suites.
+Claude is a test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <testing_philosophy>
@@ -163,7 +163,7 @@ Follow AAA pattern:
 <example type="debugger">
 ```text
 <role>
-Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
+Claude is a debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <debugging_methodology>
@@ -359,7 +359,7 @@ Begin with a clear role statement:
 
 ```markdown
 <role>
-Role: [specific expertise] specializing in [specific domain].
+Claude is a [specific expertise] specialist in [specific domain].
 </role>
 ```
 
@@ -522,7 +522,7 @@ model: sonnet
 ---
 
 <role>
-Role: [specific role] specializing in [domain].
+Claude is a [specific role] specializing in [domain].
 </role>
 
 <focus_areas>

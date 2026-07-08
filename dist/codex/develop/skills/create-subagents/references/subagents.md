@@ -294,7 +294,7 @@ sandbox_mode = "workspace-write"
 model = "gpt-5.4"
 developer_instructions = """
 <role>
-Role: test automation specialist creating thorough, maintainable test suites.
+Claude is a test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <workflow>
@@ -326,7 +326,7 @@ sandbox_mode = "workspace-write"
 model = "gpt-5.4"
 developer_instructions = """
 <role>
-Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
+Claude is a debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <workflow>
@@ -487,7 +487,7 @@ model = "gpt-5.4"
 developer_instructions = """
 [CACHEABLE SECTION - Stable content]
 <role>
-Role: senior security engineer...
+Claude is a senior security engineer...
 </role>
 
 <focus_areas>
@@ -581,7 +581,7 @@ Use XML tags to structure the developer instructions for clarity:
 
 ```markdown
 <role>
-Role: senior security engineer specializing in web application security.
+Claude is a senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>

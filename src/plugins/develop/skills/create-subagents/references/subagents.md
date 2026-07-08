@@ -457,7 +457,7 @@ Follow the file format specified above (YAML frontmatter + {{! term('configured_
 claude --agents '{
   "code-reviewer": {
     "description": "ALWAYS use this subagent after code changes.",
-    "prompt": "Role: senior code reviewer. Focus on quality, security, and best practices.",
+    "prompt": "Claude is a senior code reviewer. Focus on quality, security, and best practices.",
     "tools": ["Read", "Grep", "Glob", "Bash"],
     "model": "sonnet"
   }
@@ -481,7 +481,7 @@ sandbox_mode = "workspace-write"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>
-Role: test automation specialist creating thorough, maintainable test suites.
+Claude is a test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <workflow>
@@ -513,7 +513,7 @@ model: {{! term('configured_agent_standard_model') !}}
 ---
 
 <role>
-Role: test automation specialist creating thorough, maintainable test suites.
+Claude is a test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <workflow>
@@ -546,7 +546,7 @@ sandbox_mode = "workspace-write"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>
-Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
+Claude is a debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <workflow>
@@ -579,7 +579,7 @@ model: {{! term('configured_agent_standard_model') !}}
 ---
 
 <role>
-Role: debugging specialist skilled at root cause analysis and systematic problem-solving.
+Claude is a debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <workflow>
@@ -808,7 +808,7 @@ model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 [CACHEABLE SECTION - Stable content]
 <role>
-Role: senior security engineer...
+Claude is a senior security engineer...
 </role>
 
 <focus_areas>
@@ -848,7 +848,7 @@ model: {{! term('configured_agent_standard_model') !}}
 
 [CACHEABLE SECTION - Stable content]
 <role>
-Role: senior security engineer...
+Claude is a senior security engineer...
 </role>
 
 <focus_areas>
@@ -943,7 +943,7 @@ Use XML tags to structure the {{! term('configured_agent_prompt') !}} for clarit
 
 ```markdown
 <role>
-Role: senior security engineer specializing in web application security.
+Claude is a senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>
