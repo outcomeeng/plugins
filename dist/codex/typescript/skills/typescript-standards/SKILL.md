@@ -10,10 +10,6 @@ allowed-tools: Read
 The TypeScript code standards every TypeScript skill enforces.
 </objective>
 
-<quick_start>
-Reference this skill when coding or reviewing TypeScript. Standards grouped by category with eslint rule codes. All examples show correct (✅) and incorrect (❌) patterns.
-</quick_start>
-
 <success_criteria>
 Code follows these standards when tsc strict mode and eslint checks pass. See summary table at the end for the complete rejection criteria with rule codes.
 </success_criteria>
@@ -121,10 +117,10 @@ function handle(value: string | number): void {
 Production code must name domain-significant literals and export reusable constants from the module that owns them.
 
 ```typescript
-// ✅ REQUIRED: Named constants at module level
-const MIN_SCORE = 0;
-const MAX_SCORE = 100;
-const DEFAULT_SCORE = 85;
+// ✅ REQUIRED: Named reusable constants at module level
+export const MIN_SCORE = 0;
+export const MAX_SCORE = 100;
+export const DEFAULT_SCORE = 85;
 
 export function validateScore(score: number): boolean {
   return score >= MIN_SCORE && score <= MAX_SCORE;
@@ -399,14 +395,14 @@ import { Position } from "./position";
 import { tokenize } from "./tokens";
 ```
 
-**Infrastructure** is stable code that doesn't move when the feature moves. Path aliases are required:
+**Stable shared modules** are project-owned code that does not move when a feature moves. Path aliases are required, using the aliases the repository declares:
 
 ```typescript
-// ❌ REJECTED: Deep relative to infrastructure
-import { getRepoRoot } from "../../../../../../src/lib/paths";
+// ❌ REJECTED: Deep relative import to stable shared code
+import { getRepoRoot } from "../../../../../../src/shared/paths";
 
-// ✅ REQUIRED: Path alias
-import { getRepoRoot } from "@lib/paths";
+// ✅ REQUIRED: Repository-declared path alias
+import { getRepoRoot } from "@shared/paths";
 ```
 
 `scripts/` entrypoints are the exception: relative imports are acceptable there because they are boundary modules and often need to avoid circular dependency tangles. Imported orchestrator modules should still follow the normal alias rules for stable infrastructure.
@@ -430,8 +426,8 @@ import { helper } from "lib/utils"; // Only works if CWD is product root
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@lib/*": ["src/lib/*"]
+      "@feature/*": ["<feature-root>/*"],
+      "@shared/*": ["<shared-root>/*"]
     }
   }
 }
@@ -439,17 +435,18 @@ import { helper } from "lib/utils"; // Only works if CWD is product root
 
 **2. Common path alias patterns:**
 
-| Alias    | Maps to     | Purpose               |
-| -------- | ----------- | --------------------- |
-| `@/*`    | `src/*`     | Main application code |
-| `@lib/*` | `src/lib/*` | Shared library code   |
+| Alias        | Maps to            | Purpose                  |
+| ------------ | ------------------ | ------------------------ |
+| `@feature/*` | `<feature-root>/*` | Feature-owned modules    |
+| `@shared/*`  | `<shared-root>/*`  | Stable shared modules    |
+| `@testing/*` | `<testing-root>/*` | Test infrastructure root |
 
 **3. Usage with path aliases:**
 
 ```typescript
 // ✅ REQUIRED: Stable infrastructure via alias
-import { processData } from "@/features/processing";
-import { Logger } from "@lib/logger";
+import { processData } from "@feature/processing";
+import { Logger } from "@shared/logger";
 
 // ✅ ACCEPTABLE: Module-internal relative
 import { Position } from "./position";

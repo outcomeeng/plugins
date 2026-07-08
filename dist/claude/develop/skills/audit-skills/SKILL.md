@@ -1,9 +1,8 @@
 ---
 name: audit-skills
 description: >-
-  SKILL.md audit methodology preloaded by the skill-auditor agent. Dispatch
-  skill-auditor to audit SKILL.md files; the main conversation reaches this audit
-  only through that agent.
+  SKILL.md audit methodology preloaded by the skill-auditor agent. The main
+  conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -382,7 +381,7 @@ Before presenting audit findings, verify:
 
 - [ ] All evaluation areas assessed (including operational effectiveness)
 - [ ] Findings have file:line locations
-- [ ] Assessment section provides clear summary
+- [ ] Emitted verdict rows provide a clear summary
 - [ ] Strengths identified
 
 **Accuracy checks**:
