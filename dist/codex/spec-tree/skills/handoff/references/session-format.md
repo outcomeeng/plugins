@@ -21,7 +21,7 @@ The workflow chooses its stdin form by harness: interactive Claude Code and Code
 <metadata>
   timestamp: [UTC timestamp]
   product: [Product name from cwd]
-  git_ref: [value from frontmatter git_ref — the work branch /pickup checks out]
+  git_ref: [value from frontmatter git_ref — the branch or commit anchor /pickup uses]
   git_status: [clean | dirty]
 </metadata>
 
