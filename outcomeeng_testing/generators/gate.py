@@ -22,6 +22,9 @@ SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH = (
     "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
 )
 SELECTED_GATE_SKILL_PATH = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
+SELECTED_GATE_PLUGIN_SCRIPT_PATH = (
+    "src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py"
+)
 SELECTED_GATE_SHARED_SOURCE_PATH = "src/_shared/spec-tree/instruction-block.md"
 SELECTED_GATE_WORKFLOW_PATH = "scripts/check.sh"
 SELECTED_GATE_FULL_GATE_PATH = "pyproject.toml"
@@ -34,6 +37,7 @@ SELECTED_GATE_CHANGED_PATH_EXAMPLES = (
     SELECTED_GATE_SPX_CONFIG_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
     SELECTED_GATE_SKILL_PATH,
+    SELECTED_GATE_PLUGIN_SCRIPT_PATH,
     SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,

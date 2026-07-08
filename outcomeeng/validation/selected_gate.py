@@ -87,6 +87,7 @@ PYTHON_PATTERNS: Final = (
     "outcomeeng/**",
     "outcomeeng_testing/**",
     "outcomeeng_evals/**",
+    "src/plugins/**/*.py",
     "spx/**/tests/test_*.py",
 )
 PYTHON_ASSERTION_TEST_PATTERNS: Final = ("spx/**/tests/test_*.py",)
@@ -239,8 +240,10 @@ def collect_changed_paths(
 
 def deleted_paths_after_status_resolution(
     entries: Sequence[ChangedPath],
+    *,
+    repo: Path | None = None,
 ) -> tuple[str, ...]:
-    """Return paths whose observed statuses are all deleted."""
+    """Return paths with any deletion status in the gathered entry set."""
 
     statuses_by_path: dict[str, set[str]] = {}
     for entry in entries:
@@ -249,7 +252,8 @@ def deleted_paths_after_status_resolution(
         sorted(
             path
             for path, statuses in statuses_by_path.items()
-            if all(status.startswith(DELETED_GIT_STATUS_PREFIX) for status in statuses)
+            if any(status.startswith(DELETED_GIT_STATUS_PREFIX) for status in statuses)
+            and (repo is None or not (repo / path).exists())
         )
     )
 
@@ -386,7 +390,10 @@ def run_selected_check(
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_selected_gate_plan(
         tuple(entry.path for entry in changed_path_entries),
-        deleted_paths=deleted_paths_after_status_resolution(changed_path_entries),
+        deleted_paths=deleted_paths_after_status_resolution(
+            changed_path_entries,
+            repo=repo,
+        ),
     )
     _write_plan(sink, plan)
     if plan.full_gate:
