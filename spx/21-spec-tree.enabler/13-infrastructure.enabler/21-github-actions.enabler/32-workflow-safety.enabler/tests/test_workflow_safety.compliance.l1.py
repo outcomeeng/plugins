@@ -2,47 +2,36 @@
 
 from __future__ import annotations
 
-import re
-from collections.abc import Iterator
-from pathlib import Path
-from typing import Any, Final, cast
-
-# PyYAML ships without inline types; this test casts parsed workflow structure below.
-import yaml  # type: ignore[import-untyped]
-
-REPO_ROOT: Final = Path(__file__).resolve().parents[6]
-WORKFLOWS_DIR: Final = REPO_ROOT / ".github" / "workflows"
-FULL_SHA_RE: Final = re.compile(r"^[0-9a-f]{40}$")
+from outcomeeng_testing.harnesses.github_actions_workflows import (
+    UNPINNED_QUOTED_USES_VALUE,
+    active_generic_claude_callers,
+    block_scalar_uses_text_pin_violations,
+    external_workflow_pin_violations,
+    quoted_uses_key_pin_violations,
+    renovate_beta_main_exemption_violations,
+    sonar_beta_main_exclusion_violations,
+)
 
 
-def _walk_uses(value: object) -> Iterator[str]:
-    if isinstance(value, dict):
-        for key, nested in cast("dict[str, object]", value).items():
-            if key == "uses" and isinstance(nested, str):
-                yield nested
-            else:
-                yield from _walk_uses(nested)
-    elif isinstance(value, list):
-        for nested in value:
-            yield from _walk_uses(nested)
+def test_external_workflow_uses_are_pinned_to_sha_or_marked_beta_main() -> None:
+    assert not external_workflow_pin_violations()
 
 
-def _workflow_documents() -> Iterator[dict[str, Any]]:
-    for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
-        yield cast(
-            "dict[str, Any]", yaml.load(workflow.read_text(), Loader=yaml.BaseLoader)
-        )
+def test_external_workflow_pin_scanner_reads_quoted_uses_keys() -> None:
+    assert quoted_uses_key_pin_violations() == (UNPINNED_QUOTED_USES_VALUE,)
 
 
-def _external_uses() -> Iterator[str]:
-    for document in _workflow_documents():
-        for uses in _walk_uses(document):
-            if not uses.startswith("./"):
-                yield uses
+def test_external_workflow_pin_scanner_ignores_block_scalar_uses_text() -> None:
+    assert not block_scalar_uses_text_pin_violations()
 
 
-def test_external_workflow_uses_are_pinned_to_full_commit_sha() -> None:
-    for uses in _external_uses():
-        _, _, ref = uses.partition("@")
+def test_sonar_excludes_only_marked_beta_main_callers() -> None:
+    assert not sonar_beta_main_exclusion_violations()
 
-        assert FULL_SHA_RE.fullmatch(ref), uses
+
+def test_renovate_exempts_only_marked_beta_main_callers() -> None:
+    assert not renovate_beta_main_exemption_violations()
+
+
+def test_generic_claude_callers_are_not_active_workflows() -> None:
+    assert not active_generic_claude_callers()

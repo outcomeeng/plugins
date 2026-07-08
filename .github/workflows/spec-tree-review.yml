@@ -2,11 +2,7 @@
 #
 # Required setup:
 # 1. Add CLAUDE_CODE_OAUTH_TOKEN to repository secrets.
-# 2. (Optional) Provide a `REVIEW.md` at the repository root. The
-#    spec-tree-review prompt reads it as the finding-classification
-#    taxonomy and comment shape; absent the file, the embedded
-#    BLOCKING/DEBT/FOLLOW-UP taxonomy is used.
-# 3. (Optional) Tune behavior via repo variables in Settings → Secrets and
+# 2. (Optional) Tune behavior via repo variables in Settings → Secrets and
 #    variables → Actions → Variables. See the `with:` block below — every
 #    entry reads a `vars.SPEC_TREE_REVIEW_*` value and falls back to the
 #    reusable's default when the variable is unset. No edits to this file
@@ -31,14 +27,14 @@ permissions:
 
 jobs:
   spec-tree-review:
-    # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
-    # Renovate keeps this SHA current; the trailing `# main` comment is the branch
-    # Renovate tracks. See the outcomeeng/gh-actions README "Security" for the full rationale.
-    #
-    # Beta-tester consumers (internal repos deliberately tracking-latest) MAY
-    # swap this for `@main` with a `# BETA TESTER:` marker comment — see the
-    # documented exception in the outcomeeng/gh-actions README "Security → Documented exception".
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@a113491956c710dcdb7cb54174b4a52f9f6609d4 # main
+    # BETA TESTER: deliberately tracks outcomeeng/gh-actions @main to surface
+    # upstream changes early without a per-release follow-up PR. Production
+    # callers must SHA-pin per the gh-actions README "Security" section. Risk:
+    # unreviewed upstream main commits execute with this workflow's repository
+    # permissions before release review. renovate.json disables digest pinning
+    # for this beta caller; pin it back to a SHA when this repo graduates to
+    # production-caller usage.
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -128,7 +124,7 @@ jobs:
       # Caller is responsible for AWS/GCP auth in the calling workflow.
       # See README "Review workflow inputs" for the full contract.
 
-    # `spec-tree-review.yml` bakes in a REVIEW.md-aware review prompt;
+    # `spec-tree-review.yml` bakes in the shipped review-changes prompt;
     # `custom_prompt` is deliberately NOT exposed as an input.
     #
     # The baseline allowlist combines `Bash(gh issue|pr ...)` patterns for

@@ -13,6 +13,16 @@
   "prConcurrentLimit": 10,
   "packageRules": [
     {
+      "description": "Disable Renovate digest pinning for beta outcomeeng/gh-actions reusable-workflow callers that intentionally track @main.",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["outcomeeng/gh-actions"],
+      "matchFileNames": [
+        ".github/workflows/spec-tree.yml",
+        ".github/workflows/spec-tree-review.yml"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Group GitHub Actions and reusable-workflow updates. Digest pinning itself is enforced by the helpers:pinGitHubActionDigests preset above; this rule only adds the grouping.",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"
