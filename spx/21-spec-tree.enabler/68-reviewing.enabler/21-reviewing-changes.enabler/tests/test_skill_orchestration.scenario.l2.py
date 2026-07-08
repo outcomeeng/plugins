@@ -84,6 +84,19 @@ def _init_repo_with_branch(repo: pathlib.Path) -> str:
     return "main"
 
 
+def _init_repo_with_committed_rename(repo: pathlib.Path) -> str:
+    """Set up a repo whose feature branch renames a tracked file."""
+    _run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    _run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    _run_git("add", "README.md", cwd=repo)
+    _run_git("commit", "-q", "-m", "initial", cwd=repo)
+    _run_git("switch", "-c", "feature/x", cwd=repo)
+    _run_git("mv", "README.md", "RENAMED.md", cwd=repo)
+    _run_git("commit", "-q", "-m", "rename readme", cwd=repo)
+    return "main"
+
+
 def _make_env(cwd: pathlib.Path) -> dict[str, str]:
     """Return an env dict for isolated git subprocesses.
 
@@ -414,6 +427,72 @@ class TestReviewRunnerBoundary:
         event_types = [event["type"] for event in journal["events"]]
         assert event_types == ["verification.scope.entered"]
         assert journal["sealed"] is False
+
+    def test_runner_requires_rename_source_and_destination_scope(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_committed_rename(repo)
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        journal_path = tmp_path / "journal.json"
+        write_fake_spx(bin_dir, journal_path)
+
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
+        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+
+        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        assert started.returncode == 0, started.stderr
+        start_payload = json.loads(started.stdout)
+        assert start_payload["changedFiles"] == ["README.md", "RENAMED.md"]
+
+        scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            start_payload["statePath"],
+            "RENAMED.md",
+            env=env,
+            cwd=repo,
+        )
+        assert scoped.returncode == 0, scoped.stderr
+
+        missing_source = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload["statePath"],
+            env=env,
+            cwd=repo,
+        )
+        assert missing_source.returncode == 1
+        assert "missing scope-advanced events for: README.md" in missing_source.stderr
+
+        source_scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            start_payload["statePath"],
+            "README.md",
+            env=env,
+            cwd=repo,
+        )
+        assert source_scoped.returncode == 0, source_scoped.stderr
+
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload["statePath"],
+            env=env,
+            cwd=repo,
+        )
+        assert finished.returncode == 0, finished.stderr
+        assert finished.stdout == "run-001\n"
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:

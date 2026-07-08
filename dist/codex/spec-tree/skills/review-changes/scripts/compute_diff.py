@@ -47,6 +47,9 @@ DIFF_SECTION_COMMITTED = "Committed diff"
 DIFF_SECTION_STAGED = "Staged diff"
 DIFF_SECTION_UNSTAGED = "Unstaged diff"
 DIFF_SECTION_UNTRACKED = "Untracked files"
+DIFF_RENAME_COPY_ARGS = ("--find-renames", "--find-copies")
+RENAME_STATUS_PREFIX = "R"
+COPY_STATUS_PREFIX = "C"
 
 
 @dataclass(frozen=True)
@@ -169,12 +172,38 @@ def _diff_section(title: str, diff: str) -> str:
     return f"### {title}\n\n{diff}"
 
 
-def _diff_name_only(args: list[str]) -> tuple[str, ...]:
-    return tuple(
-        line
-        for line in _git_stdout(["diff", "--name-only", *args]).splitlines()
-        if line
-    )
+def _dedupe_paths(paths: list[str]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for path in paths:
+        if path not in seen:
+            seen.add(path)
+            unique.append(path)
+    return tuple(unique)
+
+
+def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
+    records = _git_stdout(
+        ["diff", "--name-status", "-z", *DIFF_RENAME_COPY_ARGS, *args]
+    ).split("\0")
+    if records and records[-1] == "":
+        records.pop()
+
+    paths: list[str] = []
+    index = 0
+    while index < len(records):
+        status = records[index]
+        index += 1
+        if not status:
+            raise RuntimeError("git diff --name-status emitted an empty status")
+        path_count = (
+            2 if status.startswith((RENAME_STATUS_PREFIX, COPY_STATUS_PREFIX)) else 1
+        )
+        if index + path_count > len(records):
+            raise RuntimeError("git diff --name-status emitted a truncated record")
+        paths.extend(records[index : index + path_count])
+        index += path_count
+    return _dedupe_paths(paths)
 
 
 def _untracked_paths() -> tuple[str, ...]:
@@ -210,19 +239,25 @@ def diff_sections(base_ref: str, head_ref: str) -> tuple[DiffSection, ...]:
             DIFF_SECTION_COMMITTED,
             _diff_section(
                 DIFF_SECTION_COMMITTED,
-                _git_diff([f"{base_ref}...{head_ref}"]),
+                _git_diff([*DIFF_RENAME_COPY_ARGS, f"{base_ref}...{head_ref}"]),
             ),
-            _diff_name_only([f"{base_ref}...{head_ref}"]),
+            _diff_changed_paths([f"{base_ref}...{head_ref}"]),
         ),
         DiffSection(
             DIFF_SECTION_STAGED,
-            _diff_section(DIFF_SECTION_STAGED, _git_diff(["--cached"])),
-            _diff_name_only(["--cached"]),
+            _diff_section(
+                DIFF_SECTION_STAGED,
+                _git_diff([*DIFF_RENAME_COPY_ARGS, "--cached"]),
+            ),
+            _diff_changed_paths(["--cached"]),
         ),
         DiffSection(
             DIFF_SECTION_UNSTAGED,
-            _diff_section(DIFF_SECTION_UNSTAGED, _git_diff([])),
-            _diff_name_only([]),
+            _diff_section(
+                DIFF_SECTION_UNSTAGED,
+                _git_diff([*DIFF_RENAME_COPY_ARGS]),
+            ),
+            _diff_changed_paths([]),
         ),
         DiffSection(
             DIFF_SECTION_UNTRACKED,
