@@ -197,7 +197,7 @@ State a human-readable closeout first, then the session mechanics. The operator 
 
 The closeout MUST include:
 
-- **Product outcome**: what capability, behavior, document, page, test, infrastructure state, or other product-defining artifact or behavior is now true in the repository being worked. Read the product spec when product intent is needed to frame the outcome, then connect the work to that intent only at the level that helps the operator understand it. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. NOT: which branch or session changed.
+- **Product outcome**: what payload capability, behavior, document, page, command, workflow, methodology rule, skill contract, generated artifact contract, or other shipped product surface is now true in the repository being worked. Read the product spec when product intent is needed to frame the outcome, then connect the work to that intent only at the level that helps the operator understand it. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. NEVER classify lifecycle mechanics as product outcome: default-branch merge state, PR state, merge commit, branch cleanup, CI/check state, marketplace-source refresh, installed plugin version, session archive state, or handoff/session mechanics.
 - **Changed product surface**: the product-defining artifacts or behaviors that changed: source files, generated outputs, documentation sections, APIs, commands, pages, workflows, services, deployments, data projections, configuration, methodology or skill content when the product ships it, or other domain surfaces. Do not list transport-only records such as pull requests, merge commits, branch deletion, or session archive ids here; those belong under evidence, inspection references, delivered state, or session mechanics.
 - **Human-readable change summary**: the key behaviors, rules, sections, controls, checks, outputs, or workflows changed, written so the operator can understand the result without reconstructing it from the diff.
 - **Verification evidence**: commands, audits, reviews, CI checks, screenshots, manual inspections, run ids, session ids, PR numbers, commit SHAs, or other proof that passed. Reproduce identity values verbatim when they are part of the evidence.
@@ -207,6 +207,8 @@ The closeout MUST include:
 - **Remaining Branches**: for merge lifecycle closeout, group branch state under exactly four labels — **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**. Include full branch names and full commit SHAs.
 
 When closing after a default-branch merge, compute or preserve the merge transport's branch-state closeout record from `/merging-standards` `<branch_state_closeout>` before final confirmation. The record includes PR number and merge commit SHA when applicable, merged branch name, remote branch existence, local branch existence, local fully-merged status against `origin/<base>`, gone-upstream tracking status, preservation branch existence, preservation branch ancestry or `git cherry -v --abbrev=40 origin/<base> <branch>` patch-equivalence evidence, final worktree state, and release-source worktree state when a post-merge release or marketplace refresh used one.
+
+Classify default-branch merge state, installed location, and generated install state under **Delivered state**. Classify marketplace-source refresh, installed plugin version, CI/check state, audit/review outputs, and command evidence under **Verification evidence** or **Inspection references** when they prove the delivered state. Classify branch cleanup under **Remaining Branches**. Classify session archival and handoff state under the session-mechanics block.
 
 Apply the cleanup policy before writing the closeout: delete a still-existing remote feature branch through the approved merge lifecycle deletion command; delete a local feature branch only when it exists, tracks a gone upstream, and is fully merged into `origin/<base>`; delete a no-remote preservation branch when all substantive commits are present on `origin/<base>` by ancestry or patch equivalence unless the branch name or operator instruction marks retained evidence. Never delete a branch checked out in another live worktree; report the exact worktree path and branch. Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`; report the unmatched full SHAs and keep it.
 
@@ -228,6 +230,18 @@ Delivered state:
 Why it fails: the operator still has to reconstruct the product outcome, changed product surface, workflow behavior, verification meaning, inspection references, and remaining-work state from mechanics. If these facts matter, place them under **Verification evidence**, **Inspection references**, **Delivered state**, **Remaining work**, **Remaining Branches**, or the session-mechanics block after the product summary.
 
 </rejected_delivered_state_receipt>
+
+<rejected_misclassified_product_outcome>
+
+NEVER put delivery, release, branch, version, or session mechanics under **Product outcome**. This sentence shape is the anti-pattern:
+
+```text
+Product outcome: the changes are now on origin/main, and the marketplace source was refreshed so the installed plugin is current.
+```
+
+Why it fails: the label is filled with lifecycle evidence rather than the payload's changed behavior or shipped product surface. First name what changed in the product, skill, command, workflow, document, or generated artifact contract; then place default-branch, marketplace-source, installed-version, PR, branch, and session facts under the matching evidence, state, reference, branches, or mechanics field.
+
+</rejected_misclassified_product_outcome>
 
 Put session mechanics only after the product summary:
 
