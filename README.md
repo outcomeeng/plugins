@@ -211,16 +211,16 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 Plugin development: /create-skills, /create-subagents
 
-| Type  | Name                      | Purpose                                                                                                                                  |
-| ----- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/agent-prompt-standards` | Agent prompt writing conventions enforced across all creator and auditor skills                                                          |
-| Skill | `/audit-skills`           | SKILL.md audit methodology preloaded by the skill-auditor agent                                                                          |
-| Skill | `/audit-subagents`        | Subagent-configuration audit methodology preloaded by the subagent-auditor agent                                                         |
-| Skill | `/create-skills`          | Creating, editing, or improving SKILL.md files                                                                                           |
-| Skill | `/create-subagents`       | Creating, editing, or configuring subagents                                                                                              |
-| Skill | `/skill-standards`        | Skill authoring standards enforced across all creating and auditing skills                                                               |
-| Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                  |
-| Agent | `subagent-auditor`        | Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent |
+| Type  | Name                      | Purpose                                                                                                                                                                                                                                                                                                   |
+| ----- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/agent-prompt-standards` | Agent prompt writing conventions enforced across all creator and auditor skills                                                                                                                                                                                                                           |
+| Skill | `/audit-skills`           | SKILL.md audit methodology preloaded by the skill-auditor agent                                                                                                                                                                                                                                           |
+| Skill | `/audit-subagents`        | Claude: Subagent-configuration audit methodology preloaded by the subagent-auditor agent; Codex: Custom agent-configuration audit methodology preloaded by the subagent-auditor agent                                                                                                                     |
+| Skill | `/create-skills`          | Creating, editing, or improving SKILL.md files                                                                                                                                                                                                                                                            |
+| Skill | `/create-subagents`       | Claude: Creating, editing, or configuring subagents; Codex: Creating, editing, or configuring custom agents                                                                                                                                                                                               |
+| Skill | `/skill-standards`        | Skill authoring standards enforced across all creating and auditing skills                                                                                                                                                                                                                                |
+| Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                                                                                                                                                                                   |
+| Agent | `subagent-auditor`        | Claude: Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent; Codex: Auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent |
 
 ### frontend
 

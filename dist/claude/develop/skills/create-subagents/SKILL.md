@@ -8,10 +8,11 @@ description: >-
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A subagent configured for an isolated, focused role — its system prompt, tool access, and Task-tool orchestration.
+A subagent configured for an isolated, focused role — its system prompt, tool access, and isolated-workflow orchestration.
 </objective>
 
 <quick_start>
+
 <workflow>
 
 1. Run `/agents` command
@@ -28,47 +29,29 @@ A subagent configured for an isolated, focused role — its system prompt, tool 
 </workflow>
 
 <example>
-```markdown
----
-name: code-reviewer
-description: Expert code reviewer. Use proactively after code changes to review for quality, security, and best practices.
-tools: Read, Grep, Glob, Bash
-model: sonnet
----
-
-<role>
-Claude is a senior code reviewer focused on quality, security, and best practices.
-</role>
-
-<focus_areas>
-
-- Code quality and maintainability
-- Security vulnerabilities
-- Performance issues
-- Best practices adherence
-
-</focus_areas>
-
-<output_format>
-Provide specific, actionable feedback with file:line references.
-</output_format>
-
-````
+Read `${CLAUDE_SKILL_DIR}/references/subagents.md` for complete subagent file examples and field references.
 </example>
 </quick_start>
 
 <file_structure>
-| Type | Location | Scope | Priority |
-|------|----------|-------|----------|
-| **Product** | `.claude/agents/` | Current product only | Highest |
-| **User** | `~/.claude/agents/` | All projects | Lower |
-| **Plugin** | Plugin's `agents/` dir | All projects | Lowest |
+
+<claude_storage_locations>
+
+Priority order:
+
+1. Product: `.claude/agents/` for the current product
+2. CLI: `--agents` flag for the current session
+3. User: `~/.claude/agents/` for all projects
+4. Plugin: plugin `agents/` directory for all projects
+
+</claude_storage_locations>
 
 Product-scope subagents override user-scope when names conflict.
 </file_structure>
 
 <configuration>
 <field name="name">
+
 - Lowercase letters and hyphens only
 - Must be unique
 
@@ -76,12 +59,14 @@ Product-scope subagents override user-scope when names conflict.
 
 <field name="description">
 - Natural language description of purpose
+
 - Include when Claude should invoke this subagent
 - Used for automatic subagent selection
 
 </field>
 
 <field name="tools">
+
 - Comma-separated list: `Read, Write, Edit, Bash, Grep`
 - If omitted: inherits all tools from main thread
 - Use `/agents` interface to see all available tools
@@ -108,13 +93,15 @@ Product-scope subagents override user-scope when names conflict.
 skills:
   - audit-typescript
   - testing
-````
+```
 
 </field>
+
 </configuration>
 
 <execution_model>
 <critical_constraint>
+
 **Subagents are black boxes that cannot interact with users.**
 
 Subagents run in isolated contexts and return their final output to the main conversation. They:
@@ -123,9 +110,9 @@ Subagents run in isolated contexts and return their final output to the main con
 - ✅ Can access MCP servers and other non-interactive tools
 - ❌ **Cannot use AskUserQuestion** or any tool requiring user interaction
 - ❌ **Cannot present options or wait for user input**
-- ❌ **User never sees subagent's intermediate steps**
+- ❌ **User never sees isolated-workflow intermediate steps**
 
-The main conversation sees only the subagent's final report/output.
+The main conversation sees only the isolated workflow's final report/output.
 </critical_constraint>
 
 <workflow_design>
@@ -150,11 +137,11 @@ Use **subagents** for:
 ```
 Main Chat: Ask user for requirements (AskUserQuestion)
 ↓
-Subagent: Research API and create documentation (no user interaction)
+subagent: Research API and create documentation (no user interaction)
 ↓
 Main Chat: Review research with user, confirm approach
 ↓
-Subagent: Generate code based on confirmed plan
+subagent: Generate code based on confirmed plan
 ↓
 Main Chat: Present results, handle testing/deployment
 ```
@@ -170,7 +157,7 @@ Clearly define the subagent's role, capabilities, and constraints.
 <principle name="use_pure_xml_structure">
 Structure the system prompt with pure XML tags. Remove ALL markdown headings from the body.
 
-```markdown
+```text
 ---
 name: security-reviewer
 description: Reviews code for security vulnerabilities
@@ -208,8 +195,8 @@ Tailor instructions to the specific task domain. Don't create generic "helper" s
 </principle>
 </system_prompt_guidelines>
 
-<subagent_xml_structure>
-Subagent.md files are system prompts consumed only by Claude. Like skills and slash commands, they should use pure XML structure for optimal parsing and token efficiency.
+<configured_agent_xml_structure>
+subagent file bodies are system prompts consumed by the target runtime. Like skills and slash commands, they should use pure XML structure for parsing and token efficiency.
 
 <recommended_tags>
 Common tags for subagent structure:
@@ -249,9 +236,10 @@ Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links
 
 For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to subagents.
 </critical_rule>
-</subagent_xml_structure>
+</configured_agent_xml_structure>
 
 <invocation>
+
 <automatic>
 Claude automatically selects subagents based on the `description` field when it matches the current task.
 </automatic>
@@ -272,7 +260,9 @@ Explicitly invoke a subagent:
 
 <management>
 <using_agents_command>
+
 Run `/agents` for an interactive interface to:
+
 - View all available subagents
 - Create new subagents
 - Edit existing subagents
@@ -292,61 +282,27 @@ Edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md)
-
-- File format and configuration
-- Skill injection (`skills:` field for preloading skill content)
-- Model selection, including explicit aliases for reproducible agent behavior
-- Tool security and least privilege
-- Prompt caching optimization
-- Complete examples
-
-**Writing effective prompts**: [write-subagent-prompts.md](${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md)
-
-- Core principles and XML structure
-- Description field optimization for routing
-- Extended thinking for complex reasoning
-- Security constraints and strong modal verbs
-- Success criteria definition
-
-**Advanced topics**:
-
-**Evaluation and testing**: [evaluation-and-testing.md](${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md)
-
-- Evaluation metrics (task completion, tool correctness, robustness)
-- Testing strategies (offline, simulation, online monitoring)
-- Evaluation-driven development
-- G-Eval for custom criteria
-
-**Error handling and recovery**: [error-handling-and-recovery.md](${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md)
-
-- Common failure modes and causes
-- Recovery strategies (graceful degradation, retry, circuit breakers)
-- Structured communication and observability
-- Anti-patterns to avoid
-
-**Context management**: [context-management.md](${CLAUDE_SKILL_DIR}/references/context-management.md)
-
-- Memory architecture (STM, LTM, working memory)
-- Context strategies (summarization, sliding window, scratchpads)
-- Managing long-running tasks
-- Prompt caching interaction
-
-**Orchestration patterns**: [orchestration-patterns.md](${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md)
-
-- Sequential, parallel, hierarchical, coordinator patterns
-- Model selection for orchestration roles
-- Multi-agent coordination
-- Pattern selection guidance
-
-**Debugging and troubleshooting**: [debugging-agents.md](${CLAUDE_SKILL_DIR}/references/debugging-agents.md)
-
-- Logging, tracing, and correlation IDs
-- Common failure types (hallucinations, format errors, tool misuse)
-- Diagnostic procedures
-- Continuous monitoring
+- [subagents.md](${CLAUDE_SKILL_DIR}/references/subagents.md): file format, configuration, skill injection, model selection, tool security, prompt caching, complete examples.
+- [write-subagent-prompts.md](${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md): prompt structure, description routing, extended thinking, security constraints, success criteria.
+- [evaluation-and-testing.md](${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md): evaluation metrics, testing strategies, evaluation-driven development, G-Eval.
+- [error-handling-and-recovery.md](${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md): failure causes, recovery strategies, observability, anti-patterns.
+- [context-management.md](${CLAUDE_SKILL_DIR}/references/context-management.md): memory architecture, context strategies, long-running tasks, prompt caching.
+- [orchestration-patterns.md](${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md): sequential, parallel, hierarchical, and coordinator patterns with model-selection guidance.
+- [debugging-agents.md](${CLAUDE_SKILL_DIR}/references/debugging-agents.md): logging, tracing, hallucinations, format errors, tool misuse, diagnostic procedures.
 
 </reference>
+
+<failure_modes>
+
+**Failure: Runtime-specific examples made SKILL.md exceed the line budget**
+
+What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source exceeded `/skill-standards`' 500-line cap.
+
+Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
+
+How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
+
+</failure_modes>
 
 <success_criteria>
 A well-configured subagent has:
@@ -355,8 +311,9 @@ A well-configured subagent has:
 - Clear role definition in system prompt
 - Appropriate tool restrictions (least privilege)
 - XML-structured system prompt with role, approach, and constraints
+
 - Description field optimized for automatic routing
-- Successfully tested on representative tasks
+- At least one verification run or documented dry-run against the subagent's intended workflow
 - Model selection appropriate for task complexity, cost, and reproducibility needs
 
 </success_criteria>

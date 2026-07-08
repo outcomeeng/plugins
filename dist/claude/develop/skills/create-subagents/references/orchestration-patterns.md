@@ -1,16 +1,5 @@
 <table_of_contents>
 
-- `<core_concept>` — why orchestration decomposes work across focused agents
-- `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, explicit-model, and hybrid patterns
-- `<implementation_guidance>` — coordinator subagent structure, handoffs, and synchronization
-- `<anti_patterns>` — over-orchestration, missing coordination, serial bottlenecks, unclear handoffs, and missing recovery
-- `<best_practices>` — granularity, responsibilities, handoffs, parallelism, coordinator weight, and model selection
-- `<pattern_selection>` — choosing the right orchestration pattern
-
-</table_of_contents>
-
-<table_of_contents>
-
 - `<core_concept>` — why orchestration pattern choice matters
 - `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, and hybrid patterns
 - `<implementation_guidance>` — coordinator subagent prompt pattern
@@ -50,7 +39,7 @@ Orchestration defines how multiple subagents coordinate to complete complex task
 
 **Example**:
 
-```markdown
+```text
 Task: Comprehensive code review
 
 Flow:
@@ -67,7 +56,7 @@ Flow:
 </when_to_use>
 
 <implementation>
-```markdown
+```text
 <sequential_workflow>
 Main chat orchestrates:
 1. Launch security-reviewer with code changes
@@ -243,12 +232,14 @@ Coordinator analyzes request → determines relevant agents:
 Coordinator agent prompt:
 
 <role>
+
 Claude is an orchestration coordinator. Route tasks to specialized agents based on:
+
 - Task characteristics
 - Available agents and their capabilities
 - Results from previous agents
 - User goals
-</role>
+  </role>
 
 <available_agents>
 
@@ -316,32 +307,45 @@ Workers (5 concurrent instances of security-reviewer):
 
 Research findings:
 
+<claude_model_research>
+
 - Sonnet 4.5: "Best model in the world for agents", exceptional at planning and validation
 - Haiku: lower-cost execution for simple or high-volume work when the owning workflow accepts that trade-off
+
+</claude_model_research>
+
 - Explicit model aliases keep agent behavior stable when the main conversation model changes
 
 **Pattern**:
 
-```markdown
+```text
 1. Sonnet (Orchestrator):
+
    - Analyzes task
    - Creates plan
    - Breaks into subtasks
    - Identifies what can be parallelized
 
+
 2. Haiku or Sonnet (Workers):
-   - Each completes assigned subtask
-   - Executes in parallel for speed
-   - Returns results to orchestrator
+
+
+- Each completes assigned subtask
+- Executes in parallel for speed
+- Returns results to orchestrator
+
 
 3. Sonnet (Orchestrator):
-   - Integrates results from all workers
-   - Validates output quality
-   - Ensures coherence
-   - Delivers final output
+
+
+- Integrates results from all workers
+- Validates output quality
+- Ensures coherence
+- Delivers final output
 ```
 
 **Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit `sonnet` aliases and avoid session-model inheritance.
+
 </explicit_model_orchestration>
 </orchestrator_worker>
 </pattern_catalog>
@@ -418,7 +422,7 @@ Coordinator:
 <coordinator_subagent>
 **Example coordinator implementation**:
 
-```markdown
+```text
 ---
 name: workflow-coordinator
 description: Orchestrates multi-agent workflows. Use when task requires multiple specialized agents in coordination.
@@ -599,10 +603,14 @@ Heavy coordinator = bottleneck. Coordinator should route and synthesize, not do 
 <principle name="explicit_model_selection">
 **Use explicit model choices strategically**.
 
+<claude_explicit_model_selection>
+
 - Planning and validation: Sonnet
 - Evidence-producing review and audit: Sonnet
 - Highest-stakes decisions: explicit stronger model when warranted
 - Simple or high-volume execution: Haiku when the owning workflow accepts lower-cost execution
+
+</claude_explicit_model_selection>
 
 </principle>
 </best_practices>

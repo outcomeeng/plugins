@@ -1,16 +1,5 @@
 <table_of_contents>
 
-- `<core_concept>` — why orchestration decomposes work across focused agents
-- `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, explicit-model, and hybrid patterns
-- `<implementation_guidance>` — coordinator subagent structure, handoffs, and synchronization
-- `<anti_patterns>` — over-orchestration, missing coordination, serial bottlenecks, unclear handoffs, and missing recovery
-- `<best_practices>` — granularity, responsibilities, handoffs, parallelism, coordinator weight, and model selection
-- `<pattern_selection>` — choosing the right orchestration pattern
-
-</table_of_contents>
-
-<table_of_contents>
-
 - `<core_concept>` — why orchestration pattern choice matters
 - `<pattern_catalog>` — sequential, parallel, hierarchical, coordinator, orchestrator-worker, and hybrid patterns
 - `<implementation_guidance>` — coordinator subagent prompt pattern
@@ -50,7 +39,7 @@ Orchestration defines how multiple subagents coordinate to complete complex task
 
 **Example**:
 
-```markdown
+```text
 Task: Comprehensive code review
 
 Flow:
@@ -67,7 +56,7 @@ Flow:
 </when_to_use>
 
 <implementation>
-```markdown
+```text
 <sequential_workflow>
 Main chat orchestrates:
 1. Launch security-reviewer with code changes
@@ -243,12 +232,14 @@ Coordinator analyzes request → determines relevant agents:
 Coordinator agent prompt:
 
 <role>
-Claude is an orchestration coordinator. Route tasks to specialized agents based on:
+
+The custom agent is an orchestration coordinator. Route tasks to specialized agents based on:
+
 - Task characteristics
 - Available agents and their capabilities
 - Results from previous agents
 - User goals
-</role>
+  </role>
 
 <available_agents>
 
@@ -316,32 +307,45 @@ Workers (5 concurrent instances of security-reviewer):
 
 Research findings:
 
-- Sonnet 4.5: "Best model in the world for agents", exceptional at planning and validation
-- Haiku: lower-cost execution for simple or high-volume work when the owning workflow accepts that trade-off
+<codex_model_research>
+
+- gpt-5.5 and gpt-5.4: stronger planning, validation, synthesis, and evidence-producing review work
+- gpt-5.4-mini: lower-cost execution for simple or high-volume work when the owning workflow accepts that trade-off
+
+</codex_model_research>
+
 - Explicit model aliases keep agent behavior stable when the main conversation model changes
 
 **Pattern**:
 
-```markdown
-1. Sonnet (Orchestrator):
+```text
+1. gpt-5.5 or gpt-5.4 (Orchestrator):
+
    - Analyzes task
    - Creates plan
    - Breaks into subtasks
    - Identifies what can be parallelized
 
-2. Haiku or Sonnet (Workers):
-   - Each completes assigned subtask
-   - Executes in parallel for speed
-   - Returns results to orchestrator
 
-3. Sonnet (Orchestrator):
-   - Integrates results from all workers
-   - Validates output quality
-   - Ensures coherence
-   - Delivers final output
+2. gpt-5.4-mini or gpt-5.4 (Workers):
+
+
+- Each completes assigned subtask
+- Executes in parallel for speed
+- Returns results to orchestrator
+
+
+3. gpt-5.5 or gpt-5.4 (Orchestrator):
+
+
+- Integrates results from all workers
+- Validates output quality
+- Ensures coherence
+- Delivers final output
 ```
 
-**Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit `sonnet` aliases and avoid session-model inheritance.
+**Reproducibility rule**: verification, audit, review, and other evidence-producing agents use explicit `gpt-5.4` or `gpt-5.5` models and avoid session-model inheritance.
+
 </explicit_model_orchestration>
 </orchestrator_worker>
 </pattern_catalog>
@@ -418,15 +422,14 @@ Coordinator:
 <coordinator_subagent>
 **Example coordinator implementation**:
 
-```markdown
----
-name: workflow-coordinator
-description: Orchestrates multi-agent workflows. Use when task requires multiple specialized agents in coordination.
-model: sonnet
----
-
+```toml
+name = "workflow_coordinator"
+description = "Orchestrates multi-agent workflows. Use when a task requires multiple specialized agents in coordination."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+developer_instructions = """
 <role>
-Claude is a workflow coordinator. Analyze tasks, identify required agents, orchestrate their execution.
+The custom agent is a workflow coordinator. Analyze tasks, identify required agents, orchestrate their execution.
 </role>
 
 <available_agents>
@@ -444,9 +447,9 @@ Claude is a workflow coordinator. Analyze tasks, identify required agents, orche
 1. Analyze incoming task
 2. Identify required capabilities
 3. Select agents and pattern
-4. Launch agents (sequentially or parallel as appropriate)
+4. Launch agents sequentially or in parallel as appropriate
 5. Monitor execution
-6. Handle errors (retry, fallback, escalate)
+6. Handle errors through retry, fallback, or escalation
 7. Integrate results
 8. Validate coherence
 9. Deliver final output
@@ -454,12 +457,12 @@ Claude is a workflow coordinator. Analyze tasks, identify required agents, orche
 
 <error_handling>
 If agent fails:
-
 - Retry with refined context (1-2 attempts)
 - Try alternative agent if available
 - Proceed with partial results if acceptable
 - Escalate to human if critical
-  </error_handling>
+</error_handling>
+"""
 ```
 
 </coordinator_subagent>
@@ -599,10 +602,14 @@ Heavy coordinator = bottleneck. Coordinator should route and synthesize, not do 
 <principle name="explicit_model_selection">
 **Use explicit model choices strategically**.
 
-- Planning and validation: Sonnet
-- Evidence-producing review and audit: Sonnet
+<codex_explicit_model_selection>
+
+- Planning and validation: gpt-5.5 or gpt-5.4
+- Evidence-producing review and audit: gpt-5.5 or gpt-5.4
 - Highest-stakes decisions: explicit stronger model when warranted
-- Simple or high-volume execution: Haiku when the owning workflow accepts lower-cost execution
+- Simple or high-volume execution: gpt-5.4-mini when the owning workflow accepts lower-cost execution
+
+</codex_explicit_model_selection>
 
 </principle>
 </best_practices>

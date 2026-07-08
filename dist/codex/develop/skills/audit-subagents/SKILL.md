@@ -1,11 +1,11 @@
 ---
 name: audit-subagents
 description: >-
-  Subagent-configuration audit methodology preloaded by the subagent-auditor agent.
-  Dispatch subagent-auditor to audit subagent configuration files; the main
+  Custom agent-configuration audit methodology preloaded by the subagent-auditor agent.
+  Dispatch subagent-auditor to audit custom agent configuration files; the main
   conversation reaches this audit only through that agent.
-argument-hint: <subagent-path>
-arguments: subagent_path
+argument-hint: <configured-agent-path>
+arguments: configured_agent_path
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -20,12 +20,14 @@ This audit runs in the subagent-auditor agent's isolated context. When this skil
 </dispatch_gate>
 
 <objective>
-A verdict on one subagent configuration file (`agents/*.md`) against the create-subagents and `/agent-prompt-standards` conventions — PASS when no critical issue rejects it, FAIL when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
+A verdict on one custom agent configuration file (`.codex/agents/*.toml` or `~/.codex/agents/*.toml`) against the create-subagents and `/agent-prompt-standards` conventions — PASS when no critical issue rejects it, FAIL when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
 </objective>
 
 <constraints>
-- NEVER modify the subagent file under audit or any other file — this audit produces a verdict, never a fix or a commit
-- MUST check for markdown headings (##, ###) in subagent body and flag as critical
+- NEVER modify the custom agent file under audit or any other file — this audit produces a verdict, never a fix or a commit
+
+- MUST check for markdown headings (##, ###) inside `developer_instructions` and flag as critical
+
 - MUST verify all XML tags are properly closed
 - MUST distinguish between functional deficiencies and style preferences
 - NEVER flag missing tag names if the content/function is present under a different name (e.g., `<critical_workflow>` vs `<workflow>`)
@@ -33,7 +35,7 @@ A verdict on one subagent configuration file (`agents/*.md`) against the create-
 - NEVER flag formatting preferences that don't impact effectiveness
 - MUST flag missing functionality, not missing exact tag names
 - ONLY flag issues that reduce actual effectiveness
-- ALWAYS apply contextual judgment based on subagent purpose and complexity
+- ALWAYS apply contextual judgment based on custom agent purpose and complexity
 
 </constraints>
 
@@ -42,9 +44,10 @@ A verdict on one subagent configuration file (`agents/*.md`) against the create-
 
 1. Both skills are already injected above. Read the `develop:create-subagents` skill guidance, specifically its **Subagent usage and configuration** and **Writing effective prompts** reference topics.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
-3. Before penalizing any missing section, search entire file for equivalent content under different tag names
-4. Read the subagent configuration file at `$subagent_path`
-5. Evaluate against best practices from steps 1-3, focusing on functionality over formatting
+3. If `$configured_agent_path` is empty, STOP with `FAIL` and a critical issue naming the missing required path argument.
+4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
+5. Read the custom agent configuration file at `$configured_agent_path`.
+6. Evaluate against best practices from steps 1-4, focusing on functionality over formatting.
 
 **Use ACTUAL patterns from references, not memory.**
 </audit_workflow>
@@ -53,10 +56,12 @@ A verdict on one subagent configuration file (`agents/*.md`) against the create-
 <area name="critical" priority="must-fix">
 These issues significantly hurt effectiveness - flag as critical:
 
-**yaml_frontmatter**:
+**toml_configuration**:
 
-- **name**: Lowercase-with-hyphens, unique, clear purpose
+- **name**: Unique, clear purpose, matches the configured agent's role
 - **description**: Includes BOTH what it does AND when to use it, specific trigger keywords
+- **developer_instructions**: Present, substantive, and structured with role, workflow, constraints, and output expectations
+- **nickname_candidates**: When present, a TOML array of concise display names that fit the configured agent's role and avoid misleading aliases
 
 **role_definition**:
 
@@ -84,7 +89,8 @@ These issues significantly hurt effectiveness - flag as critical:
 
 **xml_structure**:
 
-- No markdown headings in body (##, ###) - use pure XML tags
+- No markdown headings inside `developer_instructions` (##, ###) - use pure XML tags
+
 - All XML tags properly opened and closed
 - No hybrid XML/markdown structure
 - Note: Markdown formatting WITHIN content (bold, italic, lists, code blocks) is acceptable
@@ -117,7 +123,7 @@ These improve quality - flag as recommendations:
 **model_selection**:
 
 - Is model choice appropriate for task complexity?
-- Guidance: Simple/fast → Haiku, Complex/critical → Sonnet, Highest capability → Opus
+- Guidance: Simple/fast -> gpt-5.4-mini, complex/critical -> gpt-5.4, highest capability -> gpt-5.5
 
 **success_criteria**:
 
@@ -150,26 +156,26 @@ Note these as potential enhancements - don't flag if missing:
 </evaluation_areas>
 
 <contextual_judgment>
-Apply judgment based on subagent purpose and complexity:
+Apply judgment based on custom agent purpose and complexity:
 
-**Simple subagents** (single task, minimal tools):
+**Simple custom agents** (single task, minimal tools):
 
 - Focus areas may be implicit in role definition
 - Minimal examples acceptable
 - Light error handling sufficient
 
-**Complex subagents** (multi-step, external systems, security concerns):
+**Complex custom agents** (multi-step, external systems, security concerns):
 
 - Missing constraints is a real issue
 - Comprehensive output format expected
 - Thorough error handling required
 
-**Delegation subagents** (coordinate other subagents):
+**Delegation custom agents** (coordinate other subagents):
 
 - Context management becomes important
 - Success criteria should measure orchestration success
 
-Always explain WHY something matters for this specific subagent, not just that it violates a rule.
+Always explain WHY something matters for this specific custom agent, not just that it violates a rule.
 </contextual_judgment>
 
 <anti_patterns>
@@ -178,9 +184,9 @@ Flag these structural violations:
 <pattern name="markdown_headings_in_body" severity="critical">
 Using markdown headings (##, ###) for structure instead of XML tags.
 
-**Why this matters**: Subagent.md files are consumed only by Claude, never read by humans. Pure XML structure provides ~25% better token efficiency and consistent parsing.
+**Why this matters**: `developer_instructions` content is consumed by Codex as prompt text. Pure XML structure provides consistent parsing and keeps task boundaries explicit.
 
-**How to detect**: Search file for `##` or `###` symbols outside code blocks/examples.
+**How to detect**: Search `developer_instructions` for `##` or `###` symbols outside code blocks/examples.
 
 **Fix**: Convert to semantic XML tags (e.g., `## Workflow` → `<workflow>`)
 </pattern>
@@ -225,7 +231,7 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
 {
   "schema_version": 1,
   "skill": "audit-subagents",
-  "target": "<subagent-path>",
+  "target": "<configured-agent-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     {
@@ -234,7 +240,7 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
       "findings": [
         {
           "id": "f-001",
-          "file": "<subagent-file>",
+          "file": "<configured-agent-file>",
           "line": null,
           "rule": "<issue-category>",
           "severity": "REJECT",
@@ -247,7 +253,7 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
     { "name": "quick-fixes", "status": "PASS", "findings": [] }
   ],
   "metadata": {
-    "subagent_type": "simple | complex | delegation",
+    "configured_agent_type": "simple | complex | delegation",
     "tool_access": "appropriate | over-permissioned | under-specified",
     "model_selection": "appropriate | reconsider"
   }
@@ -262,17 +268,17 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
 
 **Failure 2: Scored the subagent instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, convention, or fix and the author cannot act on it. Emit findings, never scores.
 
-**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged YAML and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every evaluation area was judged; cover them all before issuing the verdict.
+**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged TOML configuration and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every evaluation area was judged; cover them all before issuing the verdict.
 
 </failure_modes>
 
 <success_criteria>
 The verdict is sound when:
 
-- Every evaluation area was judged with none skipped — YAML frontmatter, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
+- Every evaluation area was judged with none skipped — TOML configuration, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
 - The verdict states an overall PASS/FAIL with findings grouped critical-issues / recommendations / strengths / quick-fixes.
 - Each finding is falsifiable: it names the location, the convention at issue, and the consequence — every critical issue names what breaks if unfixed, judged on functionality rather than exact tag spelling.
-- The same subagent file yields the same verdict.
+- The same custom agent file yields the same verdict.
 
 </success_criteria>
 
@@ -284,7 +290,7 @@ Before completing the audit, verify:
 3. **Accuracy**: Line numbers verified against actual file content
 4. **Actionability**: Recommendations are specific and implementable
 5. **Fairness**: Verified content isn't present under different tag names before flagging
-6. **Context**: Applied appropriate judgment for subagent type and complexity
+6. **Context**: Applied appropriate judgment for custom agent type and complexity
 7. **Examples**: At least one concrete example given for major issues
 
 </validation>

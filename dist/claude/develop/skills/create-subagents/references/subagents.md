@@ -1,12 +1,12 @@
 <table_of_contents>
 
-- `<file_format>` — subagent frontmatter, body shape, and configuration fields
+- `<file_format>` — subagent file shape and configuration fields
 - `<storage_locations>` — product, user, CLI, and plugin placement
 - `<execution_model>` — black-box execution and workflow implications
 - `<tool_configuration>` — inherited and specific tool grants
 - `<model_selection>` — model aliases and reproducibility-sensitive inheritance boundaries
 - `<invocation>` — automatic and explicit subagent use
-- `<management>` — `/agents`, direct files, and CLI configuration
+- `<management>` — runtime management surfaces, direct files, and CLI configuration
 - `<example_subagents>` — test-writer and debugger examples
 - `<tool_security>` — least privilege and audit checklist
 - `<skill_injection>` — startup skill preloading
@@ -18,19 +18,19 @@
 <file_format>
 Subagent file structure:
 
-```markdown
+```text
 ---
 name: your-subagent-name
 description: Description of when this subagent should be invoked
 tools: tool1, tool2, tool3 # Optional - inherits all tools if omitted
-model: sonnet # Optional - opus, sonnet, haiku, or inherit
+model: sonnet
 skills: # Optional - inject skill content at startup
   - skill-name-one
   - skill-name-two
 ---
 
 <role>
-Your subagent's system prompt using pure XML structure. This defines the subagent's role, capabilities, and approach.
+Claude is a focused repository reviewer who identifies correctness, security, and test-coverage risks in scoped code changes.
 </role>
 
 <constraints>
@@ -46,25 +46,36 @@ Step-by-step process for consistency.
 
 <configuration_fields>
 
-| Field         | Required | Description                                                                                |
-| ------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `name`        | Yes      | Unique identifier using lowercase letters and hyphens                                      |
-| `description` | Yes      | Natural language description of purpose. Include when Claude should invoke this.           |
-| `tools`       | No       | Comma-separated list. If omitted, inherits all tools from main thread                      |
-| `model`       | No       | `opus`, `sonnet`, `haiku`, or `inherit`; use explicit aliases when reproducibility matters |
-| `skills`      | No       | Array of skill names. Full skill content injected into subagent context at startup         |
+<claude_configuration_fields>
+
+Required fields:
+
+- `name`: unique identifier using lowercase letters and hyphens
+- `description`: natural language description of purpose, including when Claude should invoke this
+
+Optional fields:
+
+- `tools`: comma-separated list; if omitted, inherits all tools from main thread
+- `model`: `opus`, `sonnet`, `haiku`, or `inherit`; use explicit aliases when reproducibility matters
+- `skills`: array of skill names; full skill content injects into subagent context at startup
+
+</claude_configuration_fields>
 
 </configuration_fields>
 </file_format>
 
 <storage_locations>
 
-| Type        | Location               | Scope                | Priority |
-| ----------- | ---------------------- | -------------------- | -------- |
-| **Product** | `.claude/agents/`      | Current product only | Highest  |
-| **User**    | `~/.claude/agents/`    | All projects         | Lower    |
-| **CLI**     | `--agents` flag        | Current session      | Medium   |
-| **Plugin**  | Plugin's `agents/` dir | All projects         | Lowest   |
+<claude_storage_locations>
+
+Priority order:
+
+1. Product: `.claude/agents/` for the current product
+2. CLI: `--agents` flag for the current session
+3. User: `~/.claude/agents/` for all projects
+4. Plugin: plugin `agents/` directory for all projects
+
+</claude_storage_locations>
 
 When subagent names conflict, higher priority takes precedence.
 </storage_locations>
@@ -134,9 +145,11 @@ description: Reviews code for quality and security
 ```
 
 Subagent has access to all tools, including MCP tools.
+
 </inherit_all_tools>
 
 <specific_tools>
+
 Specify tools as comma-separated list for granular control:
 
 ```yaml
@@ -148,11 +161,13 @@ tools: Read, Grep, Glob
 ```
 
 Use `/agents` command to see full list of available tools.
+
 </specific_tools>
 </tool_configuration>
 
 <model_selection>
 <model_capabilities>
+
 **Sonnet 4.5** (`sonnet`):
 
 - "Best model in the world for agents" (Anthropic)
@@ -181,7 +196,7 @@ Use `/agents` command to see full list of available tools.
 <orchestration_strategy>
 **Explicit model orchestration pattern**:
 
-```markdown
+```text
 1. Sonnet (Coordinator):
    - Creates plan
    - Breaks task into subtasks
@@ -189,8 +204,8 @@ Use `/agents` command to see full list of available tools.
 
 2. Haiku or Sonnet (Workers):
    - Execute subtasks in parallel
-   - Use `haiku` for simple or high-volume tasks when the owning workflow accepts lower-cost execution
-   - Use `sonnet` when comparable evidence quality or higher reasoning capability matters
+   - Use the faster model for simple or high-volume tasks when the owning workflow accepts lower-cost execution
+   - Use the stronger model when comparable evidence quality or higher reasoning capability matters
 
 3. Sonnet (Validator):
    - Integrates results
@@ -204,21 +219,24 @@ Use `/agents` command to see full list of available tools.
 <decision_framework>
 **When to use each model**:
 
-| Task Type           | Recommended Model | Rationale                               |
-| ------------------- | ----------------- | --------------------------------------- |
-| Simple validation   | Haiku             | Fast lower-cost execution               |
-| Clear execution     | Haiku             | Efficient for bounded tasks             |
-| Complex analysis    | Sonnet            | Superior reasoning, worth the cost      |
-| Multi-step planning | Sonnet            | Best for breaking down complexity       |
-| Quality validation  | Sonnet            | Critical checkpoint, needs intelligence |
-| Batch processing    | Haiku             | Cost efficiency for high volume         |
-| Critical security   | Sonnet            | High stakes require best model          |
-| Output synthesis    | Sonnet            | Ensuring coherence across inputs        |
+<claude_decision_framework>
+
+- Simple validation: Haiku for fast lower-cost execution
+- Clear execution: Haiku for bounded tasks
+- Complex analysis: Sonnet for stronger reasoning
+- Multi-step planning: Sonnet for breaking down complexity
+- Quality validation: Sonnet when the checkpoint needs more capability
+- Batch processing: Haiku for cost efficiency at high volume
+- Critical security: Sonnet for high-stakes review
+- Output synthesis: Sonnet for coherence across inputs
+
+</claude_decision_framework>
 
 </decision_framework>
 </model_selection>
 
 <invocation>
+
 <automatic>
 Claude automatically selects subagents based on:
 - Task description in user's request
@@ -240,7 +258,9 @@ Users can explicitly request a subagent:
 
 <management>
 <using_agents_command>
+
 **Recommended**: Use `/agents` command for interactive management:
+
 - View all available subagents (built-in, user, product, plugin)
 - Create new subagents with guided setup
 - Edit existing subagents and their tool access
@@ -256,6 +276,7 @@ Users can explicitly request a subagent:
 - User: `~/.claude/agents/subagent-name.md`
 
 Follow the file format specified above (YAML frontmatter + system prompt).
+
 </direct_file_management>
 
 <cli_based_configuration>
@@ -264,8 +285,8 @@ Follow the file format specified above (YAML frontmatter + system prompt).
 ```bash
 claude --agents '{
   "code-reviewer": {
-    "description": "Expert code reviewer. Use proactively after code changes.",
-    "prompt": "You are a senior code reviewer. Focus on quality, security, and best practices.",
+    "description": "ALWAYS use this subagent after code changes.",
+    "prompt": "Claude is a senior code reviewer. Focus on quality, security, and best practices.",
     "tools": ["Read", "Grep", "Glob", "Bash"],
     "model": "sonnet"
   }
@@ -274,12 +295,13 @@ claude --agents '{
 
 Useful for testing configurations before saving them.
 </cli_based_configuration>
+
 </management>
 
 <example_subagents>
 <test_writer>
 
-```markdown
+```text
 ---
 name: test-writer
 description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
@@ -288,7 +310,7 @@ model: sonnet
 ---
 
 <role>
-You are a test automation specialist creating thorough, maintainable test suites.
+Claude is a test automation specialist creating thorough, maintainable test suites.
 </role>
 
 <workflow>
@@ -311,6 +333,7 @@ You are a test automation specialist creating thorough, maintainable test suites
 </test_writer>
 
 <debugger>
+
 ```markdown
 ---
 name: debugger
@@ -320,7 +343,7 @@ model: sonnet
 ---
 
 <role>
-You are a debugging specialist skilled at root cause analysis and systematic problem-solving.
+Claude is a debugging specialist skilled at root cause analysis and systematic problem-solving.
 </role>
 
 <workflow>
@@ -340,8 +363,8 @@ You are a debugging specialist skilled at root cause analysis and systematic pro
 - Review recent changes that might have introduced the bug
 - Verify fix doesn't break other functionality
   </debugging_techniques>
+```
 
-````
 </debugger>
 </example_subagents>
 
@@ -354,19 +377,21 @@ Treat tool access like production IAM: start from deny-all, allowlist only what'
 
 <why_it_matters>
 **Security risks of over-permissioning**:
+
 - Agent could modify wrong code (production instead of tests)
 - Agent could run dangerous commands (rm -rf, data deletion)
 - Agent could expose protected information
 - Agent could skip critical steps (linting, testing, validation)
 
 **Example vulnerability**:
+
 ```markdown
 ❌ Bad: Agent drafting sales email has full access to all tools
 Risk: Could access revenue dashboard data, customer financial info
 
 ✅ Good: Agent drafting sales email has Read access to Salesforce only
 Scope: Can draft email, cannot access sensitive financial data
-````
+```
 
 </why_it_matters>
 
@@ -401,6 +426,7 @@ Scope: Can draft email, cannot access sensitive financial data
 </tool_security>
 
 <skill_injection>
+
 Subagents can preload skills via the `skills:` frontmatter field. The full SKILL.md content of each listed skill is injected into the subagent's context at startup — not lazily loaded or dynamically invoked.
 
 <how_it_works>
@@ -430,7 +456,7 @@ Subagents can preload skills via the `skills:` frontmatter field. The full SKILL
 
 <example>
 
-```yaml
+```text
 ---
 name: adr-auditor
 description: Audit an ADR for structure, atemporal voice, and tag validity
@@ -480,7 +506,7 @@ Prompt caching for frequently-invoked subagents:
 <cache_structure>
 **Structure prompts for caching**:
 
-```markdown
+```text
 ---
 name: security-reviewer
 description: ...
@@ -490,7 +516,7 @@ model: sonnet
 
 [CACHEABLE SECTION - Stable content]
 <role>
-You are a senior security engineer...
+Claude is a senior security engineer...
 </role>
 
 <focus_areas>
@@ -558,14 +584,14 @@ Recent changes: {varies per invocation}
 Create task-specific subagents, not generic helpers.
 
 ❌ Bad: "You are a helpful assistant"
-✅ Good: "You are a React performance optimizer specializing in hooks and memoization"
+✅ Good: "React performance optimizer specializing in hooks and memoization"
 </be_specific>
 
 <clear_triggers>
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "Reviews code for security vulnerabilities. Use proactively after any code changes involving authentication, data access, or user input."
+✅ Good: "ALWAYS use this subagent after code changes involving authentication, data access, or user input."
 </clear_triggers>
 
 <focused_tools>
@@ -583,7 +609,7 @@ Use XML tags to structure the system prompt for clarity:
 
 ```markdown
 <role>
-You are a senior security engineer specializing in web application security.
+Claude is a senior security engineer specializing in web application security.
 </role>
 
 <focus_areas>

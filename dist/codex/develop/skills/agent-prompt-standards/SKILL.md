@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-The agent-prompt writing conventions — voice, description style, constraint language, objective shape, and anti-patterns — for the text within SKILL.md files and subagent system prompts, enforced across every creator and auditor skill.
+The agent-prompt writing conventions — voice, description style, constraint language, objective shape, and anti-patterns — for the text within SKILL.md files and custom agent developer instructions, enforced across every creator and auditor skill.
 </objective>
 
 <reference_note>

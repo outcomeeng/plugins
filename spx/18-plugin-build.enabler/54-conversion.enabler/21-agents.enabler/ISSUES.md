@@ -22,4 +22,4 @@ Deferral reason: this branch targets the bounded generated Codex-agent config en
 
 Revisit condition: when structural work on `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` is scheduled, decide whether `permission_mode`, `PERMISSION_MODE_MAPPINGS`, and the associated mapping tests belong in the plugin-agent conversion path or should be removed in favor of tool-derived Codex policy config only.
 
-Deferral reason: this branch fixes the generated Codex-agent policy enforcement for fields and tool declarations that can appear in the current Claude plugin agent source. Removing or re-scoping `permissionMode` changes the converter's declared frontmatter surface and belongs with the planned agent-conversion boundary split.
+Deferral reason: generated Codex-agent policy enforcement for fields and tool declarations that can appear in the rendered plugin agent source is bounded separately from removing or re-scoping `permissionMode`, which changes the converter's declared frontmatter surface and belongs with the planned agent-conversion boundary split.

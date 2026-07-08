@@ -1,18 +1,5 @@
 <table_of_contents>
 
-- `<core_problem>` — why subagent context needs explicit management
-- `<memory_architecture>` — short-term, long-term, working, core, and archival memory
-- `<context_strategies>` — summarization, sliding windows, scratchpads, smart memory, and compaction
-- `<subagent_patterns>` — stateful and stateless subagent shapes
-- `<context_inheritance>` — what subagents do and do not inherit
-- `<anti_patterns>` — context failures to avoid
-- `<best_practices>` — memory and retrieval principles
-- `<prompt_caching_interaction>` — cache-friendly context patterns
-
-</table_of_contents>
-
-<table_of_contents>
-
 - `<core_problem>` — why subagent context fails
 - `<memory_architecture>` — short-term, long-term, working, core, and archival memory
 - `<context_strategies>` — summarization, sliding windows, semantic switching, scratchpads, and smart memory
@@ -143,14 +130,14 @@ Trigger summarization when:
 
 1. **Highlight important events**
 
-```markdown
+```text
 Bad: "Reviewed code, found issues, provided fixes"
 Good: "Identified critical SQL injection in auth.ts:127, provided parameterized query fix. High-priority: requires immediate attention before deployment."
 ```
 
 2. **Include timing for sequential reasoning**
 
-```markdown
+```text
 "First attempt: Direct fix failed due to type mismatch.
 Second attempt: Added type conversion, introduced runtime error.
 Final approach: Refactored to use type-safe wrapper (successful)."
@@ -158,7 +145,7 @@ Final approach: Refactored to use type-safe wrapper (successful)."
 
 3. **Structure into categories vs long paragraphs**
 
-```markdown
+```text
 Issues found:
 
 - Security: SQL injection (Critical), XSS (High)
@@ -177,7 +164,7 @@ Actions taken:
 
 <example_workflow>
 
-```markdown
+```text
 <context_management>
 When conversation history exceeds 15 turns:
 
@@ -199,7 +186,7 @@ When conversation history exceeds 15 turns:
 **Pattern**: Recent interactions in context, older interactions as vectors for retrieval.
 
 <implementation>
-```markdown
+```text
 <sliding_window_strategy>
 Maintain in context:
 - Last 5 tool calls and results (short-term memory)
@@ -229,7 +216,7 @@ Retrieval trigger:
 **Pattern**: Detect context changes, respond appropriately.
 
 <example>
-```markdown
+```text
 <context_switch_detection>
 Monitor for topic changes:
 - User switches from "fix bug" to "add feature"
@@ -266,7 +253,7 @@ On context switch:
 <scratchpad_workflow>
 For complex debugging:
 
-1. Create scratchpad file: `.claude/scratch/debug-session-{timestamp}.md`
+1. Create scratchpad file: `.codex/scratch/debug-session-{timestamp}.md`
 2. Log each hypothesis and test result in scratchpad
 3. Keep only current hypothesis and key findings in context
 4. Reference scratchpad for full debugging history
@@ -377,7 +364,7 @@ Summary format:
 
 ```markdown
 <memory_structure>
-.claude/memory/
+.codex/memory/
   core-facts.md          # Essential product information
   decisions.md           # Key decisions and rationale
   patterns.md            # Discovered patterns and conventions
@@ -398,12 +385,12 @@ Subagent reads relevant files at start, updates during execution, summarizes at 
 <stateful_subagent>
 **For long-running or frequently-invoked subagents**:
 
-```markdown
+```text
 ---
 name: code-architect
 description: Maintains understanding of system architecture across multiple invocations
 tools: Read, Write, Grep, Glob
-model: sonnet
+model: gpt-5.4
 ---
 
 <role>
@@ -413,7 +400,7 @@ Claude is a system architect maintaining coherent design across product evolutio
 <memory_management>
 On each invocation:
 
-1. Read `.claude/memory/architecture-state.md` for current system state
+1. Read `.codex/memory/architecture-state.md` for current system state
 2. Perform assigned task with full context
 3. Update architecture-state.md with new components, decisions, patterns
 4. Maintain concise state (max 500 lines), summarize older decisions
@@ -432,12 +419,12 @@ State file structure:
 <stateless_subagent>
 **For simple, focused subagents**:
 
-```markdown
+```text
 ---
 name: syntax-checker
 description: Validates code syntax without maintaining state
 tools: Read, Bash
-model: sonnet
+model: gpt-5.4-mini
 ---
 
 <role>
@@ -596,7 +583,7 @@ Use context for:
 
 <prompt_caching_interaction>
 
-Prompt caching (see [subagents.md](subagents.md#prompt_caching)) works best with stable context.
+Prompt caching works best with stable context. Stable prompt prefixes become cheaper on later invocations, while task-specific suffixes stay fresh. Cache entries refresh on use and expire after the runtime's cache TTL; prompt edits, tool-definition changes, and TTL expiry invalidate cached content.
 
 <cache_friendly_context>
 **Structure context for caching**:
