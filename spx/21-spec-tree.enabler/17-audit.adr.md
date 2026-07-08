@@ -16,9 +16,8 @@ The implementation-audit orchestration embeds no language-specific knowledge bey
 
 ### Testing
 
-- ALWAYS: implementation-audit orchestration records audit run metadata, required coverage units, findings, terminal state, and the rendered projection through `spx verification run`, so SPX owns payload validation, terminal projection rendering, and authoritative finding count ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
-- Given a changeset scope with a supported implementation partition, when `implementation-auditor` runs, then it starts one `spx verification run` with `--verification-type audit --scope-type changeset`, records required code, test, and architecture coverage units, records concern findings, finishes the run, and relays the rendered projection ([test](68-audit.enabler/tests/test_implementation_audit_contract.scenario.l1.py))
-- ALWAYS: implementation-audit orchestration records audit run metadata, required coverage units, findings, terminal state, and the rendered projection through `spx verification run`, so SPX owns payload validation, terminal projection rendering, and authoritative finding count ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture` skills ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: the spec-tree plugin ships retired implementation-audit agents or plugin-side verdict scripts under the audit skill ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
 
 ### Audit
 
