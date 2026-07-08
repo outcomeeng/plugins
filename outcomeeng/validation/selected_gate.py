@@ -17,7 +17,6 @@ from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
     FMT_CHECK_ARGV,
-    HOOK_SAFETY_ARGV,
     INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
     PREFLIGHT_STEPS,
@@ -28,7 +27,6 @@ from outcomeeng.validation._steps import (
     RUFF_FORMAT_ARGV,
     SHELLCHECK_ARGV,
     SPX_MARKDOWN_ARGV,
-    SPX_VERSION_FLOOR_ARGV,
     TEST_RECIPE,
     VALIDATION_STEPS,
 )
@@ -59,6 +57,7 @@ SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime chang
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 TEST_REASON: Final = "changed python assertion tests"
 ROOT_README_PATH: Final = "README.md"
+SPX_CONFIG_PATH: Final = "spx.config.yaml"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -67,6 +66,7 @@ SKILL_STEP_LABELS: Final = (
     "skill-injection",
     "reference-portability",
     "runtime-token",
+    "hook-safety",
     "docs-check",
 )
 
@@ -92,6 +92,7 @@ PYTHON_PATTERNS: Final = (
 PYTHON_ASSERTION_TEST_PATTERNS: Final = ("spx/**/tests/test_*.py",)
 MARKDOWN_PATTERNS: Final = (
     ROOT_README_PATH,
+    SPX_CONFIG_PATH,
     "*.md",
     "spx/**",
     "src/plugins/**/*.md",
@@ -118,18 +119,6 @@ INSTRUCTION_BLOCK_PATTERNS: Final = (
     "outcomeeng/distribution/instruction_block.py",
 )
 
-_STEP_REASONS: Final = {
-    FMT_CHECK_ARGV: MARKDOWN_REASON,
-    SPX_MARKDOWN_ARGV: MARKDOWN_REASON,
-    ACTIONLINT_ARGV: WORKFLOW_REASON,
-    SHELLCHECK_ARGV: WORKFLOW_REASON,
-    RUFF_FORMAT_ARGV: PYTHON_REASON,
-    RUFF_CHECK_ARGV: PYTHON_REASON,
-    MYPY_ARGV: PYTHON_REASON,
-    PYRIGHT_ARGV: PYTHON_REASON,
-    HOOK_SAFETY_ARGV: WORKFLOW_REASON,
-    SPX_VERSION_FLOOR_ARGV: FULL_GATE_REASON,
-}
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
     "diff",

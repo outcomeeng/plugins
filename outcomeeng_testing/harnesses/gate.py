@@ -114,6 +114,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_README_PATH,
     SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_SKILL_PATH,
+    SELECTED_GATE_SPX_CONFIG_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
 )
@@ -960,6 +961,16 @@ def assert_selected_gate_mapping_contract() -> None:
         SPX_MARKDOWN_ARGV,
     )
     assert all(item.reason == MARKDOWN_REASON for item in readme_plan.selected_steps)
+
+    spx_config_plan = build_selected_gate_plan((SELECTED_GATE_SPX_CONFIG_PATH,))
+    assert spx_config_plan.full_gate is False
+    assert tuple(item.step.argv for item in spx_config_plan.selected_steps) == (
+        FMT_CHECK_ARGV,
+        SPX_MARKDOWN_ARGV,
+    )
+    assert all(
+        item.reason == MARKDOWN_REASON for item in spx_config_plan.selected_steps
+    )
 
     plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH,))
     expected_skill_markdown_steps = tuple(
