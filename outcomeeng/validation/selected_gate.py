@@ -81,11 +81,17 @@ FULL_GATE_PATTERNS: Final = (
     "outcomeeng_evals/**",
     "outcomeeng_testing/**",
 )
-PYTHON_PATTERNS: Final = (
+PYTHON_FORMAT_LINT_PATTERNS: Final = (
     "outcomeeng/**",
     "outcomeeng_testing/**",
     "outcomeeng_evals/**",
     "src/plugins/**/*.py",
+    "spx/**/tests/test_*.py",
+)
+PYTHON_TYPECHECK_PATTERNS: Final = (
+    "outcomeeng/**",
+    "outcomeeng_testing/**",
+    "outcomeeng_evals/**",
     "spx/**/tests/test_*.py",
 )
 PYTHON_ASSERTION_TEST_PATTERNS: Final = ("spx/**/tests/test_*.py",)
@@ -319,14 +325,20 @@ def build_selected_gate_plan(
         for argv in workflow_argvs:
             selected_argvs.add(argv)
             reasons[argv] = WORKFLOW_REASON
-    if _matches_any(normalized, PYTHON_PATTERNS):
-        python_argvs: tuple[tuple[str, ...], ...] = (
+    if _matches_any(normalized, PYTHON_FORMAT_LINT_PATTERNS):
+        python_lint_argvs: tuple[tuple[str, ...], ...] = (
             RUFF_FORMAT_ARGV,
             RUFF_CHECK_ARGV,
+        )
+        for argv in python_lint_argvs:
+            selected_argvs.add(argv)
+            reasons[argv] = PYTHON_REASON
+    if _matches_any(normalized, PYTHON_TYPECHECK_PATTERNS):
+        python_typecheck_argvs: tuple[tuple[str, ...], ...] = (
             MYPY_ARGV,
             PYRIGHT_ARGV,
         )
-        for argv in python_argvs:
+        for argv in python_typecheck_argvs:
             selected_argvs.add(argv)
             reasons[argv] = PYTHON_REASON
     if _matches_any(normalized, SKILL_PATTERNS):

@@ -1014,15 +1014,14 @@ def assert_selected_gate_mapping_contract() -> None:
         step
         for step in VALIDATION_STEPS
         if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV}
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
     )
     assert tuple(item.step for item in plan.selected_steps) == (
         expected_plugin_script_steps
     )
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
         PYTHON_REASON
-        if item.step.argv
-        in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV}
+        if item.step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
         else SKILL_REASON
         for item in plan.selected_steps
     )

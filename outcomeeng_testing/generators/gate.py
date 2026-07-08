@@ -7,7 +7,7 @@ from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.validation import Step
 
-SELECTED_GATE_PYTHON_SOURCE_PATH = "outcomeeng/merging_policy.py"
+SELECTED_GATE_PYTHON_SOURCE_PATH = "outcomeeng/hygiene/clean.py"
 SELECTED_GATE_PYTHON_TEST_PATH = (
     "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/"
     "tests/test_selected_gate.mapping.l1.py"
