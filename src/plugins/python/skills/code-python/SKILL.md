@@ -15,7 +15,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 </repo_local_overlay>
 
 <objective>
-Python implementation code that makes its node's existing tests pass — written fresh against failing tests, or repaired against reviewer feedback.
+Python implementation code that makes its node's existing tests pass.
 </objective>
 
 <mode_detection>

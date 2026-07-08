@@ -10,20 +10,20 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript implementation code that makes its node's tests pass — written fresh against failing tests, or repaired against reviewer feedback.
+TypeScript implementation code that makes its node's tests pass.
 </objective>
 
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 
 ```
-Base directory for this skill: {skill_dir}
+Base directory for this skill: ${CLAUDE_SKILL_DIR}
 ```
 
 Use this path to access skill files:
 
-- References: `{skill_dir}/references/`
-- Workflows: `{skill_dir}/workflows/`
+- References: `${CLAUDE_SKILL_DIR}/references/`
+- Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
 
 **IMPORTANT**: Do NOT search the product directory for skill files.
 </accessing_skill_files>
@@ -272,10 +272,10 @@ spec-tree:contextualize spx/55-example.enabler/21-commands.outcome
 <two_modes>
 This skill operates in one of two modes depending on the input:
 
-| Input                            | Mode               | Workflow                      |
-| -------------------------------- | ------------------ | ----------------------------- |
-| Spec (ADR/PDR, node spec)        | **Implementation** | `workflows/implementation.md` |
-| Rejection feedback from reviewer | **Remediation**    | `workflows/remediation.md`    |
+| Input                            | Mode               | Workflow                                          |
+| -------------------------------- | ------------------ | ------------------------------------------------- |
+| Spec (ADR/PDR, node spec)        | **Implementation** | `${CLAUDE_SKILL_DIR}/workflows/implementation.md` |
+| Rejection feedback from reviewer | **Remediation**    | `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    |
 
 Determine the mode from the input, then follow the appropriate workflow.
 </two_modes>
@@ -298,21 +298,21 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 <reference_index>
 
-| File                                         | Purpose                               |
-| -------------------------------------------- | ------------------------------------- |
-| `references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
-| `references/test-patterns.md`                | Debuggability-first test organization |
-| `references/verification-checklist.md`       | Pre-submission verification           |
-| `references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
+| File                                                             | Purpose                               |
+| ---------------------------------------------------------------- | ------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
+| `${CLAUDE_SKILL_DIR}/references/test-patterns.md`                | Debuggability-first test organization |
+| `${CLAUDE_SKILL_DIR}/references/verification-checklist.md`       | Pre-submission verification           |
+| `${CLAUDE_SKILL_DIR}/references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
 
 </reference_index>
 
 <workflows_index>
 
-| Workflow                      | Purpose                         |
-| ----------------------------- | ------------------------------- |
-| `workflows/implementation.md` | TDD phases, code standards      |
-| `workflows/remediation.md`    | Fix issues from review feedback |
+| Workflow                                          | Purpose                         |
+| ------------------------------------------------- | ------------------------------- |
+| `${CLAUDE_SKILL_DIR}/workflows/implementation.md` | TDD phases, code standards      |
+| `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    | Fix issues from review feedback |
 
 </workflows_index>
 

@@ -16,13 +16,13 @@ Rust implementation code with spec-driven behavior, explicit seams, and full val
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 
 ```text
-Base directory for this skill: {skill_dir}
+Base directory for this skill: ${CLAUDE_SKILL_DIR}
 ```
 
 Use this path to access skill files:
 
-- References: `{skill_dir}/references/`
-- Workflows: `{skill_dir}/workflows/`
+- References: `${CLAUDE_SKILL_DIR}/references/`
+- Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
 
 Do not search the product directory for skill files when the loading message already provides the base path.
 </accessing_skill_files>
@@ -35,7 +35,7 @@ Do not search the product directory for skill files when the loading message alr
 
 1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
 2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
-3. Read `workflows/implementation.md` for new work or `workflows/remediation.md` for review feedback.
+3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
 4. Use `/test-rust` when behavior changes require new or revised tests.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
 
@@ -111,11 +111,11 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 <reference_guides>
 
-- `references/outcome-engineering-patterns.md` -- Rust-native code patterns for seams, config, errors, and cleanup
-- `references/test-patterns.md` -- debuggability-first Rust test organization
-- `references/verification-checklist.md` -- completion checks and validation commands
-- `workflows/implementation.md` -- protocol for new implementation work
-- `workflows/remediation.md` -- protocol for fixing review feedback
+- `${CLAUDE_SKILL_DIR}/references/outcome-engineering-patterns.md` -- Rust-native code patterns for seams, config, errors, and cleanup
+- `${CLAUDE_SKILL_DIR}/references/test-patterns.md` -- debuggability-first Rust test organization
+- `${CLAUDE_SKILL_DIR}/references/verification-checklist.md` -- completion checks and validation commands
+- `${CLAUDE_SKILL_DIR}/workflows/implementation.md` -- protocol for new implementation work
+- `${CLAUDE_SKILL_DIR}/workflows/remediation.md` -- protocol for fixing review feedback
 
 </reference_guides>
 

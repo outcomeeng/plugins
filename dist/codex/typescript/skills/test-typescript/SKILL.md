@@ -12,7 +12,7 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript test files that supply evidence for a node specification's assertions — written fresh from the spec, or repaired against reviewer feedback.
+TypeScript test files that supply evidence for a node specification's assertions.
 </objective>
 
 <mode_detection>

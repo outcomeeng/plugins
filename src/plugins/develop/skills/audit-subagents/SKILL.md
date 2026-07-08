@@ -25,6 +25,7 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 
 <constraints>
 - NEVER modify the {{! term('configured_agent') !}} file under audit or any other file — this audit produces a verdict, never a fix or a commit
+- NEVER report a score; report contextual judgment instead
 {!% if target == 'codex' %!}
 - MUST check for markdown headings (##, ###) inside `{{! field('configured_agent_prompt') !}}` and flag as critical
 {!% else %!}

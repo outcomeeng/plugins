@@ -17,11 +17,12 @@ This audit runs in the skill-auditor agent's isolated context. When this skill l
 </dispatch_gate>
 
 <objective>
-A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence — contextual judgment across the full skill-authoring surface, never a score.
+A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence.
 </objective>
 
 <constraints>
 - NEVER modify files during audit - ONLY analyze and report findings
+- NEVER report a score; report contextual judgment across the full skill-authoring surface
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
 - NEVER generate fixes unless explicitly requested by the user

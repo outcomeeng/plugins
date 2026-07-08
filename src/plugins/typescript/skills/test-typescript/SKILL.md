@@ -12,7 +12,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-TypeScript test files that supply evidence for a node specification's assertions — written fresh from the spec, or repaired against reviewer feedback.
+TypeScript test files that supply evidence for a node specification's assertions.
 </objective>
 
 <mode_detection>

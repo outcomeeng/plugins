@@ -13,7 +13,7 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Python test files that supply evidence for a spec-tree node's assertions — written fresh, or repaired against rejected evidence.
+Python test files that supply evidence for a spec-tree node's assertions.
 </objective>
 
 <mode_detection>

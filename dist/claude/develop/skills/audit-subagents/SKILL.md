@@ -25,6 +25,7 @@ A verdict on one subagent configuration file (`.claude/agents/*.md` or `~/.claud
 
 <constraints>
 - NEVER modify the subagent file under audit or any other file — this audit produces a verdict, never a fix or a commit
+- NEVER report a score; report contextual judgment instead
 
 - MUST check for markdown headings (##, ###) in subagent body and flag as critical
 

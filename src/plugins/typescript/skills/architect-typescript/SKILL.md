@@ -166,12 +166,12 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 
 ```
-Base directory for this skill: {skill_dir}
+Base directory for this skill: ${CLAUDE_SKILL_DIR}
 ```
 
 Use this path to access skill files:
 
-- References: `{skill_dir}/references/`
+- References: `${CLAUDE_SKILL_DIR}/references/`
 
 **IMPORTANT**: Do NOT search the product directory for skill files.
 </accessing_skill_files>
@@ -179,10 +179,10 @@ Use this path to access skill files:
 <reference_index>
 Detailed patterns and principles:
 
-| File                                  | Purpose                                   |
-| ------------------------------------- | ----------------------------------------- |
-| `references/adr-patterns.md`          | Common ADR patterns for TypeScript        |
-| `references/typescript-principles.md` | Type safety, clean architecture, security |
+| File                                                      | Purpose                                   |
+| --------------------------------------------------------- | ----------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/adr-patterns.md`          | Common ADR patterns for TypeScript        |
+| `${CLAUDE_SKILL_DIR}/references/typescript-principles.md` | Type safety, clean architecture, security |
 
 </reference_index>
 

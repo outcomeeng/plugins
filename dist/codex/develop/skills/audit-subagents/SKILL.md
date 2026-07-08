@@ -25,6 +25,7 @@ A verdict on one custom agent configuration file (`.codex/agents/*.toml` or `~/.
 
 <constraints>
 - NEVER modify the custom agent file under audit or any other file — this audit produces a verdict, never a fix or a commit
+- NEVER report a score; report contextual judgment instead
 
 - MUST check for markdown headings (##, ###) inside `developer_instructions` and flag as critical
 
