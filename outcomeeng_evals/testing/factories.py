@@ -60,6 +60,7 @@ DEFAULT_CI_CHANGED_PATH_STATUS = "M"
 DEFAULT_CI_RENAMED_PATH = "docs/manage-pr.md"
 DEFAULT_CI_COPIED_PATH = "docs/copied-suite.py"
 DEFAULT_CI_HARNESS_PATH = "outcomeeng_evals/suite.py"
+DEFAULT_CI_WHITESPACE_PATH = " docs/has edge spaces.md "
 
 
 @dataclass(frozen=True)
@@ -262,6 +263,14 @@ def make_changed_paths_file_cases() -> tuple[ChangedPathsFileCase, ...]:
         ChangedPathsFileCase(
             content=f"C100\t{DEFAULT_CI_HARNESS_PATH}\t{DEFAULT_CI_COPIED_PATH}\n",
             expected_paths=(DEFAULT_CI_HARNESS_PATH, DEFAULT_CI_COPIED_PATH),
+        ),
+        ChangedPathsFileCase(
+            content=f"{DEFAULT_CI_CHANGED_PATH_STATUS}\t{DEFAULT_CI_WHITESPACE_PATH}\n",
+            expected_paths=(DEFAULT_CI_WHITESPACE_PATH,),
+        ),
+        ChangedPathsFileCase(
+            content=DEFAULT_CI_WHITESPACE_PATH + "\n",
+            expected_paths=(DEFAULT_CI_WHITESPACE_PATH,),
         ),
     )
 

@@ -139,6 +139,7 @@ PYTEST_TARGET_ARG = (
     "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py"
 )
 SELECTED_GATE_RENAMED_TARGET_ARG = "docs/renamed-selected-gate.py"
+SELECTED_GATE_WHITESPACE_PATH = " docs/selected gate edge spaces.py "
 
 
 def selected_check_plan_block(*, labels: Sequence[str], reason: str) -> str:
@@ -1031,6 +1032,18 @@ def assert_selected_gate_mapping_contract() -> None:
             sorted((branch_path, staged_path, unstaged_path, untracked_path))
         )
         assert runner.repos == [repo] * len(runner.outputs)
+
+    with TemporaryDirectory() as tmp:
+        runner = selected_gate_runner_for_paths(
+            branch_path=SELECTED_GATE_WHITESPACE_PATH,
+            staged_path=SELECTED_GATE_WHITESPACE_PATH,
+            unstaged_path=SELECTED_GATE_WHITESPACE_PATH,
+            untracked_path=SELECTED_GATE_WHITESPACE_PATH,
+        )
+
+        assert collect_changed_paths(Path(tmp), runner=runner) == (
+            SELECTED_GATE_WHITESPACE_PATH,
+        )
 
     with TemporaryDirectory() as tmp:
         branch_path = SELECTED_GATE_PYTHON_SOURCE_PATH

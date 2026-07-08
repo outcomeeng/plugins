@@ -466,13 +466,12 @@ def _changed_path_entries_from_output(
     entries: list[ChangedPath] = []
     status_output = command != GIT_LS_UNTRACKED_ARGV
     for line in output.splitlines():
-        stripped = line.strip()
-        if not stripped:
+        if not line:
             continue
         if status_output:
-            entries.extend(_parse_name_status_line(stripped))
+            entries.extend(_parse_name_status_line(line))
         else:
-            entries.append(ChangedPath(path=stripped, status="A"))
+            entries.append(ChangedPath(path=line, status="A"))
     return tuple(entries)
 
 

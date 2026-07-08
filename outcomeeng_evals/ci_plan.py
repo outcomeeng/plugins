@@ -101,13 +101,12 @@ def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
 
 
 def _changed_paths_from_line(line: str) -> tuple[str, ...]:
-    stripped = line.strip()
-    if not stripped:
+    if not line:
         return ()
-    parts = stripped.split("\t")
+    parts = line.split("\t")
     status = parts[0]
     if len(parts) == 1:
-        return (stripped,)
+        return (line,)
     if status.startswith((RENAMED_GIT_STATUS_PREFIX, COPIED_GIT_STATUS_PREFIX)):
         if len(parts) < 3:
             return ()
