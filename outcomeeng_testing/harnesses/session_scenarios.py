@@ -24,6 +24,8 @@ def _handoff(
     goal: str = "Verify handoff behavior",
     next_step: str = "Inspect the session file",
     git_ref: str | None = None,
+    specs: list[str] | None = None,
+    files: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     fields: dict[str, str] = {
         "priority": priority,
@@ -32,9 +34,14 @@ def _handoff(
     }
     if git_ref is not None:
         fields["git_ref"] = git_ref
+    payload: dict[str, object] = dict(fields)
+    if specs is not None:
+        payload["specs"] = specs
+    if files is not None:
+        payload["files"] = files
     return subprocess.run(
         ["spx", "session", "handoff", "--sessions-dir", str(sessions_dir)],
-        input=f"{json.dumps(fields)}\n{body}",
+        input=f"{json.dumps(payload)}\n{body}",
         capture_output=True,
         text=True,
         cwd=str(cwd),
@@ -105,6 +112,17 @@ def _parse_session_file(stdout: str) -> Path:
 
 
 def _read_git_ref(session_file: Path) -> str:
+    frontmatter = _read_frontmatter(session_file)
+    match = re.search(
+        r'^\s*"?git_ref"?:\s*"?([^"\n]+?)"?\s*$',
+        frontmatter,
+        re.MULTILINE,
+    )
+    assert match, f"no git_ref in frontmatter of {session_file}"
+    return match.group(1)
+
+
+def _read_frontmatter(session_file: Path) -> str:
     lines = session_file.read_text().splitlines()
     assert lines and lines[0] == "---", f"no YAML frontmatter in {session_file}"
     closing_index = next(
@@ -114,14 +132,16 @@ def _read_git_ref(session_file: Path) -> str:
     assert closing_index is not None, (
         f"no closing YAML frontmatter fence in {session_file}"
     )
-    frontmatter = "\n".join(lines[1:closing_index])
-    match = re.search(
-        r'^\s*"?git_ref"?:\s*"?([^"\n]+?)"?\s*$',
-        frontmatter,
-        re.MULTILINE,
-    )
-    assert match, f"no git_ref in frontmatter of {session_file}"
-    return match.group(1)
+    return "\n".join(lines[1:closing_index])
+
+
+def _frontmatter_contains_field_value(
+    session_file: Path, field: str, value: str
+) -> bool:
+    frontmatter = _read_frontmatter(session_file)
+    field_line = re.search(rf'^\s*"?{re.escape(field)}"?:', frontmatter, re.MULTILINE)
+    assert field_line, f"no {field} in frontmatter of {session_file}"
+    return value in frontmatter
 
 
 def _single_todo_file(sessions_dir: Path) -> Path:
@@ -134,17 +154,23 @@ def handoff_file_contains_repository_tree_state_and_active_node_path() -> bool:
     with TemporaryDirectory() as directory, accepted_git_context() as repo:
         sessions_dir = Path(directory) / "sessions"
         active_node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
+        active_spec = f"{active_node}sessions.md"
+        changed_file = "src/plugins/spec-tree/skills/handoff/SKILL.md"
         result = _handoff(
             sessions_dir,
             f"Active node: {active_node}\n",
             cwd=repo,
             goal="Verify handoff writes recoverable repository state",
             next_step="Inspect the session file repository anchor and active node",
+            specs=[active_spec],
+            files=[changed_file],
         )
         assert result.returncode == 0, result.stderr
         session_file = _single_todo_file(sessions_dir)
         assert active_node in session_file.read_text()
         assert _read_git_ref(session_file) == "main"
+        assert _frontmatter_contains_field_value(session_file, "specs", active_spec)
+        assert _frontmatter_contains_field_value(session_file, "files", changed_file)
         return True
 
 

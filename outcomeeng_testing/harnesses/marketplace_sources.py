@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable
@@ -72,6 +74,23 @@ ISSUE_RESOLVER_SCRIPT = (
 CLAUDE_MARKETPLACE_LIST_CALL = (*CLAUDE_MARKETPLACE_LIST_COMMAND,)
 CODEX_MARKETPLACE_LIST_CALL = (*CODEX_MARKETPLACE_LIST_COMMAND,)
 CLAUDE_PLUGIN_LIST_CALL = (*CLAUDE_PLUGIN_LIST_COMMAND,)
+ISSUE_RESOLVER_FILESYSTEM_WRITE_CALLS = frozenset(
+    (
+        "open",
+        "os.open",
+        "os.makedirs",
+        "os.mkdir",
+        "Path.open",
+        "Path.touch",
+        "Path.write_bytes",
+        "Path.write_text",
+        "tempfile.NamedTemporaryFile",
+        "tempfile.TemporaryDirectory",
+        "tempfile.TemporaryFile",
+        "tempfile.mkdtemp",
+        "tempfile.mkstemp",
+    )
+)
 
 
 @dataclass
@@ -192,8 +211,10 @@ def issue_resolver_creates_no_temporary_files() -> bool:
     with TemporaryDirectory() as directory:
         root = Path(directory)
         workdir = root / "empty-working-directory"
+        scratchdir = root / "process-scratch-directory"
         registered_path = root / "registered-marketplace"
         workdir.mkdir()
+        scratchdir.mkdir()
         result = _run_issue_resolver(
             [
                 {
@@ -204,10 +225,44 @@ def issue_resolver_creates_no_temporary_files() -> bool:
             ],
             runtime=resolver.RUNTIME_CLAUDE,
             cwd=workdir,
+            env={**os.environ, "TMPDIR": str(scratchdir)},
         )
         assert result.returncode == 0
         assert list(workdir.iterdir()) == []
+        assert list(scratchdir.iterdir()) == []
+        assert not _issue_resolver_uses_filesystem_write_api()
         return True
+
+
+def _issue_resolver_uses_filesystem_write_api() -> bool:
+    tree = ast.parse(ISSUE_RESOLVER_SCRIPT.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if _is_tempfile_import(node):
+            return True
+        if isinstance(node, ast.Call):
+            call_name = _call_name(node.func)
+            if call_name in ISSUE_RESOLVER_FILESYSTEM_WRITE_CALLS:
+                return True
+            if call_name.endswith((".write_text", ".write_bytes", ".touch", ".mkdir")):
+                return True
+    return False
+
+
+def _is_tempfile_import(node: ast.AST) -> bool:
+    if isinstance(node, ast.Import):
+        return any(alias.name == "tempfile" for alias in node.names)
+    if isinstance(node, ast.ImportFrom):
+        return node.module == "tempfile"
+    return False
+
+
+def _call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _call_name(node.value)
+        return f"{parent}.{node.attr}" if parent else node.attr
+    return ""
 
 
 def _load_issue_resolver() -> ModuleType:
@@ -228,7 +283,11 @@ def _load_issue_resolver() -> ModuleType:
 
 
 def _run_issue_resolver(
-    payload: object | str, *, runtime: str, cwd: Path | None = None
+    payload: object | str,
+    *,
+    runtime: str,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
@@ -244,6 +303,7 @@ def _run_issue_resolver(
         text=True,
         check=False,
         cwd=cwd,
+        env=env,
     )
 
 
