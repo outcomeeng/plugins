@@ -109,6 +109,7 @@ from outcomeeng.validation.selected_gate import (
 )
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
+    SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
     SELECTED_GATE_MARKDOWN_PATH,
     SELECTED_GATE_PLUGIN_SCRIPT_PATH,
@@ -903,6 +904,14 @@ def assert_selected_gate_mapping_contract() -> None:
     )
     assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
 
+    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
+    assert plan.full_gate is False
+    assert tuple(item.step.argv for item in plan.selected_steps) == (
+        ACTIONLINT_ARGV,
+        SHELLCHECK_ARGV,
+    )
+    assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
+
     plan = build_selected_gate_plan(
         (
             SELECTED_GATE_PYTHON_SOURCE_PATH,
@@ -953,7 +962,6 @@ def assert_selected_gate_mapping_contract() -> None:
 
     full_gate_examples = (
         SELECTED_GATE_FULL_GATE_PATH,
-        ".github/workflows/spec-tree-evals.yml",
         "outcomeeng/validation/selected_gate.py",
         "outcomeeng_testing/generators/gate.py",
         "outcomeeng_testing/evals/just_recipes.py",

@@ -80,8 +80,6 @@ FULL_GATE_PATTERNS: Final = (
     "outcomeeng/validation/**",
     "outcomeeng_evals/**",
     "outcomeeng_testing/**",
-    ".github/workflows/check.yml",
-    ".github/workflows/spec-tree-evals.yml",
 )
 PYTHON_PATTERNS: Final = (
     "outcomeeng/**",
