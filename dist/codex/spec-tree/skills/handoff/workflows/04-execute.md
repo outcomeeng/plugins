@@ -7,7 +7,7 @@ A completed closure execution state: approved persistence written, session-owned
 Work not committed here is not persisted.
 
 <required_reading>
-Before writing a Path B or Path C session file, read `references/session-format.md` for the canonical template.
+Before writing a Path B or Path C session file, read `${SKILL_DIR}/references/session-format.md` for the canonical template.
 
 </required_reading>
 
@@ -51,7 +51,7 @@ For each anchored node, check `git status` and record:
 <resolve_claimed_sessions>
 Read the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 (`<perspective_claimed_sessions>`). Use it as the authoritative archive list and artifact identifier for the rest of this workflow.
 
-**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
+**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `${SKILL_DIR}/references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
 
 **Cross-check against workflow 03 approval.** The marker must match the session-disposition header the user approved. If the user named additional sessions during workflow 03, add them before archiving. If any session is classified **ambiguous**, STOP and resolve with the user before proceeding.
 
@@ -83,13 +83,13 @@ Every closure ends with **zero, one, or several** session files — one canonica
 1. Use the artifact id from `<resolve_claimed_sessions>`. Derive its file path from `spx session show <artifact-id>` or the root worktree's `.spx/sessions/todo/<artifact-id>.md`.
 2. Do NOT run `spx session handoff` — that would create a second handoff and break the one-handoff end state.
 3. Read the artifact frontmatter and preserve its existing `created_at`, `agent_session_id`, and `git_ref` values.
-4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative continuation from every claimed session.
+4. Write (overwrite) the artifact file using the template in `${SKILL_DIR}/references/session-format.md`. The file content is the canonical continuation with cumulative continuation from every claimed session.
 5. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
 
 **Path C — new handoff (one handoff, no artifact)**:
 
 0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` and a real stop condition. Path C is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
-1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
+1. Compose the canonical continuation using `${SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
 
    **Choose the stdin form by harness.**
@@ -197,8 +197,8 @@ State a human-readable closeout first, then the session mechanics. The operator 
 
 The closeout MUST include:
 
-- **Product outcome**: answer, in plain English, why the operator should be glad the work is merged. Use the loaded Spec Tree ancestry — product spec, product decisions, ancestor specs and decisions, lower-index sibling context, and target node — to translate the payload into the product benefit at the right scale. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
-- **Changed product surface**: answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is better because of the change. Use product words from the loaded ancestry, not raw repository storage words. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
+- **Product outcome**: answer, in plain English, why the operator should be glad about the work's delivered or parked state. For a default-branch merge closeout, explain why the merged work is valuable. For a continuation handoff before default-branch delivery, explain what useful product state is preserved for pickup without claiming the work is merged. Use the loaded Spec Tree ancestry — product spec, product decisions, ancestor specs and decisions, lower-index sibling context, and target node — to translate the payload into the product benefit at the right scale. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
+- **Changed product surface**: answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is better because of the change or being preserved for pickup. Use product words from the loaded ancestry, not raw repository storage words. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
 - **Human-readable change summary**: answer what changed, why it matters to the operator, and what additional benefit continuing the work would create when follow-up remains. Write the summary so the operator can understand the result from product language alone, without reconstructing it from a diff, branch, PR, file list, generated tree, installed version, or archive receipt. This is a value field, so keep transport, storage, and artifact identifiers out of it; use the evidence, inspection, delivered-state, remaining-work, branch, and session-mechanics fields for those facts.
 - **Verification evidence**: commands, audits, reviews, CI checks, screenshots, manual inspections, run ids, session ids, PR numbers, commit SHAs, or other proof that passed. Reproduce identity values verbatim when they are part of the evidence.
 - **Inspection references**: places the operator can inspect the result or its evidence: local file paths, generated artifact paths, rendered pages, running URLs, deployed URLs, PR URLs, merged commits, screenshots, journal runs, logs, or external records. Include whichever references apply; omit unavailable references rather than inventing one.
@@ -249,16 +249,16 @@ NEVER fill **Changed product surface** or **Human-readable change summary** with
 
 ```text
 Changed product surface:
-- src/plugins/spec-tree/skills/handoff/workflows/04-execute.md
-- Generated runtime handoff workflow output
-- spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md
-- spx/21-spec-tree.enabler/76-sessions.enabler/ISSUES.md
+- the handoff workflow file
+- the generated runtime copy
+- the sessions specification
+- the node issue note
 ```
 
 Why it fails: the operator still has to infer the product benefit from storage locations. Translate those locations through the loaded ancestry into product language, for example:
 
 ```text
-Changed product surface: the handoff closeout now explains what improved, why the merge matters, and what a follow-up would add, using the product language loaded from the Spec Tree ancestry.
+Changed product surface: the handoff closeout now explains what improved, why the delivered state matters, and what a follow-up would add, using the product language loaded from the Spec Tree ancestry.
 ```
 
 Then put the file paths under **Inspection references**.
