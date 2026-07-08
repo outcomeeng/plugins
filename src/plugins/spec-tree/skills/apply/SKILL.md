@@ -108,7 +108,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 | 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`               | `Skill("test-rust")`               |
 | 6    | Test audit               | `Skill("audit-typescript-tests")`                       | `Skill("audit-python-tests")`        | `Skill("audit-rust-tests")`        |
 | 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`               | `Skill("code-rust")`               |
-| 8    | Code audit               | `Skill("audit-typescript-code")`                        | `Skill("audit-python-code")`         | `Skill("audit-rust-code")`         |
+| 8    | Implementation audit     | `implementation-auditor` agent                          | same                                 | same                               |
 | 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                                 | same                               |
 | 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                                 | same                               |
 | 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                                 | same                               |
@@ -195,13 +195,15 @@ Write implementation code. All tests from Step 5 must pass.
 
 <step number="8" name="Code audit" gate="true">
 
-Invoke the code audit skill for the detected language.
+Dispatch the `implementation-auditor` agent with the repository path, exact live file list, changeset scope, governing node path, detected language, and deterministic verification already run.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
+The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from the main conversation.
+
+**REJECTED or BLOCKED -> fix the defect class or exact blocked command -> re-dispatch this step.** Loop until APPROVED.
 
 </step>
 

@@ -40,10 +40,11 @@ The invocation request `$request` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.
+- Optional explicit live file list for pre-commit audits, including modified and untracked files that are not yet part of `<head>`.
 - Governing node paths and any explicit file-list partition the caller already resolved.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 
-Use the caller's changeset scope exactly. Do not derive a different base, widen to the whole repository, or collapse the scope to only one file unless the caller supplied that exact scope.
+Use the caller's changeset scope and explicit live file list exactly. Do not derive a different base, widen to the whole repository, drop uncommitted files, or collapse the scope to only one file unless the caller supplied that exact scope. For pre-commit `/apply` audits, record the live file list in the `--input` payload at run start and in scope payloads so SPX persistence preserves the files the audit actually gated.
 
 </request_contract>
 
@@ -59,7 +60,7 @@ spx verification run start \
   --input stdin
 ```
 
-Capture the returned run token exactly. Use that token for every later command:
+The `--input` payload carries the caller request, deterministic verification state, governing nodes, and any explicit live file list supplied for pre-commit audits. Capture the returned run token exactly. Use that token for every later command:
 
 ```bash
 spx verification run scope add \
@@ -112,6 +113,8 @@ Build an expected coverage inventory before invoking any language concern skill.
 - coverage status: required, optional, missing-skill, unsupported, covered, rejected, or coverage-gap
 
 Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation file, rejected SPX payload, or required unit that receives no concern result rejects the run through coverage status and terminal metadata. Do not continue after detecting an absent required skill for a language partition.
+
+When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
 </coverage_model>
 
