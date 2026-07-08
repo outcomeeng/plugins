@@ -567,6 +567,20 @@ def _parse_yaml_scalar(value: str) -> object:
         ]
     if value.startswith(("'", '"')) and value.endswith(value[0]):
         return value[1:-1]
+    lower_value = value.lower()
+    if lower_value == "true":
+        return True
+    if lower_value == "false":
+        return False
+    if lower_value in {"null", "~"}:
+        return None
+    if re.fullmatch(r"[-+]?(0|[1-9][0-9]*)", value):
+        return int(value)
+    if re.fullmatch(
+        r"[-+]?(?:[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)(?:[eE][-+]?[0-9]+)?",
+        value,
+    ):
+        return float(value)
     return value
 
 
@@ -718,6 +732,10 @@ def _format_toml_value(value: object) -> str:
         return "true" if value else "false"
     if value is None:
         return '""'
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value)
     if isinstance(value, Mapping):
         items = (
             f"{_format_toml_key(str(key))} = {_format_toml_value(item)}"

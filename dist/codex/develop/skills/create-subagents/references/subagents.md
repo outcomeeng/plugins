@@ -74,7 +74,6 @@ Priority order:
 
 1. Product: `.codex/agents/` for the current product
 2. User: `~/.codex/agents/` for all projects
-3. Plugin: plugin `agents/` directory for all projects
 
 </codex_storage_locations>
 

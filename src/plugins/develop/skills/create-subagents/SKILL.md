@@ -67,8 +67,9 @@ Priority order:
 Priority order:
 
 1. Product: `.claude/agents/` for the current product
-2. User: `~/.claude/agents/` for all projects
-3. Plugin: plugin `agents/` directory for all projects
+2. CLI: `--agents` flag for the current session
+3. User: `~/.claude/agents/` for all projects
+4. Plugin: plugin `agents/` directory for all projects
 
 </claude_storage_locations>
 {!% endif %!}

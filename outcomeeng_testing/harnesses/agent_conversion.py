@@ -116,6 +116,9 @@ model: {CODEX_STANDARD_MODEL}
 mcp_servers:
   docs:
     command: npx
+    startup_timeout_sec: 20
+    enabled: false
+    required: true
     args:
       - -y
       - @modelcontextprotocol/server-docs
@@ -127,7 +130,7 @@ CODEX_RENDERED_FLOW_MCP_AGENT: Final = f"""---
 name: {CHANGES_REVIEWER_NAME}
 description: {AGENT_DESCRIPTION}
 model: {CODEX_STANDARD_MODEL}
-mcp_servers: {{docs: {{command: npx, args: [-y, @modelcontextprotocol/server-docs]}}}}
+mcp_servers: {{docs: {{command: npx, startup_timeout_sec: 20, enabled: false, required: true, args: [-y, @modelcontextprotocol/server-docs]}}}}
 ---
 
 {AGENT_BODY}
@@ -503,6 +506,9 @@ def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
     for parsed in (block_parsed, flow_parsed):
         docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
         assert toml_string(docs_server, "command") == "npx"
+        assert docs_server["startup_timeout_sec"] == 20
+        assert docs_server["enabled"] is False
+        assert docs_server["required"] is True
         assert toml_string_list(docs_server, "args") == [
             "-y",
             "@modelcontextprotocol/server-docs",
