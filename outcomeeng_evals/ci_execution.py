@@ -5,16 +5,27 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Literal
 
 from outcomeeng_evals.ci_plan import EvalPlanItem
 
 UV_RUN_EVALS_ARGV_PREFIX: Final = ("uv", "run", "outcomeeng-evals", "run")
+PLUGIN_DIR_FLAG: Final = "--plugin-dir"
+CASE_ID_FLAG: Final = "--case-id"
 DEFAULT_CI_WORKERS: Final = "1"
 DEFAULT_CI_MAX_BUDGET_USD: Final = "0.50"
 DEFAULT_CI_TIMEOUT_SECONDS: Final = "120"
 EXIT_SUCCESS: Final = 0
 EXIT_FAILURE: Final = 1
+CiRunSettingName = Literal["workers", "max_budget_usd", "timeout_seconds"]
+
+
+@dataclass(frozen=True)
+class CiRunSettingOption:
+    """Source-owned argv flag for one CI runtime setting."""
+
+    flag: str
+    setting: CiRunSettingName
 
 
 @dataclass(frozen=True)
@@ -24,6 +35,13 @@ class CiRunSettings:
     workers: str = DEFAULT_CI_WORKERS
     max_budget_usd: str = DEFAULT_CI_MAX_BUDGET_USD
     timeout_seconds: str = DEFAULT_CI_TIMEOUT_SECONDS
+
+
+CI_RUN_SETTING_OPTIONS: Final = (
+    CiRunSettingOption(flag="--workers", setting="workers"),
+    CiRunSettingOption(flag="--max-budget-usd", setting="max_budget_usd"),
+    CiRunSettingOption(flag="--timeout-seconds", setting="timeout_seconds"),
+)
 
 
 @dataclass(frozen=True)
@@ -48,17 +66,13 @@ def command_for_plan_item(
     command: list[str] = [
         *UV_RUN_EVALS_ARGV_PREFIX,
         str(item.eval_toml),
-        "--plugin-dir",
+        PLUGIN_DIR_FLAG,
         str(item.plugin_dir),
-        "--workers",
-        settings.workers,
-        "--max-budget-usd",
-        settings.max_budget_usd,
-        "--timeout-seconds",
-        settings.timeout_seconds,
     ]
+    for option in CI_RUN_SETTING_OPTIONS:
+        command.extend((option.flag, _ci_run_setting_value(settings, option.setting)))
     for case_id in item.case_ids:
-        command.extend(("--case-id", case_id))
+        command.extend((CASE_ID_FLAG, case_id))
     return tuple(command)
 
 
@@ -86,3 +100,16 @@ def execute_ci_plan(
 def _run_subprocess(command: Sequence[str]) -> int:
     completed = subprocess.run(command, check=False)
     return completed.returncode
+
+
+def _ci_run_setting_value(
+    settings: CiRunSettings,
+    setting: CiRunSettingName,
+) -> str:
+    match setting:
+        case "workers":
+            return settings.workers
+        case "max_budget_usd":
+            return settings.max_budget_usd
+        case "timeout_seconds":
+            return settings.timeout_seconds

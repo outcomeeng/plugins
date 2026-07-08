@@ -29,14 +29,17 @@ Required handling:
 `local-completion-boundary` and `transport-selection` eval suites do not prove
 the producing merge lifecycle behavior:
 
-- `local-completion-boundary` simulates status assessment in `prompt.md`;
-  replacing `src/plugins/spec-tree/skills/merge/SKILL.md` or
-  `spx/local/merging.md` would not change the evaluated behavior.
+- `local-completion-boundary` simulates status assessment in
+  [`prompt.md`](evals/local-completion-boundary/prompt.md); replacing
+  [`src/plugins/spec-tree/skills/merge/SKILL.md`](../../../src/plugins/spec-tree/skills/merge/SKILL.md)
+  or [`spx/local/merging.md`](../../local/merging.md) would not change the
+  evaluated behavior.
 - `local-completion-boundary` covers the local-stop/local-pause branch, but not
   continuation through default-branch merge, declared deploy/release phases, and
   closeout.
 - `transport-selection` grades a static prompt/case model without materializing
-  or directly invoking `src/plugins/spec-tree/skills/merge/SKILL.md`.
+  or directly invoking
+  [`src/plugins/spec-tree/skills/merge/SKILL.md`](../../../src/plugins/spec-tree/skills/merge/SKILL.md).
 - Both suites hard-code the policy in the prompt, so the grader can keep passing
   after the producer changes.
 

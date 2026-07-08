@@ -24,7 +24,6 @@ from outcomeeng_evals.ci_execution import (
     EXIT_FAILURE,
     EXIT_SUCCESS,
     UV_RUN_EVALS_ARGV_PREFIX,
-    command_for_plan_item,
     execute_ci_plan,
 )
 from outcomeeng_evals.ci_plan import (
@@ -81,14 +80,6 @@ DEFAULT_CI_WHITESPACE_PATH = " docs/has edge spaces.md "
 DEFAULT_CI_TABBED_PATH = "docs/plain\tpath.md"
 DEFAULT_CI_MALFORMED_STATUS_ROW = "M\tdocs/plain\tpath.md"
 DEFAULT_CI_EXPLICIT_MODEL = "claude-sonnet-4-5"
-
-
-@dataclass(frozen=True)
-class EvalPlanCommandCase:
-    """Harness-owned CI plan item with its expected command contract."""
-
-    item: EvalPlanItem
-    expected_command: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -206,59 +197,6 @@ def make_eval_plan_item(
         plugin_dir=plugin_dir,
         case_ids=case_ids,
     )
-
-
-def make_eval_plan_item_command_cases() -> tuple[EvalPlanItem, ...]:
-    return (
-        make_eval_plan_item(rule="full-suite"),
-        make_eval_plan_item(
-            rule="single-case",
-            case_ids=DEFAULT_PLAN_CASE_IDS[:1],
-        ),
-        make_eval_plan_item(
-            rule="multi-case",
-            plugin_dir=Path("dist/claude/python"),
-            case_ids=DEFAULT_PLAN_CASE_IDS,
-        ),
-    )
-
-
-def make_eval_plan_command_cases(
-    settings: CiRunSettings | None = None,
-) -> tuple[EvalPlanCommandCase, ...]:
-    effective_settings = settings or CiRunSettings()
-    return tuple(
-        EvalPlanCommandCase(
-            item=item,
-            expected_command=expected_command_for_plan_item(
-                item,
-                settings=effective_settings,
-            ),
-        )
-        for item in make_eval_plan_item_command_cases()
-    )
-
-
-def expected_command_for_plan_item(
-    item: EvalPlanItem,
-    *,
-    settings: CiRunSettings,
-) -> tuple[str, ...]:
-    command: list[str] = [
-        *UV_RUN_EVALS_ARGV_PREFIX,
-        str(item.eval_toml),
-        "--plugin-dir",
-        str(item.plugin_dir),
-        "--workers",
-        settings.workers,
-        "--max-budget-usd",
-        settings.max_budget_usd,
-        "--timeout-seconds",
-        settings.timeout_seconds,
-    ]
-    for case_id in item.case_ids:
-        command.extend(("--case-id", case_id))
-    return tuple(command)
 
 
 def expected_default_ci_command(eval_toml: Path) -> tuple[str, ...]:
@@ -628,25 +566,6 @@ def assert_definition_rejects_nonexistent_cases_file() -> None:
 
 def assert_definition_rejects_nonexistent_prompt_file() -> None:
     _assert_definition_raises(lines=(), match="prompt", with_prompt=False)
-
-
-def assert_plan_items_map_to_run_commands_with_settings_and_case_selectors() -> None:
-    for case in make_eval_plan_command_cases():
-        assert command_for_plan_item(case.item, settings=CiRunSettings()) == (
-            case.expected_command
-        )
-
-
-def assert_multi_case_plan_item_preserves_case_selector_order() -> None:
-    assert command_for_plan_item(
-        make_eval_plan_item(case_ids=DEFAULT_PLAN_CASE_IDS),
-        settings=CiRunSettings(),
-    )[-4:] == (
-        "--case-id",
-        *DEFAULT_PLAN_CASE_IDS[:1],
-        "--case-id",
-        *DEFAULT_PLAN_CASE_IDS[1:],
-    )
 
 
 def assert_root_instruction_changes_select_full_suites() -> None:

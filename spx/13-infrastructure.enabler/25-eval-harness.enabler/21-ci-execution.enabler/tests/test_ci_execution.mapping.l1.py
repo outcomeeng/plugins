@@ -6,9 +6,11 @@ from outcomeeng_evals.testing.factories import (
     assert_changed_paths_file_reads_git_name_status_rows,
     assert_empty_plan_exits_successfully_without_commands,
     assert_failing_suite_fails_aggregate_after_attempting_every_suite,
+    assert_root_instruction_changes_select_full_suites,
+)
+from outcomeeng_testing.harnesses.evals import (
     assert_multi_case_plan_item_preserves_case_selector_order,
     assert_plan_items_map_to_run_commands_with_settings_and_case_selectors,
-    assert_root_instruction_changes_select_full_suites,
 )
 
 
