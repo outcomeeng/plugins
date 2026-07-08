@@ -79,7 +79,7 @@ Three rules govern a conversation's claimed-session set:
 
 Permission to archive comes from completing this workflow against the claimed-session set named in `<CLAIMED_SESSIONS ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session session files created by this conversation are workflow artifacts, not members of the claimed-session set.
 
-Full algorithm in `references/claimed-session-resolution.md`.
+Full algorithm in `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md`.
 
 </claimed_session_invariants>
 

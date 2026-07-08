@@ -6,7 +6,7 @@ Lean on the imperfection ledger defined in `/understand` (loaded as a foundation
 
 <required_reading>
 
-- `references/claimed-session-resolution.md` before resolving claimed sessions.
+- `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md` before resolving claimed sessions.
 
 </required_reading>
 
@@ -70,7 +70,7 @@ Guide the next pickup from the state in prose. Do not pre-compute fixed if-then 
 <perspective_claimed_sessions>
 Resolve which sessions are in this conversation's claimed sessions and locate any mid-session handoff artifact to reconcile.
 
-Read `references/claimed-session-resolution.md` and follow every step of the algorithm. After resolving, emit a marker into the conversation so workflow 04 reads the claimed sessions from context rather than re-running the algorithm:
+Read `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md` and follow every step of the algorithm. After resolving, emit a marker into the conversation so workflow 04 reads the claimed sessions from context rather than re-running the algorithm:
 
 ```text
 <RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_id="id-or-none">

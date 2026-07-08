@@ -7,7 +7,7 @@ A completed closure execution state: approved persistence written, session-owned
 Work not committed here is not persisted.
 
 <required_reading>
-Before writing a Path B or Path C session file, read `references/session-format.md` for the canonical template.
+Before writing a Path B or Path C session file, read `${CLAUDE_SKILL_DIR}/references/session-format.md` for the canonical template.
 
 </required_reading>
 
@@ -51,7 +51,7 @@ For each anchored node, check `git status` and record:
 <resolve_claimed_sessions>
 Read the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 (`<perspective_claimed_sessions>`). Use it as the authoritative archive list and artifact identifier for the rest of this workflow.
 
-**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
+**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
 
 **Cross-check against workflow 03 approval.** The marker must match the session-disposition header the user approved. If the user named additional sessions during workflow 03, add them before archiving. If any session is classified **ambiguous**, STOP and resolve with the user before proceeding.
 
@@ -83,13 +83,13 @@ Every closure ends with **zero, one, or several** session files — one canonica
 1. Use the artifact id from `<resolve_claimed_sessions>`. Derive its file path from `spx session show <artifact-id>` or the root worktree's `.spx/sessions/todo/<artifact-id>.md`.
 2. Do NOT run `spx session handoff` — that would create a second handoff and break the one-handoff end state.
 3. Read the artifact frontmatter and preserve its existing `created_at`, `agent_session_id`, and `git_ref` values.
-4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative continuation from every claimed session.
+4. Write (overwrite) the artifact file using the template in `${CLAUDE_SKILL_DIR}/references/session-format.md`. The file content is the canonical continuation with cumulative continuation from every claimed session.
 5. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
 
 **Path C — new handoff (one handoff, no artifact)**:
 
 0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` and a real stop condition. Path C is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
-1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
+1. Compose the canonical continuation using `${CLAUDE_SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
 
    **Choose the stdin form by harness.**
@@ -197,9 +197,9 @@ State a human-readable closeout first, then the session mechanics. The operator 
 
 The closeout MUST include:
 
-- **Product outcome**: what payload capability, behavior, document, page, command, workflow, methodology rule, skill contract, generated artifact contract, or other shipped product surface is now true in the repository being worked. Read the product spec when product intent is needed to frame the outcome, then connect the work to that intent only at the level that helps the operator understand it. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. NEVER classify lifecycle mechanics as product outcome: default-branch merge state, PR state, merge commit, branch cleanup, CI/check state, marketplace-source refresh, installed plugin version, session archive state, or handoff/session mechanics.
-- **Changed product surface**: the product-defining artifacts or behaviors that changed: source files, generated outputs, documentation sections, APIs, commands, pages, workflows, services, deployments, data projections, configuration, methodology or skill content when the product ships it, or other domain surfaces. Do not list transport-only records such as pull requests, merge commits, branch deletion, or session archive ids here; those belong under evidence, inspection references, delivered state, or session mechanics.
-- **Human-readable change summary**: the key behaviors, rules, sections, controls, checks, outputs, or workflows changed, written so the operator can understand the result without reconstructing it from the diff.
+- **Product outcome**: answer, in plain English, why the operator should be glad about the work's delivered or parked state. For a default-branch merge closeout, explain why the merged work is valuable. For a continuation handoff before default-branch delivery, explain what useful product state is preserved for pickup without claiming the work is merged. Use the loaded Spec Tree ancestry — product spec, product decisions, ancestor specs and decisions, lower-index sibling context, and target node — to translate the payload into the product benefit at the right scale. A small bug fix or technical-debt cleanup may be described plainly as a bug fix or debt cleanup. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
+- **Changed product surface**: answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is better because of the change or being preserved for pickup. Use product words from the loaded ancestry, not raw repository storage words. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts.
+- **Human-readable change summary**: answer what changed, why it matters to the operator, and what additional benefit continuing the work would create when follow-up remains. Write the summary so the operator can understand the result from product language alone, without reconstructing it from a diff, branch, PR, file list, generated tree, installed version, or archive receipt. This is a value field, so keep transport, storage, and artifact identifiers out of it; use the evidence, inspection, delivered-state, remaining-work, branch, and session-mechanics fields for those facts.
 - **Verification evidence**: commands, audits, reviews, CI checks, screenshots, manual inspections, run ids, session ids, PR numbers, commit SHAs, or other proof that passed. Reproduce identity values verbatim when they are part of the evidence.
 - **Inspection references**: places the operator can inspect the result or its evidence: local file paths, generated artifact paths, rendered pages, running URLs, deployed URLs, PR URLs, merged commits, screenshots, journal runs, logs, or external records. Include whichever references apply; omit unavailable references rather than inventing one.
 - **Delivered state**: one concise field naming where the work now lives — default branch on origin, local branch, running service, deployed environment, generated install, archived session state, or intentionally local output. This field never becomes the closeout title or first section.
@@ -208,11 +208,11 @@ The closeout MUST include:
 
 When closing after a default-branch merge, compute or preserve the merge transport's branch-state closeout record from `/merging-standards` `<branch_state_closeout>` before final confirmation. The record includes PR number and merge commit SHA when applicable, merged branch name, remote branch existence, local branch existence, local fully-merged status against `origin/<base>`, gone-upstream tracking status, preservation branch existence, preservation branch ancestry or `git cherry -v --abbrev=40 origin/<base> <branch>` patch-equivalence evidence, final worktree state, and release-source worktree state when a post-merge release or marketplace refresh used one.
 
-Classify default-branch merge state, installed location, and generated install state under **Delivered state**. Classify marketplace-source refresh, installed plugin version, CI/check state, audit/review outputs, and command evidence under **Verification evidence** or **Inspection references** when they prove the delivered state. Classify branch cleanup under **Remaining Branches**. Classify session archival and handoff state under the session-mechanics block.
+Classify default-branch merge state, installed location, and generated install state under **Delivered state**. Classify marketplace-source refresh, installed plugin version, CI/check state, audit/review outputs, command evidence, local file paths, generated artifact paths, PR URLs, commit SHAs, and run/session identities under **Verification evidence** or **Inspection references** when they prove the delivered state. Classify branch cleanup under **Remaining Branches**. Classify session archival and handoff state under the session-mechanics block.
 
 Apply the cleanup policy before writing the closeout: delete a still-existing remote feature branch through the approved merge lifecycle deletion command; delete a local feature branch only when it exists, tracks a gone upstream, and is fully merged into `origin/<base>`; delete a no-remote preservation branch when all substantive commits are present on `origin/<base>` by ancestry or patch equivalence unless the branch name or operator instruction marks retained evidence. Never delete a branch checked out in another live worktree; report the exact worktree path and branch. Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`; report the unmatched full SHAs and keep it.
 
-Adapt the closeout to the product domain. Use the product spec as context for what the product is when that context clarifies the outcome, while keeping the outcome proportional to the change. Examples: an application change names the changed page, flow, API, service, or deployment and the relevant runtime URL or screenshot; a library or CLI change names the changed command, projection, schema, output contract, or public API and the command evidence; a documentation or methodology change names the changed document, workflow, skill, generated output when applicable, and audit or review evidence. Keep transport records separate from product surfaces.
+Adapt the closeout to the product domain. Use the loaded Spec Tree ancestry from the product spec through the target node as the source vocabulary for the value fields, while keeping the outcome proportional to the change. Examples: an application change explains the improved page, flow, API, service, or deployment behavior and keeps the runtime URL or screenshot in inspection references; a library or CLI change explains the improved command, projection, schema, output contract, or public API and keeps command evidence in verification evidence; a documentation or methodology change explains the improved document, workflow, skill, or generated contract and keeps audit or review evidence in verification evidence. Keep transport records and repository-storage records separate from product surfaces.
 
 <rejected_delivered_state_receipt>
 
@@ -239,9 +239,31 @@ NEVER put delivery, release, branch, version, or session mechanics under **Produ
 Product outcome: the changes are now on origin/main, and the marketplace source was refreshed so the installed plugin is current.
 ```
 
-Why it fails: the label is filled with lifecycle evidence rather than the payload's changed behavior or shipped product surface. First name what changed in the product, skill, command, workflow, document, or generated artifact contract; then place default-branch, marketplace-source, installed-version, PR, branch, and session facts under the matching evidence, state, reference, branches, or mechanics field.
+Why it fails: the label is filled with lifecycle evidence rather than the payload's changed behavior or shipped product surface. Answer what improved in the product, skill, command, workflow, document, or generated artifact contract; then place default-branch, marketplace-source, installed-version, PR, branch, and session facts under the matching evidence, state, reference, branches, or mechanics field.
 
 </rejected_misclassified_product_outcome>
+
+<rejected_repository_inventory_surface>
+
+NEVER fill **Changed product surface** or **Human-readable change summary** with a repository inventory. This shape is the anti-pattern:
+
+```text
+Changed product surface:
+- the handoff workflow file
+- the generated runtime copy
+- the sessions specification
+- the node issue note
+```
+
+Why it fails: the operator still has to infer the product benefit from storage locations. Translate those locations through the loaded ancestry into product language, for example:
+
+```text
+Changed product surface: the handoff closeout now explains what improved, why the delivered state matters, and what a follow-up would add, using the product language loaded from the Spec Tree ancestry.
+```
+
+Then put the file paths under **Inspection references**.
+
+</rejected_repository_inventory_surface>
 
 Put session mechanics only after the product summary:
 

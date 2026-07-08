@@ -20,7 +20,7 @@ Before asking the operator to continue, build a no-surprises proposal. The opera
 
 - Expected outcome — what product or workflow state will be true if continuation succeeds.
 - Current classification — `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`.
-- Changed product surface — the product-defining artifacts or behaviors likely affected: specs, skills, references, scripts, generated output, source files, workflow files, methodology or skill content when the product ships it, or other domain surfaces. Branches, PRs, and session records are transport or lifecycle surfaces; place them under inspection references or remaining-work expectation instead.
+- Changed product surface — answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is likely to be better if continuation succeeds. Before `/contextualize`, use the current session evidence without raw repository storage words; after `/contextualize`, refine the wording with the loaded node context. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts. Put those mechanics under inspection references or remaining-work expectation instead.
 - Planned skill path — methodology, authoring, testing, audit, review, commit, merge, or lifecycle skills expected before completion.
 - Evidence infrastructure — known test files, harnesses, generators, fixtures, evals, audit agents, review agents, generated artifacts, and validation commands the work is expected to touch or depend on.
 - Verification plan — deterministic commands and agentic gates expected before reporting completion.
@@ -158,7 +158,7 @@ Evidence:
 
 Work proposal:
 - Expected outcome: [plain-English end state]
-- Changed product surface: [likely specs / skills / references / scripts / generated output / source / workflow / methodology or other domain surfaces]
+- Changed product surface: [plain-English product behavior, workflow, document, command, methodology, generated contract, skill contract, or other shipped surface likely to improve]
 - Skill path: [planned skills and lifecycle gates]
 - Evidence infrastructure: [tests / harnesses / generators / fixtures / evals / audit agents / review agents / generated artifacts / validation commands]
 - Verification: [deterministic commands and agentic gates expected]
