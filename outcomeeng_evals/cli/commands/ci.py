@@ -14,7 +14,12 @@ from outcomeeng_evals.ci_execution import (
     command_for_plan_item,
     execute_ci_plan,
 )
-from outcomeeng_evals.ci_plan import CiMode, build_ci_plan, read_changed_paths_file
+from outcomeeng_evals.ci_plan import (
+    CHANGED_PATHS_FILE_HELP,
+    CiMode,
+    build_ci_plan,
+    read_changed_paths_file,
+)
 
 
 @click.command(name="ci")
@@ -32,7 +37,7 @@ from outcomeeng_evals.ci_plan import CiMode, build_ci_plan, read_changed_paths_f
 @click.option(
     "--changed-paths-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="File containing one changed repository-relative path per line.",
+    help=CHANGED_PATHS_FILE_HELP,
 )
 @click.option(
     "--default-plugin-dir",

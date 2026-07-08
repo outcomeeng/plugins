@@ -16,6 +16,10 @@ UNIVERSAL_OWNED_PATHS = (
     "outcomeeng_testing/generators/**",
     "outcomeeng_testing/harnesses/**",
 )
+CHANGED_PATHS_FILE_HELP = (
+    "File containing git diff --name-status rows, or one repository-relative "
+    "path per line."
+)
 RENAMED_GIT_STATUS_PREFIX = "R"
 COPIED_GIT_STATUS_PREFIX = "C"
 
@@ -89,7 +93,7 @@ def plan_to_jsonable(items: list[EvalPlanItem]) -> list[dict[str, object]]:
 
 
 def read_changed_paths_file(path: Path | None) -> tuple[str, ...]:
-    """Read repository-relative changed paths from a git changed-path file."""
+    """Read paths from git name-status rows or plain repository-relative paths."""
 
     if path is None:
         return ()

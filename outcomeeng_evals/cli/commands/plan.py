@@ -8,6 +8,7 @@ from pathlib import Path
 import click
 
 from outcomeeng_evals.ci_plan import (
+    CHANGED_PATHS_FILE_HELP,
     CiMode,
     build_ci_plan,
     plan_to_jsonable,
@@ -30,7 +31,7 @@ from outcomeeng_evals.ci_plan import (
 @click.option(
     "--changed-paths-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="File containing one changed repository-relative path per line.",
+    help=CHANGED_PATHS_FILE_HELP,
 )
 @click.option(
     "--default-plugin-dir",
