@@ -8,7 +8,7 @@ description: >-
 {!% require_skill 'develop:agent-prompt-standards' %!}
 
 <objective>
-A {{! term('configured_agent') !}} configured for an isolated, focused role — its {{! term('configured_agent_prompt') !}}, tool access, and subagent-workflow orchestration.
+A {{! term('configured_agent') !}} configured for an isolated, focused role — its {{! term('configured_agent_prompt') !}}, tool access, and isolated-workflow orchestration.
 </objective>
 
 <quick_start>
@@ -163,9 +163,9 @@ skills:
 <execution_model>
 <critical_constraint>
 {!% if target == 'codex' %!}
-**Subagent workflows are black boxes that cannot interact with users.**
+**Custom agent workflows are black boxes that cannot interact with users.**
 
-Custom agents launched as subagents run in isolated contexts and return their final output to the main conversation. They:
+Custom agents run in isolated contexts and return their final output to the main conversation. They:
 {!% else %!}
 **Subagents are black boxes that cannot interact with users.**
 
@@ -176,13 +176,13 @@ Subagents run in isolated contexts and return their final output to the main con
 - ✅ Can access MCP servers and other non-interactive tools
 - ❌ **Cannot use {{! tool('ask_user') !}}** or any tool requiring user interaction
 - ❌ **Cannot present options or wait for user input**
-- ❌ **User never sees subagent-workflow intermediate steps**
+- ❌ **User never sees isolated-workflow intermediate steps**
 
-The main conversation sees only the subagent workflow's final report/output.
+The main conversation sees only the isolated workflow's final report/output.
 </critical_constraint>
 
 <workflow_design>
-**Designing workflows with subagents:**
+**Designing workflows with {{! term('configured_agents') !}}:**
 
 Use **main chat** for:
 
@@ -191,7 +191,7 @@ Use **main chat** for:
 - Any task requiring user confirmation/input
 - Work where user needs visibility into progress
 
-Use **subagents** for:
+Use **{{! term('configured_agents') !}}** for:
 
 - Research tasks (API documentation lookup, code analysis)
 - Code generation based on pre-defined requirements
@@ -203,11 +203,11 @@ Use **subagents** for:
 ```
 Main Chat: Ask user for requirements ({{! tool('ask_user') !}})
 ↓
-Subagent: Research API and create documentation (no user interaction)
+{{! term('configured_agent') !}}: Research API and create documentation (no user interaction)
 ↓
 Main Chat: Review research with user, confirm approach
 ↓
-Subagent: Generate code based on confirmed plan
+{{! term('configured_agent') !}}: Generate code based on confirmed plan
 ↓
 Main Chat: Present results, handle testing/deployment
 ```
@@ -288,20 +288,20 @@ Claude is a senior code reviewer specializing in security.
 </principle>
 
 <principle name="task_specific">
-Tailor instructions to the specific task domain. Don't create generic "helper" subagents.
+Tailor instructions to the specific task domain. Don't create generic "helper" {{! term('configured_agents') !}}.
 
 ❌ Bad: "Helpful assistant for code"
 ✅ Good: "Claude is a React component refactoring specialist. Analyze components for hooks best practices, performance anti-patterns, and accessibility issues."
 </principle>
 </system_prompt_guidelines>
 
-<subagent_xml_structure>
+<configured_agent_xml_structure>
 {{! term('configured_agent_file') !}} bodies are {{! term('configured_agent_prompts') !}} consumed by the target runtime. Like skills and slash commands, they should use pure XML structure for parsing and token efficiency.
 
 <recommended_tags>
-Common tags for subagent structure:
+Common tags for {{! term('configured_agent') !}} structure:
 
-- `<role>` - Who the subagent is and what it does
+- `<role>` - Who the {{! term('configured_agent') !}} is and what it does
 - `<constraints>` - Hard rules (NEVER/MUST/ALWAYS)
 - `<focus_areas>` - What to prioritize
 - `<workflow>` - Step-by-step process
@@ -336,7 +336,7 @@ Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links
 
 For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to {{! term('configured_agents') !}}.
 </critical_rule>
-</subagent_xml_structure>
+</configured_agent_xml_structure>
 
 <invocation>
 <automatic>
@@ -344,14 +344,14 @@ The runtime automatically selects {{! term('configured_agents') !}} based on the
 </automatic>
 
 <explicit>
-Explicitly invoke a subagent:
+Explicitly invoke a {{! term('configured_agent') !}}:
 
 ```
-> Use the code-reviewer subagent to check my recent changes
+> Use the code-reviewer {{! term('configured_agent') !}} to check my recent changes
 ```
 
 ```
-> Have the test-writer subagent create tests for the new API endpoints
+> Have the test-writer {{! term('configured_agent') !}} create tests for the new API endpoints
 ```
 
 </explicit>
@@ -365,7 +365,7 @@ Edit `.codex/agents/*.toml` or `~/.codex/agents/*.toml` files to:
 - Edit existing custom agents and their configuration
 - Choose project-scoped or user-scoped behavior
 
-Use `/agent` to switch between active agent threads and inspect running subagents.
+Use `/agent` to switch between active agent threads and inspect running custom agents.
 {!% else %!}
 Run `/agents` for an interactive interface to:
 

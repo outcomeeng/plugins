@@ -8,7 +8,7 @@ description: >-
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A subagent configured for an isolated, focused role — its system prompt, tool access, and subagent-workflow orchestration.
+A subagent configured for an isolated, focused role — its system prompt, tool access, and isolated-workflow orchestration.
 </objective>
 
 <quick_start>
@@ -108,9 +108,9 @@ Subagents run in isolated contexts and return their final output to the main con
 - ✅ Can access MCP servers and other non-interactive tools
 - ❌ **Cannot use AskUserQuestion** or any tool requiring user interaction
 - ❌ **Cannot present options or wait for user input**
-- ❌ **User never sees subagent-workflow intermediate steps**
+- ❌ **User never sees isolated-workflow intermediate steps**
 
-The main conversation sees only the subagent workflow's final report/output.
+The main conversation sees only the isolated workflow's final report/output.
 </critical_constraint>
 
 <workflow_design>
@@ -135,11 +135,11 @@ Use **subagents** for:
 ```
 Main Chat: Ask user for requirements (AskUserQuestion)
 ↓
-Subagent: Research API and create documentation (no user interaction)
+subagent: Research API and create documentation (no user interaction)
 ↓
 Main Chat: Review research with user, confirm approach
 ↓
-Subagent: Generate code based on confirmed plan
+subagent: Generate code based on confirmed plan
 ↓
 Main Chat: Present results, handle testing/deployment
 ```
@@ -193,7 +193,7 @@ Tailor instructions to the specific task domain. Don't create generic "helper" s
 </principle>
 </system_prompt_guidelines>
 
-<subagent_xml_structure>
+<configured_agent_xml_structure>
 subagent file bodies are system prompts consumed by the target runtime. Like skills and slash commands, they should use pure XML structure for parsing and token efficiency.
 
 <recommended_tags>
@@ -234,7 +234,7 @@ Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links
 
 For XML structure principles and token efficiency details, read `/skill-standards` — the same principles apply to subagents.
 </critical_rule>
-</subagent_xml_structure>
+</configured_agent_xml_structure>
 
 <invocation>
 <automatic>
