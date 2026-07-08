@@ -5,18 +5,30 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION, is_satisfied
+from outcomeeng.validation.spx_version import (
+    REQUIRED_SPX_VERSION,
+    is_satisfied,
+    read_pinned_version,
+)
 
 
 MINIMUM_VERIFICATION_RUN_SPX_VERSION: Final = "0.6.13"
 WORKFLOW_PATH: Final = Path(".github/workflows/check.yml")
-AUDIT_SKILL_SCRIPT_DIR: Final = Path("src/plugins/spec-tree/skills/audit/scripts")
-IMPLEMENTATION_AUDITOR_PATH: Final = Path(
-    "src/plugins/spec-tree/agents/implementation-auditor.md"
+PLUGIN_SURFACES: Final = (
+    Path("src/plugins"),
+    Path("dist/claude"),
+    Path("dist/codex"),
+)
+AUDIT_SKILL_SCRIPT_DIRS: Final = tuple(
+    surface / "spec-tree" / "skills" / "audit" / "scripts"
+    for surface in PLUGIN_SURFACES
+)
+SPEC_TREE_AGENT_DIRS: Final = tuple(
+    surface / "spec-tree" / "agents" for surface in PLUGIN_SURFACES
 )
 RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
-    Path("src/plugins/spec-tree/agents/auditor.md"),
-    Path("src/plugins/spec-tree/agents/audit-orchestrator.md"),
+    "auditor.md",
+    "audit-orchestrator.md",
 )
 RETIRED_AUDIT_SKILL_TOKENS: Final = (
     "verdict.py",
@@ -43,29 +55,30 @@ LANGUAGE_CONCERN_SKILLS: Final = (
 
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
-    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    workflow_pin = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
     return (
         is_satisfied(REQUIRED_SPX_VERSION, MINIMUM_VERIFICATION_RUN_SPX_VERSION)
-        and f'SPX_VERSION: "{MINIMUM_VERIFICATION_RUN_SPX_VERSION}"' in workflow
+        and workflow_pin is not None
+        and is_satisfied(workflow_pin, MINIMUM_VERIFICATION_RUN_SPX_VERSION)
     )
 
 
 def audit_skill_ships_no_verdict_toolchain_scripts() -> bool:
     return all(
-        not (AUDIT_SKILL_SCRIPT_DIR / retired_name).exists()
+        not (script_dir / retired_name).exists()
+        for script_dir in AUDIT_SKILL_SCRIPT_DIRS
         for retired_name in RETIRED_AUDIT_SKILL_TOKENS
     )
 
 
 def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
-    return (
-        IMPLEMENTATION_AUDITOR_PATH.is_file()
-        and "name: implementation-auditor"
-        in IMPLEMENTATION_AUDITOR_PATH.read_text(encoding="utf-8")
-        and all(
-            not retired_path.exists()
-            for retired_path in RETIRED_IMPLEMENTATION_AUDITOR_PATHS
-        )
+    return all(
+        (agent_dir / "implementation-auditor.md").is_file()
+        for agent_dir in SPEC_TREE_AGENT_DIRS
+    ) and not any(
+        (agent_dir / retired_name).exists()
+        for agent_dir in SPEC_TREE_AGENT_DIRS
+        for retired_name in RETIRED_IMPLEMENTATION_AUDITOR_PATHS
     )
 
 
@@ -79,21 +92,15 @@ def language_concern_skill_trios_exist() -> bool:
 def _language_concern_skill_trio_exists(
     plugin_name: str, skill_names: tuple[str, str, str]
 ) -> bool:
-    skill_paths = [
-        Path("src/plugins") / plugin_name / "skills" / skill_name
+    skill_paths = tuple(
+        surface / plugin_name / "skills" / skill_name
+        for surface in PLUGIN_SURFACES
         for skill_name in skill_names
-    ]
-    code_skill_name = skill_names[0]
-    code_skill_source = (skill_paths[0] / "SKILL.md").read_text(encoding="utf-8")
-    old_skill_path = (
-        Path("src/plugins")
-        / plugin_name
-        / "skills"
-        / code_skill_name.removesuffix("-code")
     )
-    return (
-        all(skill_path.is_dir() for skill_path in skill_paths)
-        and f"name: {code_skill_name}" in code_skill_source
-        and f'"skill": "{code_skill_name}"' in code_skill_source
-        and not old_skill_path.exists()
+    old_skill_paths = tuple(
+        surface / plugin_name / "skills" / skill_names[0].removesuffix("-code")
+        for surface in PLUGIN_SURFACES
     )
+    return all(
+        (skill_path / "SKILL.md").is_file() for skill_path in skill_paths
+    ) and not any(old_skill_path.exists() for old_skill_path in old_skill_paths)

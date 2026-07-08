@@ -106,8 +106,9 @@ Build an expected coverage inventory before invoking any language concern skill.
 - language partition
 - concern partition: `code`, `tests`, or `architecture`
 - subject paths or explicit unsupported-file marker
-- stable producer identity: plugin name, skill name, audit class, language, and concern
-- producer provenance: owning plugin version when a skill exists
+- stable expected-producer identity: plugin name, skill name, audit class, language, and concern
+- producer provenance: owning plugin version when the concern skill exists; null with reason `missing-skill` or `unsupported` when no executable concern skill can run
+- execution producer identity: the wrapper and SPX command driver that recorded the unit, present for every unit so missing-skill and unsupported classifications still have provenance for the recorder
 - coverage status: required, optional, missing-skill, unsupported, covered, rejected, or coverage-gap
 
 Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation file, rejected SPX payload, or required unit that receives no concern result rejects the run through coverage status and terminal metadata. Do not continue after detecting an absent required skill for a language partition.

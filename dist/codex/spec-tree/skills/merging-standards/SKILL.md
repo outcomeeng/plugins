@@ -451,7 +451,7 @@ Required: <concrete change>
 
 <auditor_verdicts>
 
-Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, and `auditor` — emit structured findings for the slice they inspect. Language-specific audit concerns are composed through the installed `audit-{lang}*` skills, not through language-specific auditor agents.
+Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, and `implementation-auditor` — emit structured findings for the slice they inspect. Language-specific audit concerns are composed through the installed `audit-{lang}-{code|tests|architecture}` skills, not through language-specific auditor agents.
 
 **Verdict handling.** A `REJECTED` overall verdict, an `UNKNOWN` overall verdict, a `FAIL` row, an `UNKNOWN` row, or a `REJECT` finding is in-slice unresolved work, identical in handling to a valid `BLOCKING` or `DEBT` finding in `<review_classification>`: fix the bug or resolve the audit uncertainty, re-run the auditor, repeat until clean. `APPROVED` means the auditor found nothing in scope. "Capture in `ISSUES.md`" is NOT an option for rejected or unknown in-slice audit work on a slice currently under review — `ISSUES.md` is for items outside the slice (a known gap in an unrelated module, a tracking note for future enablement), never for in-slice bugs or audit uncertainty the auditor surfaced.
 
