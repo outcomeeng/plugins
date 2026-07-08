@@ -531,12 +531,55 @@ def _parse_yaml_nested_block(raw_lines: Sequence[str]) -> object:
     lines = _dedent_yaml_block(raw_lines)
     first = next((line.strip() for line in lines if line.strip()), "")
     if first.startswith("- "):
-        return tuple(
-            _parse_yaml_scalar(line.strip()[2:])
-            for line in lines
-            if line.strip().startswith("- ")
-        )
+        return _parse_yaml_sequence_block(lines)
     return _parse_yaml_mapping("\n".join(lines))
+
+
+def _parse_yaml_sequence_block(lines: Sequence[str]) -> tuple[object, ...]:
+    items: list[object] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+        if not stripped:
+            index += 1
+            continue
+        if not stripped.startswith("- "):
+            index += 1
+            continue
+        continuation, next_index = _collect_yaml_sequence_continuation(lines, index + 1)
+        items.append(_parse_yaml_sequence_item(stripped[2:].strip(), continuation))
+        index = next_index
+    return tuple(items)
+
+
+def _collect_yaml_sequence_continuation(
+    lines: Sequence[str],
+    start: int,
+) -> tuple[tuple[str, ...], int]:
+    block: list[str] = []
+    index = start
+    while index < len(lines):
+        line = lines[index]
+        if line.strip().startswith("- "):
+            break
+        block.append(line)
+        index += 1
+    return tuple(block), index
+
+
+def _parse_yaml_sequence_item(
+    raw_value: str,
+    raw_continuation: Sequence[str],
+) -> object:
+    continuation = _dedent_yaml_block(raw_continuation)
+    if not continuation:
+        return _parse_yaml_scalar(raw_value)
+    if not raw_value:
+        return _parse_yaml_nested_block(continuation)
+    if ":" in raw_value:
+        return _parse_yaml_mapping("\n".join((raw_value, *continuation)))
+    return _parse_yaml_scalar(raw_value)
 
 
 def _parse_yaml_block_scalar(style: str, raw_lines: Sequence[str]) -> str:

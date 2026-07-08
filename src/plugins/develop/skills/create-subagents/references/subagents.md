@@ -385,20 +385,26 @@ Use `/agents` command to see full list of available tools.
 </model_selection>
 
 <invocation>
+{!% if target == 'codex' %!}
+<explicit_request>
+Codex uses {{! term('configured_agent') !}} descriptions to select the right agent after the user explicitly asks for a {{! term('configured_agent') !}} or subagent workflow.
+</explicit_request>
+{!% else %!}
 <automatic>
-The runtime automatically selects {{! term('configured_agents') !}} based on:
+Claude automatically selects {{! term('configured_agents') !}} based on:
 - Task description in user's request
 - `description` field in {{! term('configured_agent') !}} configuration
 - Current context
 
 </automatic>
+{!% endif %!}
 
 <explicit>
-Users can explicitly request a subagent:
+Users can explicitly request a {{! term('configured_agent') !}}:
 
 ```
-> Use the code-reviewer subagent to check my recent changes
-> Have the test-runner subagent fix the failing tests
+> Use the code-reviewer {{! term('configured_agent') !}} to check my recent changes
+> Have the test-runner {{! term('configured_agent') !}} fix the failing tests
 ```
 
 </explicit>

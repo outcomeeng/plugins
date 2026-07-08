@@ -240,20 +240,17 @@ Consult Codex custom-agent documentation or existing `.codex/agents/*.toml` file
 </model_selection>
 
 <invocation>
-<automatic>
-The runtime automatically selects custom agents based on:
-- Task description in user's request
-- `description` field in custom agent configuration
-- Current context
 
-</automatic>
+<explicit_request>
+Codex uses custom agent descriptions to select the right agent after the user explicitly asks for a custom agent or subagent workflow.
+</explicit_request>
 
 <explicit>
-Users can explicitly request a subagent:
+Users can explicitly request a custom agent:
 
 ```
-> Use the code-reviewer subagent to check my recent changes
-> Have the test-runner subagent fix the failing tests
+> Use the code-reviewer custom agent to check my recent changes
+> Have the test-runner custom agent fix the failing tests
 ```
 
 </explicit>

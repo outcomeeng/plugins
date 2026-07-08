@@ -91,8 +91,12 @@ Product-scope {{! term('configured_agents') !}} override user-scope when names c
 
 <field name="description">
 - Natural language description of purpose
-- Include when the runtime should invoke this {{! term('configured_agent') !}}
+{!% if target == 'codex' %!}
+- Guides selection after the user explicitly asks Codex for this {{! term('configured_agent') !}} or subagent workflow
+{!% else %!}
+- Include when Claude should invoke this {{! term('configured_agent') !}}
 - Used for automatic {{! term('configured_agent') !}} selection
+{!% endif %!}
 
 </field>
 
@@ -340,9 +344,15 @@ For XML structure principles and token efficiency details, read `/skill-standard
 </configured_agent_xml_structure>
 
 <invocation>
+{!% if target == 'codex' %!}
+<explicit_request>
+Codex uses {{! term('configured_agent') !}} descriptions to select the right agent after the user explicitly asks for a {{! term('configured_agent') !}} or subagent workflow.
+</explicit_request>
+{!% else %!}
 <automatic>
-The runtime automatically selects {{! term('configured_agents') !}} based on the `description` field when it matches the current task.
+Claude automatically selects {{! term('configured_agents') !}} based on the `description` field when it matches the current task.
 </automatic>
+{!% endif %!}
 
 <explicit>
 Explicitly invoke a {{! term('configured_agent') !}}:

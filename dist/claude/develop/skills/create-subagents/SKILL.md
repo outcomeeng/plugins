@@ -59,7 +59,8 @@ Product-scope subagents override user-scope when names conflict.
 
 <field name="description">
 - Natural language description of purpose
-- Include when the runtime should invoke this subagent
+
+- Include when Claude should invoke this subagent
 - Used for automatic subagent selection
 
 </field>
@@ -238,8 +239,9 @@ For XML structure principles and token efficiency details, read `/skill-standard
 </configured_agent_xml_structure>
 
 <invocation>
+
 <automatic>
-The runtime automatically selects subagents based on the `description` field when it matches the current task.
+Claude automatically selects subagents based on the `description` field when it matches the current task.
 </automatic>
 
 <explicit>

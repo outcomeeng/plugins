@@ -236,8 +236,9 @@ Use `/agents` command to see full list of available tools.
 </model_selection>
 
 <invocation>
+
 <automatic>
-The runtime automatically selects subagents based on:
+Claude automatically selects subagents based on:
 - Task description in user's request
 - `description` field in subagent configuration
 - Current context

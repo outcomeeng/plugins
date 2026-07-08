@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import tomllib
-from collections.abc import Mapping
+import os
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
@@ -119,6 +121,10 @@ mcp_servers:
     startup_timeout_sec: 20
     enabled: false
     required: true
+    env_vars:
+      - LOCAL_TOKEN
+      - name: REMOTE_TOKEN
+        source: remote
     args:
       - -y
       - @modelcontextprotocol/server-docs
@@ -130,7 +136,7 @@ CODEX_RENDERED_FLOW_MCP_AGENT: Final = f"""---
 name: {CHANGES_REVIEWER_NAME}
 description: {AGENT_DESCRIPTION}
 model: {CODEX_STANDARD_MODEL}
-mcp_servers: {{docs: {{command: npx, startup_timeout_sec: 20, enabled: false, required: true, args: [-y, @modelcontextprotocol/server-docs]}}}}
+mcp_servers: {{docs: {{command: npx, startup_timeout_sec: 20, enabled: false, required: true, env_vars: [LOCAL_TOKEN, {{name: REMOTE_TOKEN, source: remote}}], args: [-y, @modelcontextprotocol/server-docs]}}}}
 ---
 
 {AGENT_BODY}
@@ -263,6 +269,18 @@ def converted_codex_rendered_agent_toml(root: Path) -> dict[str, object]:
     return tomllib.loads(render_agent_toml(converted))
 
 
+def converted_default_codex_source_root_toml(root: Path) -> dict[str, object]:
+    """Convert a rendered Codex fixture through the default source root."""
+    write_dist_codex_agent_tree(
+        root,
+        PLUGIN_NAME,
+        {CHANGES_REVIEWER_NAME: CODEX_RENDERED_AGENT},
+    )
+    with working_directory(root):
+        (converted,) = convert_agents()
+    return tomllib.loads(render_agent_toml(converted))
+
+
 def converted_codex_agent_with_yaml_mcp_toml(
     root: Path,
     source: str,
@@ -292,6 +310,31 @@ def converted_empty_tools_toml(root: Path) -> dict[str, object]:
 def convert_agent_tree(source_root: Path) -> tuple[CodexAgent, ...]:
     """Convert a harness-created agent tree."""
     return convert_agents(source_root)
+
+
+def write_dist_codex_agent_tree(
+    root: Path,
+    plugin_name: str,
+    agents: Mapping[str, str],
+) -> Path:
+    """Materialize a generated dist/codex plugin agent tree."""
+    source_root = root.joinpath(*CODEX_DIST_ROOT_PARTS)
+    for agent_name, content in agents.items():
+        agent_path = source_root / plugin_name / "agents" / f"{agent_name}.md"
+        agent_path.parent.mkdir(parents=True, exist_ok=True)
+        agent_path.write_text(content, encoding="utf-8")
+    return source_root
+
+
+@contextmanager
+def working_directory(path: Path) -> Iterator[None]:
+    """Run a block with the current working directory set to ``path``."""
+    previous = Path.cwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(previous)
 
 
 def installed_guarded_writer_toml(root: Path) -> dict[str, object]:
@@ -472,7 +515,7 @@ def assert_skills_are_preserved_as_developer_instruction_guidance() -> None:
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
     """Assert rendered Codex target agents preserve Codex runtime overrides."""
     with TemporaryDirectory() as tmp:
-        parsed = converted_codex_rendered_agent_toml(Path(tmp))
+        parsed = converted_default_codex_source_root_toml(Path(tmp))
 
     assert parsed["name"] == CHANGES_REVIEWER_NAME
     assert parsed["description"] == AGENT_DESCRIPTION
@@ -509,6 +552,10 @@ def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
         assert docs_server["startup_timeout_sec"] == 20
         assert docs_server["enabled"] is False
         assert docs_server["required"] is True
+        assert docs_server["env_vars"] == [
+            "LOCAL_TOKEN",
+            {"name": "REMOTE_TOKEN", "source": "remote"},
+        ]
         assert toml_string_list(docs_server, "args") == [
             "-y",
             "@modelcontextprotocol/server-docs",

@@ -56,8 +56,8 @@ Product-scope custom agents override user-scope when names conflict.
 
 <field name="description">
 - Natural language description of purpose
-- Include when the runtime should invoke this custom agent
-- Used for automatic custom agent selection
+
+- Guides selection after the user explicitly asks Codex for this custom agent or subagent workflow
 
 </field>
 
@@ -232,9 +232,10 @@ For XML structure principles and token efficiency details, read `/skill-standard
 </configured_agent_xml_structure>
 
 <invocation>
-<automatic>
-The runtime automatically selects custom agents based on the `description` field when it matches the current task.
-</automatic>
+
+<explicit_request>
+Codex uses custom agent descriptions to select the right agent after the user explicitly asks for a custom agent or subagent workflow.
+</explicit_request>
 
 <explicit>
 Explicitly invoke a custom agent:
