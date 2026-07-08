@@ -439,33 +439,57 @@ def _parse_yaml_mapping(text: str) -> dict[str, object]:
             index += 1
             continue
         if raw_line.startswith("  - ") and current_key is not None:
-            existing = values.setdefault(current_key, [])
-            if not isinstance(existing, list):
-                existing = [existing]
-                values[current_key] = existing
-            existing.append(_parse_yaml_scalar(raw_line[4:].strip()))
+            _append_yaml_sequence_item(values, current_key, raw_line[4:].strip())
             index += 1
             continue
-        key, separator, value = raw_line.partition(":")
-        if not separator:
-            index += 1
-            continue
-        current_key = key.strip()
-        value = value.strip()
-        if _is_yaml_block_scalar(value):
-            block_lines, index = _collect_yaml_block(lines, index + 1)
-            values[current_key] = _parse_yaml_block_scalar(value, block_lines)
-            continue
-        if not value:
-            block_lines, next_index = _collect_yaml_indented_block(lines, index + 1)
-            values[current_key] = (
-                _parse_yaml_nested_block(block_lines) if block_lines else []
-            )
-            index = next_index if block_lines else index + 1
-            continue
-        values[current_key] = _parse_yaml_scalar(value)
-        index += 1
+        parsed_key, index = _parse_yaml_mapping_line(values, lines, index)
+        current_key = parsed_key or current_key
     return values
+
+
+def _append_yaml_sequence_item(
+    values: dict[str, object],
+    key: str,
+    raw_value: str,
+) -> None:
+    existing = values.setdefault(key, [])
+    if not isinstance(existing, list):
+        existing = [existing]
+        values[key] = existing
+    existing.append(_parse_yaml_scalar(raw_value))
+
+
+def _parse_yaml_mapping_line(
+    values: dict[str, object],
+    lines: Sequence[str],
+    index: int,
+) -> tuple[str | None, int]:
+    key, separator, raw_value = lines[index].partition(":")
+    if not separator:
+        return None, index + 1
+    current_key = key.strip()
+    value = raw_value.strip()
+    if _is_yaml_block_scalar(value):
+        block_lines, next_index = _collect_yaml_block(lines, index + 1)
+        values[current_key] = _parse_yaml_block_scalar(value, block_lines)
+        return current_key, next_index
+    if value:
+        values[current_key] = _parse_yaml_scalar(value)
+        return current_key, index + 1
+    return current_key, _parse_yaml_empty_mapping_value(
+        values, current_key, lines, index
+    )
+
+
+def _parse_yaml_empty_mapping_value(
+    values: dict[str, object],
+    key: str,
+    lines: Sequence[str],
+    index: int,
+) -> int:
+    block_lines, next_index = _collect_yaml_indented_block(lines, index + 1)
+    values[key] = _parse_yaml_nested_block(block_lines) if block_lines else []
+    return next_index if block_lines else index + 1
 
 
 def _is_yaml_block_scalar(value: str) -> bool:
@@ -551,37 +575,106 @@ def _fold_yaml_lines(lines: Sequence[str]) -> str:
 
 
 def _parse_yaml_scalar(value: str) -> object:
-    if value.startswith("{") and value.endswith("}"):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError:
-            parsed = _parse_yaml_flow_mapping(value)
-            if parsed is None:
-                return value
-        return parsed
-    if value.startswith("[") and value.endswith("]"):
-        return [
+    for parser in (
+        _parse_yaml_braced_scalar,
+        _parse_yaml_sequence_scalar,
+        _parse_yaml_quoted_scalar,
+        _parse_yaml_keyword_scalar,
+        _parse_yaml_numeric_scalar,
+    ):
+        parsed, handled = parser(value)
+        if handled:
+            return parsed
+    return value
+
+
+def _parse_yaml_braced_scalar(value: str) -> tuple[object, bool]:
+    if not (value.startswith("{") and value.endswith("}")):
+        return None, False
+    try:
+        return json.loads(value), True
+    except json.JSONDecodeError:
+        parsed = _parse_yaml_flow_mapping(value)
+        return (parsed, True) if parsed is not None else (None, False)
+
+
+def _parse_yaml_sequence_scalar(value: str) -> tuple[object, bool]:
+    if not (value.startswith("[") and value.endswith("]")):
+        return None, False
+    return (
+        [
             _parse_yaml_scalar(part)
             for part in _split_delimited(value[1:-1])
             if part.strip()
-        ]
+        ],
+        True,
+    )
+
+
+def _parse_yaml_quoted_scalar(value: str) -> tuple[object, bool]:
     if value.startswith(("'", '"')) and value.endswith(value[0]):
-        return value[1:-1]
+        return value[1:-1], True
+    return None, False
+
+
+def _parse_yaml_keyword_scalar(value: str) -> tuple[object, bool]:
     lower_value = value.lower()
     if lower_value == "true":
-        return True
+        return True, True
     if lower_value == "false":
-        return False
+        return False, True
     if lower_value in {"null", "~"}:
+        return None, True
+    return None, False
+
+
+def _parse_yaml_numeric_scalar(value: str) -> tuple[object, bool]:
+    integer = _parse_yaml_integer(value)
+    if integer is not None:
+        return integer, True
+    yaml_float = _parse_yaml_float(value)
+    if yaml_float is not None:
+        return yaml_float, True
+    return None, False
+
+
+def _parse_yaml_integer(value: str) -> int | None:
+    digits = _strip_numeric_sign(value)
+    if not digits.isdigit():
         return None
-    if re.fullmatch(r"[-+]?(0|[1-9][0-9]*)", value):
-        return int(value)
-    if re.fullmatch(
-        r"[-+]?(?:[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)(?:[eE][-+]?[0-9]+)?",
-        value,
-    ):
-        return float(value)
-    return value
+    if digits != "0" and digits.startswith("0"):
+        return None
+    return int(value)
+
+
+def _parse_yaml_float(value: str) -> float | None:
+    body, exponent = _split_numeric_exponent(_strip_numeric_sign(value))
+    if exponent is not None and not _is_signed_digits(exponent):
+        return None
+    if "." not in body:
+        return None
+    whole, _, fractional = body.partition(".")
+    if not whole and not fractional:
+        return None
+    if (whole and not whole.isdigit()) or (fractional and not fractional.isdigit()):
+        return None
+    return float(value)
+
+
+def _strip_numeric_sign(value: str) -> str:
+    return value[1:] if value.startswith(("+", "-")) else value
+
+
+def _split_numeric_exponent(value: str) -> tuple[str, str | None]:
+    for marker in ("e", "E"):
+        if marker in value:
+            body, _, exponent = value.partition(marker)
+            return body, exponent
+    return value, None
+
+
+def _is_signed_digits(value: str) -> bool:
+    return bool(value) and _strip_numeric_sign(value).isdigit()
 
 
 def _parse_yaml_flow_mapping(value: str) -> dict[str, object] | None:
