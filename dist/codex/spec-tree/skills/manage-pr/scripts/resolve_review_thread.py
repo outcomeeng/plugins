@@ -228,7 +228,7 @@ def review_threads_from_payload(payload: dict[str, object]) -> dict[str, object]
 def iter_thread_comments(
     review_threads: dict[str, object],
 ) -> Iterator[tuple[str, dict[str, object]]]:
-    threads = review_threads["nodes"]
+    threads = review_threads.get("nodes")
     if not isinstance(threads, list):
         raise ValueError("GitHub response reviewThreads.nodes must be a list")
     for thread in threads:

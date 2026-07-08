@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.review_thread_resolver import (
     direct_thread_id_resolves_without_discovery,
     malformed_paginated_response_returns_error,
     missing_comment_page_info_returns_error,
+    missing_review_thread_nodes_returns_error,
     null_paginated_thread_node_returns_error,
     null_review_thread_discovery_payload_returns_error,
     review_comment_id_discovers_thread_before_resolving,
@@ -41,6 +42,10 @@ def test_missing_comment_page_info_returns_error() -> None:
 
 def test_null_review_thread_discovery_payload_returns_error() -> None:
     assert null_review_thread_discovery_payload_returns_error()
+
+
+def test_missing_review_thread_nodes_returns_error() -> None:
+    assert missing_review_thread_nodes_returns_error()
 
 
 def test_null_paginated_thread_node_returns_error() -> None:

@@ -310,6 +310,15 @@ def null_review_thread_discovery_payload_returns_error() -> bool:
     )
 
 
+def missing_review_thread_nodes_returns_error() -> bool:
+    return _payload_returns_error(
+        _threads_payload(
+            {"pageInfo": {"hasNextPage": False, "endCursor": None}},
+        ),
+        "GitHub response reviewThreads.nodes must be a list",
+    )
+
+
 def null_paginated_thread_node_returns_error() -> bool:
     threads_page = _threads_payload(
         _review_threads(
