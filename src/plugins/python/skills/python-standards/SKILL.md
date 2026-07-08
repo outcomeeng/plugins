@@ -15,7 +15,7 @@ Code follows these standards when all ruff rules and mypy checks pass. See `${CL
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Python skills load these standards. Do not invoke it directly — invoke `/code-python`, `/test-python`, or `/audit-python` instead.
+This is a reference skill. Other Python skills load these standards. Do not invoke it directly — invoke `/code-python`, `/test-python`, or `/audit-python-code` instead.
 
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>
@@ -357,7 +357,7 @@ data = pickle.loads(untrusted_bytes)
 requests.get(url, verify=False)
 ```
 
-Context matters for security rules — a CLI tool invoked by the user has different trust boundaries than a web service. See `/audit-python` for false positive handling.
+Context matters for security rules — a CLI tool invoked by the user has different trust boundaries than a web service. See `/audit-python-code` for false positive handling.
 
 **Ruff rules enforced:**
 

@@ -137,7 +137,7 @@ Scan all findings, including any folded in from the composed language audit. If 
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
 The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. When Step 5b composed a language audit, its rows are appended to the `rows` array below and count toward `overall` exactly like the native rows. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 

@@ -20,7 +20,7 @@ MUST preserve exact functionality — all tests must pass after refinement.
 MUST preserve dependency injection patterns — NEVER remove injected parameters or seam boundaries.
 MUST preserve ownership semantics — NEVER introduce unnecessary clones or weaken lifetime bounds.
 MUST follow product standards from AGENTS.md when present.
-MUST verify refactored code would pass `/audit-rust` checklist.
+MUST verify refactored code would pass `/audit-rust-code` checklist.
 
 NEVER modify code that lacks test coverage — flag it and stop.
 NEVER modify code with inadequate tests (mockall mocks, implementation testing) — flag it and stop.
@@ -187,7 +187,7 @@ If uncertain whether a change affects ownership semantics or behavior: do not ma
 - [ ] Tests pass (same tests that passed before)
 - [ ] `cargo check --all-targets` clean
 - [ ] Functionality preserved
-- [ ] Would pass /audit-rust checklist
+- [ ] Would pass /audit-rust-code checklist
 
 </output_format>
 

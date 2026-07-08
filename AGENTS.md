@@ -97,7 +97,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 - ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
 - NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `auditor`, `audit-orchestrator`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the develop-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the develop-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
 
 **Use the multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `multi_agent_v1.wait_agent`. Close every spawned agent with `multi_agent_v1.close_agent` immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
 
@@ -113,7 +113,7 @@ Spawn a typed verifier or reviewer:
 }
 ```
 
-Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
+Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `implementation-auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
 
 ```json
 {
@@ -197,14 +197,14 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 
 **Use explicit prompts for audit agents.** The `message` field comes from the `multi_agent_v1.spawn_agent` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
-Use this shape for a one-off implementation audit:
+Use this shape for an implementation audit:
 
 ```json
 {
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
-    "agent_type": "auditor",
-    "message": "Repository: <absolute-repository-path>\nScope: <changed files or diff range>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the scoped implementation for conformance to the governing spec-tree and language methodology. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "agent_type": "implementation-auditor",
+    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> changeset scope plus any explicit changed-file partition already resolved\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
   }
 }
 ```
@@ -291,18 +291,6 @@ Use this shape for subagent audits:
 }
 ```
 
-Use this shape for audit journal orchestration:
-
-```json
-{
-  "tool": "multi_agent_v1.spawn_agent",
-  "arguments": {
-    "agent_type": "audit-orchestrator",
-    "message": "Repository: <absolute-repository-path>\nScope: <changed files, artifact paths, or diff range>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the local audit workflow that carries findings through the audit journal run set. Return the audit journal result or blocked state exactly as the audit workflow specifies."
-  }
-}
-```
-
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
 | "Implement this outcome"                   | `/contextualize`       | —                       |
@@ -321,13 +309,13 @@ Use this shape for audit journal orchestration:
 | "Diagnose the spx environment"             | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"   | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically:
 
-| User Says...            | Skill (composed)             | Composing agent             |
-| ----------------------- | ---------------------------- | --------------------------- |
-| "Audit this code"       | `/audit-python`              | `auditor` (`/audit` family) |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`               |
-| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`     |
+| User Says...            | Skill (composed)             | Composing agent          |
+| ----------------------- | ---------------------------- | ------------------------ |
+| "Audit this code"       | `/audit-python-code`         | `implementation-auditor` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`            |
+| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`  |
 
 ---
 

@@ -448,7 +448,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 5. Test: write tests via `/test-[language]` skill.
 6. Review tests via `/audit-[language]-tests` — loop until APPROVED.
 7. Implement: write code via `/code-[language]` skill.
-8. Review code via `/audit-[language]` — loop until APPROVED.
+8. Review code via `/audit-[language]-code` — loop until APPROVED.
 
 #### `commit-changes`
 

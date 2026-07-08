@@ -14,7 +14,7 @@ Rust work follows this standard when `/rust-standards` is loaded first, relevant
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Rust skills load these standards automatically. Invoke `/code-rust`, `/test-rust`, `/audit-rust`, or related Rust skills rather than invoking this directly.
+This is a reference skill. Other Rust skills load these standards automatically. Invoke `/code-rust`, `/test-rust`, `/audit-rust-code`, or related Rust skills rather than invoking this directly.
 </reference_note>
 
 <repo_local_overlay>

@@ -26,7 +26,7 @@ Python implementation code that makes its node's existing tests pass — written
    - Action: Write implementation to make tests pass
 
 2. **FIX mode** - Implementation exists but was rejected by reviewer
-   - Check: Recent `/audit-python` output shows REJECT with specific issues
+   - Check: Recent `/audit-python-code` output shows REJECT with specific issues
    - Action: Read the rejection, fix the specific issues, re-run verification
 
 **Always check which mode before proceeding.**
@@ -117,7 +117,7 @@ All must pass before declaring complete.
 
 <fix_mode_workflow>
 
-**Step 1 — Read rejection feedback.** Find the most recent `/audit-python` output. Look for:
+**Step 1 — Read rejection feedback.** Find the most recent `/audit-python-code` output. Look for:
 
 - Specific file:line locations
 - Issue categories (magic values, missing DI, etc.)

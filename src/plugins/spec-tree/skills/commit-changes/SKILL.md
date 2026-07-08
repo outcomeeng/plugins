@@ -54,7 +54,7 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 <review_workflow_context>
 
-**When invoked from a review or audit skill** (e.g., `audit-python`, `audit-typescript`):
+**When invoked from a review or audit skill** (e.g., `audit-python-code`, `audit-typescript-code`):
 
 This skill may be referenced during the commit phase of a code review. In that context:
 

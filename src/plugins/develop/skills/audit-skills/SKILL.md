@@ -35,7 +35,7 @@ A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`
 <focus_areas>
 During audits, prioritize evaluation of:
 
-- YAML compliance (name length, description quality, directive style with negative constraint, `argument-hint` when arguments are used)
+- YAML compliance (name length, description quality by skill role, `argument-hint` when arguments are used)
 - Command capabilities (argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `@` file references)
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
 - Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
@@ -73,8 +73,9 @@ During audits, prioritize evaluation of:
 <area name="yaml_frontmatter">
 Check for:
 
-- **name**: Lowercase-with-hyphens, max 64 chars, matches directory name, follows verb-noun convention (create-*, manage-*, setup-*, generate-*)
-- **description**: Max 1024 chars, directive style (ALWAYS invoke + NEVER without), no XML tags
+- **name**: Lowercase letters, numbers, and hyphens only; max 64 chars; matches directory name
+- **description**: Max 1024 chars, no XML tags; directive style for invoked skills; passive style for reference skills and exact-name protocol or loop-body skills
+- **user-invocable**: `false` for reference skills loaded by other skills; default user-invocable for agent-preloaded audit skills with a passive description and `<dispatch_gate>`
 - **argument-hint**: Present when the skill takes arguments (`$ARGUMENTS`, `$ARGUMENTS[N]`, `$N`, or a declared `$name`); omit for self-contained skills
 
 </area>
@@ -293,7 +294,7 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
 The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
 
@@ -311,7 +312,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
         {
           "id": "f-001",
           "file": "<skill-file>",
-          "line": null,
+          "line": 12,
           "rule": "<strength-name>",
           "severity": "INFO",
           "message": "<what it does> — removing this would <specific consequence>"
@@ -325,7 +326,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
         {
           "id": "f-002",
           "file": "<skill-file>",
-          "line": null,
+          "line": 24,
           "rule": "<issue-name>",
           "severity": "WARNING",
           "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
@@ -339,7 +340,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
         {
           "id": "f-003",
           "file": "<skill-file>",
-          "line": null,
+          "line": 36,
           "rule": "<issue-name>",
           "severity": "REJECT",
           "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."

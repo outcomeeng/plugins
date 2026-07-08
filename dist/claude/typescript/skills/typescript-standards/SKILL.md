@@ -19,7 +19,7 @@ Code follows these standards when tsc strict mode and eslint checks pass. See su
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other TypeScript skills reference these standards. It is not invoked directly—invoke `/code-typescript`, `/test-typescript`, or `/audit-typescript` instead.
+This is a reference skill. Other TypeScript skills reference these standards. It is not invoked directly—invoke `/code-typescript`, `/test-typescript`, or `/audit-typescript-code` instead.
 
 These standards apply to ALL TypeScript code, including tests and scripts. `/typescript-test-standards` adds stricter rules for test code.
 </reference_note>
@@ -320,7 +320,7 @@ if (!apiKey) {
 }
 ```
 
-Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. Reading env vars in `scripts/` is acceptable boundary behavior; imported modules should prefer typed config once past that boundary. See `/audit-typescript` for false positive handling.
+Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. Reading env vars in `scripts/` is acceptable boundary behavior; imported modules should prefer typed config once past that boundary. See `/audit-typescript-code` for false positive handling.
 
 **ESLint rules enforced:**
 

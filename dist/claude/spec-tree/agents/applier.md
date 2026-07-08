@@ -45,7 +45,7 @@ For each step, invoke the **exact** Skill tool call:
 | 5    | —     | `Skill("test-typescript")`                         | `Skill("test-python")`               |
 | 6    | YES   | `Skill("audit-typescript-tests")`                  | `Skill("audit-python-tests")`        |
 | 7    | —     | `Skill("code-typescript")`                         | `Skill("code-python")`               |
-| 8    | YES   | `Skill("audit-typescript")`                        | `Skill("audit-python")`              |
+| 8    | YES   | `Skill("audit-typescript-code")`                   | `Skill("audit-python-code")`         |
 
 **Do NOT skip, reorder, or substitute any step.**
 
