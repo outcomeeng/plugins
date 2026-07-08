@@ -6,14 +6,12 @@ import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final, cast
-
-# PyYAML ships without inline types; callers cast parsed workflow structure.
-import yaml  # type: ignore[import-untyped]
+from typing import Final
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR: Final = REPO_ROOT / ".github" / "workflows"
 FULL_SHA_RE: Final = re.compile(r"^[0-9a-f]{40}$")
+USES_LINE_RE: Final = re.compile(r"^\s*(?:-\s*)?uses:\s*(?P<value>[^#]+)")
 OUTCOMEENG_GH_ACTIONS_PREFIX: Final = "outcomeeng/gh-actions/"
 BETA_TESTER_MARKER: Final = "# BETA TESTER:"
 GENERIC_CLAUDE_WORKFLOW_NAMES: Final = frozenset(
@@ -65,36 +63,36 @@ def _allowed_external_workflow_use(external_use: ExternalWorkflowUse) -> bool:
 
 def _external_workflow_uses() -> Iterator[ExternalWorkflowUse]:
     for workflow in _workflow_paths():
-        marked_beta = BETA_TESTER_MARKER in workflow.read_text()
-        for uses in _walk_uses(_workflow_document(workflow)):
+        lines = workflow.read_text().splitlines()
+        for line_number, line in enumerate(lines):
+            match = USES_LINE_RE.match(line)
+            if match is None:
+                continue
+            uses = match.group("value").strip().strip("'\"")
             if uses.startswith("./"):
                 continue
+
             _, _, ref = uses.partition("@")
             yield ExternalWorkflowUse(
                 workflow=workflow,
                 value=uses,
                 ref=ref,
-                marked_beta=marked_beta,
+                marked_beta=_marked_beta(lines, line_number),
             )
 
 
-def _workflow_document(workflow: Path) -> dict[str, Any]:
-    return cast(
-        "dict[str, Any]", yaml.load(workflow.read_text(), Loader=yaml.BaseLoader)
-    )
+def _marked_beta(lines: list[str], line_number: int) -> bool:
+    if BETA_TESTER_MARKER in lines[line_number]:
+        return True
+
+    for comment_line in reversed(lines[:line_number]):
+        stripped = comment_line.strip()
+        if not stripped.startswith("#"):
+            return False
+        if BETA_TESTER_MARKER in stripped:
+            return True
+    return False
 
 
 def _workflow_paths() -> tuple[Path, ...]:
     return tuple(sorted([*WORKFLOWS_DIR.glob("*.yml"), *WORKFLOWS_DIR.glob("*.yaml")]))
-
-
-def _walk_uses(value: object) -> Iterator[str]:
-    if isinstance(value, dict):
-        for key, nested in cast("dict[str, object]", value).items():
-            if key == "uses" and isinstance(nested, str):
-                yield nested
-            else:
-                yield from _walk_uses(nested)
-    elif isinstance(value, list):
-        for nested in value:
-            yield from _walk_uses(nested)
