@@ -1,33 +1,22 @@
 # Audit
 
-PROVIDES generic audit orchestration that dispatches to language-specific `audit-{lang}*` skills via template substitution, plus artifact-type evidence auditors and one-off agent wrappers that render and combine their verdicts
-SO THAT every caller running an audit on TypeScript, Python, Rust, or any future language plugin — locally or in CI
-CAN run a per-language audit that streams partition progress and findings onto the audit journal, preserves the structured wrapper verdict, and renders the sealed prefix without each language plugin maintaining its own orchestrator
+PROVIDES implementation-audit orchestration through one spec-tree-owned `implementation-auditor` wrapper agent that records audit coverage, findings, terminal state, and the rendered projection through `spx verification run`
+SO THAT all language plugins
+CAN contribute code, test, and architecture audit intelligence without shipping per-language auditor agents or plugin-side verdict scripts
 
 ## Assertions
 
 ### Scenarios
 
-- Given a scope containing files of one or more supported languages, when `/audit` runs, then it partitions the scope by file extension, dispatches one `audit-{lang}*` skill per partition, collects each dispatched verdict, and emits one wrapper verdict whose `children` array holds the dispatched verdicts and whose `overall` is derived via `aggregate_verdicts.py` ([review])
-- Given a repo with `refs/remotes/origin/HEAD` configured, when `detect_base_ref` runs, then it returns the bare base-branch name with the `refs/remotes/origin/` prefix stripped; when the symbolic ref is absent, it returns `main` ([test](tests/test_auditing.scenario.l1.py))
-- Given a feature branch with commits ahead of `origin/<base>`, when `branch_scope` runs, then it returns the files the branch added — three-dot semantics, so commits that landed on the base branch after the branch was cut are excluded — filtered by the supplied pathspec patterns ([test](tests/test_auditing.scenario.l1.py))
-- Given a git diff range and optional pathspec patterns, when `expand_diff_range` runs, then it returns the matching file paths in git's order, with an empty list for no matches rather than an error ([test](tests/test_auditing.scenario.l1.py))
-
-### Properties
-
-- The scope hash is deterministic and collision-resistant: the same sorted file list always produces the same scope hash, and file lists with different `(path, content)` pairs produce different scope hashes even when their naive `path\0content` concatenations would be byte-equal — closed by length-prefixed framing ([test](tests/test_auditing.property.l1.py))
+- Given a changeset scope with a supported implementation partition, when `implementation-auditor` runs, then it starts one `spx verification run` with `--verification-type audit --scope-type changeset`, records required code, test, and architecture coverage units, records concern findings, finishes the run, and relays the rendered projection ([test](tests/test_implementation_audit_contract.scenario.l1.py))
 
 ### Compliance
 
-- ALWAYS: emit exactly one wrapper verdict per orchestrator run — children of the wrapper carry per-partition (per-language) verdicts; the wrapper's overall is derived via `aggregate_verdicts.py` per the canonical rollup rule in `verdict.py` ([review])
-- ALWAYS: dispatch to every concern's skill in the protocol-prescribed phase order before emitting a verdict — partial dispatch produces misleading verdicts ([review])
-- ALWAYS: provide artifact-type auditors for test evidence and eval evidence so deterministic evidence artifacts are judged for evidentiary quality by isolated verifier contexts before the main agent relies on them ([review])
-- NEVER: `/audit` runs the project's validation or test commands or any other deterministic verification — it dispatches only the agentic concern audits (implementation, test evidence, ADR/PDR architecture); the main agent passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md` ([review])
-- ALWAYS: emit every audit verdict by opening `spx journal --type audit` before partition dispatch, appending scope-entered, partition scope-advanced, partition finding-reported, and terminal run-completed events through `journal_emit.py`, and rendering the sealed prefix through `journal_emit.py render` — orchestrator and dispatched skills produce structured verdict data and channel events, never hand-formatted markdown ([review])
-- ALWAYS: enumerate the audit scope and compute the scope hash through `audit_orchestrator.py`'s git/scope helpers — `/audit` never embeds git plumbing or scope hashing inline in skill prose ([review])
-- ALWAYS: the `auditor` agent invokes the `/audit` skill on a scope and relays the journal-rendered verdict — it owns no audit policy of its own and invokes nothing the `/audit` skill does not already resolve ([review])
-- ALWAYS: pull-request audit runs stamp `targetKind=pull-request` and `pullRequestNumber` into the wrapper metadata so the journal backend can project prior audit runs for the same PR ([review])
-- ALWAYS: the resolved/reopened projection computes finding identity as `(file, line, rule, message)` — `id` and `severity` are excluded so a regenerated finding with a fresh ID or upgraded severity matches its prior counterpart ([test](tests/test_auditing.scenario.l1.py))
-- NEVER: continue past a missing skill in the `audit-{lang}*` trio — halt before any phase runs so callers see the gap immediately ([review])
-- NEVER: re-implement verdict shape or rollup logic in the orchestrator — the canonical schema lives in `verdict.py` and the rollup lives in `verdict.roll_up` ([review])
-- NEVER: recover prior audit state by parsing a rendered PR comment or writing a separate `.spx/audits/` state file — the journal backend is the durable state surface for local and pull-request audit runs ([review])
+- ALWAYS: implementation audits enter through the `implementation-auditor` agent, whose only audit behavior is invoking `spec-tree:audit` in an isolated verifier context and relaying the rendered `spx verification run` projection ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: implementation-audit orchestration records planned or classified coverage units with `spx verification run scope add`, records findings with `spx verification run finding add`, and finishes and renders the run through `spx verification run finish` and `spx verification run render` ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: each language implementation partition requires `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture`; the old `audit-{lang}` implementation-code skill name is not a valid dispatch target ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: every programming-language plugin ships its implementation-code audit skill as `audit-{lang}-code` beside its `audit-{lang}-tests` and `audit-{lang}-architecture` concern skills ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: producer metadata separates stable producer identity from producer provenance, including the owning plugin version when a concern skill exists, so convergence identity survives plugin version changes ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: implementation-audit orchestration runs deterministic validation, test, or eval commands; those checks remain the main conversation's changeset responsibility and CI's repository responsibility ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: implementation-audit orchestration uses plugin-side `verdict.py`, `aggregate_verdicts.py`, `pass_results.py`, `journal_emit.py`, or `audit_orchestrator.py`; audit payload validation and projection are SPX responsibilities ([test](tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: the spec-tree plugin ships the retired implementation-audit agents `auditor` or `audit-orchestrator`; implementation audit has one wrapper agent, `implementation-auditor` ([test](tests/test_implementation_audit_contract.compliance.l1.py))

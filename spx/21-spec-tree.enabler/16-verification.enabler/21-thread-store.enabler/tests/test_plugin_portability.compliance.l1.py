@@ -221,5 +221,5 @@ class TestBackendModulesDoNotRedefineBranchSlug:
                     )
         assert not violations, (
             "backend modules redefine branch_slug (forbidden — re-export "
-            "from audit_orchestrator.py):\n" + "\n".join(violations)
+            "from the shared changeset-scope module):\n" + "\n".join(violations)
         )

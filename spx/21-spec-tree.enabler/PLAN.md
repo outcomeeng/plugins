@@ -6,7 +6,7 @@ This work is **blocked on the `spx` CLI** adopting the claim-and-reproduction mo
 
 ## Model (the target)
 
-`spx.status.json` holds committed *claims* of verification outcomes per node, per mechanism (test/eval/audit). Raw evidence (test runs, eval runs, audit journals) is uncommitted.
+`spx.status.json` holds committed *claims* of verification outcomes per node, per mechanism (test/eval/audit). Raw evidence (test runs, eval runs, audit verification runs) is uncommitted.
 
 - `spx spec status --update` reads only *available* local evidence and folds it into the committed claims; absence of evidence leaves a claim unchanged. It never runs verification.
 - A committed claim can be `passed`, `failed`, or `not-run` at rest. `failed` is legitimate: an agent who breaks tests and ends the session commits a `failing` claim.

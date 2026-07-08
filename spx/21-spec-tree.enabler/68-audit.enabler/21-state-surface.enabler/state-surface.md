@@ -1,21 +1,15 @@
-# Journal State Surface
+# Verification Run State Surface
 
-PROVIDES audit state as a projection over the `spx journal --type audit` run set, keyed by the run target metadata and rendered from the sealed journal prefix
-SO THAT local audit runs and pull-request audit runs share one durable state contract
-CAN carry open, resolved, and reopened findings across audit iterations without a separate state file, state-file lock, or rendered-comment database
+PROVIDES audit state as an SPX verification-run projection keyed by audit verification type, changeset scope, coverage units, producer identity, and finding content
+SO THAT local audit runs and pull-request audit runs
+CAN carry open, resolved, reopened, missing-coverage, and unsupported-scope evidence across audit iterations without a plugin-side state file, lock file, verdict script, or rendered-comment database
 
 ## Assertions
 
-### Scenarios
-
-- Given an audit run with no prior journal run for the same target, when the projection renders the current verdict, then `resolved` and `reopened` are empty arrays ([test](../tests/test_auditing.scenario.l1.py))
-- Given a prior journal run with an open finding and a later run omits that finding, when the projection renders the later verdict, then the finding appears in `resolved` ([test](../tests/test_auditing.scenario.l1.py))
-- Given a prior journal run whose `resolved` array contains a finding and a later run reports the same finding again, when the projection renders the later verdict, then the finding appears in `reopened` ([test](../tests/test_auditing.scenario.l1.py))
-- Given two branch labels whose slug values collide in the same state directory, when `branch_slug` derives a label for the later branch, then it appends a hash suffix so caller-owned local projections can keep distinct names ([test](../tests/test_auditing.scenario.l1.py))
-
 ### Compliance
 
-- ALWAYS: the journal backend owns persistence and concurrency for audit runs; the `/audit` skill records the wrapper verdict on the audit journal and renders state from the sealed prefix ([review])
-- ALWAYS: resolved and reopened identity is `(file, line, rule, message)`; producer-assigned IDs and severity labels are excluded so regenerated findings match by content ([test](../tests/test_auditing.scenario.l1.py))
-- NEVER: audit state is written to `.spx/audits/`, a lock file, a path inside `spx/`, or any other tracked product directory ([review])
-- NEVER: audit state is recovered by parsing rendered PR comments; rendered comments are display projections, not the state source ([review])
+- ALWAYS: audit state persistence and projection go through `spx verification run` commands, with no plugin-side audit state file or verdict script ([test](../tests/test_implementation_audit_contract.compliance.l1.py))
+- ALWAYS: prior audit context is selected by audit class, audit kind, stable producer identity, subject path, changed-file partition, language partition, and concern partition so repeated runs in one merge period converge on the same audit units ([audit])
+- ALWAYS: resolved and reopened finding identity excludes producer-assigned IDs and producer provenance version, so regenerated findings match by stable producer identity plus content ([audit])
+- NEVER: audit state is written to `.spx/audits/`, a lock file, a path inside `spx/`, or any other tracked product directory ([test](../tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: audit state is recovered by parsing rendered PR comments; rendered comments are display projections, not the state source ([audit])
