@@ -61,6 +61,7 @@ These issues significantly hurt effectiveness - flag as critical:
 - **name**: Unique, clear purpose, matches the configured agent's role
 - **description**: Includes BOTH what it does AND when to use it, specific trigger keywords
 - **developer_instructions**: Present, substantive, and structured with role, workflow, constraints, and output expectations
+- **nickname_candidates**: When present, a TOML array of concise display names that fit the configured agent's role and avoid misleading aliases
 
 **role_definition**:
 
