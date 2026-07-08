@@ -27,11 +27,11 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 <invocation_modes>
 
-An optional argument controls what runs before the per-node flow below:
+The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
-- `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The `applier` role does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
-- `[node-path]` → the work queue is that single node.
-- no argument → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge — on its return, dispatch any audit handoff it reports, then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- `$ARGUMENTS` containing a node path without `--agent` → the work queue is that single node.
+- Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
 
 When the work is described as a plan or proposal rather than a specific node or queue, invoke `/plan-slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
@@ -74,7 +74,7 @@ When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at
 
 Before any audit gate or whole-changeset review runs, self-converge the diff: read the changed specs, tests, and implementation together; confirm the design is coherent; and fix obvious contradictions before asking an auditor or reviewer to find them. Audit gates confirm a stabilized design. They are not the design loop.
 
-When a gate returns `REJECT` or a review surfaces a valid finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. Same-class means the same rule, source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary. A patch to the cited line alone is sufficient only when the sweep proves the defect isolated.
+When a gate returns `REJECTED`, `UNKNOWN`, or `BLOCKED`, or when a review surfaces a valid finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. Same-class means the same rule, source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary. A patch to the cited line alone is sufficient only when the sweep proves the defect isolated.
 
 Do not re-run a gate after every micro-edit. Batch the class fix, re-read the affected diff, then run the gate once on the stabilized tree. If repeated findings keep reopening the same design area, stop patching and refactor Claude's approach before the next gate.
 
@@ -98,30 +98,30 @@ When both evidence classes changed, dispatch both auditors before Step 9. Step 9
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                              | Python                               | Rust                               |
-| ---- | ------------------------ | ------------------------------------------------------- | ------------------------------------ | ---------------------------------- |
-| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                         | same                                 | same                               |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                                 | same                               |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                                 | same                               |
-| 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")`          | `Skill("architect-rust")`          |
-| 4    | Architecture audit       | `Skill("audit-typescript-architecture")`                | `Skill("audit-python-architecture")` | `Skill("audit-rust-architecture")` |
-| 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`               | `Skill("test-rust")`               |
-| 6    | Test audit               | `Skill("audit-typescript-tests")`                       | `Skill("audit-python-tests")`        | `Skill("audit-rust-tests")`        |
-| 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`               | `Skill("code-rust")`               |
-| 8    | Implementation audit     | `implementation-auditor` agent                          | same                                 | same                               |
-| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                                 | same                               |
-| 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                                 | same                               |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                                 | same                               |
+| Step | Purpose                  | TypeScript                                              | Python                      | Rust                      |
+| ---- | ------------------------ | ------------------------------------------------------- | --------------------------- | ------------------------- |
+| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                         | same                        | same                      |
+| 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                        | same                      |
+| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                        | same                      |
+| 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")` | `Skill("architect-rust")` |
+| 4    | Architecture audit       | `adr-auditor` agent                                     | same                        | same                      |
+| 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`      | `Skill("test-rust")`      |
+| 6    | Test audit               | `test-evidence-auditor` agent                           | same                        | same                      |
+| 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`      | `Skill("code-rust")`      |
+| 8    | Implementation audit     | `implementation-auditor` agent                          | same                        | same                      |
+| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                        | same                      |
+| 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                        | same                      |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                        | same                      |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
 ‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
 
-**Invoke the exact Skill tool call shown.** Never substitute, skip, or reorder.
+Invoke the exact skill or agent surface shown. Never substitute, skip, or reorder.
 
 </skill_map>
 
-<steps>
+<workflow>
 
 <step number="1" name="Load methodology" frequency="once per session">
 
@@ -155,13 +155,13 @@ Produce the ADR(s) for the work item. The architecture must be complete before a
 
 <step number="4" name="Architecture audit" gate="true">
 
-Invoke the architecture audit skill for the detected language.
+Dispatch `adr-auditor` with the ADR path, governing node path, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-architecture` concern inside its isolated context.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
+**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
 </step>
 
@@ -175,13 +175,13 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 <step number="6" name="Test audit" gate="true">
 
-Invoke the test audit skill for the detected language.
+Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-tests` concern inside its isolated context.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
+**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
 </step>
 
@@ -233,11 +233,11 @@ Claude tends to report the flow done the moment Step 9 converges and tests pass 
 
 </step>
 
-</steps>
+</workflow>
 
 <review_gates>
 
-Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or `REJECT`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a REJECT-loop gate, but a hard precondition for declaring the flow complete.
+Steps 4, 6, and 8 are blocking audit gates. Each auditor agent emits `APPROVED`, `REJECTED`, or a blocked/unknown result from its own verdict contract. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a retry-loop gate, but a hard precondition for declaring the flow complete.
 
 - Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
@@ -245,9 +245,9 @@ Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or
 - Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
-On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the defect class, re-invoke the same skill, and scan again.
+On `REJECTED`, `UNKNOWN`, or `BLOCKED` (Steps 4, 6, 8), or an unaddressed valid finding (Step 9): fix the defect class or exact blocked command, re-dispatch the same auditor, and scan again.
 
-**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
+**3 consecutive rejected, unknown, or blocked results on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
 
 </review_gates>
 
@@ -266,7 +266,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 **Failure 1: Claude closed the flow at Step 9.** Claude reported the flow complete the moment the Step 8 audit passed, tests were green, and the Step 9 review converged — while nothing had been committed, pushed, reviewed at integration time, or merged. Signal: a "done" claim for default-branch work with a clean working tree or a local commit ahead of base and no merged PR. Avoid: for default-branch work the flow is incomplete until Step 10 reaches the default branch on origin; local readiness is progress, never delivered value.
 
-**Failure 2: Claude patched the cited line instead of the defect class.** An audit gate or the Step 9 review cited one instance; Claude fixed that line, re-ran the gate, and the same class reopened on the next iteration elsewhere. Signal: repeated REJECTs reopening the same rule, source contract, or evidence pattern. Avoid: per `<stabilized_diff_rule>`, treat each finding as defect-class evidence — sweep the touched node(s), fix every in-scope instance, then run the gate once on the stabilized tree.
+**Failure 2: Claude patched the cited line instead of the defect class.** An audit gate or the Step 9 review cited one instance; Claude fixed that line, re-ran the gate, and the same class reopened on the next iteration elsewhere. Signal: repeated rejected verdicts reopening the same rule, source contract, or evidence pattern. Avoid: per `<stabilized_diff_rule>`, treat each finding as defect-class evidence — sweep the touched node(s), fix every in-scope instance, then run the gate once on the stabilized tree.
 
 **Failure 3: Claude kept running the flow in the main context after dispatching `--agent`.** Invoked with `--agent`, Claude launched the `applier` role and then also ran Steps 1–8 in the main context, duplicating the work. Signal: main-context architect/test/code steps after an `applier` dispatch. Avoid: after `--agent` dispatch, stop the per-node steps in the main context; resume only at Step 9 (when cross-node) and Step 10 once the `applier` returns.
 
@@ -278,13 +278,13 @@ Scan the conversation for these markers before declaring done:
 
 - [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
 - [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
-- [ ] Step 4 audit skill emitted `APPROVED`
-- [ ] Step 6 audit skill emitted `APPROVED`
-- [ ] Step 8 audit skill emitted `APPROVED`
+- [ ] Step 4 `adr-auditor` emitted `APPROVED`
+- [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
+- [ ] Step 8 `implementation-auditor` emitted `APPROVED` with an `spx verification run` token and rendered projection
 - [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
 - [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9
 - [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
-- [ ] All tests pass
+- [ ] The product's touched-scope verification command has passed for the changed node and implementation, for example `just test <pytest-target>...` for this repository's co-located spec tests plus any additional narrow validation lane selected by `spx/local/merging.md`
 - [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
 
 </success_criteria>

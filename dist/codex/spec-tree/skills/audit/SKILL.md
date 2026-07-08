@@ -202,11 +202,11 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <success_criteria>
 
-- The run starts with `spx verification run start --verification-type audit --scope-type changeset`.
-- Every planned or classified audit unit is recorded with `spx verification run scope add`.
-- Every finding is recorded with `spx verification run finding add`.
-- The run is finished and rendered through `spx verification run finish` and `spx verification run render`.
-- Required implementation concerns use `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture`.
-- No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern appears in the orchestration.
+- The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
+- The verdict states an explicit overall determination: APPROVED, REJECTED, or BLOCKED.
+- Every rejected finding is falsifiable: it names the stable producer identity, subject, violated rule or principle, evidence message, and required fix.
+- Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
+- The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
+- No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
