@@ -14,9 +14,12 @@ The compact summary is the agent writing for the agent who reads it next, so a s
 
 ## Verification
 
+### Testing
+
+- ALWAYS: the `compactPrompt` configuration appends sections conforming to the state schema (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([conformance])
+
 ### Audit
 
-- ALWAYS: the post-compact summary includes sections conforming to the state schema (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([audit])
 - ALWAYS: spec-tree's post-compact continuity contribution is the compact summary state the resuming agent reads and interprets ([audit])
 - NEVER: spec-tree's compact-summary contribution adds imperative sections ("next step", "resume here", "now do X", "persistence proposal", "starting point") ([audit])
 - NEVER: spec-tree's compact-summary contribution names specific skills the agent should invoke after resume — skill choice is the resuming agent's, not summary text it reads as self-direction ([audit])

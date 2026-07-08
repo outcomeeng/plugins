@@ -234,8 +234,18 @@ def issue_resolver_creates_no_temporary_files() -> bool:
         return True
 
 
+def issue_resolver_detects_chained_filesystem_write_api() -> bool:
+    tree = ast.parse("from pathlib import Path\nPath('target').write_text('payload')\n")
+    assert _tree_uses_filesystem_write_api(tree)
+    return True
+
+
 def _issue_resolver_uses_filesystem_write_api() -> bool:
     tree = ast.parse(ISSUE_RESOLVER_SCRIPT.read_text(encoding="utf-8"))
+    return _tree_uses_filesystem_write_api(tree)
+
+
+def _tree_uses_filesystem_write_api(tree: ast.AST) -> bool:
     for node in ast.walk(tree):
         if _is_tempfile_import(node):
             return True
@@ -259,6 +269,8 @@ def _is_tempfile_import(node: ast.AST) -> bool:
 def _call_name(node: ast.AST) -> str:
     if isinstance(node, ast.Name):
         return node.id
+    if isinstance(node, ast.Call):
+        return _call_name(node.func)
     if isinstance(node, ast.Attribute):
         parent = _call_name(node.value)
         return f"{parent}.{node.attr}" if parent else node.attr

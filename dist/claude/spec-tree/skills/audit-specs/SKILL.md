@@ -15,7 +15,7 @@ This audit runs in the spec-auditor agent's isolated context. When this skill lo
 
 <objective>
 
-A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`).
+A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, parseable runtime/configuration contracts may use deterministic evidence, and no semantic claim about authored prose carries `[test]`).
 
 </objective>
 
@@ -26,9 +26,9 @@ A verdict on one spec node — an enabler or outcome `{slug}.md` — against the
 Every assertion carries exactly one verification-type tag — `[test]`, `[eval]`, or `[audit]` (`[review]` is the legacy spelling of `[audit]`). `/test` selects the tag; this audit verifies the selection fits the claim — an audit that accepts any present tag verifies nothing. Two checks decide fitness:
 
 - Under a `[test]` tag, the assertion type (scenario, mapping, conformance, property, compliance) fits the claim's quantifier. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction.
-- The tag is reachable for the claim's subject. A claim whose subject is the content of an authored prose or documentation artifact — text the product authors and maintains in a document, not executable behavior — is never `[test]`. Behavioral evidence cannot verify it: the only evidence available reads the authored text and asserts on it, which proves the prose was authored, not that code behaves — whether the read is direct or laundered through test infrastructure. Such a claim's tag is `[eval]` or `[audit]`.
+- The tag is reachable for the claim's subject. A claim about a parseable runtime or configuration contract may use `[test]` when deterministic evidence parses the artifact and checks a structural contract such as field presence, schema conformance, registered command shape, generated output shape, or configured section names. A claim whose subject is semantic authored prose or documentation content — text the product authors and maintains in a document, not executable or parseable structure — is never `[test]`. Behavioral evidence cannot verify it: the only evidence available reads the authored text and asserts on it, which proves the prose was authored, not that code behaves — whether the read is direct or laundered through test infrastructure. Such a claim's tag is `[eval]` or `[audit]`.
 
-A missing tag, a bare mechanism tag, a tag carried more than once, an assertion type the `/test` router would not produce for the claim, or `[test]` on a prose-content claim is a finding.
+A missing tag, a bare mechanism tag, a tag carried more than once, an assertion type the `/test` router would not produce for the claim, or `[test]` on a semantic prose-content claim is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -109,9 +109,9 @@ For each assertion under `## Assertions`:
 
 1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design, and `([review])` is its legacy spelling, also bare. A missing tag, a tag carried more than once, or a `[test]` or `[eval]` mechanism tag with no path is invalid; a bare `([audit])` or `([review])` is valid.
 2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
-3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
+3. The tag is reachable for the claim's subject. A `[test]` tag is reachable for a parseable runtime or configuration contract when deterministic evidence parses the artifact and checks a structural contract such as field presence, schema conformance, registered command shape, generated output shape, or configured section names. When the claim's subject is the semantic content of authored prose or documentation rather than an executable or parseable contract, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
-**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
+**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on a claim whose subject is semantic authored prose content rather than executable or parseable structure → REJECT — "prose-coupling."**
 
 </step>
 
@@ -156,7 +156,7 @@ Each finding's `rule` field carries the violation pattern (`missing-section`, `m
 
 Claude read an assertion — "the skill body states the three-gate vocabulary ([test])" — and passed it because a `[test]` tag was present and pointed at a file. The only evidence such a claim admits reads the authored body and asserts a substring of it, so it proves the prose was typed, not that code behaves. The tag belongs in `[eval]` or `[audit]`. The coupling is identical whether the test reads the body directly or through a harness constant or reader helper — full-chain, the claim still verifies prose.
 
-How to avoid: Step 5 check 3 — when the claim's subject is the content of an authored prose or documentation artifact, `[test]` is unreachable. Reject it as "prose-coupling" and remediate to `[eval]` or `[audit]`.
+How to avoid: Step 5 check 3 — when the claim's subject is the semantic content of authored prose or documentation, `[test]` is unreachable. Reject it as "prose-coupling" and remediate to `[eval]` or `[audit]`. When the claim is instead about a parseable runtime or configuration contract, keep the deterministic evidence lane and audit whether the test checks the structural contract rather than prose meaning.
 
 **Failure 2: Passed a universal claim tagged `scenario`**
 

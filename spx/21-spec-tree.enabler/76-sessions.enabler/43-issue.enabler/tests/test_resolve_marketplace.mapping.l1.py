@@ -4,6 +4,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     issue_resolver_claude_directory_marketplace_json_maps_to_path,
     issue_resolver_codex_local_marketplace_json_maps_to_path,
     issue_resolver_creates_no_temporary_files,
+    issue_resolver_detects_chained_filesystem_write_api,
     issue_resolver_malformed_marketplace_json_maps_to_invalid_json_error,
     issue_resolver_missing_local_marketplace_maps_to_resolution_error,
 )
@@ -27,3 +28,7 @@ def test_missing_local_marketplace_maps_to_resolution_error() -> None:
 
 def test_resolver_creates_no_temporary_files() -> None:
     assert issue_resolver_creates_no_temporary_files()
+
+
+def test_resolver_detects_chained_filesystem_write_api() -> None:
+    assert issue_resolver_detects_chained_filesystem_write_api()

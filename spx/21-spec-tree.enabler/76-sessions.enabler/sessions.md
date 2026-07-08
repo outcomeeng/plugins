@@ -28,8 +28,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Conformance
 
-- The `compactPrompt` in `.claude/settings.json` contains all six state-schema section headers (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([audit])
-- The `compactPrompt` in `.claude/settings.json` gates the state-schema appendix on a concrete trigger — the presence of a `<SPEC_TREE_FOUNDATION>` or `<SPEC_TREE_CONTEXT>` marker in the conversation — so the summarizer appends the sections whenever a spec-tree skill loaded this session, not on a subjective judgment that spec-tree work occurred ([audit])
+- The `compactPrompt` in `.claude/settings.json` contains all six state-schema section headers (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([test](tests/test_sessions.conformance.l1.py))
+- The `compactPrompt` in `.claude/settings.json` gates the state-schema appendix on a concrete trigger — the presence of a `<SPEC_TREE_FOUNDATION>` or `<SPEC_TREE_CONTEXT>` marker in the conversation — so the summarizer appends the sections whenever a spec-tree skill loaded this session, not on a subjective judgment that spec-tree work occurred ([test](tests/test_sessions.conformance.l1.py))
 
 ### Compliance
 
