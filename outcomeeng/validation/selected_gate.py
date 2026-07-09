@@ -71,6 +71,7 @@ SKILL_STEP_LABELS: Final = (
 )
 
 FULL_GATE_PATTERNS: Final = (
+    ".github/workflows/check.yml",
     "pyproject.toml",
     "uv.lock",
     "justfile",
@@ -80,10 +81,15 @@ FULL_GATE_PATTERNS: Final = (
     "outcomeeng/validation/**",
     "outcomeeng_evals/**",
     "outcomeeng_testing/**",
-    ".github/workflows/check.yml",
-    ".github/workflows/spec-tree-evals.yml",
 )
-PYTHON_PATTERNS: Final = (
+PYTHON_FORMAT_LINT_PATTERNS: Final = (
+    "outcomeeng/**",
+    "outcomeeng_testing/**",
+    "outcomeeng_evals/**",
+    "src/plugins/**/*.py",
+    "spx/**/tests/test_*.py",
+)
+PYTHON_TYPECHECK_PATTERNS: Final = (
     "outcomeeng/**",
     "outcomeeng_testing/**",
     "outcomeeng_evals/**",
@@ -239,8 +245,10 @@ def collect_changed_paths(
 
 def deleted_paths_after_status_resolution(
     entries: Sequence[ChangedPath],
+    *,
+    repo: Path | None = None,
 ) -> tuple[str, ...]:
-    """Return paths whose observed statuses are all deleted."""
+    """Return paths with any deletion status in the gathered entry set."""
 
     statuses_by_path: dict[str, set[str]] = {}
     for entry in entries:
@@ -249,7 +257,8 @@ def deleted_paths_after_status_resolution(
         sorted(
             path
             for path, statuses in statuses_by_path.items()
-            if all(status.startswith(DELETED_GIT_STATUS_PREFIX) for status in statuses)
+            if any(status.startswith(DELETED_GIT_STATUS_PREFIX) for status in statuses)
+            and (repo is None or not (repo / path).exists())
         )
     )
 
@@ -317,14 +326,20 @@ def build_selected_gate_plan(
         for argv in workflow_argvs:
             selected_argvs.add(argv)
             reasons[argv] = WORKFLOW_REASON
-    if _matches_any(normalized, PYTHON_PATTERNS):
-        python_argvs: tuple[tuple[str, ...], ...] = (
+    if _matches_any(normalized, PYTHON_FORMAT_LINT_PATTERNS):
+        python_lint_argvs: tuple[tuple[str, ...], ...] = (
             RUFF_FORMAT_ARGV,
             RUFF_CHECK_ARGV,
+        )
+        for argv in python_lint_argvs:
+            selected_argvs.add(argv)
+            reasons[argv] = PYTHON_REASON
+    if _matches_any(normalized, PYTHON_TYPECHECK_PATTERNS):
+        python_typecheck_argvs: tuple[tuple[str, ...], ...] = (
             MYPY_ARGV,
             PYRIGHT_ARGV,
         )
-        for argv in python_argvs:
+        for argv in python_typecheck_argvs:
             selected_argvs.add(argv)
             reasons[argv] = PYTHON_REASON
     if _matches_any(normalized, SKILL_PATTERNS):
@@ -386,7 +401,10 @@ def run_selected_check(
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_selected_gate_plan(
         tuple(entry.path for entry in changed_path_entries),
-        deleted_paths=deleted_paths_after_status_resolution(changed_path_entries),
+        deleted_paths=deleted_paths_after_status_resolution(
+            changed_path_entries,
+            repo=repo,
+        ),
     )
     _write_plan(sink, plan)
     if plan.full_gate:

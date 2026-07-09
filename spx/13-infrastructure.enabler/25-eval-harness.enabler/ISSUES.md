@@ -9,10 +9,14 @@ The broad `test-evidence-auditor` run
 `spx/13-infrastructure.enabler/25-eval-harness.enabler` reported that several
 existing parent-node tests keep setup data and helper builders in executed test
 files instead of `outcomeeng_evals.testing`, `outcomeeng_testing/`, or inert
-fixtures:
+fixtures.
+
+PR 420 converts
+`spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_definition.conformance.l1.py`
+to assertion wrappers over `outcomeeng_evals.testing.factories`, so that file is
+no longer part of this follow-up. The remaining parent-node evidence files are:
 
 - `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval_harness.compliance.l1.py`
-- `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_definition.conformance.l1.py`
 - `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_report.conformance.l1.py`
 - `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_runner.compliance.l1.py`
 

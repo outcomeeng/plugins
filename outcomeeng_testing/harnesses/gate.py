@@ -83,6 +83,7 @@ from outcomeeng.validation import (
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.selected_gate import (
+    ChangedPath,
     DEFAULT_BASE_REF,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
@@ -103,12 +104,16 @@ from outcomeeng.validation.selected_gate import (
     WORKFLOW_REASON,
     build_selected_gate_plan,
     collect_changed_paths,
+    deleted_paths_after_status_resolution,
     run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
+    SELECTED_GATE_CHECK_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,
+    SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
     SELECTED_GATE_MARKDOWN_PATH,
+    SELECTED_GATE_PLUGIN_SCRIPT_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_README_PATH,
@@ -900,6 +905,14 @@ def assert_selected_gate_mapping_contract() -> None:
     )
     assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
 
+    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
+    assert plan.full_gate is False
+    assert tuple(item.step.argv for item in plan.selected_steps) == (
+        ACTIONLINT_ARGV,
+        SHELLCHECK_ARGV,
+    )
+    assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
+
     plan = build_selected_gate_plan(
         (
             SELECTED_GATE_PYTHON_SOURCE_PATH,
@@ -931,6 +944,14 @@ def assert_selected_gate_mapping_contract() -> None:
     test_path = SELECTED_GATE_PYTHON_TEST_PATH
     plan = build_selected_gate_plan((test_path,), deleted_paths=(test_path,))
     assert all(item.reason != TEST_REASON for item in plan.selected_steps)
+    deleted_paths = deleted_paths_after_status_resolution(
+        (
+            ChangedPath(path=test_path, status="M"),
+            ChangedPath(path=test_path, status="D"),
+        )
+    )
+    plan = build_selected_gate_plan((test_path,), deleted_paths=deleted_paths)
+    assert all(item.reason != TEST_REASON for item in plan.selected_steps)
     existing_test_target = PYTEST_TARGET_ARG
     plan = build_selected_gate_plan(
         (test_path, existing_test_target),
@@ -942,7 +963,7 @@ def assert_selected_gate_mapping_contract() -> None:
 
     full_gate_examples = (
         SELECTED_GATE_FULL_GATE_PATH,
-        ".github/workflows/spec-tree-evals.yml",
+        SELECTED_GATE_CHECK_WORKFLOW_PATH,
         "outcomeeng/validation/selected_gate.py",
         "outcomeeng_testing/generators/gate.py",
         "outcomeeng_testing/evals/just_recipes.py",
@@ -986,6 +1007,23 @@ def assert_selected_gate_mapping_contract() -> None:
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
         MARKDOWN_REASON
         if item.step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
+        else SKILL_REASON
+        for item in plan.selected_steps
+    )
+
+    plan = build_selected_gate_plan((SELECTED_GATE_PLUGIN_SCRIPT_PATH,))
+    expected_plugin_script_steps = tuple(
+        step
+        for step in VALIDATION_STEPS
+        if step.label in SKILL_STEP_LABELS
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+    )
+    assert tuple(item.step for item in plan.selected_steps) == (
+        expected_plugin_script_steps
+    )
+    assert tuple(item.reason for item in plan.selected_steps) == tuple(
+        PYTHON_REASON
+        if item.step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
         else SKILL_REASON
         for item in plan.selected_steps
     )
@@ -1100,6 +1138,9 @@ def assert_selected_gate_mapping_contract() -> None:
 
     with TemporaryDirectory() as tmp:
         source_path = SELECTED_GATE_PYTHON_TEST_PATH
+        repo = Path(tmp)
+        (repo / source_path).parent.mkdir(parents=True)
+        (repo / source_path).touch()
         runner = selected_gate_runner_for_paths(
             branch_path=source_path,
             branch_status="D",
@@ -1112,7 +1153,7 @@ def assert_selected_gate_mapping_contract() -> None:
         exit_code = run_selected_check(
             spawner=spawner,
             sink=sink,
-            repo=Path(tmp),
+            repo=repo,
             runner=runner,
         )
 

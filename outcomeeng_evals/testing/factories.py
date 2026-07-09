@@ -8,6 +8,7 @@ eval directory tree with one call.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,11 +24,24 @@ from outcomeeng_evals.ci_execution import (
     EXIT_FAILURE,
     EXIT_SUCCESS,
     UV_RUN_EVALS_ARGV_PREFIX,
-    command_for_plan_item,
     execute_ci_plan,
 )
-from outcomeeng_evals.ci_plan import EvalPlanItem
-from outcomeeng_evals.ci_plan import read_changed_paths_file
+from outcomeeng_evals.ci_plan import (
+    ROOT_INSTRUCTION_PATHS,
+    CiMode,
+    EvalPlanItem,
+    build_ci_plan,
+    read_changed_paths_file,
+)
+from outcomeeng_evals.definition import (
+    CiPolicy,
+    DEFAULT_MODEL,
+    DEFAULT_SUITE_THRESHOLD,
+    DEFAULT_TRIALS_PER_CASE,
+    MAX_TRIALS_PER_CASE,
+    EvalDefinition,
+    load_definition,
+)
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
@@ -53,6 +67,8 @@ _DEFAULT_PROMPT_FILENAME = "prompt.md"
 _DEFAULT_EVAL_FILENAME = "eval.toml"
 _DEFAULT_EVAL_RULE = "rule"
 _DEFAULT_PLUGIN_DIR = Path("dist/claude/spec-tree")
+DEFAULT_DEFINITION_THRESHOLD = 0.95
+DEFAULT_DEFINITION_TRIALS = 3
 DEFAULT_PLAN_CASE_IDS = ("alpha", "beta")
 DEFAULT_CI_OWNED_PATH = "src/plugins/spec-tree/skills/manage-pr/**"
 DEFAULT_CI_CHANGED_PATH = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
@@ -61,14 +77,9 @@ DEFAULT_CI_RENAMED_PATH = "docs/manage-pr.md"
 DEFAULT_CI_COPIED_PATH = "docs/copied-suite.py"
 DEFAULT_CI_HARNESS_PATH = "outcomeeng_evals/suite.py"
 DEFAULT_CI_WHITESPACE_PATH = " docs/has edge spaces.md "
-
-
-@dataclass(frozen=True)
-class EvalPlanCommandCase:
-    """Harness-owned CI plan item with its expected command contract."""
-
-    item: EvalPlanItem
-    expected_command: tuple[str, ...]
+DEFAULT_CI_TABBED_PATH = "docs/plain\tpath.md"
+DEFAULT_CI_MALFORMED_STATUS_ROW = "M\tdocs/plain\tpath.md"
+DEFAULT_CI_EXPLICIT_MODEL = "claude-sonnet-4-5"
 
 
 @dataclass(frozen=True)
@@ -87,6 +98,25 @@ class ChangedPathsFileCase:
 
     content: str
     expected_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ChangedPathsFileErrorCase:
+    """Harness-owned changed-path file case that must be rejected."""
+
+    content: str
+
+
+@dataclass(frozen=True)
+class CiMetadataDefinitionCase:
+    """Harness-owned eval definition case for optional CI metadata."""
+
+    eval_toml: Path
+    plugin_dir: Path
+    model: str
+    owned_paths: tuple[str, ...]
+    smoke_case_ids: tuple[str, ...]
+    ci_policy: CiPolicy
 
 
 def make_case(
@@ -169,59 +199,6 @@ def make_eval_plan_item(
     )
 
 
-def make_eval_plan_item_command_cases() -> tuple[EvalPlanItem, ...]:
-    return (
-        make_eval_plan_item(rule="full-suite"),
-        make_eval_plan_item(
-            rule="single-case",
-            case_ids=DEFAULT_PLAN_CASE_IDS[:1],
-        ),
-        make_eval_plan_item(
-            rule="multi-case",
-            plugin_dir=Path("dist/claude/python"),
-            case_ids=DEFAULT_PLAN_CASE_IDS,
-        ),
-    )
-
-
-def make_eval_plan_command_cases(
-    settings: CiRunSettings | None = None,
-) -> tuple[EvalPlanCommandCase, ...]:
-    effective_settings = settings or CiRunSettings()
-    return tuple(
-        EvalPlanCommandCase(
-            item=item,
-            expected_command=expected_command_for_plan_item(
-                item,
-                settings=effective_settings,
-            ),
-        )
-        for item in make_eval_plan_item_command_cases()
-    )
-
-
-def expected_command_for_plan_item(
-    item: EvalPlanItem,
-    *,
-    settings: CiRunSettings,
-) -> tuple[str, ...]:
-    command: list[str] = [
-        *UV_RUN_EVALS_ARGV_PREFIX,
-        str(item.eval_toml),
-        "--plugin-dir",
-        str(item.plugin_dir),
-        "--workers",
-        settings.workers,
-        "--max-budget-usd",
-        settings.max_budget_usd,
-        "--timeout-seconds",
-        settings.timeout_seconds,
-    ]
-    for case_id in item.case_ids:
-        command.extend(("--case-id", case_id))
-    return tuple(command)
-
-
 def expected_default_ci_command(eval_toml: Path) -> tuple[str, ...]:
     return (
         *UV_RUN_EVALS_ARGV_PREFIX[1:],
@@ -275,6 +252,19 @@ def make_changed_paths_file_cases() -> tuple[ChangedPathsFileCase, ...]:
     )
 
 
+def make_changed_paths_file_error_cases() -> tuple[ChangedPathsFileErrorCase, ...]:
+    return (
+        ChangedPathsFileErrorCase(content=DEFAULT_CI_TABBED_PATH + "\n"),
+        ChangedPathsFileErrorCase(content=DEFAULT_CI_MALFORMED_STATUS_ROW + "\n"),
+        ChangedPathsFileErrorCase(
+            content=(
+                f"{DEFAULT_CI_CHANGED_PATH_STATUS}\t{DEFAULT_CI_CHANGED_PATH}\n"
+                f"{DEFAULT_CI_RENAMED_PATH}\n"
+            ),
+        ),
+    )
+
+
 def assert_changed_paths_file_reads_git_name_status_rows() -> None:
     with TemporaryDirectory() as tmp:
         for index, case in enumerate(make_changed_paths_file_cases()):
@@ -282,25 +272,325 @@ def assert_changed_paths_file_reads_git_name_status_rows() -> None:
             changed_paths_file.write_text(case.content, encoding="utf-8")
 
             assert read_changed_paths_file(changed_paths_file) == case.expected_paths
+        for index, error_case in enumerate(make_changed_paths_file_error_cases()):
+            changed_paths_file = Path(tmp) / f"changed-paths-error-{index}.txt"
+            changed_paths_file.write_text(error_case.content, encoding="utf-8")
+
+            try:
+                read_changed_paths_file(changed_paths_file)
+            except ValueError:
+                continue
+            raise AssertionError(
+                f"changed paths file accepted ambiguous input: {error_case.content!r}"
+            )
 
 
-def assert_plan_items_map_to_run_commands_with_settings_and_case_selectors() -> None:
-    for case in make_eval_plan_command_cases():
-        assert command_for_plan_item(case.item, settings=CiRunSettings()) == (
-            case.expected_command
+def make_ci_metadata_definition_case(tmp_path: Path) -> CiMetadataDefinitionCase:
+    eval_toml = make_eval_dir(
+        tmp_path / "eval",
+        plugin_dir=str(_DEFAULT_PLUGIN_DIR),
+        model=DEFAULT_CI_EXPLICIT_MODEL,
+        owned_paths=(DEFAULT_CI_OWNED_PATH,),
+        smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
+        ci_policy=CiPolicy.MANUAL.value,
+    )
+    return CiMetadataDefinitionCase(
+        eval_toml=eval_toml,
+        plugin_dir=_DEFAULT_PLUGIN_DIR,
+        model=DEFAULT_CI_EXPLICIT_MODEL,
+        owned_paths=(DEFAULT_CI_OWNED_PATH,),
+        smoke_case_ids=DEFAULT_PLAN_CASE_IDS[:1],
+        ci_policy=CiPolicy.MANUAL,
+    )
+
+
+def _required_eval_lines() -> tuple[str, ...]:
+    return (
+        f'title = "{_DEFAULT_EVAL_TITLE}"',
+        f'cases = "{_DEFAULT_CASES_FILENAME}"',
+        f'prompt = "{_DEFAULT_PROMPT_FILENAME}"',
+    )
+
+
+def _write_eval_definition(
+    tmp_path: Path,
+    *,
+    lines: tuple[str, ...] = (),
+    with_cases: bool = True,
+    with_prompt: bool = True,
+) -> Path:
+    directory = tmp_path / "eval"
+    directory.mkdir(parents=True)
+    toml_path = directory / _DEFAULT_EVAL_FILENAME
+    toml_path.write_text(
+        "\n".join((*_required_eval_lines(), *lines)) + "\n",
+        encoding="utf-8",
+    )
+    if with_cases:
+        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
+    if with_prompt:
+        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
+    return toml_path
+
+
+def _assert_definition_raises(
+    *,
+    lines: tuple[str, ...],
+    match: str,
+    with_cases: bool = True,
+    with_prompt: bool = True,
+) -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=lines,
+            with_cases=with_cases,
+            with_prompt=with_prompt,
+        )
+        try:
+            load_definition(toml_path)
+        except (FileNotFoundError, KeyError, ValueError) as exc:
+            if match not in str(exc):
+                raise AssertionError(
+                    f"expected error containing {match!r}, got {exc!r}"
+                ) from exc
+            return
+        raise AssertionError(f"expected load_definition to reject {toml_path}")
+
+
+def assert_definition_loads_required_fields() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(Path(tmp))
+
+        definition = load_definition(toml_path)
+
+        assert isinstance(definition, EvalDefinition)
+        assert definition.title == _DEFAULT_EVAL_TITLE
+
+
+def assert_definition_resolves_cases_path_relative_to_toml_directory() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(Path(tmp))
+
+        definition = load_definition(toml_path)
+
+        assert (
+            definition.cases_path
+            == (toml_path.parent / _DEFAULT_CASES_FILENAME).resolve()
         )
 
 
-def assert_multi_case_plan_item_preserves_case_selector_order() -> None:
-    assert command_for_plan_item(
-        make_eval_plan_item(case_ids=DEFAULT_PLAN_CASE_IDS),
-        settings=CiRunSettings(),
-    )[-4:] == (
-        "--case-id",
-        *DEFAULT_PLAN_CASE_IDS[:1],
-        "--case-id",
-        *DEFAULT_PLAN_CASE_IDS[1:],
+def assert_definition_resolves_prompt_path_relative_to_toml_directory() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(Path(tmp))
+
+        definition = load_definition(toml_path)
+
+        assert (
+            definition.prompt_template_path
+            == (toml_path.parent / _DEFAULT_PROMPT_FILENAME).resolve()
+        )
+
+
+def assert_definition_applies_default_threshold_when_omitted() -> None:
+    with TemporaryDirectory() as tmp:
+        definition = load_definition(_write_eval_definition(Path(tmp)))
+
+        assert definition.threshold == DEFAULT_SUITE_THRESHOLD
+
+
+def assert_definition_applies_default_trials_when_omitted() -> None:
+    with TemporaryDirectory() as tmp:
+        definition = load_definition(_write_eval_definition(Path(tmp)))
+
+        assert definition.trials == DEFAULT_TRIALS_PER_CASE
+
+
+def assert_definition_applies_default_model_when_omitted() -> None:
+    with TemporaryDirectory() as tmp:
+        definition = load_definition(_write_eval_definition(Path(tmp)))
+
+        assert definition.model == DEFAULT_MODEL
+
+
+def assert_definition_uses_explicit_threshold_when_set() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f"threshold = {DEFAULT_DEFINITION_THRESHOLD}",),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert math.isclose(definition.threshold, DEFAULT_DEFINITION_THRESHOLD)
+
+
+def assert_definition_uses_explicit_trials_when_set() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f"trials = {DEFAULT_DEFINITION_TRIALS}",),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert definition.trials == DEFAULT_DEFINITION_TRIALS
+
+
+def assert_definition_loads_optional_ci_metadata() -> None:
+    with TemporaryDirectory() as tmp:
+        case = make_ci_metadata_definition_case(Path(tmp))
+
+        definition = load_definition(case.eval_toml)
+
+        assert definition.plugin_dir == case.plugin_dir
+        assert definition.model == case.model
+        assert definition.owned_paths == case.owned_paths
+        assert definition.smoke_case_ids == case.smoke_case_ids
+        assert definition.ci_policy is case.ci_policy
+
+
+def assert_definition_uses_explicit_model_when_set() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f'model = "{DEFAULT_CI_EXPLICIT_MODEL}"',),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert definition.model == DEFAULT_CI_EXPLICIT_MODEL
+
+
+def assert_definition_rejects_inherit_model() -> None:
+    _assert_definition_raises(lines=('model = "inherit"',), match="model")
+
+
+def assert_definition_rejects_non_string_model() -> None:
+    _assert_definition_raises(lines=("model = 1",), match="model")
+
+
+def assert_definition_accepts_trials_at_cap() -> None:
+    with TemporaryDirectory() as tmp:
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f"trials = {MAX_TRIALS_PER_CASE}",),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert definition.trials == MAX_TRIALS_PER_CASE
+
+
+def assert_definition_rejects_trials_above_cap() -> None:
+    _assert_definition_raises(
+        lines=(f"trials = {MAX_TRIALS_PER_CASE + 1}",),
+        match="trials",
     )
+
+
+def assert_definition_rejects_trials_below_one() -> None:
+    _assert_definition_raises(lines=("trials = 0",), match="trials")
+
+
+def assert_definition_rejects_missing_title() -> None:
+    with TemporaryDirectory() as tmp:
+        directory = Path(tmp) / "eval"
+        directory.mkdir(parents=True)
+        toml_path = directory / _DEFAULT_EVAL_FILENAME
+        toml_path.write_text(
+            (
+                f'cases = "{_DEFAULT_CASES_FILENAME}"\n'
+                f'prompt = "{_DEFAULT_PROMPT_FILENAME}"\n'
+            ),
+            encoding="utf-8",
+        )
+        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
+        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
+
+        try:
+            load_definition(toml_path)
+        except (KeyError, ValueError) as exc:
+            if "title" not in str(exc):
+                raise AssertionError(f"expected title error, got {exc!r}") from exc
+            return
+        raise AssertionError(f"expected load_definition to reject {toml_path}")
+
+
+def assert_definition_rejects_missing_cases() -> None:
+    with TemporaryDirectory() as tmp:
+        directory = Path(tmp) / "eval"
+        directory.mkdir(parents=True)
+        toml_path = directory / _DEFAULT_EVAL_FILENAME
+        toml_path.write_text(
+            (
+                f'title = "{_DEFAULT_EVAL_TITLE}"\n'
+                f'prompt = "{_DEFAULT_PROMPT_FILENAME}"\n'
+            ),
+            encoding="utf-8",
+        )
+        (directory / _DEFAULT_PROMPT_FILENAME).write_text("", encoding="utf-8")
+
+        try:
+            load_definition(toml_path)
+        except (KeyError, ValueError) as exc:
+            if "cases" not in str(exc):
+                raise AssertionError(f"expected cases error, got {exc!r}") from exc
+            return
+        raise AssertionError(f"expected load_definition to reject {toml_path}")
+
+
+def assert_definition_rejects_missing_prompt() -> None:
+    with TemporaryDirectory() as tmp:
+        directory = Path(tmp) / "eval"
+        directory.mkdir(parents=True)
+        toml_path = directory / _DEFAULT_EVAL_FILENAME
+        toml_path.write_text(
+            (f'title = "{_DEFAULT_EVAL_TITLE}"\ncases = "{_DEFAULT_CASES_FILENAME}"\n'),
+            encoding="utf-8",
+        )
+        (directory / _DEFAULT_CASES_FILENAME).write_text("", encoding="utf-8")
+
+        try:
+            load_definition(toml_path)
+        except (KeyError, ValueError) as exc:
+            if "prompt" not in str(exc):
+                raise AssertionError(f"expected prompt error, got {exc!r}") from exc
+            return
+        raise AssertionError(f"expected load_definition to reject {toml_path}")
+
+
+def assert_definition_rejects_nonexistent_cases_file() -> None:
+    _assert_definition_raises(lines=(), match="cases", with_cases=False)
+
+
+def assert_definition_rejects_nonexistent_prompt_file() -> None:
+    _assert_definition_raises(lines=(), match="prompt", with_prompt=False)
+
+
+def assert_root_instruction_changes_select_full_suites() -> None:
+    with TemporaryDirectory() as tmp:
+        eval_toml = make_eval_dir(
+            Path(tmp) / "evals" / "rule",
+            plugin_dir="dist/claude/spec-tree",
+            owned_paths=(DEFAULT_CI_OWNED_PATH,),
+            smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
+        )
+
+        for root_instruction_path in ROOT_INSTRUCTION_PATHS:
+            plan = build_ci_plan(
+                eval_toml.parent.parent,
+                mode=CiMode.PR,
+                changed_paths=(root_instruction_path,),
+            )
+
+            assert plan == [
+                EvalPlanItem(
+                    eval_toml=eval_toml,
+                    plugin_dir=_DEFAULT_PLUGIN_DIR,
+                    case_ids=(),
+                )
+            ]
 
 
 def assert_empty_plan_exits_successfully_without_commands() -> None:
@@ -434,6 +724,7 @@ def make_eval_dir(
     with_cases: bool = True,
     with_prompt: bool = True,
     plugin_dir: str | None = None,
+    model: str | None = None,
     owned_paths: tuple[str, ...] = (),
     smoke_case_ids: tuple[str, ...] = (),
     ci_policy: str | None = None,
@@ -455,6 +746,8 @@ def make_eval_dir(
         lines.append(f"trials = {trials}")
     if plugin_dir is not None:
         lines.append(f'plugin_dir = "{plugin_dir}"')
+    if model is not None:
+        lines.append(f'model = "{model}"')
     if owned_paths:
         rendered_owned_paths = ", ".join(f'"{path}"' for path in owned_paths)
         lines.append(f"owned_paths = [{rendered_owned_paths}]")
