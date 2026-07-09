@@ -2,11 +2,10 @@
 
 Known follow-ups for the audit node. Coordination note; not spec truth.
 
-## Generic auditor has no YAML audit surface
+## Generic auditor has no workflow-YAML audit surface
 
-During PR 420 local verification, the `auditor` agent rejected audit setup for
-the full changeset scope when `.github/workflows/spec-tree-evals.yml` was
-included:
+During PR 420 local verification, the `auditor` agent rejected audit setup when
+the full changeset scope included `.github/workflows/spec-tree-evals.yml`:
 
 ```text
 missing required skill: audit-yaml-kind
@@ -19,8 +18,8 @@ Checked facts:
 - The `auditor` agent approved the remaining supported Python, test
   infrastructure, spec-test, and coordination-note scope after the workflow YAML
   was excluded.
-- The final `changes-reviewer` gate still needs to review the full diff,
-  including `.github/workflows/spec-tree-evals.yml`.
+- The changeset review gate still owns full-diff review, including workflow YAML,
+  because the generic implementation auditor cannot currently judge that surface.
 
 Revisit condition: when the audit-family surface work in `PLAN.md` resumes,
 decide whether workflow YAML receives a dedicated YAML audit skill or routes to a
