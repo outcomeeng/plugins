@@ -48,3 +48,23 @@ Revisit condition: run `/apply` on
 `evals/local-completion-boundary` and `evals/transport-selection` to
 producer-coupled evals, or reclassify/remove the `[eval]` assertions they no
 longer support. Rerun `eval-evidence-auditor` over the repaired eval artifacts.
+
+### PR-lifecycle skills carry no eval trigger
+
+`transport-selection` does not own the `manage-github-pr` or `open-pr` skills.
+Its `prompt.md` names `manage-github-pr` only as the literal `delegation_target`
+string its own decision rule dictates, never loading that skill's content, and
+`open-pr` appears in neither `prompt.md` nor `cases.jsonl`. Replacing either
+skill's `SKILL.md` with unrelated text changes no case outcome, so a CI trigger
+on those paths starts a job that cannot detect the change that started it.
+
+Those four trigger paths therefore carry no `owned_paths` declaration and no
+generated trigger entry. Declaring them would assert a producer coupling the
+suite does not have — the `False` producer-coupling category in
+`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`.
+
+Revisit condition: this resolves with the prompt-only simulation above. Once
+`transport-selection` materializes its prompt from a declared `prompt_source`
+producer, declare the producers the materialized prompt actually reads — then
+the generator derives their trigger paths, and a mutation to those skills
+genuinely changes a case outcome.
