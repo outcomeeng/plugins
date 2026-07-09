@@ -134,6 +134,7 @@ def assert_main_group_exposes_documented_subcommands() -> None:
         "plan",
         "ci",
         "materialize-prompts",
+        "materialize-ci-triggers",
     ):
         assert subcommand in result.output
 

@@ -17,14 +17,13 @@ from tempfile import TemporaryDirectory
 
 from hypothesis import given, seed, settings
 
-from outcomeeng_evals.ci_plan import UNIVERSAL_OWNED_PATHS
+from outcomeeng_evals.ci_plan import UNIVERSAL_OWNED_PATHS, matches
 from outcomeeng_evals.ci_triggers import (
     BEGIN_MARKER,
     CiTriggerError,
     END_MARKER,
     EXPECTED_BLOCK_COUNT,
     ci_trigger_paths,
-    matches,
     materialize_ci_triggers,
     minimal_patterns,
 )

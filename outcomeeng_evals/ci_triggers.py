@@ -20,7 +20,6 @@ generator that reads a closed set of inputs has no reason to commit either.
 
 from __future__ import annotations
 
-import fnmatch
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,16 +145,6 @@ def materialize_ci_triggers(
 
     workflow.write_text(rendered, encoding="utf-8")
     return CiTriggerResult(workflow=workflow, paths=paths, changed=True)
-
-
-def matches(path: str, pattern: str) -> bool:
-    """Whether ``pattern`` selects ``path`` under the CI provider's glob rules.
-
-    A trailing ``/**`` selects the directory's contents; ``fnmatch``'s ``*``
-    already spans ``/``, so the pattern needs no special handling beyond it.
-    """
-
-    return fnmatch.fnmatchcase(path, pattern)
 
 
 def minimal_patterns(patterns: set[str]) -> tuple[str, ...]:

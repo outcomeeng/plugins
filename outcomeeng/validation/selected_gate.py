@@ -17,6 +17,7 @@ from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
     EVAL_PROMPTS_ARGV,
+    EVAL_TRIGGER_WORKFLOW,
     EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
     INSTRUCTION_BLOCK_ARGV,
@@ -122,7 +123,7 @@ SKILL_PATTERNS: Final = (
 # eval workflow, so only those two surfaces can stale it.
 EVAL_TRIGGER_PATTERNS: Final = (
     "spx/**/evals/**",
-    ".github/workflows/spec-tree-evals.yml",
+    EVAL_TRIGGER_WORKFLOW,
 )
 # A producer-coupled prompt is derived from a producer the eval names under
 # `src/plugins/`. The producer set is per-eval, not statically known here, so

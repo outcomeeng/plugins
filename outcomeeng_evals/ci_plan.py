@@ -162,5 +162,17 @@ def _pr_selection(
     return None
 
 
+def matches(path: str, pattern: str) -> bool:
+    """Whether ``pattern`` selects ``path`` under CI-ownership glob rules.
+
+    A trailing ``/**`` selects a directory's contents; ``fnmatch``'s ``*``
+    already spans ``/``, so the pattern needs no handling beyond it. This is
+    the one place the glob semantics of `owned_paths` are defined — the CI
+    workflow's generated trigger filter matches with the same rules.
+    """
+
+    return fnmatch.fnmatchcase(path, pattern)
+
+
 def _matches_any(path: str, patterns: tuple[str, ...]) -> bool:
-    return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+    return any(matches(path, pattern) for pattern in patterns)
