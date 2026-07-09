@@ -10,6 +10,7 @@ The ``main`` group exposes these subcommands:
 - ``plan`` — select eval suites and cases for CI.
 - ``ci`` — plan and run eval suites for CI.
 - ``materialize-prompts`` — write or check producer-derived prompt.md files.
+- ``materialize-ci-triggers`` — write or check the CI workflow's eval trigger paths.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import click
 
 from outcomeeng_evals.cli.commands.discover import discover_command
 from outcomeeng_evals.cli.commands.ci import ci_command
+from outcomeeng_evals.cli.commands.ci_triggers import ci_triggers_command
 from outcomeeng_evals.cli.commands.history import history_command
 from outcomeeng_evals.cli.commands.materialize_prompts import (
     materialize_prompts_command,
@@ -45,3 +47,4 @@ main.add_command(discover_command)
 main.add_command(ci_command)
 main.add_command(plan_command)
 main.add_command(materialize_prompts_command)
+main.add_command(ci_triggers_command)

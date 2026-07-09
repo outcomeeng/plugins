@@ -16,8 +16,12 @@
 #
 # Triggers: every `pull_request` that touches an eval-owned spec or skill
 # surface, plus `push` to main for the same paths, a weekly `schedule`, and
-# manual `workflow_dispatch`. A change to the workflow file itself is not a
-# trigger path — validate workflow edits via `workflow_dispatch`. The OAuth
+# manual `workflow_dispatch`. Both `paths:` blocks are GENERATED from the eval
+# definitions by `outcomeeng-evals materialize-ci-triggers` (`just
+# build-eval-triggers`); the gate's `eval-triggers` step fails on drift. Edit
+# an eval's `owned_paths`, never these lists. A change to the workflow file
+# itself is not a trigger path — validate workflow edits via
+# `workflow_dispatch`. The OAuth
 # secret reaches the `claude` subprocess, so every PR run is gated by the
 # `authorize` job: only a PR whose author has admin/maintain/write permission
 # runs (fork/external PRs are skipped, and GitHub withholds secrets from fork
@@ -48,16 +52,15 @@ on:
     # so do not mark it a required status check without a separate always-runs
     # gate job.
     paths:
+      # BEGIN eval-trigger-paths
       - "AGENTS.md"
       - "CLAUDE.md"
       - "dist/claude/spec-tree/agents/changes-reviewer.md"
       - "dist/claude/spec-tree/skills/audit-adr/**"
       - "dist/claude/spec-tree/skills/audit-pdr/**"
       - "dist/claude/spec-tree/skills/handoff/**"
-      - "dist/claude/spec-tree/skills/manage-github-pr/**"
       - "dist/claude/spec-tree/skills/merge/**"
       - "dist/claude/spec-tree/skills/merging-standards/**"
-      - "dist/claude/spec-tree/skills/open-pr/**"
       - "dist/claude/spec-tree/skills/review-changes/**"
       - "dist/claude/spec-tree/skills/understand/**"
       - "dist/claude/typescript/skills/test-typescript/**"
@@ -88,29 +91,28 @@ on:
       - "src/plugins/spec-tree/skills/audit-adr/**"
       - "src/plugins/spec-tree/skills/audit-pdr/**"
       - "src/plugins/spec-tree/skills/handoff/**"
-      - "src/plugins/spec-tree/skills/manage-github-pr/**"
       - "src/plugins/spec-tree/skills/merge/**"
       - "src/plugins/spec-tree/skills/merging-standards/**"
-      - "src/plugins/spec-tree/skills/open-pr/**"
       - "src/plugins/spec-tree/skills/review-changes/**"
       - "src/plugins/spec-tree/skills/understand/**"
       - "src/plugins/typescript/skills/test-typescript/**"
       - "src/plugins/typescript/skills/typescript-test-standards/**"
+      # END eval-trigger-paths
   push:
     branches: [main]
     # Same scope as the PR filter — a change to this workflow file itself does
     # not refresh the baseline; dispatch it when a workflow edit needs a run.
+    # Generated: see the header note.
     paths:
+      # BEGIN eval-trigger-paths
       - "AGENTS.md"
       - "CLAUDE.md"
       - "dist/claude/spec-tree/agents/changes-reviewer.md"
       - "dist/claude/spec-tree/skills/audit-adr/**"
       - "dist/claude/spec-tree/skills/audit-pdr/**"
       - "dist/claude/spec-tree/skills/handoff/**"
-      - "dist/claude/spec-tree/skills/manage-github-pr/**"
       - "dist/claude/spec-tree/skills/merge/**"
       - "dist/claude/spec-tree/skills/merging-standards/**"
-      - "dist/claude/spec-tree/skills/open-pr/**"
       - "dist/claude/spec-tree/skills/review-changes/**"
       - "dist/claude/spec-tree/skills/understand/**"
       - "dist/claude/typescript/skills/test-typescript/**"
@@ -141,14 +143,13 @@ on:
       - "src/plugins/spec-tree/skills/audit-adr/**"
       - "src/plugins/spec-tree/skills/audit-pdr/**"
       - "src/plugins/spec-tree/skills/handoff/**"
-      - "src/plugins/spec-tree/skills/manage-github-pr/**"
       - "src/plugins/spec-tree/skills/merge/**"
       - "src/plugins/spec-tree/skills/merging-standards/**"
-      - "src/plugins/spec-tree/skills/open-pr/**"
       - "src/plugins/spec-tree/skills/review-changes/**"
       - "src/plugins/spec-tree/skills/understand/**"
       - "src/plugins/typescript/skills/test-typescript/**"
       - "src/plugins/typescript/skills/typescript-test-standards/**"
+      # END eval-trigger-paths
   schedule:
     # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
     - cron: "0 6 * * 1"

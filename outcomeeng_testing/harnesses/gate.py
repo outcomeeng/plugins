@@ -31,6 +31,8 @@ from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    EVAL_PROMPTS_ARGV,
+    EVAL_TRIGGERS_ARGV,
     FAILURE_EXCERPT_LINE_LIMIT,
     FMT_CHECK_ARGV,
     FULL_LOG_LABEL,
@@ -94,6 +96,7 @@ from outcomeeng.validation.selected_gate import (
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
     GIT_LS_UNTRACKED_ARGV,
+    EVAL_REASON,
     INSTRUCTION_BLOCK_REASON,
     MARKDOWN_REASON,
     PYTHON_REASON,
@@ -886,6 +889,22 @@ def _assert_production_step_lists_smoke() -> None:
     assert len(spawner.spawn_calls) == len(steps)
 
 
+def _expected_skill_reason(argv: tuple[str, ...]) -> str:
+    if argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}:
+        return MARKDOWN_REASON
+    if argv == EVAL_PROMPTS_ARGV:
+        return EVAL_REASON
+    return SKILL_REASON
+
+
+def _expected_plugin_script_reason(argv: tuple[str, ...]) -> str:
+    if argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}:
+        return PYTHON_REASON
+    if argv == EVAL_PROMPTS_ARGV:
+        return EVAL_REASON
+    return SKILL_REASON
+
+
 def assert_selected_gate_mapping_contract() -> None:
     """Assert selected local gate planning mappings."""
 
@@ -905,13 +924,21 @@ def assert_selected_gate_mapping_contract() -> None:
     )
     assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
 
+    # The eval workflow carries the generated trigger blocks, so editing it
+    # selects the trigger currency check alongside the workflow linters. It
+    # carries no producer, so the prompt check stays unselected.
     plan = build_selected_gate_plan((SELECTED_GATE_EVAL_WORKFLOW_PATH,))
     assert plan.full_gate is False
     assert tuple(item.step.argv for item in plan.selected_steps) == (
         ACTIONLINT_ARGV,
         SHELLCHECK_ARGV,
+        EVAL_TRIGGERS_ARGV,
     )
-    assert all(item.reason == WORKFLOW_REASON for item in plan.selected_steps)
+    assert tuple(item.reason for item in plan.selected_steps) == (
+        WORKFLOW_REASON,
+        WORKFLOW_REASON,
+        EVAL_REASON,
+    )
 
     plan = build_selected_gate_plan(
         (
@@ -995,20 +1022,19 @@ def assert_selected_gate_mapping_contract() -> None:
     )
 
     plan = build_selected_gate_plan((SELECTED_GATE_SKILL_PATH,))
+    # An authored plugin file may be a producer for a producer-coupled eval
+    # prompt, so the prompt currency check joins the skill and markdown steps.
     expected_skill_markdown_steps = tuple(
         step
         for step in VALIDATION_STEPS
         if step.label in SKILL_STEP_LABELS
-        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
+        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV, EVAL_PROMPTS_ARGV}
     )
     assert tuple(item.step for item in plan.selected_steps) == (
         expected_skill_markdown_steps
     )
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
-        MARKDOWN_REASON
-        if item.step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
-        else SKILL_REASON
-        for item in plan.selected_steps
+        _expected_skill_reason(item.step.argv) for item in plan.selected_steps
     )
 
     plan = build_selected_gate_plan((SELECTED_GATE_PLUGIN_SCRIPT_PATH,))
@@ -1016,21 +1042,27 @@ def assert_selected_gate_mapping_contract() -> None:
         step
         for step in VALIDATION_STEPS
         if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV, EVAL_PROMPTS_ARGV}
     )
     assert tuple(item.step for item in plan.selected_steps) == (
         expected_plugin_script_steps
     )
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
-        PYTHON_REASON
-        if item.step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-        else SKILL_REASON
-        for item in plan.selected_steps
+        _expected_plugin_script_reason(item.step.argv) for item in plan.selected_steps
     )
 
+    # A shared fragment is inlined by the build; an eval names its producer by
+    # an authored `src/plugins/` path, so no shared-fragment edit stales a
+    # materialized prompt and the prompt check stays unselected here.
     shared_plan = build_selected_gate_plan((SELECTED_GATE_SHARED_SOURCE_PATH,))
+    expected_shared_steps = tuple(
+        step
+        for step in VALIDATION_STEPS
+        if step.label in SKILL_STEP_LABELS
+        or step.argv in {FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV}
+    )
     assert tuple(item.step for item in shared_plan.selected_steps) == (
-        expected_skill_markdown_steps
+        expected_shared_steps
     )
     assert tuple(item.reason for item in shared_plan.selected_steps) == tuple(
         MARKDOWN_REASON

@@ -59,6 +59,8 @@ from outcomeeng.validation._summary_schema import (
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    EVAL_PROMPTS_ARGV,
+    EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
@@ -98,6 +100,8 @@ __all__ = [
     "AD_HOC_SUMMARY_SCHEMA",
     "CHECK_RECIPES",
     "CHECK_SUMMARY_SCHEMA",
+    "EVAL_PROMPTS_ARGV",
+    "EVAL_TRIGGERS_ARGV",
     "FMT_CHECK_ARGV",
     "FAILURE_EXCERPT_LINE_LIMIT",
     "FULL_LOG_LABEL",
