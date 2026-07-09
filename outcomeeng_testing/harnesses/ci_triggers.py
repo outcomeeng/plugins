@@ -24,7 +24,6 @@ from outcomeeng_evals.ci_triggers import (
     END_MARKER,
     EXPECTED_BLOCK_COUNT,
     ci_trigger_paths,
-    materialize_ci_triggers,
     minimal_patterns,
 )
 from outcomeeng_evals.cli import EXIT_SUCCESS, main
@@ -190,14 +189,13 @@ def assert_every_trigger_block_receives_the_same_paths() -> None:
     """Assert each declared trigger event renders an identical path list."""
 
     with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
-        result = materialize_ci_triggers(
-            repo.root, repo.workflow, repo_root=repo.repo_root
-        )
+        assert _invoke_cli(repo, check=False).exit_code == EXIT_SUCCESS
+        expected = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
         blocks = _rendered_blocks(repo.workflow_text())
 
         assert len(blocks) == EXPECTED_BLOCK_COUNT
         for block in blocks:
-            assert block == result.paths
+            assert block == expected
 
 
 def assert_minimization_preserves_coverage() -> None:
