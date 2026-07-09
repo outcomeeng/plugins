@@ -28,6 +28,9 @@ SELECTED_GATE_PLUGIN_SCRIPT_PATH = (
 SELECTED_GATE_SHARED_SOURCE_PATH = "src/_shared/spec-tree/instruction-block.md"
 SELECTED_GATE_WORKFLOW_PATH = "scripts/check.sh"
 SELECTED_GATE_EVAL_WORKFLOW_PATH = ".github/workflows/spec-tree-evals.yml"
+SELECTED_GATE_EVAL_DEFINITION_PATH = (
+    "spx/21-spec-tree.enabler/76-merging.enabler/evals/transport-selection/eval.toml"
+)
 SELECTED_GATE_CHECK_WORKFLOW_PATH = ".github/workflows/check.yml"
 SELECTED_GATE_FULL_GATE_PATH = "pyproject.toml"
 

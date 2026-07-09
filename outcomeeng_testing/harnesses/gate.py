@@ -113,6 +113,7 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_CHECK_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,
+    SELECTED_GATE_EVAL_DEFINITION_PATH,
     SELECTED_GATE_EVAL_WORKFLOW_PATH,
     SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH,
     SELECTED_GATE_MARKDOWN_PATH,
@@ -938,6 +939,24 @@ def assert_selected_gate_mapping_contract() -> None:
         WORKFLOW_REASON,
         WORKFLOW_REASON,
         EVAL_REASON,
+    )
+
+    # An eval definition generates both the CI trigger list and, for a
+    # producer-coupled suite, the materialized prompt — so it selects both
+    # currency checks, alongside the markdown lane its `spx/**` path matches.
+    plan = build_selected_gate_plan((SELECTED_GATE_EVAL_DEFINITION_PATH,))
+    assert plan.full_gate is False
+    assert tuple(item.step.argv for item in plan.selected_steps) == (
+        FMT_CHECK_ARGV,
+        EVAL_TRIGGERS_ARGV,
+        EVAL_PROMPTS_ARGV,
+        SPX_MARKDOWN_ARGV,
+    )
+    assert tuple(item.reason for item in plan.selected_steps) == (
+        MARKDOWN_REASON,
+        EVAL_REASON,
+        EVAL_REASON,
+        MARKDOWN_REASON,
     )
 
     plan = build_selected_gate_plan(
