@@ -1,108 +1,52 @@
-# Example Architecture Review
+<example_verdict>
 
-This is a complete REJECTED review showing the concern table and the level of detail expected from `audit-rust-architecture`.
+This ADR-target example is the complete JSON output for a rejected Rust architecture audit. It includes only Rust-specific architecture concerns; generic ADR section structure, atemporal voice, and tag validity are absent because the composing artifact-type auditor owns them.
 
-# ARCHITECTURE REVIEW
-
-**Decision:** REJECTED
-
-## Verdict
-
-| # | Concern               | Status | Detail                                         |
-| - | --------------------- | ------ | ---------------------------------------------- |
-| 1 | Section structure     | REJECT | Contains phantom "Testing Strategy" section    |
-| 2 | Testability in Verif. | REJECT | Verification omits DI and no-mocking rules     |
-| 3 | Atemporal voice       | REJECT | Decision statement narrates present code state |
-| 4 | Mocking prohibition   | REJECT | Decision prescribes `mockall` at the seam      |
-| 5 | Level accuracy        | PASS   | Level references are consistent                |
-| 6 | Anti-patterns         | REJECT | Level assignment table moved into ADR          |
-| 7 | Ancestor consistency  | PASS   | No contradiction with ancestor decisions       |
-
----
-
-## Violations
-
-### Mocking At The Boundary
-
-**Where:** decision statement, "Use `mockall` for all command runner tests"
-**Concern:** Mocking prohibition
-**Why this fails:** The ADR turns generated mocks into the intended seam. The Rust architecture standard requires dependency injection with real traits or function seams so tests preserve coupling to the boundary.
-
-**Correct approach:**
-
-```rust
-pub trait CommandRunner {
-    fn run(&self, program: &str, args: &[&str]) -> Result<CommandOutput, CommandError>;
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-rust-architecture",
+  "target": "spx/example.enabler/15-command-runner.adr.md",
+  "overall": "FAIL",
+  "rows": [
+    {
+      "name": "testability-in-verification",
+      "status": "FAIL",
+      "findings": [
+        {
+          "rule": "missing-testability",
+          "file": "spx/example.enabler/15-command-runner.adr.md",
+          "message": "`## Verification` does not require external command execution to flow through an injected trait or function seam; add an ALWAYS rule requiring the seam so command construction can be audited independently from process execution."
+        }
+      ]
+    },
+    {
+      "name": "mocking-prohibition",
+      "status": "FAIL",
+      "findings": [
+        {
+          "rule": "generated-mock-seam",
+          "file": "spx/example.enabler/15-command-runner.adr.md",
+          "message": "`mockall` is named as the controlled implementation; dependency injection must inject a real trait implementation or function seam, not a generated mock framework double."
+        }
+      ]
+    },
+    { "name": "level-accuracy", "status": "PASS", "findings": [] },
+    {
+      "name": "anti-patterns",
+      "status": "FAIL",
+      "findings": [
+        {
+          "rule": "level-assignment-table",
+          "file": "spx/example.enabler/15-command-runner.adr.md",
+          "message": "A level assignment table appears in the Rust architecture decision; remove the table and keep level selection in the testing workflow while the ADR states the seam that makes the levels possible."
+        }
+      ]
+    },
+    { "name": "ancestor-consistency", "status": "PASS", "findings": [] }
+  ],
+  "metadata": { "branch": "work/example" }
 }
-
-pub fn build_site<R: CommandRunner>(
-    config: &BuildConfig,
-    runner: &R,
-) -> Result<BuildResult, BuildError> {
-    runner.run("hugo", &["--destination", config.output_dir.as_str()])?;
-    Ok(BuildResult::success())
-}
 ```
 
----
-
-### Phantom Testing Strategy Section
-
-**Where:** `## Testing Strategy` with a level assignment table
-**Concern:** Section structure, Anti-patterns
-**Why this fails:** The ADR template has no Testing Strategy section. Level assignments are a downstream `/test` concern. The ADR should define the seam that makes Level 1 or Level 2 verification possible, then leave the final level choice to the testing workflow.
-
-**Correct approach:**
-
-```markdown
-## Verification
-
-### Audit
-
-- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- preserves isolated verification of command logic ([audit])
-- NEVER: `mockall`, `faux`, or generated mocks as the primary strategy for architectural seams ([audit])
-```
-
----
-
-### Missing Testability Constraints
-
-**Where:** `## Verification`
-**Concern:** Testability in Verification
-**Why this fails:** The ADR governs build orchestration, but `## Verification` has no `### Audit` rules that force observable seams. Removing the phantom section is insufficient unless those constraints move into ALWAYS and NEVER rules under `### Audit`.
-
----
-
-### Temporal Language In The Decision Statement
-
-**Where:** decision statement, "The current `build.rs` wrapper shells out directly..."
-**Concern:** Atemporal voice
-**Why this fails:** The sentence describes a code snapshot that expires. An ADR states enduring architecture, not the condition of one file on one date.
-
-**Correct approach:**
-
-```markdown
-Build orchestration invokes external binaries through injected runner seams that isolate command construction from process execution.
-```
-
----
-
-## Required Changes
-
-1. Remove the Testing Strategy section and fold testability into `## Verification`'s `### Audit`
-2. Replace `mockall` language with injected trait or function seams
-3. Rewrite the decision statement in atemporal voice
-4. Add ALWAYS and NEVER rules under `### Audit` that make the intended test shape observable
-
----
-
-## References
-
-- /rust-architecture-standards: `<adr_sections>`
-- /rust-architecture-standards: `<testability_in_verification>`
-- /rust-architecture-standards: `<atemporal_voice>`
-- /rust-architecture-standards: `<di_patterns>`
-
----
-
-Revise and resubmit.
+</example_verdict>

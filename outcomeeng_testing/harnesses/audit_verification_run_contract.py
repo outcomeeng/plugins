@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
+from collections.abc import Mapping
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any
 from typing import Final
 
 from outcomeeng.validation.spx_version import (
@@ -25,6 +30,10 @@ AUDIT_SKILL_SCRIPT_DIRS: Final = tuple(
 )
 SPEC_TREE_AGENT_DIRS: Final = tuple(
     surface / "spec-tree" / "agents" for surface in PLUGIN_SURFACES
+)
+SPEC_TREE_AUDIT_SKILL_PATH: Final = Path("src/plugins/spec-tree/skills/audit/SKILL.md")
+SPEC_TREE_IMPLEMENTATION_AUDITOR_PATH: Final = Path(
+    "src/plugins/spec-tree/agents/implementation-auditor.md"
 )
 RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
     "auditor.md",
@@ -52,6 +61,60 @@ LANGUAGE_CONCERN_SKILLS: Final = (
     ),
     ("rust", ("audit-rust-code", "audit-rust-tests", "audit-rust-architecture")),
 )
+ARCHITECTURE_CONCERN_SKILL_PATHS: Final = (
+    Path("src/plugins/python/skills/audit-python-architecture/SKILL.md"),
+    Path("src/plugins/rust/skills/audit-rust-architecture/SKILL.md"),
+    Path("src/plugins/typescript/skills/audit-typescript-architecture/SKILL.md"),
+)
+IMPLEMENTATION_AUDIT_INPUT: Final = {
+    "schema_version": 1,
+    "request": {"kind": "implementation-audit-contract"},
+}
+IMPLEMENTATION_AUDIT_SCOPE_UNIT: Final = {
+    "unitId": "unit-python-code",
+    "auditClass": "implementation",
+    "auditKind": "code",
+    "subject": "file.txt",
+    "coverageRequirement": "required",
+    "coverageStatus": "audited",
+    "priorContext": {
+        "changedFilePartition": "file.txt",
+        "concernPartition": "code",
+        "languagePartition": "python",
+    },
+    "expectedProducer": {
+        "producerKind": "skill",
+        "agentName": "implementation-auditor",
+        "agentOwningPluginName": "spec-tree",
+        "skillName": "audit-python-code",
+        "skillOwningPluginName": "python",
+        "invocationRole": "leaf-skill",
+    },
+    "recordedByRunDriver": {
+        "producerKind": "agent",
+        "agentName": "implementation-auditor",
+        "agentOwningPluginName": "spec-tree",
+        "skillName": "audit",
+        "skillOwningPluginName": "spec-tree",
+        "invocationRole": "run-driver",
+    },
+}
+IMPLEMENTATION_AUDIT_FINDING: Final = {
+    "unitId": "unit-python-code",
+    "producerIdentity": {
+        "producerKind": "skill",
+        "agentName": "implementation-auditor",
+        "agentOwningPluginName": "spec-tree",
+        "skillName": "audit-python-code",
+        "skillOwningPluginName": "python",
+        "invocationRole": "leaf-skill",
+    },
+    "rule": "example-rule",
+    "severity": "blocking",
+    "location": "file.txt:1",
+    "message": "example finding",
+    "evidence": {"observed": "problem", "expected": "clean"},
+}
 
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
@@ -82,10 +145,200 @@ def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
     )
 
 
+def implementation_auditor_wrapper_is_thin_projection_relay() -> bool:
+    text = SPEC_TREE_IMPLEMENTATION_AUDITOR_PATH.read_text(encoding="utf-8")
+    required_snippets = (
+        "tools: Bash, Read, Skill",
+        "model: sonnet",
+        "skills:\n  - spec-tree:audit",
+        "MUST hold no audit policy",
+        "Invoke `spec-tree:audit`",
+        "live file list when supplied",
+        "spx verification run` token and rendered projection",
+        "NEVER construct a path into a skill `scripts/` directory",
+    )
+    return all(snippet in text for snippet in required_snippets)
+
+
+def implementation_audit_skill_declares_orchestration_contract() -> bool:
+    text = SPEC_TREE_AUDIT_SKILL_PATH.read_text(encoding="utf-8")
+    ordered_snippets = (
+        "<request_contract>",
+        "Optional explicit live file list for pre-commit audits",
+        "<verification_run_contract>",
+        "spx verification run start",
+        "spx verification run scope add",
+        "spx verification run finding add",
+        "spx verification run finish",
+        "spx verification run render",
+        "<coverage_model>",
+        "Build an expected coverage inventory before invoking any language concern skill",
+        "<skill_map>",
+        "For each language partition, invoke the required implementation concern skills",
+        "<finding_model>",
+        "<terminal_model>",
+        "<verdict_format>",
+    )
+    return _snippets_appear_in_order(text, ordered_snippets) and all(
+        snippet in text
+        for snippet in (
+            "language partition",
+            "concern partition: `code`, `tests`, or `architecture`",
+            "audit-{lang}-code",
+            "audit-{lang}-tests",
+            "audit-{lang}-architecture",
+            "coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`",
+            "Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified",
+            "Do not continue after detecting an absent required skill for a language partition",
+            "Record each accepted concern finding through `spx verification run finding add`",
+            "Finish the run only after every required coverage unit",
+            "Use the terminal status SPX derives from accepted coverage and finding evidence",
+            "APPROVED with the exact run token and the rendered `spx verification run render` projection",
+            "REJECTED with the exact run token, rendered projection, and finding rows from the projection",
+            "BLOCKED when SPX rejects a command or a required skill is missing before dispatch",
+            "No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run",
+        )
+    )
+
+
 def language_concern_skill_trios_exist() -> bool:
     return all(
         _language_concern_skill_trio_exists(plugin_name, skill_names)
         for plugin_name, skill_names in LANGUAGE_CONCERN_SKILLS
+    )
+
+
+def language_architecture_skills_accept_implementation_scope() -> bool:
+    required_snippets = (
+        "implementation-auditor",
+        "adr-auditor",
+        "implementation architecture scope",
+        "architecture target",
+        "<architecture-scope>",
+        "spx/local/",
+    )
+    forbidden_snippets = (
+        "composed by generic `adr-auditor`",
+        '"target": "<adr-path>"',
+    )
+    return all(
+        _skill_text_has_contract(path, required_snippets, forbidden_snippets)
+        for path in ARCHITECTURE_CONCERN_SKILL_PATHS
+    )
+
+
+def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
+    with TemporaryDirectory() as tmp_dir:
+        repo = Path(tmp_dir)
+        _initialize_changeset_repo(repo)
+        scope = _changeset_scope(repo)
+        start_report = _run_spx_json(
+            repo,
+            (
+                "verification",
+                "run",
+                "start",
+                "--verification-type",
+                "audit",
+                "--scope-type",
+                "changeset",
+                "--scope",
+                scope,
+                "--input",
+                "stdin",
+            ),
+            IMPLEMENTATION_AUDIT_INPUT,
+        )
+        run_token = _required_string(start_report, "runToken")
+
+        scope_report = _run_spx_json(
+            repo,
+            (
+                "verification",
+                "run",
+                "scope",
+                "add",
+                "--verification-type",
+                "audit",
+                "--scope-type",
+                "changeset",
+                "--scope",
+                scope,
+                "--run",
+                run_token,
+                "--payload",
+                "stdin",
+                "--idempotency-key",
+                "unit-python-code",
+            ),
+            _with_producer_provenance(IMPLEMENTATION_AUDIT_SCOPE_UNIT),
+        )
+        finding_report = _run_spx_json(
+            repo,
+            (
+                "verification",
+                "run",
+                "finding",
+                "add",
+                "--verification-type",
+                "audit",
+                "--scope-type",
+                "changeset",
+                "--scope",
+                scope,
+                "--run",
+                run_token,
+                "--payload",
+                "stdin",
+                "--idempotency-key",
+                "finding-example",
+            ),
+            _with_producer_provenance(IMPLEMENTATION_AUDIT_FINDING),
+        )
+        finish_report = _run_spx_json(
+            repo,
+            (
+                "verification",
+                "run",
+                "finish",
+                "--verification-type",
+                "audit",
+                "--scope-type",
+                "changeset",
+                "--scope",
+                scope,
+                "--run",
+                run_token,
+                "--terminal-status",
+                "rejected",
+            ),
+        )
+        render_report = _run_spx_json(
+            repo,
+            (
+                "verification",
+                "run",
+                "render",
+                "--verification-type",
+                "audit",
+                "--scope-type",
+                "changeset",
+                "--scope",
+                scope,
+                "--run",
+                run_token,
+            ),
+        )
+
+    return (
+        scope_report.get("sequence") == 1
+        and finding_report.get("sequence") == 2
+        and finish_report.get("terminalStatus") == "rejected"
+        and finish_report.get("sealed") is True
+        and render_report.get("runToken") == run_token
+        and render_report.get("findingCount") == 1
+        and render_report.get("sealed") is True
+        and render_report.get("terminalStatus") == "rejected"
     )
 
 
@@ -104,3 +357,98 @@ def _language_concern_skill_trio_exists(
     return all(
         (skill_path / "SKILL.md").is_file() for skill_path in skill_paths
     ) and not any(old_skill_path.exists() for old_skill_path in old_skill_paths)
+
+
+def _skill_text_has_contract(
+    path: Path, required_snippets: tuple[str, ...], forbidden_snippets: tuple[str, ...]
+) -> bool:
+    text = path.read_text(encoding="utf-8")
+    return all(snippet in text for snippet in required_snippets) and not any(
+        snippet in text for snippet in forbidden_snippets
+    )
+
+
+def _initialize_changeset_repo(repo: Path) -> None:
+    _run(repo, ("git", "init", "-q"))
+    _run(repo, ("git", "config", "user.email", "test@example.com"))
+    _run(repo, ("git", "config", "user.name", "Test User"))
+    (repo / "file.txt").write_text("before\n", encoding="utf-8")
+    _run(repo, ("git", "add", "file.txt"))
+    _run(repo, ("git", "commit", "-q", "-m", "initial"))
+    (repo / "file.txt").write_text("after\n", encoding="utf-8")
+    _run(repo, ("git", "add", "file.txt"))
+    _run(repo, ("git", "commit", "-q", "-m", "change"))
+
+
+def _changeset_scope(repo: Path) -> str:
+    head = _run(repo, ("git", "rev-parse", "HEAD")).stdout.strip()
+    base = _run(repo, ("git", "rev-parse", "HEAD~1")).stdout.strip()
+    return f"{base}..{head}"
+
+
+def _run_spx_json(
+    repo: Path,
+    args: tuple[str, ...],
+    payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    stdin = None if payload is None else f"{json.dumps(payload)}\n"
+    completed = _run(repo, ("spx", *args), input_text=stdin)
+    parsed = json.loads(completed.stdout)
+    if not isinstance(parsed, dict):
+        raise TypeError("spx command did not return a JSON object")
+    return parsed
+
+
+def _with_producer_provenance(payload: Mapping[str, Any]) -> dict[str, Any]:
+    result = dict(payload)
+    result["producerProvenance"] = {
+        "agentOwningPluginVersion": _plugin_version("spec-tree"),
+        "skillOwningPluginVersion": _plugin_version("python"),
+        "toolVersion": MINIMUM_VERIFICATION_RUN_SPX_VERSION,
+    }
+    return result
+
+
+def _plugin_version(plugin_name: str) -> str:
+    manifest_path = (
+        Path("src") / "plugins" / plugin_name / ".claude-plugin" / "plugin.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise TypeError(f"plugin manifest is not a JSON object: {manifest_path}")
+    version = manifest.get("version")
+    if not isinstance(version, str):
+        raise TypeError(f"plugin manifest lacks string version: {manifest_path}")
+    return version
+
+
+def _run(
+    repo: Path,
+    args: tuple[str, ...],
+    input_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=repo,
+        input=input_text,
+        text=True,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _required_string(payload: Mapping[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        raise TypeError(f"missing string field: {key}")
+    return value
+
+
+def _snippets_appear_in_order(text: str, snippets: tuple[str, ...]) -> bool:
+    offset = 0
+    for snippet in snippets:
+        position = text.find(snippet, offset)
+        if position == -1:
+            return False
+        offset = position + len(snippet)
+    return True

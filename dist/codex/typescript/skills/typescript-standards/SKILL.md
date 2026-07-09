@@ -11,7 +11,7 @@ The TypeScript code standards every TypeScript skill enforces.
 </objective>
 
 <success_criteria>
-Code follows these standards when tsc strict mode and eslint checks pass. See summary table at the end for the complete rejection criteria with rule codes.
+Code follows these standards when tsc strict mode and eslint pass, every manual-review criterion in the rejection summary has been evaluated, and no source-ownership, error-context, security, import-hygiene, async, or code-hygiene rule in this reference remains violated.
 </success_criteria>
 
 <reference_note>

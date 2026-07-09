@@ -209,7 +209,7 @@ Use this shape for an implementation audit:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "implementation-auditor",
-    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> changeset scope plus any explicit changed-file partition already resolved\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
+    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> changeset scope plus any explicit changed-file partition already resolved\nLive file list: <full paths to modified and untracked files for pre-commit audits, or none for committed changeset-only audits>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
   }
 }
 ```

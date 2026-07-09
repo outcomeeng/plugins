@@ -10,7 +10,7 @@ The canonical Rust standards for type usage, ownership, error handling, module b
 </objective>
 
 <success_criteria>
-Rust work follows this standard when `/rust-standards` is loaded first, relevant specialized Rust standards are loaded next, repo-local overlays are applied, and implementation or audit decisions can cite the applicable standard section.
+Rust work follows this standard when compiler, lint, test, and review evidence show the code preserves meaningful type and ownership design, structured errors, explicit module boundaries, justified async and concurrency, testable seams, and documented unsafe invariants, with repo-local overlays applied when present.
 </success_criteria>
 
 <reference_note>

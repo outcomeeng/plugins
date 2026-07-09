@@ -416,16 +416,11 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 <success_criteria>
 The implementation is ready for review when:
 
-- [ ] Spec fully implemented
-- [ ] All functions have type annotations
-- [ ] All public functions have JSDoc
-- [ ] Tests exist for all public functions
-- [ ] tsc passes with zero errors
-- [ ] eslint passes with zero errors
-- [ ] All tests pass
-- [ ] Coverage ≥80% for new code
-- [ ] No TODOs/FIXMEs unaddressed
-- [ ] No console.log statements
-- [ ] No hardcoded secrets
+- [ ] The product's resolved TypeScript type-check command passes
+- [ ] The product's resolved TypeScript lint/format check command passes
+- [ ] The product's resolved TypeScript test command for the governed node or changeset passes
+- [ ] The implementation follows `/typescript-standards` and any `spx/local/typescript.md` overlay loaded for the repository
+- [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
+- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 
 </success_criteria>

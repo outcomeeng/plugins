@@ -263,14 +263,12 @@ All checks pass. Ready for re-review.
 
 <success_criteria>
 
-Task is complete when:
+Implementation is ready for review when:
 
-- [ ] All tests in `{node}/tests/` pass
-- [ ] Type checking passes (`mypy`)
-- [ ] Linting passes (`ruff check`)
-- [ ] Semantic values are source-owned (no duplicated test-owned constants)
-- [ ] Code uses dependency injection (no direct external imports)
-- [ ] All functions have type annotations
-- [ ] All reviewer feedback addressed (if FIX mode)
+- [ ] The product's resolved Python test command for the governed node or changeset passes
+- [ ] The product's resolved Python type-check command passes
+- [ ] The product's resolved Python lint/format check command passes
+- [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
+- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 
 </success_criteria>

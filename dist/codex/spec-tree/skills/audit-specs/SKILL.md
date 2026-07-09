@@ -17,8 +17,6 @@ This audit runs in the spec-auditor agent's isolated context. When this skill lo
 
 A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`).
 
-Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
-
 </objective>
 
 <essential_principles>
@@ -39,6 +37,10 @@ A node states product truth. "The status rollup reports failing when any child f
 **BINARY VERDICT.**
 
 `APPROVED` or `REJECTED`. No middle ground.
+
+**ARTIFACT BOUNDARY.**
+
+Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality is audited by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
 
 </essential_principles>
 

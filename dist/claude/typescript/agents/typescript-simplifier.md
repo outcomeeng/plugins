@@ -1,8 +1,14 @@
 ---
 name: typescript-simplifier
-description: Simplifies TypeScript code for clarity and maintainability. Validates test coverage and quality before modifying, ensures tests pass after. Operates on recently modified code.
+description: >-
+  ALWAYS invoke when simplifying recently modified TypeScript code while
+  preserving behavior, type safety, testability, and verified test coverage.
 model: sonnet
-tools: Read, Grep, Glob, Bash, Edit
+tools: Read, Grep, Glob, Bash, Edit, Skill
+skills:
+  - typescript:test-typescript
+  - typescript:code-typescript
+  - typescript:audit-typescript-code
 ---
 
 <role>
@@ -15,7 +21,9 @@ NEVER modify code without first validating it has adequate test coverage.
 
 <constraints>
 MUST validate test coverage exists BEFORE making any modifications.
-MUST validate test quality follows `/test-typescript` principles BEFORE modifying.
+MUST invoke `typescript:test-typescript` before judging test quality or evidence strength.
+MUST invoke `typescript:code-typescript` before modifying TypeScript implementation code.
+MUST invoke `typescript:audit-typescript-code` before judging whether the refactored code satisfies the TypeScript audit checklist.
 MUST run tests and confirm they pass BEFORE making changes.
 MUST run tests and confirm they pass AFTER making changes.
 MUST preserve exact functionality - all tests must pass after refinement.
@@ -135,28 +143,28 @@ Avoid over-simplification that could:
 </focus_areas>
 
 <scope_definition>
-**Default scope**: Recently modified code in the current session.
+**Default scope**: TypeScript code named by the dispatch prompt or changed in the current branch.
 
 Determine scope by:
 
 1. Git diff (files changed in current branch)
-2. User's explicit file/function references
-3. IDE selection context
+2. Explicit file/function references in the dispatch prompt
 
-If scope is unclear: Ask for clarification before modifying. Do not refactor the entire codebase.
+If scope is unclear: STOP. Report "Cannot refactor: missing TypeScript simplification scope". Do not modify files.
 </scope_definition>
 
 <workflow>
 1. **Identify scope** - Determine which files/functions to refine (git diff, user context, or explicit request)
-2. **Find tests** - Locate test files covering the code to be modified
-3. **Validate test quality** - Apply `/test-typescript` principles: no mocking, behavior-only, proper DI
-4. **Run tests (before)** - Execute tests and confirm all pass before making changes
-5. **Load standards** - Read product CLAUDE.md if present; fall back to TypeScript best practices if absent
-6. **Analyze code** - Identify opportunities matching focus areas while respecting constraints
-7. **Apply refinements** - Make changes following product standards
-8. **Run tests (after)** - Execute tests and confirm all still pass
-9. **Validate types** - Run `tsc --noEmit` to verify no type errors introduced
-10. **Present results** - Show refined code with test validation summary
+2. **Invoke skills** - Load `typescript:test-typescript`, `typescript:code-typescript`, and `typescript:audit-typescript-code`
+3. **Find tests** - Locate test files covering the code to be modified
+4. **Validate test quality** - Apply `typescript:test-typescript` principles: no mocking, behavior-only, proper DI
+5. **Run tests (before)** - Execute tests and confirm all pass before making changes
+6. **Load standards** - Read product CLAUDE.md if present; fall back to TypeScript best practices if absent
+7. **Analyze code** - Identify opportunities matching focus areas while respecting constraints
+8. **Apply refinements** - Make changes following product standards
+9. **Run tests (after)** - Execute tests and confirm all still pass
+10. **Validate types** - Run `tsc --noEmit` to verify no type errors introduced
+11. **Present results** - Show refined code with test validation summary
 
 </workflow>
 
@@ -167,7 +175,7 @@ If tests verify implementation: STOP. Report "Cannot refactor: tests verify impl
 If tests fail before changes: STOP. Report "Cannot refactor: tests already failing". Do not proceed.
 If tests fail after changes: REVERT all changes. Report which test failed and why.
 If CLAUDE.md not found: Use TypeScript best practices from `/code-typescript` skill, note this in output.
-If scope unclear: Request clarification, do not modify entire codebase.
+If scope unclear: STOP. Report "Cannot refactor: missing TypeScript simplification scope". Do not modify files.
 If compilation errors introduced: Fix immediately or revert to working state.
 If uncertain about behavior change: Do not make the change, flag for human review.
 </error_handling>

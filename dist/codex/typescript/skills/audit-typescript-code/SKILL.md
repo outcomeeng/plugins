@@ -184,14 +184,12 @@ Read `${SKILL_DIR}/references/example-audit.md` for complete APPROVED and REJECT
 
 <success_criteria>
 
-Review is complete when:
+A sound verdict has these properties:
 
-- [ ] Every function comprehended via predict/verify protocol (Phase 1)
-- [ ] Design evaluated: IO/logic, DI, SRP, error quality (Phase 1)
-- [ ] Import structure checked (Phase 1)
-- [ ] ADR/PDR compliance verified (Phase 2)
-- [ ] Structured verdict table with per-concern status
-- [ ] For REJECT: findings with concern, explanation, and correct approach
-- [ ] Decision clearly stated (APPROVED/REJECTED)
+- [ ] The verdict states exactly one overall determination: `PASS`, `FAIL`, or `UNKNOWN`
+- [ ] Every applicable TypeScript concern in the verdict table was judged, with no skipped concern hidden by an approval
+- [ ] Each `FAIL` finding names the file, line, violated concern or rule, and concrete evidence
+- [ ] Each `UNKNOWN` result names the missing evidence or blocked inspection step instead of guessing
+- [ ] The same repository state and audit scope can reproduce the verdict from the listed evidence
 
 </success_criteria>

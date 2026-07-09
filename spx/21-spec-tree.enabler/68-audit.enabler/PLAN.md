@@ -8,12 +8,13 @@ spec-tree-owned
 verifier context, then records one audit verification run. Language plugins ship
 skills only; they do not ship language-specific auditor agents.
 
-## First PR: Python implementation audit through `spx verification run`
+## First PR: implementation audit contract through `spx verification run`
 
 ### Observable path
 
 Actor: an operator in this plugin checkout dispatches an implementation audit for
-a small Python implementation scope.
+an implementation scope whose language concerns are supplied by installed
+language plugins.
 
 Invocation: the main conversation dispatches `implementation-auditor` with a
 changeset or explicit file-list scope after deterministic validation and tests
@@ -23,14 +24,16 @@ with `spx verification run scope add`, records findings with `spx verification
 run finding add`, finishes with `spx verification run finish`, and renders the
 projection with `spx verification run render`.
 
-Behavior: the wrapper partitions the scope by language, validates that the
-Python partition has all required implementation concerns, invokes
-`audit-python-code`, `audit-python-tests`, and `audit-python-architecture`, and
-records the composed result as one audit run. The same PR also renames the
-TypeScript and Rust implementation-code skills to `audit-typescript-code` and
+Behavior: the wrapper prompt remains policy-thin and invokes `spec-tree:audit`;
+the `spec-tree:audit` prompt contract requires partitioning the caller's scope by
+language and concern, validating that each language partition has
+`audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture`,
+recording planned or classified coverage units through `spx verification run
+scope add`, recording findings through `spx verification run finding add`, and
+relaying the rendered projection. The same PR also renames the TypeScript and
+Rust implementation-code skills to `audit-typescript-code` and
 `audit-rust-code` so every shipped language plugin satisfies
-`spx/21-spec-tree.enabler/17-audit.adr.md`; the first smoke path proves Python
-because it is the narrowest end-to-end run. No deterministic validation, test, or
+`spx/21-spec-tree.enabler/17-audit.adr.md`. No deterministic validation, test, or
 eval command runs inside the audit.
 
 Persisted result: one `verificationType=audit`, `scopeType=changeset` run whose
@@ -76,13 +79,18 @@ Verification before PR merge:
 
 ### Dependency-order check
 
-This slice is runnable because it ends in an operator-visible SPX audit run for
-one Python implementation scope. The version-floor bump, wrapper rename,
-cross-language code-skill rename, instruction-block routing, and audit spec
-cleanup are included only because the path cannot run correctly without them.
+This slice is runnable because the published SPX audit lifecycle accepts
+implementation-audit payloads and the shipped wrapper and skill prompt contracts
+route all audit state through that lifecycle. The version-floor bump, wrapper
+rename, cross-language code-skill rename, instruction-block routing, and audit
+spec cleanup are included only because the path cannot run correctly without
+them.
 
 ## Later slices
 
+- Add executable agent/eval coverage for representative implementation-auditor
+  runs over one-language, multi-language, and unsupported-file scopes once the
+  agentic runner can be exercised deterministically.
 - Generalize the implementation-auditor partitioning and coverage inventory for
   several files, several languages, and changesets containing unsupported files.
 - Move remaining audit run-set convergence onto SPX prior-context restoration

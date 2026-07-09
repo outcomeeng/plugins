@@ -11,7 +11,7 @@ The Python code standards every Python skill enforces.
 </objective>
 
 <success_criteria>
-Code follows these standards when all ruff rules and mypy checks pass. See `${SKILL_DIR}/references/rejection-criteria.md` for the complete rejection-criteria lookup with rule codes.
+Code follows these standards when ruff and mypy pass, every manual rejection criterion in `${SKILL_DIR}/references/rejection-criteria.md` has been evaluated, and no source-ownership, import-hygiene, security, resource-management, or code-hygiene rule in this reference remains violated.
 </success_criteria>
 
 <reference_note>
@@ -23,8 +23,6 @@ These standards apply to ALL Python code: production and test code alike.
 <repo_local_overlay>
 When another skill loads this reference inside a repository, it must also check for `spx/local/python.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
-
----
 
 <type_annotations>
 
@@ -88,8 +86,6 @@ def __init__(self, config: Config):
 
 </type_annotations>
 
----
-
 <source_owned_values>
 
 Production modules must own semantic literals through enums, schemas, registries, constructors, typed factories, or public constants that production consumers can import. Tests import those source-owned values instead of defining test-local constants.
@@ -136,8 +132,6 @@ if __name__ == "__main__":
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary and follow source ownership; only *values* may be synthetic at the call site. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed. A hand-written key is a hand-picked case for the parser or consumer that reads the container.
 
 </source_owned_values>
-
----
 
 <constant_objects>
 
@@ -201,8 +195,6 @@ response_code = HTTPStatus.OK
 
 </constant_objects>
 
----
-
 <naming_conventions>
 
 **Lowercase Argument Names (N803)**
@@ -242,8 +234,6 @@ def test_processing(self, input_val: str, expected: int) -> None:
 
 </naming_conventions>
 
----
-
 <s101_policy>
 
 Ruff's S101 rule flags `assert` statements because they can be disabled with Python's `-O` flag.
@@ -265,8 +255,6 @@ Ruff's S101 rule flags `assert` statements because they can be disabled with Pyt
 If the product hasn't configured this, tests will fail linting. Fix by adding the config, not by avoiding `assert`.
 
 </s101_policy>
-
----
 
 <type_strictness>
 
@@ -295,8 +283,6 @@ result = cast(str, value)  # type: ignore[no-untyped-call]  # third-party lib mi
 
 </type_strictness>
 
----
-
 <modern_syntax>
 
 Use modern syntax: `X | None` (not `Optional[X]`), `X | Y` (not `Union[X, Y]`), and lowercase generics `list[str]` / `dict[str, V]` (not `List` / `Dict`).
@@ -309,8 +295,6 @@ Use modern syntax: `X | None` (not `Optional[X]`), `X | Y` (not `Union[X, Y]`), 
 | UP007 | `Optional[X]`, `Union[X, Y]` instead of `X \| None`, `X \| Y` |
 
 </modern_syntax>
-
----
 
 <error_handling>
 
@@ -333,8 +317,6 @@ except ValueError as e:
 | S110 | `try`-`except`-`pass` on broad exception |
 
 </error_handling>
-
----
 
 <security>
 
@@ -373,8 +355,6 @@ Context matters for security rules — a CLI tool invoked by the user has differ
 
 </security>
 
----
-
 <resource_management>
 
 Acquire files and other resources with a context manager (`with open(...) as f:`), never a manual `open()` / `.close()` pair.
@@ -386,8 +366,6 @@ Acquire files and other resources with a context manager (`with open(...) as f:`
 | SIM115 | Open file without context manager |
 
 </resource_management>
-
----
 
 <code_hygiene>
 
@@ -401,8 +379,6 @@ Remove commented-out code and unused imports; never manipulate `sys.path` to rea
 | F401   | Unused imports     |
 
 </code_hygiene>
-
----
 
 <import_hygiene>
 
@@ -483,8 +459,6 @@ python3 -m pip install -e .
 ```
 
 </import_hygiene>
-
----
 
 <rejection_criteria_summary>
 The complete rejection-criteria lookup — every issue the sections above state, indexed by its ruff rule code (or `manual` / `review` / `mypy`) — lives in `${SKILL_DIR}/references/rejection-criteria.md`.

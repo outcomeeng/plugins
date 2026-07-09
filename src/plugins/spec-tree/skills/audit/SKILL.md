@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on one implementation audit scope — APPROVED when every required language concern is covered with no rejected findings, or REJECTED with each finding naming the concern, subject, violated rule, and required fix.
+A verdict on one implementation audit scope — APPROVED when every required language concern is covered with no rejected findings, or REJECTED with each finding naming the unit, producer, rule, severity, location, message, and observed-versus-expected evidence.
 
 </objective>
 
@@ -43,6 +43,8 @@ The invocation request `$ARGUMENTS` carries:
 - Governing node paths and any explicit file-list partition the caller already resolved.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 
+If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, or deterministic verification state, return BLOCKED before starting a verification run. Name the missing request fields and the exact wrapper prompt shape required to retry.
+
 Use the caller's changeset scope and explicit live file list exactly. Do not derive a different base, widen to the whole repository, drop uncommitted files, or collapse the scope to only one file unless the caller supplied that exact scope. For pre-commit `/apply` audits, record the live file list in the `--input` payload at run start and in scope payloads so SPX persistence preserves the files the audit actually gated.
 
 </request_contract>
@@ -59,7 +61,7 @@ spx verification run start \
   --input stdin
 ```
 
-The `--input` payload carries the caller request, deterministic verification state, governing nodes, and any explicit live file list supplied for pre-commit audits. Capture the returned run token exactly. Use that token for every later command:
+The `--input` payload carries the caller request, deterministic verification state, governing nodes, and any explicit live file list supplied for pre-commit audits. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
 
 ```bash
 spx verification run scope add \
@@ -83,8 +85,7 @@ spx verification run finish \
   --scope-type changeset \
   --scope <base>..<head> \
   --run <token> \
-  --terminal-status <spx-accepted-status> \
-  --terminal-metadata stdin
+  --terminal-status <evidence-derived-status>
 
 spx verification run render \
   --verification-type audit \
@@ -109,9 +110,10 @@ Build an expected coverage inventory before invoking any language concern skill.
 - stable expected-producer identity: plugin name, skill name, audit class, language, and concern
 - producer provenance: owning plugin version when the concern skill exists; null with reason `missing-skill` or `unsupported` when no executable concern skill can run
 - execution producer identity: the wrapper and SPX command driver that recorded the unit, present for every unit so missing-skill and unsupported classifications still have provenance for the recorder
-- coverage status: required, optional, missing-skill, unsupported, covered, rejected, or coverage-gap
+- coverage requirement: `required` or `optional`
+- coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
 
-Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation file, rejected SPX payload, or required unit that receives no concern result rejects the run through coverage status and terminal metadata. Do not continue after detecting an absent required skill for a language partition.
+Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation file, rejected SPX payload, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue after detecting an absent required skill for a language partition.
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
@@ -137,12 +139,12 @@ Record each accepted concern finding through `spx verification run finding add`.
 
 - stable producer identity matching the coverage unit
 - producer provenance, including owning plugin version when present
-- audit class and kind
-- language and concern partition
-- subject path and optional line
+- unit identity for a scope unit already recorded in the run
 - rule or violated principle
+- severity: `blocking` or `debt`
+- location
 - message
-- required fix
+- observed-versus-expected evidence
 
 Finding identity for convergence is content and stable producer identity, not plugin version. Version changes preserve provenance without making the same finding look new.
 
@@ -150,15 +152,11 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 <terminal_model>
 
-Finish the run only after every required coverage unit is covered, rejected, missing, unsupported, or classified as a coverage gap. The terminal metadata carries:
+Finish the run only after every required coverage unit is `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, and after every finding has been recorded. Record missing required skills, unsupported files, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-- coverage totals by language and concern
-- missing required skills
-- unsupported files
-- finding count by concern
-- deterministic verification state supplied by the caller
+Use the terminal status SPX derives from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Do not pass terminal metadata for audit runs; SPX rejects audit terminal metadata because audit terminal state derives from scope and finding evidence.
 
-If SPX rejects terminal status or metadata, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
+If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
 </terminal_model>
 
@@ -176,12 +174,12 @@ Each finding row names:
 
 - stable producer identity
 - producer provenance when present
-- audit class and kind
-- language and concern partition
-- subject path and optional line
+- unit identity
 - rule or violated principle
+- severity
+- location
 - message
-- required fix
+- observed-versus-expected evidence
 
 The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
 
@@ -189,13 +187,45 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 <failure_modes>
 
-**Main conversation invoked this skill directly.** Stop at `<dispatch_gate>` and dispatch `implementation-auditor`. Running the audit inside the authoring context reintroduces the bias the verifier context exists to remove.
+**Main conversation invoked this skill directly.**
 
-**A missing concern skill appears after one concern already ran.** The coverage inventory belongs before concern dispatch. Validate the complete `audit-{lang}-{code|tests|architecture}` trio for every language partition before invoking any concern skill.
+What happened: Claude loaded the implementation-audit skill in the authoring conversation instead of dispatching `implementation-auditor`.
 
-**A finding is reported only in prose.** Prose findings are not durable evidence. Every finding goes through `spx verification run finding add`; the rendered projection is the inspection surface.
+Why it failed: Running the audit inside the authoring context reintroduces the bias the verifier context exists to remove.
 
-**Deterministic verification runs inside the audit.** Stop and return the boundary failure. Validation, tests, and evals are caller and CI responsibilities, not work a dispatched audit repeats.
+How to avoid: Stop at `<dispatch_gate>` and dispatch `implementation-auditor` with repository path, changeset scope, governing nodes, and deterministic verification state.
+
+**The request was empty or malformed.**
+
+What happened: Claude received no `$ARGUMENTS`, or the wrapper request omitted repository path, changeset scope, governing nodes, or deterministic verification state.
+
+Why it failed: Starting a verification run without the required selector fields creates durable audit state that cannot be tied to the intended scope.
+
+How to avoid: Return BLOCKED before `spx verification run start`, name the missing request fields, and request the exact wrapper prompt shape from `<request_contract>`.
+
+**A missing concern skill appeared after one concern already ran.**
+
+What happened: Claude invoked one concern skill before validating that the complete `audit-{lang}-{code|tests|architecture}` trio existed for every language partition.
+
+Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery leaves a partial run.
+
+How to avoid: Validate the complete concern-skill trio for every language partition before invoking any concern skill.
+
+**A finding was reported only in prose.**
+
+What happened: Claude named a concern finding in text without recording it through `spx verification run finding add`.
+
+Why it failed: Prose findings are not durable evidence and cannot appear in the rendered SPX projection.
+
+How to avoid: Record every finding through `spx verification run finding add`; use the rendered projection as the inspection surface.
+
+**Deterministic verification ran inside the audit.**
+
+What happened: Claude ran validation, tests, or evals from the dispatched audit context.
+
+Why it failed: Validation, tests, and evals are caller and CI responsibilities, and repeating them inside the audit changes the audit boundary.
+
+How to avoid: Stop and return the boundary failure with the deterministic command that was attempted.
 
 </failure_modes>
 
@@ -203,7 +233,7 @@ The rendered SPX projection is the inspection surface. Do not hand-format a comp
 
 - The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
 - The verdict states an explicit overall determination: APPROVED, REJECTED, or BLOCKED.
-- Every rejected finding is falsifiable: it names the stable producer identity, subject, violated rule or principle, evidence message, and required fix.
+- Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.

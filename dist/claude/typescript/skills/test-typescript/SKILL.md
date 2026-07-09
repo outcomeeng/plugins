@@ -339,12 +339,11 @@ Tests pass checklist. Ready for re-review.
 
 <success_criteria>
 
-Task is complete when:
+Test evidence is ready for review when:
 
-- [ ] Test files exist in `{node}/tests/` directory
-- [ ] Each assertion from spec has corresponding test(s)
-- [ ] Tests follow `/typescript-test-standards` standards
-- [ ] Tests run and fail for expected reasons
-- [ ] All reviewer feedback addressed (if FIX mode)
+- [ ] Every created or changed test file lives in the governed node's `tests/` directory and is linked from the corresponding spec assertion
+- [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
+- [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
+- [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
 
 </success_criteria>

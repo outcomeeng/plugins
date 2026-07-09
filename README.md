@@ -256,17 +256,17 @@ Prose craft for external prose (/write-prose, /audit-prose) and internal team do
 
 Python engineering: /test-python, /code-python, /audit-python-code, /audit-python-tests, /audit-python-architecture, /architect-python
 
-| Type  | Name                             | Purpose                                                                                                                                                                |
-| ----- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architect-python`              | Writing ADRs for Python                                                                                                                                                |
-| Skill | `/audit-python-architecture`     | Python-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Python concerns in scope |
-| Skill | `/audit-python-code`             | Python implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the Python code files in scope                 |
-| Skill | `/audit-python-tests`            | Python test-evidence audit methodology composed by a dispatched auditor agent for the Python tests in scope                                                            |
-| Skill | `/code-python`                   | Writing or fixing implementation code for Python                                                                                                                       |
-| Skill | `/python-architecture-standards` | Python ADR conventions enforced across architect and auditor skills                                                                                                    |
-| Skill | `/python-standards`              | Python code standards enforced across all skills                                                                                                                       |
-| Skill | `/python-test-standards`         | Python testing standards enforced across all skills                                                                                                                    |
-| Skill | `/test-python`                   | Writing or fixing tests for Python                                                                                                                                     |
+| Type  | Name                             | Purpose                                                                                                                                                             |
+| ----- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/architect-python`              | Writing ADRs for Python                                                                                                                                             |
+| Skill | `/audit-python-architecture`     | Python-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Python concerns in scope |
+| Skill | `/audit-python-code`             | Python implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the Python code files in scope              |
+| Skill | `/audit-python-tests`            | Python test-evidence audit methodology composed by a dispatched auditor agent for the Python tests in scope                                                         |
+| Skill | `/code-python`                   | Writing or fixing implementation code for Python                                                                                                                    |
+| Skill | `/python-architecture-standards` | Python ADR conventions enforced across architect and auditor skills                                                                                                 |
+| Skill | `/python-standards`              | Python code standards enforced across all skills                                                                                                                    |
+| Skill | `/python-test-standards`         | Python testing standards enforced across all skills                                                                                                                 |
+| Skill | `/test-python`                   | Writing or fixing tests for Python                                                                                                                                  |
 
 ### rust
 
@@ -275,7 +275,7 @@ Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /
 | Type  | Name                           | Purpose                                                                                                                                                                   |
 | ----- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Skill | `/architect-rust`              | Writing ADRs for Rust                                                                                                                                                     |
-| Skill | `/audit-rust-architecture`     | Rust-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Rust concerns in scope        |
+| Skill | `/audit-rust-architecture`     | Rust-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Rust concerns in scope           |
 | Skill | `/audit-rust-code`             | Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by implementation-auditor for the Rust code files in scope |
 | Skill | `/audit-rust-tests`            | Rust test-evidence audit methodology composed by a dispatched auditor agent for the Rust tests in scope                                                                   |
 | Skill | `/code-rust`                   | Writing or fixing implementation code for Rust                                                                                                                            |
@@ -283,7 +283,7 @@ Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /
 | Skill | `/rust-standards`              | Rust code standards enforced across all skills                                                                                                                            |
 | Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                                                                                                                            |
 | Skill | `/test-rust`                   | Writing or fixing tests for Rust                                                                                                                                          |
-| Agent | `rust-simplifier`              | Simplifies Rust code for clarity and maintainability                                                                                                                      |
+| Agent | `rust-simplifier`              | Simplifying recently modified Rust code while preserving behavior, ownership semantics, testability, and verified test coverage                                           |
 
 ### spec-tree
 
@@ -342,18 +342,18 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 
 TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, typescript-simplifier agent
 
-| Type  | Name                                 | Purpose                                                                                                                                                                        |
-| ----- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                                                                                                                                    |
-| Skill | `/audit-typescript-architecture`     | TypeScript-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the TypeScript concerns in scope |
-| Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the TypeScript code files in scope                 |
-| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology composed by a dispatched auditor agent for the TypeScript tests in scope                                                            |
-| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                                                                                                                           |
-| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                                                                                                         |
-| Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                                                                                                        |
-| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                                                                                           |
-| Skill | `/typescript-test-standards`         | TypeScript testing standards enforced across all skills                                                                                                                        |
-| Agent | `typescript-simplifier`              | Simplifies TypeScript code for clarity and maintainability                                                                                                                     |
+| Type  | Name                                 | Purpose                                                                                                                                                                     |
+| ----- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                                                                                                                                 |
+| Skill | `/audit-typescript-architecture`     | TypeScript-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the TypeScript concerns in scope |
+| Skill | `/audit-typescript-code`             | TypeScript implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the TypeScript code files in scope              |
+| Skill | `/audit-typescript-tests`            | TypeScript test-evidence audit methodology composed by a dispatched auditor agent for the TypeScript tests in scope                                                         |
+| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                                                                                                                        |
+| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                                                                                                      |
+| Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                                                                                                     |
+| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                                                                                        |
+| Skill | `/typescript-test-standards`         | TypeScript testing standards enforced across all skills                                                                                                                     |
+| Agent | `typescript-simplifier`              | Simplifying recently modified TypeScript code while preserving behavior, type safety, testability, and verified test coverage                                               |
 
 ### work
 

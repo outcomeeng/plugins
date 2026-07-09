@@ -1,7 +1,7 @@
 ---
 name: audit-python-architecture
 description: >-
-  Python-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Python concerns in scope.
+  Python-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Python concerns in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
@@ -10,42 +10,54 @@ allowed-tools: Read, Grep, Glob, Bash, Skill
 
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — the generic `adr-auditor` composing this skill for the Python concerns in scope, or a generic `/audit`-family agent — isolated from the author context that produced the work under audit. This skill judges only Python-specific concerns: dependency injection, no-mocking, and execution-level accuracy. Section structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` reading the canonical template and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
+This audit runs inside a dispatched artifact-type auditor's verifier context — `implementation-auditor` composing this skill for Python implementation architecture scope, or `adr-auditor` composing it for a Python ADR's language-specific architecture concerns — isolated from the author context that produced the work under audit. This skill judges only Python-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, Python anti-patterns, and test-double exception cases. Generic decision-record structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` when the target is an ADR and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
 
 </dispatch_gate>
 
 <objective>
-A structured verdict on an ADR's Python-specific architecture concerns — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, Python anti-patterns, and test-double exception cases.
+A JSON verdict on a Python architecture scope — implementation architecture or ADR language concerns — with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Python anti-patterns, ancestor consistency, and test-double exception cases.
 </objective>
 
-<audit_workflow>
-**For spec-tree work items: the composing auditor has already loaded the ADR/PDR hierarchy.**
+<constraints>
 
-When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching `adr-auditor` has already invoked `spec-tree:contextualize` on the node and loaded the complete ADR/PDR hierarchy. Use that loaded context:
+- Read-only over the audited repository. Never edit files, stage changes, commit, or open pull requests.
+- Produce only the JSON verdict described in `<verdict_format>`; fixes and prose remediation belong in finding messages, not in repository mutations.
+- Judge only Python-specific architecture concerns. Generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
+- Treat `PASS | FAIL | UNKNOWN` as the only verdict vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
+
+</constraints>
+
+<audit_workflow>
+**For spec-tree work items: the composing auditor has already loaded the governing context.**
+
+When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` on the node and loaded the complete governing context. Use that loaded context:
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Target node spec with typed assertions
+- Implementation files, changed-file partition, or ADR path supplied by the composing auditor
 
 **Python review focus:**
 
-- Does the ADR's `## Verification` (`### Audit`) include testability constraints (DI, no mocking)?
-- Does the ADR use any mocking language anywhere (prose or code examples)?
+- For implementation targets, do the changed Python files conform to loaded architecture decisions for dependency injection, no mocking, level accuracy, and test-double exception cases?
+- For ADR targets, does `## Verification` (`### Audit`) include testability constraints (DI, no mocking)?
+- Does the target use any mocking language anywhere (implementation, prose, or code examples)?
 - Are execution levels accurate (SaaS services jump `l1` to `l3`, no `l2`)?
 - Does any test-double usage document which `/test` exception case applies?
-- Does the ADR contradict any ancestor ADR/PDR decision on a Python-architecture concern?
+- Does the target contradict any ancestor ADR/PDR decision on a Python-architecture concern?
 
 **Procedure:**
 
 1. **Standards are pre-loaded above.** Read repo-local `spx/local/python-architecture.md` if present; an overlay routes skill behavior to the product's governing specs and decisions and supplements skill behavior without declaring product truth.
-2. **Read `/test`** for methodology (5 stages, 5 factors, 7 exceptions)
-3. **Read the ADR** completely, focusing on the Python-specific concerns below
-4. **Check `## Verification`** — must include testability constraints as ALWAYS/NEVER rules under `### Audit`; must NOT include level assignment tables
-5. **Check for mocking language** — reject `unittest.mock.patch`, `respx.mock`, "mock at boundary" in any section, prose AND code examples
-6. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
-7. **Check test double usage** — must document which `/test` exception case applies
-8. **Check Python anti-patterns** — `src.*` import examples should use `product.*` / `product_testing.*`
-9. **Identify all Python-architecture violations** and classify per concern
-10. **Output structured verdict** — APPROVED or REJECTED with per-concern table
+2. **Read repo-local test overlay** `spx/local/python-tests.md` if present before judging level references or test-double exception cases.
+3. **Read `/test`** for methodology (5 stages, 5 factors, 7 exceptions)
+4. **Read the architecture target** completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition
+5. **Check testability constraints** — ADR targets express them in `## Verification` / `### Audit`; implementation targets must conform to the loaded architecture decisions' DI and no-mocking constraints
+6. **Check for mocking language** — reject `unittest.mock.patch`, `respx.mock`, "mock at boundary" in any section, prose AND code examples
+7. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
+8. **Check test double usage** — must document which `/test` exception case applies
+9. **Check Python anti-patterns** — `src.*` import examples should use `product.*` / `product_testing.*`
+10. **Identify all Python-architecture violations** and classify per concern
+11. **Output the JSON verdict** with `overall` set to `PASS`, `FAIL`, or `UNKNOWN` and every concern row populated
 
 </audit_workflow>
 
@@ -69,13 +81,13 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 All canonical conventions are in `/python-architecture-standards`. Read it first. This skill checks only the Python-specific concerns:
 
-**1. Testability in Verification** — The `## Verification` section must include ALWAYS/NEVER rules under `### Audit` that enable appropriate testing. See `<testability_in_verification>` in `/python-architecture-standards` for the correct pattern. Level assignment tables are violations.
+**1. Testability constraints** — ADR targets must include ALWAYS/NEVER rules under `## Verification` / `### Audit` that enable appropriate testing; implementation targets must comply with the loaded architecture decisions' testability constraints. See `<testability_in_verification>` in `/python-architecture-standards` for the correct ADR pattern. Level assignment tables are violations.
 
-**2. Mocking prohibition** — No mocking language anywhere in the ADR. See `<di_patterns>` in `/python-architecture-standards` for what to check and correct ADR language.
+**2. Mocking prohibition** — No mocking language anywhere in the architecture target. See `<di_patterns>` in `/python-architecture-standards` for what to check and correct ADR language.
 
-**3. Level accuracy** — When the `## Verification` rules reference testing levels, verify against `/test` definitions. See `<level_context>` in `/python-architecture-standards`. Key rule: SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`).
+**3. Level accuracy** — When the architecture target references testing levels, verify against `/test` definitions. See `<level_context>` in `/python-architecture-standards`. Key rule: SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`).
 
-**4. Python anti-patterns** — Check for Python-specific content that does not belong in an ADR. See `<anti_patterns>` in `/python-architecture-standards`. Note Python-specific anti-pattern: `src.*` import examples should use `product.*` / `product_testing.*`.
+**4. Python anti-patterns** — Check for Python-specific architecture anti-patterns. See `<anti_patterns>` in `/python-architecture-standards`. Note Python-specific anti-pattern: `src.*` import examples should use `product.*` / `product_testing.*`.
 
 **5. Test double exception cases** — Any test double usage must document which of the 7 `/test` Stage 5 exceptions applies. No exception = no doubles.
 
@@ -93,20 +105,21 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 {
   "schema_version": 1,
   "skill": "audit-python-architecture",
-  "target": "<adr-path>",
+  "target": "<architecture-scope>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     { "name": "testability-in-verification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "test-double-exception-cases", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach code sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each finding's `rule` carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the relevant implementation file or ADR path; `message` carries the one-line "why this fails". Include the correct-approach code sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
 </verdict_format>
 
@@ -117,34 +130,29 @@ Each finding's `rule` carries the violation pattern (e.g., `missing-testability`
 - Judge section structure, atemporal voice, or per-rule tag validity — those belong to the composing `adr-auditor`
 - Reference specific line numbers (they change) — use section names or quoted text
 - Provide grep commands — focus on principles, not tooling
-- Approve an ADR just because a Protocol is defined — check that an ALWAYS rule mandates it
+- Approve an architecture target just because a Protocol is defined — check that an ALWAYS rule mandates it for ADR targets or that implementation code follows the loaded architecture constraint
 
 **Do:**
 
 - Reference `/python-architecture-standards` section names (e.g., `<testability_in_verification>`, `<di_patterns>`)
-- Reference `/test` section names for level rules (e.g., "Stage 2 Five Factors", "Cardinal Rule")
-- Reference `/python-test-standards` for Python-specific Protocol patterns
+- Reference `/test` methodology by its real heading, `Stage 2: At what level does that evidence live?`, for level rules
+- Reference `/python-architecture-standards` `<di_patterns>` for Python-specific Protocol patterns
 - Show correct architecture with code examples
 - Be direct about violations
 
 </what_to_avoid>
 
 <example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `FAIL` JSON verdict showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
 </example_review>
 
 <success_criteria>
-Review is complete when:
+The verdict is sound when:
 
-- [ ] Read `/python-architecture-standards` before starting review
-- [ ] Verified `## Verification` includes testability constraints (ALWAYS/NEVER for DI, no mocking)
-- [ ] Verified no mocking language anywhere in ADR (prose AND code examples)
-- [ ] Verified level assignments — no `l2` for SaaS services
-- [ ] Verified test double usage has documented exception case
-- [ ] Verified Python anti-patterns (`src.*` import examples use `product.*` / `product_testing.*`)
-- [ ] Did NOT judge section structure, atemporal voice, or tag validity — those are the composing adr-auditor's concern
-- [ ] Output follows format with section references (not line numbers)
-- [ ] Structured verdict table with per-concern status
-- [ ] Decision clearly stated (APPROVED/REJECTED)
+- Every applicable Python architecture concern row is evaluated, with inapplicable concerns marked `UNKNOWN` rather than skipped.
+- `overall` is `FAIL` when any concern row is `FAIL`, `PASS` when every concern row is `PASS` or `UNKNOWN`, and `UNKNOWN` only when missing context prevents a definitive judgment.
+- Each rejecting finding names the relevant implementation file or ADR path, violated rule, evidence, and required correction in the JSON `message`.
+- No finding judges generic ADR structure, atemporal voice, or per-rule tag validity.
+- The same architecture scope and governing context produce the same JSON verdict.
 
 </success_criteria>

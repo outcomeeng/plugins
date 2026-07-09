@@ -16,8 +16,6 @@ This audit runs in the adr-auditor agent's isolated context. When this skill loa
 
 A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three native categories: section structure, atemporal voice, and per-rule tag validity and evidence-type fit.
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` (Step 5b), which judges only those concerns. This skill owns section structure, atemporal voice, and tag validity from the canonical template.
-
 </objective>
 
 <essential_principles>
@@ -37,6 +35,10 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 **BINARY VERDICT.**
 
 `APPROVED` or `REJECTED`. No middle ground.
+
+**LANGUAGE COMPOSITION BOUNDARY.**
+
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` in Step 5b. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
 </essential_principles>
 
@@ -73,7 +75,7 @@ Read the ADR under audit. Identify its sections: the opening decision statement,
 
 **Step 3: Section structure**
 
-Read the canonical ADR template at `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` and derive the valid section set from it in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template cannot be read, report the section-structure property as UNKNOWN — "template-missing" — and issue no structural finding.
+Invoke `/understand` and use its canonical ADR template guidance to derive the valid section set in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, report the section-structure property as UNKNOWN — "template-missing" — and issue no structural finding.
 
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
