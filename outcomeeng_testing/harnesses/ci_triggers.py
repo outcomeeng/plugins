@@ -15,18 +15,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 
 from outcomeeng_evals.ci_plan import UNIVERSAL_OWNED_PATHS, matches
 from outcomeeng_evals.ci_triggers import (
     BEGIN_MARKER,
-    CiTriggerError,
     END_MARKER,
     EXPECTED_BLOCK_COUNT,
     ci_trigger_paths,
     materialize_ci_triggers,
     minimal_patterns,
 )
+from outcomeeng_evals.cli import EXIT_SUCCESS, main
 from outcomeeng_evals.definition import CiPolicy
 from outcomeeng_testing.generators.ci_triggers import probe_paths, trigger_pattern_sets
 
@@ -117,24 +118,43 @@ def assert_universal_paths_always_contribute() -> None:
         assert universal in derived
 
 
+def _invoke_cli(repo: EvalTriggerRepo, *, check: bool) -> Result:
+    """Invoke `outcomeeng-evals materialize-ci-triggers` against the temp repo.
+
+    The compliance assertion names the CLI invocation, so the evidence drives
+    the Click command and reads its exit code rather than the library function
+    the command wraps.
+    """
+
+    argv = [
+        "materialize-ci-triggers",
+        str(repo.root),
+        "--workflow",
+        str(repo.workflow),
+        "--repo-root",
+        str(repo.repo_root),
+    ]
+    if check:
+        argv.append("--check")
+    return CliRunner().invoke(main, argv)
+
+
 def assert_check_passes_when_workflow_is_current() -> None:
     """Assert the drift check exits successfully against a freshly written file."""
 
     with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
-        materialize_ci_triggers(repo.root, repo.workflow, repo_root=repo.repo_root)
+        assert _invoke_cli(repo, check=False).exit_code == EXIT_SUCCESS
 
-        result = materialize_ci_triggers(
-            repo.root, repo.workflow, repo_root=repo.repo_root, check=True
-        )
+        result = _invoke_cli(repo, check=True)
 
-        assert result.changed is False
+        assert result.exit_code == EXIT_SUCCESS
 
 
 def assert_check_fails_when_a_trigger_path_is_removed() -> None:
     """Assert the drift check rejects a hand-edited workflow missing a path."""
 
     with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
-        materialize_ci_triggers(repo.root, repo.workflow, repo_root=repo.repo_root)
+        _invoke_cli(repo, check=False)
         tampered = "\n".join(
             line
             for line in repo.workflow_text().splitlines()
@@ -142,21 +162,17 @@ def assert_check_fails_when_a_trigger_path_is_removed() -> None:
         )
         repo.workflow.write_text(tampered + "\n", encoding="utf-8")
 
-        try:
-            materialize_ci_triggers(
-                repo.root, repo.workflow, repo_root=repo.repo_root, check=True
-            )
-        except CiTriggerError as error:
-            assert str(repo.workflow) in str(error)
-        else:
-            raise AssertionError("stale trigger paths passed the drift check")
+        result = _invoke_cli(repo, check=True)
+
+        assert result.exit_code != EXIT_SUCCESS
+        assert str(repo.workflow) in result.output
 
 
 def assert_check_fails_when_an_unowned_trigger_path_is_added() -> None:
     """Assert the drift check rejects a trigger path no eval suite owns."""
 
     with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
-        materialize_ci_triggers(repo.root, repo.workflow, repo_root=repo.repo_root)
+        _invoke_cli(repo, check=False)
         tampered = repo.workflow_text().replace(
             f"{_WORKFLOW_INDENT}{END_MARKER}",
             f'{_WORKFLOW_INDENT}- "spx/orphan.md"\n{_WORKFLOW_INDENT}{END_MARKER}',
@@ -164,14 +180,10 @@ def assert_check_fails_when_an_unowned_trigger_path_is_added() -> None:
         )
         repo.workflow.write_text(tampered, encoding="utf-8")
 
-        try:
-            materialize_ci_triggers(
-                repo.root, repo.workflow, repo_root=repo.repo_root, check=True
-            )
-        except CiTriggerError as error:
-            assert str(repo.workflow) in str(error)
-        else:
-            raise AssertionError("an unowned trigger path passed the drift check")
+        result = _invoke_cli(repo, check=True)
+
+        assert result.exit_code != EXIT_SUCCESS
+        assert str(repo.workflow) in result.output
 
 
 def assert_every_trigger_block_receives_the_same_paths() -> None:
