@@ -5,8 +5,7 @@ description: >-
   implementation-auditor agent. Dispatch implementation-auditor for
   implementation audits; the main conversation reaches this audit only through
   that agent.
-argument-hint: "[scope]"
-arguments: request
+argument-hint: "<implementation audit request>"
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
@@ -36,7 +35,7 @@ A verdict on one implementation audit scope — APPROVED when every required lan
 
 <request_contract>
 
-The invocation request `$request` carries:
+The invocation request `$ARGUMENTS` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.

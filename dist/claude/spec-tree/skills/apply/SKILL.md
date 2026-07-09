@@ -284,7 +284,7 @@ Scan the conversation for these markers before declaring done:
 - [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
 - [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9
 - [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
-- [ ] The product's touched-scope verification command has passed for the changed node and implementation, for example `just test <pytest-target>...` for this repository's co-located spec tests plus any additional narrow validation lane selected by `spx/local/merging.md`
+- [ ] The product's declared touched-scope verification command has passed for the changed node and implementation, using the consumer repository's local verification overlay or root instructions to select the concrete command
 - [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
 
 </success_criteria>
