@@ -97,9 +97,7 @@ def _runtime_uv_lines(source: str) -> list[int]:
 
 
 def _is_verification_skill(skill_dir: pathlib.Path) -> bool:
-    return skill_dir.name == "audit" or skill_dir.name.startswith(
-        ("audit-", "review-")
-    )
+    return skill_dir.name == "audit" or skill_dir.name.startswith(("audit-", "review-"))
 
 
 class TestThreadStoreScriptsImportOnlyStdlib:
