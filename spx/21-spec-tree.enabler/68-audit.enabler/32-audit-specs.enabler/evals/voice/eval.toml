@@ -1,0 +1,19 @@
+title = "audit-specs-voice"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md",
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/voice/**",
+  "src/plugins/spec-tree/skills/audit-specs/**",
+  "dist/claude/spec-tree/skills/audit-specs/**",
+]
+smoke_cases = ["temporal-rationale-rejected", "atemporal-node-passes"]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "src/plugins/spec-tree/skills/audit-specs/SKILL.md"
+section = "audit_voice"
+template = "prompt.template.md"

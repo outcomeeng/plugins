@@ -2,7 +2,7 @@
 
 PROVIDES an audit methodology verifying a spec node declares a well-formed node whose assertions carry a valid verification-type tag that fits each claim — including that parseable runtime/configuration contracts may use deterministic evidence while semantic claims about authored prose or documentation content never carry `[test]`
 SO THAT all spec-tree projects
-CAN eliminate malformed node specs, preserve deterministic conformance for parseable contracts, and stop prose-bound claims from masquerading as behavioral `[test]` evidence before they accumulate
+CAN eliminate malformed node specs, preserve deterministic conformance for parseable contracts, and block prose-bound claims from masquerading as behavioral `[test]` evidence
 
 ## Node Spec Evidence Model
 
@@ -12,7 +12,7 @@ Three properties checked in order:
 
 1. **Section structure** — the node opens with its kind statement (an enabler's `PROVIDES … SO THAT … CAN …` or an outcome's `WE BELIEVE THAT … WILL … CONTRIBUTING TO …`) and carries an `## Assertions` section; assertion-type headings appear only where that type applies
 2. **Atemporal voice** — the node states product truth, never history
-3. **Per-assertion tag validity, evidence-type fit, and coupling fitness** — every assertion carries exactly one verification-type tag (`[test]`, `[eval]`, or `[audit]`; `[review]` is the legacy spelling of `[audit]`); a `[test]` assertion's assertion type fits the claim's quantifier (a universal is never `scenario`); a claim about a parseable runtime or configuration contract may carry `[test]` when deterministic evidence checks structure such as field presence, schema conformance, registered command shape, generated output shape, or configured section names; and a claim whose subject is semantic authored prose or documentation content — text the product authors and maintains in a document, not executable or parseable structure — never carries `[test]`
+3. **Per-assertion tag validity, evidence-type fit, and coupling fitness** — every assertion carries exactly one verification-type tag (`[test]`, `[eval]`, or `[audit]`; `[review]` is the compatibility form of `[audit]`); a `[test]` assertion's assertion type fits the claim's quantifier (a universal is never `scenario`); a claim about a parseable runtime or configuration contract may carry `[test]` when deterministic evidence checks structure such as field presence, schema conformance, registered command shape, generated output shape, or configured section names; and a claim whose subject is semantic authored prose or documentation content — text the product authors and maintains in a document, not executable or parseable structure — never carries `[test]`
 
 ## Per-assertion Tag Fitness Model
 
