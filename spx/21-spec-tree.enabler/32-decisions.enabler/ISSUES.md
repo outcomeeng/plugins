@@ -1,12 +1,14 @@
 # Issues: Decisions Enabler
 
-## 16-verification.enabler conformance for the surviving auditors — REFRAMED by the run-journal architecture
+## Artifact-type auditors do not yet persist verification runs
 
-The auditor collapse (PR #275: composition mechanism + removal of the 10 language auditor agents + doc reconciliation) shipped without this conformance. `adr-auditor`/`test-evidence-auditor` gained `Skill` (for composition); `pdr-auditor` is unchanged; all three run as read-only verdict producers in the established pre-conformance pattern.
+`implementation-auditor` is the first audit wrapper moving to `spx verification run`. The artifact-type wrappers — `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, and `eval-evidence-auditor` — still return their skill verdict directly and do not yet record scope, findings, terminal state, or prior-run context through the shared verification-run lifecycle.
 
-**The conformance scope as originally written here is superseded.** `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` replaced the thread-store-persistence + verdict-toolchain model this entry described (`scripts/` arbiter, "wire thread-store persistence") with the append-only **run-journal contract**: wrapper agents declare `tools: Bash, Read, Skill` and append events through the `spx audit` channel (`init`/`progress`/`close`), and every surface is a projection. That gate is now satisfied — `spx 0.5.6` exposes the channel — so the migration is a live, sequenced effort tracked in **`spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`** (items 1–6: re-scope the verdict-toolchain to a projection, decide thread-store's fate, rework `17-audit.adr` onto the journal, give the wrapper agents the `tools: Bash, Read, Skill` shape, re-home the verdict vocabulary, decide reviewing's result-delivery governance). The `tools: Bash, Read, Skill` change to `adr-auditor`/`pdr-auditor`/`test-evidence-auditor` is item 4 there, sequenced after the audit skills migrate onto the channel — do NOT make it in isolation here. This entry defers to that plan for the agent/skill/journal conformance.
+Required handling:
 
-**One independent slice (PDR-auditing eval suites) — DELIVERED.** `pdr-auditing.md`'s scenario assertions had carried forward-referenced `[test](tests/test_pdr_auditing.scenario.l1.py)` (unbuilt, `32-pdr-auditing.enabler` in `spx/EXCLUDE`); per `15-spec-coverage.adr.md` an LLM-judgment surface carries `[eval]`, mirroring `21-adr-auditing.enabler`'s `evals/structure|voice|tag-validity`. This slice is independent of the run-journal channel (it scores the `audit-pdr` skill through the published `outcomeeng-evals` harness) and shipped separately: `32-pdr-auditing.enabler` now carries `evals/structure|voice|tag-validity` scored through the harness, its six scenario assertions moved from `[test]` to `[eval]`, and the node left `spx/EXCLUDE` — the eval-evidence gap for PDR auditing is resolved.
+- Keep each wrapper thin and runtime-neutral while implementation audit proves the single-run contract.
+- Move artifact-type auditors onto `spx verification run` in the later slice recorded by `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`.
+- Preserve each artifact audit's existing verdict schema until the SPX payload contract for that audit kind is specified.
 
 ## Audit-skill family carries codebase-wide standards deviations (FOLLOW-UP, surfaced by skill-auditor)
 

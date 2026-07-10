@@ -8,9 +8,9 @@ does not carry co-located eval implementations for those cases, so the scenario
 assertions still rely on `[review]` evidence.
 `[review]` fits LLM-driven orchestration behavior that no finite automated test
 falsifies, but it leaves a structural regression (for example the skill body
-losing its `<mode_detection>` block) undetected by the deterministic gate. The
-Conformance assertions carry `[test]`, so the node's `tests/` directory covers
-packaging and static routing properties only.
+losing its `<mode_detection>` block) undetected by the deterministic gate.
+Packaging, frontmatter intent, and closeout semantics use `[audit]`; deterministic
+tests do not parse skill Markdown as a proxy for LLM-driven orchestration behavior.
 
 The eval lane can add scenarios mirroring the gate evals under
 `spx/21-spec-tree.enabler/76-merging.enabler`:
