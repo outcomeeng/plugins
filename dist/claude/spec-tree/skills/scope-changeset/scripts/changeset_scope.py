@@ -1,10 +1,10 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
 Single home for the deterministic git derivation shared by the audit,
-review-changes, and thread-store skills: branch identity, the on-disk
+review-changes, and sync-base skills: branch identity, the on-disk
 addressing slug, base-ref resolution, the remote-tracking ref form, and
 merge-base diff scope. Consumers import these symbols (directly or through
-``thread-store/scripts/branch_slug.py``'s re-export); none re-implements them.
+consumer imports); none re-implements them.
 
 Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
@@ -275,7 +275,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
     The ``state_dir`` argument is optional — passing ``None`` disables
     the state-file collision check, which is the calling convention
     callers use when they do not maintain audit-state files (the
-    thread-store helper consumes this contract via re-export).
+    consumers import this contract directly).
     """
     # Stage 1: replace slashes.
     slashed = branch_name.replace("/", "__")

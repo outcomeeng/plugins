@@ -1,5 +1,5 @@
 from outcomeeng_testing.harnesses.reviewing_changes_audit import (
-    TestComputeDiffHasNoThreadAddressing as _ComputeDiffHasNoThreadAddressing,
+    TestComputeDiffHasNoPersistenceAddressing as _ComputeDiffHasNoPersistenceAddressing,
     TestNoParallelReviewResultRenderer as _NoParallelReviewResultRenderer,
     TestNoSecondSchemaRepresentation as _NoSecondSchemaRepresentation,
     TestScriptsAreStdlibOnly as _ScriptsAreStdlibOnly,
@@ -28,8 +28,8 @@ def test_no_alternate_schema_file_exists() -> None:
     _NoSecondSchemaRepresentation().test_no_alternate_schema_file_exists()
 
 
-def test_compute_diff_has_no_thread_addressing() -> None:
-    _ComputeDiffHasNoThreadAddressing().test_compute_diff_has_no_slug_argument()
+def test_compute_diff_has_no_persistence_addressing() -> None:
+    _ComputeDiffHasNoPersistenceAddressing().test_compute_diff_has_no_slug_argument()
 
 
 def test_script_set_has_no_parallel_renderer() -> None:

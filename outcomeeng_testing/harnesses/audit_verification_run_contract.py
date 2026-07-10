@@ -25,7 +25,7 @@ PLUGIN_SURFACES: Final = (
     Path("dist/codex"),
 )
 AUDIT_SKILL_SCRIPT_DIRS: Final = tuple(
-    surface / "spec-tree" / "skills" / "audit" / "scripts"
+    surface / "spec-tree" / "skills" / "audit-implementation" / "scripts"
     for surface in PLUGIN_SURFACES
 )
 SPEC_TREE_AGENT_DIRS: Final = tuple(
@@ -85,7 +85,7 @@ IMPLEMENTATION_AUDIT_SCOPE_UNIT: Final = {
         "producerKind": "agent",
         "agentName": "implementation-auditor",
         "agentOwningPluginName": "spec-tree",
-        "skillName": "audit",
+        "skillName": "audit-implementation",
         "skillOwningPluginName": "spec-tree",
         "invocationRole": "run-driver",
     },

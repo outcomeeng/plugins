@@ -310,15 +310,14 @@ class TestNoSecondSchemaRepresentation:
         )
 
 
-class TestComputeDiffHasNoThreadAddressing:
-    """``compute_diff.py`` does not accept thread-addressing arguments."""
+class TestComputeDiffHasNoPersistenceAddressing:
+    """``compute_diff.py`` does not accept persistence-addressing arguments."""
 
     def test_compute_diff_has_no_slug_argument(self) -> None:
         if not COMPUTE_DIFF_SCRIPT.is_file():
             pytest.skip("compute_diff.py not yet present")
         source = COMPUTE_DIFF_SCRIPT.read_text(encoding="utf-8")
         assert "--slug" not in source
-        assert "thread_store" not in source
 
 
 # The review script set: the runner plus the legacy helper modules.

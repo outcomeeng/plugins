@@ -1,5 +1,5 @@
 ---
-name: audit
+name: audit-implementation
 description: >-
   Implementation-audit orchestration methodology preloaded by the
   implementation-auditor agent. Dispatch implementation-auditor for

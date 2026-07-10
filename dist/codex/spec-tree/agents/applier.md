@@ -69,7 +69,7 @@ Do not invent missing requirements. If the dispatch prompt, repository files, or
 
 At Steps 4 and 6, do not run the gates. Record the corresponding `ARCHITECTURE_AUDIT_REQUIRED` or `TEST_AUDIT_REQUIRED` handoff for the final aggregate report.
 
-At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` handoff containing repository path, live file list including untracked files, `<base>..<head>` scope, governing node path, detected language, and deterministic verification already run. The main conversation dispatches `implementation-auditor` with that request.
+At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit-implementation` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` handoff containing repository path, live file list including untracked files, `<base>..<head>` scope, governing node path, detected language, and deterministic verification already run. The main conversation dispatches `implementation-auditor` with that request.
 
 </gate_protocol>
 
