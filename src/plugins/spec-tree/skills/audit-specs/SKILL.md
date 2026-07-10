@@ -129,18 +129,18 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
+The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-specs",
   "target": "<node-spec-file-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "tag-fitness", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "section-structure", "status": "PASS | FAIL", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
+    { "name": "tag-fitness", "status": "PASS | FAIL", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }

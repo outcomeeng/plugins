@@ -179,20 +179,20 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any property is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
+The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-pdr",
   "target": "<pdr-file-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "property-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "tag-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "content-classification", "status": "PASS | FAIL", "findings": [] },
+    { "name": "property-quality", "status": "PASS | FAIL", "findings": [] },
+    { "name": "tag-validity", "status": "PASS | FAIL", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
+    { "name": "consistency", "status": "PASS | FAIL", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }

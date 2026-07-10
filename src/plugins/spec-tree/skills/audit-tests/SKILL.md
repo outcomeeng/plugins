@@ -248,18 +248,18 @@ Scan all findings across all assertions, including any folded in from the compos
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`. Skills never hand-format markdown verdicts.
 
-The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
+The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-tests",
   "target": "<spec-node-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
     {
       "name": "gate-1-assertion",
-      "status": "PASS | FAIL | UNKNOWN",
+      "status": "PASS | FAIL",
       "findings": [
         {
           "id": "f-002",
@@ -273,7 +273,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
     },
     {
       "name": "gate-2-architectural",
-      "status": "PASS | FAIL | UNKNOWN",
+      "status": "PASS | FAIL",
       "findings": [
         {
           "id": "f-003",
@@ -290,7 +290,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
 }
 ```
 
-Gate-skipped rows use `status: "UNKNOWN"`. A skill with no Gate 2 omits that row from the verdict; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 
