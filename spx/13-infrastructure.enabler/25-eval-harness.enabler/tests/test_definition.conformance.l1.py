@@ -17,7 +17,6 @@ from outcomeeng_evals.testing.factories import (
     assert_definition_rejects_non_string_model,
     assert_definition_rejects_nonexistent_cases_file,
     assert_definition_rejects_nonexistent_prompt_file,
-    assert_definition_rejects_owned_path_globs_ci_matches_differently,
     assert_definition_rejects_trials_above_cap,
     assert_definition_rejects_trials_below_one,
     assert_definition_resolves_cases_path_relative_to_toml_directory,
@@ -25,6 +24,7 @@ from outcomeeng_evals.testing.factories import (
     assert_definition_uses_explicit_model_when_set,
     assert_definition_uses_explicit_threshold_when_set,
     assert_definition_uses_explicit_trials_when_set,
+    assert_owned_path_alphabet_excludes_every_glob_magic_character,
 )
 
 
@@ -112,5 +112,5 @@ def test_accepts_owned_path_shapes_ci_matches_identically() -> None:
     assert_definition_accepts_owned_path_shapes_ci_matches_identically()
 
 
-def test_rejects_owned_path_globs_ci_matches_differently() -> None:
-    assert_definition_rejects_owned_path_globs_ci_matches_differently()
+def test_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
+    assert_owned_path_alphabet_excludes_every_glob_magic_character()

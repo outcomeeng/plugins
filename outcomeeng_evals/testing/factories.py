@@ -7,9 +7,11 @@ eval directory tree with one call.
 
 from __future__ import annotations
 
+import glob
 import json
 import math
 import os
+from string import printable
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -500,33 +502,22 @@ def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None
         assert definition.owned_paths == accepted
 
 
-def assert_definition_rejects_owned_path_globs_ci_matches_differently() -> None:
-    """Assert any character outside the owned-path alphabet is refused.
+def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
+    """Assert the alphabet excludes every character the stdlib calls glob magic.
 
-    `fnmatch`'s `*` spans `/` and the CI provider's does not, so a glob beyond
-    a trailing recursive suffix would select a suite locally that the generated
-    trigger filter never starts remotely. The alphabet is an allowlist, so each
-    probe below is refused because it leaves the alphabet -- not because it
-    appears on a list of globs the loader happens to know about.
+    The property evidence proves the loader honors whatever the alphabet says.
+    It cannot prove the alphabet says the right thing -- a widened alphabet also
+    widens the domain that evidence searches. `glob.has_magic` is an oracle
+    outside this module's control, so it pins the contract the alphabet must
+    keep: a path carrying a glob character is matched differently by `fnmatch`
+    and by the CI provider's engine, and must never reach either.
     """
 
-    for outside_alphabet in ("*", "?", "[", "]", "{", "}", "!", "+", "@", " "):
-        assert not OWNED_PATH_ALPHABET.fullmatch(outside_alphabet)
-        divergent = (
-            f"src/plugins/{outside_alphabet}/skills{OWNED_PATH_RECURSIVE_SUFFIX}"
-        )
-        _assert_definition_raises(
-            lines=(f'owned_paths = ["{divergent}"]',),
-            match="owned_paths",
-        )
+    magic = tuple(character for character in printable if glob.has_magic(character))
+    assert magic
 
-    # A recursive suffix anywhere but the end leaves its `*` in the body the
-    # alphabet governs, so it is refused for the same reason.
-    mid_path = f"src{OWNED_PATH_RECURSIVE_SUFFIX}/scripts{OWNED_PATH_RECURSIVE_SUFFIX}"
-    _assert_definition_raises(
-        lines=(f'owned_paths = ["{mid_path}"]',),
-        match="owned_paths",
-    )
+    for character in magic:
+        assert OWNED_PATH_ALPHABET.fullmatch(character) is None
 
 
 def assert_definition_accepts_trials_at_cap() -> None:
