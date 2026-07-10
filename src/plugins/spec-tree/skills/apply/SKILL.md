@@ -39,7 +39,7 @@ When the queue holds more than one node, order by numeric index prefix (lower fi
 
 1. If it is listed in `spx/EXCLUDE`, remove its line first — the `spx` CLI then includes its tests in `spx test passing`.
 2. Run Steps 1–9 on the node.
-3. Commit via `/commit-changes`.
+3. Confirm the final gate subject is committed and the worktree is clean.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 
 If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
@@ -80,6 +80,21 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 </stabilized_diff_rule>
 
+<verification_checkpoint>
+
+Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
+
+1. Run the required deterministic verification over the stabilized changes.
+2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local verification checkpoint.
+3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
+4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run.
+
+An audit over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate.
+
+After a rejected audit or valid review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
+
+</verification_checkpoint>
+
 <evidence_auditor_gate>
 
 Before Step 9 invokes `changes-reviewer`, run the applicable artifact-type evidence auditors over the stabilized diff. This gate is separate from the language-specific Step 6 test audit: Step 6 checks the tests written for the target node in the TDD flow; this pre-review gate checks any evidence artifacts the final changeset would publish.
@@ -90,7 +105,7 @@ Dispatch `test-evidence-auditor` before Step 9 when the diff creates or modifies
 
 Dispatch `eval-evidence-auditor` before Step 9 when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. Include the governing node, assertion text or spec path plus assertion headings, the eval artifacts, and the producer artifacts in the dispatch prompt. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch before Step 9.
 
-When both evidence classes changed, dispatch both auditors before Step 9. Step 9 starts only after every applicable evidence-auditor verdict is clean on the exact diff it reviews.
+Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`. When both evidence classes changed, dispatch both auditors against the same checkpoint before Step 9. Step 9 starts only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews.
 
 </evidence_auditor_gate>
 
@@ -159,7 +174,7 @@ Dispatch `adr-auditor` with the ADR path, governing node path, detected language
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 
-Before invoking the audit, apply `<stabilized_diff_rule>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
 **REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
@@ -179,7 +194,7 @@ Dispatch `test-evidence-auditor` with the governing node, assertion text or spec
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
-Before invoking the audit, apply `<stabilized_diff_rule>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
 **REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
 
@@ -195,11 +210,11 @@ Write implementation code. All tests from Step 5 must pass.
 
 <step number="8" name="Code audit" gate="true">
 
-Dispatch the `implementation-auditor` agent with the repository path, exact live file list, changeset scope, governing node path, detected language, and deterministic verification already run.
+Dispatch the `implementation-auditor` agent with the repository path, exact committed changeset scope, no live file list, governing node path, detected language, and deterministic verification already run.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
 
-Before invoking the audit, apply `<stabilized_diff_rule>`.
+Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
 The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from the main conversation. Read the returned rendered projection: its `terminalStatus` is the Step 8 verdict — `approved` passes, `rejected` requires repair, and a missing projection or exact blocked command blocks the gate.
 
@@ -211,7 +226,7 @@ The implementation-auditor composes the installed `audit-{lang}-{code|tests|arch
 
 Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
 
-Before invoking the review, run `<evidence_auditor_gate>`. The reviewer must see a diff whose touched evidence artifacts have already passed their artifact-type evidence audits.
+Before invoking the review, run `<evidence_auditor_gate>`, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
 
 Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
 

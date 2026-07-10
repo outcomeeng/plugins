@@ -39,13 +39,13 @@ The invocation request `$ARGUMENTS` carries:
 
 - Repository path.
 - Changeset scope as `<base>..<head>` for `--scope`.
-- Optional explicit live file list for pre-commit audits, including modified and untracked files that are not yet part of `<head>`.
+- Optional explicit live file list for advisory pre-commit audits, including modified and untracked files that are not yet part of `<head>`. A run with a live file list never satisfies an apply or merge gate.
 - Governing node paths and any explicit file-list partition the caller already resolved.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
 
 If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, or deterministic verification state, return BLOCKED before starting a verification run. Name the missing request fields and the exact wrapper prompt shape required to retry.
 
-Use the caller's changeset scope and explicit live file list exactly. Do not derive a different base, widen to the whole repository, drop uncommitted files, or collapse the scope to only one file unless the caller supplied that exact scope. For pre-commit `/apply` audits, record the live file list in the `--input` payload at run start and in scope payloads so SPX persistence preserves the files the audit actually gated.
+Use the caller's changeset scope and explicit live file list exactly. Do not derive a different base, widen to the whole repository, drop uncommitted files, or collapse the scope to only one file unless the caller supplied that exact scope. A gate-eligible request addresses an exact committed head and supplies no live file list. For an advisory pre-commit audit, record the live file list in the `--input` payload at run start and in scope payloads so SPX persistence preserves the files inspected, while reporting that the run cannot satisfy a gate.
 
 </request_contract>
 
@@ -234,6 +234,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
+- A gating run addresses a committed head with no live file list; a run carrying modified or untracked files identifies itself as advisory and is never presented as gate evidence.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>

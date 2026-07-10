@@ -172,11 +172,11 @@ Blocked or incomplete result shape:
 
 After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-journal` skill and use its `render_review_run.py <run-token>` helper to inspect the sealed review run. That helper calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, reads the sealed event prefix, and prints the review status, full head/base identity, scope coverage, and finding counts. Treat this as journal inspection; the sealed prefix remains the only review result.
 
-**Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not commit, merge, or mark the gate passed until a later `changes-reviewer` run returns a valid raw journal token, or the operator explicitly approves a process exception.
+**Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not publish, merge, or mark the gate passed. When repairing a finding or blocked subject, rerun deterministic verification, create a new local checkpoint commit, and review that new head; an operator-approved process exception is the only other path past the gate.
 
-**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the current working diff, `origin/<base>...HEAD` for a specific range, a branch name, or a PR reference.
+**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the clean committed head, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference.
 
-- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, and make the diff scope clean enough for the reviewer to infer the target from the raw token.
+- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the reviewer judges an exact committed head. A review over a working diff is advisory and never satisfies a gate.
 - NEVER invoke the `spec-tree:review-changes` skill.
 - NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
 
@@ -209,12 +209,14 @@ Use this shape for an implementation audit:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "implementation-auditor",
-    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> changeset scope plus any explicit changed-file partition already resolved\nLive file list: <full paths to modified and untracked files for pre-commit audits, or none for committed changeset-only audits>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
+    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nLive file list: none for a gating audit; full modified and untracked paths only for an advisory pre-commit audit\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
   }
 }
 ```
 
 **Codex `implementation-auditor` output contract.** A successful final message carries the raw `spx verification run` token and rendered projection, without a competing prose verdict envelope. Treat the projection's `terminalStatus` as authoritative: `approved` passes the implementation-audit gate and `rejected` requires repair. A missing token or projection, a terminal status outside that vocabulary, or an exact blocked SPX command leaves the gate blocked.
+
+**Committed gate subject.** A gating implementation audit runs only after deterministic verification passes and the subject is committed locally. A run carrying a live modified or untracked file list is advisory and cannot satisfy an apply or merge gate.
 
 Use this shape for test-evidence audits:
 
