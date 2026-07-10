@@ -12,11 +12,8 @@ Rejected: keeping the derivation in the audit skill with re-exports — it leave
 
 ## Verification
 
-### Testing
-
-- ALWAYS: every git-derived diff range is composed against the remote-tracking ref `origin/<base>` via `remote_tracking_ref` — `branch_scope` for the audit surface, `compute_diff` for the review surface — so a stale local branch ref does not widen the scope ([scenario])
-
 ### Audit
 
+- ALWAYS: every git-derived diff range is composed against the remote-tracking ref `origin/<base>` via `remote_tracking_ref` — `branch_scope` for the audit surface, `compute_diff` for the review surface — so a stale local branch ref does not widen the scope ([audit])
 - ALWAYS: the changeset-derivation primitives are defined once in the changeset-scope skill's `scripts/changeset_scope.py`; implementation-audit orchestration, review-changes, and sync-base reach them only by import ([audit])
 - NEVER: a consumer skill re-implements a changeset-derivation primitive in its own `scripts/` ([audit])

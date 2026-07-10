@@ -15,7 +15,3 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 - Given a checkout on a named branch, when `detect_current_branch` runs, then it returns that branch name; on a detached HEAD it raises `DetachedHeadError` rather than returning the `HEAD` placeholder ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a git ref that resolves to a commit, when `commit_oid` runs, then it returns the full object ID of that commit so journal run-state identity is stamped with concrete commit IDs rather than symbolic refs ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a `state_dir` whose state file at the base-slug path records a different branch, when `branch_slug` runs, then it returns the base slug with the deterministic `--<sha8>` collision suffix; with no such state file it returns the bare base slug ([test](tests/test_changeset_scope.scenario.l1.py))
-
-### Compliance
-
-- ALWAYS: every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through the shared `remote_tracking_ref` helper — `branch_scope` for the auditing surface and `compute_diff` for the reviewing surface — so a stale local branch ref cannot widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
