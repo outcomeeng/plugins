@@ -48,6 +48,10 @@ VERIFY_MODULE_PATH = (
     / "verify_session_claims.py"
 )
 SESSION_ID = "2026-01-01_00-00-00"
+TEST_NODE_PATH = "spx/21-x.enabler"
+TEST_SPEC_PATH = f"{TEST_NODE_PATH}/x.md"
+PASSING_STATUS_JSON = '{"status": "passing"}'
+PRESENT_FILE_NAME = "present.md"
 
 
 def load_verify_session_claims_module() -> ModuleType:
@@ -340,7 +344,7 @@ def node_status_surfaces_changed_value() -> bool:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
+            scripted=session_command_scripts(specs=(TEST_SPEC_PATH,))
             | {SPX_STATUS: (0, '{"status": "failing"}', "")},
         )
         verdict = _only(
@@ -356,17 +360,17 @@ def node_status_evidence_excludes_child_tree() -> bool:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
+            scripted=session_command_scripts(specs=(TEST_SPEC_PATH,))
             | {
                 SPX_STATUS: (
                     0,
                     json.dumps(
                         {
-                            "node": "spx/21-x.enabler",
+                            "node": TEST_NODE_PATH,
                             "status": "passing",
                             "children": [
                                 {
-                                    "node": "spx/21-x.enabler/32-y.enabler",
+                                    "node": f"{TEST_NODE_PATH}/32-y.enabler",
                                     "status": "failing",
                                 }
                             ],
@@ -407,8 +411,8 @@ def spec_entry_emits_both_path_and_node_status() -> bool:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
-            | {SPX_STATUS: (0, '{"status": "passing"}', "")},
+            scripted=session_command_scripts(specs=(TEST_SPEC_PATH,))
+            | {SPX_STATUS: (0, PASSING_STATUS_JSON, "")},
         )
         verdicts = module.verify(SESSION_ID, repo, runner)
         path_verdicts = [
@@ -423,8 +427,8 @@ def spec_entry_emits_both_path_and_node_status() -> bool:
         ]
         assert len(path_verdicts) == 1
         assert len(node_verdicts) == 1
-        assert path_verdicts[0].subject == "spx/21-x.enabler/x.md"
-        assert node_verdicts[0].subject == "spx/21-x.enabler"
+        assert path_verdicts[0].subject == TEST_SPEC_PATH
+        assert node_verdicts[0].subject == TEST_NODE_PATH
         return True
 
 
@@ -457,12 +461,12 @@ def git_ref_branch_absent_from_origin_is_discrepancy() -> bool:
 def current_session_frontmatter_shape_still_emits_claims() -> bool:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        (repo / "present.md").write_text("here\n")
+        (repo / PRESENT_FILE_NAME).write_text("here\n")
         runner = RecordingRunner(
             repo=repo,
             scripted=session_command_scripts(
                 git_ref=head_sha(repo),
-                files=("present.md",),
+                files=(PRESENT_FILE_NAME,),
             ),
         )
         verdicts = module.verify(SESSION_ID, repo, runner)
@@ -555,11 +559,11 @@ def verification_is_read_only_and_uses_spec_status() -> bool:
             scripted=session_command_scripts(
                 git_ref="0" * 40,
                 git_status="clean",
-                specs=("spx/21-x.enabler/x.md",),
+                specs=(TEST_SPEC_PATH,),
                 pr_numbers=("256",),
             )
             | {
-                SPX_STATUS: (0, '{"status": "passing"}', ""),
+                SPX_STATUS: (0, PASSING_STATUS_JSON, ""),
                 GH_VIEW: (0, '{"state": "MERGED"}', ""),
             },
         )
@@ -581,21 +585,21 @@ def node_status_evidence_keeps_target_node_scalar_fields_only() -> bool:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
+            scripted=session_command_scripts(specs=(TEST_SPEC_PATH,))
             | {
                 SPX_STATUS: (
                     0,
                     json.dumps(
                         {
-                            "node": "spx/21-x.enabler",
-                            "path": "spx/21-x.enabler/x.md",
-                            "spec": "spx/21-x.enabler/x.md",
+                            "node": TEST_NODE_PATH,
+                            "path": TEST_SPEC_PATH,
+                            "spec": TEST_SPEC_PATH,
                             "state": "Specified",
                             "status": "passing",
                             "result": True,
                             "children": [
                                 {
-                                    "node": "spx/21-x.enabler/32-y.enabler",
+                                    "node": f"{TEST_NODE_PATH}/32-y.enabler",
                                     "status": "failing",
                                 }
                             ],
@@ -617,10 +621,10 @@ def node_status_evidence_keeps_target_node_scalar_fields_only() -> bool:
         ]
         assert len(node_status) == 1
         assert json.loads(node_status[0].evidence) == {
-            "node": "spx/21-x.enabler",
-            "path": "spx/21-x.enabler/x.md",
+            "node": TEST_NODE_PATH,
+            "path": TEST_SPEC_PATH,
             "result": True,
-            "spec": "spx/21-x.enabler/x.md",
+            "spec": TEST_SPEC_PATH,
             "state": "Specified",
             "status": "passing",
         }
@@ -638,7 +642,7 @@ def wrong_shape_session_metadata_is_unverifiable() -> bool:
 def malformed_session_metadata_fields_are_unverifiable() -> bool:
     malformed_payloads: tuple[dict[str, Any], ...] = (
         {"git_ref": 123, "specs": [], "files": []},
-        {"git_ref": None, "specs": "spx/21-x.enabler/x.md", "files": []},
+        {"git_ref": None, "specs": TEST_SPEC_PATH, "files": []},
         {"git_ref": None, "specs": [], "files": [123]},
         {
             "git_ref": None,
@@ -713,20 +717,16 @@ def optional_session_injection_lists_default_to_empty() -> bool:
 
 
 def _present_path(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    (repo / "present.md").write_text("here\n")
-    return {"files": ("present.md",)}, {}
+    (repo / PRESENT_FILE_NAME).write_text("here\n")
+    return {"files": (PRESENT_FILE_NAME,)}, {}
 
 
 def _node_ok(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    return {"specs": ("spx/21-x.enabler/x.md",)}, {
-        SPX_STATUS: (0, '{"status": "passing"}', "")
-    }
+    return {"specs": (TEST_SPEC_PATH,)}, {SPX_STATUS: (0, PASSING_STATUS_JSON, "")}
 
 
 def _node_unavailable(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    return {"specs": ("spx/21-x.enabler/x.md",)}, {
-        SPX_STATUS: (1, "", "spx: command not found")
-    }
+    return {"specs": (TEST_SPEC_PATH,)}, {SPX_STATUS: (1, "", "spx: command not found")}
 
 
 def _dirty_but_recorded_clean(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:

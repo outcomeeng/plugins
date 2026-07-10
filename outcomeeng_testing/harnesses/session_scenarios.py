@@ -14,6 +14,8 @@ from outcomeeng_testing.harnesses.git_context import (
     handoff_git_env,
 )
 
+SESSION_BODY = "# Session\n"
+
 
 def _handoff(
     sessions_dir: Path,
@@ -112,14 +114,9 @@ def _parse_session_file(stdout: str) -> Path:
 
 
 def _read_git_ref(session_file: Path) -> str:
-    frontmatter = _read_frontmatter(session_file)
-    match = re.search(
-        r'^\s*"?git_ref"?:\s*"?([^"\n]+?)"?\s*$',
-        frontmatter,
-        re.MULTILINE,
-    )
-    assert match, f"no git_ref in frontmatter of {session_file}"
-    return match.group(1)
+    field_line = _frontmatter_field_line(session_file, "git_ref")
+    _, _, raw_value = field_line.partition(":")
+    return raw_value.strip().strip('"')
 
 
 def _read_frontmatter(session_file: Path) -> str:
@@ -138,10 +135,36 @@ def _read_frontmatter(session_file: Path) -> str:
 def _frontmatter_contains_field_value(
     session_file: Path, field: str, value: str
 ) -> bool:
+    return value in _frontmatter_field_block(session_file, field)
+
+
+def _frontmatter_field_line(session_file: Path, field: str) -> str:
     frontmatter = _read_frontmatter(session_file)
-    field_line = re.search(rf'^\s*"?{re.escape(field)}"?:', frontmatter, re.MULTILINE)
-    assert field_line, f"no {field} in frontmatter of {session_file}"
-    return value in frontmatter
+    return _frontmatter_field_block_from_text(frontmatter, field).splitlines()[0]
+
+
+def _frontmatter_field_block(session_file: Path, field: str) -> str:
+    return _frontmatter_field_block_from_text(_read_frontmatter(session_file), field)
+
+
+def _frontmatter_field_block_from_text(frontmatter: str, field: str) -> str:
+    field_prefixes = (f"{field}:", f'"{field}":')
+    lines = frontmatter.splitlines()
+    field_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.lstrip().startswith(field_prefixes)
+        ),
+        None,
+    )
+    assert field_index is not None, f"no {field} in frontmatter"
+    block = [lines[field_index]]
+    for line in lines[field_index + 1 :]:
+        if line and not line[0].isspace() and not line.startswith("- "):
+            break
+        block.append(line)
+    return "\n".join(block)
 
 
 def _single_todo_file(sessions_dir: Path) -> Path:
@@ -236,7 +259,7 @@ def pickup_removes_from_todo() -> bool:
         sessions_dir = Path(directory) / "sessions"
         result = _handoff(
             sessions_dir,
-            "# Session\n",
+            SESSION_BODY,
             cwd=repo,
             goal="Move a session out of todo",
             next_step="Confirm the file no longer exists in todo",
@@ -254,7 +277,7 @@ def pickup_places_in_doing() -> bool:
         sessions_dir = Path(directory) / "sessions"
         result = _handoff(
             sessions_dir,
-            "# Session\n",
+            SESSION_BODY,
             cwd=repo,
             goal="Move a session into doing",
             next_step="Confirm the file exists in doing",
@@ -428,7 +451,7 @@ def issues_md_excerpt_preserved() -> bool:
 
 def root_checkout_on_branch_records_branch_name() -> bool:
     with TemporaryDirectory() as directory, handoff_git_env() as env:
-        result = _handoff(Path(directory) / "sessions", "# Session\n", cwd=env.root)
+        result = _handoff(Path(directory) / "sessions", SESSION_BODY, cwd=env.root)
         assert result.returncode == 0, result.stderr
         assert _read_git_ref(_parse_session_file(result.stdout)) == env.default_branch
         return True
@@ -437,7 +460,7 @@ def root_checkout_on_branch_records_branch_name() -> bool:
 def root_checkout_detached_head_records_head_sha() -> bool:
     with TemporaryDirectory() as directory, handoff_git_env() as env:
         env.detach_root()
-        result = _handoff(Path(directory) / "sessions", "# Session\n", cwd=env.root)
+        result = _handoff(Path(directory) / "sessions", SESSION_BODY, cwd=env.root)
         assert result.returncode == 0, result.stderr
         assert _read_git_ref(_parse_session_file(result.stdout)) == env.head_sha()
         return True
@@ -447,7 +470,7 @@ def linked_worktree_at_origin_tip_records_tip_sha() -> bool:
     with TemporaryDirectory() as directory, handoff_git_env() as env:
         result = _handoff(
             Path(directory) / "sessions",
-            "# Session\n",
+            SESSION_BODY,
             cwd=env.linked_at_origin_tip(),
         )
         assert result.returncode == 0, result.stderr
@@ -458,7 +481,7 @@ def linked_worktree_at_origin_tip_records_tip_sha() -> bool:
 def linked_worktree_on_branch_is_refused() -> bool:
     with TemporaryDirectory() as directory, handoff_git_env() as env:
         sessions_dir = Path(directory) / "sessions"
-        result = _handoff(sessions_dir, "# Session\n", cwd=env.linked_on_branch())
+        result = _handoff(sessions_dir, SESSION_BODY, cwd=env.linked_on_branch())
         assert result.returncode != 0
         assert "SessionHandoffBaseError" in result.stderr
         assert not list(sessions_dir.rglob("*.md"))
@@ -470,7 +493,7 @@ def linked_worktree_detached_off_tip_is_refused() -> bool:
         sessions_dir = Path(directory) / "sessions"
         result = _handoff(
             sessions_dir,
-            "# Session\n",
+            SESSION_BODY,
             cwd=env.linked_detached_off_tip(),
         )
         assert result.returncode != 0
@@ -484,7 +507,7 @@ def explicit_work_branch_ref_records_branch_name() -> bool:
         work_branch = env.push_work_branch("work/feature")
         result = _handoff(
             Path(directory) / "sessions",
-            "# Session\n",
+            SESSION_BODY,
             cwd=env.linked_at_origin_tip(),
             git_ref=work_branch,
         )
@@ -500,7 +523,7 @@ def explicit_work_branch_ref_absent_from_origin_is_refused() -> bool:
         sessions_dir = Path(directory) / "sessions"
         result = _handoff(
             sessions_dir,
-            "# Session\n",
+            SESSION_BODY,
             cwd=env.linked_at_origin_tip(),
             git_ref="work/absent",
         )
@@ -513,7 +536,7 @@ def explicit_work_branch_ref_absent_from_origin_is_refused() -> bool:
 def _handoff_then_pickup(sessions_dir: Path, repo: Path) -> str:
     result = _handoff(
         sessions_dir,
-        "# Session\n",
+        SESSION_BODY,
         cwd=repo,
         goal="Move a session through pickup",
         next_step="Run release and inspect queue state",
