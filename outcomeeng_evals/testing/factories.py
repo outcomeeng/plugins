@@ -470,6 +470,42 @@ def assert_definition_rejects_non_string_model() -> None:
     _assert_definition_raises(lines=("model = 1",), match="model")
 
 
+def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
+    """Assert an exact path and a trailing `/**` both load."""
+
+    accepted = ("AGENTS.md", "src/plugins/spec-tree/skills/merge/**")
+    with TemporaryDirectory() as tmp:
+        entries = ", ".join(f'"{path}"' for path in accepted)
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f"owned_paths = [{entries}]",),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert definition.owned_paths == accepted
+
+
+def assert_definition_rejects_owned_path_globs_ci_matches_differently() -> None:
+    """Assert a glob beyond a trailing `/**` is refused at load time.
+
+    `fnmatch`'s `*` spans `/` and the CI provider's does not, so each shape
+    below would select a suite locally that the generated trigger filter never
+    starts remotely.
+    """
+
+    for divergent in (
+        "src/plugins/*/skills/**",
+        "spx/?-node/**",
+        "spx/[ab]-node/**",
+        "src/**/scripts/**",
+    ):
+        _assert_definition_raises(
+            lines=(f'owned_paths = ["{divergent}"]',),
+            match="owned_paths",
+        )
+
+
 def assert_definition_accepts_trials_at_cap() -> None:
     with TemporaryDirectory() as tmp:
         toml_path = _write_eval_definition(

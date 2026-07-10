@@ -28,6 +28,11 @@ MAX_TRIALS_PER_CASE = 100
 EVAL_TOML_FILENAME = "eval.toml"
 RUNS_DIRNAME = "runs"
 
+# The only glob an owned path may carry, and the characters that would make its
+# local `fnmatch` semantics diverge from the CI provider's glob engine.
+OWNED_PATH_RECURSIVE_SUFFIX = "/**"
+GLOB_METACHARACTERS = ("*", "?", "[", "]")
+
 _REQUIRED_TITLE = "title"
 _REQUIRED_CASES = "cases"
 _REQUIRED_PROMPT = "prompt"
@@ -103,7 +108,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
     )
     plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
     model = _optional_model(raw, _OPTIONAL_MODEL)
-    owned_paths = _optional_str_tuple(raw, _OPTIONAL_OWNED_PATHS)
+    owned_paths = _optional_owned_paths(raw, _OPTIONAL_OWNED_PATHS)
     smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
     ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
 
@@ -230,6 +235,32 @@ def _optional_str_tuple(data: dict[str, Any], key: str) -> tuple[str, ...]:
             raise ValueError(msg)
         result.append(item)
     return tuple(result)
+
+
+def _optional_owned_paths(data: dict[str, Any], key: str) -> tuple[str, ...]:
+    """Load ``owned_paths``, restricted to the shapes CI matching agrees on.
+
+    An owned path is matched two ways: locally by ``fnmatch`` when the planner
+    selects suites from changed paths, and remotely by the CI provider's glob
+    engine when the generated trigger filter decides whether the job starts at
+    all. The two engines agree on an exact literal and on a trailing ``/**``,
+    and disagree elsewhere — ``fnmatch``'s ``*`` spans ``/`` while the CI
+    provider's does not. Restricting the shape keeps the two in lockstep, so a
+    path that selects a suite locally also starts the job remotely.
+    """
+
+    paths = _optional_str_tuple(data, key)
+    for path in paths:
+        prefix = path.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
+        if any(character in prefix for character in GLOB_METACHARACTERS):
+            allowed = f"an exact path or one ending in {OWNED_PATH_RECURSIVE_SUFFIX!r}"
+            msg = (
+                f"field {key!r} entry {path!r} must be {allowed} — a glob the "
+                f"local planner and the CI trigger filter match differently "
+                f"would select a suite the CI job never starts"
+            )
+            raise ValueError(msg)
+    return paths
 
 
 def _optional_ci_policy(data: dict[str, Any], key: str) -> CiPolicy:

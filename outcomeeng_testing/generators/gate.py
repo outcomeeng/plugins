@@ -8,6 +8,7 @@ from hypothesis.strategies import SearchStrategy
 from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, Step
 from outcomeeng.validation.selected_gate import (
     CHECK_WORKFLOW_PATH,
+    INSTRUCTION_BLOCK_SOURCE_PATH,
     PYPROJECT_PATH,
     ROOT_README_PATH,
     SPX_CONFIG_PATH,
@@ -24,9 +25,7 @@ SELECTED_GATE_MARKDOWN_PATH = (
 )
 SELECTED_GATE_README_PATH = ROOT_README_PATH
 SELECTED_GATE_SPX_CONFIG_PATH = SPX_CONFIG_PATH
-SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH = (
-    "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
-)
+SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH = INSTRUCTION_BLOCK_SOURCE_PATH
 SELECTED_GATE_SKILL_PATH = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
 SELECTED_GATE_PLUGIN_SCRIPT_PATH = (
     "src/plugins/spec-tree/skills/manage-pr/scripts/resolve_review_thread.py"
