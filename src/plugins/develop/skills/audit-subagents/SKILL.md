@@ -45,7 +45,7 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read the `develop:create-subagents` skill guidance, specifically its **Subagent usage and configuration** and **Writing effective prompts** reference topics.
+1. Both skills are already injected above. Read `develop:create-subagents` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
@@ -129,10 +129,10 @@ These improve quality - flag as recommendations:
 - Does prompt include focus areas or equivalent specificity?
 - Pass: 3-6 specific focus areas listed somewhere in the prompt
 
-**output_format**:
+**output structure**:
 
 - Does prompt define expected output structure?
-- Pass: `<output_format>` section with clear structure
+- Pass: clear deliverable-structure guidance under any semantically appropriate tag
 
 **model_selection**:
 
