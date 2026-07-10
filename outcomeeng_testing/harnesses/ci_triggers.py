@@ -41,6 +41,13 @@ CI_TRIGGERS_PROPERTY_TEST_PATH = (
 _EVAL_DIR_GLOB_SUFFIX = "/**"
 _WORKFLOW_INDENT = " " * 6
 
+# Probe fixtures: arbitrary representatives of a suite slug, a path an eval
+# owns, and a path no eval owns. Named once so a reader sees which literal
+# carries which role.
+_PROBE_SUITE = "suite"
+_PROBE_OWNED_PATH = "spx/a.md"
+_PROBE_UNOWNED_PATH = "spx/orphan.md"
+
 
 @dataclass(frozen=True)
 class EvalTriggerRepo:
@@ -98,19 +105,19 @@ def assert_ci_policy_controls_trigger_contribution(policy: CiPolicy) -> None:
     """Assert a suite's CI policy decides whether it contributes trigger paths."""
 
     owned = ("src/plugins/example/**", "spx/example.md")
-    with eval_trigger_repo({"suite": (policy, owned)}) as repo:
+    with eval_trigger_repo({_PROBE_SUITE: (policy, owned)}) as repo:
         derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
         contributes = policy is not CiPolicy.MANUAL
 
         for owned_path in owned:
             assert (owned_path in derived) is contributes
-        assert (repo.eval_dir_glob("suite") in derived) is contributes
+        assert (repo.eval_dir_glob(_PROBE_SUITE) in derived) is contributes
 
 
 def assert_universal_paths_always_contribute() -> None:
     """Assert the universal surfaces trigger CI regardless of suite ownership."""
 
-    with eval_trigger_repo({"suite": (CiPolicy.MANUAL, ())}) as repo:
+    with eval_trigger_repo({_PROBE_SUITE: (CiPolicy.MANUAL, ())}) as repo:
         derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
 
     for universal in UNIVERSAL_OWNED_PATHS:
@@ -141,7 +148,9 @@ def _invoke_cli(repo: EvalTriggerRepo, *, check: bool) -> Result:
 def assert_check_passes_when_workflow_is_current() -> None:
     """Assert the drift check exits successfully against a freshly written file."""
 
-    with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
+    with eval_trigger_repo(
+        {_PROBE_SUITE: (CiPolicy.FULL, (_PROBE_OWNED_PATH,))}
+    ) as repo:
         assert _invoke_cli(repo, check=False).exit_code == EXIT_SUCCESS
 
         result = _invoke_cli(repo, check=True)
@@ -152,12 +161,14 @@ def assert_check_passes_when_workflow_is_current() -> None:
 def assert_check_fails_when_a_trigger_path_is_removed() -> None:
     """Assert the drift check rejects a hand-edited workflow missing a path."""
 
-    with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
+    with eval_trigger_repo(
+        {_PROBE_SUITE: (CiPolicy.FULL, (_PROBE_OWNED_PATH,))}
+    ) as repo:
         _invoke_cli(repo, check=False)
         tampered = "\n".join(
             line
             for line in repo.workflow_text().splitlines()
-            if '"spx/a.md"' not in line
+            if f'"{_PROBE_OWNED_PATH}"' not in line
         )
         repo.workflow.write_text(tampered + "\n", encoding="utf-8")
 
@@ -170,11 +181,13 @@ def assert_check_fails_when_a_trigger_path_is_removed() -> None:
 def assert_check_fails_when_an_unowned_trigger_path_is_added() -> None:
     """Assert the drift check rejects a trigger path no eval suite owns."""
 
-    with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
+    with eval_trigger_repo(
+        {_PROBE_SUITE: (CiPolicy.FULL, (_PROBE_OWNED_PATH,))}
+    ) as repo:
         _invoke_cli(repo, check=False)
         tampered = repo.workflow_text().replace(
             f"{_WORKFLOW_INDENT}{END_MARKER}",
-            f'{_WORKFLOW_INDENT}- "spx/orphan.md"\n{_WORKFLOW_INDENT}{END_MARKER}',
+            f'{_WORKFLOW_INDENT}- "{_PROBE_UNOWNED_PATH}"\n{_WORKFLOW_INDENT}{END_MARKER}',
             1,
         )
         repo.workflow.write_text(tampered, encoding="utf-8")
@@ -188,7 +201,9 @@ def assert_check_fails_when_an_unowned_trigger_path_is_added() -> None:
 def assert_every_trigger_block_receives_the_same_paths() -> None:
     """Assert each declared trigger event renders an identical path list."""
 
-    with eval_trigger_repo({"suite": (CiPolicy.FULL, ("spx/a.md",))}) as repo:
+    with eval_trigger_repo(
+        {_PROBE_SUITE: (CiPolicy.FULL, (_PROBE_OWNED_PATH,))}
+    ) as repo:
         assert _invoke_cli(repo, check=False).exit_code == EXIT_SUCCESS
         expected = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
         blocks = _rendered_blocks(repo.workflow_text())
