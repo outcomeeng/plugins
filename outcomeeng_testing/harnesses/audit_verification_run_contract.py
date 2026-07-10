@@ -31,21 +31,6 @@ RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
-LANGUAGE_CONCERN_SKILLS: Final = (
-    (
-        "python",
-        ("audit-python-code", "audit-python-tests", "audit-python-architecture"),
-    ),
-    (
-        "typescript",
-        (
-            "audit-typescript-code",
-            "audit-typescript-tests",
-            "audit-typescript-architecture",
-        ),
-    ),
-    ("rust", ("audit-rust-code", "audit-rust-tests", "audit-rust-architecture")),
-)
 IMPLEMENTATION_AUDIT_INPUT: Final = {
     "schema_version": 1,
     "request": {"kind": "implementation-audit-contract"},
@@ -118,10 +103,7 @@ def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
 
 
 def language_concern_skill_trios_exist() -> bool:
-    return all(
-        _language_concern_skill_trio_exists(plugin_name, skill_names)
-        for plugin_name, skill_names in LANGUAGE_CONCERN_SKILLS
-    )
+    return all(_surface_language_concern_skill_trios_exist(surface) for surface in PLUGIN_SURFACES)
 
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
@@ -239,21 +221,25 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
     )
 
 
-def _language_concern_skill_trio_exists(
-    plugin_name: str, skill_names: tuple[str, str, str]
-) -> bool:
-    skill_paths = tuple(
-        surface / plugin_name / "skills" / skill_name
-        for surface in PLUGIN_SURFACES
-        for skill_name in skill_names
-    )
-    old_skill_paths = tuple(
-        surface / plugin_name / "skills" / skill_names[0].removesuffix("-code")
-        for surface in PLUGIN_SURFACES
+def _surface_language_concern_skill_trios_exist(surface: Path) -> bool:
+    language_plugins = tuple(
+        plugin_dir
+        for plugin_dir in surface.iterdir()
+        if (plugin_dir / "skills" / f"code-{plugin_dir.name}" / "SKILL.md").is_file()
     )
     return all(
-        (skill_path / "SKILL.md").is_file() for skill_path in skill_paths
-    ) and not any(old_skill_path.exists() for old_skill_path in old_skill_paths)
+        all(
+            (
+                plugin_dir
+                / "skills"
+                / f"audit-{plugin_dir.name}-{concern}"
+                / "SKILL.md"
+            ).is_file()
+            for concern in ("code", "tests", "architecture")
+        )
+        and not (plugin_dir / "skills" / f"audit-{plugin_dir.name}").exists()
+        for plugin_dir in language_plugins
+    )
 
 
 def _initialize_changeset_repo(repo: Path) -> None:

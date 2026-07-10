@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-One persisted implementation-audit run whose rendered SPX projection reports the evidence-derived terminal status, required coverage, and each finding's unit, producer, rule, severity, location, message, and observed-versus-expected evidence.
+An SPX-rendered verdict on the requested implementation scope against the installed language concern standards, with `terminalStatus` determined from recorded coverage and findings.
 
 </objective>
 

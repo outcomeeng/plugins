@@ -31,7 +31,6 @@ import subprocess
 from collections.abc import Sequence
 from typing import Protocol
 
-DEFAULT_BASE_REF = "main"
 BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
 BRANCH_SLUG_MAX_LENGTH = 64
 BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
@@ -60,12 +59,9 @@ class Runner(Protocol):
 class BaseRefNotConfiguredError(RuntimeError):
     """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
 
-    The default ``detect_base_ref(strict=False)`` falls back to
-    ``DEFAULT_BASE_REF`` because the audit skill tolerates a missing
-    remote (single-developer repos, fresh bootstraps). The strict
-    variant exists for the review-changes skill, which refuses to
-    pick a fallback because the operator needs a definitive answer
-    about which ref the diff was computed against.
+    Base-ref derivation has no portable fallback when the remote default is
+    absent. Callers must supply authoritative scope rather than guessing a
+    consumer repository's branch name.
     """
 
 
@@ -176,15 +172,9 @@ def detect_base_ref(
     :func:`remote_tracking_ref`; returning the bare name keeps the slug
     derivation and the diff-range composition independent.
 
-    When the symbolic ref is absent (no remote configured, fresh
-    bootstrap, solo developer repo):
-
-    - ``strict=False`` (default): returns ``DEFAULT_BASE_REF`` so callers
-      can still compose diff ranges without halting. The audit skill
-      relies on this fallback.
-    - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
-      review-changes skill uses this variant so the operator gets a
-      definitive answer rather than a silently-chosen literal.
+    When the symbolic ref is absent, raises ``BaseRefNotConfiguredError``.
+    ``strict`` remains accepted for caller compatibility; neither mode guesses
+    a consumer repository's default branch.
     """
     result = runner(
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
@@ -194,17 +184,13 @@ def detect_base_ref(
         check=False,
     )
     if result.returncode != 0:
-        if strict:
-            raise BaseRefNotConfiguredError(f"refs/remotes/origin/HEAD unset at {repo}")
-        return DEFAULT_BASE_REF
+        raise BaseRefNotConfiguredError(f"refs/remotes/origin/HEAD unset at {repo}")
     line = result.stdout.strip()
     if line.startswith(ORIGIN_HEAD_REF_PREFIX):
         return line[len(ORIGIN_HEAD_REF_PREFIX) :]
-    if strict:
-        raise BaseRefNotConfiguredError(
-            f"refs/remotes/origin/HEAD has unexpected shape: {line!r}"
-        )
-    return DEFAULT_BASE_REF
+    raise BaseRefNotConfiguredError(
+        f"refs/remotes/origin/HEAD has unexpected shape: {line!r}"
+    )
 
 
 def detect_current_branch(
