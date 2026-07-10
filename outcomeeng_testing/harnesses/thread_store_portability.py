@@ -96,6 +96,12 @@ def _runtime_uv_lines(source: str) -> list[int]:
     ]
 
 
+def _is_verification_skill(skill_dir: pathlib.Path) -> bool:
+    return skill_dir.name == "audit" or skill_dir.name.startswith(
+        ("audit-", "review-")
+    )
+
+
 class TestThreadStoreScriptsImportOnlyStdlib:
     """Every thread-store script imports only stdlib + sibling modules."""
 
@@ -135,13 +141,13 @@ class TestThreadStoreScriptsImportOnlyStdlib:
 
 
 class TestVerificationSkillsDoNotImportBackendsDirectly:
-    """Every plugin skill reaches persistence through the thread-store facade."""
+    """Every verification skill reaches persistence through the facade."""
 
     def test_no_verification_skill_imports_concrete_backend(self) -> None:
         violations: list[str] = []
         for skills_dir in PLUGIN_SKILLS_DIRS:
             for skill_dir in sorted(skills_dir.iterdir()):
-                if not skill_dir.is_dir() or skill_dir.name == "manage-thread-store":
+                if not skill_dir.is_dir() or not _is_verification_skill(skill_dir):
                     continue
                 for script in _iter_script_files(skill_dir / "scripts"):
                     source = script.read_text(encoding="utf-8")
