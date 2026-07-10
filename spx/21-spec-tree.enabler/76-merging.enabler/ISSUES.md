@@ -60,8 +60,12 @@ on those paths starts a job that cannot detect the change that started it.
 
 Those four trigger paths therefore carry no `owned_paths` declaration and no
 generated trigger entry. Declaring them would assert a producer coupling the
-suite does not have — the `False` producer-coupling category in
-`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`.
+suite does not have.
+[`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`](../../13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md)
+requires a skill eval to couple to its real producer through direct invocation,
+harness-mediated invocation, or source-derived prompt materialization, and
+refuses a prompt-only simulation as evidence for that producer. This suite does
+none of those for either skill.
 
 Revisit condition: this resolves with the prompt-only simulation above. Once
 `transport-selection` materializes its prompt from a declared `prompt_source`

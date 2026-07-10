@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -77,6 +78,28 @@ def ci_command_property(
     return decorator
 
 
+def toml_basic_string(value: str) -> str:
+    """Quote ``value`` as a TOML basic string, escaping what TOML forbids raw.
+
+    `json.dumps` is not a TOML escaper: JSON mandates escaping only
+    `U+0000`–`U+001F`, while TOML additionally forbids a raw `U+007F`. A
+    generated path carrying `DEL` written through JSON would make the document
+    unparseable, so the loader under test would never see the path and the
+    parser's error would masquerade as the loader's verdict.
+    """
+
+    escaped = []
+    for character in value:
+        if character in ('"', "\\"):
+            escaped.append(f"\\{character}")
+        elif character < " " or character == "\x7f":
+            escaped.append(f"\\u{ord(character):04X}")
+        else:
+            escaped.append(character)
+    body = "".join(escaped)
+    return f'"{body}"'
+
+
 def write_eval_definition_with_owned_paths(
     directory: Path,
     owned_paths: Sequence[str],
@@ -93,7 +116,7 @@ def write_eval_definition_with_owned_paths(
         encoding="utf-8",
     )
     (directory / "prompt.md").write_text("{case_id}\n", encoding="utf-8")
-    entries = ", ".join(json.dumps(path, ensure_ascii=False) for path in owned_paths)
+    entries = ", ".join(toml_basic_string(path) for path in owned_paths)
     eval_toml = directory / "eval.toml"
     eval_toml.write_text(
         'title = "probe"\n'
@@ -138,6 +161,13 @@ def _assert_owned_path_rejected(owned_path: str) -> None:
 
         try:
             load_definition(eval_toml)
+        except tomllib.TOMLDecodeError as error:
+            # A transport failure, not a verdict: the path never reached the
+            # loader, so this run proves nothing about the assertion.
+            raise AssertionError(
+                f"owned path {owned_path!r} never reached the loader — the "
+                f"probe document is malformed: {error}"
+            ) from error
         except ValueError as error:
             assert "owned_paths" in str(error)
         else:
