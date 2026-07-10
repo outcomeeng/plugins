@@ -8,6 +8,7 @@ to the TOML file's directory.
 
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from enum import StrEnum
@@ -28,10 +29,13 @@ MAX_TRIALS_PER_CASE = 100
 EVAL_TOML_FILENAME = "eval.toml"
 RUNS_DIRNAME = "runs"
 
-# The only glob an owned path may carry, and the characters that would make its
-# local `fnmatch` semantics diverge from the CI provider's glob engine.
+# The only glob an owned path may carry, and the characters its remainder may
+# use. The alphabet is an allowlist rather than a list of forbidden globs: a
+# denylist admits every metacharacter nobody thought to forbid, and this
+# contract has to hold against a CI provider's glob engine the harness cannot
+# introspect.
 OWNED_PATH_RECURSIVE_SUFFIX = "/**"
-GLOB_METACHARACTERS = ("*", "?", "[", "]")
+OWNED_PATH_ALPHABET = re.compile(r"[A-Za-z0-9._/-]+")
 
 _REQUIRED_TITLE = "title"
 _REQUIRED_CASES = "cases"
@@ -251,8 +255,8 @@ def _optional_owned_paths(data: dict[str, Any], key: str) -> tuple[str, ...]:
 
     paths = _optional_str_tuple(data, key)
     for path in paths:
-        prefix = path.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
-        if any(character in prefix for character in GLOB_METACHARACTERS):
+        body = path.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
+        if not OWNED_PATH_ALPHABET.fullmatch(body):
             allowed = f"an exact path or one ending in {OWNED_PATH_RECURSIVE_SUFFIX!r}"
             msg = (
                 f"field {key!r} entry {path!r} must be {allowed} — a glob the "

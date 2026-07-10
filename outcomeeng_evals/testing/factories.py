@@ -39,6 +39,8 @@ from outcomeeng_evals.definition import (
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
+    OWNED_PATH_ALPHABET,
+    OWNED_PATH_RECURSIVE_SUFFIX,
     EvalDefinition,
     load_definition,
 )
@@ -471,9 +473,21 @@ def assert_definition_rejects_non_string_model() -> None:
 
 
 def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
-    """Assert an exact path and a trailing `/**` both load."""
+    """Assert an exact path and a trailing recursive glob both load.
 
-    accepted = ("AGENTS.md", "src/plugins/spec-tree/skills/merge/**")
+    Both shapes are built from the source-owned alphabet and recursive suffix,
+    so narrowing either contract reaches this evidence rather than passing
+    beside it.
+    """
+
+    exact = "AGENTS.md"
+    recursive = f"src/plugins/spec-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
+    assert OWNED_PATH_ALPHABET.fullmatch(exact)
+    assert OWNED_PATH_ALPHABET.fullmatch(
+        recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
+    )
+
+    accepted = (exact, recursive)
     with TemporaryDirectory() as tmp:
         entries = ", ".join(f'"{path}"' for path in accepted)
         toml_path = _write_eval_definition(
@@ -487,23 +501,32 @@ def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None
 
 
 def assert_definition_rejects_owned_path_globs_ci_matches_differently() -> None:
-    """Assert a glob beyond a trailing `/**` is refused at load time.
+    """Assert any character outside the owned-path alphabet is refused.
 
-    `fnmatch`'s `*` spans `/` and the CI provider's does not, so each shape
-    below would select a suite locally that the generated trigger filter never
-    starts remotely.
+    `fnmatch`'s `*` spans `/` and the CI provider's does not, so a glob beyond
+    a trailing recursive suffix would select a suite locally that the generated
+    trigger filter never starts remotely. The alphabet is an allowlist, so each
+    probe below is refused because it leaves the alphabet -- not because it
+    appears on a list of globs the loader happens to know about.
     """
 
-    for divergent in (
-        "src/plugins/*/skills/**",
-        "spx/?-node/**",
-        "spx/[ab]-node/**",
-        "src/**/scripts/**",
-    ):
+    for outside_alphabet in ("*", "?", "[", "]", "{", "}", "!", "+", "@", " "):
+        assert not OWNED_PATH_ALPHABET.fullmatch(outside_alphabet)
+        divergent = (
+            f"src/plugins/{outside_alphabet}/skills{OWNED_PATH_RECURSIVE_SUFFIX}"
+        )
         _assert_definition_raises(
             lines=(f'owned_paths = ["{divergent}"]',),
             match="owned_paths",
         )
+
+    # A recursive suffix anywhere but the end leaves its `*` in the body the
+    # alphabet governs, so it is refused for the same reason.
+    mid_path = f"src{OWNED_PATH_RECURSIVE_SUFFIX}/scripts{OWNED_PATH_RECURSIVE_SUFFIX}"
+    _assert_definition_raises(
+        lines=(f'owned_paths = ["{mid_path}"]',),
+        match="owned_paths",
+    )
 
 
 def assert_definition_accepts_trials_at_cap() -> None:
