@@ -88,6 +88,14 @@ def _imported_modules(source: str) -> list[str]:
     return modules
 
 
+def _runtime_uv_lines(source: str) -> list[int]:
+    return [
+        node.lineno
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Constant) and node.value == "uv"
+    ]
+
+
 class TestThreadStoreScriptsImportOnlyStdlib:
     """Every thread-store script imports only stdlib + sibling modules."""
 
@@ -102,6 +110,10 @@ class TestThreadStoreScriptsImportOnlyStdlib:
                 if module in LOCAL_THREAD_STORE_MODULES:
                     continue
                 violations.append(f"{script.relative_to(REPO_ROOT)}: import '{module}'")
+            for line in _runtime_uv_lines(source):
+                violations.append(
+                    f"{script.relative_to(REPO_ROOT)}:{line}: runtime reference to 'uv'"
+                )
         assert not violations, (
             "thread-store scripts import non-stdlib, non-local modules:\n"
             + "\n".join(violations)
