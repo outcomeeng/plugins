@@ -30,7 +30,7 @@ Run implementation audits in an isolated verifier context. Invoke the `spec-tree
 
 1. Read the caller's repository path, changeset scope, live file list when supplied, governing node paths, and deterministic verification state.
 2. Invoke `spec-tree:audit` with the repository path, changeset scope, live file list when supplied, governing node paths, and deterministic verification state unchanged.
-3. If `spec-tree:audit` reports a blocked SPX command, relay the command, stderr, and blocked step.
+3. If `spec-tree:audit` reports a blocked SPX command, return the exact blocked command.
 4. If `spec-tree:audit` renders a completed run, relay the run token and rendered projection verbatim.
 
 </workflow>
