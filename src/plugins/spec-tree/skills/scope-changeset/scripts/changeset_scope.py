@@ -28,6 +28,8 @@ from __future__ import annotations
 import hashlib
 import pathlib
 import subprocess
+from collections.abc import Sequence
+from typing import Protocol
 
 DEFAULT_BASE_REF = "main"
 BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
@@ -39,6 +41,20 @@ ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
 FRONTMATTER_DELIMITER = "---"
 COMMIT_PEEL_SUFFIX = "^{commit}"
+
+
+class Runner(Protocol):
+    """Execute one git command through an injectable process boundary."""
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]: ...
 
 
 class BaseRefNotConfiguredError(RuntimeError):
@@ -66,6 +82,7 @@ def expand_diff_range(
     *,
     patterns: list[str] | None = None,
     repo: pathlib.Path,
+    runner: Runner = subprocess.run,
 ) -> list[str]:
     """Return the file paths changed in the given git diff range.
 
@@ -90,7 +107,7 @@ def expand_diff_range(
     if patterns:
         cmd.append("--")
         cmd.extend(patterns)
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, range_spec and patterns caller-controlled
+    result = runner(
         cmd,
         cwd=repo,
         capture_output=True,
@@ -120,6 +137,7 @@ def branch_scope(
     *,
     patterns: list[str] | None = None,
     repo: pathlib.Path,
+    runner: Runner = subprocess.run,
 ) -> list[str]:
     """Return the files this branch changed relative to ``origin/<base_ref>``.
 
@@ -141,10 +159,15 @@ def branch_scope(
     range_spec = BRANCH_SCOPE_RANGE_TEMPLATE.format(
         origin_ref=remote_tracking_ref(base_ref)
     )
-    return expand_diff_range(range_spec, patterns=patterns, repo=repo)
+    return expand_diff_range(range_spec, patterns=patterns, repo=repo, runner=runner)
 
 
-def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
+def detect_base_ref(
+    repo: pathlib.Path,
+    *,
+    strict: bool = False,
+    runner: Runner = subprocess.run,
+) -> str:
     """Return the bare base-branch name configured by ``origin/HEAD``.
 
     Reads ``refs/remotes/origin/HEAD`` and strips the
@@ -163,7 +186,7 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
       review-changes skill uses this variant so the operator gets a
       definitive answer rather than a silently-chosen literal.
     """
-    result = subprocess.run(
+    result = runner(
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
         cwd=repo,
         capture_output=True,
@@ -184,7 +207,11 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
     return DEFAULT_BASE_REF
 
 
-def detect_current_branch(repo: pathlib.Path) -> str:
+def detect_current_branch(
+    repo: pathlib.Path,
+    *,
+    runner: Runner = subprocess.run,
+) -> str:
     """Return the current branch name; raise ``DetachedHeadError`` on detached HEAD.
 
     Callers name records by the current branch; running on detached HEAD
@@ -192,7 +219,7 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     detached-checkout invocation. Raising forces the caller to switch to a
     named branch before a branch-scoped record is created.
     """
-    result = subprocess.run(
+    result = runner(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S607
         cwd=repo,
         capture_output=True,
@@ -205,7 +232,12 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     return branch
 
 
-def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
+def commit_oid(
+    ref: str,
+    *,
+    repo: pathlib.Path,
+    runner: Runner = subprocess.run,
+) -> str:
     """Resolve ``ref`` to the full object ID of a commit.
 
     The journal run-state identity records concrete head/base commit IDs, not
@@ -213,7 +245,7 @@ def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
     accepting commits and tags that point at commits.
     """
     # Fixed argv, no shell, ref is caller-controlled.
-    result = subprocess.run(  # noqa: S603
+    result = runner(
         ["git", "rev-parse", "--verify", "--quiet", f"{ref}{COMMIT_PEEL_SUFFIX}"],
         cwd=repo,
         capture_output=True,
