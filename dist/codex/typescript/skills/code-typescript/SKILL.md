@@ -112,13 +112,13 @@ async function syncFiles(
 <hierarchy_of_authority>
 **Where to look for guidance, in order of precedence:**
 
-| Priority | Source                    | What It Provides                                      |
-| -------- | ------------------------- | ----------------------------------------------------- |
-| 1        | `docs/`, `README.md`      | Product architecture, design decisions, intended APIs |
-| 2        | `AGENTS.md`               | Product-specific rules for Claude                     |
-| 3        | ADRs/PDRs, specs          | Documented decisions and requirements                 |
-| 4        | This skill (`SKILL.md`)   | Generic TypeScript best practices                     |
-| 5        | Existing code (reference) | Evidence of implementation, NOT authority             |
+| Priority | Source                       | What It Provides                                           |
+| -------- | ---------------------------- | ---------------------------------------------------------- |
+| 1        | Loaded PDRs, ADRs, and specs | Product and architecture truth                             |
+| 2        | `AGENTS.md` and overlays     | Product-specific workflow and local constraints            |
+| 3        | Loaded TypeScript skills     | Language implementation and testing standards              |
+| 4        | `docs/`, `README.md`         | Supplementary product explanation                          |
+| 5        | Existing code                | Lower-layer implementation evidence, never governing truth |
 
 **CRITICAL: Existing code is NOT authoritative.**
 
@@ -257,12 +257,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 - Lower-index siblings (they constrain the target via dependency encoding)
 - Target node spec with typed assertions
 
-**Example invocation:**
-
-```bash
-# By node path
-spec-tree:contextualize spx/55-example.enabler/21-commands.outcome
-```
+**Example invocation:** Invoke `/contextualize` with `spx/<node-path>`.
 
 **If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
@@ -288,7 +283,7 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 3. **Type Safety First**: Use strict TypeScript with `strict: true`. No `any` without justification.
 
-4. **Self-Verification**: Before declaring "done," run tsc, eslint, and vitest.
+4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, test, and validation commands. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
 
 5. **Humility**: The code must pass review. Write code that will survive adversarial review.
 
@@ -373,7 +368,7 @@ import { treeBuilder } from "@testing/harnesses/tree-builder";
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@testing/*": ["tests/*"],
+      "@testing/*": ["testing/*"],
       "@lib/*": ["lib/*"]
     }
   }

@@ -19,7 +19,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 2. Load work item context (Step 2 — every node)
 3. Architect -> audit until APPROVED (Steps 3–4)
 4. Test -> audit until APPROVED (Steps 5–6)
-5. Implement -> audit until APPROVED (Steps 7–8)
+5. Implement -> audit until the rendered projection reports `terminalStatus: approved` (Steps 7–8)
 6. Evidence-auditor gates for touched `[test]` and `[eval]` evidence, then whole-changeset review when the change reaches beyond the target node (Step 9)
 7. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
 
@@ -42,7 +42,7 @@ When the queue holds more than one node, order by numeric index prefix (lower fi
 3. Commit via `/commit-changes`.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 
-If a node's flow cannot reach an APPROVED/converged state within the gate retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
+If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
 </invocation_modes>
 
@@ -201,9 +201,9 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from the main conversation.
+The implementation-auditor composes the installed `audit-{lang}-{code|tests|architecture}` concern skills and records the run through `spx verification run`. Do not invoke those concern skills directly from the main conversation. Read the returned rendered projection: its `terminalStatus` is the Step 8 verdict — `approved` passes, `rejected` requires repair, and a missing projection or exact blocked command blocks the gate.
 
-**REJECTED or BLOCKED -> fix the defect class or exact blocked command -> re-dispatch this step.** Loop until APPROVED.
+**Projection `terminalStatus: rejected` or BLOCKED -> fix the defect class or exact blocked command -> re-dispatch this step.** Loop until the rendered projection reports `terminalStatus: approved`.
 
 </step>
 
@@ -223,7 +223,7 @@ Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid findi
 
 Skip this step only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change — then state that scope and stop. For every other change, the work is destined for the default branch, and the flow is NOT complete at Step 9.
 
-Local readiness is not delivered value. An APPROVED Step 8 audit, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
+Local readiness is not delivered value. A Step 8 projection with `terminalStatus: approved`, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
 
 Invoke `/merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
 
@@ -237,15 +237,15 @@ Claude tends to report the flow done the moment Step 9 converges and tests pass 
 
 <review_gates>
 
-Steps 4, 6, and 8 are blocking audit gates. Each auditor agent emits `APPROVED`, `REJECTED`, or a blocked/unknown result from its own verdict contract. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a retry-loop gate, but a hard precondition for declaring the flow complete.
+Steps 4, 6, and 8 are blocking audit gates. Steps 4 and 6 emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; an exact blocked command is a blocked result. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a retry-loop gate, but a hard precondition for declaring the flow complete.
 
 - Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
-- Before considering implementation complete: scan the conversation for the Step 8 verdict. If `APPROVED` is not present, stop — invoke Step 8.
+- Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
-On `REJECTED`, `UNKNOWN`, or `BLOCKED` (Steps 4, 6, 8), or an unaddressed valid finding (Step 9): fix the defect class or exact blocked command, re-dispatch the same auditor, and scan again.
+On `REJECTED`, `UNKNOWN`, or `BLOCKED` at Steps 4 and 6; projection `terminalStatus: rejected` or a blocked result at Step 8; or an unaddressed valid finding at Step 9: fix the defect class or exact blocked command, re-dispatch the same auditor, and inspect the new result.
 
 **3 consecutive rejected, unknown, or blocked results on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
 
@@ -280,7 +280,7 @@ Scan the conversation for these markers before declaring done:
 - [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
 - [ ] Step 4 `adr-auditor` emitted `APPROVED`
 - [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
-- [ ] Step 8 `implementation-auditor` emitted `APPROVED` with an `spx verification run` token and rendered projection
+- [ ] Step 8 `implementation-auditor` returned an `spx verification run` token and rendered projection whose `terminalStatus` is `approved`
 - [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
 - [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9
 - [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked

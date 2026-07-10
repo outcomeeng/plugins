@@ -32,23 +32,20 @@ When a suspicious pattern is valid:
 </reviewer_response_pattern>
 
 <example>
-```rust
-trait Handler {
-    fn handle(&self, command: &Command, ctx: &RequestContext) -> Result<Response, Error>;
-}
+    trait Handler {
+        fn handle(&self, command: &Command, ctx: &RequestContext) -> Result<Response, Error>;
+    }
 
-struct PingHandler;
+    struct PingHandler;
 
-impl Handler for PingHandler {
-fn handle(&self, command: &Command, _ctx: &RequestContext) -> Result<Response, Error> {
-match command {
-Command::Ping => Ok(Response::Pong),
-_ => Err(Error::Unsupported),
-}
-}
-}
+    impl Handler for PingHandler {
+        fn handle(&self, command: &Command, _ctx: &RequestContext) -> Result<Response, Error> {
+            match command {
+                Command::Ping => Ok(Response::Pong),
+                _ => Err(Error::Unsupported),
+            }
+        }
+    }
 
-```
 `_ctx` is acceptable here because the trait requires a uniform interface and the unused parameter is explicit.
 </example>
-```

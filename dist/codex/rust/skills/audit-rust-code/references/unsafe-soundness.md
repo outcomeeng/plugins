@@ -43,4 +43,4 @@ For each `extern "C"` function and `#[no_mangle]`:
 
 ## Verdict row
 
-The audit folds an `unsafe-soundness` row into the JSON verdict (`PASS` when every site is sound, `FAIL` on any violation, `UNKNOWN`/`N/A` when the scope has no unsafe sites). An `UNKNOWN` row carries `explanation` naming why the concern does not apply. Findings carry `severity: "REJECT"` and name the block, `file:line`, rule prefix, and failed invariant.
+The audit folds an `unsafe-soundness` row into the JSON verdict: `PASS` when every site is sound, `FAIL` on any violation, and `NOT_APPLICABLE` when the scope has no unsafe sites. A `NOT_APPLICABLE` row carries `explanation` naming why the concern does not apply. Findings use `blocking` or `debt` severity and name the block, `file:line`, rule prefix, failed invariant, and observed-versus-expected evidence.

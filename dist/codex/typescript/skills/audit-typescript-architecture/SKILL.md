@@ -15,15 +15,15 @@ This audit runs inside a dispatched artifact-type auditor's verifier context —
 </dispatch_gate>
 
 <objective>
-A JSON verdict on a TypeScript architecture scope — implementation architecture or ADR language concerns — with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.
+A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.
 </objective>
 
 <constraints>
 
 - Read-only over the audited repository. Never edit files, stage changes, commit, or open pull requests.
-- Produce only the JSON verdict described in `<verdict_format>`; fixes and prose remediation belong in finding messages, not in repository mutations.
+- Produce only the JSON verdict described in `<verdict_format>`; finding messages state the violated rule and consequence, while corrective examples remain in references and standards.
 - Judge only TypeScript-specific architecture concerns. Generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
-- Treat `PASS | FAIL | UNKNOWN` as the only verdict vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
+- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
 
 </constraints>
 
@@ -54,7 +54,7 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 6. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
 7. **Check TypeScript anti-patterns** — architecture target content that violates `<anti_patterns>`
 8. **Identify all TypeScript-architecture violations** and classify per concern
-9. **Output the JSON verdict** with `overall` set to `PASS`, `FAIL`, or `UNKNOWN` and every concern row populated
+9. **Output the JSON verdict** with `overall` set to `APPROVED` or `REJECTED` and every concern row populated
 
 </audit_workflow>
 
@@ -94,26 +94,26 @@ Section structure, atemporal voice, and per-rule tag validity are NOT this skill
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
+The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. Every `NOT_APPLICABLE` row explains why its concern does not apply. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-typescript-architecture",
   "target": "<architecture-scope>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "testability-in-verification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "testability-in-verification", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "mocking-prohibition", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "level-accuracy", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "anti-patterns", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "ancestor-consistency", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the relevant implementation file or ADR path; `message` carries the one-line "why this fails". Include the correct-approach code sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each finding's `rule` field carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the relevant implementation file or ADR path; `message` carries the one-line violated rule and consequence, while `observed` and `expected` carry the evidence. Corrective examples and remediation narrative stay in the referenced example and standards files rather than the verdict.
 
 </verdict_format>
 
@@ -130,21 +130,21 @@ Each finding's `rule` field carries the violation pattern (e.g., `missing-testab
 
 - Reference `/typescript-architecture-standards` section names (e.g., `<testability_in_verification>`, `<di_patterns>`)
 - Reference `/test` methodology by its real heading, `Stage 2: At what level does that evidence live?`, for level rules
-- Show correct architecture with code or markdown examples
+- Keep corrective architecture examples in the referenced standards and example files, never in the emitted verdict
 - Be direct about violations
 
 </what_to_avoid>
 
 <example_review>
-Read `${SKILL_DIR}/references/example-audit.md` for a complete ADR-target `FAIL` JSON verdict showing the TypeScript concern types: missing testability in `## Verification`, mocking language, unjustified test-double language, and SaaS `l2` violation.
+Read `${SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the TypeScript concern types: missing testability in `## Verification`, mocking language, unjustified test-double language, and SaaS `l2` violation.
 </example_review>
 
 <success_criteria>
 The verdict is sound when:
 
-- Every applicable TypeScript architecture concern row is evaluated, with inapplicable concerns marked `UNKNOWN` rather than skipped.
-- `overall` is `FAIL` when any concern row is `FAIL`, `PASS` when every concern row is `PASS` or `UNKNOWN`, and `UNKNOWN` only when missing context prevents a definitive judgment.
-- Each rejecting finding names the relevant implementation file or ADR path, violated rule, evidence, and required correction in the JSON `message`.
+- Every applicable TypeScript architecture concern row is evaluated, with inapplicable concerns marked `NOT_APPLICABLE` and explained rather than skipped.
+- `overall` is `REJECTED` when any concern row is `FAIL` and `APPROVED` when every concern row is `PASS` or explained `NOT_APPLICABLE`; missing required context produces a failing row and `REJECTED`.
+- Each rejecting finding names the relevant implementation file or ADR path, violated rule and consequence in `message`, and concrete evidence in `observed` and `expected`.
 - No finding judges generic ADR structure, atemporal voice, or per-rule tag validity.
 - The same architecture scope and governing context produce the same JSON verdict.
 

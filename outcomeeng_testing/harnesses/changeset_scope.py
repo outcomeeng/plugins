@@ -29,6 +29,7 @@ import pathlib
 import subprocess
 import sys
 from dataclasses import dataclass
+from tempfile import TemporaryDirectory
 from types import ModuleType
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -42,13 +43,49 @@ CHANGESET_SCOPE_SCRIPTS_DIR = (
     / "scripts"
 )
 CHANGESET_SCOPE_MODULE_PATH = CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope.py"
+MERGE_CLASSIFIER_MODULE_PATH = (
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "merge"
+    / "scripts"
+    / "classify_changeset.py"
+)
+CHANGESET_SCOPE_FIXTURES_DIR = (
+    pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "changeset_scope"
+)
+STALE_BASE_FIXTURE_DIR = CHANGESET_SCOPE_FIXTURES_DIR / "stale-base"
+SPACED_NOTE_FIXTURE_DIR = CHANGESET_SCOPE_FIXTURES_DIR / "spaced-note"
 
-MERGED_FILE = "merged.txt"
-FEATURE_FILE = "feature.txt"
-INITIAL_FILE = "README.md"
-BASE_BRANCH = "main"
-FEATURE_BRANCH = "feature/x"
-SPACED_NOTE_PATH = "spx dir/PLAN.md"
+
+def _fixture_file(scenario: pathlib.Path, role: str) -> pathlib.Path:
+    role_root = scenario / role
+    files = tuple(path for path in role_root.rglob("*") if path.is_file())
+    if len(files) != 1:
+        raise RuntimeError(
+            f"Expected one fixture file under {role_root}, found {files}"
+        )
+    return files[0]
+
+
+def _fixture_relative_path(scenario: pathlib.Path, role: str) -> str:
+    return _fixture_file(scenario, role).relative_to(scenario / role).as_posix()
+
+
+def _fixture_branch_name(scenario: pathlib.Path, role: str) -> str:
+    marker = _fixture_file(scenario, role)
+    return marker.parent.relative_to(scenario / role).as_posix()
+
+
+MERGED_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "merged")
+FEATURE_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "feature")
+INITIAL_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "initial")
+WORKING_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "working")
+BASE_BRANCH = _fixture_branch_name(STALE_BASE_FIXTURE_DIR, "branches/base")
+FEATURE_BRANCH = _fixture_branch_name(STALE_BASE_FIXTURE_DIR, "branches/feature")
+SPACED_NOTE_PATH = _fixture_relative_path(SPACED_NOTE_FIXTURE_DIR, "committed")
 
 
 def load_changeset_scope_module() -> ModuleType:
@@ -65,6 +102,24 @@ def load_changeset_scope_module() -> ModuleType:
         )
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_merge_classifier_module() -> ModuleType:
+    """Load the merge changeset classifier through its shipped file boundary."""
+    cached = sys.modules.get("classify_changeset")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "classify_changeset", MERGE_CLASSIFIER_MODULE_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load merge classifier from {MERGE_CLASSIFIER_MODULE_PATH}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["classify_changeset"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -101,6 +156,10 @@ def _commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> N
     _git(repo, "commit", "-q", "-m", message)
 
 
+def _fixture_text(scenario: pathlib.Path, role: str) -> str:
+    return _fixture_file(scenario, role).read_text(encoding="utf-8")
+
+
 @dataclass(frozen=True)
 class StaleBaseRepo:
     """A repo where the feature branch holds a commit already merged to origin.
@@ -130,10 +189,20 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     """
     _git(repo, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
     _git(repo, "config", "commit.gpgsign", "false")
-    _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
+    _commit_file(
+        repo,
+        INITIAL_FILE,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
+        "initial",
+    )
     initial_sha = _git(repo, "rev-parse", "HEAD")
 
-    _commit_file(repo, MERGED_FILE, "merged change\n", "merge change into base")
+    _commit_file(
+        repo,
+        MERGED_FILE,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "merged"),
+        "merge change into base",
+    )
     advanced_sha = _git(repo, "rev-parse", "HEAD")
 
     # origin/main (and origin/HEAD) point at the advanced base A+M.
@@ -147,7 +216,12 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
 
     # Feature branches off A+M (so it contains the merged commit) and adds F.
     _git(repo, "switch", "-q", "-c", FEATURE_BRANCH)
-    _commit_file(repo, FEATURE_FILE, "feature change\n", "feature change")
+    _commit_file(
+        repo,
+        FEATURE_FILE,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "feature"),
+        "feature change",
+    )
 
     # The local base ref lags origin by the merged commit.
     _git(repo, "update-ref", f"refs/heads/{BASE_BRANCH}", initial_sha)
@@ -169,7 +243,12 @@ def build_repo_without_origin(repo: pathlib.Path) -> str:
     """
     _git(repo, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
     _git(repo, "config", "commit.gpgsign", "false")
-    _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
+    _commit_file(
+        repo,
+        INITIAL_FILE,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
+        "initial",
+    )
     return BASE_BRANCH
 
 
@@ -199,9 +278,49 @@ def build_repo_with_modified_spaced_note(repo: pathlib.Path) -> SpacedNoteRepo:
     """
     build_repo_without_origin(repo)
     (repo / "spx dir").mkdir()
-    _commit_file(repo, SPACED_NOTE_PATH, "v1\n", "add spaced note")
-    (repo / SPACED_NOTE_PATH).write_text("v2\n", encoding="utf-8")
+    _commit_file(
+        repo,
+        SPACED_NOTE_PATH,
+        _fixture_text(SPACED_NOTE_FIXTURE_DIR, "committed"),
+        "add spaced note",
+    )
+    (repo / SPACED_NOTE_PATH).write_text(
+        _fixture_text(SPACED_NOTE_FIXTURE_DIR, "working"),
+        encoding="utf-8",
+    )
     return SpacedNoteRepo(repo=repo, note_path=SPACED_NOTE_PATH)
+
+
+def assert_merge_classifier_uses_canonical_changeset_scope() -> None:
+    """Prove committed and working paths come from the canonical scope model."""
+    with TemporaryDirectory() as tmp:
+        repo = pathlib.Path(tmp) / "repo"
+        repo.mkdir()
+        stale = build_stale_local_base_repo(repo)
+        (stale.repo / WORKING_FILE).write_text(
+            _fixture_text(STALE_BASE_FIXTURE_DIR, "working"),
+            encoding="utf-8",
+        )
+
+        paths = set(load_merge_classifier_module().changed_paths(stale.repo))
+
+        assert stale.feature_file in paths
+        assert stale.merged_file not in paths
+        assert WORKING_FILE in paths
+
+
+def assert_merge_classifier_handles_spaced_coordination_note() -> None:
+    """Prove porcelain output preserves a spaced coordination-note path."""
+    with TemporaryDirectory() as tmp:
+        repo = pathlib.Path(tmp) / "repo"
+        repo.mkdir()
+        spaced = build_repo_with_modified_spaced_note(repo)
+        classifier = load_merge_classifier_module()
+
+        working = classifier._working_tree_paths(spaced.repo)
+
+        assert spaced.note_path in working
+        assert classifier.is_coordination_note(spaced.note_path)
 
 
 def detach_head(repo: pathlib.Path) -> None:

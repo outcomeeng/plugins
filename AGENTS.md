@@ -209,6 +209,8 @@ Use this shape for an implementation audit:
 }
 ```
 
+**Codex `implementation-auditor` output contract.** A successful final message carries the raw `spx verification run` token and rendered projection, without a competing prose verdict envelope. Treat the projection's `terminalStatus` as authoritative: `approved` passes the implementation-audit gate and `rejected` requires repair. A missing token or projection, a terminal status outside that vocabulary, or an exact blocked SPX command leaves the gate blocked.
+
 Use this shape for test-evidence audits:
 
 ```json

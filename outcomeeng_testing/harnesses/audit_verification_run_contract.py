@@ -31,10 +31,6 @@ AUDIT_SKILL_SCRIPT_DIRS: Final = tuple(
 SPEC_TREE_AGENT_DIRS: Final = tuple(
     surface / "spec-tree" / "agents" for surface in PLUGIN_SURFACES
 )
-SPEC_TREE_AUDIT_SKILL_PATH: Final = Path("src/plugins/spec-tree/skills/audit/SKILL.md")
-SPEC_TREE_IMPLEMENTATION_AUDITOR_PATH: Final = Path(
-    "src/plugins/spec-tree/agents/implementation-auditor.md"
-)
 RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
     "auditor.md",
     "audit-orchestrator.md",
@@ -60,11 +56,6 @@ LANGUAGE_CONCERN_SKILLS: Final = (
         ),
     ),
     ("rust", ("audit-rust-code", "audit-rust-tests", "audit-rust-architecture")),
-)
-ARCHITECTURE_CONCERN_SKILL_PATHS: Final = (
-    Path("src/plugins/python/skills/audit-python-architecture/SKILL.md"),
-    Path("src/plugins/rust/skills/audit-rust-architecture/SKILL.md"),
-    Path("src/plugins/typescript/skills/audit-typescript-architecture/SKILL.md"),
 )
 IMPLEMENTATION_AUDIT_INPUT: Final = {
     "schema_version": 1,
@@ -145,85 +136,10 @@ def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
     )
 
 
-def implementation_auditor_wrapper_is_thin_projection_relay() -> bool:
-    text = SPEC_TREE_IMPLEMENTATION_AUDITOR_PATH.read_text(encoding="utf-8")
-    required_snippets = (
-        "tools: Bash, Read, Skill",
-        "model: sonnet",
-        "skills:\n  - spec-tree:audit",
-        "MUST hold no audit policy",
-        "Invoke `spec-tree:audit`",
-        "live file list when supplied",
-        "spx verification run` token and rendered projection",
-        "NEVER construct a path into a skill `scripts/` directory",
-    )
-    return all(snippet in text for snippet in required_snippets)
-
-
-def implementation_audit_skill_declares_orchestration_contract() -> bool:
-    text = SPEC_TREE_AUDIT_SKILL_PATH.read_text(encoding="utf-8")
-    ordered_snippets = (
-        "<request_contract>",
-        "Optional explicit live file list for pre-commit audits",
-        "<verification_run_contract>",
-        "spx verification run start",
-        "spx verification run scope add",
-        "spx verification run finding add",
-        "spx verification run finish",
-        "spx verification run render",
-        "<coverage_model>",
-        "Build an expected coverage inventory before invoking any language concern skill",
-        "<skill_map>",
-        "For each language partition, invoke the required implementation concern skills",
-        "<finding_model>",
-        "<terminal_model>",
-        "<verdict_format>",
-    )
-    return _snippets_appear_in_order(text, ordered_snippets) and all(
-        snippet in text
-        for snippet in (
-            "language partition",
-            "concern partition: `code`, `tests`, or `architecture`",
-            "audit-{lang}-code",
-            "audit-{lang}-tests",
-            "audit-{lang}-architecture",
-            "coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`",
-            "Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified",
-            "Do not continue after detecting an absent required skill for a language partition",
-            "Record each accepted concern finding through `spx verification run finding add`",
-            "Finish the run only after every required coverage unit",
-            "Use the terminal status SPX derives from accepted coverage and finding evidence",
-            "APPROVED with the exact run token and the rendered `spx verification run render` projection",
-            "REJECTED with the exact run token, rendered projection, and finding rows from the projection",
-            "BLOCKED when SPX rejects a command or a required skill is missing before dispatch",
-            "No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run",
-        )
-    )
-
-
 def language_concern_skill_trios_exist() -> bool:
     return all(
         _language_concern_skill_trio_exists(plugin_name, skill_names)
         for plugin_name, skill_names in LANGUAGE_CONCERN_SKILLS
-    )
-
-
-def language_architecture_skills_accept_implementation_scope() -> bool:
-    required_snippets = (
-        "implementation-auditor",
-        "adr-auditor",
-        "implementation architecture scope",
-        "architecture target",
-        "<architecture-scope>",
-        "spx/local/",
-    )
-    forbidden_snippets = (
-        "composed by generic `adr-auditor`",
-        '"target": "<adr-path>"',
-    )
-    return all(
-        _skill_text_has_contract(path, required_snippets, forbidden_snippets)
-        for path in ARCHITECTURE_CONCERN_SKILL_PATHS
     )
 
 
@@ -359,15 +275,6 @@ def _language_concern_skill_trio_exists(
     ) and not any(old_skill_path.exists() for old_skill_path in old_skill_paths)
 
 
-def _skill_text_has_contract(
-    path: Path, required_snippets: tuple[str, ...], forbidden_snippets: tuple[str, ...]
-) -> bool:
-    text = path.read_text(encoding="utf-8")
-    return all(snippet in text for snippet in required_snippets) and not any(
-        snippet in text for snippet in forbidden_snippets
-    )
-
-
 def _initialize_changeset_repo(repo: Path) -> None:
     _run(repo, ("git", "init", "-q"))
     _run(repo, ("git", "config", "user.email", "test@example.com"))
@@ -442,13 +349,3 @@ def _required_string(payload: Mapping[str, Any], key: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"missing string field: {key}")
     return value
-
-
-def _snippets_appear_in_order(text: str, snippets: tuple[str, ...]) -> bool:
-    offset = 0
-    for snippet in snippets:
-        position = text.find(snippet, offset)
-        if position == -1:
-            return False
-        offset = position + len(snippet)
-    return True

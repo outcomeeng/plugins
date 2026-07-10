@@ -1,35 +1,23 @@
-# Remediation Protocol
+<required_reading>
 
-When the input is **rejection feedback** from a reviewer, follow this protocol.
+- Read the complete rejection feedback, including every referenced file and line.
+- Read the affected code in context before editing.
+- Read the governing spec, ADR, or PDR when the rejection concerns compliance or product behavior.
+- Read `/typescript-standards` and `/typescript-test-standards` before changing implementation or tests.
 
-## Phase R0: Parse the Rejection
+</required_reading>
 
-1. **Read the rejection feedback** completely
-2. **Categorize issues**:
-   - **Blocking**: Must fix (type errors, security, test failures, design problems)
-   - **Conditional**: Need eslint-disable with justification (false positives)
-   - **Warnings**: Should fix but not blocking
-3. **Identify affected files**: List every file:line mentioned
-4. **Check for patterns**: Multiple similar issues may have a common root cause
+<process>
 
-## Phase R1: Understand Root Cause
+1. Validate each finding against its cited rule, then classify it as valid in-scope, unbacked, or a separate larger concern according to the governing verifier and merge contracts. Preserve the verifier's concrete file and line references.
+2. Group repeated findings by root cause. A single wrong return type, missing source contract, or invalid abstraction can surface as many local failures.
+3. Identify the actual layer in violation: implementation, test evidence, source contract, or specification alignment. Do not change tests to make implementation defects disappear.
+4. For complex fixes, write a brief local plan before editing:
 
-Before fixing, understand WHY the code was rejected:
+```text
+Fix Plan
 
-1. **Read the affected code** in context (not just the flagged line)
-2. **Read the spec/decision record (ADR/PDR)** if the issue is about compliance
-3. **Identify root cause vs symptoms**:
-   - If 5 type errors stem from one wrong return type, fix the return type
-   - If tests fail because of a logic error, fix the logic (not the test assertions)
-
-## Phase R2: Plan Non-Trivial Fixes
-
-For complex fixes, write a brief plan:
-
-```markdown
-## Fix Plan
-
-### Issue: {description}
+Issue: {description}
 
 **Root Cause**: {why this happened}
 
@@ -41,11 +29,13 @@ For complex fixes, write a brief plan:
 **Verification**: {how to prove it's fixed}
 ```
 
-## Phase R3: Apply Fixes
+5. Apply fixes systematically, keeping changes bounded to the rejected defect class and any same-class instances in the touched node.
+6. Use `@ts-expect-error` or lint suppression only with a precise reason and only when the governing rules allow the exception.
+7. Add or correct tests when the rejection identifies missing or weak evidence. The added test names the behavior and fails for the original defect.
+8. Run the focused test, typecheck, lint, and repository-selected validation commands. Repeat the fix loop until all selected commands pass.
+9. Prepare the re-review summary with original issue, fix applied, and verification command output.
 
-Fix systematically. Common patterns:
-
-**Type Errors**:
+Common remediation patterns:
 
 ```typescript
 // WRONG - Suppressing without understanding
@@ -58,8 +48,6 @@ const result: ExpectedType = someFunction();
 // @ts-expect-error - external library lacks type definitions
 const result = externalLib.call();
 ```
-
-**Security Issues**:
 
 ```typescript
 // WRONG - Ignoring security rule
@@ -74,30 +62,6 @@ execFile(command, args); // No shell, no injection
 exec("git status");
 ```
 
-**Test Failures**:
-
-1. Read the test to understand what it's checking
-2. Read the implementation to understand actual behavior
-3. Determine which is wrong:
-   - If test is wrong: Fix test AND explain why
-   - If implementation is wrong: Fix implementation
-   - If both are wrong: Fix both
-
-**Spec Deviations**:
-
-1. Quote the spec requirement being aligned to
-2. Show the deviation in current code
-3. Implement the aligned version
-4. Add a test that verifies spec compliance
-
-## Phase R4: Add Missing Tests
-
-If the rejection identified missing test coverage:
-
-1. Add named test for the specific case that was broken
-2. Add edge case tests if the bug was an edge case
-3. Follow the 4-part debuggability progression
-
 ```typescript
 it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
   // Regression: Reviewer caught missing empty email handling.
@@ -107,10 +71,6 @@ it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
   expect(() => parseUser(input)).toThrow(/email/);
 });
 ```
-
-## Phase R5: Self-Verification
-
-Run ALL tools before declaring fixed:
 
 ```bash
 <product-typecheck-command>
@@ -125,28 +85,33 @@ Run ALL tools before declaring fixed:
 # npx vitest run
 ```
 
-**All must pass.** If any fail, go back to Phase R3.
+```text
+Fixes Applied
 
-## Phase R6: Submit for Re-Review
-
-```markdown
-## Fixes Applied
-
-### Issues Addressed
+Issues Addressed
 
 | Original Issue            | Fix Applied    | Verification |
 | ------------------------- | -------------- | ------------ |
 | {file:line - description} | {what changed} | {tool/test}  |
 
-### Verification Results
+Verification Results
 
-| Tool   | Status           |
-| ------ | ---------------- |
-| tsc    | PASS (0 errors)  |
-| eslint | PASS (0 errors)  |
-| vitest | PASS (X/X tests) |
+| Command                  | Result     |
+| ------------------------ | ---------- |
+| `<command actually run>` | `<result>` |
 
-### Ready for Re-Review
+Ready for Re-Review
 
 This fix is ready for re-review.
 ```
+
+</process>
+
+<success_criteria>
+
+- Every verifier finding has a traced root cause and a bounded disposition.
+- Implementation defects are fixed in implementation, test-evidence defects are fixed in evidence, and specs are not weakened to match broken lower layers.
+- Same-class defects across the touched node have been swept.
+- Focused tests, typecheck, lint, and selected validation pass through repository-selected commands.
+
+</success_criteria>

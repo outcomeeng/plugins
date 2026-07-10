@@ -35,7 +35,7 @@ See `templates/nodes/enabler-name.md` for the spec format.
 
 The hypothesis has three parts:
 
-- **Output** — what the software does. Assertions specify this. Locally verifiable by tests or review.
+- **Output** — what the software does. Assertions specify this. Locally verifiable through test, evaluate, or audit evidence.
 - **Outcome** — measurable change in user behavior the output is expected to produce. Requires real users to validate.
 - **Impact** — business value: increase revenue, sustain revenue, reduce costs, or avoid costs.
 

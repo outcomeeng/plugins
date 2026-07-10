@@ -17,7 +17,7 @@ This audit runs inside the dispatched `implementation-auditor` verifier context 
 </dispatch_gate>
 
 <objective>
-A verdict on Rust implementation code — APPROVED, or REJECTED with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.
+A verdict on Rust implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.
 </objective>
 
 <repo_local_overlay>
@@ -26,11 +26,12 @@ Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository 
 
 <constraints>
 
-Comprehension is the whole job. This skill runs no deterministic verification of its own — no formatter, linter, or test run. The caller brings the project's formatting, linting, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository. Read names and signatures first, predict behavior, then read the body and look for surprises. Review time belongs to design and semantics, not restating what `clippy` already checked or re-running what the caller already passed.
-
-This skill audits implementation code. Test evidence quality belongs to `/audit-rust-tests`. If test files are in scope, load `/rust-test-standards` and hand off evidence judgments to the test auditor — do not run the test suite; the caller already passed it before dispatch.
-
-The verdict is binary. APPROVED means every concern passes. REJECTED means at least one concern fails.
+- NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
+- NEVER run deterministic validation, formatting, lint, test, or eval commands — the caller passes those before dispatch and CI re-runs them over the repository.
+- NEVER evaluate test evidence quality — the composing implementation auditor invokes `/audit-rust-tests` as a separate concern.
+- ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
+- NEVER include corrective Rust samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
+- `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails.
 
 </constraints>
 
@@ -106,7 +107,7 @@ When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `exter
 
 **Phase 2: ADR and PDR compliance**
 
-Verify each relevant architectural or product constraint is reflected in the code shape. Undocumented deviations are REJECTED.
+Verify each relevant architectural or product constraint is reflected in the code shape. Undocumented deviations make this concern `FAIL`.
 
 </audit_workflow>
 
@@ -114,7 +115,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 - `${CLAUDE_SKILL_DIR}/references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
 - `${CLAUDE_SKILL_DIR}/references/unsafe-soundness.md` -- soundness pass for `unsafe` blocks and FFI boundaries
-- `${CLAUDE_SKILL_DIR}/references/example-audit.md` -- complete APPROVED and REJECTED examples
+- `${CLAUDE_SKILL_DIR}/references/example-audit.md` -- complete PASS and FAIL examples
 
 </reference_guides>
 
@@ -122,26 +123,26 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
+The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-rust-code",
   "target": "<scope-target>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "function-comprehension", "status": "PASS | FAIL | UNKNOWN", "explanation": "<required when UNKNOWN>", "findings": [] },
-    { "name": "design-coherence", "status": "PASS | FAIL | UNKNOWN", "explanation": "<required when UNKNOWN>", "findings": [] },
-    { "name": "import-structure", "status": "PASS | FAIL | UNKNOWN", "explanation": "<required when UNKNOWN>", "findings": [] },
-    { "name": "unsafe-soundness", "status": "PASS | FAIL | UNKNOWN", "explanation": "<required when UNKNOWN>", "findings": [] },
-    { "name": "adr-pdr-compliance", "status": "PASS | FAIL | UNKNOWN", "explanation": "<required when UNKNOWN>", "findings": [] }
+    { "name": "function-comprehension", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "design-coherence", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "import-structure", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "unsafe-soundness", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "adr-pdr-compliance", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each row whose status is `UNKNOWN` carries `explanation` naming why the concern does not apply. Each finding carries `file`, `line`, `rule` (the concern name or specific violation), `severity: "REJECT"`, and `message` (the one-line "why this fails"). Include correct-approach Rust samples and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each `NOT_APPLICABLE` row carries `explanation` naming why the concern does not apply. Each finding carries `file`, `line`, `rule` (the concern name or specific violation), `severity: "blocking | debt"`, `message`, `observed`, and `expected`. The message names the violated rule and consequence only; it contains no corrective Rust sample, implementation patch, prescribed refactor, or required-change summary.
 
 </verdict_format>
 
@@ -157,8 +158,8 @@ Each row whose status is `UNKNOWN` carries `explanation` naming why the concern 
 
 <success_criteria>
 
-- APPROVED means every applicable concern row is PASS, every non-applicable UNKNOWN row explains why the concern does not apply, and every production function in scope was covered.
-- REJECTED means each finding names the exact code location, violated Rust or repository rule, observable consequence, and required correction.
+- `APPROVED` means every applicable concern row is `PASS`, every `NOT_APPLICABLE` row explains why the concern does not apply, and every production function in scope was covered.
+- `REJECTED` means each finding names the exact code location, violated Rust or repository rule, severity, observable consequence, and observed-versus-expected evidence.
 - Boundary and design judgments are falsifiable from the cited import path, call path, ownership flow, error path, or module relationship.
 - Unsafe and FFI judgments identify the invariant being preserved or violated, including pointer validity, aliasing, lifetime, ABI, unwind, and thread-safety constraints when applicable.
 - ADR and PDR judgments cite the product constraint being upheld or violated without embedding spec identifiers in code guidance.

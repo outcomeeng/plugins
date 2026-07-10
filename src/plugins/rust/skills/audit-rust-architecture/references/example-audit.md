@@ -7,7 +7,7 @@ This ADR-target example is the complete JSON output for a rejected Rust architec
   "schema_version": 1,
   "skill": "audit-rust-architecture",
   "target": "spx/example.enabler/15-command-runner.adr.md",
-  "overall": "FAIL",
+  "overall": "REJECTED",
   "rows": [
     {
       "name": "testability-in-verification",
@@ -16,7 +16,10 @@ This ADR-target example is the complete JSON output for a rejected Rust architec
         {
           "rule": "missing-testability",
           "file": "spx/example.enabler/15-command-runner.adr.md",
-          "message": "`## Verification` does not require external command execution to flow through an injected trait or function seam; add an ALWAYS rule requiring the seam so command construction can be audited independently from process execution."
+          "severity": "blocking",
+          "message": "The ADR leaves external command execution without an enforceable injection seam.",
+          "observed": "Verification rules do not require command execution to flow through an injected trait or function.",
+          "expected": "Verification rules require the source-owned command-execution seam."
         }
       ]
     },
@@ -27,7 +30,10 @@ This ADR-target example is the complete JSON output for a rejected Rust architec
         {
           "rule": "generated-mock-seam",
           "file": "spx/example.enabler/15-command-runner.adr.md",
-          "message": "`mockall` is named as the controlled implementation; dependency injection must inject a real trait implementation or function seam, not a generated mock framework double."
+          "severity": "blocking",
+          "message": "The architecture defines a generated mock as the injected command runner.",
+          "observed": "The decision names mockall as the controlled implementation of the runner boundary.",
+          "expected": "The architecture defines a real trait implementation or function seam without a generated mock."
         }
       ]
     },
@@ -39,7 +45,10 @@ This ADR-target example is the complete JSON output for a rejected Rust architec
         {
           "rule": "level-assignment-table",
           "file": "spx/example.enabler/15-command-runner.adr.md",
-          "message": "A level assignment table appears in the Rust architecture decision; remove the table and keep level selection in the testing workflow while the ADR states the seam that makes the levels possible."
+          "severity": "blocking",
+          "message": "The architecture decision owns execution-level selection instead of the testing workflow.",
+          "observed": "The ADR contains a table assigning execution levels to evidence paths.",
+          "expected": "The ADR defines architecture seams while the testing workflow selects execution levels."
         }
       ]
     },

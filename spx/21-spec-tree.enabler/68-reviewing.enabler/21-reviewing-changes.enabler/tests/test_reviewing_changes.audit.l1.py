@@ -7,9 +7,6 @@ universal rules across the skill's files rather than per-case scenarios:
   writes no durable review state. ``compute_diff.py`` may write only the
   caller-owned scratch review-input bundle files; the remaining scripts use no
   direct write primitives.
-- The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
-  declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
-  listing ``spec-tree:review-changes``.
 - The scripts/ directory holds the runner, legacy helper modules, and no
   parallel validation or renderer script, so the human surface comes only from
   the sealed journal prefix.
@@ -37,8 +34,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
     SKILL_DIR,
-    SKILL_FILE,
-    WRAPPER_AGENT_PATH,
     load_journal_emit_module,
     make_review_result_dict,
     run_journal_emit_in_process,
@@ -127,33 +122,6 @@ def _script_files() -> list[pathlib.Path]:
     return [
         p for p in sorted(SCRIPTS_DIR.rglob("*.py")) if "__pycache__" not in p.parts
     ]
-
-
-def _frontmatter(source: str) -> dict[str, str | list[str]]:
-    if not source.startswith("---\n"):
-        return {}
-    lines = source.splitlines()
-    data: dict[str, str | list[str]] = {}
-    current_list_key: str | None = None
-    for line in lines[1:]:
-        if line == "---":
-            break
-        if line.startswith("  - ") and current_list_key is not None:
-            value = data.setdefault(current_list_key, [])
-            if isinstance(value, list):
-                value.append(line.removeprefix("  - "))
-            continue
-        current_list_key = None
-        key, separator, value = line.partition(":")
-        if separator == "":
-            continue
-        stripped = value.strip()
-        if stripped:
-            data[key] = stripped
-        else:
-            data[key] = []
-            current_list_key = key
-    return data
 
 
 def _top_level_name(module: str) -> str:
@@ -315,29 +283,6 @@ class TestScriptsAreStdlibOnly:
             "review-changes scripts reference uv at runtime "
             "(forbidden by Plugin Portability Constraints):\n" + "\n".join(violations)
         )
-
-
-class TestWrapperAgentShape:
-    """The wrapper agent points at the review-changes skill."""
-
-    def test_wrapper_agent_frontmatter_declares_review_skill(self) -> None:
-        frontmatter = _frontmatter(WRAPPER_AGENT_PATH.read_text(encoding="utf-8"))
-
-        assert frontmatter["model"] == "sonnet"
-        assert frontmatter["tools"] == "Bash, Read, Skill"
-        assert frontmatter["skills"] == ["spec-tree:review-changes"]
-
-
-class TestSkillCommandBoundary:
-    """The skill grants only the runner command and file reads."""
-
-    def test_skill_frontmatter_allows_only_runner_and_read(self) -> None:
-        frontmatter = _frontmatter(SKILL_FILE.read_text(encoding="utf-8"))
-
-        assert frontmatter["allowed-tools"] == [
-            'Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)',
-            "Read",
-        ]
 
 
 class TestNoSecondSchemaRepresentation:

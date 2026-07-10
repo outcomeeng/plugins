@@ -7,7 +7,7 @@ This ADR-target example is the complete JSON output for a rejected Python archit
   "schema_version": 1,
   "skill": "audit-python-architecture",
   "target": "spx/example.enabler/15-trakt-list-provider.adr.md",
-  "overall": "FAIL",
+  "overall": "REJECTED",
   "rows": [
     {
       "name": "testability-in-verification",
@@ -16,7 +16,10 @@ This ADR-target example is the complete JSON output for a rejected Python archit
         {
           "rule": "missing-testability",
           "file": "spx/example.enabler/15-trakt-list-provider.adr.md",
-          "message": "The ADR defines a TraktListProvider Protocol but `## Verification` has no ALWAYS rule requiring list operations to accept that Protocol as a parameter; add the rule so implementation can be audited for the DI seam."
+          "severity": "blocking",
+          "message": "The ADR leaves list operations without an enforceable dependency-injection seam.",
+          "observed": "The decision defines TraktListProvider but its Verification rules do not require list operations to accept that protocol.",
+          "expected": "Verification rules require the source-owned provider seam used by list operations."
         }
       ]
     },
@@ -27,7 +30,10 @@ This ADR-target example is the complete JSON output for a rejected Python archit
         {
           "rule": "mocking-language",
           "file": "spx/example.enabler/15-trakt-list-provider.adr.md",
-          "message": "`respx.mock` appears in an example as the intended test seam; replace it with a controlled TraktListProvider implementation and document the `/test` exception case if a test double remains."
+          "severity": "blocking",
+          "message": "The architecture prescribes a replacement mock as the provider seam.",
+          "observed": "An ADR example names respx.mock as the intended Trakt provider boundary.",
+          "expected": "The architecture defines a dependency-injected provider boundary without framework replacement mocks."
         }
       ]
     },
@@ -38,7 +44,10 @@ This ADR-target example is the complete JSON output for a rejected Python archit
         {
           "rule": "saas-l2",
           "file": "spx/example.enabler/15-trakt-list-provider.adr.md",
-          "message": "The ADR assigns `l2` to Trakt.tv API behavior; Trakt.tv is a SaaS service, so isolated verification is `l1` with a controlled provider and real API verification is `l3`."
+          "severity": "blocking",
+          "message": "The architecture assigns a local execution level to a remote SaaS boundary.",
+          "observed": "The decision classifies Trakt.tv API behavior as l2.",
+          "expected": "Remote SaaS behavior is l3; isolated local behavior is classified independently at l1."
         }
       ]
     },
@@ -51,7 +60,10 @@ This ADR-target example is the complete JSON output for a rejected Python archit
         {
           "rule": "missing-test-double-exception",
           "file": "spx/example.enabler/15-trakt-list-provider.adr.md",
-          "message": "The ADR allows a controlled provider test double without naming the applicable `/test` exception case; document the exception case or require the real provider at the appropriate level."
+          "severity": "blocking",
+          "message": "The architecture permits a test double without an applicable exception classification.",
+          "observed": "The decision allows a controlled provider double without naming a Stage 5 exception case.",
+          "expected": "Every permitted test double is justified by one applicable Stage 5 exception case."
         }
       ]
     }

@@ -1,24 +1,23 @@
 <examples>
 
-The skill's entire output is the JSON verdict (see `<verdict_format>` in the skill). These examples show the verdict shape for an approved change and a design rejection; the audit runs no deterministic verification, so there is no automated-gates or test-execution row. A scope with no `unsafe` sites reports the `unsafe-soundness` row as `UNKNOWN`.
+The skill's entire output is the JSON concern verdict. These examples show `PASS`, `FAIL`, and `NOT_APPLICABLE`; the audit runs no deterministic verification.
 
-<example name="approved">
-Auditing `src/config/` for a CLI crate.
+<example name="pass">
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-rust-code",
   "target": "src/config/",
-  "overall": "PASS",
+  "overall": "APPROVED",
   "rows": [
     { "name": "function-comprehension", "status": "PASS", "findings": [] },
     { "name": "design-coherence", "status": "PASS", "findings": [] },
     { "name": "import-structure", "status": "PASS", "findings": [] },
     {
       "name": "unsafe-soundness",
-      "status": "UNKNOWN",
-      "explanation": "scope contains no unsafe blocks, unsafe functions, unsafe impls, extern C boundaries, or no_mangle exports",
+      "status": "NOT_APPLICABLE",
+      "explanation": "scope contains no unsafe or FFI sites",
       "findings": []
     },
     { "name": "adr-pdr-compliance", "status": "PASS", "findings": [] }
@@ -29,69 +28,34 @@ Auditing `src/config/` for a CLI crate.
 
 </example>
 
-<example name="rejected-design-flaw">
-Auditing `src/orders/`.
+<example name="fail">
 
-````json
+```json
 {
   "schema_version": 1,
   "skill": "audit-rust-code",
   "target": "src/orders/",
-  "overall": "FAIL",
+  "overall": "REJECTED",
   "rows": [
-    {
-      "name": "function-comprehension",
-      "status": "FAIL",
-      "findings": [
-        {
-          "id": "f-001",
-          "file": "src/orders/processor.rs",
-          "line": 42,
-          "rule": "io-logic-tangle",
-          "severity": "REJECT",
-          "message": "Predict/verify: `process_orders` is predicted to compute and return order summaries, but the body computes totals, persists state, and sends emails through a concrete client. The boundary call prevents isolated verification of the pricing logic. Extract `compute_order_summaries` as a pure function and move sending behind an injected `EmailSender` trait. Correct approach:\n\n```rust\ntrait EmailSender {\n    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;\n}\n\nfn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {\n    orders.iter().map(OrderSummary::from).collect()\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    for summary in compute_order_summaries(orders) {\n        sender.send(&summary)?;\n    }\n    Ok(())\n}\n```"
-        }
-      ]
-    },
     {
       "name": "design-coherence",
       "status": "FAIL",
       "findings": [
         {
-          "id": "f-002",
           "file": "src/orders/processor.rs",
           "line": 42,
           "rule": "io-logic-separation",
-          "severity": "REJECT",
-          "message": "Pure computation and boundary calls are tangled; the pricing logic cannot be exercised without the email client. Inject the email boundary through a trait or narrow function seam. Correct approach:\n\n```rust\nfn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {\n    orders.iter().map(OrderSummary::from).collect()\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    for summary in compute_order_summaries(orders) {\n        sender.send(&summary)?;\n    }\n    Ok(())\n}\n```"
-        }
-      ]
-    },
-    { "name": "import-structure", "status": "PASS", "findings": [] },
-    {
-      "name": "unsafe-soundness",
-      "status": "UNKNOWN",
-      "explanation": "scope contains no unsafe blocks, unsafe functions, unsafe impls, extern C boundaries, or no_mangle exports",
-      "findings": []
-    },
-    {
-      "name": "adr-pdr-compliance",
-      "status": "FAIL",
-      "findings": [
-        {
-          "id": "f-003",
-          "file": "src/orders/processor.rs",
-          "line": 3,
-          "rule": "dependency-injection",
-          "severity": "REJECT",
-          "message": "The module imports a concrete email client directly, while the governing ADR requires an injected seam for external services. Depend on an `EmailSender` trait passed in instead. Correct approach:\n\n```rust\ntrait EmailSender {\n    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    ...\n}\n```"
+          "severity": "blocking",
+          "message": "Order calculation and email delivery share one function, coupling core behavior to an external side effect.",
+          "observed": "process_orders computes totals and calls the concrete email client in the same body",
+          "expected": "core order calculation is independently observable and external delivery crosses an injected boundary"
         }
       ]
     }
   ],
   "metadata": { "branch": "<branch>" }
 }
-````
+```
 
 </example>
 

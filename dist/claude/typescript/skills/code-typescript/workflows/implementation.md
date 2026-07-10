@@ -1,74 +1,43 @@
-# Implementation Protocol
+<required_reading>
 
-Execute these phases IN ORDER.
+- Read the specification completely: node spec, ADR/PDR, design note, ticket, or user request.
+- Read repository-local authority before existing code: root guide, docs, and any spec-tree context already loaded by `spec-tree:contextualize`.
+- Read `/typescript-standards` and `/typescript-test-standards`; they own TypeScript code and test conventions.
+- Read `package.json`, `tsconfig*`, test configuration, and relevant local overlays or harness guides before selecting commands.
 
-## Phase 0: Understand the Spec
+</required_reading>
 
-Before writing any code:
+<process>
 
-1. **Read the specification** completely (TRD, design doc, ticket, or user request)
-2. **Identify deliverables**: What files, functions, classes need to be created?
-3. **Identify interfaces**: What are the function signatures, input/output types?
-4. **Identify edge cases**: What error conditions must be handled?
-5. **Identify test scenarios**: What tests will prove correctness?
+1. Identify deliverables, public interfaces, edge cases, error behavior, and the tests that prove correctness. If the specification is missing or unclear, stop and ask for clarification before writing code.
+2. Discover existing contracts and reusable artifacts before writing code: package dependencies, source-owned constants, registries, constructors, harnesses, fixtures, generators, entrypoints, and neighboring modules.
+3. Record the discovery result in the working notes: libraries already available, authoritative rules loaded, reusable artifacts found, and commands selected from repository wrappers.
 
-**If the spec is missing or unclear**:
+<gate name="discovery">
 
-- Ask for clarification
-- Do NOT proceed with assumptions
-- Document any decisions made
+Proceed only when the specification, source contracts, reusable test infrastructure, and repository command surface are identified. Stop before mutation when any required authority or contract is missing; report the exact missing input instead of inventing a local substitute.
 
-## Phase 0.5: Codebase Discovery (MANDATORY)
+</gate>
 
-**Before writing ANY code, discover what already exists.**
+4. Write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
+5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
 
-See `<codebase_discovery>` in SKILL.md for complete guidance.
+<gate name="red-evidence">
 
-### Quick Checklist
+Proceed to implementation only when the focused test fails because the declared behavior is absent or incorrect. Stop and repair the test or source contract when it passes before implementation, fails during setup, or fails for an unrelated reason.
 
-```bash
-# 1. Read product docs (highest authority)
-Read: README.md, docs/, CLAUDE.md
+</gate>
 
-# 2. Read the relevant skill/spec first
-Read: the skill and spec docs that define the pattern in use
+6. Implement the smallest TypeScript change that satisfies the tests while preserving dependency injection, explicit types, source-owned contracts, and repository import rules.
+7. Run the focused test, typecheck, lint, and repository-selected validation commands. Use raw tool fallbacks only when no repository wrapper exists.
 
-# 3. Check available libraries
-Read: package.json → dependencies, devDependencies
+<gate name="completion">
 
-# 4. Locate reusable artifacts
-Glob/Grep: actual modules, harnesses, fixtures, registries, entrypoints
+Report completion only when the focused test passes and every repository-selected typecheck, lint, and validation command exits successfully. A missing command, skipped required check, or non-zero exit keeps the workflow incomplete and must be reported with the exact command and result.
 
-# 5. Confirm file placement
-Read: files in target directory
-```
+</gate>
 
-### Discovery Output
-
-Before proceeding to Phase 1, document:
-
-- **Libraries to use**: (from package.json, don't add new ones)
-- **Authoritative rules loaded**: (skill/spec/docs that govern this work)
-- **Reusable artifacts found**: (existing utilities, harnesses, fixtures, registries)
-- **Utilities to reuse**: (don't reinvent what exists)
-
-**Remember the hierarchy**: `docs/` > `CLAUDE.md` > `specs` > `SKILL.md` >>> existing code
-
-Existing code is REFERENCE, not authority. Use code search to find artifacts, never to decide methodology or conventions. When docs and code conflict, docs win.
-
-## Phase 1: Write Tests First (TDD)
-
-For each function/class to implement:
-
-1. **Create test file** if it doesn't exist, following `/typescript-test-standards`: `{module}.scenario.l1.test.ts`
-2. **Write test cases** following the debuggability progression (see `references/test-patterns.md`)
-3. **Run tests** to confirm they fail (red phase)
-
-## Phase 2: Implement Code
-
-Write implementation that makes tests pass.
-
-### File Structure
+Use this file-structure model as an illustration of separation, not as a required product layout:
 
 ```
 src/
@@ -90,9 +59,13 @@ spx/{node-path}/tests/   # Co-located tests (Outcome Engineering framework)
 └── core.scenario.l2.test.ts
 ```
 
-### Code Standards
+Apply these coding rules while implementing:
 
-**Type Annotations** (MANDATORY):
+- Public functions and exported values carry explicit types.
+- Errors are typed and carry actionable context.
+- Dependencies enter through parameters, constructor arguments, or explicit adapters rather than hidden globals.
+- Magic values become named constants when the value has domain meaning.
+- Test infrastructure stays outside product code and outside `spx/**/tests/`.
 
 ```typescript
 // GOOD - Complete type annotations
@@ -119,8 +92,6 @@ function processItems(items, config, logger) {
 }
 ```
 
-**Modern TypeScript Syntax** (ES2022+):
-
 ```typescript
 // Use const assertions for literal types
 const CONFIG = {
@@ -134,8 +105,6 @@ const routes = {
   about: "/about",
 } satisfies Record<string, string>;
 ```
-
-**Error Handling**:
 
 ```typescript
 // GOOD - Specific error classes with context
@@ -153,8 +122,6 @@ try {
   return null;
 }
 ```
-
-**Dependency Injection**:
 
 ```typescript
 // GOOD - Dependencies as parameters
@@ -178,8 +145,6 @@ async function syncFiles(source: string, dest: string): Promise<SyncResult> {
 }
 ```
 
-**Constants, Not Magic Numbers**:
-
 ```typescript
 // GOOD
 const TIMEOUT_MS = 60_000;
@@ -190,10 +155,6 @@ for (let attempt = 0; attempt < 3; attempt++) {
   // Magic number
 }
 ```
-
-## Phase 3: Self-Verification
-
-Before declaring completion, run ALL verification tools:
 
 ```bash
 # TypeScript validation through the repository's canonical command
@@ -215,27 +176,13 @@ Before declaring completion, run ALL verification tools:
 # npx vitest run
 ```
 
-**Expected**:
+</process>
 
-- tsc: Zero errors
-- eslint: Zero errors (auto-fix applied where safe)
-- vitest: All tests pass, coverage ≥80% for new code
+<success_criteria>
 
-See `references/verification-checklist.md` for full checklist.
+- The implementation follows the loaded specification and preserves source-owned contracts.
+- Required tests exist, fail before the implementation change for the expected reason, and pass after the change.
+- Typecheck, lint, and the focused test command pass through repository-selected wrappers or documented fallbacks.
+- No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.
 
-## Phase 4: Submit for Review
-
-When verification passes:
-
-1. **Summarize what was implemented**:
-   - Files created/modified
-   - Functions/classes added
-   - Tests added
-   - Any deviations from spec (with justification)
-
-2. **Note any known limitations**:
-   - Edge cases not covered
-   - Dependencies on external systems
-   - Performance considerations
-
-3. **Request review**: Submit for code review.
+</success_criteria>

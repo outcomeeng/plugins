@@ -7,7 +7,7 @@ This ADR-target example is the complete JSON output for a rejected TypeScript ar
   "schema_version": 1,
   "skill": "audit-typescript-architecture",
   "target": "spx/example.enabler/15-build-runner.adr.md",
-  "overall": "FAIL",
+  "overall": "REJECTED",
   "rows": [
     {
       "name": "testability-in-verification",
@@ -16,7 +16,10 @@ This ADR-target example is the complete JSON output for a rejected TypeScript ar
         {
           "rule": "missing-testability",
           "file": "spx/example.enabler/15-build-runner.adr.md",
-          "message": "`## Verification` does not require build orchestration to accept a dependency-injected runner parameter; add an ALWAYS rule requiring the runner seam so command construction can be audited independently from process execution."
+          "severity": "blocking",
+          "message": "The ADR leaves build orchestration without an enforceable runner seam.",
+          "observed": "Verification rules do not require build orchestration to accept the source-owned runner parameter.",
+          "expected": "Verification rules require the dependency-injected runner used by build orchestration."
         }
       ]
     },
@@ -27,7 +30,10 @@ This ADR-target example is the complete JSON output for a rejected TypeScript ar
         {
           "rule": "mocking-language",
           "file": "spx/example.enabler/15-build-runner.adr.md",
-          "message": "`vi.fn()` is named as the controlled implementation and the ADR also calls it a fake runner without naming a `/test` exception case; dependency injection must inject a real function or object, and any test double language must name the applicable exception case."
+          "severity": "blocking",
+          "message": "The architecture defines a framework mock as the injected build runner.",
+          "observed": "The decision names vi.fn() as a fake runner and provides no Stage 5 exception classification.",
+          "expected": "The architecture defines a real function or object seam and classifies every permitted test double."
         }
       ]
     },
@@ -38,7 +44,10 @@ This ADR-target example is the complete JSON output for a rejected TypeScript ar
         {
           "rule": "saas-l2",
           "file": "spx/example.enabler/15-build-runner.adr.md",
-          "message": "The decision assigns `l2` to a SaaS-hosted deployment API; SaaS behavior has no local level, so isolated command construction is `l1` and real API verification is `l3`."
+          "severity": "blocking",
+          "message": "The architecture assigns a local execution level to a remote SaaS boundary.",
+          "observed": "The decision classifies a SaaS-hosted deployment API as l2.",
+          "expected": "Remote SaaS behavior is l3; isolated local behavior is classified independently at l1."
         }
       ]
     },
