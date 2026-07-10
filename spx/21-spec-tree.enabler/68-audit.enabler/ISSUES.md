@@ -48,7 +48,7 @@ require inlining audit intelligence into the wrapper agent.
 
 Runtime evidence distinguishes skill loading from orchestration failure:
 
-- The installed `spec-tree:audit` skill exists in the Codex plugin cache.
+- The installed implementation-audit orchestration skill exists in the Codex plugin cache.
 - `test-evidence-auditor` run `019f468d-6ab3-7613-af9f-b61e1d6442e2`
   returned JSON `PASS`.
 - `changes-reviewer` run `019f468d-8269-7863-88c6-e8234b1809d5` returned raw

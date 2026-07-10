@@ -25,8 +25,8 @@ with `spx verification run scope add`, records findings with `spx verification
 run finding add`, finishes with `spx verification run finish`, and renders the
 projection with `spx verification run render`.
 
-Behavior: the wrapper prompt remains policy-thin and invokes `spec-tree:audit`;
-the `spec-tree:audit` prompt contract requires partitioning the caller's scope by
+Behavior: the wrapper prompt remains policy-thin and invokes
+`spec-tree:audit-implementation`; the `spec-tree:audit-implementation` prompt contract requires partitioning the caller's scope by
 language and concern, validating that each language partition has
 `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture`,
 recording planned or classified coverage units through `spx verification run

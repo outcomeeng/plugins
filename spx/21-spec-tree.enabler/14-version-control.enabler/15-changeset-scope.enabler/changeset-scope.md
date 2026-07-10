@@ -1,7 +1,7 @@
 # Changeset Scope
 
 PROVIDES the canonical git-derived changeset primitives — branch identity, addressing slug, base-ref resolution, concrete commit-OID resolution, and merge-base diff scope
-SO THAT the audit skill, the review-changes skill, the thread-store skill, and base synchronization
+SO THAT implementation-audit orchestration, the review-changes skill, and base synchronization
 CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and changed-file set from one source rather than re-implementing or re-exporting git derivation across skills
 
 ## Assertions
@@ -18,5 +18,4 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 
 ### Compliance
 
-- ALWAYS: the changeset-derivation primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `commit_oid`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — resolve to one module, and the `branch_slug` re-export at `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` is identity-equal to the canonical symbol ([test](tests/test_changeset_scope.compliance.l1.py))
 - ALWAYS: every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through the shared `remote_tracking_ref` helper — `branch_scope` for the auditing surface and `compute_diff` for the reviewing surface — so a stale local branch ref cannot widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
