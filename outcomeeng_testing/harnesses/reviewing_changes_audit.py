@@ -428,12 +428,7 @@ class TestNoParallelReviewResultRenderer:
 
 def scripts_use_no_direct_write_primitives() -> None:
     subject = TestScriptsDoNotWriteStorageDirectly()
-    for script_path in (
-        REVIEW_RESULT_MODULE_PATH,
-        COMPUTE_DIFF_SCRIPT,
-        JOURNAL_EMIT_SCRIPT,
-        REVIEW_RUN_SCRIPT,
-    ):
+    for script_path in _script_files():
         subject.test_script_uses_no_direct_write_primitives(script_path)
 
 

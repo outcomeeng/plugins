@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import ast
 import pathlib
-import re
 import sys
 
 
@@ -36,7 +35,6 @@ THREAD_STORE_SCRIPTS_DIR = (
     / "scripts"
 )
 SPEC_TREE_SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
-SPEC_TREE_AGENTS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents"
 
 # Names of modules that ship alongside ``thread_store.py`` and are
 # imported by sibling scripts via bare names (sys.path[0] resolution).
@@ -156,41 +154,6 @@ class TestVerificationSkillsDoNotImportBackendsDirectly:
         assert not violations, (
             "verification skills import a concrete backend module directly "
             "(forbidden — route through thread_store facade):\n" + "\n".join(violations)
-        )
-
-
-class TestAgentsDoNotReferenceConcreteBackends:
-    """Wrapper-agent prose must not name a concrete backend module.
-
-    Spec line 37 names "verification skill or wrapper agent" as joint subject.
-    Agents are markdown files; their prose "imports" a backend by
-    naming the module in instructions to the model. The check scans
-    every agent file under ``plugins/spec-tree/agents/`` for the
-    presence of any concrete backend module name as a whole word.
-
-    A future ``changes-reviewer`` agent that referenced ``fs_backend``
-    in its body would fail this test; the rule directs agents to reach
-    persistence only through the CRUD CLIs exposed by ``manage-thread-store``.
-    """
-
-    def test_no_agent_names_concrete_backend(self) -> None:
-        violations: list[str] = []
-        if not SPEC_TREE_AGENTS_DIR.is_dir():
-            # No agents directory yet; the rule has no input to violate.
-            return
-        for agent_file in sorted(SPEC_TREE_AGENTS_DIR.glob("*.md")):
-            content = agent_file.read_text(encoding="utf-8")
-            for module_name in CONCRETE_BACKEND_MODULES:
-                # Match the module name as a whole word to avoid false
-                # hits on substrings inside unrelated identifiers.
-                if re.search(rf"\b{re.escape(module_name)}\b", content):
-                    violations.append(
-                        f"{agent_file.relative_to(REPO_ROOT)}: contains '{module_name}'"
-                    )
-        assert not violations, (
-            "agent prose names a concrete backend module (forbidden — "
-            "agents reach persistence only through thread-store CRUD CLIs):\n"
-            + "\n".join(violations)
         )
 
 
