@@ -16,9 +16,10 @@ Actor: an operator in this plugin checkout dispatches an implementation audit fo
 an implementation scope whose language concerns are supplied by installed
 language plugins.
 
-Invocation: the main conversation dispatches `implementation-auditor` with a
-changeset or explicit file-list scope after deterministic validation and tests
-have run. The wrapper starts `spx verification run start --verification-type
+Invocation: the main conversation commits a deterministic-passing local
+checkpoint, then dispatches `implementation-auditor` with that exact changeset
+scope. An explicit live-file scope is advisory and cannot satisfy a gate. The
+wrapper starts `spx verification run start --verification-type
 audit --scope-type changeset --scope <base>..<head>`, records inspected scope
 with `spx verification run scope add`, records findings with `spx verification
 run finding add`, finishes with `spx verification run finish`, and renders the

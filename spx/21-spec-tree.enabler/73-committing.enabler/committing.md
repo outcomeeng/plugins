@@ -1,6 +1,6 @@
 # Committing
 
-PROVIDES a commit workflow enforcing Conventional Commits with selective staging
+PROVIDES a commit workflow enforcing Conventional Commits with selective staging for local verification checkpoints and publication-ready changes
 SO THAT all developers
 CAN produce atomic, well-described commits that map cleanly to spec tree changes
 
@@ -15,5 +15,6 @@ CAN produce atomic, well-described commits that map cleanly to spec tree changes
 ### Compliance
 
 - ALWAYS: `/commit-changes` presents payload-bearing `git commit` message input by supported harness environment — quoted heredoc to `git commit -F -` for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | git commit -F -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
+- ALWAYS: `/commit-changes` can seal deterministic-passing work as a local verification checkpoint before an agentic gate; approval governs publication readiness, not whether the gate subject may be committed locally, and a repaired subject receives a new checkpoint commit before re-verification ([audit])
 - ALWAYS: include version bumps in the same commit as the changes that warrant them — separate version bump commits create misleading history ([review])
 - NEVER: commit files that likely contain secrets (.env, credentials) — warn the user if they request it ([review])
