@@ -31,7 +31,7 @@ AUDIT_TESTS_PROPERTY_SEED = 20260704
 AUDIT_TESTS_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/tests/"
-    "test_audit_tests.property.l1.py::"
+    "test_test_auditing.property.l1.py::"
     "test_coupling_taxonomy_classifies_distinct_failure_modes"
 )
 AUDIT_TESTS_PROPERTY_EXAMPLES = 25
