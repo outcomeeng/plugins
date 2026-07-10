@@ -68,6 +68,14 @@ eval-materialize-prompts root:
 eval-materialize-prompts-check root:
     uv run outcomeeng-evals materialize-prompts "{{root}}" --repo-root . --check
 
+# Regenerate the eval CI workflow's trigger paths from the eval definitions
+build-eval-triggers:
+    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/spec-tree-evals.yml --repo-root .
+
+# Check the eval CI workflow's trigger paths for drift
+eval-triggers-check:
+    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/spec-tree-evals.yml --repo-root . --check
+
 # Run deterministic validation only
 validation:
     python3 -m outcomeeng.validation validation

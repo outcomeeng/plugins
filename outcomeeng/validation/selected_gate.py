@@ -16,6 +16,9 @@ from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    EVAL_PROMPTS_ARGV,
+    EVAL_TRIGGER_WORKFLOW,
+    EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
     INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
@@ -55,9 +58,17 @@ MARKDOWN_REASON: Final = "markdown or spec path changed"
 WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
+EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 ROOT_README_PATH: Final = "README.md"
 SPX_CONFIG_PATH: Final = "spx.config.yaml"
+# Exact-match selection targets, named so a consumer imports the value rather
+# than recopying the path.
+CHECK_WORKFLOW_PATH: Final = ".github/workflows/check.yml"
+PYPROJECT_PATH: Final = "pyproject.toml"
+INSTRUCTION_BLOCK_SOURCE_PATH: Final = (
+    "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
+)
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -71,8 +82,8 @@ SKILL_STEP_LABELS: Final = (
 )
 
 FULL_GATE_PATTERNS: Final = (
-    ".github/workflows/check.yml",
-    "pyproject.toml",
+    CHECK_WORKFLOW_PATH,
+    PYPROJECT_PATH,
     "uv.lock",
     "justfile",
     "Justfile",
@@ -115,10 +126,25 @@ SKILL_PATTERNS: Final = (
     ".claude-plugin/**",
     ".agents/plugins/**",
 )
+# The trigger list is generated from the eval definitions and written into the
+# eval workflow, so only those two surfaces can stale it.
+EVAL_TRIGGER_PATTERNS: Final = (
+    "spx/**/evals/**",
+    EVAL_TRIGGER_WORKFLOW,
+)
+# A producer-coupled prompt is derived from a producer the eval names under
+# `src/plugins/`. The producer set is per-eval, not statically known here, so
+# the whole authored plugin tree is the pattern: selecting the prompt check for
+# an unrelated plugin edit costs one fast command, while missing a real producer
+# edit would ship a stale prompt.
+EVAL_PROMPT_PATTERNS: Final = (
+    "spx/**/evals/**",
+    "src/plugins/**",
+)
 INSTRUCTION_BLOCK_PATTERNS: Final = (
     "AGENTS.md",
     "CLAUDE.md",
-    "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
+    INSTRUCTION_BLOCK_SOURCE_PATH,
     "src/plugins/spec-tree/skills/update-instruction-block/**",
     "dist/claude/spec-tree/skills/understand/templates/instruction-block.md",
     "dist/codex/spec-tree/skills/understand/templates/instruction-block.md",
@@ -350,6 +376,12 @@ def build_selected_gate_plan(
     if _matches_any(normalized, INSTRUCTION_BLOCK_PATTERNS):
         selected_argvs.add(INSTRUCTION_BLOCK_ARGV)
         reasons[INSTRUCTION_BLOCK_ARGV] = INSTRUCTION_BLOCK_REASON
+    if _matches_any(normalized, EVAL_TRIGGER_PATTERNS):
+        selected_argvs.add(EVAL_TRIGGERS_ARGV)
+        reasons[EVAL_TRIGGERS_ARGV] = EVAL_REASON
+    if _matches_any(normalized, EVAL_PROMPT_PATTERNS):
+        selected_argvs.add(EVAL_PROMPTS_ARGV)
+        reasons[EVAL_PROMPTS_ARGV] = EVAL_REASON
 
     selected_steps = [
         SelectedGateStep(step=step, reason=reasons[step.argv])

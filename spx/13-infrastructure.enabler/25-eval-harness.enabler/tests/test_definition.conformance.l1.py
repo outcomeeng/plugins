@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng_evals.testing.factories import (
+    assert_definition_accepts_owned_path_shapes_ci_matches_identically,
     assert_definition_accepts_trials_at_cap,
     assert_definition_applies_default_model_when_omitted,
     assert_definition_applies_default_threshold_when_omitted,
@@ -23,6 +24,7 @@ from outcomeeng_evals.testing.factories import (
     assert_definition_uses_explicit_model_when_set,
     assert_definition_uses_explicit_threshold_when_set,
     assert_definition_uses_explicit_trials_when_set,
+    assert_owned_path_alphabet_excludes_every_glob_magic_character,
 )
 
 
@@ -104,3 +106,11 @@ def test_rejects_nonexistent_cases_file() -> None:
 
 def test_rejects_nonexistent_prompt_file() -> None:
     assert_definition_rejects_nonexistent_prompt_file()
+
+
+def test_accepts_owned_path_shapes_ci_matches_identically() -> None:
+    assert_definition_accepts_owned_path_shapes_ci_matches_identically()
+
+
+def test_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
+    assert_owned_path_alphabet_excludes_every_glob_magic_character()

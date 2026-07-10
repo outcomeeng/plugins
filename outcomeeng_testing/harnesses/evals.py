@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import tomllib
 from collections.abc import Callable, Sequence
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from hypothesis import given, seed, settings
 
@@ -15,7 +19,12 @@ from outcomeeng_evals.ci_execution import (
     command_for_plan_item,
 )
 from outcomeeng_evals.ci_plan import EvalPlanItem
-from outcomeeng_testing.generators.evals import ci_run_settings, eval_plan_items
+from outcomeeng_evals.definition import load_definition
+from outcomeeng_testing.generators.evals import (
+    ci_run_settings,
+    eval_plan_items,
+    owned_paths_violating_alphabet,
+)
 
 CI_COMMAND_PROPERTY_SEED = 20260708
 CI_COMMAND_PROPERTY_EXAMPLES = 60
@@ -23,6 +32,14 @@ CI_EXECUTION_MAPPING_TEST_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/25-eval-harness.enabler/"
     "21-ci-execution.enabler/tests/test_ci_execution.mapping.l1.py::"
+)
+
+OWNED_PATH_PROPERTY_SEED = 20260710
+OWNED_PATH_PROPERTY_EXAMPLES = 80
+DEFINITION_PROPERTY_TEST_PATH = (
+    "just test "
+    "spx/13-infrastructure.enabler/25-eval-harness.enabler/"
+    "tests/test_definition.property.l1.py::"
 )
 
 
@@ -59,6 +76,105 @@ def ci_command_property(
         return wrapper
 
     return decorator
+
+
+def toml_basic_string(value: str) -> str:
+    """Quote ``value`` as a TOML basic string, escaping what TOML forbids raw.
+
+    `json.dumps` is not a TOML escaper: JSON mandates escaping only
+    `U+0000`–`U+001F`, while TOML additionally forbids a raw `U+007F`. A
+    generated path carrying `DEL` written through JSON would make the document
+    unparseable, so the loader under test would never see the path and the
+    parser's error would masquerade as the loader's verdict.
+    """
+
+    escaped = []
+    for character in value:
+        if character in ('"', "\\"):
+            escaped.append(f"\\{character}")
+        elif character < " " or character == "\x7f":
+            escaped.append(f"\\u{ord(character):04X}")
+        else:
+            escaped.append(character)
+    body = "".join(escaped)
+    return f'"{body}"'
+
+
+def write_eval_definition_with_owned_paths(
+    directory: Path,
+    owned_paths: Sequence[str],
+) -> Path:
+    """Write a minimal eval directory declaring ``owned_paths``; return its TOML.
+
+    Each owned path is escaped as a TOML basic string, so a generated path
+    carrying a quote, a backslash, or a control character reaches the loader
+    as written instead of breaking the document that transports it.
+    """
+
+    (directory / "cases.jsonl").write_text(
+        json.dumps({"id": "only", "input": {}, "expect": {}}) + "\n",
+        encoding="utf-8",
+    )
+    (directory / "prompt.md").write_text("{case_id}\n", encoding="utf-8")
+    entries = ", ".join(toml_basic_string(path) for path in owned_paths)
+    eval_toml = directory / "eval.toml"
+    eval_toml.write_text(
+        'title = "probe"\n'
+        'cases = "cases.jsonl"\n'
+        'prompt = "prompt.md"\n'
+        f"owned_paths = [{entries}]\n",
+        encoding="utf-8",
+    )
+    return eval_toml
+
+
+def assert_owned_path_outside_the_alphabet_is_rejected() -> None:
+    """Assert the loader refuses any owned path outside the source alphabet.
+
+    The alphabet's complement is open, so the domain is searched rather than
+    enumerated: a hand-picked bag of globs proves nothing about the character
+    nobody thought to name.
+    """
+
+    configured = seed(OWNED_PATH_PROPERTY_SEED)(
+        settings(max_examples=OWNED_PATH_PROPERTY_EXAMPLES, deadline=None)(
+            given(owned_path=owned_paths_violating_alphabet())(
+                _assert_owned_path_rejected
+            )
+        )
+    )
+
+    try:
+        configured()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {OWNED_PATH_PROPERTY_SEED}")
+        error.add_note(
+            f"Replay path: {DEFINITION_PROPERTY_TEST_PATH}"
+            "test_owned_path_outside_the_alphabet_is_rejected"
+        )
+        raise
+
+
+def _assert_owned_path_rejected(owned_path: str) -> None:
+    with TemporaryDirectory() as tmp:
+        eval_toml = write_eval_definition_with_owned_paths(Path(tmp), (owned_path,))
+
+        try:
+            load_definition(eval_toml)
+        except tomllib.TOMLDecodeError as error:
+            # A transport failure, not a verdict: the path never reached the
+            # loader, so this run proves nothing about the assertion.
+            raise AssertionError(
+                f"owned path {owned_path!r} never reached the loader — the "
+                f"probe document is malformed: {error}"
+            ) from error
+        except ValueError as error:
+            assert "owned_paths" in str(error)
+        else:
+            raise AssertionError(
+                f"owned path {owned_path!r} carries a character outside the "
+                f"alphabet and was accepted"
+            )
 
 
 def assert_plan_items_map_to_run_commands_with_settings_and_case_selectors() -> None:

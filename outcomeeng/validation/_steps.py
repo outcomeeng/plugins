@@ -70,6 +70,34 @@ HOOK_SAFETY_ARGV: Final = (
 )
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
+# Generated eval artifacts. Both derive from `eval.toml` definitions and the
+# producers those definitions name; both fail the gate when the committed
+# artifact drifts from what the source now renders.
+EVALS_ROOT: Final = "spx"
+EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/spec-tree-evals.yml"
+EVAL_TRIGGERS_ARGV: Final = (
+    "uv",
+    "run",
+    "outcomeeng-evals",
+    "materialize-ci-triggers",
+    EVALS_ROOT,
+    "--workflow",
+    EVAL_TRIGGER_WORKFLOW,
+    "--repo-root",
+    ".",
+    "--check",
+)
+EVAL_PROMPTS_ARGV: Final = (
+    "uv",
+    "run",
+    "outcomeeng-evals",
+    "materialize-prompts",
+    EVALS_ROOT,
+    "--repo-root",
+    ".",
+    "--check",
+)
+
 # Shipped authored text under src/plugins/ where a non-portable reference can hide.
 _REFERENCE_SUFFIXES: Final = (".md", ".py", ".json", ".toml", ".yaml", ".yml")
 
@@ -198,6 +226,8 @@ VALIDATION_STEPS: Final = (
             "--check",
         ),
     ),
+    Step(label="eval-triggers", argv=EVAL_TRIGGERS_ARGV),
+    Step(label="eval-prompts", argv=EVAL_PROMPTS_ARGV),
     Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
     Step(label="spx-version", argv=SPX_VERSION_FLOOR_ARGV),
 )

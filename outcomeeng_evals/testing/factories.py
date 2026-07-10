@@ -7,9 +7,11 @@ eval directory tree with one call.
 
 from __future__ import annotations
 
+import glob
 import json
 import math
 import os
+from string import printable
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -39,6 +41,8 @@ from outcomeeng_evals.definition import (
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
+    OWNED_PATH_ALPHABET,
+    OWNED_PATH_RECURSIVE_SUFFIX,
     EvalDefinition,
     load_definition,
 )
@@ -468,6 +472,52 @@ def assert_definition_rejects_inherit_model() -> None:
 
 def assert_definition_rejects_non_string_model() -> None:
     _assert_definition_raises(lines=("model = 1",), match="model")
+
+
+def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
+    """Assert an exact path and a trailing recursive glob both load.
+
+    Both shapes are built from the source-owned alphabet and recursive suffix,
+    so narrowing either contract reaches this evidence rather than passing
+    beside it.
+    """
+
+    exact = "AGENTS.md"
+    recursive = f"src/plugins/spec-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
+    assert OWNED_PATH_ALPHABET.fullmatch(exact)
+    assert OWNED_PATH_ALPHABET.fullmatch(
+        recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
+    )
+
+    accepted = (exact, recursive)
+    with TemporaryDirectory() as tmp:
+        entries = ", ".join(f'"{path}"' for path in accepted)
+        toml_path = _write_eval_definition(
+            Path(tmp),
+            lines=(f"owned_paths = [{entries}]",),
+        )
+
+        definition = load_definition(toml_path)
+
+        assert definition.owned_paths == accepted
+
+
+def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
+    """Assert the alphabet excludes every character the stdlib calls glob magic.
+
+    The property evidence proves the loader honors whatever the alphabet says.
+    It cannot prove the alphabet says the right thing -- a widened alphabet also
+    widens the domain that evidence searches. `glob.has_magic` is an oracle
+    outside this module's control, so it pins the contract the alphabet must
+    keep: a path carrying a glob character is matched differently by `fnmatch`
+    and by the CI provider's engine, and must never reach either.
+    """
+
+    magic = tuple(character for character in printable if glob.has_magic(character))
+    assert magic
+
+    for character in magic:
+        assert OWNED_PATH_ALPHABET.fullmatch(character) is None
 
 
 def assert_definition_accepts_trials_at_cap() -> None:

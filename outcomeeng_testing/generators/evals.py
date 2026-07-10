@@ -10,6 +10,10 @@ from hypothesis.strategies import SearchStrategy
 
 from outcomeeng_evals.ci_execution import CiRunSettings
 from outcomeeng_evals.ci_plan import EvalPlanItem
+from outcomeeng_evals.definition import (
+    OWNED_PATH_ALPHABET,
+    OWNED_PATH_RECURSIVE_SUFFIX,
+)
 
 _PATH_ALPHABET = string.ascii_lowercase + string.digits + "-_"
 _CASE_ID_ALPHABET = string.ascii_letters + string.digits + "-_"
@@ -46,6 +50,34 @@ def eval_plan_items() -> SearchStrategy[EvalPlanItem]:
         eval_toml=_eval_toml_paths(),
         plugin_dir=_plugin_dirs(),
         case_ids=_case_ids(),
+    )
+
+
+def owned_path_violating_characters() -> SearchStrategy[str]:
+    """Characters an owned path may not carry, drawn from the open complement.
+
+    The alphabet is an allowlist, so the domain it rejects is every character
+    outside it rather than an enumerable set of globs. The strategy searches
+    that domain instead of naming members of it, and it is bounded only by what
+    UTF-8 encodes — the reachable input, since a TOML basic string carries
+    control characters, `NUL`, and non-ASCII alike into the loader.
+    """
+
+    return st.characters(codec="utf-8").filter(
+        lambda character: OWNED_PATH_ALPHABET.fullmatch(character) is None
+    )
+
+
+def owned_paths_violating_alphabet() -> SearchStrategy[str]:
+    """Owned paths whose body carries a character outside the alphabet."""
+
+    return st.builds(
+        lambda prefix, character, suffix: (
+            f"{prefix}/{character}/{suffix}{OWNED_PATH_RECURSIVE_SUFFIX}"
+        ),
+        prefix=_path_segments(),
+        character=owned_path_violating_characters(),
+        suffix=_path_segments(),
     )
 
 
