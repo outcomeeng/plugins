@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-An SPX-rendered verdict on the requested implementation scope against the installed language concern standards, with `terminalStatus` determined from recorded coverage and findings.
+A verdict on the requested implementation scope against the installed language concern standards — APPROVED (`terminalStatus: approved`), or REJECTED (`terminalStatus: rejected`) with each finding naming the artifact, violated rule, and evidence.
 
 </objective>
 
@@ -42,6 +42,16 @@ The invocation request `$ARGUMENTS` carries:
 - Optional explicit live file list for advisory pre-commit audits, including modified and untracked files that are not yet part of `<head>`. A run with a live file list never satisfies an apply or merge gate.
 - Governing node paths and any explicit file-list partition the caller already resolved.
 - Deterministic verification already run, or the concrete reason the audit is intentionally blocked before verification.
+
+The wrapper passes those fields with these exact labels:
+
+```text
+Repository: <absolute-repository-path>
+Scope: <base>..<head> committed changeset scope
+Live file list: none for a gating audit; <full modified and untracked paths> for an advisory audit
+Governing node(s): <full spx/... paths>
+Deterministic verification already run: <commands and results, or blocking reason>
+```
 
 If `$ARGUMENTS` is empty or lacks repository path, changeset scope, governing nodes, or deterministic verification state, return BLOCKED before starting a verification run. Name the missing request fields and the exact wrapper prompt shape required to retry.
 

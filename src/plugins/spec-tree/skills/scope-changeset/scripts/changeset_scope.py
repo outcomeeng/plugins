@@ -16,7 +16,7 @@ only the standard library is available.
 
 Tested inputs and error cases: changeset-scope and dependent
 verification-run suites exercise origin/HEAD base detection, missing-origin
-fallbacks, named-branch detection, detached-HEAD refusal, branch slug collision
+rejection, named-branch detection, detached-HEAD refusal, branch slug collision
 suffixes, diff-range expansion with and without pathspec filters, empty diff
 matches, staged and unstaged changes, remote-tracking three-dot branch scope,
 arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
