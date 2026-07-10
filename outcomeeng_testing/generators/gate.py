@@ -5,7 +5,13 @@ from __future__ import annotations
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import Step
+from outcomeeng.validation import EVAL_TRIGGER_WORKFLOW, Step
+from outcomeeng.validation.selected_gate import (
+    CHECK_WORKFLOW_PATH,
+    PYPROJECT_PATH,
+    ROOT_README_PATH,
+    SPX_CONFIG_PATH,
+)
 
 SELECTED_GATE_PYTHON_SOURCE_PATH = "outcomeeng/hygiene/clean.py"
 SELECTED_GATE_PYTHON_TEST_PATH = (
@@ -16,8 +22,8 @@ SELECTED_GATE_MARKDOWN_PATH = (
     "spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/"
     "selected-gate.md"
 )
-SELECTED_GATE_README_PATH = "README.md"
-SELECTED_GATE_SPX_CONFIG_PATH = "spx.config.yaml"
+SELECTED_GATE_README_PATH = ROOT_README_PATH
+SELECTED_GATE_SPX_CONFIG_PATH = SPX_CONFIG_PATH
 SELECTED_GATE_INSTRUCTION_BLOCK_SOURCE_PATH = (
     "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
 )
@@ -27,12 +33,15 @@ SELECTED_GATE_PLUGIN_SCRIPT_PATH = (
 )
 SELECTED_GATE_SHARED_SOURCE_PATH = "src/_shared/spec-tree/instruction-block.md"
 SELECTED_GATE_WORKFLOW_PATH = "scripts/check.sh"
-SELECTED_GATE_EVAL_WORKFLOW_PATH = ".github/workflows/spec-tree-evals.yml"
+# An exact-match selection target, so the value comes from the source module
+# that owns it rather than a copied literal. The other constants here are
+# arbitrary representatives of a glob domain and own their own values.
+SELECTED_GATE_EVAL_WORKFLOW_PATH = EVAL_TRIGGER_WORKFLOW
 SELECTED_GATE_EVAL_DEFINITION_PATH = (
     "spx/21-spec-tree.enabler/76-merging.enabler/evals/transport-selection/eval.toml"
 )
-SELECTED_GATE_CHECK_WORKFLOW_PATH = ".github/workflows/check.yml"
-SELECTED_GATE_FULL_GATE_PATH = "pyproject.toml"
+SELECTED_GATE_CHECK_WORKFLOW_PATH = CHECK_WORKFLOW_PATH
+SELECTED_GATE_FULL_GATE_PATH = PYPROJECT_PATH
 
 SELECTED_GATE_CHANGED_PATH_EXAMPLES = (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
@@ -46,6 +55,7 @@ SELECTED_GATE_CHANGED_PATH_EXAMPLES = (
     SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     SELECTED_GATE_EVAL_WORKFLOW_PATH,
+    SELECTED_GATE_EVAL_DEFINITION_PATH,
     SELECTED_GATE_CHECK_WORKFLOW_PATH,
     SELECTED_GATE_FULL_GATE_PATH,
 )

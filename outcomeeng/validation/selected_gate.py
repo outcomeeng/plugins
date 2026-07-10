@@ -62,6 +62,10 @@ EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 ROOT_README_PATH: Final = "README.md"
 SPX_CONFIG_PATH: Final = "spx.config.yaml"
+# Exact-match selection targets, named so a consumer imports the value rather
+# than recopying the path.
+CHECK_WORKFLOW_PATH: Final = ".github/workflows/check.yml"
+PYPROJECT_PATH: Final = "pyproject.toml"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -75,8 +79,8 @@ SKILL_STEP_LABELS: Final = (
 )
 
 FULL_GATE_PATTERNS: Final = (
-    ".github/workflows/check.yml",
-    "pyproject.toml",
+    CHECK_WORKFLOW_PATH,
+    PYPROJECT_PATH,
     "uv.lock",
     "justfile",
     "Justfile",
