@@ -296,14 +296,14 @@ Read `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotat
 <verdict_format>
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
+The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findings; otherwise it is `REJECTED`. An audit that cannot complete records a `REJECT` finding in `must-fix` and returns `REJECTED`. Worth-improving and keep-these-aspects observations land as `WARNING` and `INFO` findings respectively and do not reject the skill.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-skills",
   "target": "<skill-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
     {
       "name": "keep-these-aspects",
@@ -335,7 +335,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
     },
     {
       "name": "must-fix",
-      "status": "PASS | FAIL | UNKNOWN",
+      "status": "PASS | FAIL",
       "findings": [
         {
           "id": "f-003",
@@ -369,7 +369,7 @@ Note: While this skill uses pure XML structure, it produces JSON output that the
 The verdict is sound when:
 
 - Every evaluation area was judged with none skipped — YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, command capabilities, prompt craft, and anti-patterns (coverage-complete).
-- The verdict states an overall PASS/FAIL with findings grouped keep-these-aspects / worth-improving / must-fix.
+- The verdict states an overall APPROVED/REJECTED with findings grouped keep-these-aspects / worth-improving / must-fix.
 - Each finding is falsifiable: it names the location (file:line), the standard at issue, and the consequence — every keep names what degrades if removed, every must-fix names the failure it prevents.
 - The same SKILL.md yields the same verdict.
 
