@@ -34,23 +34,23 @@ THREAD_STORE_SCRIPTS_DIR = (
     / "manage-thread-store"
     / "scripts"
 )
-SPEC_TREE_SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
+PLUGIN_SKILLS_DIRS = tuple(
+    plugin_dir / "skills"
+    for plugin_dir in sorted((REPO_ROOT / "src" / "plugins").iterdir())
+    if (plugin_dir / "skills").is_dir()
+)
 
 # Names of modules that ship alongside ``thread_store.py`` and are
 # imported by sibling scripts via bare names (sys.path[0] resolution).
 LOCAL_THREAD_STORE_MODULES = frozenset(
-    {
-        "thread_store",
-        "backend",
-        "fs_backend",
-        "branch_slug",
-        "errors",
-    }
+    script_path.stem for script_path in THREAD_STORE_SCRIPTS_DIR.glob("*.py")
 )
 
 # Concrete backend module names a verification skill MUST NOT import directly. The
 # facade dispatches; the verification skill never names a backend.
-CONCRETE_BACKEND_MODULES = frozenset({"fs_backend"})
+CONCRETE_BACKEND_MODULES = frozenset(
+    script_path.stem for script_path in THREAD_STORE_SCRIPTS_DIR.glob("*_backend.py")
+)
 
 
 def _iter_script_files(directory: pathlib.Path) -> list[pathlib.Path]:
@@ -123,34 +123,21 @@ class TestThreadStoreScriptsImportOnlyStdlib:
 
 
 class TestVerificationSkillsDoNotImportBackendsDirectly:
-    """Every verification skill under ``plugins/spec-tree/skills/`` (other than
-    thread-store itself) reaches persistence through the
-    ``thread_store`` facade, never by importing ``fs_backend`` (or any
-    other concrete backend module) directly.
-
-    The current marketplace has no verification skills yet — review-changes
-    is declared but not implemented. The test passes trivially on an
-    empty input and fails the moment a verification skill adds a forbidden import.
-    """
+    """Every plugin skill reaches persistence through the thread-store facade."""
 
     def test_no_verification_skill_imports_concrete_backend(self) -> None:
         violations: list[str] = []
-        for skill_dir in sorted(SPEC_TREE_SKILLS_DIR.iterdir()):
-            if not skill_dir.is_dir():
-                continue
-            if skill_dir.name == "manage-thread-store":
-                # The thread-store skill is the implementation home for the
-                # facade; its own scripts legitimately reference the
-                # concrete backend modules.
-                continue
-            scripts_dir = skill_dir / "scripts"
-            for script in _iter_script_files(scripts_dir):
-                source = script.read_text(encoding="utf-8")
-                for module in _imported_modules(source):
-                    if module in CONCRETE_BACKEND_MODULES:
-                        violations.append(
-                            f"{script.relative_to(REPO_ROOT)}: import '{module}'"
-                        )
+        for skills_dir in PLUGIN_SKILLS_DIRS:
+            for skill_dir in sorted(skills_dir.iterdir()):
+                if not skill_dir.is_dir() or skill_dir.name == "manage-thread-store":
+                    continue
+                for script in _iter_script_files(skill_dir / "scripts"):
+                    source = script.read_text(encoding="utf-8")
+                    for module in _imported_modules(source):
+                        if module in CONCRETE_BACKEND_MODULES:
+                            violations.append(
+                                f"{script.relative_to(REPO_ROOT)}: import '{module}'"
+                            )
         assert not violations, (
             "verification skills import a concrete backend module directly "
             "(forbidden — route through thread_store facade):\n" + "\n".join(violations)
