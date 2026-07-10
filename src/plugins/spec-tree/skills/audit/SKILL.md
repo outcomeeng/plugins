@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on one implementation audit scope — APPROVED when every required language concern is covered with no rejected findings, or REJECTED with each finding naming the unit, producer, rule, severity, location, message, and observed-versus-expected evidence.
+One persisted implementation-audit run whose rendered SPX projection reports the evidence-derived terminal status, required coverage, and each finding's unit, producer, rule, severity, location, message, and observed-versus-expected evidence.
 
 </objective>
 
@@ -164,11 +164,9 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 <verdict_format>
 
-Return one of these verdict forms:
+When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-- APPROVED with the exact run token and the rendered `spx verification run render` projection.
-- REJECTED with the exact run token, rendered projection, and finding rows from the projection.
-- BLOCKED when SPX rejects a command or a required skill is missing before dispatch. Include the exact command, stderr, and the coverage unit or payload key that failed.
+Return BLOCKED only when SPX rejects a command or a required skill is missing before dispatch. Include the exact command, stderr, and the coverage unit or payload key that failed.
 
 Each finding row names:
 
