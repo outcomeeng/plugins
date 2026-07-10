@@ -24,23 +24,12 @@ PLUGIN_SURFACES: Final = (
     Path("dist/claude"),
     Path("dist/codex"),
 )
-AUDIT_SKILL_SCRIPT_DIRS: Final = tuple(
-    surface / "spec-tree" / "skills" / "audit-implementation" / "scripts"
-    for surface in PLUGIN_SURFACES
-)
 SPEC_TREE_AGENT_DIRS: Final = tuple(
     surface / "spec-tree" / "agents" for surface in PLUGIN_SURFACES
 )
 RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
     "auditor.md",
     "audit-orchestrator.md",
-)
-RETIRED_AUDIT_SKILL_TOKENS: Final = (
-    "verdict.py",
-    "aggregate_verdicts.py",
-    "pass_results.py",
-    "journal_emit.py",
-    "audit_orchestrator.py",
 )
 LANGUAGE_CONCERN_SKILLS: Final = (
     (
@@ -114,14 +103,6 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
         is_satisfied(REQUIRED_SPX_VERSION, MINIMUM_VERIFICATION_RUN_SPX_VERSION)
         and workflow_pin is not None
         and is_satisfied(workflow_pin, MINIMUM_VERIFICATION_RUN_SPX_VERSION)
-    )
-
-
-def audit_skill_ships_no_verdict_toolchain_scripts() -> bool:
-    return all(
-        not (script_dir / retired_name).exists()
-        for script_dir in AUDIT_SKILL_SCRIPT_DIRS
-        for retired_name in RETIRED_AUDIT_SKILL_TOKENS
     )
 
 
