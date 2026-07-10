@@ -64,7 +64,7 @@ This skill creates either a local verification checkpoint before the gate or a p
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
 4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.enabler/21-bar.outcome`)
-5. **Verify tests pass** — All required deterministic checks must pass before committing
+5. **Verify the touched scope** — The repository's focused deterministic checks must pass before committing. An aggregate gate whose generated-output drift check requires committed files runs after the checkpoint, when the lifecycle requires it.
 
 The calling workflow provides the specific file list, work item context, and whether the commit is a pre-gate checkpoint or a post-gate publication commit.
 
