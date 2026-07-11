@@ -6,11 +6,12 @@ Skill and agent eval prompts are generated from declared producer artifacts. An 
 
 Eval evidence must fail when the behavior it claims to prove changes. A hand-authored `prompt.md` that simulates a skill can keep passing after the shipped skill is replaced, so it proves only the prompt author's copy of the rules. Shipped skill content is a rendered artifact with its own source-to-runtime contract, and the eval harness owns per-eval TOML, prompt, cases, run reports, and CI selection. Placing producer coupling in the eval definition lets deterministic tooling materialize reviewable prompts while preserving structured JSON grading.
 
-Named producer sections are the supported coupling mode because skill bodies already use stable XML-like sections and step tags. The generated prompt can focus the eval on one sub-prompt while still deriving that sub-prompt from the shipped producer text. Whole-skill or harness-invoked evals remain valid only when the suite exercises the real producer directly rather than through a materialized prompt.
+Producer files and named producer sections are the supported source-derived coupling modes. A whole-skill assertion uses `producer-file`, so every change to the producing skill changes the materialized prompt. A concern-scoped assertion uses `producer-section`, so the generated prompt focuses on one stable XML-like step while deriving that step from shipped producer text. Harness-invoked evals remain valid when the suite preserves observable evidence that the real producer executed.
 
 ## Invariants
 
-- The same producer text, section selector, prompt template, and case input produce the same rendered prompt.
+- The same producer text, source kind, optional section selector, prompt template, and case input produce the same rendered prompt.
+- A change anywhere in a `producer-file` source changes the materialized prompt.
 - A change to the selected producer section changes the materialized prompt unless the change is outside the selected section.
 
 ## Verification
@@ -18,12 +19,15 @@ Named producer sections are the supported coupling mode because skill bodies alr
 ### Testing
 
 - ALWAYS: an eval definition with `prompt_source.kind = "producer-section"` resolves the prompt template relative to the eval directory and resolves the producer path against the repository root, then materializes `prompt.md` from the selected producer section ([conformance])
+- ALWAYS: an eval definition with `prompt_source.kind = "producer-file"` resolves the same paths and materializes `prompt.md` from the complete producer file without parsing it as text ([conformance])
 - ALWAYS: producer-section extraction selects exactly one named XML-like section from the producer text and fails when no matching section or multiple matching sections exist ([mapping])
 - ALWAYS: prompt materialization changes when the selected producer section changes and stays unchanged when unrelated producer text changes ([property])
 - ALWAYS: the `outcomeeng-evals materialize-prompts --check` command fails when a generated `prompt.md` differs from its source-derived rendering and exits successfully when every generated prompt is current ([compliance])
-- NEVER: a producer-coupled eval definition accepts a missing producer path, missing prompt template, missing section name, or unsupported prompt source kind ([conformance])
+- NEVER: a producer-coupled eval definition accepts a missing producer path, missing prompt template, a missing section name for `producer-section`, a section name for `producer-file`, or an unsupported prompt source kind ([conformance])
 
 ### Audit
 
 - ALWAYS: skill, agent, classifier, script, or command behavior evals are coupled to the real producer through direct invocation, harness-mediated invocation, or source-derived prompt materialization ([audit])
+- ALWAYS: producer-prompt rendering exposes its source-kind and path resolution through explicit definition values so tests exercise the real filesystem boundary without replacing collaborators ([audit])
 - NEVER: a prompt-only simulation that restates the producing artifact's policy is accepted as evidence for that producer ([audit])
+- NEVER: producer-prompt tests use framework mocks or monkeypatching to replace definition loading, path resolution, producer reads, or prompt writes; temporary real workspaces provide the evidence ([audit])

@@ -165,7 +165,7 @@ def _resolve_base_ref() -> str:
     env_value = os.environ.get(ENV_BASE_REF, "").strip()
     if env_value:
         return env_value
-    bare_base = changeset_scope.detect_base_ref(pathlib.Path.cwd(), strict=True)
+    bare_base = changeset_scope.detect_base_ref(pathlib.Path.cwd())
     return str(changeset_scope.remote_tracking_ref(bare_base))
 
 

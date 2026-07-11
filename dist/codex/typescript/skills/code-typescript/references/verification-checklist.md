@@ -4,14 +4,11 @@ Before declaring "done," confirm:
 
 ## Required Checks
 
-- [ ] All tsc errors resolved
-- [ ] All eslint errors resolved (auto-fix applied where safe)
-- [ ] All tests pass
-- [ ] Coverage ≥80% for new code
-- [ ] JSDoc present for all public functions
-- [ ] No TODO/FIXME comments left unaddressed
-- [ ] No console.log statements (use logger)
-- [ ] No hardcoded secrets or paths
+- [ ] The resolved product type-check command passes
+- [ ] The resolved product lint/format check command passes after the canonical auto-fix command runs when available
+- [ ] The resolved product test command passes for the governed node or changeset
+- [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the resolved commands or loaded standards passes through those commands
+- [ ] Manual review confirms the implementation follows `/typescript-standards` and any loaded `spx/local/typescript.md` overlay
 
 ## Tool Commands
 
@@ -40,38 +37,28 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 ## Completion Criteria Table
 
-| Criterion                            | Status   |
-| ------------------------------------ | -------- |
-| Spec fully implemented               | Required |
-| All functions have type annotations  | Required |
-| All public functions have JSDoc      | Required |
-| Tests exist for all public functions | Required |
-| tsc passes with zero errors          | Required |
-| eslint passes with zero errors       | Required |
-| All tests pass                       | Required |
-| Coverage ≥80% for new code           | Required |
-| No TODOs/FIXMEs unaddressed          | Required |
-| No console.log statements            | Required |
-| No hardcoded secrets                 | Required |
+| Criterion                           | Status                |
+| ----------------------------------- | --------------------- |
+| Product type-check command passes   | Required              |
+| Product lint/format command passes  | Required              |
+| Product test command passes         | Required              |
+| Loaded standards are followed       | Required              |
+| Repo-local overlay is followed      | Required when present |
+| Supplied reviewer findings resolved | Required in FIX mode  |
 
 ## What to Check For
 
 ### Type Safety
 
-- No `any` without explicit justification
-- No `@ts-ignore` without explanation (prefer `@ts-expect-error`)
-- All function parameters and returns are typed
+- Follow the type-safety rules in `/typescript-standards`
+- Treat `any`, suppression comments, and missing annotations according to the loaded standards and resolved type-check command
 
 ### Code Quality
 
-- Public functions have JSDoc with @param/@returns/@throws
-- No dead code or commented-out code blocks
-- Constants are UPPER_SNAKE_CASE, no magic numbers
-- Dependencies injected via parameters
+- Follow the code-quality, dependency-injection, source-owned-value, import, and hygiene rules in `/typescript-standards`
+- Apply documentation, TODO, logging, and security requirements only when they are declared by the loaded standards, repo-local overlay, or resolved product commands
 
 ### Testing
 
-- Tests exist for all public functions
-- Tests cover edge cases
-- Tests use descriptive names
-- No mocking - dependency injection only
+- Tests required by the governing spec assertions exist and pass through the resolved product test command
+- Test shape and mocking rules come from `/typescript-test-standards` and any loaded `spx/local/typescript-tests.md` overlay

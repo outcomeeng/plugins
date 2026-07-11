@@ -15,7 +15,7 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 </repo_local_overlay>
 
 <objective>
-Python implementation code that makes its node's existing tests pass — written fresh against failing tests, or repaired against reviewer feedback.
+Python implementation code that makes its node's existing tests pass.
 </objective>
 
 <mode_detection>
@@ -26,7 +26,7 @@ Python implementation code that makes its node's existing tests pass — written
    - Action: Write implementation to make tests pass
 
 2. **FIX mode** - Implementation exists but was rejected by reviewer
-   - Check: Recent `/audit-python` output shows REJECT with specific issues
+   - Check: Recent `/audit-python-code` output shows REJECT with specific issues
    - Action: Read the rejection, fix the specific issues, re-run verification
 
 **Always check which mode before proceeding.**
@@ -117,7 +117,7 @@ All must pass before declaring complete.
 
 <fix_mode_workflow>
 
-**Step 1 — Read rejection feedback.** Find the most recent `/audit-python` output. Look for:
+**Step 1 — Read rejection feedback.** Find the most recent `/audit-python-code` output. Look for:
 
 - Specific file:line locations
 - Issue categories (magic values, missing DI, etc.)
@@ -263,14 +263,12 @@ All checks pass. Ready for re-review.
 
 <success_criteria>
 
-Task is complete when:
+Implementation is ready for review when:
 
-- [ ] All tests in `{node}/tests/` pass
-- [ ] Type checking passes (`mypy`)
-- [ ] Linting passes (`ruff check`)
-- [ ] Semantic values are source-owned (no duplicated test-owned constants)
-- [ ] Code uses dependency injection (no direct external imports)
-- [ ] All functions have type annotations
-- [ ] All reviewer feedback addressed (if FIX mode)
+- [ ] The product's resolved Python test command for the governed node or changeset passes
+- [ ] The product's resolved Python type-check command passes
+- [ ] The product's resolved Python lint/format check command passes
+- [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
+- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 
 </success_criteria>

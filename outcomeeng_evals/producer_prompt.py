@@ -17,11 +17,14 @@ PRODUCER_FIELD: Final = "producer"
 SECTION_FIELD: Final = "section"
 TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
+PRODUCER_FILE_KIND: Final = "producer-file"
 PROMPT_FIELD: Final = "prompt"
+MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 
 _PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
+_PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -44,7 +47,8 @@ class ProducerPromptDefinition:
     prompt_path: Path
     producer_path: Path
     producer_relative_path: str
-    section_name: str
+    kind: str
+    section_name: str | None
     template_path: Path
 
 
@@ -52,8 +56,14 @@ def materialize_prompt(eval_toml_path: Path, *, repo_root: Path) -> Path:
     """Write ``prompt.md`` from the producer declared by ``eval.toml``."""
     definition = load_producer_prompt_definition(eval_toml_path, repo_root=repo_root)
     prompt_text = render_prompt(definition)
-    definition.prompt_path.write_text(prompt_text, encoding="utf-8")
-    return definition.prompt_path
+    resolved_root = repo_root.resolve()
+    resolved_prompt = definition.prompt_path.resolve()
+    if not resolved_prompt.is_relative_to(resolved_root):
+        msg = f"{resolved_prompt}: generated prompt resolves outside {resolved_root}"
+        raise ProducerPromptError(msg)
+    # The resolved containment guard above fixes the sink to this repository.
+    resolved_prompt.write_text(prompt_text, encoding="utf-8")  # NOSONAR
+    return resolved_prompt
 
 
 def verify_materialized_prompt(eval_toml_path: Path, *, repo_root: Path) -> None:
@@ -130,9 +140,20 @@ def load_producer_prompt_definition(
 
 
 def render_prompt(definition: ProducerPromptDefinition) -> str:
-    """Render a prompt template from the selected producer section."""
+    """Render a prompt template from the declared producer source."""
     template = definition.template_path.read_text(encoding="utf-8")
     producer_text = definition.producer_path.read_text(encoding="utf-8")
+    if definition.kind == PRODUCER_FILE_KIND:
+        return _replace_known_placeholders_once(
+            template,
+            {
+                _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
+                _PRODUCER_FILE_PLACEHOLDER: producer_text,
+            },
+        )
+    if definition.section_name is None:
+        msg = "producer-section definition requires a section name"
+        raise ProducerPromptError(msg)
     producer_section = extract_named_producer_section(
         producer_text,
         section_name=definition.section_name,
@@ -193,22 +214,28 @@ def _resolve_definition(
     prompt_source: dict[str, Any],
 ) -> ProducerPromptDefinition:
     kind = _required_str(prompt_source, KIND_FIELD, eval_toml_path=eval_toml_path)
-    if kind != PRODUCER_SECTION_KIND:
+    if kind not in (PRODUCER_SECTION_KIND, PRODUCER_FILE_KIND):
         msg = (
             f"{eval_toml_path}: unsupported {PROMPT_SOURCE_TABLE}.{KIND_FIELD} "
-            f"{kind!r}; expected {PRODUCER_SECTION_KIND!r}"
+            f"{kind!r}; expected {PRODUCER_SECTION_KIND!r} or {PRODUCER_FILE_KIND!r}"
         )
         raise ProducerPromptError(msg)
 
     prompt_relative = _required_str(raw, PROMPT_FIELD, eval_toml_path=eval_toml_path)
+    if prompt_relative != MATERIALIZED_PROMPT_FILENAME:
+        msg = (
+            f"{eval_toml_path}: {PROMPT_FIELD!r} must be "
+            f"{MATERIALIZED_PROMPT_FILENAME!r} for producer-coupled evals"
+        )
+        raise ProducerPromptError(msg)
     producer_relative = _required_str(
         prompt_source,
         PRODUCER_FIELD,
         eval_toml_path=eval_toml_path,
     )
-    section_name = _required_str(
+    section_name = _optional_section_name(
         prompt_source,
-        SECTION_FIELD,
+        kind=kind,
         eval_toml_path=eval_toml_path,
     )
     template_relative = _required_str(
@@ -228,11 +255,7 @@ def _resolve_definition(
         eval_toml_path=eval_toml_path,
         field_name=TEMPLATE_FIELD,
     )
-    prompt_path = _resolve_eval_relative_path(
-        prompt_relative,
-        eval_toml_path=eval_toml_path,
-        field_name=PROMPT_FIELD,
-    )
+    prompt_path = eval_toml_path.parent.resolve() / MATERIALIZED_PROMPT_FILENAME
 
     if not producer_path.is_file():
         msg = f"{eval_toml_path}: producer file not found: {producer_path}"
@@ -252,6 +275,7 @@ def _resolve_definition(
         prompt_path=prompt_path,
         producer_path=producer_path,
         producer_relative_path=producer_relative,
+        kind=kind,
         section_name=section_name,
         template_path=template_path,
     )
@@ -291,6 +315,27 @@ def _required_str(
     return value
 
 
+def _optional_section_name(
+    prompt_source: dict[str, Any],
+    *,
+    kind: str,
+    eval_toml_path: Path,
+) -> str | None:
+    if kind == PRODUCER_SECTION_KIND:
+        return _required_str(
+            prompt_source,
+            SECTION_FIELD,
+            eval_toml_path=eval_toml_path,
+        )
+    if SECTION_FIELD in prompt_source:
+        msg = (
+            f"{eval_toml_path}: field {SECTION_FIELD!r} is invalid for "
+            f"{PRODUCER_FILE_KIND!r}"
+        )
+        raise ProducerPromptError(msg)
+    return None
+
+
 def _resolve_repo_relative_path(
     raw_path: str,
     *,
@@ -301,6 +346,9 @@ def _resolve_repo_relative_path(
     candidate = Path(raw_path)
     if candidate.is_absolute():
         msg = f"{eval_toml_path}: {field_name!r} must be repository-relative"
+        raise ProducerPromptError(msg)
+    if ".." in candidate.parts:
+        msg = f"{eval_toml_path}: {field_name!r} must not contain parent traversal"
         raise ProducerPromptError(msg)
     return _resolve_beneath(
         (repo_root / candidate).resolve(),

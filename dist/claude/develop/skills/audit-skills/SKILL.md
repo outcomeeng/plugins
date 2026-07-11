@@ -1,9 +1,8 @@
 ---
 name: audit-skills
 description: >-
-  SKILL.md audit methodology preloaded by the skill-auditor agent. Dispatch
-  skill-auditor to audit SKILL.md files; the main conversation reaches this audit
-  only through that agent.
+  SKILL.md audit methodology preloaded by the skill-auditor agent. The main
+  conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -18,11 +17,12 @@ This audit runs in the skill-auditor agent's isolated context. When this skill l
 </dispatch_gate>
 
 <objective>
-A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence — contextual judgment across the full skill-authoring surface, never a score.
+A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence.
 </objective>
 
 <constraints>
 - NEVER modify files during audit - ONLY analyze and report findings
+- NEVER report a score; report contextual judgment across the full skill-authoring surface
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
 - NEVER generate fixes unless explicitly requested by the user
@@ -35,7 +35,7 @@ A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`
 <focus_areas>
 During audits, prioritize evaluation of:
 
-- YAML compliance (name length, description quality, directive style with negative constraint, `argument-hint` when arguments are used)
+- YAML compliance (name length, description quality by skill role, `argument-hint` when arguments are used)
 - Command capabilities (argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `@` file references)
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
 - Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
@@ -73,8 +73,9 @@ During audits, prioritize evaluation of:
 <area name="yaml_frontmatter">
 Check for:
 
-- **name**: Lowercase-with-hyphens, max 64 chars, matches directory name, follows verb-noun convention (create-*, manage-*, setup-*, generate-*)
-- **description**: Max 1024 chars, directive style (ALWAYS invoke + NEVER without), no XML tags
+- **name**: Lowercase letters, numbers, and hyphens only; max 64 chars; matches directory name
+- **description**: Max 1024 chars, no XML tags; directive style for invoked skills; passive style for reference skills and exact-name protocol or loop-body skills
+- **user-invocable**: `false` for reference skills loaded by other skills; default user-invocable for agent-preloaded audit skills with a passive description and `<dispatch_gate>`
 - **argument-hint**: Present when the skill takes arguments (`$ARGUMENTS`, `$ARGUMENTS[N]`, `$N`, or a declared `$name`); omit for self-contained skills
 
 </area>
@@ -293,16 +294,16 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
+The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findings; otherwise it is `REJECTED`. An audit that cannot complete records a `REJECT` finding in `must-fix` and returns `REJECTED`. Worth-improving and keep-these-aspects observations land as `WARNING` and `INFO` findings respectively and do not reject the skill.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-skills",
   "target": "<skill-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
     {
       "name": "keep-these-aspects",
@@ -311,7 +312,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
         {
           "id": "f-001",
           "file": "<skill-file>",
-          "line": null,
+          "line": 12,
           "rule": "<strength-name>",
           "severity": "INFO",
           "message": "<what it does> — removing this would <specific consequence>"
@@ -325,7 +326,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
         {
           "id": "f-002",
           "file": "<skill-file>",
-          "line": null,
+          "line": 24,
           "rule": "<issue-name>",
           "severity": "WARNING",
           "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
@@ -334,12 +335,12 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
     },
     {
       "name": "must-fix",
-      "status": "PASS | FAIL | UNKNOWN",
+      "status": "PASS | FAIL",
       "findings": [
         {
           "id": "f-003",
           "file": "<skill-file>",
-          "line": null,
+          "line": 36,
           "rule": "<issue-name>",
           "severity": "REJECT",
           "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."
@@ -368,7 +369,7 @@ Note: While this skill uses pure XML structure, it produces JSON output that the
 The verdict is sound when:
 
 - Every evaluation area was judged with none skipped — YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, command capabilities, prompt craft, and anti-patterns (coverage-complete).
-- The verdict states an overall PASS/FAIL with findings grouped keep-these-aspects / worth-improving / must-fix.
+- The verdict states an overall APPROVED/REJECTED with findings grouped keep-these-aspects / worth-improving / must-fix.
 - Each finding is falsifiable: it names the location (file:line), the standard at issue, and the consequence — every keep names what degrades if removed, every must-fix names the failure it prevents.
 - The same SKILL.md yields the same verdict.
 
@@ -381,7 +382,7 @@ Before presenting audit findings, verify:
 
 - [ ] All evaluation areas assessed (including operational effectiveness)
 - [ ] Findings have file:line locations
-- [ ] Assessment section provides clear summary
+- [ ] Emitted verdict rows provide a clear summary
 - [ ] Strengths identified
 
 **Accuracy checks**:

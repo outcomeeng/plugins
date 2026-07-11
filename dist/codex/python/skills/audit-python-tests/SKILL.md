@@ -1,30 +1,16 @@
 ---
 name: audit-python-tests
 description: >-
-  Python test-evidence audit methodology composed by a dispatched auditor agent for the Python tests in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  Python test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Python tests in scope.
+  Reached only through those auditor agents, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — `test-evidence-auditor` (via `audit-tests`) or a generic `/audit`-family agent composing this skill for the Python tests in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
 
 </dispatch_gate>
-
-!`test -f spx/local/python.md && cat spx/local/python.md || true`
-
-!`test -f spx/local/python-tests.md && cat spx/local/python-tests.md || true`
-
-Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 
 <objective>
 A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence gap.
@@ -37,6 +23,18 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 </constraints>
 
 <audit_workflow>
+
+<prerequisites>
+
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
+
+</prerequisites>
 
 <audit_scope>
 For every in-scope test assertion, inspect the full evidence chain:
@@ -211,7 +209,7 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows.
+This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
 
 For each finding, include:
 
@@ -220,7 +218,7 @@ For each finding, include:
 - The imported chain when the defect is outside the test file
 - Required fix
 
-Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECT` when any property fails.
+Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECTED` when any property fails.
 </verdict_format>
 
 <failure_modes>

@@ -18,3 +18,8 @@ smoke_cases = [
 ]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/audit-adr/SKILL.md"
+template = "prompt.template.md"

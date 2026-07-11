@@ -35,11 +35,11 @@ architect-python  --produces ADRs-->  audit-python-architecture
                                               | REJECT -> fix and resubmit
                                               | APPROVE
                                               v
-                                         code-python  -->  audit-python
+                                         code-python  -->  audit-python-code
 ```
 
 - **code-python** implements exactly what the ADR specifies and fixes issues within ADR constraints — it does not choose alternative approaches or refactor the architecture.
-- **audit-python** rejects code that deviates from the ADR — it does not suggest architectural alternatives.
+- **audit-python-code** rejects code that deviates from the ADR — it does not suggest architectural alternatives.
 - When a downstream skill hits a situation the architecture does not cover, it ABORTS: stop, document what failed, escalate with the structured message in `<abort_protocol>`, and wait for a revised ADR. It does not improvise a workaround.
 
 </authority_model>
@@ -52,7 +52,7 @@ When a downstream skill must abort, it returns this structured message:
 
 ### Skill
 
-{code-python | audit-python}
+{code-python | audit-python-code}
 
 ### ADR Reference
 
@@ -137,7 +137,7 @@ These principles guide every ADR. Each links to the reference carrying the full 
 
 <constraints>
 - NEVER write implementation code — write ADRs that constrain implementation.
-- NEVER review code — that is `audit-python`.
+- NEVER review code — that is `audit-python-code`.
 - NEVER fix bugs — that is `code-python` in remediation mode.
 - NEVER create work items — the orchestrator does that, informed by the ADRs.
 - NEVER approve the skill's own ADRs for implementation — the architecture reviewer approves, and the orchestrator decides when to proceed.
@@ -163,7 +163,7 @@ ONLY after the architecture reviewer has APPROVED, output:
 ### Key Constraints for Downstream Skills
 
 1. code-python must: {constraint from the ADR}
-2. audit-python must verify: {verification from the ADR}
+2. audit-python-code must verify: {verification from the ADR}
 
 ### Abort Conditions
 

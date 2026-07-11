@@ -9,6 +9,9 @@ from outcomeeng_testing.evals.producer_prompt import (
     assert_cli_materializes_nested_eval_roots,
     assert_duplicate_producer_section_is_rejected,
     assert_materialization_preserves_placeholder_text_inside_producer_section,
+    assert_materialization_rejects_noncanonical_prompt_path,
+    assert_materializes_prompt_from_complete_producer_file,
+    assert_producer_file_rejects_section_selector,
     assert_materialization_rejects_absolute_producer_path,
     assert_materialization_rejects_producer_path_outside_repo,
     assert_materialization_rejects_prompt_path_outside_eval_dir,
@@ -29,6 +32,14 @@ def test_materializes_prompt_from_named_producer_section() -> None:
     assert_materializes_prompt_from_named_producer_section()
 
 
+def test_materializes_prompt_from_complete_producer_file() -> None:
+    assert_materializes_prompt_from_complete_producer_file()
+
+
+def test_producer_file_rejects_section_selector() -> None:
+    assert_producer_file_rejects_section_selector()
+
+
 def test_check_accepts_current_materialized_prompt() -> None:
     assert_check_accepts_current_materialized_prompt()
 
@@ -43,6 +54,10 @@ def test_check_rejects_stale_materialized_prompt() -> None:
 
 def test_materialization_rejects_prompt_path_outside_eval_dir() -> None:
     assert_materialization_rejects_prompt_path_outside_eval_dir()
+
+
+def test_materialization_rejects_noncanonical_prompt_path() -> None:
+    assert_materialization_rejects_noncanonical_prompt_path()
 
 
 def test_materialization_rejects_prompt_template_alias() -> None:

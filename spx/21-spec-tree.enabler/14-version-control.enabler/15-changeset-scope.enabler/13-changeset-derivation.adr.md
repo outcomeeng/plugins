@@ -1,10 +1,10 @@
 # Changeset Derivation Home and Remote-Ref Scoping
 
-The git-derived changeset primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `commit_oid`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — are defined once in `plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` and reached by the audit, review-changes, manage-thread-store, and sync-base skills through import or re-export, never re-definition. Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` (three-dot, merge-base) through the single `remote_tracking_ref` helper, never a bare local branch ref — `branch_scope` composes it for the audit surface and `compute_diff` for the review surface. Journal run-state identity uses `commit_oid` to stamp concrete head/base commit IDs rather than symbolic refs.
+The git-derived changeset primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `commit_oid`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — are defined once in `plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` and reached by implementation-audit orchestration, review-changes, and sync-base through import, never re-definition. Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` (three-dot, merge-base) through the single `remote_tracking_ref` helper, never a bare local branch ref — `branch_scope` composes it for the audit surface and `compute_diff` for the review surface. Journal run-state identity uses `commit_oid` to stamp concrete head/base commit IDs rather than symbolic refs.
 
 ## Rationale
 
-The agentic-verification surfaces — audit, review-changes, and manage-thread-store — derive branch identity and diff scope from git, and base synchronization derives the base ref from the same primitives. Housing that derivation inside one of them (the audit skill's `audit_orchestrator.py`) forces a re-export shim in manage-thread-store to carry the slug rule across skills and leaves review-changes reaching two skills away for `detect_base_ref`. A single shared home removes the cross-skill reach; the audit-orchestration decision's own migration trigger — a helper co-located with one consumer migrates to a shared location once a second consumer appears — is met when review-changes consumes the derivation.
+The agentic-verification surfaces — implementation audit and review-changes — derive branch identity and diff scope from git, and base synchronization derives the base ref from the same primitives. A single shared home prevents either verification consumer from owning or duplicating the common derivation.
 
 Scoping against the remote-tracking ref rather than a bare local branch ref keeps the changeset independent of local-ref staleness. A bare local ref such as `main` lags `origin/<base>` in a multi-worktree checkout where the local branch is left unattached. The three-dot diff recomputes its merge base from whichever ref it is given; against a stale local ref the merge base falls at an older divergence point, so commits already merged into the base re-enter the diff and surface as findings against work outside the changeset. Composing against the fetched remote-tracking ref fixes the merge base at the true branch point.
 
@@ -12,12 +12,10 @@ Rejected: keeping the derivation in the audit skill with re-exports — it leave
 
 ## Verification
 
-### Testing
-
-- ALWAYS: every git-derived diff range is composed against the remote-tracking ref `origin/<base>` via `remote_tracking_ref` — `branch_scope` for the audit surface, `compute_diff` for the review surface — so a stale local branch ref does not widen the scope ([scenario])
-
 ### Audit
 
-- ALWAYS: the changeset-derivation primitives are defined once in the changeset-scope skill's `scripts/changeset_scope.py`; the audit, review-changes, manage-thread-store, and sync-base skills reach them only by import or re-export ([audit])
-- ALWAYS: the `branch_slug` re-export at `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` resolves the symbol from the changeset-scope module and is identity-equal to the canonical definition ([audit])
+- ALWAYS: every git-derived diff range is composed against the remote-tracking ref `origin/<base>` via `remote_tracking_ref` — `branch_scope` for the audit surface, `compute_diff` for the review surface — so a stale local branch ref does not widen the scope ([audit])
+- ALWAYS: the changeset-derivation primitives are defined once in the changeset-scope skill's `scripts/changeset_scope.py`; implementation-audit orchestration, review-changes, and sync-base reach them only by import ([audit])
+- ALWAYS: each changeset-derivation primitive that invokes git accepts a dependency-injected runner typed by a source-owned protocol, and composed primitives forward that runner through the complete call path ([audit])
 - NEVER: a consumer skill re-implements a changeset-derivation primitive in its own `scripts/` ([audit])
+- NEVER: tests replace git behavior through framework mocking; runner doubles cross the declared protocol boundary ([audit])

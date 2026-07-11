@@ -20,11 +20,12 @@ This audit runs in the subagent-auditor agent's isolated context. When this skil
 </dispatch_gate>
 
 <objective>
-A verdict on one {{! term('configured_agent') !}} configuration file ({!% if target == 'codex' %!}`.codex/agents/*.toml` or `~/.codex/agents/*.toml`{!% else %!}`.claude/agents/*.md` or `~/.claude/agents/*.md`{!% endif %!}) against the create-subagents and `/agent-prompt-standards` conventions — PASS when no critical issue rejects it, FAIL when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
+A verdict on one {{! term('configured_agent') !}} configuration file ({!% if target == 'codex' %!}`.codex/agents/*.toml` or `~/.codex/agents/*.toml`{!% else %!}`.claude/agents/*.md` or `~/.claude/agents/*.md`{!% endif %!}) against the create-subagents and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
 </objective>
 
 <constraints>
 - NEVER modify the {{! term('configured_agent') !}} file under audit or any other file — this audit produces a verdict, never a fix or a commit
+- NEVER report a score; report contextual judgment instead
 {!% if target == 'codex' %!}
 - MUST check for markdown headings (##, ###) inside `{{! field('configured_agent_prompt') !}}` and flag as critical
 {!% else %!}
@@ -44,9 +45,9 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read the `develop:create-subagents` skill guidance, specifically its **Subagent usage and configuration** and **Writing effective prompts** reference topics.
+1. Both skills are already injected above. Read `develop:create-subagents` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
-3. If `$configured_agent_path` is empty, STOP with `FAIL` and a critical issue naming the missing required path argument.
+3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
 5. Read the {{! term('configured_agent') !}} configuration file at `$configured_agent_path`.
 6. Evaluate against best practices from steps 1-4, focusing on functionality over formatting.
@@ -128,10 +129,10 @@ These improve quality - flag as recommendations:
 - Does prompt include focus areas or equivalent specificity?
 - Pass: 3-6 specific focus areas listed somewhere in the prompt
 
-**output_format**:
+**output structure**:
 
 - Does prompt define expected output structure?
-- Pass: `<output_format>` section with clear structure
+- Pass: clear deliverable-structure guidance under any semantically appropriate tag
 
 **model_selection**:
 
@@ -248,20 +249,20 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 </anti_patterns>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
 
-The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `REJECT`; `FAIL` if any critical finding is `REJECT`; `UNKNOWN` if the subagent file cannot be read or the audit cannot complete. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
+The skill's `overall` is `APPROVED` iff the `critical-issues` row has no findings with severity `REJECT`; otherwise it is `REJECTED`. A missing or unreadable subagent file, or an audit that cannot complete, records a `REJECT` critical issue and returns `REJECTED`. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-subagents",
   "target": "<configured-agent-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
     {
       "name": "critical-issues",
-      "status": "PASS | FAIL | UNKNOWN",
+      "status": "PASS | FAIL",
       "findings": [
         {
           "id": "f-001",
@@ -301,7 +302,7 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
 The verdict is sound when:
 
 - Every evaluation area was judged with none skipped — {!% if target == 'codex' %!}TOML configuration{!% else %!}YAML frontmatter{!% endif %!}, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
-- The verdict states an overall PASS/FAIL with findings grouped critical-issues / recommendations / strengths / quick-fixes.
+- The verdict states an overall APPROVED/REJECTED with findings grouped critical-issues / recommendations / strengths / quick-fixes.
 - Each finding is falsifiable: it names the location, the convention at issue, and the consequence — every critical issue names what breaks if unfixed, judged on functionality rather than exact tag spelling.
 - The same {{! term('configured_agent') !}} file yields the same verdict.
 

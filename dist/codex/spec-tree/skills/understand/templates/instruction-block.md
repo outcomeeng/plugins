@@ -102,7 +102,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 - ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
 - NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `auditor`, `audit-orchestrator`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the develop-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the develop-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
 
 **Use the multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `multi_agent_v1.wait_agent`. Close every spawned agent with `multi_agent_v1.close_agent` immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
 
@@ -118,7 +118,7 @@ Spawn a typed verifier or reviewer:
 }
 ```
 
-Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
+Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `implementation-auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
 
 ```json
 {
@@ -172,11 +172,11 @@ Blocked or incomplete result shape:
 
 After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-journal` skill and use its `render_review_run.py <run-token>` helper to inspect the sealed review run. That helper calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, reads the sealed event prefix, and prints the review status, full head/base identity, scope coverage, and finding counts. Treat this as journal inspection; the sealed prefix remains the only review result.
 
-**Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not commit, merge, or mark the gate passed until a later `changes-reviewer` run returns a valid raw journal token, or the operator explicitly approves a process exception.
+**Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not publish, merge, or mark the gate passed. When repairing a finding or blocked subject, rerun deterministic verification, create a new local checkpoint commit, and review that new head; an operator-approved process exception is the only other path past the gate.
 
-**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the current working diff, `origin/<base>...HEAD` for a specific range, a branch name, or a PR reference.
+**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the current worktree scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. A `HEAD` review satisfies a gate only when the caller first confirms the worktree is clean; on a dirty tree it includes staged, unstaged, and untracked sections and is advisory.
 
-- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, and make the diff scope clean enough for the reviewer to infer the target from the raw token.
+- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the reviewer judges an exact committed head. A review over a working diff is advisory and never satisfies a gate.
 - NEVER invoke the `spec-tree:review-changes` skill.
 - NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
 
@@ -202,17 +202,23 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 
 **Use explicit prompts for audit agents.** The `message` field comes from the `multi_agent_v1.spawn_agent` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
-Use this shape for a one-off implementation audit:
+Use this shape for an implementation audit:
 
 ```json
 {
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
-    "agent_type": "auditor",
-    "message": "Repository: <absolute-repository-path>\nScope: <changed files or diff range>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the scoped implementation for conformance to the governing spec-tree and language methodology. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "agent_type": "implementation-auditor",
+    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nLive file list: none for a gating audit; full modified and untracked paths only for an advisory pre-commit audit\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
   }
 }
 ```
+
+**Codex `implementation-auditor` output contract.** A successful final message carries the raw `spx verification run` token and rendered projection, without a competing prose verdict envelope. Treat the projection's `terminalStatus` as authoritative: `approved` passes the implementation-audit gate and `rejected` requires repair. A missing token or projection, a terminal status outside that vocabulary, or an exact blocked SPX command leaves the gate blocked.
+
+**Committed gate subject.** A gating implementation audit runs only after deterministic verification passes and the subject is committed locally. A run carrying a live modified or untracked file list is advisory and cannot satisfy an apply or merge gate.
+
+**Full deterministic gate ordering.** When the repository requires `just check-full` or another full deterministic bundle, run it only after all applicable evidence auditors, implementation audits, and changeset review have converged on the same clean committed head. Never launch it before agentic verification, from inside an agent, or concurrently with another heavy command. Any later change invalidates the full-gate result and requires the affected agentic checks to converge again before rerunning the full bundle.
 
 Use this shape for test-evidence audits:
 
@@ -257,7 +263,7 @@ Use this shape for decision audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "adr-auditor",
-    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, downstream alignment, and language-specific architecture concerns when applicable. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nAudit scope: <exact committed changeset or artifact scope>\nScope classification: <language-neutral | implementation-language partitions: comma-separated languages>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, and every language-specific architecture concern required by the scope classification. Return only the structured JSON verdict specified by audit-adr, with no prose outside the JSON object."
   }
 }
 ```
@@ -296,18 +302,6 @@ Use this shape for subagent audits:
 }
 ```
 
-Use this shape for audit journal orchestration:
-
-```json
-{
-  "tool": "multi_agent_v1.spawn_agent",
-  "arguments": {
-    "agent_type": "audit-orchestrator",
-    "message": "Repository: <absolute-repository-path>\nScope: <changed files, artifact paths, or diff range>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Run the local audit workflow that carries findings through the audit journal run set. Return the audit journal result or blocked state exactly as the audit workflow specifies."
-  }
-}
-```
-
 <!-- /harness:codex -->
 
 | User Says...                               | Skill                  | Agent                   |
@@ -328,34 +322,34 @@ Use this shape for audit journal orchestration:
 | "Diagnose the spx environment"             | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"   | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically:
 
 <!-- lang:python -->
 
-| User Says...            | Skill (composed)             | Composing agent             |
-| ----------------------- | ---------------------------- | --------------------------- |
-| "Audit this code"       | `/audit-python`              | `auditor` (`/audit` family) |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`               |
-| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`     |
+| User Says...            | Skill (composed)             | Composing agent          |
+| ----------------------- | ---------------------------- | ------------------------ |
+| "Audit this code"       | `/audit-python-code`         | `implementation-auditor` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`            |
+| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`  |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill (composed)                 | Composing agent             |
-| --------------------------- | -------------------------------- | --------------------------- |
-| "Audit this code"           | `/audit-typescript`              | `auditor` (`/audit` family) |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `adr-auditor`               |
-| "Audit these tests"         | `/audit-typescript-tests`        | `test-evidence-auditor`     |
+| User Says...                | Skill (composed)                 | Composing agent          |
+| --------------------------- | -------------------------------- | ------------------------ |
+| "Audit this code"           | `/audit-typescript-code`         | `implementation-auditor` |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `adr-auditor`            |
+| "Audit these tests"         | `/audit-typescript-tests`        | `test-evidence-auditor`  |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill (composed)           | Composing agent             |
-| --------------------- | -------------------------- | --------------------------- |
-| "Audit this code"     | `/audit-rust`              | `auditor` (`/audit` family) |
-| "Audit unsafe Rust"   | `/audit-rust`              | `auditor` (`/audit` family) |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `adr-auditor`               |
-| "Audit these tests"   | `/audit-rust-tests`        | `test-evidence-auditor`     |
+| User Says...          | Skill (composed)           | Composing agent          |
+| --------------------- | -------------------------- | ------------------------ |
+| "Audit this code"     | `/audit-rust-code`         | `implementation-auditor` |
+| "Audit unsafe Rust"   | `/audit-rust-code`         | `implementation-auditor` |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `adr-auditor`            |
+| "Audit these tests"   | `/audit-rust-tests`        | `test-evidence-auditor`  |
 
 <!-- /lang:rust -->
 

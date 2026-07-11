@@ -1,10 +1,10 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
 Single home for the deterministic git derivation shared by the audit,
-review-changes, and thread-store skills: branch identity, the on-disk
+review-changes, and sync-base skills: branch identity, the on-disk
 addressing slug, base-ref resolution, the remote-tracking ref form, and
 merge-base diff scope. Consumers import these symbols (directly or through
-``thread-store/scripts/branch_slug.py``'s re-export); none re-implements them.
+consumer imports); none re-implements them.
 
 Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
@@ -14,9 +14,9 @@ Portability: stdlib only — no third-party packages, no ``uv``, no
 ``outcomeeng_*`` imports. This script ships into consumer plugin trees where
 only the standard library is available.
 
-Tested inputs and error cases: ``test_auditing.scenario.l1.py`` and dependent
-scope/journal suites exercise origin/HEAD base detection, missing-origin
-fallbacks, named-branch detection, detached-HEAD refusal, branch slug collision
+Tested inputs and error cases: changeset-scope and dependent
+verification-run suites exercise origin/HEAD base detection, missing-origin
+rejection, named-branch detection, detached-HEAD refusal, branch slug collision
 suffixes, diff-range expansion with and without pathspec filters, empty diff
 matches, staged and unstaged changes, remote-tracking three-dot branch scope,
 arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
@@ -28,28 +28,41 @@ from __future__ import annotations
 import hashlib
 import pathlib
 import subprocess
+from collections.abc import Sequence
+from typing import Protocol
 
-DEFAULT_BASE_REF = "main"
 BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
 BRANCH_SLUG_MAX_LENGTH = 64
 BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
 BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
 ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
+ORIGIN_HEAD_REF = f"{ORIGIN_HEAD_REF_PREFIX}HEAD"
 ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
 FRONTMATTER_DELIMITER = "---"
 COMMIT_PEEL_SUFFIX = "^{commit}"
 
 
-class BaseRefNotConfiguredError(RuntimeError):
-    """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
+class Runner(Protocol):
+    """Execute one git command through an injectable process boundary."""
 
-    The default ``detect_base_ref(strict=False)`` falls back to
-    ``DEFAULT_BASE_REF`` because the audit skill tolerates a missing
-    remote (single-developer repos, fresh bootstraps). The strict
-    variant exists for the review-changes skill, which refuses to
-    pick a fallback because the operator needs a definitive answer
-    about which ref the diff was computed against.
+    def __call__(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: pathlib.Path,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+class BaseRefNotConfiguredError(RuntimeError):
+    """Raised by ``detect_base_ref`` when origin/HEAD is absent.
+
+    Base-ref derivation has no portable fallback when the remote default is
+    absent. Callers must supply authoritative scope rather than guessing a
+    consumer repository's branch name.
     """
 
 
@@ -66,6 +79,7 @@ def expand_diff_range(
     *,
     patterns: list[str] | None = None,
     repo: pathlib.Path,
+    runner: Runner = subprocess.run,
 ) -> list[str]:
     """Return the file paths changed in the given git diff range.
 
@@ -90,7 +104,7 @@ def expand_diff_range(
     if patterns:
         cmd.append("--")
         cmd.extend(patterns)
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, range_spec and patterns caller-controlled
+    result = runner(
         cmd,
         cwd=repo,
         capture_output=True,
@@ -120,6 +134,7 @@ def branch_scope(
     *,
     patterns: list[str] | None = None,
     repo: pathlib.Path,
+    runner: Runner = subprocess.run,
 ) -> list[str]:
     """Return the files this branch changed relative to ``origin/<base_ref>``.
 
@@ -141,10 +156,14 @@ def branch_scope(
     range_spec = BRANCH_SCOPE_RANGE_TEMPLATE.format(
         origin_ref=remote_tracking_ref(base_ref)
     )
-    return expand_diff_range(range_spec, patterns=patterns, repo=repo)
+    return expand_diff_range(range_spec, patterns=patterns, repo=repo, runner=runner)
 
 
-def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
+def detect_base_ref(
+    repo: pathlib.Path,
+    *,
+    runner: Runner = subprocess.run,
+) -> str:
     """Return the bare base-branch name configured by ``origin/HEAD``.
 
     Reads ``refs/remotes/origin/HEAD`` and strips the
@@ -153,38 +172,29 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
     :func:`remote_tracking_ref`; returning the bare name keeps the slug
     derivation and the diff-range composition independent.
 
-    When the symbolic ref is absent (no remote configured, fresh
-    bootstrap, solo developer repo):
-
-    - ``strict=False`` (default): returns ``DEFAULT_BASE_REF`` so callers
-      can still compose diff ranges without halting. The audit skill
-      relies on this fallback.
-    - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
-      review-changes skill uses this variant so the operator gets a
-      definitive answer rather than a silently-chosen literal.
+    When the symbolic ref is absent, raises ``BaseRefNotConfiguredError``.
+    No mode guesses a consumer repository's default branch.
     """
-    result = subprocess.run(
-        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
+    result = runner(
+        ["git", "symbolic-ref", ORIGIN_HEAD_REF],  # noqa: S607  # Git is intentionally resolved through PATH.
         cwd=repo,
         capture_output=True,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        if strict:
-            raise BaseRefNotConfiguredError(f"refs/remotes/origin/HEAD unset at {repo}")
-        return DEFAULT_BASE_REF
+        raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} unset at {repo}")
     line = result.stdout.strip()
     if line.startswith(ORIGIN_HEAD_REF_PREFIX):
         return line[len(ORIGIN_HEAD_REF_PREFIX) :]
-    if strict:
-        raise BaseRefNotConfiguredError(
-            f"refs/remotes/origin/HEAD has unexpected shape: {line!r}"
-        )
-    return DEFAULT_BASE_REF
+    raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} has unexpected shape: {line!r}")
 
 
-def detect_current_branch(repo: pathlib.Path) -> str:
+def detect_current_branch(
+    repo: pathlib.Path,
+    *,
+    runner: Runner = subprocess.run,
+) -> str:
     """Return the current branch name; raise ``DetachedHeadError`` on detached HEAD.
 
     Callers name records by the current branch; running on detached HEAD
@@ -192,7 +202,7 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     detached-checkout invocation. Raising forces the caller to switch to a
     named branch before a branch-scoped record is created.
     """
-    result = subprocess.run(
+    result = runner(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S607
         cwd=repo,
         capture_output=True,
@@ -205,7 +215,12 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     return branch
 
 
-def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
+def commit_oid(
+    ref: str,
+    *,
+    repo: pathlib.Path,
+    runner: Runner = subprocess.run,
+) -> str:
     """Resolve ``ref`` to the full object ID of a commit.
 
     The journal run-state identity records concrete head/base commit IDs, not
@@ -213,7 +228,7 @@ def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
     accepting commits and tags that point at commits.
     """
     # Fixed argv, no shell, ref is caller-controlled.
-    result = subprocess.run(  # noqa: S603
+    result = runner(
         ["git", "rev-parse", "--verify", "--quiet", f"{ref}{COMMIT_PEEL_SUFFIX}"],
         cwd=repo,
         capture_output=True,
@@ -275,7 +290,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
     The ``state_dir`` argument is optional — passing ``None`` disables
     the state-file collision check, which is the calling convention
     callers use when they do not maintain audit-state files (the
-    thread-store helper consumes this contract via re-export).
+    consumers import this contract directly).
     """
     # Stage 1: replace slashes.
     slashed = branch_name.replace("/", "__")

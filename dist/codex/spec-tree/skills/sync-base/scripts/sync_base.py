@@ -52,6 +52,7 @@ identity preserved.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import pathlib
@@ -81,18 +82,36 @@ READINESS_SCHEMA_VERSION = 1
 
 def _load_changeset_scope() -> ModuleType:
     """Load the canonical ``changeset_scope`` module via importlib and cache it."""
+    resolved_path = _CHANGESET_SCOPE_PATH.resolve()
     cached = sys.modules.get("changeset_scope")
-    if cached is not None:
+    if cached is not None and _module_origin(cached) == resolved_path:
         return cached
+    module_name = (
+        "changeset_scope"
+        if cached is None
+        else "changeset_scope_"
+        + hashlib.sha256(str(resolved_path).encode()).hexdigest()
+    )
+    path_cached = sys.modules.get(module_name)
+    if path_cached is not None and _module_origin(path_cached) == resolved_path:
+        return path_cached
     spec = importlib.util.spec_from_file_location(
-        "changeset_scope", _CHANGESET_SCOPE_PATH
+        module_name,
+        resolved_path,
     )
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Cannot load changeset_scope from {_CHANGESET_SCOPE_PATH}")
     module = importlib.util.module_from_spec(spec)
-    sys.modules["changeset_scope"] = module
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _module_origin(module: ModuleType) -> pathlib.Path | None:
+    module_file = getattr(module, "__file__", None)
+    if not isinstance(module_file, str):
+        return None
+    return pathlib.Path(module_file).resolve()
 
 
 _changeset_scope = _load_changeset_scope()
@@ -103,6 +122,7 @@ _changeset_scope = _load_changeset_scope()
 detect_base_ref = _changeset_scope.detect_base_ref
 remote_tracking_ref = _changeset_scope.remote_tracking_ref
 detect_current_branch = _changeset_scope.detect_current_branch
+BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
 DetachedHeadError = _changeset_scope.DetachedHeadError
 
 
@@ -566,6 +586,19 @@ def _sync_detached(
     )
 
 
+def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
+    try:
+        return detect_base_ref(repo)
+    except BaseRefNotConfiguredError as exc:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            "",
+            "",
+            None,
+            str(exc),
+        )
+
+
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
@@ -580,7 +613,17 @@ def sync_base(
     never raises for an ordinary git outcome.
     """
     if base_ref is None:
-        base_ref = detect_base_ref(repo, strict=False)
+        resolved_base = _resolve_default_base(repo)
+        if isinstance(resolved_base, SyncBaseResult):
+            return resolved_base
+        base_ref = resolved_base
+    return _sync_resolved_base(repo, base_ref=base_ref, fetch=fetch)
+
+
+def _sync_resolved_base(
+    repo: pathlib.Path, *, base_ref: str, fetch: bool
+) -> SyncBaseResult:
+    """Synchronize onto a caller-resolved bare base branch."""
     remote_ref = remote_tracking_ref(base_ref)
 
     try:

@@ -10,20 +10,20 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript implementation code that makes its node's tests pass — written fresh against failing tests, or repaired against reviewer feedback.
+TypeScript implementation code that makes its node's tests pass.
 </objective>
 
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 
 ```
-Base directory for this skill: {skill_dir}
+Base directory for this skill: ${CLAUDE_SKILL_DIR}
 ```
 
 Use this path to access skill files:
 
-- References: `{skill_dir}/references/`
-- Workflows: `{skill_dir}/workflows/`
+- References: `${CLAUDE_SKILL_DIR}/references/`
+- Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
 
 **IMPORTANT**: Do NOT search the product directory for skill files.
 </accessing_skill_files>
@@ -112,13 +112,13 @@ async function syncFiles(
 <hierarchy_of_authority>
 **Where to look for guidance, in order of precedence:**
 
-| Priority | Source                    | What It Provides                                      |
-| -------- | ------------------------- | ----------------------------------------------------- |
-| 1        | `docs/`, `README.md`      | Product architecture, design decisions, intended APIs |
-| 2        | `CLAUDE.md`               | Product-specific rules for Claude                     |
-| 3        | ADRs/PDRs, specs          | Documented decisions and requirements                 |
-| 4        | This skill (`SKILL.md`)   | Generic TypeScript best practices                     |
-| 5        | Existing code (reference) | Evidence of implementation, NOT authority             |
+| Priority | Source                       | What It Provides                                           |
+| -------- | ---------------------------- | ---------------------------------------------------------- |
+| 1        | Loaded PDRs, ADRs, and specs | Product and architecture truth                             |
+| 2        | `CLAUDE.md` and overlays     | Product-specific workflow and local constraints            |
+| 3        | Loaded TypeScript skills     | Language implementation and testing standards              |
+| 4        | `docs/`, `README.md`         | Supplementary product explanation                          |
+| 5        | Existing code                | Lower-layer implementation evidence, never governing truth |
 
 **CRITICAL: Existing code is NOT authoritative.**
 
@@ -257,12 +257,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 - Lower-index siblings (they constrain the target via dependency encoding)
 - Target node spec with typed assertions
 
-**Example invocation:**
-
-```bash
-# By node path
-spec-tree:contextualize spx/55-example.enabler/21-commands.outcome
-```
+**Example invocation:** Invoke `/contextualize` with `spx/<node-path>`.
 
 **If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
@@ -272,10 +267,10 @@ spec-tree:contextualize spx/55-example.enabler/21-commands.outcome
 <two_modes>
 This skill operates in one of two modes depending on the input:
 
-| Input                            | Mode               | Workflow                      |
-| -------------------------------- | ------------------ | ----------------------------- |
-| Spec (ADR/PDR, node spec)        | **Implementation** | `workflows/implementation.md` |
-| Rejection feedback from reviewer | **Remediation**    | `workflows/remediation.md`    |
+| Input                            | Mode               | Workflow                                          |
+| -------------------------------- | ------------------ | ------------------------------------------------- |
+| Spec (ADR/PDR, node spec)        | **Implementation** | `${CLAUDE_SKILL_DIR}/workflows/implementation.md` |
+| Rejection feedback from reviewer | **Remediation**    | `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    |
 
 Determine the mode from the input, then follow the appropriate workflow.
 </two_modes>
@@ -288,7 +283,7 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 3. **Type Safety First**: Use strict TypeScript with `strict: true`. No `any` without justification.
 
-4. **Self-Verification**: Before declaring "done," run tsc, eslint, and vitest.
+4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, test, and validation commands. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
 
 5. **Humility**: The code must pass review. Write code that will survive adversarial review.
 
@@ -298,21 +293,21 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 <reference_index>
 
-| File                                         | Purpose                               |
-| -------------------------------------------- | ------------------------------------- |
-| `references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
-| `references/test-patterns.md`                | Debuggability-first test organization |
-| `references/verification-checklist.md`       | Pre-submission verification           |
-| `references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
+| File                                                             | Purpose                               |
+| ---------------------------------------------------------------- | ------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
+| `${CLAUDE_SKILL_DIR}/references/test-patterns.md`                | Debuggability-first test organization |
+| `${CLAUDE_SKILL_DIR}/references/verification-checklist.md`       | Pre-submission verification           |
+| `${CLAUDE_SKILL_DIR}/references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
 
 </reference_index>
 
 <workflows_index>
 
-| Workflow                      | Purpose                         |
-| ----------------------------- | ------------------------------- |
-| `workflows/implementation.md` | TDD phases, code standards      |
-| `workflows/remediation.md`    | Fix issues from review feedback |
+| Workflow                                          | Purpose                         |
+| ------------------------------------------------- | ------------------------------- |
+| `${CLAUDE_SKILL_DIR}/workflows/implementation.md` | TDD phases, code standards      |
+| `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    | Fix issues from review feedback |
 
 </workflows_index>
 
@@ -373,7 +368,7 @@ import { treeBuilder } from "@testing/harnesses/tree-builder";
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@testing/*": ["tests/*"],
+      "@testing/*": ["testing/*"],
       "@lib/*": ["lib/*"]
     }
   }
@@ -416,16 +411,11 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 <success_criteria>
 The implementation is ready for review when:
 
-- [ ] Spec fully implemented
-- [ ] All functions have type annotations
-- [ ] All public functions have JSDoc
-- [ ] Tests exist for all public functions
-- [ ] tsc passes with zero errors
-- [ ] eslint passes with zero errors
-- [ ] All tests pass
-- [ ] Coverage ≥80% for new code
-- [ ] No TODOs/FIXMEs unaddressed
-- [ ] No console.log statements
-- [ ] No hardcoded secrets
+- [ ] The product's resolved TypeScript type-check command passes
+- [ ] The product's resolved TypeScript lint/format check command passes
+- [ ] The product's resolved TypeScript test command for the governed node or changeset passes
+- [ ] The implementation follows `/typescript-standards` and any `spx/local/typescript.md` overlay loaded for the repository
+- [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
+- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 
 </success_criteria>

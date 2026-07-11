@@ -237,10 +237,16 @@ class GitDiscoveryError(RuntimeError):
         )
 
 
+class BaseRefDiscoveryError(RuntimeError):
+    """The selected gate cannot resolve the remote default branch."""
+
+
 class ChangesetScopeModule(Protocol):
     """Typed subset of the canonical changeset-scope helper."""
 
-    def detect_base_ref(self, repo: Path, *, strict: bool = False) -> str: ...
+    BaseRefNotConfiguredError: type[RuntimeError]
+
+    def detect_base_ref(self, repo: Path) -> str: ...
 
     def remote_tracking_ref(self, base_ref: str) -> str: ...
 
@@ -431,6 +437,10 @@ def run_selected_check(
     except GitDiscoveryError as exc:
         _write_git_discovery_error(sink, exc)
         return GIT_DISCOVERY_FAILURE_EXIT_CODE
+    except BaseRefDiscoveryError as exc:
+        sink.write(f"{GIT_DISCOVERY_ERROR_PREFIX}: {exc}\n")
+        sink.flush()
+        return GIT_DISCOVERY_FAILURE_EXIT_CODE
     plan = build_selected_gate_plan(
         tuple(entry.path for entry in changed_path_entries),
         deleted_paths=deleted_paths_after_status_resolution(
@@ -458,7 +468,10 @@ def resolve_default_base_ref(repo: Path) -> str:
     """Return the canonical remote-tracking base ref for this repository."""
 
     changeset_scope = _load_changeset_scope()
-    bare_base = changeset_scope.detect_base_ref(repo)
+    try:
+        bare_base = changeset_scope.detect_base_ref(repo)
+    except changeset_scope.BaseRefNotConfiguredError as exc:
+        raise BaseRefDiscoveryError(str(exc)) from exc
     return changeset_scope.remote_tracking_ref(bare_base)
 
 

@@ -1,7 +1,7 @@
 ---
 name: scope-changeset
 description: ALWAYS invoke this skill when deriving a changeset's base ref, branch slug, branch identity, or merge-base diff scope from git. NEVER re-implement branch-slug or base-ref derivation inside another skill's scripts.
-allowed-tools: Bash, Read
+allowed-tools: Read
 ---
 
 <objective>
@@ -16,7 +16,7 @@ The derivation lives in `${CLAUDE_SKILL_DIR}/scripts/changeset_scope.py`, import
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
 | `branch_slug(name, state_dir)`  | Path-safe, length-bounded, deterministic on-disk slug for a branch name                  |
 | `detect_current_branch(repo)`   | Current branch name; raises `DetachedHeadError` on detached HEAD                         |
-| `detect_base_ref(repo, strict)` | Bare base-branch name from `origin/HEAD`; strict raises `BaseRefNotConfiguredError`      |
+| `detect_base_ref(repo)`         | Bare base-branch name from `origin/HEAD`; raises `BaseRefNotConfiguredError` when absent |
 | `remote_tracking_ref(base)`     | The remote-tracking ref `origin/<base>` — the single source of the `origin/` composition |
 | `branch_scope(base, repo)`      | Files changed on this branch relative to `origin/<base>` (three-dot, merge-base)         |
 | `expand_diff_range(spec, repo)` | Files changed in an arbitrary git diff range                                             |

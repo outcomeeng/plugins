@@ -1,27 +1,18 @@
-# Verdict Toolchain
+# Verification Run Payload Validation
 
-PROVIDES a stdlib-only Python toolchain — the `verdict.py` module and the `aggregate_verdicts.py` and `pass_results.py` CLIs — that defines the schema of the verdict projection an agentic verification run records on its sealed journal, rolls child verdict projections up under one rule, and captures verbatim tool output into a results directory
-SO THAT every agentic verification skill emits one structured verdict shape for the journal that is the run's sole source of truth — never hand-formatting markdown and never treating a rendered surface as authoritative state — and the orchestrator and dispatched skills share one projection shape and one rollup rule
-CAN ship inside `plugins/spec-tree/skills/audit/scripts/`, run from any consumer project against `python3` only, and stand as the deterministic verdict schema and rollup logic the `/audit` skill, the `auditor` agent, and every dispatched `audit-{lang}*` skill use before journal rendering
-
-`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` makes the append-only run journal an agentic verification run's sole source of truth and every output surface a projection rendered from the journal's event history — a pure function of an event prefix. This toolchain defines the verdict schema and rollup inputs recorded on that journal: `verdict.py` declares the schema and `aggregate_verdicts.py` rolls child projections up under the rollup rule. Journal rendering owns the display surface; this toolchain never parses rendered comments as state.
+PROVIDES the SPX-owned verification-run payload and projection contract consumed by audit and review skills
+SO THAT agentic verification skills
+CAN record validated scope evidence, finding evidence, terminal state, and rendered projections without shipping plugin-side verdict schema or rollup scripts
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: `verdict.py` defines exactly one schema for the verdict projection — `Status` ∈ {APPROVED, REJECTED, PASS, FAIL, UNKNOWN}, `Severity` ∈ {REJECT, WARNING, INFO}, frozen `Finding`/`Row`/`Verdict` dataclasses, and a `SCHEMA_VERSION` constant ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `verdict.parse_json` validates JSON input against the schema and raises `VerdictValidationError` on missing keys, unknown status values, unknown severity values, or schema-version mismatch ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `verdict.to_json_dict` and `verdict.from_json_dict` round-trip a `Verdict` instance through JSON without loss — the serialized-then-parsed verdict equals the original ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `verdict.Verdict` carries optional `resolved` and `reopened` finding tuples that round-trip through JSON without loss — callers diffing a current audit against a prior verdict populate these to surface what changed since the prior run ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `verdict.from_json_dict` tolerates absence of `resolved` and `reopened` and defaults each to an empty tuple — verdicts emitted before these fields existed parse without error, and stateless audits that never compute the diff omit the fields entirely ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `verdict.roll_up` returns REJECTED if any child is FAIL or REJECTED, UNKNOWN if any child is UNKNOWN and none are FAIL/REJECTED, APPROVED if every child is PASS or APPROVED, and UNKNOWN when the input is empty ([test](tests/test_verdict.compliance.l1.py))
-- ALWAYS: `aggregate_verdicts.py` reads N child verdict JSON files (positional paths or via `--directory`), validates each, and emits one wrapper verdict whose `children` array holds the parsed children and whose `overall` is derived via `verdict.roll_up` over child overalls ([test](tests/test_aggregate_verdicts.compliance.l1.py))
-- ALWAYS: `aggregate_verdicts.py` accepts repeatable `--metadata key=value` flags and `--skill`/`--target` flags to set the wrapper's metadata, skill name, and target — the wrapper carries orchestrator-level identification, not derived from children ([test](tests/test_aggregate_verdicts.compliance.l1.py))
-- ALWAYS: `pass_results.py mkdir` creates a fresh `audit-results-*` directory via `tempfile.mkdtemp`, prints its path on stdout, and leaves cleanup to the caller — survives across orchestrator/dispatched-skill invocations ([test](tests/test_pass_results.compliance.l1.py))
-- ALWAYS: `pass_results.py add <dir> <command>` writes verbatim content from stdin (or `--file`) to `<dir>/<sanitized-command>`, replacing every path-resolving character — ASCII space, POSIX `/`, Windows `\`, and `:` — with underscores and preserving every other character (flags, `-`, `=`, dots) verbatim. The narrow filename contract keeps `directory / name` safe so a command containing `/path/to/check.py` cannot produce a nested subdirectory or escape the results directory. No JSON wrapping, no truncation ([test](tests/test_pass_results.compliance.l1.py))
-- ALWAYS: `pass_results.py add` resolves filename collisions by appending `.1`, `.2`, … until a free name is found — multiple invocations of the same command append, not overwrite ([test](tests/test_pass_results.compliance.l1.py))
-- NEVER: any script in this toolchain imports a third-party package, requires `uv`, or reads files outside `plugins/spec-tree/skills/audit/scripts/` — stdlib only, plugin-internal only, per the Plugin Portability Constraints in `AGENTS.md` ([review])
-- NEVER: an audit skill hand-formats a markdown verdict — display output is journal rendering over run events, never markdown assembled by hand ([review])
-- NEVER: verdict state is recovered by parsing markdown, delimiter blocks, PR comments, or any other rendered surface ([review])
-- NEVER: a script in this toolchain references `outcomeeng_*` packages — those packages exist for marketplace build/test tooling and are not available in consumer projects that install spec-tree plugins ([review])
+- ALWAYS: the shipped SPX floor is at least the published release that provides the `spx verification run` lifecycle used by audit skills ([test](tests/test_verification_run_payload_contract.compliance.l1.py))
+- NEVER: the spec-tree plugin ships `verdict.py`, `aggregate_verdicts.py`, `pass_results.py`, `journal_emit.py`, or `audit_orchestrator.py` under the audit skill ([test](tests/test_verification_run_payload_contract.compliance.l1.py))
+
+### Audit
+
+- ALWAYS: audit skills record audit evidence through `spx verification run start`, `spx verification run scope add`, `spx verification run finding add`, `spx verification run finish`, and `spx verification run render` ([audit])
+- ALWAYS: verdict format validation, audit finding validation, terminal projection rendering, and authoritative finding count are delegated to SPX verification-run commands rather than plugin-side Python scripts ([audit])
+- NEVER: the audit skill invokes `python3 "${CLAUDE_SKILL_DIR}/scripts/..."` to validate verdicts, aggregate child results, or render audit projections ([audit])

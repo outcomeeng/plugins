@@ -21,12 +21,12 @@
     {
       "name": "typescript",
       "source": "./dist/claude/typescript",
-      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript, /architect-typescript, /audit-typescript-architecture, typescript-simplifier agent"
+      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript-code, /audit-typescript-tests, /audit-typescript-architecture, /architect-typescript, typescript-simplifier agent"
     },
     {
       "name": "python",
       "source": "./dist/claude/python",
-      "description": "Python engineering: /test-python, /code-python, /audit-python, /architect-python, /audit-python-architecture"
+      "description": "Python engineering: /test-python, /code-python, /audit-python-code, /audit-python-tests, /audit-python-architecture, /architect-python"
     },
     {
       "name": "prose",
@@ -36,7 +36,7 @@
     {
       "name": "spec-tree",
       "source": "./dist/claude/spec-tree",
-      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue"
+      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue"
     },
     {
       "name": "work",
@@ -51,7 +51,7 @@
     {
       "name": "rust",
       "source": "./dist/claude/rust",
-      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust, /architect-rust, /audit-rust-architecture"
+      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust"
     }
   ]
 }

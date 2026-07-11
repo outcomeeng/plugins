@@ -54,18 +54,19 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 <review_workflow_context>
 
-**When invoked from a review or audit skill** (e.g., `audit-python`, `audit-typescript`):
+**When invoked before or after a review or audit gate** (e.g., from `/apply` or after `audit-python-code` findings):
 
-This skill may be referenced during the commit phase of a code review. In that context:
+This skill creates either a local verification checkpoint before the gate or a publication-ready commit after the gate. In that context:
 
-1. **Committing is the seal of approval** — Only commit after verdict is APPROVED
-2. **Scope to work item** — Stage only files from the approved work item:
+1. **Checkpoint before verification** — Commit deterministic-passing work before a persisted audit or review so the gate binds to an immutable head. Approval governs publication and merge readiness, not whether the local gate subject may be committed.
+2. **New checkpoint after repair** — When a gate rejects the subject, fix the defect class, rerun deterministic verification, and create a new commit. Do not amend the audited checkpoint while its run remains prior context.
+3. **Scope to work item** — Stage only files from the work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
-3. **Include work item reference** — Add a `Refs:` footer using the node path format from the review skill's context (e.g. `Refs: spx/55-example.enabler/21-bar.outcome`)
-4. **Verify tests pass** — All tests must pass before committing
+4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.enabler/21-bar.outcome`)
+5. **Verify the touched scope** — The repository's focused deterministic checks must pass before committing. An aggregate gate whose generated-output drift check requires committed files runs after the checkpoint, when the lifecycle requires it.
 
-The review skill provides the specific file list and work item context.
+The calling workflow provides the specific file list, work item context, and whether the commit is a pre-gate checkpoint or a post-gate publication commit.
 
 </review_workflow_context>
 

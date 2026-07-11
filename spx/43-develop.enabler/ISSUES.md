@@ -28,11 +28,11 @@ Required handling:
 
 Gate changed skills with `develop:skill-auditor`.
 
-## 3. Verdict row taxonomy
+## 3. Verification-run row taxonomy
 
-Verdict-emitting skills use different row taxonomies while claiming the canonical verdict envelope. For example, `audit-skills` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagents` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
+Verdict-emitting skills use different row taxonomies while claiming a shared audit evidence envelope. For example, `audit-skills` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagents` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
 
-Required handling: decide whether `verdict.py` mandates a uniform row taxonomy or treats row names as free-form labels inside a fixed envelope. This decision affects journal projections, rendered audit surfaces, and any auditor agent that indexes on row names.
+Required handling: decide whether the SPX verification-run payload contract mandates a uniform row taxonomy or treats row names as free-form labels inside a fixed envelope. This decision affects rendered audit surfaces and any auditor agent that indexes on row names.
 
 Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before editing individual skills.
 

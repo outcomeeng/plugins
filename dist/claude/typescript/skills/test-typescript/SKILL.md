@@ -2,6 +2,8 @@
 name: test-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
+argument-hint: "<full-spx-node-path>"
+arguments: node_path
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -12,27 +14,31 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript test files that supply evidence for a node specification's assertions — written fresh from the spec, or repaired against reviewer feedback.
+TypeScript test files that supply evidence for a node specification's assertions.
 </objective>
+
+<input_contract>
+`$node_path` is the full `spx/...` path to the governing node. If `$node_path` is empty, stop and report that the governing node path is required before test evidence can be written or repaired.
+</input_contract>
 
 <mode_detection>
 **Determine the current mode:**
 
 1. **WRITE mode** - Tests do not exist yet, or starting fresh
-   - Check: `ls {node_path}/tests/*.ts` returns nothing or minimal files
+   - Check: `ls $node_path/tests/*.ts` returns nothing or minimal files
    - Action: Follow full workflow below
 
 2. **FIX mode** - Tests exist but were rejected by reviewer
-   - Check: Recent `/audit-typescript-tests` output shows REJECT with specific issues
+   - Check: Recent `/audit-typescript-tests` output shows `REJECTED` with specific failing rows or findings
    - Action: Read the rejection, fix the specific issues, re-run tests
 
 **Always check which mode before proceeding.**
 </mode_detection>
 
 <quick_start>
-**Input:** Node spec path (e.g., `spx/55-example.enabler/21-parser.outcome/`)
+**Input:** Governing node path from `$node_path`
 
-**Output:** Test files written to `{node}/tests/` directory
+**Output:** Test files written to `$node_path/tests/` directory
 
 **Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
@@ -52,26 +58,13 @@ Check mode -> WRITE or FIX -> Execute -> Verify -> Report
 
 **Step 1: Load Context**
 
-Read the node spec and related files:
-
-```bash
-# Read node spec
-cat {node_path}/{slug}.md
-
-# Read parent node for context (if nested)
-cat {parent_path}/{parent_slug}.md
-
-# Check for ADRs/PDRs that constrain testing approach
-ls {node_path}/../*.adr.md {node_path}/../*.pdr.md 2>/dev/null
-```
+Require a live `<SPEC_TREE_FOUNDATION>` marker, invoking `/understand` when absent. Invoke `/contextualize` with the full node path and require the matching live `<SPEC_TREE_CONTEXT>` marker before reading test bodies or writing evidence. Use that context rather than reconstructing ancestor, sibling, or decision reads with shell commands.
 
 Extract from the spec:
 
 - **Assertions** - Typed assertions to verify
 - **Test Strategy** - Which levels are specified
 - **Harnesses** - Any referenced test harnesses
-
-**Note on Analysis sections:** The Analysis section documents what the spec author examined. It provides context but is not binding -- implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
 
 **Step 2: Determine Evidence and Level**
 
@@ -109,7 +102,7 @@ Create test files following `/typescript-test-standards`:
 
 ```bash
 # Resolve from repo docs or scripts; fallback: npx vitest run
-<product-test-command> {node_path}/tests/
+<product-test-command> $node_path/tests/
 ```
 
 If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product test command when no focused form exists.
@@ -118,12 +111,7 @@ Tests should FAIL with import errors or assertion errors (implementation does no
 
 **Step 6: Handle Specified Nodes**
 
-If the implementation module does not exist yet, tests fail on import -- breaking the quality gate. Add the node to `spx/EXCLUDE`:
-
-```bash
-# Add node path to spx/EXCLUDE (paths relative to spx/)
-echo "76-risc-v.outcome" >> spx/EXCLUDE
-```
+If the implementation module does not exist yet, tests fail on import -- breaking the quality gate. Add the portion of `$node_path` relative to `spx/` to `spx/EXCLUDE` using the repository's file-editing tool.
 
 The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Remove the entry from `spx/EXCLUDE` when implementation begins.
 
@@ -226,13 +214,13 @@ For each rejection reason:
 
 ```bash
 # Run the node tests through the repository's canonical test command; fallback: npx vitest run
-<product-test-command> {node_path}/tests/
+<product-test-command> $node_path/tests/
 
 # Run the repository's canonical TypeScript validation; fallback: npx tsc --noEmit
 <product-typecheck-command>
 
 # Run the repository's canonical lint validation for the changed files; fallback: npx eslint src/ test/
-<product-lint-command> {node_path}/tests/
+<product-lint-command> $node_path/tests/
 ```
 
 **Step 4: Report What Was Fixed**
@@ -306,7 +294,7 @@ Also check for `spx/local/typescript-tests.md` at the repository root -- product
 ```markdown
 **Tests Written**
 
-**Node: {node_path}**
+**Node: $node_path**
 
 **Test Files Created**
 
@@ -339,12 +327,11 @@ Tests pass checklist. Ready for re-review.
 
 <success_criteria>
 
-Task is complete when:
+Test evidence is ready for review when:
 
-- [ ] Test files exist in `{node}/tests/` directory
-- [ ] Each assertion from spec has corresponding test(s)
-- [ ] Tests follow `/typescript-test-standards` standards
-- [ ] Tests run and fail for expected reasons
-- [ ] All reviewer feedback addressed (if FIX mode)
+- [ ] Every created or changed test file lives in the governed node's `tests/` directory and is linked from the corresponding spec assertion
+- [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
+- [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
+- [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
 
 </success_criteria>

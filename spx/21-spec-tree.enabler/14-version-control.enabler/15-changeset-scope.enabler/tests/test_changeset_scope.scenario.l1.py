@@ -2,9 +2,8 @@
 
 Covers the Scenario assertions in ``../changeset-scope.md``:
 
-- ``detect_base_ref`` returns the bare base-branch name from ``origin/HEAD``;
-  strict raises ``BaseRefNotConfiguredError`` and non-strict returns
-  ``DEFAULT_BASE_REF`` when ``origin/HEAD`` is unset.
+- ``detect_base_ref`` returns the bare base-branch name from ``origin/HEAD`` and
+  raises ``BaseRefNotConfiguredError`` when it is unset.
 - ``remote_tracking_ref`` composes the remote-tracking ref ``origin/<base>``.
 - ``branch_scope`` diffs the three-dot range ``origin/<base>...HEAD``.
 - A local branch ref that lags its remote-tracking ref does not widen the
@@ -52,21 +51,12 @@ def test_detect_base_ref_returns_bare_base_from_origin_head(
     assert module.detect_base_ref(stale.repo) == stale.base_ref
 
 
-def test_detect_base_ref_non_strict_falls_back_to_default_without_origin(
-    tmp_path: pathlib.Path,
-) -> None:
-    module = load_changeset_scope_module()
-    repo = _repo(tmp_path)
-    build_repo_without_origin(repo)
-    assert module.detect_base_ref(repo, strict=False) == module.DEFAULT_BASE_REF
-
-
-def test_detect_base_ref_strict_raises_without_origin(tmp_path: pathlib.Path) -> None:
+def test_detect_base_ref_raises_without_origin(tmp_path: pathlib.Path) -> None:
     module = load_changeset_scope_module()
     repo = _repo(tmp_path)
     build_repo_without_origin(repo)
     with pytest.raises(module.BaseRefNotConfiguredError):
-        module.detect_base_ref(repo, strict=True)
+        module.detect_base_ref(repo)
 
 
 def test_remote_tracking_ref_composes_origin_prefix(tmp_path: pathlib.Path) -> None:

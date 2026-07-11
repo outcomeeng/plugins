@@ -18,6 +18,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_source_effort_maps_to_codex_reasoning_effort,
     assert_source_effort_reaches_converted_codex_reasoning_effort,
     assert_source_model_maps_to_codex_model,
+    assert_skills_are_preserved_as_codex_config_and_guidance,
     assert_supported_permission_mode_reaches_converted_codex_sandbox_mode,
     assert_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default,
     assert_tool_allowlist_without_web_tool_disables_web_search,
@@ -30,6 +31,10 @@ from outcomeeng_testing.harnesses.agent_conversion import (
 
 def test_source_model_maps_to_codex_model() -> None:
     assert_source_model_maps_to_codex_model()
+
+
+def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
+    assert_skills_are_preserved_as_codex_config_and_guidance()
 
 
 def test_opus_model_maps_to_distinct_top_tier_codex_model() -> None:

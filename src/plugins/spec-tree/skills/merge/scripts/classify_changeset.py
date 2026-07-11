@@ -40,6 +40,11 @@ _COORDINATION_NOTE = re.compile(
 )
 _CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
 _PREVIEW_LIMIT = 40
+BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
+
+
+class ChangesetClassificationError(RuntimeError):
+    """The merge classifier cannot derive a transport-selection changeset."""
 
 
 def _load_changeset_scope() -> ModuleType:
@@ -121,7 +126,10 @@ def classify(paths: list[str]) -> tuple[int, int]:
 def changed_paths(repo: pathlib.Path) -> list[str]:
     """Full changed-file set: committed branch scope plus working-tree changes."""
     changeset_scope = _load_changeset_scope()
-    base = changeset_scope.detect_base_ref(repo)
+    try:
+        base = changeset_scope.detect_base_ref(repo)
+    except changeset_scope.BaseRefNotConfiguredError as exc:
+        raise ChangesetClassificationError(str(exc)) from exc
     committed = changeset_scope.branch_scope(base, repo=repo)
     working = _working_tree_paths(repo)
     return [*committed, *working]
@@ -129,7 +137,11 @@ def changed_paths(repo: pathlib.Path) -> list[str]:
 
 def main() -> int:
     repo = pathlib.Path.cwd()
-    paths = changed_paths(repo)
+    try:
+        paths = changed_paths(repo)
+    except ChangesetClassificationError as exc:
+        print(f"{BASE_REF_ERROR_PREFIX}: {exc}", file=sys.stderr)
+        return 1
     total, noncoord = classify(paths)
     print(
         f"total changed files: {total}; non-coordination-note files: {noncoord} "

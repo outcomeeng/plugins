@@ -1,22 +1,14 @@
 ---
 name: audit-rust-tests
 description: >-
-  Rust test-evidence audit methodology composed by a dispatched auditor agent for the Rust tests in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  Rust test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Rust tests in scope.
+  Reached only through those auditor agents, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — `test-evidence-auditor` (via `audit-tests`) or a generic `/audit`-family agent composing this skill for the Rust tests in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
 
 </dispatch_gate>
 
@@ -34,13 +26,18 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-1. Invoking 4 skills: Already done above.
-2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills only.
 
-3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
 

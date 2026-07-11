@@ -1,22 +1,14 @@
 ---
 name: audit-typescript-tests
 description: >-
-  TypeScript test-evidence audit methodology composed by a dispatched auditor agent for the TypeScript tests in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  TypeScript test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the TypeScript tests in scope.
+  Reached only through those auditor agents, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — `test-evidence-auditor` (via `audit-tests`) or a generic `/audit`-family agent composing this skill for the TypeScript tests in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
 
 </dispatch_gate>
 
@@ -36,13 +28,18 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-1. Invoking 4 skills: Already done above.
-2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
+Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/typescript.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded skills only.
 
-3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The caller brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
 
@@ -268,7 +265,7 @@ All codebase imports are `import type` → tautology → REJECT.
 
 If the test imports from a barrel and the assertion-relevant symbol is a sibling never called → False coupling → REJECT.
 
-**Deep relative imports** (`../../../../testing/`) are a tracing cue. They signal the test may be reaching a harness that wraps a different module. Step 6 traces the chain regardless.
+**Deep relative imports** (`../../../../testing/`) are a tracing cue. They signal the test may be reaching a harness that wraps a different module. Step 7 (`harness_chain`) traces the chain regardless.
 
 </supplement>
 

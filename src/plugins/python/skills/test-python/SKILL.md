@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-Python test files that supply evidence for a spec-tree node's assertions — written fresh, or repaired against rejected evidence.
+Python test files that supply evidence for a spec-tree node's assertions.
 </objective>
 
 <mode_detection>

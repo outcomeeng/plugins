@@ -110,13 +110,13 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Diagnose the spx environment"             | `/diagnose`            | —                       |
 | "File a follow-up in a dependency queue"   | `/issue`               | —                       |
 
-Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
+Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tests|architecture}` skills that generic artifact-type auditors compose for the language in scope. There is no per-language auditor agent. Dispatch `implementation-auditor` for implementation audits; it invokes the matching language concern skills automatically:
 
-| User Says...            | Skill (composed)             | Composing agent             |
-| ----------------------- | ---------------------------- | --------------------------- |
-| "Audit this code"       | `/audit-python`              | `auditor` (`/audit` family) |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`               |
-| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`     |
+| User Says...            | Skill (composed)             | Composing agent          |
+| ----------------------- | ---------------------------- | ------------------------ |
+| "Audit this code"       | `/audit-python-code`         | `implementation-auditor` |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`            |
+| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`  |
 
 ---
 

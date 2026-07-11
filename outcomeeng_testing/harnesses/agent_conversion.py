@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import tomllib
 import os
+import tomllib
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
@@ -12,7 +12,6 @@ from typing import Final, cast
 
 from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
-    CODEX_AGENT_ENV_SEPARATOR,
     CODEX_AGENT_ENV_VAR,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
@@ -26,6 +25,7 @@ from outcomeeng.distribution.agents import (
     READ_ONLY_SANDBOX_MODE,
     READ_ONLY_TOOLS,
     SCRIPT_CAPABLE_TOOLS,
+    TomlArrayTable,
     TomlMultilineString,
     UNMAPPED_PERMISSION_MODE_EXAMPLE,
     WEB_CAPABLE_TOOLS,
@@ -52,136 +52,39 @@ PLUGIN_NAME: Final = "sample"
 CHANGES_REVIEWER_NAME: Final = "changes-reviewer"
 GUARDED_WRITER_NAME: Final = "guarded-writer"
 READ_ONLY_REVIEWER_NAME: Final = "read-only-reviewer"
-AGENT_DESCRIPTION: Final = "Review changes."
-AGENT_BODY: Final = "Review the diff and report findings."
 REVIEWER_BODY: Final = "Review."
 WRITER_BODY: Final = "Write."
 REVIEWER_DESCRIPTION: Final = "Review."
 WRITER_DESCRIPTION: Final = "Write."
 REVIEWER_SOURCE_PATH: Final = Path("reviewer.md")
 WRITER_SOURCE_PATH: Final = Path("writer.md")
-CHANGES_REVIEWER_ENV_MARKER: Final = (
-    f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{CHANGES_REVIEWER_NAME}"
-)
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 GENERATED_CODEX_AGENTS_DIRNAME: Final = "generated-codex-agents"
 CODEX_DIST_ROOT_PARTS: Final = ("dist", "codex")
 CODEX_PLUGIN_MANIFEST_PARTS: Final = ("dist", "codex", PLUGIN_NAME, ".codex-plugin")
 CODEX_PLUGIN_MANIFEST_FILENAME: Final = "plugin.json"
 CODEX_PLUGIN_MANIFEST_BODY: Final = '{"name": "sample", "version": "0.0.1"}\n'
+AGENT_CONVERSION_FIXTURES_DIR: Final = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
+)
+SPEC_TREE_AGENT_SOURCE_DIR: Final = (
+    Path(__file__).resolve().parents[2] / "src" / "plugins" / "spec-tree" / "agents"
+)
+SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
+CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
+CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
+CODEX_FLOW_MCP_AGENT_FIXTURE: Final = "codex-flow-mcp-agent.txt"
+DUPLICATE_REVIEWER_FIXTURE: Final = "duplicate-reviewer.md"
+DUPLICATE_REVIEWER_BANG_FIXTURE: Final = "duplicate-reviewer-bang.md"
+EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
+FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
+GUARDED_WRITER_AGENT_FIXTURE: Final = "guarded-writer-agent.md"
+READ_ONLY_REVIEWER_AGENT_FIXTURE: Final = "read-only-reviewer-agent.md"
 INVALID_MANIFEST_BODY: Final = "{"
 STALE_GENERATED_CONTENT: Final = "user-visible stale generated content\n"
-FIRST_REVIEWER_SOURCE: Final = """---
-name: reviewer
-description: First reviewer.
----
-
-Review one.
-"""
-SECOND_REVIEWER_SOURCE: Final = """---
-name: reviewer!
-description: Second reviewer.
----
-
-Review two.
-"""
-SOURCE_AGENT: Final = f"""---
-name: {CHANGES_REVIEWER_NAME}
-description: {AGENT_DESCRIPTION}
-model: sonnet
-skills:
-  - spec-tree:review-changes
-tools: Read, Bash
----
-
-{AGENT_BODY}
-"""
-CODEX_RENDERED_AGENT: Final = f"""---
-name: {CHANGES_REVIEWER_NAME}
-description: {AGENT_DESCRIPTION}
-model: {CODEX_STANDARD_MODEL}
-model_reasoning_effort: high
-sandbox_mode: read-only
-nickname_candidates: [Atlas, Delta]
-mcp_servers: {{"docs": {{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-docs"]}}}}
-skills:
-  - spec-tree:review-changes
-tools: Read
----
-
-{AGENT_BODY}
-"""
-CODEX_RENDERED_BLOCK_MCP_AGENT: Final = f"""---
-name: {CHANGES_REVIEWER_NAME}
-description: {AGENT_DESCRIPTION}
-model: {CODEX_STANDARD_MODEL}
-mcp_servers:
-  docs:
-    command: npx
-    startup_timeout_sec: 20
-    enabled: false
-    required: true
-    env_vars:
-      - LOCAL_TOKEN
-      - name: REMOTE_TOKEN
-        source: remote
-    args:
-      - -y
-      - @modelcontextprotocol/server-docs
----
-
-{AGENT_BODY}
-"""
-CODEX_RENDERED_FLOW_MCP_AGENT: Final = f"""---
-name: {CHANGES_REVIEWER_NAME}
-description: {AGENT_DESCRIPTION}
-model: {CODEX_STANDARD_MODEL}
-mcp_servers: {{docs: {{command: npx, startup_timeout_sec: 20, enabled: false, required: true, env_vars: [LOCAL_TOKEN, {{name: REMOTE_TOKEN, source: remote}}], args: [-y, @modelcontextprotocol/server-docs]}}}}
----
-
-{AGENT_BODY}
-"""
-FOLDED_DESCRIPTION_AGENT: Final = """---
-name: changes-reviewer
-description: >-
-  Review working changes against a base ref.
-  Accept optional PR, branch, or range inputs.
-model: sonnet
----
-
-Review the diff and report findings.
-"""
 FOLDED_DESCRIPTION_TEXT: Final = (
     "Review working changes against a base ref. "
     "Accept optional PR, branch, or range inputs."
-)
-EMPTY_TOOLS_AGENT: Final = """---
-name: changes-reviewer
-description: Review changes.
-tools: []
----
-
-Review the diff and report findings.
-"""
-GUARDED_WRITER_AGENT: Final = f"""---
-name: {GUARDED_WRITER_NAME}
-description: Guarded writer.
-model: opus
-permissionMode: bypassPermissions
-tools:
-  - Read
-disallowedTools:
-  - Bash
-skills:
-  - develop:audit-subagents
-unknownField: keep-me-visible
----
-
-Review write behavior.
-"""
-REVIEWER_RENAMED_TO_READ_ONLY: Final = GUARDED_WRITER_AGENT.replace(
-    f"name: {GUARDED_WRITER_NAME}",
-    f"name: {READ_ONLY_REVIEWER_NAME}",
 )
 MODEL_PREFIX_CASES: Final = tuple(
     (source_prefix, target_model) for source_prefix, target_model in MODEL_MAPPINGS
@@ -216,6 +119,7 @@ def source_agent(
     model: str | None = None,
     effort: str | None = None,
     permission_mode: str | None = None,
+    skills: tuple[str, ...] = (),
     tools: tuple[str, ...] = (),
     tools_declared: bool = False,
 ) -> SourceAgent:
@@ -228,16 +132,46 @@ def source_agent(
         model=model,
         effort=effort,
         permission_mode=permission_mode,
+        skills=skills,
         tools=tools,
         tools_declared=tools_declared,
     )
 
 
-def converted_source_agent_toml(root: Path) -> dict[str, object]:
+def assert_spec_tree_wrapper_agents_use_explicit_models() -> None:
+    """Prove every skill-owning Spec Tree wrapper selects a concrete model."""
+    wrappers = tuple(
+        agent
+        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob("*.md"))
+        if (agent := parse_agent_markdown(path)).skills
+    )
+
+    assert wrappers
+    for agent in wrappers:
+        assert agent.model is not None, f"{agent.source_path}: model is required"
+        assert agent.model != INHERIT_MODEL_VALUE, (
+            f"{agent.source_path}: model must not inherit"
+        )
+
+
+def agent_conversion_fixture(name: str) -> str:
+    """Read one inert whole-agent fixture."""
+    return (AGENT_CONVERSION_FIXTURES_DIR / name).read_text(encoding="utf-8")
+
+
+def converted_source_agent_toml(
+    root: Path,
+) -> tuple[SourceAgent, dict[str, object]]:
     """Render the baseline source-agent fixture through the converter."""
-    source = write_agent_source(root, PLUGIN_NAME, CHANGES_REVIEWER_NAME, SOURCE_AGENT)
-    rendered = render_agent_toml(convert_agent(parse_agent_markdown(source)))
-    return tomllib.loads(rendered)
+    source_path = write_agent_source(
+        root,
+        PLUGIN_NAME,
+        CHANGES_REVIEWER_NAME,
+        agent_conversion_fixture(SOURCE_AGENT_FIXTURE),
+    )
+    source = parse_agent_markdown(source_path)
+    rendered = render_agent_toml(convert_agent(source))
+    return source, tomllib.loads(rendered)
 
 
 def converted_folded_description_toml(root: Path) -> dict[str, object]:
@@ -246,53 +180,45 @@ def converted_folded_description_toml(root: Path) -> dict[str, object]:
         root,
         PLUGIN_NAME,
         CHANGES_REVIEWER_NAME,
-        FOLDED_DESCRIPTION_AGENT,
+        agent_conversion_fixture(FOLDED_DESCRIPTION_AGENT_FIXTURE),
     )
     rendered = render_agent_toml(convert_agent(parse_agent_markdown(source)))
     return tomllib.loads(rendered)
 
 
-def converted_skill_guidance_instructions(root: Path) -> str:
-    """Return developer instructions for the skill-guidance fixture."""
-    parsed = converted_source_agent_toml(root)
-    return toml_string(parsed, "developer_instructions")
-
-
-def converted_codex_rendered_agent_toml(root: Path) -> dict[str, object]:
-    """Convert the rendered Codex target fixture through the source-root path."""
-    source_root = write_agent_tree(
-        root,
-        PLUGIN_NAME,
-        {CHANGES_REVIEWER_NAME: CODEX_RENDERED_AGENT},
-    )
-    (converted,) = convert_agent_tree(source_root)
-    return tomllib.loads(render_agent_toml(converted))
-
-
-def converted_default_codex_source_root_toml(root: Path) -> dict[str, object]:
+def converted_default_codex_source_root_toml(
+    root: Path,
+) -> tuple[SourceAgent, dict[str, object]]:
     """Convert a rendered Codex fixture through the default source root."""
-    write_dist_codex_agent_tree(
+    source_root = write_dist_codex_agent_tree(
         root,
         PLUGIN_NAME,
-        {CHANGES_REVIEWER_NAME: CODEX_RENDERED_AGENT},
+        {CHANGES_REVIEWER_NAME: agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE)},
+    )
+    source = parse_agent_markdown(
+        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
     )
     with working_directory(root):
         (converted,) = convert_agents()
-    return tomllib.loads(render_agent_toml(converted))
+    return source, tomllib.loads(render_agent_toml(converted))
 
 
 def converted_codex_agent_with_yaml_mcp_toml(
     root: Path,
     source: str,
-) -> dict[str, object]:
+) -> tuple[SourceAgent, dict[str, object]]:
     """Convert a Codex target fixture with YAML MCP mapping syntax."""
     source_root = write_agent_tree(
         root,
         PLUGIN_NAME,
         {CHANGES_REVIEWER_NAME: source},
     )
+    source_agent_path = (
+        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
+    )
+    parsed_source = parse_agent_markdown(source_agent_path)
     (converted,) = convert_agent_tree(source_root)
-    return tomllib.loads(render_agent_toml(converted))
+    return parsed_source, tomllib.loads(render_agent_toml(converted))
 
 
 def converted_empty_tools_toml(root: Path) -> dict[str, object]:
@@ -301,7 +227,7 @@ def converted_empty_tools_toml(root: Path) -> dict[str, object]:
         root,
         PLUGIN_NAME,
         CHANGES_REVIEWER_NAME,
-        EMPTY_TOOLS_AGENT,
+        agent_conversion_fixture(EMPTY_TOOLS_AGENT_FIXTURE),
     )
     rendered = render_agent_toml(convert_agent(parse_agent_markdown(source)))
     return tomllib.loads(rendered)
@@ -342,7 +268,7 @@ def installed_guarded_writer_toml(root: Path) -> dict[str, object]:
     source_root = write_agent_tree(
         root,
         PLUGIN_NAME,
-        {GUARDED_WRITER_NAME: GUARDED_WRITER_AGENT},
+        {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
     target_root = root / CODEX_AGENTS_DIRNAME
     (installed_path,) = install_agents(source_root, target_root)
@@ -361,7 +287,9 @@ def write_codex_plugin_manifest(root: Path) -> Path:
 def source_root_with_guarded_writer(root: Path) -> Path:
     """Write the guarded-writer fixture and return the source root."""
     return write_agent_tree(
-        root, PLUGIN_NAME, {GUARDED_WRITER_NAME: GUARDED_WRITER_AGENT}
+        root,
+        PLUGIN_NAME,
+        {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
 
 
@@ -370,12 +298,16 @@ def installed_environment_markers(root: Path) -> set[str]:
     source_root = write_agent_tree(
         root,
         "alpha",
-        {GUARDED_WRITER_NAME: GUARDED_WRITER_AGENT},
+        {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
     write_agent_tree(
         root,
         "beta",
-        {READ_ONLY_REVIEWER_NAME: REVIEWER_RENAMED_TO_READ_ONLY},
+        {
+            READ_ONLY_REVIEWER_NAME: agent_conversion_fixture(
+                READ_ONLY_REVIEWER_AGENT_FIXTURE
+            )
+        },
     )
     installed_paths = install_agents(source_root, root / CODEX_AGENTS_DIRNAME)
     return {
@@ -400,15 +332,13 @@ def toml_string(values: Mapping[str, object], key: str) -> str:
     return value
 
 
-def toml_string_list(values: Mapping[str, object], key: str) -> list[str]:
-    """Return a TOML string-array value and assert the parsed shape."""
-    value = values[key]
-    assert isinstance(value, list)
-    strings: list[str] = []
-    for item in value:
-        assert isinstance(item, str)
-        strings.append(item)
-    return strings
+def toml_compatible(value: object) -> object:
+    """Normalize structured source values to their TOML-decoded container shape."""
+    if isinstance(value, Mapping):
+        return {key: toml_compatible(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [toml_compatible(item) for item in value]
+    return value
 
 
 def toml_table(values: Mapping[str, object], key: str) -> Mapping[str, object]:
@@ -416,6 +346,29 @@ def toml_table(values: Mapping[str, object], key: str) -> Mapping[str, object]:
     value = values[key]
     assert isinstance(value, dict)
     return cast("Mapping[str, object]", value)
+
+
+def parsed_toml_skill_config(
+    values: Mapping[str, object],
+) -> list[Mapping[str, object]]:
+    """Return ``skills.config`` entries from emitted TOML."""
+    skills = toml_table(values, "skills")
+    config = skills["config"]
+    assert isinstance(config, list)
+    parsed: list[Mapping[str, object]] = []
+    for item in config:
+        assert isinstance(item, dict)
+        parsed.append(cast("Mapping[str, object]", item))
+    return parsed
+
+
+def converted_skill_config(agent: CodexAgent) -> tuple[Mapping[str, object], ...]:
+    """Return the converter's structured ``skills.config`` rows."""
+    skills = agent.values["skills"]
+    assert isinstance(skills, Mapping)
+    config = skills["config"]
+    assert isinstance(config, TomlArrayTable)
+    return config.rows
 
 
 def converted_instruction_value(agent: CodexAgent) -> str:
@@ -468,8 +421,8 @@ def duplicate_filename_roots(root: Path) -> tuple[Path, Path]:
         root,
         PLUGIN_NAME,
         {
-            "reviewer": FIRST_REVIEWER_SOURCE,
-            "reviewer-bang": SECOND_REVIEWER_SOURCE,
+            "reviewer": agent_conversion_fixture(DUPLICATE_REVIEWER_FIXTURE),
+            "reviewer-bang": agent_conversion_fixture(DUPLICATE_REVIEWER_BANG_FIXTURE),
         },
     )
     return source_root, root / CODEX_AGENTS_DIRNAME
@@ -478,21 +431,23 @@ def duplicate_filename_roots(root: Path) -> tuple[Path, Path]:
 def assert_agent_frontmatter_and_body_convert_to_codex_toml() -> None:
     """Assert baseline frontmatter and body conversion."""
     with TemporaryDirectory() as tmp:
-        parsed = converted_source_agent_toml(Path(tmp))
+        source, parsed = converted_source_agent_toml(Path(tmp))
 
-    assert parsed["name"] == CHANGES_REVIEWER_NAME
-    assert parsed["description"] == AGENT_DESCRIPTION
-    assert parsed["model"] == CODEX_STANDARD_MODEL
+    assert parsed["name"] == source.name
+    assert parsed["description"] == source.description
+    assert parsed["model"] == map_model(source.model)
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert "sandbox_mode" not in parsed
     assert toml_table(toml_table(parsed, "shell_environment_policy"), "set") == {
-        CODEX_AGENT_ENV_VAR: CHANGES_REVIEWER_ENV_MARKER
+        CODEX_AGENT_ENV_VAR: agent_environment_marker(source)
     }
     instructions = toml_string(parsed, "developer_instructions")
-    assert AGENT_BODY in instructions
-    assert "spec-tree:review-changes" in instructions
-    assert "Read" in instructions
-    assert "Bash" in instructions
+    assert source.body in instructions
+    assert all(skill in instructions for skill in source.skills)
+    assert parsed_toml_skill_config(parsed) == [
+        {"name": skill, "enabled": True} for skill in source.skills
+    ]
+    assert all(tool in instructions for tool in source.tools)
 
 
 def assert_folded_yaml_description_converts_to_text() -> None:
@@ -503,63 +458,65 @@ def assert_folded_yaml_description_converts_to_text() -> None:
     assert parsed["description"] == FOLDED_DESCRIPTION_TEXT
 
 
-def assert_skills_are_preserved_as_developer_instruction_guidance() -> None:
-    """Assert skill entries become developer-instruction guidance."""
-    with TemporaryDirectory() as tmp:
-        instructions = converted_skill_guidance_instructions(Path(tmp))
+def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
+    """Assert skill entries become Codex config and developer guidance."""
+    source = parse_agent_markdown(AGENT_CONVERSION_FIXTURES_DIR / SOURCE_AGENT_FIXTURE)
+    converted = convert_agent(source)
 
+    instructions = converted_instruction_value(converted)
     assert "skills" in instructions
     assert "prompt guidance" in instructions
+    assert "not a spawn-time preload guarantee" in instructions
+    assert converted_skill_config(converted) == tuple(
+        {"name": skill, "enabled": True} for skill in source.skills
+    )
 
 
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
     """Assert rendered Codex target agents preserve Codex runtime overrides."""
     with TemporaryDirectory() as tmp:
-        parsed = converted_default_codex_source_root_toml(Path(tmp))
+        source, parsed = converted_default_codex_source_root_toml(Path(tmp))
 
-    assert parsed["name"] == CHANGES_REVIEWER_NAME
-    assert parsed["description"] == AGENT_DESCRIPTION
-    assert parsed["model"] == CODEX_STANDARD_MODEL
-    assert parsed["model_reasoning_effort"] == "high"
-    assert parsed["sandbox_mode"] == READ_ONLY_SANDBOX_MODE
-    assert parsed["nickname_candidates"] == ["Atlas", "Delta"]
-    docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
-    assert toml_string(docs_server, "command") == "npx"
-    assert toml_string_list(docs_server, "args") == [
-        "-y",
-        "@modelcontextprotocol/server-docs",
-    ]
+    assert parsed["name"] == source.name
+    assert parsed["description"] == source.description
+    assert parsed["model"] == source.model
+    assert parsed["model_reasoning_effort"] == source.model_reasoning_effort
+    assert parsed["sandbox_mode"] == source.sandbox_mode
+    assert parsed["nickname_candidates"] == list(source.nickname_candidates)
+    assert isinstance(source.mcp_servers, Mapping)
+    source_docs_server = source.mcp_servers["docs"]
+    assert isinstance(source_docs_server, Mapping)
+    parsed_docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
+    assert parsed_docs_server["command"] == source_docs_server["command"]
+    source_args = source_docs_server["args"]
+    assert isinstance(source_args, tuple)
+    assert parsed_docs_server["args"] == list(source_args)
     instructions = toml_string(parsed, "developer_instructions")
-    assert AGENT_BODY in instructions
-    assert "spec-tree:review-changes" in instructions
+    assert source.body in instructions
+    assert all(skill in instructions for skill in source.skills)
+    assert parsed_toml_skill_config(parsed) == [
+        {"name": skill, "enabled": True} for skill in source.skills
+    ]
 
 
 def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
     """Assert YAML mapping syntax for MCP servers preserves nested config."""
     with TemporaryDirectory() as tmp:
-        block_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        block_source, block_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
-            CODEX_RENDERED_BLOCK_MCP_AGENT,
+            agent_conversion_fixture(CODEX_BLOCK_MCP_AGENT_FIXTURE),
         )
-        flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        flow_source, flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
-            CODEX_RENDERED_FLOW_MCP_AGENT,
+            agent_conversion_fixture(CODEX_FLOW_MCP_AGENT_FIXTURE),
         )
 
-    for parsed in (block_parsed, flow_parsed):
-        docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
-        assert toml_string(docs_server, "command") == "npx"
-        assert docs_server["startup_timeout_sec"] == 20
-        assert docs_server["enabled"] is False
-        assert docs_server["required"] is True
-        assert docs_server["env_vars"] == [
-            "LOCAL_TOKEN",
-            {"name": "REMOTE_TOKEN", "source": "remote"},
-        ]
-        assert toml_string_list(docs_server, "args") == [
-            "-y",
-            "@modelcontextprotocol/server-docs",
-        ]
+    for source, parsed in (
+        (block_source, block_parsed),
+        (flow_source, flow_parsed),
+    ):
+        assert isinstance(source.mcp_servers, Mapping)
+        assert toml_table(parsed, "mcp_servers") == toml_compatible(source.mcp_servers)
 
 
 def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config() -> (

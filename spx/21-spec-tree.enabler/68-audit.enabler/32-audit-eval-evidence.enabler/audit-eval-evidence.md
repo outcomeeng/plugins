@@ -6,11 +6,6 @@ CAN reject eval suites that would still pass when the real producer is broken or
 
 ## Assertions
 
-### Conformance
-
-- The `audit-eval-evidence` skill frontmatter declares the `audit-eval-evidence` name and read-only tool grants, and its bundled reference model file exists under `references/evidence-model.md` ([test](tests/test_audit_eval_evidence.conformance.l1.py))
-- The `eval-evidence-auditor` agent frontmatter declares the `eval-evidence-auditor` name, `model: sonnet`, read-only tool grants, and a `skills:` preload of `spec-tree:audit-eval-evidence` ([test](tests/test_audit_eval_evidence.conformance.l1.py))
-
 ### Compliance
 
 - ALWAYS: the `audit-eval-evidence` skill is an agent-preloaded audit skill with a main-conversation dispatch gate ([audit])

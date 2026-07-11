@@ -109,6 +109,13 @@ class TomlMultilineString:
     value: str
 
 
+@dataclass(frozen=True)
+class TomlArrayTable:
+    """Explicit TOML array-of-tables value."""
+
+    rows: tuple[Mapping[str, object], ...]
+
+
 def iter_agent_files(source_root: Path) -> tuple[Path, ...]:
     """Return rendered agent markdown files under ``source_root``."""
     if not source_root.is_dir():
@@ -174,6 +181,12 @@ def convert_agent(agent: SourceAgent) -> CodexAgent:
         values["nickname_candidates"] = agent.nickname_candidates
     if agent.mcp_servers:
         values["mcp_servers"] = agent.mcp_servers
+    if agent.skills:
+        values["skills"] = {
+            "config": TomlArrayTable(
+                tuple({"name": skill, "enabled": True} for skill in agent.skills)
+            )
+        }
     values["shell_environment_policy"] = {
         "set": {
             CODEX_AGENT_ENV_VAR: agent_environment_marker(agent),
@@ -260,8 +273,10 @@ def render_developer_instructions(agent: SourceAgent) -> str:
     if agent.skills:
         guidance.append(
             "Source `skills` entries were preserved as prompt guidance. "
-            "Invoke these skills before relying on this agent's specialized "
-            f"behavior: {', '.join(f'`{skill}`' for skill in agent.skills)}."
+            "The generated Codex `skills.config` entries enable these skills; "
+            "they are not a spawn-time preload guarantee. Invoke or load these "
+            "skills before relying on this agent's specialized behavior: "
+            f"{', '.join(f'`{skill}`' for skill in agent.skills)}."
         )
 
     if agent.tools:
@@ -845,14 +860,47 @@ def _render_toml_document(values: Mapping[str, object]) -> str:
             continue
         lines.append(f"{_format_toml_key(key)} = {_format_toml_value(value)}")
     for key, table in table_values:
-        if lines:
-            lines.append("")
-        lines.append(f"[{_format_toml_key(key)}]")
-        for table_key, table_value in table.items():
-            lines.append(
-                f"{_format_toml_key(str(table_key))} = {_format_toml_value(table_value)}"
-            )
+        _append_toml_table(lines, key=key, table=table)
     return "\n".join(lines) + "\n"
+
+
+def _append_toml_table(
+    lines: list[str],
+    *,
+    key: str,
+    table: Mapping[str, object],
+) -> None:
+    if lines:
+        lines.append("")
+    lines.append(f"[{_format_toml_key(key)}]")
+    for table_key, table_value in table.items():
+        if isinstance(table_value, TomlArrayTable):
+            _append_toml_array_table(
+                lines,
+                key=key,
+                table_key=str(table_key),
+                value=table_value,
+            )
+            continue
+        lines.append(
+            f"{_format_toml_key(str(table_key))} = {_format_toml_value(table_value)}"
+        )
+
+
+def _append_toml_array_table(
+    lines: list[str],
+    *,
+    key: str,
+    table_key: str,
+    value: TomlArrayTable,
+) -> None:
+    for item in value.rows:
+        lines.append("")
+        lines.append(f"[[{_format_toml_key(key)}.{_format_toml_key(table_key)}]]")
+        lines.extend(
+            f"{_format_toml_key(str(nested_key))} = {_format_toml_value(nested_value)}"
+            for nested_key, nested_value in item.items()
+        )
 
 
 def _format_toml_key(key: str) -> str:
@@ -910,6 +958,7 @@ __all__ = [
     "AgentConversionError",
     "CodexAgent",
     "SourceAgent",
+    "TomlArrayTable",
     "agent_environment_marker",
     "convert_agent",
     "convert_agents",

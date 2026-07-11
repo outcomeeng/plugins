@@ -16,8 +16,6 @@ This audit runs in the adr-auditor agent's isolated context. When this skill loa
 
 A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three native categories: section structure, atemporal voice, and per-rule tag validity and evidence-type fit.
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` (Step 5b), which judges only those concerns. This skill owns section structure, atemporal voice, and tag validity from the canonical template.
-
 </objective>
 
 <essential_principles>
@@ -36,7 +34,11 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECTED`. No middle ground.
+`APPROVED` or `REJECTED`. An unavailable required inspection is a rejection with evidence naming the blocked inspection; it never becomes an approval through an unevaluated row.
+
+**LANGUAGE COMPOSITION BOUNDARY.**
+
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 5b. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
 </essential_principles>
 
@@ -55,9 +57,9 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **Step 1: Load context**
 
-Invoke `/contextualize` on the directory containing the ADR.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the ADR.
 
-Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the ADR directory.
+Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 
 </step>
 
@@ -73,7 +75,7 @@ Read the ADR under audit. Identify its sections: the opening decision statement,
 
 **Step 3: Section structure**
 
-Read the canonical ADR template at `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` and derive the valid section set from it in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template cannot be read, report the section-structure property as UNKNOWN — "template-missing" — and issue no structural finding.
+Use the canonical ADR template guidance loaded in Step 1 to derive the valid section set in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
 
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
@@ -121,7 +123,7 @@ A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subse
 
 This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
 
-Detect the implementation language from the node's scope — infer it from the file extension of the implementation files the ADR governs (`.py` → python, `.ts`/`.tsx` → typescript, `.rs` → rust). When a language is in scope and an `audit-{lang}-architecture` skill exists for it, invoke that skill via the Skill tool. The language skill returns its own verdict whose rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) are distinct from this skill's. **Append those rows to this verdict's `rows` array**, producing one merged verdict; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When no language is in scope (a language-neutral ADR) or no matching skill exists, skip composition.
+Read the caller-provided scope classification first. When it classifies the ADR as language-neutral, skip composition. For every declared implementation-language partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage.
 
 </step>
 
@@ -129,7 +131,7 @@ Detect the implementation language from the node's scope — infer it from the f
 
 **Step 6: Issue verdict**
 
-Scan all findings, including any folded in from the composed language audit. If any property fails: REJECTED. Otherwise: APPROVED.
+Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJECTED`; otherwise issue `APPROVED`.
 
 </step>
 
@@ -137,26 +139,26 @@ Scan all findings, including any folded in from the composed language audit. If 
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller.
 
-The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. When Step 5b composed a language audit, its rows are appended to the `rows` array below and count toward `overall` exactly like the native rows. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
+The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `debt`; this binary ADR gate emits `blocking` for every finding that rejects the ADR.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-adr",
   "target": "<adr-file-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "tag-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "section-structure", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "tag-validity", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`); the `message` field carries the one-line detail.
+Each finding carries `rule`, `severity: "blocking"`, `location`, `message`, `observed`, and `expected`. The `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, `template-missing`, `language-routing-unavailable`, or `language-skill-unavailable`).
 
 </verdict_format>
 
@@ -180,8 +182,8 @@ How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `
 
 The verdict is sound when:
 
-- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and evidence-type fit; when a language is in scope, the composed `/audit-{lang}-architecture` rows are judged too (coverage-complete).
-- The verdict states an overall APPROVED/REJECTED, every native and composed row carrying its determination, with no rule left unevaluated.
+- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and evidence-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
+- The verdict states one `APPROVED` or `REJECTED` overall determination, every native and composed row carrying `PASS`, `FAIL`, or explained `NOT_APPLICABLE`, with no rule left unevaluated.
 - Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
 - The same ADR yields the same verdict.
 

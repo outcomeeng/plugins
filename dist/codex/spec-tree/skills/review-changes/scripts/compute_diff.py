@@ -72,10 +72,10 @@ class SectionManifest:
 def _load_changeset_scope() -> ModuleType:
     """Load the ``changeset_scope`` module via ``importlib``.
 
-    The canonical git-derivation home lives at
-    ``plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py``
-    and surfaces ``detect_base_ref``, ``remote_tracking_ref``, and
-    ``BaseRefNotConfiguredError``. Loading here keeps the strict base-ref
+    The canonical git-derivation home is the sibling ``scope-changeset``
+    skill's bundled module, which surfaces ``detect_base_ref``,
+    ``remote_tracking_ref``, and
+    ``BaseRefNotConfiguredError``. Loading here keeps authoritative base-ref
     derivation and the remote-tracking composition a single source rather
     than a private duplicate inside this script.
     """
@@ -116,7 +116,7 @@ def resolve_base_ref() -> str:
     The error message names every source so the operator knows which to
     populate. No fallback to a literal default — silent fallbacks would
     let a diff compute against the wrong ref without surfacing it. The
-    strict git derivation delegates to ``changeset_scope.detect_base_ref(strict=True)``
+    git derivation delegates to ``changeset_scope.detect_base_ref()``
     so the symbolic-ref read lives in one source, then composes the
     remote-tracking ref via ``changeset_scope.remote_tracking_ref`` so a
     stale local branch ref cannot widen the diff. Env values are used verbatim
@@ -127,7 +127,7 @@ def resolve_base_ref() -> str:
         return env_value
     changeset_scope = _load_changeset_scope()
     try:
-        bare_base = changeset_scope.detect_base_ref(pathlib.Path.cwd(), strict=True)
+        bare_base = changeset_scope.detect_base_ref(pathlib.Path.cwd())
     except changeset_scope.BaseRefNotConfiguredError as exc:
         raise RuntimeError(
             "cannot resolve base_ref from any source; tried: "

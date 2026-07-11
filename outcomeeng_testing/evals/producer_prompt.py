@@ -14,7 +14,9 @@ from outcomeeng_evals.cli import main
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
+    MATERIALIZED_PROMPT_FILENAME,
     PRODUCER_FIELD,
+    PRODUCER_FILE_KIND,
     PRODUCER_SECTION_KIND,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
@@ -26,7 +28,7 @@ from outcomeeng_evals.producer_prompt import (
 )
 from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
 
-PROMPT_FILENAME = "prompt.md"
+PROMPT_FILENAME = MATERIALIZED_PROMPT_FILENAME
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
 PRODUCER_RELATIVE_PATH = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
 SECTION_NAME = "audit_tag_validity"
@@ -37,6 +39,7 @@ EXIT_SUCCESS = 0
 EXIT_GENERAL_ERROR = 1
 PRODUCER_PROMPT_PROPERTY_SEED = 20260706
 PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
+NONCANONICAL_PROMPT_PROPERTY_SEED = 20260711
 PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
@@ -58,6 +61,10 @@ RULE_TOKEN_SUFFIX = st.text(
     min_size=1,
     max_size=32,
 )
+NONCANONICAL_PROMPT_FILENAMES = st.from_regex(
+    r"[a-z][a-z0-9_-]{0,20}\.md",
+    fullmatch=True,
+).filter(lambda value: value != MATERIALIZED_PROMPT_FILENAME)
 
 
 @with_temp_workspace
@@ -71,6 +78,42 @@ def assert_materializes_prompt_from_named_producer_section(tmp_path: Path) -> No
     assert UNRELATED_RULE not in prompt_text
     assert PRODUCER_RELATIVE_PATH in prompt_text
     assert SECTION_NAME in prompt_text
+
+
+@with_temp_workspace
+def assert_materializes_prompt_from_complete_producer_file(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_eval_fixture(
+        tmp_path,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+    )
+    eval_dir = eval_toml.parent
+    producer_text = (repo_root / PRODUCER_RELATIVE_PATH).read_text(encoding="utf-8")
+    (eval_dir / PROMPT_TEMPLATE_FILENAME).write_text(
+        "Producer: {producer_path}\n\n{producer_file}\n",
+        encoding="utf-8",
+    )
+    write_prompt_source_definition(
+        eval_toml,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+        include_section=False,
+    )
+
+    materialize_prompt(eval_toml, repo_root=repo_root)
+
+    prompt_text = (eval_dir / PROMPT_FILENAME).read_text(encoding="utf-8")
+    assert producer_text in prompt_text
+    assert PRODUCER_RELATIVE_PATH in prompt_text
+
+
+@with_temp_workspace
+def assert_producer_file_rejects_section_selector(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_eval_fixture(
+        tmp_path,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+    )
+
+    with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
+        materialize_prompt(eval_toml, repo_root=repo_root)
 
 
 @with_temp_workspace
@@ -221,6 +264,44 @@ def assert_materialization_rejects_producer_path_outside_repo(
     with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
         materialize_prompt(eval_toml, repo_root=repo_root)
     assert repo_root.is_dir()
+
+
+def assert_materialization_rejects_noncanonical_prompt_path() -> None:
+    @seed(NONCANONICAL_PROMPT_PROPERTY_SEED)
+    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
+    @given(prompt_path=NONCANONICAL_PROMPT_FILENAMES)
+    def assertion(prompt_path: str) -> None:
+        materialization_rejects_noncanonical_prompt_path(prompt_path=prompt_path)
+
+    try:
+        assertion()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {NONCANONICAL_PROMPT_PROPERTY_SEED}")
+        error.add_note(
+            "Replay path: just test "
+            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
+            "test_producer_prompt.conformance.l1.py::"
+            "test_materialization_rejects_noncanonical_prompt_path"
+        )
+        raise
+
+
+def materialization_rejects_noncanonical_prompt_path(
+    *,
+    prompt_path: str,
+) -> None:
+    with TemporaryDirectory() as tmp:
+        repo_root, eval_toml = write_eval_fixture(
+            Path(tmp),
+            prompt_path=prompt_path,
+        )
+
+        with pytest.raises(
+            ProducerPromptError,
+            match=MATERIALIZED_PROMPT_FILENAME,
+        ):
+            materialize_prompt(eval_toml, repo_root=repo_root)
+        assert not (eval_toml.parent / prompt_path).exists()
 
 
 @with_temp_workspace
@@ -521,6 +602,35 @@ def write_eval_fixture(
     )
     (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
     return repo_root, eval_dir / EVAL_TOML_FILENAME
+
+
+def write_prompt_source_definition(
+    eval_toml: Path,
+    *,
+    prompt_source_kind: str,
+    include_section: bool,
+) -> None:
+    prompt_source_lines = [
+        f'{KIND_FIELD} = "{prompt_source_kind}"',
+        f'{PRODUCER_FIELD} = "{PRODUCER_RELATIVE_PATH}"',
+    ]
+    if include_section:
+        prompt_source_lines.append(f'{SECTION_FIELD} = "{SECTION_NAME}"')
+    prompt_source_lines.append(f'{TEMPLATE_FIELD} = "{PROMPT_TEMPLATE_FILENAME}"')
+    eval_toml.write_text(
+        "\n".join(
+            [
+                'title = "producer prompt"',
+                'cases = "cases.jsonl"',
+                f'prompt = "{PROMPT_FILENAME}"',
+                "",
+                f"[{PROMPT_SOURCE_TABLE}]",
+                *prompt_source_lines,
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def producer_section(name: str, body: str) -> str:

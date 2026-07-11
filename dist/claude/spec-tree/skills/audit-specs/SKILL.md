@@ -17,8 +17,6 @@ This audit runs in the spec-auditor agent's isolated context. When this skill lo
 
 A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`).
 
-Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
-
 </objective>
 
 <essential_principles>
@@ -40,6 +38,10 @@ A node states product truth. "The status rollup reports failing when any child f
 
 `APPROVED` or `REJECTED`. No middle ground.
 
+**ARTIFACT BOUNDARY.**
+
+Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality is audited by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
+
 </essential_principles>
 
 <constraints>
@@ -57,7 +59,7 @@ A node states product truth. "The status rollup reports failing when any child f
 
 **Step 1: Load context**
 
-Invoke `/contextualize` on the directory containing the node spec. Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for that directory.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the node spec. Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for that directory.
 
 </step>
 
@@ -125,20 +127,20 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller.
 
-The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
+The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 
 ```json
 {
   "schema_version": 1,
   "skill": "audit-specs",
   "target": "<node-spec-file-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "tag-fitness", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "section-structure", "status": "PASS | FAIL", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
+    { "name": "tag-fitness", "status": "PASS | FAIL", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
