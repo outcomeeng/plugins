@@ -39,6 +39,7 @@ EXIT_SUCCESS = 0
 EXIT_GENERAL_ERROR = 1
 PRODUCER_PROMPT_PROPERTY_SEED = 20260706
 PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
+NONCANONICAL_PROMPT_PROPERTY_SEED = 20260711
 PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
@@ -60,6 +61,10 @@ RULE_TOKEN_SUFFIX = st.text(
     min_size=1,
     max_size=32,
 )
+NONCANONICAL_PROMPT_FILENAMES = st.from_regex(
+    r"[a-z][a-z0-9_-]{0,20}\.md",
+    fullmatch=True,
+).filter(lambda value: value != MATERIALIZED_PROMPT_FILENAME)
 
 
 @with_temp_workspace
@@ -261,21 +266,42 @@ def assert_materialization_rejects_producer_path_outside_repo(
     assert repo_root.is_dir()
 
 
-@with_temp_workspace
-def assert_materialization_rejects_noncanonical_prompt_path(
-    tmp_path: Path,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_path="generated-prompt.md",
-    )
+def assert_materialization_rejects_noncanonical_prompt_path() -> None:
+    @seed(NONCANONICAL_PROMPT_PROPERTY_SEED)
+    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
+    @given(prompt_path=NONCANONICAL_PROMPT_FILENAMES)
+    def assertion(prompt_path: str) -> None:
+        materialization_rejects_noncanonical_prompt_path(prompt_path=prompt_path)
 
-    with pytest.raises(
-        ProducerPromptError,
-        match=MATERIALIZED_PROMPT_FILENAME,
-    ):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-    assert not (eval_toml.parent / "generated-prompt.md").exists()
+    try:
+        assertion()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {NONCANONICAL_PROMPT_PROPERTY_SEED}")
+        error.add_note(
+            "Replay path: just test "
+            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
+            "test_producer_prompt.conformance.l1.py::"
+            "test_materialization_rejects_noncanonical_prompt_path"
+        )
+        raise
+
+
+def materialization_rejects_noncanonical_prompt_path(
+    *,
+    prompt_path: str,
+) -> None:
+    with TemporaryDirectory() as tmp:
+        repo_root, eval_toml = write_eval_fixture(
+            Path(tmp),
+            prompt_path=prompt_path,
+        )
+
+        with pytest.raises(
+            ProducerPromptError,
+            match=MATERIALIZED_PROMPT_FILENAME,
+        ):
+            materialize_prompt(eval_toml, repo_root=repo_root)
+        assert not (eval_toml.parent / prompt_path).exists()
 
 
 @with_temp_workspace
