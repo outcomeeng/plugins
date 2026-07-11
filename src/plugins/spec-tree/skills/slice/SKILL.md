@@ -78,14 +78,11 @@ Hand the selected slice's node set to `/apply` as its work queue. `/apply` runs 
 
 <success_criteria>
 
-- [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
-- [ ] `SPEC_TREE_CONTEXT` loaded over the candidate area (Step 2)
 - [ ] The slice's demonstrable business and user value is stated and confirmed with the operator
 - [ ] The slice names its actor, invocation, inputs, behavior, externalized result, inspection surface, failure behavior, and verification
 - [ ] Every dependency is justified by the observable path
 - [ ] The slice is expressed as an ordered node set of full paths, not a file list
 - [ ] Later slices are specified only where they constrain the current slice's architecture, interfaces, or constraints
 - [ ] No durable tree structure was created, split, re-scoped, or reindexed — any such need was routed to `/decompose` or `/author`
-- [ ] The slice's node set is handed to `/apply` as its work queue
 
 </success_criteria>
