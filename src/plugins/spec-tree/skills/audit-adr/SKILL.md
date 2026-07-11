@@ -53,8 +53,6 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 <audit_workflow>
 
-<step name="audit_adr">
-
 <step name="load_context">
 
 **Step 1: Load context**
@@ -72,10 +70,6 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 Read the ADR under audit. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification.
 
 </step>
-
-<step name="audit_native">
-
-Audit every native ADR concern through the three steps below before composing language-specific rows.
 
 <step name="audit_structure">
 
@@ -123,8 +117,6 @@ A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subse
 
 </step>
 
-</step>
-
 <step name="compose_language">
 
 **Step 5b: Compose language-specific architecture concerns**
@@ -140,8 +132,6 @@ Read the caller-provided scope classification first. When it classifies the ADR 
 **Step 6: Issue verdict**
 
 Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJECTED`; otherwise issue `APPROVED`.
-
-</step>
 
 </step>
 
