@@ -558,7 +558,7 @@ def verification_is_read_only_and_uses_spec_status() -> bool:
         assert ["spx", "session", "show", SESSION_ID] in runner.calls
         assert any(call[:3] == ["spx", "spec", "status"] for call in runner.calls)
         for call in runner.calls:
-            _assert_read_only_call(call)
+            _assert_read_only_call(call, module)
         assert (
             RecordingRunner(repo=repo).run(["git", "status", "--porcelain"])[1].strip()
             == ""
@@ -734,9 +734,13 @@ def _enclosing_method(tree: ast.AST, target: ast.AST) -> str | None:
     return None
 
 
-def _assert_read_only_call(call: list[str]) -> None:
+def _assert_read_only_call(call: list[str], module: Any) -> None:
     if call and call[0] == "git" and len(call) > 1:
         assert call[1] not in MUTATING_GIT, f"mutating git command issued: {call}"
+    if call[:2] == ["spx", "session"]:
+        assert tuple(call[:3]) == module.SESSION_SHOW_COMMAND, (
+            f"mutating spx session command issued: {call}"
+        )
     for prefix in TEST_INVOCATIONS:
         assert tuple(call[: len(prefix)]) != prefix, f"test suite executed: {call}"
 

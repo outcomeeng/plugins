@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printf:*), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printf:*), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* branch --remotes --contains HEAD), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
 <context>
@@ -77,7 +77,7 @@ git -C <target-dir> branch --show-current
 git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>
 ```
 
-When a detached checkout or default-branch checkout has no work branch to preserve, omit `git_ref`; `spx session handoff` derives the commit-SHA or default-branch anchor from the target repository's git context. When unpushed target work must survive pickup, ask for the pushed target branch instead of omitting or guessing the anchor.
+When a detached checkout or default-branch checkout has no work branch to preserve, run `git -C <target-dir> branch --remotes --contains HEAD` and omit `git_ref` only when the output contains an `origin/*` ref. That proves the derived commit-SHA or default-branch anchor is recoverable from origin. When no origin ref contains `HEAD`, ask for a pushed target branch instead of omitting or guessing the anchor.
 
 </git_ref_resolution>
 

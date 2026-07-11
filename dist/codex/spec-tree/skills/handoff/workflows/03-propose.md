@@ -12,7 +12,22 @@ Canonical continuation: <new handoff | none (--no-session)>
 Sessions to archive after closure: <id-1>, <id-2>, ...
 ```
 
-The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus superseded same-conversation artifacts in `artifact_ids`. If both attributes are empty, write `Sessions to archive after closure: none`.
+The claimed-session list comes from `ids` in the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">` marker emitted by workflow 02. Treat `artifact_ids` as candidates, never as an archive list. Partition those candidates by independent continuation thread against the canonical continuation plan, comparing `goal`, `next_step`, `specs`, and `files`. Emit the authoritative partition marker:
+
+```text
+<RESOLVED_ARTIFACT_PARTITIONS candidate_ids="artifact-1,artifact-2,...">
+<partition thread_id="thread-1" disposition="fresh-session|zero-handoff|existing-owner">
+continuation: <canonical continuation identity or existing owner id>
+archive_ids: artifact-1
+</partition>
+<partition thread_id="thread-2" disposition="fresh-session|zero-handoff|existing-owner">
+continuation: <canonical continuation identity or existing owner id>
+archive_ids: artifact-2
+</partition>
+</RESOLVED_ARTIFACT_PARTITIONS>
+```
+
+Emit exactly one `partition` per independent continuation thread in the canonical plan, including threads with no prior artifact; those records use an empty `archive_ids:` value. Separately require every candidate id to appear in exactly one partition's `archive_ids`. A missing or duplicate thread record, or duplicate, absent, zero-thread, or multi-thread candidate assignment, is ambiguous, so STOP and ask the operator before proposing or archiving. The header lists every claimed id plus the archive ids across all partitions selected for this closure. If both sets are empty, write `Sessions to archive after closure: none`.
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 

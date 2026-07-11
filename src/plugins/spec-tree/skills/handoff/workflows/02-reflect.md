@@ -77,11 +77,11 @@ Read `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md` and follow e
 ```text
 <RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_ids="id-1,id-2,...">
 claimed_sessions: id-1, id-2, ...
-mid_session_artifacts: id-1, id-2, ...
+mid_session_artifact_candidates: id-1, id-2, ...
 </RESOLVED_CLAIMED_SESSIONS>
 ```
 
-Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists.
+Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists. The artifact ids are candidates only; workflow 03 partitions them after the canonical continuation plan exists.
 
 For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, {{! file('root_guide') !}}, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by creating a fresh continuation when one is needed, then archiving superseded same-conversation artifacts after the fresh session is verified.
 

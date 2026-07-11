@@ -30,6 +30,7 @@ from typing import Final, Protocol, TypeGuard, cast
 
 
 COMMAND_UNAVAILABLE_EXIT: Final = 127
+SESSION_SHOW_COMMAND: Final = ("spx", "session", "show")
 type JsonScalar = str | int | float | bool | None
 
 
@@ -92,7 +93,7 @@ def load_session(
     session_id: str, runner: CommandRunner
 ) -> tuple[Session | None, ClaimVerdict | None]:
     """Read session claims through the spx session API, never a worktree path."""
-    code, out, err = runner.run(["spx", "session", "show", "--json", session_id])
+    code, out, err = runner.run([*SESSION_SHOW_COMMAND, "--json", session_id])
     if code != 0:
         return None, _session_unverifiable(
             session_id, f"spx session show --json unavailable: {_detail(err)}"
@@ -109,7 +110,7 @@ def load_session(
             session_id, f"spx session show returned malformed metadata: {shape_error}"
         )
 
-    raw_code, raw_out, raw_err = runner.run(["spx", "session", "show", session_id])
+    raw_code, raw_out, raw_err = runner.run([*SESSION_SHOW_COMMAND, session_id])
     if raw_code != 0:
         return None, _session_unverifiable(
             session_id, f"spx session show unavailable: {_detail(raw_err)}"

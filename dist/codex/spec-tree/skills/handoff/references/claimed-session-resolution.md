@@ -26,25 +26,25 @@ Context compaction or a malformed marker can drop `<CLAIMED_SESSIONS>`. Recover 
 
 The claimed-session set grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another context may own work that looks related but is not yours to close.
 
-**Step 4 — Locate mid-session artifacts.**
+**Step 4 — Locate mid-session artifact candidates.**
 
 Did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
 
 - **Zero artifacts in TODO** → no artifact reconciliation needed; workflow 04 creates a fresh continuation when one is required.
-- **One or more artifacts in TODO** → they become supersession candidates. Workflow 04 partitions them by independent continuation thread using each artifact's `goal`, `next_step`, `specs`, and `files` against the canonical continuation plan from workflow 03. A fresh continuation archives only the artifacts in its own partition; Path A archives all same-conversation artifacts only when no continuation reader remains or an existing owner already carries the continuation. If an artifact maps to zero threads or multiple threads, STOP and ask the operator to confirm the artifact-to-thread mapping before creating or archiving any session. Archive only artifacts this conversation created; never touch artifacts created by other conversations.
+- **One or more artifacts in TODO** → they become supersession candidates. The flat candidate set is never an archive list. Workflow 03 partitions candidates by independent continuation thread after composing the canonical continuation plan, using each artifact's `goal`, `next_step`, `specs`, and `files`. A fresh continuation archives only the artifacts in its selected partition; Path A archives a partition only when no continuation reader remains for that thread or an existing owner already carries it. If an artifact maps to zero threads or multiple threads, STOP and ask the operator to confirm the mapping before creating or archiving any session. Archive only artifacts this conversation created; never touch artifacts created by other conversations.
 
 **Step 5 — Emit the RESOLVED_CLAIMED_SESSIONS marker.**
 
-After steps 1-4 produce the resolved claimed-session set and artifact ids, emit a marker into the conversation so workflow 04 reads from context rather than re-running the algorithm:
+After steps 1-4 produce the resolved claimed-session set and artifact candidates, emit a marker into the conversation. The `artifact_ids` attribute carries candidates for workflow 03 to partition; no consumer may archive that flat set directly:
 
 ```text
 <RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_ids="id-1,id-2,...">
 claimed_sessions: id-1, id-2, ...
-mid_session_artifacts: id-1, id-2, ...
+mid_session_artifact_candidates: id-1, id-2, ...
 </RESOLVED_CLAIMED_SESSIONS>
 ```
 
-Use `ids=""` for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists.
+Use `ids=""` for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists. Workflow 03 emits one authoritative partition per independent thread in the continuation plan, including threads with an empty artifact set, and assigns every candidate id to exactly one partition.
 
 </algorithm>
 
