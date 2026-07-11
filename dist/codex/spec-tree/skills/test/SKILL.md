@@ -30,17 +30,21 @@ Then follow the spec-tree workflow below.
 
 <evidence_design_gate>
 
-Record one row per assertion clause and score every field before scaffolding:
+Record one assertion-to-evidence row per assertion, then one clause row per independently falsifiable clause. Score every field before scaffolding or repair:
 
-| Check                        | PASS                                                                                                                                                                                 | FAIL                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| Clause inventory             | Every independently falsifiable clause has one row                                                                                                                                   | Any claim in the assertion has no row                                       |
-| Exercised path               | The row names the source path the evidence executes                                                                                                                                  | The path is absent, adjacent, or replaced                                   |
-| Observable result            | The row names an assertion-relevant observable                                                                                                                                       | The observation is structural, trivial, or unrelated                        |
-| Independent oracle           | The expected result comes from outside the behavior under test                                                                                                                       | The behavior under test produces its own expected result                    |
-| Passing-while-false mutation | A concrete source mutation makes the clause false and must fail the evidence                                                                                                         | No concrete mutation is named, or the evidence survives it                  |
-| Distrust sweep               | When any existing evidence proves only a subpart, every linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path is inventoried | A subpart trigger exists and any evidence-chain artifact is uninspected     |
-| Source-contract readiness    | Source-owned vocabulary and observable behavior exist in production contracts                                                                                                        | Test predicates would need copied values, hidden data, or replaced behavior |
+| Check                        | PASS                                                                                                                                                                                 | FAIL                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Clause inventory             | Every independently falsifiable clause has one row                                                                                                                                   | Any claim in the assertion has no row                                                                         |
+| Assertion routing            | The row names the assertion type, verification type, linked evidence file, and language                                                                                              | Type, lane, link, or language is absent or inferred from existing test shape                                  |
+| Required evidence form       | The row names the language-standard form and every type-specific obligation                                                                                                          | The planned form is generic or omits a required mapping, property, conformance, scenario, or compliance shape |
+| Exercised path               | The row names the source path the evidence executes                                                                                                                                  | The path is absent, adjacent, or replaced                                                                     |
+| Coupling trace               | The row traces the linked evidence through infrastructure to assertion-relevant source behavior                                                                                      | Coupling is structural, type-only, partial, severed, or untraced                                              |
+| Observable result            | The row names an assertion-relevant observable                                                                                                                                       | The observation is structural, trivial, or unrelated                                                          |
+| Independent oracle           | The expected result comes from outside the behavior under test                                                                                                                       | The behavior under test produces its own expected result                                                      |
+| Passing-while-false mutation | A concrete source mutation makes the clause false and must fail the evidence                                                                                                         | No concrete mutation is named, or the evidence survives it                                                    |
+| Relevant-path coverage       | Reading the source and evidence shows execution reaches every assertion-relevant branch                                                                                              | An assertion-relevant branch has no exercised route                                                           |
+| Distrust sweep               | When any existing evidence proves only a subpart, every linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path is inventoried | A subpart trigger exists and any evidence-chain artifact is uninspected                                       |
+| Source-contract readiness    | Source-owned vocabulary and observable behavior exist in production contracts                                                                                                        | Test predicates would need copied values, hidden data, or replaced behavior                                   |
 
 The gate is `PASS` only when every row passes every check. Any failed check blocks scaffolding and repair. Fix the source contract or evidence design, then score the complete matrix again.
 
@@ -80,8 +84,11 @@ Record each assertion with:
 
 - Assertion text
 - Assertion type
+- Verification type and language-standard evidence form
 - Test link (if present) — path and whether it resolves
 - Test link status: exists / missing / stale
+- Coupling path from evidence through infrastructure to assertion-relevant source
+- Type-specific obligations and relevant source branches
 
 </step>
 
@@ -120,7 +127,7 @@ Report the evidence gap summary before proceeding.
 
 For every assertion, including assertions with existing linked evidence, apply the methodology from `${SKILL_DIR}/references/methodology.md` in this order:
 
-0. **Adversarial decomposition** — enumerate independently falsifiable clauses and record the exercised path, observable result, independent oracle, and passing-while-false mutation for each clause.
+0. **Assertion-to-evidence matrix** — record the assertion type, verification type, linked file, language-standard evidence form, type-specific obligations, coupling path, relevant source branches, and one independently falsifiable row per clause with its exercised path, observable result, independent oracle, and passing-while-false mutation.
 1. **Full-chain distrust trigger** — if existing evidence proves only a subpart, inspect every clause, linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path before designing a repair.
 2. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
 3. **Stage 1** — What evidence does this assertion demand?
@@ -129,7 +136,7 @@ For every assertion, including assertions with existing linked evidence, apply t
 
 Document the routing decision for each assertion.
 
-Do not proceed to scaffolding or repair until every clause has a concrete failing mutation and the complete evidence chain has been inspected after any distrust trigger.
+Do not proceed to scaffolding or repair until every assertion has a complete matrix, every clause has a concrete failing mutation, every language-standard evidence form is satisfied by design, and the complete evidence chain has been inspected after any distrust trigger.
 
 Apply `<evidence_design_gate>`. Stop this step with `FAIL` when any check fails. Step 5 starts only from a recorded `PASS` for every assertion.
 
@@ -206,7 +213,7 @@ How to avoid: Derive the destination from the linked assertion's evidence type, 
 
 Testing output is sound when:
 
-- A recorded clause-evidence matrix contains one row for every independently falsifiable assertion clause.
+- A recorded assertion-to-evidence matrix names every assertion's type, verification lane, linked file, required language form, type-specific obligations, coupling path, and relevant source branches, plus one row for every independently falsifiable clause.
 - Every matrix row names an exercised source path, assertion-relevant observable, independent oracle, and concrete passing-while-false mutation.
 - Every assertion records `<evidence_design_gate>` as `PASS` before scaffolding and again before spec-link mutation.
 - Every subpart trigger has a complete inventory of linked tests, harnesses, generators, fixtures, source contracts, oracles, and assertion-relevant implementation paths.

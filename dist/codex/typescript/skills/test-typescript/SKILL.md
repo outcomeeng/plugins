@@ -79,6 +79,18 @@ For each assertion, apply the `/test` methodology:
 | Database, Docker                | `l2`          |
 | Real credentials, external APIs | `l3`          |
 
+Complete the generic `/test` assertion-to-evidence matrix with the TypeScript form required by `/typescript-test-standards`:
+
+| Assertion type | Required TypeScript evidence form                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------ |
+| Scenario       | A concrete behavior path with assertion-relevant expectations for every clause                               |
+| Mapping        | `it.each`, `describe.each`, or `test.each` over at least two source-owned or generated cases                 |
+| Conformance    | The applicable schema or external validator                                                                  |
+| Property       | A meaningful arbitrary and invariant executed through the seed-reporting `assertProperty(...)` harness       |
+| Compliance     | For `[test]`, a deliberate violating fixture that proves enforcement; route semantic-only rules to `[audit]` |
+
+For every row, record the linked evidence file, coupling path through imported infrastructure to source behavior, concrete falsifying mutation, and assertion-relevant source branches reached by reading. Stop before Step 3 when any assertion lacks a complete row or any planned evidence lives in a file whose evidence lane differs from the assertion link.
+
 **Step 3: Apply the source-contract-first gate**
 
 Read the assertion, the existing or planned test, and the TypeScript code under test. State the production contract the evidence exercises. If the source does not expose the needed type, enum, constructor, schema, parser entry point, registry, route, command, dependency boundary, or observable behavior, fix the source contract before writing test predicates.
@@ -190,11 +202,17 @@ Everything else is source-owned data (import it), source-owned construction (exp
 
 **Step 1: Read Rejection Feedback**
 
-Find the most recent `/audit-typescript-tests` output. Look for:
+Reread `/typescript-test-standards`, then find the most recent `/audit-typescript-tests` output. Treat the rejection as proof that the prior authoring pass applied the shared standards incompletely.
 
-- Specific file:line locations
-- Issue categories (evidentiary gap, missing property tests, etc.)
-- Required fixes
+Rebuild the assertion-to-evidence matrix across every affected assertion before editing. Include:
+
+- assertion type and linked evidence file
+- required TypeScript evidence form and type-specific obligations
+- coupling path through every harness, generator, fixture path, and source contract
+- one falsifying mutation for every clause
+- every assertion-relevant source branch reached by the evidence
+
+Sweep every same-class instance across the complete matrix. Do not treat findings as independent line-local patch requests.
 
 **Step 2: Apply Fixes**
 
@@ -248,6 +266,9 @@ Before declaring tests complete:
 
 - [ ] Each spec assertion has at least one test
 - [ ] Assertion type and level match `/test` Stage 2
+- [ ] The complete assertion-to-evidence matrix records each assertion's linked lane, required TypeScript form, coupling path, clause mutations, and relevant-path coverage
+- [ ] Mapping evidence uses `it.each`, `describe.each`, or `test.each` over at least two cases
+- [ ] `[test]` compliance evidence exercises a deliberate violating fixture
 - [ ] File names use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - [ ] Test files contain no `const`, `let`, `var`, fixture-parameter, or property-parameter declarations
 - [ ] No `vi.mock()` or `vi.fn()` replacing the dependency under test
@@ -330,6 +351,7 @@ Tests pass checklist. Ready for re-review.
 Test evidence is ready for review when:
 
 - [ ] Every created or changed test file lives in the governed node's `tests/` directory and is linked from the corresponding spec assertion
+- [ ] Every affected assertion has a complete assertion-to-evidence matrix whose language form and linked file match `/typescript-test-standards`
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
 - [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
