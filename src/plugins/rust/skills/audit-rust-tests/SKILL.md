@@ -32,8 +32,6 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 {!% require_skill 'spec-tree:test' %!}
 
-{!% require_skill 'spec-tree:audit-tests' %!}
-
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.

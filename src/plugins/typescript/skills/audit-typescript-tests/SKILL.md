@@ -34,8 +34,6 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 {!% require_skill 'spec-tree:test' %!}
 
-{!% require_skill 'spec-tree:audit-tests' %!}
-
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/typescript.md` if it exists; otherwise apply the loaded skills only.
@@ -267,7 +265,7 @@ All codebase imports are `import type` → tautology → REJECT.
 
 If the test imports from a barrel and the assertion-relevant symbol is a sibling never called → False coupling → REJECT.
 
-**Deep relative imports** (`../../../../testing/`) are a tracing cue. They signal the test may be reaching a harness that wraps a different module. Step 6 traces the chain regardless.
+**Deep relative imports** (`../../../../testing/`) are a tracing cue. They signal the test may be reaching a harness that wraps a different module. Step 7 (`harness_chain`) traces the chain regardless.
 
 </supplement>
 

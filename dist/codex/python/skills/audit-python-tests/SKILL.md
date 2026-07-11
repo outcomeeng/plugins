@@ -32,8 +32,6 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
 
 </prerequisites>
@@ -211,7 +209,7 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows.
+This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
 
 For each finding, include:
 
@@ -220,7 +218,7 @@ For each finding, include:
 - The imported chain when the defect is outside the test file
 - Required fix
 
-Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECT` when any property fails.
+Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECTED` when any property fails.
 </verdict_format>
 
 <failure_modes>
