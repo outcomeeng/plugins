@@ -69,7 +69,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 
 **Step 1: Load context**
 
-Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model.md`
+The workflow below is self-contained. Read `${SKILL_DIR}/references/evidence-model.md` only when an evidence-chain edge case needs additional examples.
 
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
 
@@ -151,72 +151,6 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 
 For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself. The finding `file` names the artifact that copied the value, while `remediation_target` names the production contract that must own it — NEVER substitute the artifact role (`harness`, `generator`, or `fixture`) for `source-contract`.
 
-<verdict_format>
-
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller. Skills never hand-format markdown verdicts.
-
-The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
-
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-tests",
-  "target": "<spec-node-path>",
-  "overall": "APPROVED | REJECTED",
-  "rows": [
-    {
-      "name": "gate-1-assertion",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "id": "f-002",
-          "file": "<test-file>",
-          "line": null,
-          "assertion": "<full-assertion-text-or-stable-id>",
-          "property": "<testability | evidence-chain-completeness | declarations | source-ownership | coupling | falsifiability | alignment | coverage | language-composition>",
-          "rule": "<assertion-id-or-property-name>",
-          "severity": "REJECT",
-          "message": "<one-line evidentiary gap>",
-          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file>"
-        }
-      ]
-    },
-    {
-      "name": "gate-2-architectural",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "id": "f-003",
-          "file": "<test-file>",
-          "line": null,
-          "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
-          "property": "architectural-duplication",
-          "rule": "<duplication-pattern>",
-          "severity": "REJECT",
-          "message": "<extraction target>: <nearest common test-infrastructure location>",
-          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file>"
-        }
-      ]
-    }
-  ],
-  "metadata": {
-    "branch": "<branch>",
-    "evidence_chain": [
-      {
-        "path": "<repository-relative-path>",
-        "role": "test | harness | generator | fixture | discovery | production",
-        "imported_from": "<repository-relative-path-or-null>",
-        "inspection_status": "inspected | unresolved"
-      }
-    ]
-  }
-}
-```
-
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `property: "source-ownership"` and `remediation_target: "source-contract"`; other findings select the failed property and owner that must change from the enumerated values. No skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
-
-</verdict_format>
-
 </step>
 
 <step name="audit_coupling">
@@ -233,7 +167,7 @@ Read the test file's import statements. Classify each import:
 
 **Zero codebase imports → REJECT — "no coupling" (tautology).**
 
-If codebase imports exist, classify using the coupling taxonomy in `${SKILL_DIR}/references/evidence-model.md`:
+If codebase imports exist, classify using this coupling taxonomy:
 
 | Category           | Definition                                                                                        | Verdict                                         |
 | ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -277,7 +211,17 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 **Import + mock = REJECT — "coupling severed."**
 
-**Exception**: Test doubles used under the 7 legitimate exception cases from the `/test` methodology are not "coupling severed." The auditor must identify which exception applies and verify the double type matches. See the exception cross-reference in `${SKILL_DIR}/references/evidence-model.md`.
+**Exception**: Test doubles used under these seven legitimate exception cases from the `/test` methodology are not "coupling severed." Identify the matching exception and verify the double type:
+
+| Exception             | Double type           |
+| --------------------- | --------------------- |
+| Failure simulation    | Stub returning errors |
+| Interaction protocols | Spy recording calls   |
+| Time and concurrency  | Fake clock            |
+| Safety                | Stub that records     |
+| Combinatorial cost    | Configurable fake     |
+| Observability         | Spy recording details |
+| Contract probes       | Contract stub         |
 
 </step>
 
@@ -334,7 +278,11 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When the caller omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition instead of guessing. When a language is in scope and an `audit-<lang>-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill and return REJECTED; never approve incomplete coverage.
+Read the detected language or language partitions from the caller's audit request. When the caller omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition with property `unsupported-language` and remediation target `language-partition` instead of guessing.
+
+When the caller supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
+
+When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, invoke each skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
 </step>
 
@@ -347,6 +295,72 @@ Scan all findings across all assertions, including any folded in from the compos
 </step>
 
 </audit_workflow>
+
+<verdict_format>
+
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller. Skills never hand-format markdown verdicts.
+
+The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
+
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-tests",
+  "target": "<spec-node-path>",
+  "overall": "APPROVED | REJECTED",
+  "rows": [
+    {
+      "name": "gate-1-assertion",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "f-002",
+          "file": "<test-file>",
+          "line": null,
+          "assertion": "<full-assertion-text-or-stable-id>",
+          "property": "<testability | evidence-chain-completeness | declarations | source-ownership | coupling | falsifiability | alignment | coverage | language-composition | unsupported-language>",
+          "rule": "<assertion-id-or-property-name>",
+          "severity": "REJECT",
+          "message": "<one-line evidentiary gap>",
+          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | skill-installation | language-partition>"
+        }
+      ]
+    },
+    {
+      "name": "gate-2-architectural",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "f-003",
+          "file": "<test-file>",
+          "line": null,
+          "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
+          "property": "architectural-duplication",
+          "rule": "<duplication-pattern>",
+          "severity": "REJECT",
+          "message": "<extraction target>: <nearest common test-infrastructure location>",
+          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file | skill-installation | language-partition>"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "branch": "<branch>",
+    "evidence_chain": [
+      {
+        "path": "<repository-relative-path>",
+        "role": "test | harness | generator | fixture | discovery | production",
+        "imported_from": "<repository-relative-path-or-null>",
+        "inspection_status": "inspected | unresolved"
+      }
+    ]
+  }
+}
+```
+
+A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `property: "source-ownership"` and `remediation_target: "source-contract"`; other findings select the failed property and owner that must change from the enumerated values. No skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+
+</verdict_format>
 
 <failure_modes>
 
@@ -400,7 +414,7 @@ The verdict is sound when:
 
 - Every in-scope assertion and required language concern has a gate determination, with no evidence partition left unevaluated.
 - Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; approval contains only inspected entries.
-- Every case and protocol value resolves to a valid production, platform, generator, fixture, harness, or eval-case owner.
+- Every protocol and domain value resolves to its production or platform owner; generated variable data resolves to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.
 - The overall APPROVED/REJECTED value agrees with every applicable gate row.
 - Every REJECT finding carries the complete canonical schema and names a falsifiable evidentiary gap against the affected assertion and artifact.
 - Every coverage determination identifies the assertion-relevant source path reached or omitted, and the same evidence package yields the same verdict.
