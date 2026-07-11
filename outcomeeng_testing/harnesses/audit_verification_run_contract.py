@@ -269,11 +269,11 @@ def _initialize_changeset_repo(repo: Path) -> None:
     _run(repo, ("git", "init", "-q"))
     _run(repo, ("git", "config", "user.email", "test@example.com"))
     _run(repo, ("git", "config", "user.name", "Test User"))
-    (repo / "file.txt").write_text("before\n", encoding="utf-8")
-    _run(repo, ("git", "add", "file.txt"))
+    (repo / AUDIT_SUBJECT_PATH).write_text("before\n", encoding="utf-8")
+    _run(repo, ("git", "add", AUDIT_SUBJECT_PATH))
     _run(repo, ("git", "commit", "-q", "-m", "initial"))
-    (repo / "file.txt").write_text("after\n", encoding="utf-8")
-    _run(repo, ("git", "add", "file.txt"))
+    (repo / AUDIT_SUBJECT_PATH).write_text("after\n", encoding="utf-8")
+    _run(repo, ("git", "add", AUDIT_SUBJECT_PATH))
     _run(repo, ("git", "commit", "-q", "-m", "change"))
 
 

@@ -56,8 +56,13 @@ def materialize_prompt(eval_toml_path: Path, *, repo_root: Path) -> Path:
     """Write ``prompt.md`` from the producer declared by ``eval.toml``."""
     definition = load_producer_prompt_definition(eval_toml_path, repo_root=repo_root)
     prompt_text = render_prompt(definition)
-    definition.prompt_path.write_text(prompt_text, encoding="utf-8")
-    return definition.prompt_path
+    resolved_root = repo_root.resolve()
+    resolved_prompt = definition.prompt_path.resolve()
+    if not resolved_prompt.is_relative_to(resolved_root):
+        msg = f"{resolved_prompt}: generated prompt resolves outside {resolved_root}"
+        raise ProducerPromptError(msg)
+    resolved_prompt.write_text(prompt_text, encoding="utf-8")
+    return resolved_prompt
 
 
 def verify_materialized_prompt(eval_toml_path: Path, *, repo_root: Path) -> None:
