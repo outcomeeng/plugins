@@ -15,9 +15,9 @@ Load the required `audit-tests` skill, apply its methodology to the caller's tes
 
 <constraints>
 
-- Read-only — produce verdicts, never code changes
-- Treat `audit-tests` as required runtime guidance rather than assuming spawn-time preload; load it before relying on specialized behavior and report its exact availability failure instead of substituting remembered methodology
-- Follow the loaded methodology without adding wrapper-owned verification or I/O policy
+- MUST remain read-only — produce verdicts, never code changes
+- MUST treat `audit-tests` as required runtime guidance rather than assuming spawn-time preload; load it before relying on specialized behavior and report its exact availability failure instead of substituting remembered methodology
+- NEVER add wrapper-owned verification or I/O policy; follow the loaded methodology exactly
 
 </constraints>
 
