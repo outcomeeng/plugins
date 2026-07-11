@@ -617,6 +617,13 @@ def sync_base(
         if isinstance(resolved_base, SyncBaseResult):
             return resolved_base
         base_ref = resolved_base
+    return _sync_resolved_base(repo, base_ref=base_ref, fetch=fetch)
+
+
+def _sync_resolved_base(
+    repo: pathlib.Path, *, base_ref: str, fetch: bool
+) -> SyncBaseResult:
+    """Synchronize onto a caller-resolved bare base branch."""
     remote_ref = remote_tracking_ref(base_ref)
 
     try:

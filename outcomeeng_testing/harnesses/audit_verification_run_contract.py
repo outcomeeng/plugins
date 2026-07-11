@@ -18,6 +18,7 @@ from outcomeeng.validation.spx_version import (
 
 
 MINIMUM_VERIFICATION_RUN_SPX_VERSION: Final = "0.6.13"
+AUDIT_SUBJECT_PATH: Final = "file.txt"
 WORKFLOW_PATH: Final = Path(".github/workflows/check.yml")
 PLUGIN_SURFACES: Final = (
     Path("src/plugins"),
@@ -50,11 +51,11 @@ IMPLEMENTATION_AUDIT_SCOPE_UNIT: Final = {
     "unitId": "unit-python-code",
     "auditClass": "implementation",
     "auditKind": "code",
-    "subject": "file.txt",
+    "subject": AUDIT_SUBJECT_PATH,
     "coverageRequirement": "required",
     "coverageStatus": "audited",
     "priorContext": {
-        "changedFilePartition": "file.txt",
+        "changedFilePartition": AUDIT_SUBJECT_PATH,
         "concernPartition": "code",
         "languagePartition": "python",
     },
@@ -87,7 +88,7 @@ IMPLEMENTATION_AUDIT_FINDING: Final = {
     },
     "rule": "example-rule",
     "severity": "blocking",
-    "location": "file.txt:1",
+    "location": f"{AUDIT_SUBJECT_PATH}:1",
     "message": "example finding",
     "evidence": {"observed": "problem", "expected": "clean"},
 }

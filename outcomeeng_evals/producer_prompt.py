@@ -341,6 +341,9 @@ def _resolve_repo_relative_path(
     if candidate.is_absolute():
         msg = f"{eval_toml_path}: {field_name!r} must be repository-relative"
         raise ProducerPromptError(msg)
+    if ".." in candidate.parts:
+        msg = f"{eval_toml_path}: {field_name!r} must not contain parent traversal"
+        raise ProducerPromptError(msg)
     return _resolve_beneath(
         (repo_root / candidate).resolve(),
         root=repo_root.resolve(),

@@ -176,7 +176,7 @@ def detect_base_ref(
     No mode guesses a consumer repository's default branch.
     """
     result = runner(
-        ["git", "symbolic-ref", ORIGIN_HEAD_REF],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
+        ["git", "symbolic-ref", ORIGIN_HEAD_REF],  # noqa: S607  # Git is intentionally resolved through PATH.
         cwd=repo,
         capture_output=True,
         text=True,
