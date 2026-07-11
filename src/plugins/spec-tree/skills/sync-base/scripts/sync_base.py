@@ -567,6 +567,19 @@ def _sync_detached(
     )
 
 
+def _resolve_default_base(repo: pathlib.Path) -> str | SyncBaseResult:
+    try:
+        return detect_base_ref(repo)
+    except BaseRefNotConfiguredError as exc:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            "",
+            "",
+            None,
+            str(exc),
+        )
+
+
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
@@ -581,16 +594,10 @@ def sync_base(
     never raises for an ordinary git outcome.
     """
     if base_ref is None:
-        try:
-            base_ref = detect_base_ref(repo)
-        except BaseRefNotConfiguredError as exc:
-            return SyncBaseResult(
-                SyncStatus.GIT_FAILURE,
-                "",
-                "",
-                None,
-                str(exc),
-            )
+        resolved_base = _resolve_default_base(repo)
+        if isinstance(resolved_base, SyncBaseResult):
+            return resolved_base
+        base_ref = resolved_base
     remote_ref = remote_tracking_ref(base_ref)
 
     try:
