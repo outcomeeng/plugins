@@ -24,11 +24,11 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 
 ### Scenarios
 
-- Given a spec node missing or malforming its kind statement, missing its `## Assertions` section, or carrying an assertion-type heading mismatched to its assertions, when audited by `/audit-specs`, then the verdict is REJECT with a structure finding (`missing-section`, `malformed-kind-statement`, or `heading-mismatch`) ([eval](evals/structure/eval.toml))
-- Given a spec node with temporal language in any section, when audited by `/audit-specs`, then the verdict is REJECT with finding category "temporal-voice" ([eval](evals/voice/eval.toml))
-- Given a spec node whose assertion carries a bare mechanism tag, no tag, or more than one tag, when audited by `/audit-specs`, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
-- Given a spec node whose `[test]` assertion tags a universal claim (ALWAYS/NEVER/"for all") as `scenario`, when audited by `/audit-specs`, then the verdict is REJECT with finding category "evidence-type-mismatch" ([eval](evals/tag-validity/eval.toml))
-- Given a spec node whose `[test]` assertion makes a claim about the content of an authored prose or documentation artifact, when audited by `/audit-specs`, then the verdict is REJECT with finding category "prose-coupling" ([eval](evals/prose-coupling/eval.toml))
+- Given a spec node missing or malforming its kind statement, missing its `## Assertions` section, or carrying an assertion-type heading mismatched to its assertions, when audited by `/audit-specs`, then the overall verdict is FAIL with a structure finding (`missing-section`, `malformed-kind-statement`, or `heading-mismatch`) ([eval](evals/structure/eval.toml))
+- Given a spec node with temporal language in any section, when audited by `/audit-specs`, then the overall verdict is FAIL with finding category "temporal-voice" ([eval](evals/voice/eval.toml))
+- Given a spec node whose assertion carries a bare mechanism tag, no tag, or more than one tag, when audited by `/audit-specs`, then the overall verdict is FAIL with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
+- Given a spec node whose `[test]` assertion tags a universal claim (ALWAYS/NEVER/"for all") as `scenario`, when audited by `/audit-specs`, then the overall verdict is FAIL with finding category "evidence-type-mismatch" ([eval](evals/tag-validity/eval.toml))
+- Given a spec node whose `[test]` assertion makes a claim about the content of an authored prose or documentation artifact, when audited by `/audit-specs`, then the overall verdict is FAIL with finding category "prose-coupling" ([eval](evals/prose-coupling/eval.toml))
 - Given a spec node with a well-formed kind statement, an `## Assertions` section, and assertion-type headings that match their assertions, when audited by `/audit-specs`, then the section-structure row is PASS ([eval](evals/structure/eval.toml))
 
 ### Compliance
