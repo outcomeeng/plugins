@@ -100,6 +100,85 @@ them.
   `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor`) with the
   same `spx verification run` contract after implementation audit is runnable.
 
+## Post-merge runtime verification checklist
+
+Observable path: an operator installs the merged marketplace, dispatches an
+artifact author or implementation auditor through the public agent registry,
+and inspects either the artifact auditor's structured verdict or the
+implementation auditor's sealed SPX projection.
+
+### Installation and removal boundaries
+
+- [x] Refresh the authoritative marketplace source from merged `origin/main`.
+- [x] Install `spec-tree 0.75.0`, `python 0.21.0`, `typescript 0.22.0`, and
+  `rust 0.5.0` into the runtime registry.
+- [x] Confirm `implementation-auditor` is registered.
+- [x] Confirm retired `auditor` and `audit-orchestrator` roles are not
+  registered, without adding filename-absence regression tests.
+
+### Implementation-audit runtime matrix
+
+- [x] Run a committed Python changeset through `implementation-auditor` and
+  inspect a sealed SPX projection containing code, tests, and architecture
+  units, plugin provenance, and `terminalStatus`.
+- [ ] Run a committed TypeScript changeset through `implementation-auditor`
+  and inspect the same projection properties for
+  `audit-typescript-{code|tests|architecture}`.
+- [ ] Run a committed Rust changeset through `implementation-auditor` and
+  inspect the same projection properties for
+  `audit-rust-{code|tests|architecture}`.
+- [ ] Exercise an unsupported-file partition and confirm the rendered SPX
+  projection records coverage status without a prose fallback.
+
+### Artifact-auditor boundaries
+
+- [x] Run `adr-auditor` and confirm it returns the structured `audit-adr`
+  verdict without requiring SPX persistence.
+- [x] Run `test-evidence-auditor` and confirm it returns the structured
+  `audit-tests` verdict without requiring SPX persistence.
+- [x] Remove the invalid deterministic wrapper-model configuration test and
+  restore the governing run-journal ADR rule to `[audit]`.
+- [ ] Re-run `adr-auditor` against the committed correction and require an
+  approved tag-validity row.
+
+### Authoring and remediation ownership
+
+- [ ] Align `architect-{python|typescript|rust}` on one rule: architect skills
+  produce ADRs and an `ADR_AUDIT_REQUIRED` handoff; the outer main conversation
+  dispatches `adr-auditor`, including when authoring ran inside `applier`.
+- [ ] Remove every architect-skill self-approval or nested auditor-dispatch
+  requirement that conflicts with the one-level subagent boundary.
+- [ ] Make every code and test FIX mode consume findings supplied explicitly by
+  its caller: implementation findings from an SPX projection, artifact-test
+  findings from the structured `audit-tests` verdict.
+- [ ] Remove ambient retrieval language such as “recent audit output” and “most
+  recent audit output” from all authoring and remediation skills.
+- [ ] Run `skill-auditor` over the exact changed architect, code, and test skill
+  list; repair only concrete findings from that bounded audit.
+
+### Apply handoff path
+
+- [ ] Run `/apply --agent` over a representative node and inspect the applier's
+  advisory audit handoffs.
+- [ ] Confirm the main conversation runs focused deterministic verification,
+  creates a checkpoint commit, confirms a clean worktree, and replaces the live
+  file list with an exact committed `<base>..<head>` scope before auditor
+  dispatch.
+- [ ] Confirm Step 4 uses `adr-auditor`, Step 6 uses
+  `test-evidence-auditor`, and Step 8 uses `implementation-auditor`, with no
+  nested auditor launch from `applier`.
+
+### Follow-up merge gate
+
+- [ ] Run focused deterministic tests for every changed skill and harness.
+- [ ] Regenerate Claude and Codex distributions and verify catalog consistency.
+- [ ] Require clean bounded skill and subagent audits on the committed head.
+- [ ] Run the repository's terminal deterministic gate only after the runtime
+  matrix and agentic checks above converge on that committed head.
+- [ ] Merge the follow-up through the configured GitHub PR lifecycle, refresh
+  the marketplace, and repeat the registry and runtime smoke checks from the
+  installed versions.
+
 ## Governing context
 
 - `spx/15-audit-result-delivery.pdr.md`: audit progress and findings are visible
