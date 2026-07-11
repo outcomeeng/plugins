@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on the requested implementation scope against the installed language concern standards — APPROVED (`terminalStatus: approved`), or REJECTED (`terminalStatus: rejected`) with each finding naming the artifact, violated rule, and evidence.
+A verdict on the requested implementation scope against the installed language concern standards — APPROVED (`terminalStatus: approved`), REJECTED (`terminalStatus: rejected`) with each finding naming the artifact, violated rule, and evidence, or BLOCKED with the failed request field, skill, or SPX command.
 
 </objective>
 

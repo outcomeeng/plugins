@@ -1,7 +1,7 @@
 ---
 name: scope-changeset
 description: ALWAYS invoke this skill when deriving a changeset's base ref, branch slug, branch identity, or merge-base diff scope from git. NEVER re-implement branch-slug or base-ref derivation inside another skill's scripts.
-allowed-tools: Bash, Read
+allowed-tools: Read
 ---
 
 <objective>

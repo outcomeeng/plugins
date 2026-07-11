@@ -72,9 +72,9 @@ class SectionManifest:
 def _load_changeset_scope() -> ModuleType:
     """Load the ``changeset_scope`` module via ``importlib``.
 
-    The canonical git-derivation home lives at
-    ``plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py``
-    and surfaces ``detect_base_ref``, ``remote_tracking_ref``, and
+    The canonical git-derivation home is the sibling ``scope-changeset``
+    skill's bundled module, which surfaces ``detect_base_ref``,
+    ``remote_tracking_ref``, and
     ``BaseRefNotConfiguredError``. Loading here keeps authoritative base-ref
     derivation and the remote-tracking composition a single source rather
     than a private duplicate inside this script.
