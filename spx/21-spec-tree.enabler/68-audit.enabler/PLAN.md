@@ -100,84 +100,120 @@ them.
   `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor`) with the
   same `spx verification run` contract after implementation audit is runnable.
 
-## Post-merge runtime verification checklist
+## Next slice: node-owned runtime completion
 
-Observable path: an operator installs the merged marketplace, dispatches an
-artifact author or implementation auditor through the public agent registry,
-and inspects either the artifact auditor's structured verdict or the
-implementation auditor's sealed SPX projection.
+Demonstrable value: after installing the marketplace, the outer conversation can
+turn an `/apply --agent` handoff into an exact committed audit subject, dispatch
+the generic implementation auditor for each supported language, and pass its
+persisted findings explicitly into remediation. The slice traverses the existing
+nodes below in dependency order; each checklist item names the durable truth it
+verifies.
 
-### Installation and removal boundaries
+### `spx/21-spec-tree.enabler/16-verification.enabler`
 
-- [x] Refresh the authoritative marketplace source from merged `origin/main`.
-- [x] Install `spec-tree 0.75.0`, `python 0.21.0`, `typescript 0.22.0`, and
-  `rust 0.5.0` into the runtime registry.
-- [x] Confirm `implementation-auditor` is registered.
-- [x] Confirm retired `auditor` and `audit-orchestrator` roles are not
-  registered, without adding filename-absence regression tests.
+Governing truth: `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`
+requires one append-only source of truth, projection-only output surfaces, and a
+thin wrapper with explicit model and skill intent.
 
-### Implementation-audit runtime matrix
+- [x] Split wrapper semantic thinness from structured configuration: keep
+  thinness under `[audit]`, and prove explicit source model/skills plus converted
+  native model/skill enablement through parser-based deterministic evidence.
+- [ ] Dispatch `adr-auditor` against the committed ADR correction and require an
+  approved structured verdict for section structure and tag validity.
+- [x] Keep artifact-type auditors on their current structured verdict contracts;
+  their migration to `spx verification run` remains the later slice recorded in
+  `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`.
 
-- [x] Run a committed Python changeset through `implementation-auditor` and
-  inspect a sealed SPX projection containing code, tests, and architecture
-  units, plugin provenance, and `terminalStatus`.
-- [ ] Run a committed TypeScript changeset through `implementation-auditor`
-  and inspect the same projection properties for
-  `audit-typescript-{code|tests|architecture}`.
-- [ ] Run a committed Rust changeset through `implementation-auditor` and
-  inspect the same projection properties for
-  `audit-rust-{code|tests|architecture}`.
-- [ ] Exercise an unsupported-file partition and confirm the rendered SPX
-  projection records coverage status without a prose fallback.
+### `spx/21-spec-tree.enabler/65-apply.enabler`
 
-### Artifact-auditor boundaries
+Governing truth: `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` requires
+deterministic verification before agentic verification and continues completed
+local work into the merge lifecycle.
 
-- [x] Run `adr-auditor` and confirm it returns the structured `audit-adr`
-  verdict without requiring SPX persistence.
-- [x] Run `test-evidence-auditor` and confirm it returns the structured
-  `audit-tests` verdict without requiring SPX persistence.
-- [x] Remove the invalid deterministic wrapper-model configuration test and
-  restore the governing run-journal ADR rule to `[audit]`.
-- [ ] Re-run `adr-auditor` against the committed correction and require an
-  approved tag-validity row.
-
-### Authoring and remediation ownership
-
-- [ ] Align `architect-{python|typescript|rust}` on one rule: architect skills
-  produce ADRs and an `ADR_AUDIT_REQUIRED` handoff; the outer main conversation
-  dispatches `adr-auditor`, including when authoring ran inside `applier`.
-- [ ] Remove every architect-skill self-approval or nested auditor-dispatch
-  requirement that conflicts with the one-level subagent boundary.
-- [ ] Make every code and test FIX mode consume findings supplied explicitly by
-  its caller: implementation findings from an SPX projection, artifact-test
-  findings from the structured `audit-tests` verdict.
-- [ ] Remove ambient retrieval language such as “recent audit output” and “most
-  recent audit output” from all authoring and remediation skills.
-- [ ] Run `skill-auditor` over the exact changed architect, code, and test skill
-  list; repair only concrete findings from that bounded audit.
-
-### Apply handoff path
-
-- [ ] Run `/apply --agent` over a representative node and inspect the applier's
-  advisory audit handoffs.
-- [ ] Confirm the main conversation runs focused deterministic verification,
+- [ ] Run `/apply --agent` over a representative node and capture its advisory
+  ADR, test-evidence, and implementation-audit handoffs.
+- [ ] Verify that the outer conversation runs focused deterministic verification,
   creates a checkpoint commit, confirms a clean worktree, and replaces the live
-  file list with an exact committed `<base>..<head>` scope before auditor
-  dispatch.
-- [ ] Confirm Step 4 uses `adr-auditor`, Step 6 uses
-  `test-evidence-auditor`, and Step 8 uses `implementation-auditor`, with no
-  nested auditor launch from `applier`.
+  file list with an exact committed `<base>..<head>` scope before dispatch.
+- [ ] Verify that the outer conversation dispatches `adr-auditor`,
+  `test-evidence-auditor`, and `implementation-auditor`; `applier` launches no
+  nested verifier.
 
-### Follow-up merge gate
+### `spx/21-spec-tree.enabler/68-audit.enabler`
 
-- [ ] Run focused deterministic tests for every changed skill and harness.
-- [ ] Regenerate Claude and Codex distributions and verify catalog consistency.
-- [ ] Require clean bounded skill and subagent audits on the committed head.
-- [ ] Run the repository's terminal deterministic gate only after the runtime
-  matrix and agentic checks above converge on that committed head.
-- [ ] Merge the follow-up through the configured GitHub PR lifecycle, refresh
-  the marketplace, and repeat the registry and runtime smoke checks from the
-  installed versions.
+Governing truth: `spx/21-spec-tree.enabler/17-audit.adr.md` requires one generic
+implementation-auditor context to compose all language concern skills, while
+`spx/21-spec-tree.enabler/68-audit.enabler/audit.md` requires missing or
+unsupported units to appear in the verification-run projection.
+
+- [x] Install `spec-tree 0.75.0` and confirm `implementation-auditor` is the
+  registered implementation-audit wrapper.
+- [x] Run a committed Python changeset and inspect a sealed SPX projection with
+  code, tests, and architecture units, plugin provenance, and `terminalStatus`.
+- [ ] Run a committed TypeScript changeset and inspect the same projection
+  properties for `audit-typescript-{code|tests|architecture}`.
+- [ ] Run a committed Rust changeset and inspect the same projection properties
+  for `audit-rust-{code|tests|architecture}`.
+- [ ] Exercise an unsupported-file partition and require recorded coverage status
+  in the rendered projection, with no prose fallback.
+
+### `spx/43-python.enabler`
+
+Governing truth: `spx/43-python.enabler/python.md` requires Python architecture,
+testing, implementation, and audit to follow the generic artifact-type auditor
+composition declared by `spx/21-spec-tree.enabler/17-audit.adr.md`.
+
+- [ ] Make `architect-python` produce the ADR plus `ADR_AUDIT_REQUIRED`; the
+  outer conversation dispatches `adr-auditor`.
+- [ ] Remove nested verifier dispatch from `architect-python`.
+- [ ] Make `code-python` and `test-python` FIX modes consume caller-supplied
+  findings from the applicable SPX projection or structured artifact verdict.
+- [ ] Remove ambient audit-output retrieval from the Python workflows.
+- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
+  Python skill set.
+
+### `spx/43-typescript.enabler`
+
+Governing truth: `spx/43-typescript.enabler/typescript.md` requires TypeScript
+architecture, testing, implementation, and audit to follow the generic
+artifact-type auditor composition declared by
+`spx/21-spec-tree.enabler/17-audit.adr.md`.
+
+- [ ] Make `architect-typescript` produce the ADR plus `ADR_AUDIT_REQUIRED`; the
+  outer conversation dispatches `adr-auditor`.
+- [ ] Remove self-approval or nested verifier dispatch from
+  `architect-typescript`.
+- [ ] Make `code-typescript` and `test-typescript` FIX modes consume
+  caller-supplied findings from the applicable SPX projection or structured
+  artifact verdict.
+- [ ] Remove ambient audit-output retrieval from the TypeScript workflows.
+- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
+  TypeScript skill set.
+
+### `spx/43-rust.enabler`
+
+Governing truth: `spx/43-rust.enabler/rust.md` requires Rust architecture,
+testing, implementation, and audit to follow the generic artifact-type auditor
+composition declared by `spx/21-spec-tree.enabler/17-audit.adr.md`.
+
+- [ ] Make `architect-rust` produce the ADR plus `ADR_AUDIT_REQUIRED`; the outer
+  conversation dispatches `adr-auditor`.
+- [ ] Remove self-approval or nested verifier dispatch from `architect-rust`.
+- [ ] Make `code-rust` and `test-rust` FIX modes consume caller-supplied findings
+  from the applicable SPX projection or structured artifact verdict.
+- [ ] Remove ambient audit-output retrieval from the Rust workflows.
+- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
+  Rust skill set.
+
+### Slice completion
+
+- [ ] Regenerate both runtime distributions and verify catalog consistency.
+- [ ] Require the node-specific runtime checks and bounded agentic audits above
+  to converge on one clean committed head.
+- [ ] Run the repository's terminal deterministic gate after that convergence.
+- [ ] Merge through the configured GitHub PR lifecycle, refresh the installed
+  marketplace, and repeat the registry plus Python, TypeScript, and Rust runtime
+  checks from the installed versions.
 
 ## Governing context
 

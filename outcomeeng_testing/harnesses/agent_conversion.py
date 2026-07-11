@@ -67,6 +67,9 @@ CODEX_PLUGIN_MANIFEST_BODY: Final = '{"name": "sample", "version": "0.0.1"}\n'
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
 )
+SPEC_TREE_AGENT_SOURCE_DIR: Final = (
+    Path(__file__).resolve().parents[2] / "src" / "plugins" / "spec-tree" / "agents"
+)
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
 CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
@@ -133,6 +136,27 @@ def source_agent(
         tools=tools,
         tools_declared=tools_declared,
     )
+
+
+def assert_spec_tree_wrapper_agent_configuration_is_explicit() -> None:
+    """Prove every Spec Tree wrapper preserves explicit runtime configuration."""
+    wrappers = tuple(
+        parse_agent_markdown(path)
+        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob("*.md"))
+    )
+
+    assert wrappers
+    for agent in wrappers:
+        assert agent.skills, f"{agent.source_path}: skills are required"
+        assert agent.model is not None, f"{agent.source_path}: model is required"
+        assert agent.model != INHERIT_MODEL_VALUE, (
+            f"{agent.source_path}: model must not inherit"
+        )
+        converted = tomllib.loads(render_agent_toml(convert_agent(agent)))
+        assert converted["model"] == map_model(agent.model)
+        assert parsed_toml_skill_config(converted) == [
+            {"name": skill, "enabled": True} for skill in agent.skills
+        ]
 
 
 def agent_conversion_fixture(name: str) -> str:
