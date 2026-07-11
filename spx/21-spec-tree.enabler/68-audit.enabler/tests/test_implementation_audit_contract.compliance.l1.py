@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
-    implementation_auditor_is_the_only_implementation_wrapper,
+    implementation_auditor_wrapper_exists,
     language_concern_skill_trios_exist,
     spx_audit_verification_run_lifecycle_accepts_implementation_payloads,
 )
 
 
-def test_implementation_auditor_is_the_only_implementation_wrapper() -> None:
-    assert implementation_auditor_is_the_only_implementation_wrapper()
+def test_implementation_auditor_wrapper_exists() -> None:
+    assert implementation_auditor_wrapper_exists()
 
 
 def test_language_concern_skill_trios_exist() -> None:

@@ -28,10 +28,6 @@ PLUGIN_SURFACES: Final = (
 SPEC_TREE_AGENT_DIRS: Final = tuple(
     surface / "spec-tree" / "agents" for surface in PLUGIN_SURFACES
 )
-RETIRED_IMPLEMENTATION_AUDITOR_PATHS: Final = (
-    "auditor.md",
-    "audit-orchestrator.md",
-)
 IMPLEMENTATION_AUDIT_INPUT: Final = {
     "schema_version": 1,
     "request": {"kind": "implementation-audit-contract"},
@@ -92,14 +88,10 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
     )
 
 
-def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
+def implementation_auditor_wrapper_exists() -> bool:
     return all(
         (agent_dir / "implementation-auditor.md").is_file()
         for agent_dir in SPEC_TREE_AGENT_DIRS
-    ) and not any(
-        (agent_dir / retired_name).exists()
-        for agent_dir in SPEC_TREE_AGENT_DIRS
-        for retired_name in RETIRED_IMPLEMENTATION_AUDITOR_PATHS
     )
 
 
