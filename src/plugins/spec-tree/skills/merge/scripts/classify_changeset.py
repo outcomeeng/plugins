@@ -40,7 +40,7 @@ _COORDINATION_NOTE = re.compile(
 )
 _CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
 _PREVIEW_LIMIT = 40
-_BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
+BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
 
 
 class ChangesetClassificationError(RuntimeError):
@@ -140,7 +140,7 @@ def main() -> int:
     try:
         paths = changed_paths(repo)
     except ChangesetClassificationError as exc:
-        print(f"{_BASE_REF_ERROR_PREFIX}: {exc}", file=sys.stderr)
+        print(f"{BASE_REF_ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 1
     total, noncoord = classify(paths)
     print(

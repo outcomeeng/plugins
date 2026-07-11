@@ -36,6 +36,7 @@ BRANCH_SLUG_MAX_LENGTH = 64
 BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
 BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
 ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
+ORIGIN_HEAD_REF = f"{ORIGIN_HEAD_REF_PREFIX}HEAD"
 ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
 FRONTMATTER_DELIMITER = "---"
@@ -175,20 +176,18 @@ def detect_base_ref(
     No mode guesses a consumer repository's default branch.
     """
     result = runner(
-        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
+        ["git", "symbolic-ref", ORIGIN_HEAD_REF],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
         cwd=repo,
         capture_output=True,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        raise BaseRefNotConfiguredError(f"refs/remotes/origin/HEAD unset at {repo}")
+        raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} unset at {repo}")
     line = result.stdout.strip()
     if line.startswith(ORIGIN_HEAD_REF_PREFIX):
         return line[len(ORIGIN_HEAD_REF_PREFIX) :]
-    raise BaseRefNotConfiguredError(
-        f"refs/remotes/origin/HEAD has unexpected shape: {line!r}"
-    )
+    raise BaseRefNotConfiguredError(f"{ORIGIN_HEAD_REF} has unexpected shape: {line!r}")
 
 
 def detect_current_branch(

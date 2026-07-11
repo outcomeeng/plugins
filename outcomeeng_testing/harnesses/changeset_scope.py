@@ -329,6 +329,14 @@ def assert_merge_classifier_reports_unconfigured_base() -> None:
         repo = pathlib.Path(tmp) / "repo"
         repo.mkdir()
         build_repo_without_origin(repo)
+        classifier = load_merge_classifier_module()
+        changeset_scope = load_changeset_scope_module()
+        try:
+            changeset_scope.detect_base_ref(repo)
+        except changeset_scope.BaseRefNotConfiguredError:
+            pass
+        else:
+            raise AssertionError("detect_base_ref should reject an unconfigured base")
 
         completed = subprocess.run(
             (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
@@ -339,8 +347,8 @@ def assert_merge_classifier_reports_unconfigured_base() -> None:
         )
 
         assert completed.returncode != 0
-        assert "error: merge changeset classification failed" in completed.stderr
-        assert "refs/remotes/origin/HEAD unset" in completed.stderr
+        assert classifier.BASE_REF_ERROR_PREFIX in completed.stderr
+        assert changeset_scope.ORIGIN_HEAD_REF in completed.stderr
         assert "Traceback" not in completed.stderr
 
 
