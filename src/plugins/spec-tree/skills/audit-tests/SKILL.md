@@ -106,7 +106,7 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 | --- | --- |
 | `path` | Repository-relative artifact path |
 | `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from` | Path that introduced the artifact, or null for the linked test |
+| `imported_from` | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
 | `inspection_status` | `inspected` or `unresolved` |
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.

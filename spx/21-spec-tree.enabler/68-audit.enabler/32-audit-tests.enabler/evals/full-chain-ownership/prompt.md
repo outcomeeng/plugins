@@ -1,6 +1,6 @@
 <!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-tests/SKILL.md. -->
 
-This eval runs in the isolated verifier context required by the producer below. The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Apply the complete producer to the supplied test-evidence package. The caller has classified the package as TypeScript, and the TypeScript-specific concern audit has already returned a passing row with no findings. Judge the language-neutral evidence chain only. Return only the producer's structured JSON verdict.
+This eval runs in the isolated verifier context required by the producer below. The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Apply the complete producer to the supplied test-evidence package. This assertion begins after required language-concern composition succeeds: the caller has classified the package as TypeScript, and the package carries the passing TypeScript concern result. Judge the language-neutral evidence chain only. Return only the producer's structured JSON verdict.
 
 ---
 name: audit-tests
@@ -110,7 +110,7 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 | --- | --- |
 | `path` | Repository-relative artifact path |
 | `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from` | Path that introduced the artifact, or null for the linked test |
+| `imported_from` | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
 | `inspection_status` | `inspected` or `unresolved` |
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.

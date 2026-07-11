@@ -102,12 +102,12 @@ Read the spec's Assertions section. For each assertion, extract:
 
 Starting from the test links mapped in Step 2, follow each repository import recursively. Record one inventory entry per artifact:
 
-| Field               | Meaning                                                                 |
-| ------------------- | ----------------------------------------------------------------------- |
-| `path`              | Repository-relative artifact path                                       |
-| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from`     | Path that introduced the artifact, or null for the linked test          |
-| `inspection_status` | `inspected` or `unresolved`                                             |
+| Field               | Meaning                                                                                                                      |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `path`              | Repository-relative artifact path                                                                                            |
+| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production`                                                      |
+| `imported_from`     | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
+| `inspection_status` | `inspected` or `unresolved`                                                                                                  |
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
 
