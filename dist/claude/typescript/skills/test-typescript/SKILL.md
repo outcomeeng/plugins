@@ -13,6 +13,14 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 
 Invoke the `test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+<context>
+
+!`test -f spx/local/typescript.md && sed -n '1,400p' spx/local/typescript.md || true`
+
+!`test -f spx/local/typescript-tests.md && sed -n '1,400p' spx/local/typescript-tests.md || true`
+
+</context>
+
 <objective>
 TypeScript test files that supply evidence for a node specification's assertions.
 </objective>
@@ -28,7 +36,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
    - Check: `ls $node_path/tests/*.ts` returns nothing or minimal files
    - Action: Follow full workflow below
 
-2. **FIX mode** - Tests exist but were rejected by reviewer
+2. **FIX mode** - Tests exist but were rejected by `test-evidence-auditor`
    - Check: Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with TypeScript findings
    - Action: Read the rejection, fix the specific issues, re-run tests
 
@@ -95,7 +103,7 @@ For every row, record the linked evidence file, coupling path through imported i
 
 Read the assertion, the existing or planned test, and the TypeScript code under test. State the production contract the evidence exercises. If the source does not expose the needed type, enum, constructor, schema, parser entry point, registry, route, command, dependency boundary, or observable behavior, fix the source contract before writing test predicates.
 
-Do not patch a predicate around a reviewer example, copy source literals into tests, hide values in fixtures or generators, or replace the behavior under test with a mock.
+Do not patch a predicate around one audit finding, copy source literals into tests, hide values in fixtures or generators, or replace the behavior under test with a mock.
 
 **Step 4: Write Test Files**
 
@@ -110,16 +118,22 @@ Create test files following `/typescript-test-standards`:
 - No `vi.mock()` or `vi.fn()` replacing the dependency under test -- use typed DI interfaces
 - Vitest as default runner; `playwright` runner token when needed
 
-**Step 5: Verify Tests Fail (RED)**
+**Step 5: Run deterministic verification gates**
 
 ```bash
 # Resolve from repo docs or scripts; fallback: npx vitest run
 <product-test-command> $node_path/tests/
+
+# Resolve from repo docs or scripts; fallback: npx tsc --noEmit
+<product-typecheck-command>
+
+# Resolve from repo docs or scripts; fallback: npx eslint src/ test/
+<product-lint-command> $node_path/tests/
 ```
 
 If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product test command when no focused form exists.
 
-Tests should FAIL with import errors or assertion errors (implementation does not exist yet).
+The focused test gate passes in WRITE mode only when tests fail for the expected missing implementation or assertion mismatch. Collection, syntax, harness, or configuration failures fail the gate. The typecheck and lint gates pass only with zero exit status. Stop before Step 6 unless all three gates pass.
 
 **Step 6: Handle Specified Nodes**
 
@@ -304,8 +318,6 @@ Read the matching level guide from `/typescript-test-standards` after choosing a
 - `/typescript-test-standards` `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and product binaries
 - `/typescript-test-standards` `levels/l3-remote-credentialed.md` - remote services, shared environments, and credentials
 
-Also check for `spx/local/typescript-tests.md` at the repository root -- product-specific overrides apply after this reference.
-
 </patterns_reference>
 
 <output_format>
@@ -325,7 +337,7 @@ Also check for `spx/local/typescript-tests.md` at the repository root -- product
 
 **Test Run (RED Phase)**
 
-Tests fail as expected. Ready for review.
+Tests fail for the expected RED reason; typecheck and lint pass. Ready for test-evidence audit.
 ```
 
 **FIX mode output:**
@@ -341,7 +353,7 @@ Tests fail as expected. Ready for review.
 
 **Verification**
 
-Tests pass checklist. Ready for re-review.
+Tests pass the deterministic checklist. Ready for audit redispatch.
 ```
 
 </output_format>
@@ -384,12 +396,13 @@ How to avoid: Fill the matrix's required-evidence-form field directly from `/typ
 
 <success_criteria>
 
-Test evidence is ready for review when:
+Test evidence is ready for audit when:
 
 - [ ] Every created or changed test file lives in the governed node's `tests/` directory and is linked from the corresponding spec assertion
 - [ ] Every affected assertion has a complete assertion-to-evidence matrix whose language form and linked file match `/typescript-test-standards`
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
-- [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
+- [ ] The product's resolved TypeScript typecheck and lint commands exit zero for the changed scope
+- [ ] FIX mode addresses every supplied audit finding with a test change or a stated evidence-based rejection before redispatch
 
 </success_criteria>
