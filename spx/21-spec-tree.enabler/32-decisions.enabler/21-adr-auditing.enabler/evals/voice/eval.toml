@@ -11,3 +11,9 @@ owned_paths = [
 smoke_cases = ["temporal-opening-statement", "atemporal-adr-passes"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-section"
+producer = "src/plugins/spec-tree/skills/audit-adr/SKILL.md"
+section = "audit_adr"
+template = "prompt.template.md"
