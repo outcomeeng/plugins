@@ -67,6 +67,9 @@ CODEX_PLUGIN_MANIFEST_BODY: Final = '{"name": "sample", "version": "0.0.1"}\n'
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
 )
+SPEC_TREE_AGENT_SOURCE_DIR: Final = (
+    Path(__file__).resolve().parents[2] / "src" / "plugins" / "spec-tree" / "agents"
+)
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
 CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
@@ -133,6 +136,22 @@ def source_agent(
         tools=tools,
         tools_declared=tools_declared,
     )
+
+
+def assert_spec_tree_wrapper_agents_use_explicit_models() -> None:
+    """Prove every skill-owning Spec Tree wrapper selects a concrete model."""
+    wrappers = tuple(
+        agent
+        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob("*.md"))
+        if (agent := parse_agent_markdown(path)).skills
+    )
+
+    assert wrappers
+    for agent in wrappers:
+        assert agent.model is not None, f"{agent.source_path}: model is required"
+        assert agent.model != INHERIT_MODEL_VALUE, (
+            f"{agent.source_path}: model must not inherit"
+        )
 
 
 def agent_conversion_fixture(name: str) -> str:
