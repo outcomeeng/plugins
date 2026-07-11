@@ -2,7 +2,11 @@
 A complete closure reflection record containing classified imperfections, path-forward persistence targets, next-context notes, external-state notes, claimed-session resolution, and thread-scoped ownership and continuation states.
 </objective>
 
+<context>
+
 Lean on the imperfection ledger defined in `/understand` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
+
+</context>
 
 <required_reading>
 

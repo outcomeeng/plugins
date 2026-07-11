@@ -3,6 +3,12 @@ A node anchor list covering every spec-tree node worked on during this session, 
 
 </objective>
 
+<required_reading>
+
+Use the loaded `/understand` foundation and every active `<SPEC_TREE_CONTEXT>` marker. This workflow requires no additional bundled reference.
+
+</required_reading>
+
 <process>
 List every spec-tree node touched in this session (any path matching `spx/**/*.enabler` or `spx/**/*.outcome`). For each, record:
 

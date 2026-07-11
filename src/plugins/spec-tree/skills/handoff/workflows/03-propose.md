@@ -2,7 +2,11 @@
 A persistence proposal containing the approval-required closure decisions and one explicit session disposition per continuation thread.
 </objective>
 
+<required_reading>
+
 Use workflow 02's imperfections, path-forward, next-context, external-state, claimed-sessions, and existing-sessions perspectives plus its resolved continuation-thread records as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
+
+</required_reading>
 
 <session_disposition_header>
 Before any proposal, print a plain-text header naming every thread disposition plus every session that will be archived:
