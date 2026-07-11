@@ -6,9 +6,9 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-{!% require_skill 'develop:skill-standards' %!}
+{!% require_skill 'instructions:skill-standards' %!}
 
-{!% require_skill 'develop:agent-prompt-standards' %!}
+{!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <dispatch_gate>
 

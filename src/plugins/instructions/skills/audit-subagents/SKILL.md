@@ -9,9 +9,9 @@ arguments: configured_agent_path
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-{!% require_skill 'develop:agent-prompt-standards' %!}
+{!% require_skill 'instructions:agent-prompt-standards' %!}
 
-{!% require_skill 'develop:create-subagents' %!}
+{!% require_skill 'instructions:create-subagents' %!}
 
 <dispatch_gate>
 
@@ -45,7 +45,7 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read `develop:create-subagents` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
+1. Both skills are already injected above. Read `instructions:create-subagents` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.

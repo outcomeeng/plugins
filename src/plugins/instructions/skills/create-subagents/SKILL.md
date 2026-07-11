@@ -5,7 +5,7 @@ description: >-
   NEVER create {{! term('configured_agents') !}} without this skill.
 ---
 
-{!% require_skill 'develop:agent-prompt-standards' %!}
+{!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <objective>
 A {{! term('configured_agent') !}} configured for an isolated, focused role — its {{! term('configured_agent_prompt') !}}, tool access, and isolated-workflow orchestration.

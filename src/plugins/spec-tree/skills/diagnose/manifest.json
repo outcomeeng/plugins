@@ -5,7 +5,7 @@
     "source": "outcomeeng/plugins"
   },
   "expected_plugins": [
-    "develop",
+    "instructions",
     "frontend",
     "hdl",
     "prose",

@@ -1,6 +1,6 @@
 {
   "enabledPlugins": {
-    "develop@outcomeeng": true,
+    "instructions@outcomeeng": true,
     "typescript@outcomeeng": true,
     "prose@outcomeeng": true,
     "python@outcomeeng": true,

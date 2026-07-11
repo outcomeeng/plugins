@@ -7,7 +7,7 @@ description: >-
 tools: Read, Glob, Grep
 model: "{{! term('configured_agent_auditor_model') !}}"
 skills:
-  - develop:audit-subagents
+  - instructions:audit-subagents
 ---
 
 <role>
@@ -29,7 +29,7 @@ Adversarial {{! term('configured_agent') !}} auditor. Evaluate {{! term('configu
   - Treat any preserved source `skills:` guidance as required methodology context for the main runtime to resolve, not as Codex custom-agent preload behavior.
   - Reject unsupported model settings, unsafe tool access, generic helper roles, prompt text that assumes another runtime, and verdict formats outside this output contract.
     {!% else %!}
-- Apply the preloaded `develop:audit-subagents` methodology to the scoped files.
+- Apply the preloaded `instructions:audit-subagents` methodology to the scoped files.
   {!% endif %!}
 - Classify each issue against the subagent-authoring standards, prompt voice rules, tool boundaries, model settings, skill preload rules, and output contract.
 - Return a verdict without editing files.

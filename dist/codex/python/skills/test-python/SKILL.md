@@ -37,7 +37,7 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Do not declare variables, constants, pytest fixture parameters, or property-generated parameters in the executed test file.
+7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, or fixture-path providers.
 8. Import source-owned values from the owning module.
 9. Import variable input domains from `product_testing.generators.*`.
 10. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
@@ -101,7 +101,7 @@ Python test work satisfies this skill when:
 
 - Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
-- Tests declare no variables, constants, pytest fixture parameters, or property-generated parameters; values come from source contracts, generators, harnesses, inert fixtures, or eval case data
+- Tests introduce no local literals, numbers, vocabulary, case data, expected results, or configuration; convenience aliases derive solely from source contracts, generators, harnesses, inert-fixture path providers, or eval case data
 - Generators represent meaningful variable domains
 - Harnesses manage resource lifecycle and pytest fixture body code
 - Inert fixtures are consumed only as files

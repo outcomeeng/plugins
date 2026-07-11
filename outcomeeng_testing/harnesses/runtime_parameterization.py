@@ -24,7 +24,7 @@ from outcomeeng.distribution.build import (
 from outcomeeng.distribution.contracts import Target
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
-PLUGIN_NAME = "develop"
+PLUGIN_NAME = "instructions"
 SKILL_NAME = "example-skill"
 TOOL_KIND = "tool"
 FILE_KIND = "file"

@@ -4,9 +4,9 @@ description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
 ---
 
-{!% require_skill 'develop:skill-standards' %!}
+{!% require_skill 'instructions:skill-standards' %!}
 
-{!% require_skill 'develop:agent-prompt-standards' %!}
+{!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <objective>
 A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.

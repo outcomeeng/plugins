@@ -8,7 +8,7 @@ tools:
 disallowedTools:
   - Bash
 skills:
-  - develop:audit-subagents
+  - instructions:audit-subagents
 unknownField: keep-me-visible
 ---
 
