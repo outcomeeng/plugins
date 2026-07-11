@@ -37,7 +37,7 @@ Emit exactly one `partition` for every `<RESOLVED_CONTINUATION_THREADS>` record 
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
-When `<HANDOFF_OPTIONS prune="true" ... />` was emitted, read `spx session list --status archive --json` before presenting the header and list every exact archive id proposed for deletion. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the archive is empty. If the operator rejects deletion, omit the marker and preserve every archived session. When the marker records `prune="false"`, write `Archived sessions to delete after closure: none` and emit no prune marker.
+When `<HANDOFF_OPTIONS prune="true" ... />` was emitted and at least one partition has `disposition="fresh-session"`, read `spx session list --status archive --json` before presenting the header. Build the proposed deletion set as the exact union of the IDs already in archive and every claimed or partition `archive_ids` entry the header says this closure will archive. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the union is empty. If the operator rejects deletion, omit the marker and preserve every archived session. When the marker records `prune="false"`, or no partition creates a fresh session, write `Archived sessions to delete after closure: none` and emit no prune marker.
 
 For each record with `continuation="present"`, a fresh continuation is allowed only if continuation by Claude is impossible now. Do not present a fresh handoff for an actionable coordination note while Claude can act. An `existing-owner` record reports its owner and proposes no fresh session for that thread. An `ambiguous` record stops the entire proposal until the operator resolves that thread's ownership.
 
@@ -76,7 +76,7 @@ This lets the user verify at a glance that each item is going to the right place
 
 - Session-disposition header printed before the proposal, naming every thread disposition and every session that will be archived.
 - User has reviewed and approved (or rejected) all proposed persistence items, or no approval-required persistence items existed and the workflow proceeded without a structured question.
-- When `<HANDOFF_OPTIONS prune="true" ... />` was emitted, the operator has approved or rejected the exact archived-session deletion set and an approval emits `<APPROVED_PRUNE>`.
+- When `<HANDOFF_OPTIONS prune="true" ... />` applies to a fresh-session closure, the operator has approved or rejected the exact union of existing and closure-created archive IDs, and an approval emits `<APPROVED_PRUNE>`.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
 

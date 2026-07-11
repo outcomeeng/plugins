@@ -244,6 +244,6 @@ Put session mechanics only after the product summary:
 - Default-branch merge closeout includes the branch-state closeout record fields from `/merging-standards` `<branch_state_closeout>` or an explicitly preserved record from the merge transport.
 - Merge lifecycle final output includes `Remaining Branches` grouped under **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**.
 - Confirmation output never uses a top-level `Delivered state` receipt as a substitute for the product-first closeout fields.
-- The releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.
+- The releasing context has stepped off the handed-off branch — both a main checkout and a linked worktree are left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.
 
 </success_criteria>
