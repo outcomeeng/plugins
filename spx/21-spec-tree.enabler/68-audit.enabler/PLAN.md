@@ -75,7 +75,7 @@ Verification before PR merge:
   the SPX verification-run projection.
 - Run `just build-skills`, `just check-skills`, `just docs-check`, `spx validation
   markdown`, `spx spec status --format json`, and the focused audit-node tests.
-  After editing `SKILL.md` or agent files, run the develop-owned skill and
+  After editing `SKILL.md` or agent files, run the instructions-owned skill and
   subagent audit gates on the changed authored sources.
 
 ### Dependency-order check

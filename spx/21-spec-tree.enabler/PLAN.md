@@ -33,7 +33,7 @@ Product specs (`/contextualize` the node, then edit):
 - `spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md` — continuation/closure signal: "a `spx/EXCLUDE` entry" → "a `specified` node".
 - `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` — drop `spx/EXCLUDE` from the universal-path example set once the file is removed.
 
-Authored skills + methodology under `src/plugins/` (run `develop:skill-auditor` after):
+Authored skills + methodology under `src/plugins/` (run `instructions:skill-auditor` after):
 
 - `spec-tree/skills/understand/references/excluded-nodes.md` — replace with a "specified via committed `spx.status.json`" reference.
 - `spec-tree/skills/understand/references/durable-map.md` and `imperfection-protocol.md`; `understand/SKILL.md` reference list.

@@ -1,10 +1,10 @@
-# Issues: Develop Plugin
+# Issues: Instructions Plugin
 
-Current develop-plugin follow-ups. Coordination note; not spec truth.
+Current instructions-plugin follow-ups. Coordination note; not spec truth.
 
 ## 1. Audit-skill skeleton sweep
 
-The canonical auditor shape lives in `src/plugins/develop/skills/skill-standards/references/auditor-skeleton.md`: verdict-shaped `<objective>`, `<audit_workflow>`, `<verdict_format>`, `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>`.
+The canonical auditor shape lives in `src/plugins/instructions/skills/skill-standards/references/auditor-skeleton.md`: verdict-shaped `<objective>`, `<audit_workflow>`, `<verdict_format>`, `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>`.
 
 Open work: sweep the remaining `audit-*` skills onto that skeleton. Keep the post-collapse composition exception: generic composing auditors that invoke language audits require `Skill` in `allowed-tools`.
 
@@ -14,7 +14,7 @@ Before starting, reconcile this work with:
 - `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the run-journal migration.
 - Any active structural-conformance session touching the same audit-skill family.
 
-Gate changed skills with `develop:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
+Gate changed skills with `instructions:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
 
 ## 2. `<quick_start>` policy enforcement on reference skills
 
@@ -26,7 +26,7 @@ Required handling:
 - Sweep reference skills for `<quick_start>` blocks and remove any abbreviated path that contradicts their foundation/reference role.
 - Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
 
-Gate changed skills with `develop:skill-auditor`.
+Gate changed skills with `instructions:skill-auditor`.
 
 ## 3. Verification-run row taxonomy
 
@@ -50,7 +50,7 @@ Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before edi
 - `irrelevant_dynamic_context`
 - `codex_rendering_assumption`
 
-Required handling: author the first develop-plugin eval suite for `audit-skills`, add matching `[eval]` assertions, and run the eval harness before using the auditor as the gate for marketplace-wide objective or argument-syntax sweeps.
+Required handling: author the first instructions-plugin eval suite for `audit-skills`, add matching `[eval]` assertions, and run the eval harness before using the auditor as the gate for marketplace-wide objective or argument-syntax sweeps.
 
 ## 5. Remaining `uv run` command policy
 
@@ -62,4 +62,4 @@ Required handling: classify each remaining `uv run` occurrence by execution envi
 
 Architect skills must use one objective-subject policy across Python, Rust, and TypeScript. The architect objectives and nearby body prose mix imperative output wording, artifact-shaped objective wording, and architect-skill subject claims across the three language plugins.
 
-Required handling: decide whether objective statements may use the artifact subject `the skill` or must name `Claude` for this output claim, update `skill-standards` / `agent-prompt-standards` if the rule needs clarification, then sweep the architect skills consistently. Gate changed skills with `develop:skill-auditor`.
+Required handling: decide whether objective statements may use the artifact subject `the skill` or must name `Claude` for this output claim, update `skill-standards` / `agent-prompt-standards` if the rule needs clarification, then sweep the architect skills consistently. Gate changed skills with `instructions:skill-auditor`.

@@ -46,10 +46,10 @@ def _require_module_implemented() -> None:
         )
 
 
-SKILL_REF = "develop:skill-standards"
-PLUGIN_NAME = "develop"
+SKILL_REF = "instructions:skill-standards"
+PLUGIN_NAME = "instructions"
 SKILL_NAME = "create-skills"
-FRAGMENT_SCOPE = "develop"
+FRAGMENT_SCOPE = "instructions"
 FRAGMENT_TOPIC = "skill-standards"
 FRAGMENT_BODY = "Shared standards body."
 MISSING_FRAGMENT_BODY = "No fragment exists here."

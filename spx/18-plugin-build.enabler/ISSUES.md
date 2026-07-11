@@ -8,7 +8,7 @@ The restructure migrated `AGENTS.md` references to `src/plugins/` but left `spx/
 
 ## 2. Codex rendering for Claude-authored argument syntax
 
-Source skills are authored in Claude Code's supported `SKILL.md` syntax. `src/plugins/develop/skills/skill-standards/references/command-capabilities.md` permits `$ARGUMENTS` for whole-string instruction capture and keeps `arguments` / `$name` for stable positional tokens. That source policy resolves the former skill-auditor contradiction that treated bare `$ARGUMENTS` as command-only syntax.
+Source skills are authored in Claude Code's supported `SKILL.md` syntax. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` permits `$ARGUMENTS` for whole-string instruction capture and keeps `arguments` / `$name` for stable positional tokens. That source policy resolves the former skill-auditor contradiction that treated bare `$ARGUMENTS` as command-only syntax.
 
 The remaining concern belongs to generated Codex output: when authored source uses a Claude-supported form that Codex does not consume directly, the build renderer must adapt Codex runtime output without weakening the authored source.
 

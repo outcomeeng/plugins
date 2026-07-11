@@ -46,7 +46,7 @@ CYCLE_TOPIC_A = "cycle-topic-a"
 CYCLE_TOPIC_B = "cycle-topic-b"
 
 INNER_BODY = "Inner fragment body.\nSecond line.\n"
-SKILL_REF = "develop:skill-standards"
+SKILL_REF = "instructions:skill-standards"
 
 
 def _fragment_path(topic: str) -> str:
