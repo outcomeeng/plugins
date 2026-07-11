@@ -89,55 +89,24 @@ them.
 
 ## Later slices
 
-- Add executable agent/eval coverage for representative implementation-auditor
-  runs over one-language, multi-language, and unsupported-file scopes once the
-  agentic runner can be exercised deterministically.
+- Run TypeScript and Rust implementation-audit slices after the Python path is
+  proven from installed skills.
 - Generalize the implementation-auditor partitioning and coverage inventory for
-  several files, several languages, and changesets containing unsupported files.
+  multi-language changesets and changesets containing unsupported files.
 - Move remaining audit run-set convergence onto SPX prior-context restoration
   once the plugin smoke path proves the single-run lifecycle.
 - Reconcile artifact-type auditors (`adr-auditor`, `pdr-auditor`,
   `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor`) with the
   same `spx verification run` contract after implementation audit is runnable.
 
-## Next slice: node-owned runtime completion
+## Next slice: Python implementation audit
 
-Demonstrable value: after installing the marketplace, the outer conversation can
-turn an `/apply --agent` handoff into an exact committed audit subject, dispatch
-the generic implementation auditor for each supported language, and pass its
-persisted findings explicitly into remediation. The slice traverses the existing
-nodes below in dependency order; each checklist item names the durable truth it
-verifies.
-
-### `spx/21-spec-tree.enabler/16-verification.enabler`
-
-Governing truth: `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`
-requires one append-only source of truth, projection-only output surfaces, and a
-thin wrapper with explicit model and skill intent.
-
-- [x] Split wrapper semantic thinness from structured configuration: keep
-  thinness under `[audit]`, and prove explicit source model/skills plus converted
-  native model/skill enablement through parser-based deterministic evidence.
-- [ ] Dispatch `adr-auditor` against the committed ADR correction and require an
-  approved structured verdict for section structure and tag validity.
-- [x] Keep artifact-type auditors on their current structured verdict contracts;
-  their migration to `spx verification run` remains the later slice recorded in
-  `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`.
-
-### `spx/21-spec-tree.enabler/65-apply.enabler`
-
-Governing truth: `spx/21-spec-tree.enabler/65-apply.enabler/apply.md` requires
-deterministic verification before agentic verification and continues completed
-local work into the merge lifecycle.
-
-- [ ] Run `/apply --agent` over a representative node and capture its advisory
-  ADR, test-evidence, and implementation-audit handoffs.
-- [ ] Verify that the outer conversation runs focused deterministic verification,
-  creates a checkpoint commit, confirms a clean worktree, and replaces the live
-  file list with an exact committed `<base>..<head>` scope before dispatch.
-- [ ] Verify that the outer conversation dispatches `adr-auditor`,
-  `test-evidence-auditor`, and `implementation-auditor`; `applier` launches no
-  nested verifier.
+Demonstrable value: after installing the marketplace, an operator dispatches
+`implementation-auditor` for an exact committed Python changeset and receives one
+sealed SPX projection containing Python code, tests, and architecture coverage,
+plugin provenance, findings, and authoritative terminal status. The selected
+node path is `spx/21-spec-tree.enabler/68-audit.enabler` followed by
+`spx/43-python.enabler`.
 
 ### `spx/21-spec-tree.enabler/68-audit.enabler`
 
@@ -150,12 +119,12 @@ unsupported units to appear in the verification-run projection.
   registered implementation-audit wrapper.
 - [x] Run a committed Python changeset and inspect a sealed SPX projection with
   code, tests, and architecture units, plugin provenance, and `terminalStatus`.
-- [ ] Run a committed TypeScript changeset and inspect the same projection
-  properties for `audit-typescript-{code|tests|architecture}`.
-- [ ] Run a committed Rust changeset and inspect the same projection properties
-  for `audit-rust-{code|tests|architecture}`.
-- [ ] Exercise an unsupported-file partition and require recorded coverage status
-  in the rendered projection, with no prose fallback.
+- [ ] Run a committed Python changeset that produces at least one finding and
+  confirm `audit-python-code`, `audit-python-tests`, and
+  `audit-python-architecture` all contribute coverage to the same sealed run.
+- [ ] Confirm the rendered projection carries the Python and spec-tree plugin
+  versions, stable producer identity, authoritative finding count, and rejected
+  terminal status for that finding-bearing run.
 
 ### `spx/43-python.enabler`
 
@@ -163,57 +132,20 @@ Governing truth: `spx/43-python.enabler/python.md` requires Python architecture,
 testing, implementation, and audit to follow the generic artifact-type auditor
 composition declared by `spx/21-spec-tree.enabler/17-audit.adr.md`.
 
-- [ ] Make `architect-python` produce the ADR plus `ADR_AUDIT_REQUIRED`; the
-  outer conversation dispatches `adr-auditor`.
-- [ ] Remove nested verifier dispatch from `architect-python`.
-- [ ] Make `code-python` and `test-python` FIX modes consume caller-supplied
-  findings from the applicable SPX projection or structured artifact verdict.
-- [ ] Remove ambient audit-output retrieval from the Python workflows.
-- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
-  Python skill set.
-
-### `spx/43-typescript.enabler`
-
-Governing truth: `spx/43-typescript.enabler/typescript.md` requires TypeScript
-architecture, testing, implementation, and audit to follow the generic
-artifact-type auditor composition declared by
-`spx/21-spec-tree.enabler/17-audit.adr.md`.
-
-- [ ] Make `architect-typescript` produce the ADR plus `ADR_AUDIT_REQUIRED`; the
-  outer conversation dispatches `adr-auditor`.
-- [ ] Remove self-approval or nested verifier dispatch from
-  `architect-typescript`.
-- [ ] Make `code-typescript` and `test-typescript` FIX modes consume
-  caller-supplied findings from the applicable SPX projection or structured
-  artifact verdict.
-- [ ] Remove ambient audit-output retrieval from the TypeScript workflows.
-- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
-  TypeScript skill set.
-
-### `spx/43-rust.enabler`
-
-Governing truth: `spx/43-rust.enabler/rust.md` requires Rust architecture,
-testing, implementation, and audit to follow the generic artifact-type auditor
-composition declared by `spx/21-spec-tree.enabler/17-audit.adr.md`.
-
-- [ ] Make `architect-rust` produce the ADR plus `ADR_AUDIT_REQUIRED`; the outer
-  conversation dispatches `adr-auditor`.
-- [ ] Remove self-approval or nested verifier dispatch from `architect-rust`.
-- [ ] Make `code-rust` and `test-rust` FIX modes consume caller-supplied findings
-  from the applicable SPX projection or structured artifact verdict.
-- [ ] Remove ambient audit-output retrieval from the Rust workflows.
-- [ ] Run focused deterministic checks and `skill-auditor` over the exact changed
-  Rust skill set.
+- [ ] Feed a finding from the rendered projection explicitly into `code-python`
+  or `test-python` FIX mode and verify that remediation does not depend on
+  ambient “recent audit output”.
+- [ ] Run focused deterministic checks and `skill-auditor` over the exact Python
+  skill files changed while correcting the path.
 
 ### Slice completion
 
 - [ ] Regenerate both runtime distributions and verify catalog consistency.
-- [ ] Require the node-specific runtime checks and bounded agentic audits above
-  to converge on one clean committed head.
+- [ ] Require the Python runtime checks and bounded agentic audits above to
+  converge on one clean committed head.
 - [ ] Run the repository's terminal deterministic gate after that convergence.
 - [ ] Merge through the configured GitHub PR lifecycle, refresh the installed
-  marketplace, and repeat the registry plus Python, TypeScript, and Rust runtime
-  checks from the installed versions.
+  marketplace, and repeat the Python runtime check from the installed versions.
 
 ## Governing context
 
