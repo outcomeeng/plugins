@@ -4,8 +4,6 @@ Apply the complete producer workflow below to the supplied ADR input. Treat the 
 
 {producer_section}
 
-Case id: {case_id}
-
 The ADR input (JSON-encoded):
 
 ```json

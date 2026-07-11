@@ -94,8 +94,6 @@ Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJE
 
 </step>
 
-Case id: {case_id}
-
 The ADR input (JSON-encoded):
 
 ```json
