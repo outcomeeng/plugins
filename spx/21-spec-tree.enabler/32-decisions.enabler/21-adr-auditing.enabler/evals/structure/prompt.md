@@ -193,7 +193,6 @@ The verdict is sound when:
 
 </success_criteria>
 
-
 The ADR input (JSON-encoded):
 
 ```json
