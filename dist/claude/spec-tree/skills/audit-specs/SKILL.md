@@ -47,6 +47,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 <constraints>
 
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER audit decision-record form or test-evidence quality here — `/audit-adr`, `/audit-pdr`, and `/audit-tests` own those subjects.
 - ALWAYS judge each assertion's tag against the `/test` router and the verification-type model — never accept a present tag as valid by its mere presence.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.

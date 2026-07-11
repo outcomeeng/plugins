@@ -1,9 +1,5 @@
 <template>
-## Contents
-
-- JSON header and stdin form
-- Body template
-- Field guidance for frontmatter and body sections
+This reference defines the JSON header and stdin form, body template, and field guidance for frontmatter and body sections.
 
 The session file content has two parts: a header of caller-supplied fields and the markdown body below.
 
