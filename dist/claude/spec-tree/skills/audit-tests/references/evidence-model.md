@@ -1,6 +1,6 @@
 <overview>
 
-Detailed evidence model for test auditing. Read this before auditing any test file.
+Detailed examples for evidence-chain edge cases. Consult this reference when the self-contained audit workflow does not settle a classification.
 
 A source-testability precondition and four properties define test evidence: testability, coupling, falsifiability, alignment, and coverage. This reference provides the taxonomy, verification procedures, and concrete examples for each.
 
@@ -71,11 +71,11 @@ May be legitimate when the test exercises cross-module evidence at L2 or L3. Ver
 **Laundered indirect coupling** — Test imports a test-infrastructure module whose only behavior is returning or re-exporting hardcoded values that the test then asserts. The extra module hides test-owned truth without coupling the assertion to production behavior.
 
 ```typescript
-// product_testing/harnesses/status.ts
+// test-support/status-harness
 export const expectedStatus = () => "accepted";
 
-// spx/55-api.enabler/tests/status.scenario.l1.test.ts
-import { expectedStatus } from "../../../product_testing/harnesses/status";
+// test-suite/status-check
+import { expectedStatus } from "../test-support/status-harness";
 
 it("accepts a request", () => {
   expect(expectedStatus()).toBe("accepted");
