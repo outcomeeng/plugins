@@ -171,7 +171,9 @@ Produce the ADR(s) for the work item. The architecture must be complete before a
 
 <step number="4" name="Architecture audit" gate="true">
 
-Dispatch `adr-auditor` with the ADR path, governing node path, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-architecture` concern inside its isolated context.
+Classify the ADR itself before dispatch: use `language-neutral` when the decision constrains no implementation language; otherwise enumerate every implementation-language partition the decision constrains. Derive the partitions from the ADR's governed implementation surface and the committed audit scope, preserving every language for a cross-language decision instead of collapsing the classification to the flow's detected language.
+
+Dispatch `adr-auditor` with the ADR path, governing node path, exact committed audit scope chosen in `<scope_detection>`, and `Scope classification: language-neutral` or `Scope classification: implementation-language partitions: <comma-separated languages>`. Require only the structured JSON verdict specified by `audit-adr`. The auditor composes each declared language's `audit-{lang}-architecture` concern inside its isolated context.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 

@@ -258,7 +258,7 @@ Use this shape for decision audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "adr-auditor",
-    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, downstream alignment, and language-specific architecture concerns when applicable. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nAudit scope: <exact committed changeset or artifact scope>\nScope classification: <language-neutral | implementation-language partitions: comma-separated languages>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, and every language-specific architecture concern required by the scope classification. Return only the structured JSON verdict specified by audit-adr, with no prose outside the JSON object."
   }
 }
 ```
