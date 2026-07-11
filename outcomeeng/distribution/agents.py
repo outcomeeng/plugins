@@ -860,26 +860,48 @@ def _render_toml_document(values: Mapping[str, object]) -> str:
             continue
         lines.append(f"{_format_toml_key(key)} = {_format_toml_value(value)}")
     for key, table in table_values:
-        if lines:
-            lines.append("")
-        lines.append(f"[{_format_toml_key(key)}]")
-        for table_key, table_value in table.items():
-            if isinstance(table_value, TomlArrayTable):
-                for item in table_value.rows:
-                    lines.append("")
-                    lines.append(
-                        f"[[{_format_toml_key(key)}.{_format_toml_key(str(table_key))}]]"
-                    )
-                    for nested_key, nested_value in item.items():
-                        lines.append(
-                            f"{_format_toml_key(str(nested_key))} = "
-                            f"{_format_toml_value(nested_value)}"
-                        )
-                continue
-            lines.append(
-                f"{_format_toml_key(str(table_key))} = {_format_toml_value(table_value)}"
-            )
+        _append_toml_table(lines, key=key, table=table)
     return "\n".join(lines) + "\n"
+
+
+def _append_toml_table(
+    lines: list[str],
+    *,
+    key: str,
+    table: Mapping[str, object],
+) -> None:
+    if lines:
+        lines.append("")
+    lines.append(f"[{_format_toml_key(key)}]")
+    for table_key, table_value in table.items():
+        if isinstance(table_value, TomlArrayTable):
+            _append_toml_array_table(
+                lines,
+                key=key,
+                table_key=str(table_key),
+                value=table_value,
+            )
+            continue
+        lines.append(
+            f"{_format_toml_key(str(table_key))} = {_format_toml_value(table_value)}"
+        )
+
+
+def _append_toml_array_table(
+    lines: list[str],
+    *,
+    key: str,
+    table_key: str,
+    value: TomlArrayTable,
+) -> None:
+    for item in value.rows:
+        lines.append("")
+        lines.append(f"[[{_format_toml_key(key)}.{_format_toml_key(table_key)}]]")
+        lines.extend(
+            f"{_format_toml_key(str(nested_key))} = "
+            f"{_format_toml_value(nested_value)}"
+            for nested_key, nested_value in item.items()
+        )
 
 
 def _format_toml_key(key: str) -> str:
