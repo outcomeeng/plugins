@@ -109,10 +109,10 @@ Run the handoff FROM the worktree that holds the work and step THAT worktree off
 
 **Release mechanics by checkout kind.** First ensure the work branch is committed and pushed — `git push -u origin HEAD:refs/heads/<branch>` when `@{upstream}` is absent, else `git push` — then satisfy the `spx session handoff` git-context gate and step off:
 
-- **Main checkout on a named branch** — the CLI records the branch name; no detach is needed. After the handoff, switch back to the base branch so the feature branch is unoccupied:
+- **Main checkout on a named branch** — the CLI records the branch name; no detach is needed before filing. After the handoff, detach at the remote base tip so the feature branch is unoccupied:
 
   ```bash
-  git switch "$(basename "$(git symbolic-ref --short refs/remotes/origin/HEAD)")"   # e.g. main
+  git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
   ```
 
 - **Linked (pool) worktree** — the CLI's git-context gate accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. Pass the pushed work branch as the header's `git_ref` so the recorded ref is the branch (not the base tip the gate would otherwise record) — the gate still runs on the detached tip and is never bypassed. `/pickup` checks out the branch `git_ref` names. Leave the worktree detached afterward.
