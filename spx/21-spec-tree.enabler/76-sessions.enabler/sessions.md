@@ -8,12 +8,10 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Scenarios
 
-- Given continuation by the agent is impossible because the user halted the work, context is exhausted, or an external blocker prevents the next action, when `/handoff` runs without `--no-session`, then a session document is created in `.spx/sessions/todo/` with repository tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
+- Given continuation by the agent is impossible because the user halted the work, context is exhausted, or an external blocker prevents the next action, when `/handoff` runs without `--no-session`, then a session document is created in `.spx/sessions/todo/` with the current tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
 - Given a session document in `.spx/sessions/todo/`, when `/pickup` runs, then the session is moved to `.spx/sessions/doing/` and its content is emitted to stdout for context loading ([test](tests/test_sessions.scenario.l1.py))
 - Given one or more session documents in `.spx/sessions/doing/`, when `spx session release` runs with their IDs, then each session is moved back to `.spx/sessions/todo/` without modifying its content ([test](tests/test_sessions.scenario.l1.py))
-- Given a session document in `.spx/sessions/todo/`, when `spx session archive` runs with its ID, then the session is moved to `.spx/sessions/archive/` and removed from `.spx/sessions/todo/` ([test](tests/test_sessions.scenario.l1.py))
-- Given a multiline session body is supplied in the handoff payload, when the session document is created, then the full body appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
-- Given a handoff body includes an `<incorporated_sessions>` section naming a prior session ID, when `spx session handoff` stores the replacement session document, then the stored body preserves that incorporated-session reference verbatim ([test](tests/test_sessions.scenario.l1.py))
+- Given coordination-note content is included in the session payload, when the session document is created, then that content appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
 - Given a root worktree checked out on a named branch, when `spx session handoff` runs, then it creates the session and records `git_ref` as the branch name ([test](tests/test_sessions.scenario.l1.py))
 - Given a root worktree with a detached HEAD, when `spx session handoff` runs, then it creates the session and records `git_ref` as the HEAD commit SHA ([test](tests/test_sessions.scenario.l1.py))
 - Given a linked worktree with a clean tree detached at the `origin/<default-branch>` tip, when `spx session handoff` runs, then it creates the session and records `git_ref` as that tip commit SHA ([test](tests/test_sessions.scenario.l1.py))

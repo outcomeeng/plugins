@@ -27,7 +27,7 @@ Classify each imperfection by nature to determine the persistence target. The de
 | **Spec correction**   | Assertion was wrong or incomplete                            | Amend the spec file directly                                                    |
 | **Task-specific**     | Only relevant to this session's work                         | Session file only                                                               |
 
-**Fix-now rule**: if Claude can fix the imperfection right now (broken link, stale path, wrong filename, simple correction), fix it immediately using Edit/Grep — do not propose it in workflow 03. Note what was fixed for the persisted log.
+**Fix-now rule**: if Claude can fix the imperfection right now (broken link, stale path, wrong filename, simple correction), inspect and edit the affected files immediately — do not propose it in workflow 03. Note what was fixed for the persisted log.
 
 **Defer rule**: a fix too large for this session becomes a Tier 3 coordination note (PLAN.md or ISSUES.md), proposed in workflow 03 and written in workflow 04, only when the session already has a real stop condition: the user halted the work, context is exhausted, or an external blocker prevents the next action. If Claude can still act, do not defer; continue the work instead of closing.
 
