@@ -31,11 +31,11 @@ Determine the mode before editing:
 
 Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
 
-| Mode  | Signal                                                                          | Action                       |
-| ----- | ------------------------------------------------------------------------------- | ---------------------------- |
-| Write | The node has no Python evidence file for the assertion                          | Follow `<write_workflow>`    |
-| Fix   | Merged `test-evidence-auditor` JSON is `FAIL` or `UNKNOWN` with Python findings | Follow `<fix_workflow>`      |
-| Split | The test requires source architecture changes first                             | Change source contract first |
+| Mode  | Signal                                                                                           | Action                       |
+| ----- | ------------------------------------------------------------------------------------------------ | ---------------------------- |
+| Write | The node has no Python evidence file for the assertion                                           | Follow `<write_workflow>`    |
+| Fix   | Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with Python findings | Follow `<fix_workflow>`      |
+| Split | The test requires source architecture changes first                                              | Change source contract first |
 
 NEVER create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
 </mode_detection>

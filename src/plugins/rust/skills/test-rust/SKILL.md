@@ -30,11 +30,11 @@ Before writing or revising tests, also check:
 
 Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
 
-| Mode  | Signal                                                                        | Action                                         |
-| ----- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
-| Write | The assertion has no Rust evidence file                                       | Follow `<workflow>`                            |
-| Fix   | Merged `test-evidence-auditor` JSON is `FAIL` or `UNKNOWN` with Rust findings | Follow `<fix_workflow>`                        |
-| Split | The source contract cannot expose the asserted behavior                       | Fix the source contract before test predicates |
+| Mode  | Signal                                                                                         | Action                                         |
+| ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Write | The assertion has no Rust evidence file                                                        | Follow `<workflow>`                            |
+| Fix   | Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with Rust findings | Follow `<fix_workflow>`                        |
+| Split | The source contract cannot expose the asserted behavior                                        | Fix the source contract before test predicates |
 
 </mode_detection>
 

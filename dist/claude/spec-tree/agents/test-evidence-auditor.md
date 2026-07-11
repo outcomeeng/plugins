@@ -26,7 +26,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide behavior-coupl
 
 <workflow>
 
-1. Require the spec-tree foundation and complete node context. Invoke `/understand` when the live foundation marker is absent, then invoke `/contextualize <full-node-path>` and block when the matching `<SPEC_TREE_CONTEXT>` marker is absent.
+1. Require the spec-tree foundation and complete node context. Invoke `/understand` when the live foundation marker is absent, then invoke `/contextualize <full-node-path>` and reject with a failed row and blocking finding when the matching `<SPEC_TREE_CONTEXT>` marker is absent.
 2. Identify every assertion with test evidence from the loaded governing spec.
 3. Read the production source each assertion governs. When the assertion-relevant behavior lacks an observable contract, add an `untestable_source` REJECT finding against the source file, continue ownership and provenance screening, and skip coupling, falsifiability, alignment, and coverage for that assertion.
 4. Starting from each linked test file, follow imports and referenced paths transitively through every evidence artifact before issuing a verdict.
@@ -46,15 +46,15 @@ Return only this JSON shape:
   "schema_version": 1,
   "skill": "audit-tests",
   "target": "<spec-node-path>",
-  "overall": "PASS | FAIL | UNKNOWN",
+  "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "gate-1-assertion", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "gate-2-architectural", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "gate-1-assertion", "status": "PASS | FAIL", "findings": [] },
+    { "name": "gate-2-architectural", "status": "PASS | FAIL", "findings": [] }
   ],
   "metadata": {
     "evidence_artifacts": [{ "path": "<path>", "kind": "<kind>" }],
     "provenance": [{ "artifact": "<path>", "line": 1, "kind": "<kind>", "value": "<value-or-expression>", "owner": "<owner>", "source": "<source>" }],
-    "language_coverage": [{ "language": "<language>", "skill": "audit-<language>-tests", "completed": true, "overall": "PASS | FAIL | UNKNOWN" }]
+    "language_coverage": [{ "language": "<language>", "skill": "audit-<language>-tests", "completed": true, "overall": "APPROVED | REJECTED" }]
   }
 }
 ```
