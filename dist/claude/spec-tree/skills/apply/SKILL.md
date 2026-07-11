@@ -201,9 +201,9 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
-On the first `REJECTED`, clear the prior Step 6 evidence state and reinvoke `/test` over every affected assertion. Rebuild the complete clause-evidence matrix, traverse every linked test and transitive infrastructure artifact, repair every same-class defect, rerun focused deterministic verification, create a new checkpoint commit, and redispatch Step 6 exactly once on the stabilized tree.
+On every `REJECTED`, clear the prior Step 6 evidence state and reinvoke `/test` over every affected assertion. Reread the shared test standards, rebuild the complete clause-evidence matrix, traverse every linked test and transitive infrastructure artifact, repair every same-class defect, rerun focused deterministic verification, create a new checkpoint commit, and redispatch Step 6 on the stabilized tree.
 
-If the stabilized redispatch remains `REJECTED`, stop the per-node flow and return the unresolved evidence findings plus the complete reset performed. Concrete evidence findings never trigger an operator question while governing assertions and source contracts determine the repair.
+If a stabilized redispatch remains `REJECTED` with concrete findings, treat each finding as proof that the prior repair applied the shared standards incompletely and repeat the complete reset. Concrete evidence findings never trigger an operator question while governing assertions, standards, source contracts, and deterministic evidence determine the repair.
 
 </step>
 
@@ -278,7 +278,7 @@ Steps 4, 6, and 8 are blocking audit gates. Steps 4 and 6 emit verdicts from the
 
 On `REJECTED` or `BLOCKED` at Steps 4 and 6; projection `terminalStatus: rejected` or a blocked result at Step 8; or an unaddressed valid finding at Step 9: fix the defect class or exact blocked command, re-dispatch the same auditor, and inspect the new result.
 
-**3 consecutive rejected or blocked results on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
+Three consecutive results on one gate trigger an approach reset, never an automatic operator checkpoint. While the latest result contains an actionable finding grounded in governing standards, specs, source contracts, or deterministic evidence, reread those sources, rebuild the complete artifact model, refactor the approach, create a new checkpoint, and continue the gate. Stop and use `AskUserQuestion` only when three consecutive results expose the same blocker and no governing source determines a repair, or when governing sources contradict one another. Report the exact blocker, the standards and artifact model reread, the repairs attempted, and the unresolved conflict.
 
 </review_gates>
 
