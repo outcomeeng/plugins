@@ -96,7 +96,7 @@ Read the spec's Assertions section. For each assertion, extract:
 
 **Missing test file = finding.** Record it and continue to next assertion.
 
-**Compliance assertions with `[audit]` tags** (or the legacy `[review]`) are verified by agent judgment, not by tests. Skip them in the test evidence audit.
+Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]`, `[audit]`, or legacy `[review]`; their evidence belongs to other verification workflows.
 
 </step>
 
@@ -314,6 +314,8 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
           "id": "f-002",
           "file": "<test-file>",
           "line": null,
+          "assertion": "<full-assertion-text-or-stable-id>",
+          "property": "<testability | evidence-chain-completeness | declarations | source-ownership | coupling | falsifiability | alignment | coverage | language-composition>",
           "rule": "<assertion-id-or-property-name>",
           "severity": "REJECT",
           "message": "<one-line evidentiary gap>",
@@ -329,6 +331,8 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
           "id": "f-003",
           "file": "<test-file>",
           "line": null,
+          "assertion": "<full-assertion-text-or-stable-id | cross-assertion>",
+          "property": "architectural-duplication",
           "rule": "<duplication-pattern>",
           "severity": "REJECT",
           "message": "<extraction target>: <nearest common test-infrastructure location>",
