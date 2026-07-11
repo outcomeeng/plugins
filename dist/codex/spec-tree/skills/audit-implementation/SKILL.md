@@ -176,7 +176,7 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-Return BLOCKED only when SPX rejects a command or a required skill is missing before dispatch. Include the exact command, stderr, and the coverage unit or payload key that failed.
+Return BLOCKED when the invocation request is malformed, SPX rejects a command, or a required skill is missing before dispatch. For malformed requests, name the absent labeled fields from `<request_contract>`. For command failures, include the exact command, stderr, and the coverage unit or payload key that failed.
 
 Each finding row names:
 

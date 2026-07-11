@@ -57,7 +57,7 @@ class Runner(Protocol):
 
 
 class BaseRefNotConfiguredError(RuntimeError):
-    """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
+    """Raised by ``detect_base_ref`` when origin/HEAD is absent.
 
     Base-ref derivation has no portable fallback when the remote default is
     absent. Callers must supply authoritative scope rather than guessing a
@@ -161,7 +161,6 @@ def branch_scope(
 def detect_base_ref(
     repo: pathlib.Path,
     *,
-    strict: bool = False,
     runner: Runner = subprocess.run,
 ) -> str:
     """Return the bare base-branch name configured by ``origin/HEAD``.
@@ -173,8 +172,7 @@ def detect_base_ref(
     derivation and the diff-range composition independent.
 
     When the symbolic ref is absent, raises ``BaseRefNotConfiguredError``.
-    ``strict`` remains accepted for caller compatibility; neither mode guesses
-    a consumer repository's default branch.
+    No mode guesses a consumer repository's default branch.
     """
     result = runner(
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path

@@ -16,7 +16,7 @@ The derivation lives in `${SKILL_DIR}/scripts/changeset_scope.py`, imported by s
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
 | `branch_slug(name, state_dir)`  | Path-safe, length-bounded, deterministic on-disk slug for a branch name                  |
 | `detect_current_branch(repo)`   | Current branch name; raises `DetachedHeadError` on detached HEAD                         |
-| `detect_base_ref(repo, strict)` | Bare base-branch name from `origin/HEAD`; strict raises `BaseRefNotConfiguredError`      |
+| `detect_base_ref(repo)`         | Bare base-branch name from `origin/HEAD`; raises `BaseRefNotConfiguredError` when absent |
 | `remote_tracking_ref(base)`     | The remote-tracking ref `origin/<base>` — the single source of the `origin/` composition |
 | `branch_scope(base, repo)`      | Files changed on this branch relative to `origin/<base>` (three-dot, merge-base)         |
 | `expand_diff_range(spec, repo)` | Files changed in an arbitrary git diff range                                             |

@@ -103,6 +103,7 @@ _changeset_scope = _load_changeset_scope()
 detect_base_ref = _changeset_scope.detect_base_ref
 remote_tracking_ref = _changeset_scope.remote_tracking_ref
 detect_current_branch = _changeset_scope.detect_current_branch
+BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
 DetachedHeadError = _changeset_scope.DetachedHeadError
 
 
@@ -580,7 +581,16 @@ def sync_base(
     never raises for an ordinary git outcome.
     """
     if base_ref is None:
-        base_ref = detect_base_ref(repo, strict=False)
+        try:
+            base_ref = detect_base_ref(repo)
+        except BaseRefNotConfiguredError as exc:
+            return SyncBaseResult(
+                SyncStatus.GIT_FAILURE,
+                "",
+                "",
+                None,
+                str(exc),
+            )
     remote_ref = remote_tracking_ref(base_ref)
 
     try:
