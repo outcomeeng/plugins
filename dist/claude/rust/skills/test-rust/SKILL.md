@@ -58,7 +58,7 @@ After writing or repairing tests:
 3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
 5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
-6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `product-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
+6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `<package>-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
 7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the location prescribed by `/rust-test-standards` and repo-local overlays.
 8. Run the repository's Rust validation commands before reporting the tests complete.
 
@@ -68,7 +68,7 @@ After writing or repairing tests:
 
 1. Read the merged `test-evidence-auditor` JSON and the Rust findings appended to its gate rows.
 2. Reinvoke `/test` for every affected assertion and rebuild the complete clause-evidence matrix from the governing assertion and source contracts.
-3. If any cited test proves only a subpart, inspect every linked test, `product-testing` harness, generator, inert fixture, source contract, oracle, and assertion-relevant implementation path before editing.
+3. If any cited test proves only a subpart, inspect every linked test, `<package>-testing` harness, generator, inert fixture, source contract, oracle, and assertion-relevant implementation path before editing.
 4. Classify every finding and same-class instance across that chain by coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or workspace-boundary safety.
 5. Fix source architecture before test syntax when the finding exposes a missing enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior.
 6. Apply every class-level repair together, then run `<verification_gates>` once on the stabilized evidence before redispatch.
@@ -98,9 +98,9 @@ All Rust test examples are owned by `/rust-test-standards`:
 - `/rust-test-standards` `<property_and_compile_time_patterns>`
 - `/rust-test-standards` `<level_2_patterns>`
 - `/rust-test-standards` `<level_3_patterns>`
-- `/rust-test-standards` `levels/level-1.md`
-- `/rust-test-standards` `levels/level-2.md`
-- `/rust-test-standards` `levels/level-3.md`
+- `/rust-test-standards` Level 1 local deterministic guidance
+- `/rust-test-standards` Level 2 local infrastructure guidance
+- `/rust-test-standards` Level 3 remote credentialed guidance
 
 </reference_guides>
 
@@ -126,7 +126,7 @@ Rust test work is complete when:
 
 **Failure: Patched one Rust finding and redispatched**
 
-Claude changed the cited assertion while adjacent clauses and `product-testing` infrastructure retained the same evidence defect. The next audit rejected another instance and the apply loop lost its autonomous repair boundary.
+Claude changed the cited assertion while adjacent clauses and `<package>-testing` infrastructure retained the same evidence defect. The next audit rejected another instance and the apply loop lost its autonomous repair boundary.
 
 Why it failed: Claude treated a finding as a single predicate repair instead of evidence that the assertion's full chain and same-class instances were untrusted.
 

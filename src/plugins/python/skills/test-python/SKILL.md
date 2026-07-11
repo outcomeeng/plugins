@@ -14,6 +14,14 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 
 {!% require_skill 'spec-tree:test' %!}
 
+<context>
+
+!`test -f spx/local/python.md && sed -n '1,400p' spx/local/python.md || true`
+
+!`test -f spx/local/python-tests.md && sed -n '1,400p' spx/local/python-tests.md || true`
+
+</context>
+
 <objective>
 Python test files that supply evidence for a spec-tree node's assertions.
 </objective>
@@ -57,8 +65,8 @@ Run this workflow for new Python tests:
 6. Put only typed assertion code in the spec node's `tests/` directory.
 7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data.
 8. Import source-owned values from the owning module.
-9. Import variable input domains from `product_testing.generators.*`.
-10. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
+9. Import variable input domains from `<package>_testing.generators.*`.
+10. Import harness entrypoints from `<package>_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
 11. Consume inert fixture files only by path, reading, or copying.
 12. Run the node's canonical pytest command and the repository's lint/type commands.
 
@@ -74,8 +82,8 @@ Run this workflow for rejected Python tests:
 5. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
 6. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
 7. Replace constant-only generators with direct source imports or meaningful variable domains.
-8. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
-9. Keep `product_testing.fixtures/` for inert files only.
+8. Move resource setup, teardown, cleanup, and pytest fixture bodies into `<package>_testing.harnesses.*`.
+9. Keep `<package>_testing.fixtures/` for inert files only.
 10. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
 11. Apply all class-level repairs together, then rerun the focused tests and repository-canonical Python validation commands once on the stabilized evidence.
 
@@ -115,6 +123,22 @@ Report the evidence created or repaired with:
 - Remaining rejection, if an audit gate still fails
 
 </reporting>
+
+<failure_modes>
+
+**Failure 1: Repaired only the cited test expectation**
+
+Claude changed the expectation named by an audit finding while another clause of the same assertion still had no source-owned case or mutation-sensitive observable. The next audit rejected a different subpart of the same evidence chain.
+
+Avoid this by rebuilding the complete clause-evidence matrix and inspecting every linked test, harness, generator, fixture, source contract, oracle, and `conftest.py` shim before editing.
+
+**Failure 2: Moved protocol vocabulary into a harness**
+
+Claude removed literals from the executed test by placing schema keys, CLI tokens, paths, producer identities, and expected projections in a harness. The test became visually thin while the harness still owned production truth.
+
+Avoid this by exporting protocol vocabulary and constructors from the owning production module. Harnesses own lifecycle, resource access, replay policy, and diagnostics only.
+
+</failure_modes>
 
 <success_criteria>
 Python test work satisfies this skill when:

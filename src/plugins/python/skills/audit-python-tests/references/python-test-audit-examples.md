@@ -49,18 +49,19 @@ Assertion type: Scenario -> example-based test strategy
 Coverage:
 
 ```text
-Baseline: product/uart_tx.py - 31.0%
-With test: product/uart_tx.py - 72.4%
-Delta: +41.4%
+Trace: UartTx.write() enters the 8N1 framing branch, appends the start bit,
+       iterates all eight data-bit positions in LSB order, and appends the
+       stop bit before returning the observed sequence.
+Assertion-relevant path reached: yes
 ```
 
 ```text
 Audit: spx/55-example.enabler/21-transmitter.outcome/
 Verdict: APPROVED
 
-| # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage | Verdict |
-|---|----------------|----------|--------------------------|-----------|----------|---------|
-| 1 | 8N1 TX bit seq | Direct   | MSB/LSB swap breaks test | PASS      | +41.4%   | PASS    |
+| # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage trace   | Verdict |
+|---|----------------|----------|--------------------------|-----------|------------------|---------|
+| 1 | 8N1 TX bit seq | Direct   | MSB/LSB swap breaks test | PASS      | 8N1 path reached | PASS    |
 ```
 
 ## Example 2: Rejected, Coupling Severed By @patch
