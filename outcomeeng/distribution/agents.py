@@ -898,8 +898,7 @@ def _append_toml_array_table(
         lines.append("")
         lines.append(f"[[{_format_toml_key(key)}.{_format_toml_key(table_key)}]]")
         lines.extend(
-            f"{_format_toml_key(str(nested_key))} = "
-            f"{_format_toml_value(nested_value)}"
+            f"{_format_toml_key(str(nested_key))} = {_format_toml_value(nested_value)}"
             for nested_key, nested_value in item.items()
         )
 
