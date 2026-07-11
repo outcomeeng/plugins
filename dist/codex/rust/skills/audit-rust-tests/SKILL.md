@@ -1,8 +1,8 @@
 ---
 name: audit-rust-tests
 description: >-
-  Rust test-evidence audit methodology composed by a dispatched auditor agent for the Rust tests in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  Rust test-evidence audit methodology composed by the dispatched test-evidence-auditor for the Rust tests in scope.
+  Reached only through the test-evidence-auditor, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -16,7 +16,7 @@ Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is una
 
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — `test-evidence-auditor` (via `audit-tests`) or a generic `/audit`-family agent composing this skill for the Rust tests in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside the dispatched `test-evidence-auditor` verifier context via `audit-tests`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch `test-evidence-auditor`. An already-dispatched test-evidence auditor that preloaded this skill proceeds.
 
 </dispatch_gate>
 
