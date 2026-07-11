@@ -32,7 +32,7 @@ Parse the complete invoking prompt text exactly once before Step 0.
 
 - invoking prompt begins with `--agent` -> launch the `applier` agent on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
 - invoking prompt contains a node path without `--agent` -> the work queue is that single node.
-- invoking prompt contains no node path -> determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+- invoking prompt contains no node path -> determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE`, treat each non-comment, non-blank entry as relative to `spx/`, prefix it with `spx/`, and queue the resulting full node paths. If no work is found, report "Nothing to apply" and stop.
 
 When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 

@@ -30,7 +30,7 @@ Invoke the `rust:rust-standards` skill before proceeding. If that skill is unava
 
 Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 

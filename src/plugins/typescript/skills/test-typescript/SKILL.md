@@ -11,14 +11,14 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 <objective>
 TypeScript test files that supply evidence for a node specification's assertions.
 </objective>
 
 <input_contract>
-`$node_path` is the full `spx/...` path to the governing node. If `$node_path` is empty, stop and report that the governing node path is required before test evidence can be written or repaired.
+Resolve `$node_path` from the optional argument. When it is empty, use the full target node path from the live `<SPEC_TREE_CONTEXT>` marker. Stop only when neither source provides a governing node path.
 </input_contract>
 
 <mode_detection>
@@ -290,7 +290,7 @@ See `/typescript-test-standards` for:
 - **Level tooling** - Vitest vs Playwright, l1/l2/l3 infrastructure
 - **Router mapping** - `/test` Stage decisions to TypeScript patterns
 - **l1 patterns** - Pure functions, typed factories, temp dirs
-- **Exception implementations** - The 6 exception cases in TypeScript
+- **Exception implementations** - The 7 exception cases in TypeScript
 - **l2 patterns** - Typed harness factory and usage
 - **l3 patterns** - Credential management, fail-loudly policy
 - **Dependency injection** - Typed interfaces and recording doubles

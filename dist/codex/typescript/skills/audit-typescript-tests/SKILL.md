@@ -32,7 +32,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
