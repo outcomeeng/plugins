@@ -22,7 +22,9 @@ from outcomeeng.distribution.marketplace_sources import (
     CLAUDE_PLUGIN_ENABLE_COMMAND,
     CLAUDE_PLUGIN_INSTALL_COMMAND,
     CLAUDE_PLUGIN_LIST_COMMAND,
+    CLAUDE_SCOPE_LOCAL,
     CLAUDE_SCOPE_MANAGED,
+    CLAUDE_SCOPE_PROJECT,
     CLAUDE_SCOPE_USER,
     CODEX_MARKETPLACE_ADD_COMMAND,
     CODEX_MARKETPLACE_LIST_COMMAND,
@@ -457,7 +459,7 @@ def source_reconciliation_rejects_ambiguous_claude_roots(tmp_path: Path) -> bool
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE: "Directory",
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                         MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "project"),
                     },
                     {
@@ -498,7 +500,7 @@ def parse_claude_installed_plugins_keeps_scope_state_and_project_path(
         [
             _claude_plugin_payload(
                 "spec-tree",
-                scope="project",
+                scope=CLAUDE_SCOPE_PROJECT,
                 enabled=True,
                 project_path=project_path,
             ),
@@ -514,7 +516,7 @@ def parse_claude_installed_plugins_keeps_scope_state_and_project_path(
     plugins = parse_claude_installed_plugins(payload, DEFAULT_MARKETPLACE)
 
     assert [(plugin.name, plugin.scope, plugin.enabled) for plugin in plugins] == [
-        ("spec-tree", "project", True),
+        ("spec-tree", CLAUDE_SCOPE_PROJECT, True),
         ("rust", CLAUDE_SCOPE_USER, False),
     ]
     assert plugins[0].project_path == project_path
@@ -659,7 +661,7 @@ def source_reconciliation_unscoped_default_adds_user_registration_and_restores_u
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = RecordingCommandRunner(
@@ -677,7 +679,7 @@ def source_reconciliation_unscoped_default_adds_user_registration_and_restores_u
                     ),
                     _claude_plugin_payload(
                         "spec-tree",
-                        scope="project",
+                        scope=CLAUDE_SCOPE_PROJECT,
                         enabled=True,
                         project_path=project_path,
                     ),
@@ -774,7 +776,7 @@ def source_reconciliation_accepts_duplicate_lower_priority_matching_sources(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_LOCAL,
                         MARKETPLACE_FIELD_PATH: str(marketplace_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                         MARKETPLACE_FIELD_PROJECT_PATH: str(project_path),
                     },
                 ]
@@ -813,7 +815,7 @@ def source_validation_prefers_user_source_over_stale_project_or_local_duplicate(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE: "Directory",
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "local",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_LOCAL,
                         MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path),
                     },
                 ]
@@ -1022,7 +1024,7 @@ def source_reconciliation_repairs_scoped_matching_codex_source(
             ),
             CODEX_MARKETPLACE_LIST_CALL: _scoped_codex_local_marketplace_payload(
                 marketplace_root,
-                scope="project",
+                scope=CLAUDE_SCOPE_PROJECT,
             ),
         }
     )
@@ -1103,7 +1105,7 @@ def source_reconciliation_repairs_scoped_stale_codex_duplicate(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_LOCAL,
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                     },
                 ]
             ),
@@ -1175,7 +1177,7 @@ def source_reconciliation_preserves_user_scope_claude_plugin_installs(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = _source_repair_runner(
@@ -1193,7 +1195,7 @@ def source_reconciliation_preserves_user_scope_claude_plugin_installs(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
@@ -1298,7 +1300,7 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = _source_repair_runner(
@@ -1316,7 +1318,7 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
@@ -1416,7 +1418,7 @@ def source_reconciliation_ignores_project_duplicate_when_user_source_canonical(
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
                     MARKETPLACE_FIELD_PATH: str(stale_root),
-                    MARKETPLACE_FIELD_SCOPE: "project",
+                    MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                     MARKETPLACE_FIELD_PROJECT_PATH: str(project_path),
                 },
             ]
@@ -1430,7 +1432,7 @@ def source_reconciliation_ignores_project_duplicate_when_user_source_canonical(
         *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
         DEFAULT_MARKETPLACE,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
     )
     assert result.changed is False
     assert result.commands == ()
@@ -1479,7 +1481,7 @@ def source_reconciliation_rejects_project_source_without_project_path(
     runner = _source_repair_runner(
         claude_payload=_scoped_claude_directory_marketplace_payload(
             stale_root,
-            scope="project",
+            scope=CLAUDE_SCOPE_PROJECT,
         ),
         codex_root=canonical_root,
     )
@@ -1507,19 +1509,19 @@ def source_reconciliation_ignores_project_source_and_adds_user_registration(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     project_remove = (
         *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
         DEFAULT_MARKETPLACE,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
     )
     runner = _source_repair_runner(
         claude_payload=_scoped_claude_directory_marketplace_payload(
             stale_root,
-            scope="project",
+            scope=CLAUDE_SCOPE_PROJECT,
             project_path=project_path,
         ),
         codex_root=canonical_root,
@@ -1532,7 +1534,7 @@ def source_reconciliation_ignores_project_source_and_adds_user_registration(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
