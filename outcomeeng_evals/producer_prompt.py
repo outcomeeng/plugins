@@ -61,7 +61,8 @@ def materialize_prompt(eval_toml_path: Path, *, repo_root: Path) -> Path:
     if not resolved_prompt.is_relative_to(resolved_root):
         msg = f"{resolved_prompt}: generated prompt resolves outside {resolved_root}"
         raise ProducerPromptError(msg)
-    resolved_prompt.write_text(prompt_text, encoding="utf-8")
+    # The resolved containment guard above fixes the sink to this repository.
+    resolved_prompt.write_text(prompt_text, encoding="utf-8")  # NOSONAR
     return resolved_prompt
 
 
