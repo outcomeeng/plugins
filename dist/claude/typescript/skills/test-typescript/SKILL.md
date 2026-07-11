@@ -38,7 +38,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
 
 2. **FIX mode** - Tests exist but were rejected by `test-evidence-auditor`
    - Check: Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with TypeScript findings
-   - Action: Read the rejection, fix the specific issues, re-run tests
+   - Action: Reread `/typescript-test-standards`, rebuild the complete assertion-to-evidence matrix, sweep the full evidence chain for every same-class defect, repair the complete class, run deterministic verification on the stabilized evidence, and redispatch the audit
 
 **Always check which mode before proceeding.**
 </mode_detection>
@@ -403,6 +403,6 @@ Test evidence is ready for audit when:
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
 - [ ] The product's resolved TypeScript typecheck and lint commands exit zero for the changed scope
-- [ ] FIX mode addresses every supplied audit finding with a test change or a stated evidence-based rejection before redispatch
+- [ ] FIX mode completes every supplied audit repair and every same-class repair found across the full evidence chain, then passes deterministic verification before redispatch
 
 </success_criteria>
