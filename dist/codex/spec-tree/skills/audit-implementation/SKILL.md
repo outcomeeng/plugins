@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on the requested implementation scope against the installed language concern standards — APPROVED (`terminalStatus: approved`), REJECTED (`terminalStatus: rejected`) with each finding naming the artifact, violated rule, and evidence, or BLOCKED with the failed request field, skill, or SPX command.
+A verdict on the requested implementation scope against the installed language concern standards, returned as the raw run token and rendered SPX projection.
 
 </objective>
 
@@ -240,7 +240,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 <success_criteria>
 
 - The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
-- The verdict states an explicit overall determination: APPROVED, REJECTED, or BLOCKED.
+- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A blocked run names the exact failed request field, unavailable skill, or SPX command that prevented a valid completed projection.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.

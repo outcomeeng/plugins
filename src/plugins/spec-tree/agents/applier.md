@@ -59,7 +59,7 @@ Every audit handoff includes the scope decision from `<step name="resolve-scope"
 
 - `ARCHITECTURE_AUDIT_REQUIRED` after architecture authoring, with ADR path, governing node path, detected language, scope, and changed files.
 - `TEST_AUDIT_REQUIRED` after test authoring, with governing node, assertion headings, test files, detected language, scope, and changed files.
-- `IMPLEMENTATION_AUDIT_REQUIRED` after implementation, with repository path, live file list including untracked files, `<base>..<head>` scope, governing node path, detected language, and deterministic verification already run.
+- `IMPLEMENTATION_AUDIT_REQUIRED` after implementation, with repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. This is an advisory work summary rather than a dispatch-ready gating request; the main `/apply` flow creates a clean checkpoint and replaces the live list with the resulting committed `<base>..<head>` scope before dispatch.
 
 Do not invent missing requirements. If the dispatch prompt, repository files, or required Skill invocations do not identify enough spec assertions, target files, language workflow, or verification commands to proceed safely, stop with `METHODOLOGY_REQUIRED` and name the missing input.
 
@@ -69,7 +69,7 @@ Do not invent missing requirements. If the dispatch prompt, repository files, or
 
 At Steps 4 and 6, do not run the gates. Record the corresponding `ARCHITECTURE_AUDIT_REQUIRED` or `TEST_AUDIT_REQUIRED` handoff for the final aggregate report.
 
-At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit-implementation` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` handoff containing repository path, live file list including untracked files, `<base>..<head>` scope, governing node path, detected language, and deterministic verification already run. The main conversation dispatches `implementation-auditor` with that request.
+At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit-implementation` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` advisory handoff containing repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. The main conversation must run focused verification, create a checkpoint commit, confirm a clean worktree, and dispatch `implementation-auditor` with the exact committed `<base>..<head>` scope and no live file list.
 
 </gate_protocol>
 

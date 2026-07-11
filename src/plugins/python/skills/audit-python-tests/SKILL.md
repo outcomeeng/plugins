@@ -1,14 +1,14 @@
 ---
 name: audit-python-tests
 description: >-
-  Python test-evidence audit methodology composed by the dispatched test-evidence-auditor for the Python tests in scope.
-  Reached only through the test-evidence-auditor, never the main conversation.
+  Python test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Python tests in scope.
+  Reached only through those auditor agents, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
 
-This audit runs inside the dispatched `test-evidence-auditor` verifier context via `audit-tests`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch `test-evidence-auditor`. An already-dispatched test-evidence auditor that preloaded this skill proceeds.
+This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
 
 </dispatch_gate>
 

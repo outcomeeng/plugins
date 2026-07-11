@@ -30,7 +30,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
-- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge — on its return, dispatch any audit handoff it reports, then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
 - `$ARGUMENTS` containing a node path without `--agent` → the work queue is that single node.
 - Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
 
@@ -88,7 +88,7 @@ Before dispatching any persisted audit or review gate, bind its subject to an ex
 1. Run the touched-scope deterministic verification required by the repository overlay over the stabilized changes. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
 2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local verification checkpoint.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
-4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run. The aggregate `just check-full` gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
+4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
 
 An audit over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate.
 
@@ -255,9 +255,9 @@ Claude tends to report the flow done the moment Step 9 converges and tests pass 
 
 <terminal_full_gate>
 
-When the repository overlay, governing node, or merge lifecycle requires the full deterministic bundle, run `just check-full` exactly once at the terminal verification point: after Steps 4, 6, 8, applicable evidence-auditor gates, and Step 9 have converged on the same clean committed head. Do not run `just check-full` before those agentic checks, inside an auditor, or concurrently with another heavy command.
+When the repository overlay, governing node, or merge lifecycle requires a full deterministic bundle, run the repository's declared full deterministic gate exactly once at the terminal verification point: after Steps 4, 6, 8, applicable evidence-auditor gates, and Step 9 have converged on the same clean committed head. Do not run that full gate before those agentic checks, inside an auditor, or concurrently with another heavy command.
 
-If `just check-full` fails, fix the reported defect, run the focused touched-scope checks, create a new checkpoint commit, rerun every invalidated agentic gate, and only then run `just check-full` again. A successful full gate is invalidated by any subsequent source, test, spec, generated-output, or configuration change.
+If the full deterministic gate fails, fix the reported defect, run the focused touched-scope checks, create a new checkpoint commit, rerun every invalidated agentic gate, and only then run the declared full gate again. A successful full gate is invalidated by any subsequent source, test, spec, generated-output, or configuration change.
 
 </terminal_full_gate>
 
@@ -269,7 +269,7 @@ Steps 4, 6, and 8 are blocking audit gates. Steps 4 and 6 emit verdicts from the
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
-- Before invoking `/merge` when the full deterministic bundle is required: confirm the terminal `just check-full` run occurred after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running `just check-full` again.
+- Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
 On `REJECTED`, `UNKNOWN`, or `BLOCKED` at Steps 4 and 6; projection `terminalStatus: rejected` or a blocked result at Step 8; or an unaddressed valid finding at Step 9: fix the defect class or exact blocked command, re-dispatch the same auditor, and inspect the new result.
