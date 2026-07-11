@@ -320,7 +320,12 @@ def render_developer_instructions(agent: SourceAgent) -> str:
 
 def render_agent_toml(agent: CodexAgent) -> str:
     """Render one converted agent as TOML."""
-    return _render_toml_document(agent.values)
+    return render_toml_document(agent.values)
+
+
+def render_toml_document(values: Mapping[str, object]) -> str:
+    """Render a structured mapping as a TOML document."""
+    return _render_toml_document(values)
 
 
 def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent, ...]:
@@ -972,6 +977,7 @@ __all__ = [
     "map_web_search",
     "parse_agent_markdown",
     "render_agent_toml",
+    "render_toml_document",
 ]
 
 

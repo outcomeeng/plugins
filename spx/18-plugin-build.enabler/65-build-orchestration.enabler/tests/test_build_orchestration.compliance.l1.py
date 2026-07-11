@@ -10,6 +10,12 @@ from outcomeeng.distribution.contracts import (
     DIST_DIFF_MODULE_NAME,
     ORCHESTRATION_VALIDATION_ARGV,
 )
+from outcomeeng.distribution.codex_project import (
+    CODEX_LOCAL_BUILD_ARGV,
+    CODEX_LOCAL_LAUNCH_ARGV,
+    CODEX_LOCAL_RECIPE_NAME,
+    PROJECT_RUNTIME_BUILD_ARGV,
+)
 from outcomeeng.distribution.orchestration import (
     BUILD_RECIPE_NAME,
     CLAUDE_MARKETPLACE_PATH,
@@ -64,6 +70,16 @@ def test_justfile_declares_build_skills_recipe() -> None:
 
     assert just_recipe_names(justfile).count(BUILD_RECIPE_NAME) == 1
     assert BUILD_COMMAND_ARGV in commands
+
+
+def test_justfile_declares_checkout_local_codex_recipe() -> None:
+    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
+    commands = just_recipe_commands(justfile, CODEX_LOCAL_RECIPE_NAME)
+
+    assert just_recipe_names(justfile).count(CODEX_LOCAL_RECIPE_NAME) == 1
+    assert CODEX_LOCAL_BUILD_ARGV in commands
+    assert PROJECT_RUNTIME_BUILD_ARGV in commands
+    assert CODEX_LOCAL_LAUNCH_ARGV in commands
 
 
 def test_lefthook_runs_build_and_checks_dist_drift() -> None:

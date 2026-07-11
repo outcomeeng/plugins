@@ -93,6 +93,12 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
+# Build and launch Codex against checkout-local plugin and custom-agent state.
+codex-local *args:
+    just build-skills
+    uv run --no-cache python -m outcomeeng.distribution.codex_project .
+    CODEX_HOME="$PWD/.codex/runtime" codex {{args}}
+
 # Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks from rendered harness templates
 build-instructions:
     uv run python -m outcomeeng.distribution.instruction_block --write

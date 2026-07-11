@@ -665,11 +665,17 @@ The Skill tool loads SKILL.md content into per-session memory the first time the
 
 ### Smoke-testing skill changes
 
-Work in the checkout registered as the marketplace source (`claude plugin marketplace list` shows which directory that is):
+For Claude, work in the checkout registered as the marketplace source (`claude plugin marketplace list` shows which directory that is):
 
 1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
 2. Run `/reload-plugins`. For a Claude session serving from the source `dist/` — the usual case while developing — this re-reads the edited SKILL.md directly, so no version bump or sync is needed to smoke-test a Claude change in the source checkout.
 3. Invoke the skill — the first invocation after the reload loads the new content.
+
+For Codex, work in the checkout whose generated plugin version you want to exercise:
+
+1. Edit `src/plugins/<plugin>/`.
+2. Run `just codex-local`. The recipe rebuilds `dist/codex/`, installs every generated plugin and custom agent into the ignored `.codex/runtime/` checkout-local Codex home, refreshes `.codex/config.toml`, and launches Codex with `CODEX_HOME` bound to that local runtime.
+3. Invoke the skill or agent in the new session. Its marketplace and plugin cache resolve from the checkout while the user's marketplace registration and versioned plugin cache remain unchanged.
 
 `just sync-marketplace` is for the cross-runtime install state, not for serving a Claude edit in the source checkout. It runs `claude plugin marketplace update outcomeeng` (which, on a version bump, repoints running Claude sessions to the versioned cache snapshot), reconciles Claude and Codex `outcomeeng` registrations to the default-branch local marketplace source, refreshes every generated Codex plugin from that source with `codex plugin add <plugin>@outcomeeng`, repairs compatibility symlinks, and then runs `validate_install` and `check-installed`. After a PR merge or direct `main` publication that changes plugin distribution files, fast-forward the **marketplace-source worktree's** `main` to the merged state and refresh installs — `git -C "$src" fetch origin main && git -C "$src" merge --ff-only origin/main`, then `(cd "$src" && just sync-marketplace <previous-main-ref>)`, where `$src` is the Directory-source path from `claude plugin marketplace list --json` (the exact steps and rationale are in [`spx/local/merging.md`](spx/local/merging.md) Post-merge marketplace sync) — then `/reload-plugins`. `sync-marketplace` must run from the source worktree: its `validate_install` reads `current_versions` from its own working directory, so running it from a feature worktree behind `origin/main` false-fails against that worktree's stale versions. Detaching the current feature worktree onto `origin/main` does not advance the source worktree the marketplace serves from.
 
