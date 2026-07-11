@@ -116,6 +116,10 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 - The audit methodology classifies coupling into at least the nine categories defined in the Coupling Taxonomy — distinct failure modes require distinct audit responses ([test](tests/test_test_auditing.property.l1.py))
 
+### Evaluations
+
+- ALWAYS: the language-neutral test-evidence auditor inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and identifies the transitive artifact and required ownership target in its structured verdict ([eval](evals/full-chain-ownership/eval.toml))
+
 ### Compliance
 
 - ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])

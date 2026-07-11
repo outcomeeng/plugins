@@ -1,3 +1,7 @@
+<!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-tests/SKILL.md. -->
+
+This eval runs in the isolated verifier context required by the producer below. Apply the complete producer to the supplied test-evidence package. The caller has classified the package as TypeScript, and the TypeScript-specific concern audit has already returned a passing row with no findings. Judge the language-neutral evidence chain only. Return only the producer's structured JSON verdict.
+
 ---
 name: audit-tests
 description: >-
@@ -83,12 +87,12 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 For every linked test, follow each repository import recursively. Record one inventory entry per artifact:
 
-| Field               | Meaning                                                                 |
-| ------------------- | ----------------------------------------------------------------------- |
-| `path`              | Repository-relative artifact path                                       |
-| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from`     | Path that introduced the artifact, or null for the linked test          |
-| `inspection_status` | `inspected` or `unresolved`                                             |
+| Field | Meaning |
+| --- | --- |
+| `path` | Repository-relative artifact path |
+| `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
+| `imported_from` | Path that introduced the artifact, or null for the linked test |
+| `inspection_status` | `inspected` or `unresolved` |
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
 
@@ -140,12 +144,12 @@ For property-based tests, verify seed and replay behavior by reading the importe
 
 Apply category-specific ownership checks to every imported test-infrastructure artifact:
 
-| Artifact role | Allowed ownership                                                                      | REJECT with `source-ownership`                                                                              |
-| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
-| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs                          |
-| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
-| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
+| Artifact role | Allowed ownership | REJECT with `source-ownership` |
+| --- | --- | --- |
+| Harness | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
+| Generator | Variable domains with meaningful variation and shrinking | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs |
+| Fixture | Inert whole payload consumed by path or bytes | Isolated tokens, values, expected outputs, or executable exports |
+| Discovery | Test collection and registration policy | Fixture bodies, domain values, generated cases, or hidden setup policy |
 
 For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with rule `source-ownership`; a harness location never establishes ownership by itself.
 
@@ -398,3 +402,9 @@ The verdict is sound when:
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.
 
 </success_criteria>
+
+The test-evidence package (JSON-encoded):
+
+```json
+{input_json}
+```

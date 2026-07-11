@@ -25,6 +25,10 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 An executed test file that declares variables or constants has already broken the evidence boundary. Screen declarations first, then check imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
 
+**COMPLETE THE EVIDENCE CHAIN.**
+
+Start from every linked test and recursively follow repository imports through test infrastructure before judging evidence. Inventory each linked test, harness, generator, fixture reference, and applicable discovery artifact with its path, role, importing artifact, and inspection status. An unresolved import, unread artifact, or unclassified role is `incomplete-evidence-chain` and rejects the audit. Approval requires a complete inventory in verdict metadata.
+
 Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
 **JUDGE COVERAGE BY READING.**
@@ -54,6 +58,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
+- ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
 
 </constraints>
@@ -69,6 +74,25 @@ Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
+
+</step>
+
+<step name="inventory_evidence_chain">
+
+**Step 2b: Inventory the complete evidence chain**
+
+For every linked test, follow each repository import recursively. Record one inventory entry per artifact:
+
+| Field               | Meaning                                                                 |
+| ------------------- | ----------------------------------------------------------------------- |
+| `path`              | Repository-relative artifact path                                       |
+| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
+| `imported_from`     | Path that introduced the artifact, or null for the linked test          |
+| `inspection_status` | `inspected` or `unresolved`                                             |
+
+Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
+
+If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
 </step>
 
@@ -93,7 +117,7 @@ Read the spec's Assertions section. For each assertion, extract:
 
 <step name="audit_declarations">
 
-**Step 3a: Test-file declarations**
+**Step 3a: Ownership across the evidence chain**
 
 Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, or property-generated parameter and classify the proper owner:
 
@@ -113,6 +137,17 @@ Use language syntax while reading to enumerate declarations, then classify owner
 Do not treat casing as evidence. Renaming `MAPPING_RUNS` to `mappingRuns` only hides a heuristic trigger; it does not change ownership.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
+
+Apply category-specific ownership checks to every imported test-infrastructure artifact:
+
+| Artifact role | Allowed ownership                                                                      | REJECT with `source-ownership`                                                                              |
+| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
+| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs                          |
+| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
+| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
+
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with rule `source-ownership`; a harness location never establishes ownership by itself.
 
 </step>
 
@@ -286,7 +321,17 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
       ]
     }
   ],
-  "metadata": { "branch": "<branch>" }
+  "metadata": {
+    "branch": "<branch>",
+    "evidence_chain": [
+      {
+        "path": "<repository-relative-path>",
+        "role": "test | harness | generator | fixture | discovery | production",
+        "imported_from": "<repository-relative-path-or-null>",
+        "inspection_status": "inspected | unresolved"
+      }
+    ]
+  }
 }
 ```
 
@@ -332,6 +377,12 @@ Claude saw a validation warning for a SCREAMING_CASE test constant used as a pro
 
 How to avoid: Step 3a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
 
+**Failure 7: Approved a thin test without auditing its harness**
+
+Claude inspected a linked Python test that imported a harness, then reviewed only three repeated `file.txt` values in the harness and approved them as harness-owned synthetic vocabulary. The harness also declared SPX payload keys, command tokens, producer identities, status values, and expected projection fields. The verdict omitted the imported-artifact inventory and never classified most values.
+
+How to avoid: Step 2b inventories and reads the complete evidence chain before judgment. Step 3a names the source of every protocol value and rejects harness-declared domain truth with `source-ownership`. Approval requires the inventory in verdict metadata.
+
 </failure_modes>
 
 <success_criteria>
@@ -340,6 +391,8 @@ The verdict is sound when:
 
 - Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
+- Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; every entry is inspected before approval.
+- Every case and protocol value has a named valid source; a harness path alone never establishes ownership.
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.

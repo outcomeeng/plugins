@@ -1,0 +1,19 @@
+title = "test-audit-full-chain-ownership"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
+  "src/plugins/spec-tree/agents/test-evidence-auditor.md",
+  "src/plugins/spec-tree/skills/audit-tests/**",
+  "dist/claude/spec-tree/agents/test-evidence-auditor.md",
+  "dist/claude/spec-tree/skills/audit-tests/**",
+]
+smoke_cases = ["rejects-harness-owned-protocol", "approves-source-owned-protocol"]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/audit-tests/SKILL.md"
+template = "prompt.template.md"

@@ -10,12 +10,30 @@ Four properties define test evidence: coupling, falsifiability, alignment, cover
 
 - `<coupling_taxonomy>` — coupling categories and examples
 - `<coupling_verification>` — import and execution-path coupling procedure
+- `<evidence_chain_completeness>` — transitive inventory and ownership provenance
 - `<test_file_declaration_model>` — test-file ownership screening before coupling
 - `<falsifiability_model>` — mutation analysis and double exceptions
 - `<alignment_verification>` — assertion-to-expectation alignment
 - `<coverage_protocol>` — coverage-by-reading procedure
 
 </table_of_contents>
+
+<evidence_chain_completeness>
+
+Evidence is the complete chain from the spec assertion through every linked test and recursively imported repository artifact. Before judging coupling, inventory linked tests, production modules, harnesses, generators, fixture references, and applicable discovery configuration. Each inventory entry records its repository-relative path, role, importing artifact, and whether it was inspected.
+
+An unresolved import, unread artifact, or unclassified role rejects the assertion with rule `incomplete-evidence-chain`. The finding targets the unresolved artifact path. Approval requires every inventory entry to be inspected and included in verdict metadata.
+
+Ownership follows artifact semantics:
+
+- Harnesses own lifecycle, resources, access to real behavior, replay configuration, and diagnostics. They do not own protocol vocabulary, payload shapes, command tokens, status values, expected outputs, or domain truth.
+- Generators own variable domains with meaningful variation and shrinking. They do not rename copied constants or hand-picked cases.
+- Fixtures own inert whole payloads consumed by path or bytes. They do not export executable values or store isolated protocol members.
+- Discovery configuration owns collection and registration. It does not hide fixture bodies, setup policy, or test data.
+
+Every case input, expected value, protocol key, command token, status value, rule identifier, and payload member names a production, platform, generator, or whole-payload fixture source. Missing provenance rejects the declaring artifact with rule `source-ownership`. Placement under a test-infrastructure directory is never provenance.
+
+</evidence_chain_completeness>
 
 <coupling_taxonomy>
 
