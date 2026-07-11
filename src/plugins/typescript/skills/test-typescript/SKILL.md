@@ -29,7 +29,7 @@ TypeScript test files that supply evidence for a node specification's assertions
    - Action: Follow full workflow below
 
 2. **FIX mode** - Tests exist but were rejected by reviewer
-   - Check: Recent `/audit-typescript-tests` output shows `REJECTED` with specific failing rows or findings
+   - Check: Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with TypeScript findings
    - Action: Read the rejection, fix the specific issues, re-run tests
 
 **Always check which mode before proceeding.**
@@ -202,7 +202,7 @@ Everything else is source-owned data (import it), source-owned construction (exp
 
 **Step 1: Read Rejection Feedback**
 
-Reread `/typescript-test-standards`, then find the most recent `/audit-typescript-tests` output. Treat the rejection as proof that the prior authoring pass applied the shared standards incompletely.
+Reread `/typescript-test-standards`, then read the most recent merged `test-evidence-auditor` JSON and the TypeScript findings appended to its gate rows. Treat `overall: REJECTED` or a `FAIL` row as proof that the prior authoring pass applied the shared standards incompletely.
 
 Rebuild the assertion-to-evidence matrix across every affected assertion before editing. Include:
 
@@ -345,6 +345,42 @@ Tests pass checklist. Ready for re-review.
 ```
 
 </output_format>
+
+<failure_modes>
+
+**Failure 1: Copied surrounding test structure instead of applying the shared standard**
+
+What happened: Claude placed reusable setup, local reading factories, parameterized case bindings, and direct `fc.assert` calls in executed test files because nearby tests used that shape.
+
+Why it failed: Existing tests have no authority over `/typescript-test-standards`. Executed test files own assertion flow only; harnesses own reusable setup and property execution through the seed-reporting wrapper.
+
+How to avoid: Complete the assertion-to-evidence matrix from the shared standard before reading surrounding tests as implementation examples. Reject any planned local declaration, fixture parameter, property parameter, or direct property execution before writing.
+
+**Failure 2: Repaired successive findings instead of rebuilding the complete matrix**
+
+What happened: Claude moved setup into a harness after one rejection, added uncovered cases after another, corrected assertion classification after a third, and still compared only selected reading fields although the assertion required every other field to remain unchanged.
+
+Why it failed: Each repair targeted the cited line while leaving another clause, path, or oracle outside the design. The auditor and authoring workflow shared the same standards; repeated rejection proved incomplete application of those standards.
+
+How to avoid: On every rejection, discard the prior matrix, reread `/typescript-test-standards`, and rebuild every affected assertion row with its complete observable, linked lane, coupling path, falsifying mutations, and relevant-path coverage before editing.
+
+**Failure 3: Put valid evidence in the wrong linked lane**
+
+What happened: A registry-derivation proof lived in mapping evidence although the compliance assertion linked the compliance file, while a dprint-argument proof lived in compliance evidence although the scenario assertion linked the scenario file.
+
+Why it failed: The checks were behaviorally useful but could not prove assertions that linked different evidence files. Alignment requires the assertion type, evidence method, and linked file to agree.
+
+How to avoid: Record one linked evidence lane per assertion in the matrix and move each proof to that file before auditing. Rescore every clause after moving evidence so no source path becomes uncovered.
+
+**Failure 4: Used generic loops and passing cases where the shared standard requires stronger forms**
+
+What happened: Mapping evidence iterated with ordinary loops, and compliance evidence asserted valid behavior without deliberate violating fixtures.
+
+Why it failed: `/typescript-test-standards` requires `it.each`, `describe.each`, or `test.each` over at least two cases for mappings, and a violating fixture for `[test]` compliance.
+
+How to avoid: Fill the matrix's required-evidence-form field directly from `/typescript-test-standards`; block writing when a mapping lacks the required table form or compliance lacks a deterministic violation that the product rejects.
+
+</failure_modes>
 
 <success_criteria>
 
