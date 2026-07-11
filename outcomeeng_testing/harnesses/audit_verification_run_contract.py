@@ -18,7 +18,6 @@ from outcomeeng.validation.spx_version import (
 
 
 MINIMUM_VERIFICATION_RUN_SPX_VERSION: Final = "0.6.13"
-AUDIT_SUBJECT_PATH: Final = "file.txt"
 WORKFLOW_PATH: Final = Path(".github/workflows/check.yml")
 PLUGIN_SURFACES: Final = (
     Path("src/plugins"),
@@ -51,11 +50,11 @@ IMPLEMENTATION_AUDIT_SCOPE_UNIT: Final = {
     "unitId": "unit-python-code",
     "auditClass": "implementation",
     "auditKind": "code",
-    "subject": AUDIT_SUBJECT_PATH,
+    "subject": "file.txt",
     "coverageRequirement": "required",
     "coverageStatus": "audited",
     "priorContext": {
-        "changedFilePartition": AUDIT_SUBJECT_PATH,
+        "changedFilePartition": "file.txt",
         "concernPartition": "code",
         "languagePartition": "python",
     },
@@ -88,7 +87,7 @@ IMPLEMENTATION_AUDIT_FINDING: Final = {
     },
     "rule": "example-rule",
     "severity": "blocking",
-    "location": f"{AUDIT_SUBJECT_PATH}:1",
+    "location": "file.txt:1",
     "message": "example finding",
     "evidence": {"observed": "problem", "expected": "clean"},
 }
@@ -269,11 +268,11 @@ def _initialize_changeset_repo(repo: Path) -> None:
     _run(repo, ("git", "init", "-q"))
     _run(repo, ("git", "config", "user.email", "test@example.com"))
     _run(repo, ("git", "config", "user.name", "Test User"))
-    (repo / AUDIT_SUBJECT_PATH).write_text("before\n", encoding="utf-8")
-    _run(repo, ("git", "add", AUDIT_SUBJECT_PATH))
+    (repo / "file.txt").write_text("before\n", encoding="utf-8")
+    _run(repo, ("git", "add", "file.txt"))
     _run(repo, ("git", "commit", "-q", "-m", "initial"))
-    (repo / AUDIT_SUBJECT_PATH).write_text("after\n", encoding="utf-8")
-    _run(repo, ("git", "add", AUDIT_SUBJECT_PATH))
+    (repo / "file.txt").write_text("after\n", encoding="utf-8")
+    _run(repo, ("git", "add", "file.txt"))
     _run(repo, ("git", "commit", "-q", "-m", "change"))
 
 
