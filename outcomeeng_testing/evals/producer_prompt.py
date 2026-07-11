@@ -14,6 +14,7 @@ from outcomeeng_evals.cli import main
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
+    MATERIALIZED_PROMPT_FILENAME,
     PRODUCER_FIELD,
     PRODUCER_FILE_KIND,
     PRODUCER_SECTION_KIND,
@@ -27,7 +28,7 @@ from outcomeeng_evals.producer_prompt import (
 )
 from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
 
-PROMPT_FILENAME = "prompt.md"
+PROMPT_FILENAME = MATERIALIZED_PROMPT_FILENAME
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
 PRODUCER_RELATIVE_PATH = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
 SECTION_NAME = "audit_tag_validity"
@@ -258,6 +259,23 @@ def assert_materialization_rejects_producer_path_outside_repo(
     with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
         materialize_prompt(eval_toml, repo_root=repo_root)
     assert repo_root.is_dir()
+
+
+@with_temp_workspace
+def assert_materialization_rejects_noncanonical_prompt_path(
+    tmp_path: Path,
+) -> None:
+    repo_root, eval_toml = write_eval_fixture(
+        tmp_path,
+        prompt_path="generated-prompt.md",
+    )
+
+    with pytest.raises(
+        ProducerPromptError,
+        match=MATERIALIZED_PROMPT_FILENAME,
+    ):
+        materialize_prompt(eval_toml, repo_root=repo_root)
+    assert not (eval_toml.parent / "generated-prompt.md").exists()
 
 
 @with_temp_workspace

@@ -19,6 +19,7 @@ TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
 PRODUCER_FILE_KIND: Final = "producer-file"
 PROMPT_FIELD: Final = "prompt"
+MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 
 _PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
@@ -215,6 +216,12 @@ def _resolve_definition(
         raise ProducerPromptError(msg)
 
     prompt_relative = _required_str(raw, PROMPT_FIELD, eval_toml_path=eval_toml_path)
+    if prompt_relative != MATERIALIZED_PROMPT_FILENAME:
+        msg = (
+            f"{eval_toml_path}: {PROMPT_FIELD!r} must be "
+            f"{MATERIALIZED_PROMPT_FILENAME!r} for producer-coupled evals"
+        )
+        raise ProducerPromptError(msg)
     producer_relative = _required_str(
         prompt_source,
         PRODUCER_FIELD,
@@ -242,11 +249,7 @@ def _resolve_definition(
         eval_toml_path=eval_toml_path,
         field_name=TEMPLATE_FIELD,
     )
-    prompt_path = _resolve_eval_relative_path(
-        prompt_relative,
-        eval_toml_path=eval_toml_path,
-        field_name=PROMPT_FIELD,
-    )
+    prompt_path = eval_toml_path.parent.resolve() / MATERIALIZED_PROMPT_FILENAME
 
     if not producer_path.is_file():
         msg = f"{eval_toml_path}: producer file not found: {producer_path}"
