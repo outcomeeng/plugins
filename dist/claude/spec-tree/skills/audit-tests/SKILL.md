@@ -33,13 +33,13 @@ Four properties must hold, checked in strict order: coupling (the test exercises
 
 **JUDGE COVERAGE BY READING.**
 
-A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
+A dispatched agentic audit runs no deterministic verification — the caller brings the project's declared tests and coverage gate to passing for the audit scope before dispatch, and any configured downstream deterministic workflow owns its declared scope. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
 
 **NO MECHANICAL SUBSTITUTES.**
 
 Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
 
-The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the caller and CI own that gate.
+The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the caller and the project's configured deterministic workflow own that gate.
 
 **TEST FILES OWN NO DATA OR CONFIGURATION.**
 
@@ -56,7 +56,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes the declared checks for the audit scope before dispatch and any configured downstream deterministic workflow owns its declared scope; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
@@ -249,7 +249,7 @@ Check assertion-type-to-strategy alignment:
 
 **Step 3e: Coverage**
 
-Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Re-running the coverage command here re-pays a cost already paid.
+Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's declared tests and coverage gate to passing for the audit scope before dispatch, and any configured downstream deterministic workflow owns its declared scope. Re-running the coverage command here re-pays a cost already paid.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -371,7 +371,7 @@ How to avoid: Step 3c checks for mocking after confirming coupling. Import + moc
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the caller already passed before dispatch and CI re-runs over the repository. The dispatched audit runs no deterministic verification.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the caller already passed before dispatch and any configured downstream deterministic workflow owns for its declared scope. The dispatched audit runs no deterministic verification.
 
 How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
@@ -379,7 +379,7 @@ How to avoid: Step 3e traces coverage by reading whether the test drives executi
 
 Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
 
-How to avoid: Essential principles — no mechanical detection. Check the four evidence properties only.
+How to avoid: Follow the complete ordered audit sequence: inventory the evidence chain, check source testability, screen test-owned declarations, then judge coupling, falsifiability, alignment, and coverage.
 
 **Failure 5: Approved a prose-body substring test as direct coupling**
 
