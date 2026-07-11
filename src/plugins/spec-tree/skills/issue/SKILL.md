@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printf:*), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* branch --remotes --contains HEAD), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(printf:*), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show:*), Bash(git -C:* branch --show-current), Bash(git -C:* branch --remotes --contains HEAD), Bash(git -C:* symbolic-ref --short refs/remotes/origin/HEAD), Bash(git -C:* rev-parse HEAD), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
 ---
 
 <context>
@@ -74,14 +74,14 @@ Tested inputs:
 </script_testing>
 
 <git_ref_resolution>
-Resolve whether the target dependency has a work branch that pickup must preserve. Include `git_ref` only when the target repository's current branch exists on origin:
+Resolve whether the target dependency has a non-default work branch that pickup must preserve. Include `git_ref` only when that current work branch exists on origin:
 
 ```bash
 git -C <target-dir> branch --show-current
 git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>
 ```
 
-When a detached checkout or default-branch checkout has no work branch to preserve, run `git -C <target-dir> branch --remotes --contains HEAD` and omit `git_ref` only when the output contains an `origin/*` ref. That proves the derived commit-SHA or default-branch anchor is recoverable from origin. When no origin ref contains `HEAD`, ask for a pushed target branch instead of omitting or guessing the anchor.
+Resolve the default branch with `git -C <target-dir> symbolic-ref --short refs/remotes/origin/HEAD`, then remove its leading `origin/` to obtain the branch-name form the session contract stores. When the current branch equals that normalized default branch, or when the checkout is detached, run `git -C <target-dir> branch --remotes --contains HEAD` and omit `git_ref` only when the output contains an `origin/*` ref. Record the expected derived anchor before filing: the normalized default branch name for a default-branch checkout, or `git -C <target-dir> rev-parse HEAD` for a detached checkout. When no origin ref contains `HEAD`, ask for a pushed target branch instead of omitting or guessing the anchor.
 
 </git_ref_resolution>
 
@@ -135,7 +135,7 @@ Omit the `git_ref` member when no target work branch must be preserved. Literal 
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
 
-**Step 6 — Report.** Surface the `<HANDOFF_ID>` and `<SESSION_FILE>` the command emits, naming the target repository the follow-up was filed into.
+**Step 6 — Verify and report.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>`, then run `spx -C <target-dir> session show --json <HANDOFF_ID>`. Confirm its stored `git_ref` equals the supplied work branch, the normalized default branch name, or the detached commit SHA recorded as the expected derived anchor in Step 2. A missing or different anchor stops the workflow as a failed filing; do not report the handoff as resumable. After the anchor matches, surface the exact `<HANDOFF_ID>` and `<SESSION_FILE>`, naming the target repository the follow-up was filed into.
 
 </workflow>
 
@@ -163,7 +163,7 @@ How to avoid: When target work must survive pickup, resolve the target dependenc
 
 <success_criteria>
 
-- The target dependency queue contains one fresh, resumable handoff whose supplied `git_ref` names a branch verified on origin, or whose omitted `git_ref` lets the target repository derive the intended default-branch or commit-SHA anchor.
+- The target dependency queue contains one fresh, resumable handoff whose stored `git_ref`, read back through `spx -C <target-dir> session show --json <HANDOFF_ID>`, equals the supplied origin branch or the intended derived default-branch or commit-SHA anchor.
 - The handoff records only the observation and an output-shaped continuation goal; it invents no target node, decision, assertion, or implementation detail.
 - The handoff header leaves `specs` and `files` empty so the target session re-derives governance after pickup.
 - The invoking repository's git state and session queue remain byte-for-byte unchanged.

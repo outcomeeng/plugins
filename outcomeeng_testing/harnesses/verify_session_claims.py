@@ -308,6 +308,20 @@ def git_ref_branch_absent_from_origin_is_discrepancy() -> bool:
         return True
 
 
+def git_ref_unreachable_sha_is_discrepancy() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(git_ref="f" * 40),
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.GIT_REF
+        )
+        assert verdict.verdict == module.Verdict.DISCREPANCY
+        return True
+
+
 def current_session_frontmatter_shape_still_emits_claims() -> bool:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
@@ -346,6 +360,27 @@ def session_load_failure_is_unverifiable() -> bool:
         )
         assert verdict.verdict == module.Verdict.UNVERIFIABLE
         assert "missing session" in verdict.evidence
+        return True
+
+
+def session_command_unavailable_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={
+                ("spx", "session", "show", "--json", SESSION_ID): (
+                    module.COMMAND_UNAVAILABLE_EXIT,
+                    "",
+                    "spx unavailable",
+                )
+            },
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.SESSION_METADATA
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
+        assert "spx unavailable" in verdict.evidence
         return True
 
 

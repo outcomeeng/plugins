@@ -8,10 +8,12 @@ from outcomeeng_testing.harnesses.verify_session_claims import (
     full_hex_branch_on_origin_confirms,
     git_ref_branch_absent_from_origin_is_discrepancy,
     git_ref_branch_on_origin_confirms,
+    git_ref_unreachable_sha_is_discrepancy,
     hex_like_branch_on_origin_confirms,
     missing_injected_path_is_discrepancy,
     node_status_evidence_excludes_child_tree,
     node_status_surfaces_changed_value,
+    session_command_unavailable_is_unverifiable,
     session_load_failure_is_unverifiable,
     session_prose_load_failure_is_unverifiable,
     spec_entry_emits_both_path_and_node_status,
@@ -54,12 +56,20 @@ def test_git_ref_branch_absent_from_origin_is_discrepancy() -> None:
     assert git_ref_branch_absent_from_origin_is_discrepancy()
 
 
+def test_git_ref_unreachable_sha_is_discrepancy() -> None:
+    assert git_ref_unreachable_sha_is_discrepancy()
+
+
 def test_current_session_frontmatter_shape_still_emits_claims() -> None:
     assert current_session_frontmatter_shape_still_emits_claims()
 
 
 def test_session_load_failure_is_unverifiable() -> None:
     assert session_load_failure_is_unverifiable()
+
+
+def test_session_command_unavailable_is_unverifiable() -> None:
+    assert session_command_unavailable_is_unverifiable()
 
 
 def test_session_prose_load_failure_is_unverifiable() -> None:
