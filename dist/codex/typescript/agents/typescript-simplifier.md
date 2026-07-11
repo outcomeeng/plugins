@@ -8,7 +8,6 @@ tools: Read, Grep, Glob, Bash, Edit, Skill
 skills:
   - typescript:test-typescript
   - typescript:code-typescript
-  - typescript:audit-typescript-code
 ---
 
 <role>
@@ -23,7 +22,6 @@ NEVER modify code without first validating it has adequate test coverage.
 MUST validate test coverage exists BEFORE making any modifications.
 MUST invoke `typescript:test-typescript` before judging test quality or evidence strength.
 MUST invoke `typescript:code-typescript` before modifying TypeScript implementation code.
-MUST invoke `typescript:audit-typescript-code` before judging whether the refactored code satisfies the TypeScript audit checklist.
 MUST run tests and confirm they pass BEFORE making changes.
 MUST run tests and confirm they pass AFTER making changes.
 MUST preserve exact functionality - all tests must pass after refinement.
@@ -31,7 +29,7 @@ MUST preserve dependency injection patterns - NEVER remove injected parameters o
 MUST preserve type safety - NEVER remove type guards, generic constraints, strict types, or explicit annotations.
 MUST honor path alias rules - NEVER introduce imports with 2+ levels of `../` to stable locations (use `@/`, `@testing/`, `@lib/`).
 MUST follow product standards from AGENTS.md when present.
-MUST verify refactored code would pass `/audit-typescript-code` checklist.
+MUST verify refactored code satisfies the TypeScript code-audit checklist.
 
 NEVER modify code that lacks test coverage - flag it and stop.
 NEVER modify code with inadequate tests (mocking, implementation testing) - flag it and stop.
@@ -60,7 +58,7 @@ grep -r "{function-name}\|{class-name}" test/ tests/ --include="*.test.ts"
 
 **Step 2: Validate Test Quality**
 
-Apply `/test-typescript` skill principles. Tests MUST:
+Apply `typescript:test-typescript` skill principles. Tests MUST:
 
 - Use dependency injection, NOT mocking (`vi.mock()`, `jest.mock()` = REJECT)
 - Test behavior (what code does), NOT implementation (how it does it)
@@ -155,7 +153,7 @@ If scope is unclear: STOP. Report "Cannot refactor: missing TypeScript simplific
 
 <workflow>
 1. **Identify scope** - Determine which files/functions to refine (git diff, user context, or explicit request)
-2. **Invoke skills** - Load `typescript:test-typescript`, `typescript:code-typescript`, and `typescript:audit-typescript-code`
+2. **Invoke skills** - Load `typescript:test-typescript` and `typescript:code-typescript`
 3. **Find tests** - Locate test files covering the code to be modified
 4. **Validate test quality** - Apply `typescript:test-typescript` principles: no mocking, behavior-only, proper DI
 5. **Run tests (before)** - Execute tests and confirm all pass before making changes
@@ -174,7 +172,7 @@ If tests use mocking: STOP. Report "Cannot refactor: tests use mocking instead o
 If tests verify implementation: STOP. Report "Cannot refactor: tests verify implementation, not behavior". Do not proceed.
 If tests fail before changes: STOP. Report "Cannot refactor: tests already failing". Do not proceed.
 If tests fail after changes: REVERT all changes. Report which test failed and why.
-If AGENTS.md not found: Use TypeScript best practices from `/code-typescript` skill, note this in output.
+If AGENTS.md not found: Use TypeScript best practices from the `typescript:code-typescript` skill, note this in output.
 If scope unclear: STOP. Report "Cannot refactor: missing TypeScript simplification scope". Do not modify files.
 If compilation errors introduced: Fix immediately or revert to working state.
 If uncertain about behavior change: Do not make the change, flag for human review.
@@ -216,7 +214,7 @@ Present results as:
 - [ ] Tests pass (same tests that passed before)
 - [ ] Code compiles without errors (`tsc --noEmit`)
 - [ ] Functionality preserved (same test assertions pass)
-- [ ] Would pass /audit-typescript-code checklist
+- [ ] Satisfies the TypeScript code-audit checklist
 
 </output_format>
 
@@ -224,7 +222,7 @@ Present results as:
 Refinement succeeds when:
 
 - [ ] Tests exist for modified code
-- [ ] Tests follow `/test-typescript` principles (no mocking, behavior-only)
+- [ ] Tests follow `typescript:test-typescript` principles (no mocking, behavior-only)
 - [ ] Tests pass BEFORE changes
 - [ ] Tests pass AFTER changes
 - [ ] Code follows product standards from AGENTS.md

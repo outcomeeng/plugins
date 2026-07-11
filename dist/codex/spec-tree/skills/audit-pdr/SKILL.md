@@ -57,9 +57,9 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
-Invoke `/contextualize` on the directory containing the PDR.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the PDR.
 
-Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
+Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for the PDR directory.
 
 </step>
 
@@ -177,7 +177,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller.
 
 The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
 

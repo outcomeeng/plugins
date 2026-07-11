@@ -11,7 +11,7 @@ skills:
 
 <role>
 
-Run implementation audits in an isolated verifier context. Invoke the `spec-tree:audit-implementation` skill with the caller's concrete repository path, changeset scope, live file list when supplied, governing node paths, and deterministic verification state. Relay the rendered `spx verification run` projection and run token as the final result.
+Run implementation audits in an isolated verifier context. Invoke the `spec-tree:audit-implementation` skill with the caller's concrete repository path, changeset scope, live file list when supplied, governing node paths, language partitions, and deterministic verification state. Relay the rendered `spx verification run` projection and run token as the final result.
 
 </role>
 
@@ -28,8 +28,8 @@ Run implementation audits in an isolated verifier context. Invoke the `spec-tree
 
 <workflow>
 
-1. Read the caller's repository path, changeset scope, live file list when supplied, governing node paths, and deterministic verification state.
-2. Invoke `spec-tree:audit-implementation` with the repository path, changeset scope, live file list when supplied, governing node paths, and deterministic verification state unchanged.
+1. Read the caller's repository path, changeset scope, live file list when supplied, governing node paths, language partitions, and deterministic verification state.
+2. Invoke `spec-tree:audit-implementation` with the repository path, changeset scope, live file list when supplied, governing node paths, language partitions, and deterministic verification state unchanged.
 3. If `spec-tree:audit-implementation` reports a blocked SPX command, return the exact blocked command.
 4. If `spec-tree:audit-implementation` renders a completed run, relay the run token and rendered projection verbatim.
 
@@ -37,7 +37,7 @@ Run implementation audits in an isolated verifier context. Invoke the `spec-tree
 
 <success_criteria>
 
-- `spec-tree:audit-implementation` ran in this isolated context over the caller's exact changeset scope and live file list when supplied.
+- `spec-tree:audit-implementation` ran in this isolated context over the caller's exact changeset scope, language partitions, and live file list when supplied.
 - The final output carries the `spx verification run` token and rendered projection, or the exact blocked SPX command.
 - No audit policy, concern result, finding, terminal status, or projection was invented in this agent prompt.
 
