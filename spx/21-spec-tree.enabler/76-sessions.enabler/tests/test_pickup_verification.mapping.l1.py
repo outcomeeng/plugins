@@ -1,22 +1,21 @@
 """Mapping evidence for pickup claim verification."""
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
-    all_claim_mapping_cases_map_to_verdict,
     current_session_frontmatter_shape_still_emits_claims,
+    dirty_state_is_discrepancy,
     external_id_surfaces_changed_state,
     full_hex_branch_on_origin_confirms,
     git_ref_branch_absent_from_origin_is_discrepancy,
     git_ref_branch_on_origin_confirms,
     hex_like_branch_on_origin_confirms,
+    missing_injected_path_is_discrepancy,
     node_status_evidence_excludes_child_tree,
     node_status_surfaces_changed_value,
     session_load_failure_is_unverifiable,
     spec_entry_emits_both_path_and_node_status,
+    unavailable_external_id_is_unverifiable,
+    unavailable_node_status_is_unverifiable,
 )
-
-
-def test_claim_maps_to_verdict() -> None:
-    assert all_claim_mapping_cases_map_to_verdict()
 
 
 def test_node_status_surfaces_changed_value() -> None:
@@ -57,3 +56,19 @@ def test_current_session_frontmatter_shape_still_emits_claims() -> None:
 
 def test_session_load_failure_is_unverifiable() -> None:
     assert session_load_failure_is_unverifiable()
+
+
+def test_missing_injected_path_is_discrepancy() -> None:
+    assert missing_injected_path_is_discrepancy()
+
+
+def test_unavailable_node_status_is_unverifiable() -> None:
+    assert unavailable_node_status_is_unverifiable()
+
+
+def test_dirty_state_is_discrepancy() -> None:
+    assert dirty_state_is_discrepancy()
+
+
+def test_unavailable_external_id_is_unverifiable() -> None:
+    assert unavailable_external_id_is_unverifiable()

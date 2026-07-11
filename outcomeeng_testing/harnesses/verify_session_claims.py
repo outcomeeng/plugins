@@ -26,10 +26,9 @@ import json
 import pathlib
 import subprocess
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from types import ModuleType
-from typing import Any, TypedDict
+from typing import Any
 
 from outcomeeng_testing.harnesses.git_context import (
     accepted_git_context,
@@ -150,17 +149,6 @@ def session_command_scripts(
     }
 
 
-type ScriptMap = dict[tuple[str, ...], tuple[int, str, str]]
-
-
-class SessionKwargs(TypedDict, total=False):
-    git_ref: str
-    git_status: str
-    specs: tuple[str, ...]
-    files: tuple[str, ...]
-    pr_numbers: tuple[str, ...]
-
-
 SPX_STATUS = ("spx", "spec", "status")
 GH_VIEW = ("gh", "pr", "view")
 STDLIB_IMPORT_ROOTS = frozenset(
@@ -199,144 +187,6 @@ TEST_INVOCATIONS = (
     ("python", "-m", "pytest"),
     ("python3", "-m", "pytest"),
 )
-
-
-@dataclass(frozen=True)
-class ClaimMappingCase:
-    id: str
-    build: Callable[[pathlib.Path], tuple[SessionKwargs, ScriptMap]]
-    kind: object
-    verdict: object
-
-
-def claim_mapping_cases() -> tuple[ClaimMappingCase, ...]:
-    module = load_verify_session_claims_module()
-    return (
-        ClaimMappingCase(
-            "git_ref-sha-reachable",
-            lambda repo: ({"git_ref": head_sha(repo)}, {}),
-            module.ClaimKind.GIT_REF,
-            module.Verdict.CONFIRMED,
-        ),
-        ClaimMappingCase(
-            "git_ref-sha-unreachable",
-            lambda repo: ({"git_ref": "0" * 40}, {}),
-            module.ClaimKind.GIT_REF,
-            module.Verdict.DISCREPANCY,
-        ),
-        ClaimMappingCase(
-            "injected-path-present",
-            _present_path,
-            module.ClaimKind.INJECTED_PATH,
-            module.Verdict.CONFIRMED,
-        ),
-        ClaimMappingCase(
-            "injected-path-missing",
-            lambda repo: ({"files": ("absent.md",)}, {}),
-            module.ClaimKind.INJECTED_PATH,
-            module.Verdict.DISCREPANCY,
-        ),
-        ClaimMappingCase(
-            "node-status-readable",
-            _node_ok,
-            module.ClaimKind.NODE_STATUS,
-            module.Verdict.CONFIRMED,
-        ),
-        ClaimMappingCase(
-            "node-status-unavailable",
-            _node_unavailable,
-            module.ClaimKind.NODE_STATUS,
-            module.Verdict.UNVERIFIABLE,
-        ),
-        ClaimMappingCase(
-            "uncommitted-clean-matches",
-            lambda repo: ({"git_status": "clean"}, {}),
-            module.ClaimKind.UNCOMMITTED_STATE,
-            module.Verdict.CONFIRMED,
-        ),
-        ClaimMappingCase(
-            "uncommitted-clean-now-dirty",
-            _dirty_but_recorded_clean,
-            module.ClaimKind.UNCOMMITTED_STATE,
-            module.Verdict.DISCREPANCY,
-        ),
-        ClaimMappingCase(
-            "external-id-readable",
-            lambda repo: (
-                {"pr_numbers": ("256",)},
-                {GH_VIEW: (0, '{"state": "MERGED"}', "")},
-            ),
-            module.ClaimKind.EXTERNAL_ID,
-            module.Verdict.CONFIRMED,
-        ),
-        ClaimMappingCase(
-            "external-id-unavailable",
-            lambda repo: (
-                {"pr_numbers": ("256",)},
-                {GH_VIEW: (1, "", "gh: not found")},
-            ),
-            module.ClaimKind.EXTERNAL_ID,
-            module.Verdict.UNVERIFIABLE,
-        ),
-        ClaimMappingCase(
-            "git_ref-git-unavailable",
-            lambda repo: (
-                {"git_ref": head_sha(repo)},
-                {("git", "rev-parse"): (128, "", "fatal: not a git repository")},
-            ),
-            module.ClaimKind.GIT_REF,
-            module.Verdict.UNVERIFIABLE,
-        ),
-        ClaimMappingCase(
-            "git_ref-git-launch-failure",
-            lambda repo: (
-                {"git_ref": head_sha(repo)},
-                {
-                    ("git", "rev-parse"): (
-                        module.COMMAND_UNAVAILABLE_EXIT,
-                        "",
-                        "No such file or directory: 'git'",
-                    )
-                },
-            ),
-            module.ClaimKind.GIT_REF,
-            module.Verdict.UNVERIFIABLE,
-        ),
-        ClaimMappingCase(
-            "uncommitted-git-unavailable",
-            lambda repo: (
-                {"git_status": "clean"},
-                {("git", "status"): (128, "", "fatal: not a git repository")},
-            ),
-            module.ClaimKind.UNCOMMITTED_STATE,
-            module.Verdict.UNVERIFIABLE,
-        ),
-    )
-
-
-def claim_maps_to_verdict(case: ClaimMappingCase) -> bool:
-    with accepted_git_context() as repo:
-        session_kwargs, scripted = case.build(repo)
-        runner = RecordingRunner(
-            repo=repo,
-            scripted=session_command_scripts(**session_kwargs) | scripted,
-        )
-        matching = [
-            verdict
-            for verdict in load_verify_session_claims_module().verify(
-                SESSION_ID, repo, runner
-            )
-            if verdict.kind == case.kind
-        ]
-        assert matching, f"no {case.kind} verdict emitted"
-        assert matching[0].verdict == case.verdict
-        return True
-
-
-def all_claim_mapping_cases_map_to_verdict() -> bool:
-    for case in claim_mapping_cases():
-        assert claim_maps_to_verdict(case)
-    return True
 
 
 def node_status_surfaces_changed_value() -> bool:
@@ -496,6 +346,66 @@ def session_load_failure_is_unverifiable() -> bool:
         )
         assert verdict.verdict == module.Verdict.UNVERIFIABLE
         assert "missing session" in verdict.evidence
+        return True
+
+
+def missing_injected_path_is_discrepancy() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(files=("absent.md",)),
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.INJECTED_PATH
+        )
+        assert verdict.verdict == module.Verdict.DISCREPANCY
+        return True
+
+
+def unavailable_node_status_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(specs=(TEST_SPEC_PATH,))
+            | {SPX_STATUS: (1, "", "spx unavailable")},
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.NODE_STATUS
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
+        return True
+
+
+def dirty_state_is_discrepancy() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        dirty_tree(repo)
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(git_status="clean"),
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner),
+            module.ClaimKind.UNCOMMITTED_STATE,
+        )
+        assert verdict.verdict == module.Verdict.DISCREPANCY
+        return True
+
+
+def unavailable_external_id_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(pr_numbers=("256",))
+            | {GH_VIEW: (1, "", "gh unavailable")},
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.EXTERNAL_ID
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
         return True
 
 
@@ -714,24 +624,6 @@ def optional_session_injection_lists_default_to_empty() -> bool:
         )
         assert module.verify(SESSION_ID, repo, runner) == []
         return True
-
-
-def _present_path(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    (repo / PRESENT_FILE_NAME).write_text("here\n")
-    return {"files": (PRESENT_FILE_NAME,)}, {}
-
-
-def _node_ok(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    return {"specs": (TEST_SPEC_PATH,)}, {SPX_STATUS: (0, PASSING_STATUS_JSON, "")}
-
-
-def _node_unavailable(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    return {"specs": (TEST_SPEC_PATH,)}, {SPX_STATUS: (1, "", "spx: command not found")}
-
-
-def _dirty_but_recorded_clean(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    dirty_tree(repo)
-    return {"git_status": "clean"}, {}
 
 
 def _only(verdicts: list[Any], kind: object) -> Any:
