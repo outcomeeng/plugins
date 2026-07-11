@@ -38,18 +38,21 @@ prompt rejects the violating chain and approves the conforming chain.
 
 ## Slice boundary
 
-This slice changes only the language-neutral test-audit surface governed by
-`spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler`:
+**Demonstrable value:** A dispatched test-evidence auditor rejects a non-Python
+evidence chain when imported test infrastructure owns unsourced protocol
+vocabulary, and its structured verdict identifies the transitive artifact and
+required ownership target.
 
-- the `test-evidence-auditor` wrapper contract;
-- `spec-tree:audit-tests` and its evidence-model reference;
-- the target node's assertions and behavioral eval evidence;
-- generated Claude and Codex copies of changed spec-tree plugin sources.
+**Ordered node set:**
 
-The slice does not change `audit-python-tests`, `audit-typescript-tests`,
-`audit-rust-tests`, or any language test standards. The non-Python eval case
-proves the generic traversal and ownership behavior without using the Python
-audit skill as its subject.
+1. `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler`
+
+The node delivers the language-neutral wrapper contract, generic audit
+methodology, and generic behavioral evidence as one observable path. The slice
+does not change `audit-python-tests`, `audit-typescript-tests`,
+`audit-rust-tests`, or any language test standards. Its non-Python eval case
+proves generic traversal and ownership behavior without using the Python audit
+skill as its subject.
 
 ## Required behavior
 
