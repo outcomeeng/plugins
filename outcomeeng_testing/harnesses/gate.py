@@ -127,6 +127,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
 )
+from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
 SELECTED_GATE_PROPERTY_REPLAY_PATH = (
@@ -1390,6 +1391,23 @@ def _assert_selected_gate_git_discovery_failure() -> None:
         assert exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
         assert spawner.spawn_calls == []
         assert runner.calls == [selected_gate_branch_discovery_argv()]
+
+    with TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        build_repo_without_origin(repo)
+        spawner = RecordingSpawner(exit_codes=[os.EX_OK])
+        sink = io.StringIO()
+
+        exit_code = production_run_selected_check(
+            spawner=spawner,
+            sink=sink,
+            repo=repo,
+        )
+
+        assert exit_code == GIT_DISCOVERY_FAILURE_EXIT_CODE
+        assert spawner.spawn_calls == []
+        assert GIT_DISCOVERY_ERROR_PREFIX in sink.getvalue()
+        assert "refs/remotes/origin/HEAD unset" in sink.getvalue()
         assert GIT_DISCOVERY_ERROR_PREFIX in output
         assert GIT_DISCOVERY_STDOUT_LABEL in output
         assert GIT_DISCOVERY_STDERR_LABEL in output

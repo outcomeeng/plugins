@@ -323,6 +323,27 @@ def assert_merge_classifier_handles_spaced_coordination_note() -> None:
         assert classifier.is_coordination_note(spaced.note_path)
 
 
+def assert_merge_classifier_reports_unconfigured_base() -> None:
+    """Prove the merge classifier translates an absent remote default branch."""
+    with TemporaryDirectory() as tmp:
+        repo = pathlib.Path(tmp) / "repo"
+        repo.mkdir()
+        build_repo_without_origin(repo)
+
+        completed = subprocess.run(
+            (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
+            cwd=repo,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        assert completed.returncode != 0
+        assert "error: merge changeset classification failed" in completed.stderr
+        assert "refs/remotes/origin/HEAD unset" in completed.stderr
+        assert "Traceback" not in completed.stderr
+
+
 def detach_head(repo: pathlib.Path) -> None:
     """Put ``repo`` on a detached HEAD so ``detect_current_branch`` raises.
 
