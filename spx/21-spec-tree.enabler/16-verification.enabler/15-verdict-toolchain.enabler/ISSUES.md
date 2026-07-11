@@ -28,7 +28,7 @@ Capture one canonical audit verification run from the supported published SPX re
 The replacement follows these boundaries:
 
 - Fixtures own complete external payloads and outputs; Python reads them as whole files.
-- Repository conformance tests retain only repository-owned assertions: SPX version floor, CI pin compatibility, retired-script absence, wrapper uniqueness, and language concern-skill trios.
+- Repository conformance tests retain only positive repository-owned assertions: SPX version floor, CI pin compatibility, wrapper identity, and language concern-skill trios.
 - Deterministic tests do not claim that captured output proves the currently installed SPX executable accepts the payload.
 - Agentic audit or producer-coupled eval evidence owns payload construction and projection interpretation behavior.
 - Fixture refresh occurs only for a newly supported SPX release or changed audit contract and replaces the complete capture with updated provenance.

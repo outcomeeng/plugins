@@ -17,7 +17,7 @@ The implementation-audit orchestration embeds no language-specific knowledge bey
 ### Testing
 
 - ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture` skills ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
-- NEVER: the spec-tree plugin ships retired implementation-audit agents or plugin-side verdict scripts under the audit skill ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
+- NEVER: the spec-tree plugin ships multiple implementation-audit wrapper agents; implementation audit has one wrapper, `implementation-auditor` ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
 
 ### Audit
 
