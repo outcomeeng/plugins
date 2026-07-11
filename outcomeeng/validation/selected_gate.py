@@ -460,10 +460,7 @@ def resolve_default_base_ref(repo: Path) -> str:
     """Return the canonical remote-tracking base ref for this repository."""
 
     changeset_scope = _load_changeset_scope()
-    try:
-        bare_base = changeset_scope.detect_base_ref(repo)
-    except changeset_scope.BaseRefNotConfiguredError:
-        return DEFAULT_BASE_REF
+    bare_base = changeset_scope.detect_base_ref(repo)
     return changeset_scope.remote_tracking_ref(bare_base)
 
 

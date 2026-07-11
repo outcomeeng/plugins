@@ -22,7 +22,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
+from typing import TextIO, cast
 
 from hypothesis import given, seed, settings
 
@@ -108,7 +108,7 @@ from outcomeeng.validation.selected_gate import (
     build_selected_gate_plan,
     collect_changed_paths,
     deleted_paths_after_status_resolution,
-    run_selected_check,
+    run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_CHECK_WORKFLOW_PATH,
@@ -260,6 +260,32 @@ def selected_gate_runner_for_paths(
                 stdout=f"{untracked_path}\n" if untracked_path else "",
             ),
         }
+    )
+
+
+def collect_selected_gate_paths(
+    repo: Path,
+    *,
+    runner: RecordingGitRunner,
+) -> tuple[str, ...]:
+    """Collect synthetic paths against the harness-owned base ref."""
+    return collect_changed_paths(repo, base_ref=DEFAULT_BASE_REF, runner=runner)
+
+
+def run_selected_check(
+    *,
+    spawner: ProcessSpawner,
+    sink: TextIO,
+    repo: Path,
+    runner: RecordingGitRunner,
+) -> int:
+    """Run the selected gate against the harness-owned base ref."""
+    return production_run_selected_check(
+        spawner=spawner,
+        sink=sink,
+        repo=repo,
+        base_ref=DEFAULT_BASE_REF,
+        runner=runner,
     )
 
 
@@ -1117,7 +1143,7 @@ def assert_selected_gate_mapping_contract() -> None:
         )
         repo = Path(tmp)
 
-        assert collect_changed_paths(repo, runner=runner) == tuple(
+        assert collect_selected_gate_paths(repo, runner=runner) == tuple(
             sorted((branch_path, staged_path, unstaged_path, untracked_path))
         )
         assert runner.repos == [repo] * len(runner.outputs)
@@ -1130,7 +1156,7 @@ def assert_selected_gate_mapping_contract() -> None:
             untracked_path=SELECTED_GATE_WHITESPACE_PATH,
         )
 
-        assert collect_changed_paths(Path(tmp), runner=runner) == (
+        assert collect_selected_gate_paths(Path(tmp), runner=runner) == (
             SELECTED_GATE_WHITESPACE_PATH,
         )
 
@@ -1167,7 +1193,7 @@ def assert_selected_gate_mapping_contract() -> None:
             branch_status="R100",
         )
 
-        assert collect_changed_paths(Path(tmp), runner=runner) == tuple(
+        assert collect_selected_gate_paths(Path(tmp), runner=runner) == tuple(
             sorted((source_path, SELECTED_GATE_RENAMED_TARGET_ARG))
         )
 
@@ -1219,7 +1245,7 @@ def assert_selected_gate_mapping_contract() -> None:
             branch_status="C100",
         )
 
-        assert collect_changed_paths(Path(tmp), runner=runner) == tuple(
+        assert collect_selected_gate_paths(Path(tmp), runner=runner) == tuple(
             sorted((source_path, SELECTED_GATE_RENAMED_TARGET_ARG))
         )
 
@@ -1378,7 +1404,7 @@ def _assert_selected_gate_git_discovery_failure() -> None:
         )
 
         try:
-            collect_changed_paths(Path(tmp), runner=runner)
+            collect_selected_gate_paths(Path(tmp), runner=runner)
         except RuntimeError as error:
             assert GIT_DISCOVERY_ERROR_PREFIX in str(error)
             assert "fatal: ambiguous argument" in str(error)
