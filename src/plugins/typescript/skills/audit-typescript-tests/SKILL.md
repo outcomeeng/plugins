@@ -12,18 +12,6 @@ This audit runs inside the dispatched `test-evidence-auditor` verifier context v
 
 </dispatch_gate>
 
-<required_skills>
-
-{!% require_skill 'typescript:typescript-standards' %!}
-
-{!% require_skill 'typescript:typescript-test-standards' %!}
-
-{!% require_skill 'spec-tree:test' %!}
-
-{!% require_skill 'spec-tree:audit-tests' %!}
-
-</required_skills>
-
 <objective>
 
 A verdict on TypeScript test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
@@ -40,13 +28,20 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-1. Invoking 4 skills: Already done above.
-2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
+{!% require_skill 'typescript:typescript-standards' %!}
+
+{!% require_skill 'typescript:typescript-test-standards' %!}
+
+{!% require_skill 'spec-tree:test' %!}
+
+{!% require_skill 'spec-tree:audit-tests' %!}
+
+Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/typescript.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded skills only.
 
-3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The caller brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
 

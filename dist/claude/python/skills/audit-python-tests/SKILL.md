@@ -12,28 +12,6 @@ This audit runs inside the dispatched `test-evidence-auditor` verifier context v
 
 </dispatch_gate>
 
-<required_skills>
-
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-</required_skills>
-
-<context>
-
-!`test -f spx/local/python.md && cat spx/local/python.md || true`
-
-!`test -f spx/local/python-tests.md && cat spx/local/python-tests.md || true`
-
-Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
-
-</context>
-
 <objective>
 A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence gap.
 </objective>
@@ -45,6 +23,20 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 </constraints>
 
 <audit_workflow>
+
+<prerequisites>
+
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
+
+</prerequisites>
 
 <audit_scope>
 For every in-scope test assertion, inspect the full evidence chain:

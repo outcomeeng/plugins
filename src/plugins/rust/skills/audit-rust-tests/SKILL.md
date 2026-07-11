@@ -12,18 +12,6 @@ This audit runs inside the dispatched `test-evidence-auditor` verifier context v
 
 </dispatch_gate>
 
-<required_skills>
-
-{!% require_skill 'rust:rust-standards' %!}
-
-{!% require_skill 'rust:rust-test-standards' %!}
-
-{!% require_skill 'spec-tree:test' %!}
-
-{!% require_skill 'spec-tree:audit-tests' %!}
-
-</required_skills>
-
 <objective>
 A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
 </objective>
@@ -38,13 +26,20 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 <prerequisites>
 
-1. Invoking 4 skills: Already done above.
-2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
+{!% require_skill 'rust:rust-standards' %!}
+
+{!% require_skill 'rust:rust-test-standards' %!}
+
+{!% require_skill 'spec-tree:test' %!}
+
+{!% require_skill 'spec-tree:audit-tests' %!}
+
+Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills only.
 
-3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
 
