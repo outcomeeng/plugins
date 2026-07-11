@@ -103,7 +103,7 @@ For each assertion:
 | Language   | Canonical pattern                                 | Legacy (fails check)                                                    |
 | ---------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
 | TypeScript | `<subject>.<evidence>.<level>[.<runner>].test.ts` | `*.unit.test.ts`, `*.integration.test.ts`, `*.e2e.test.ts`, `*.spec.ts` |
-| Python     | `test_<subject>.<evidence>.<level>.py`            | `test_*.py` with no evidence or level segment                           |
+| Python     | `test_<subject>.<evidence>.<level>[.<runner>].py` | `test_*.py` with no evidence or level segment                           |
 | Rust       | `<subject>.<evidence>.<level>[.<runner>].rs`      | `*_test.rs` or `test_*.rs` with no evidence or level segment            |
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}

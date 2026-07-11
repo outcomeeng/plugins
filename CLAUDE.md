@@ -126,11 +126,12 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ### Python
 
-| Level | Pattern                           | Example                        |
-| ----- | --------------------------------- | ------------------------------ |
-| 1     | `test_{subject}.{evidence}.l1.py` | `test_parsing.scenario.l1.py`  |
-| 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.mapping.l2.py`       |
-| 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.property.l3.py` |
+| Level | Pattern                                         | Example                                   |
+| ----- | ----------------------------------------------- | ----------------------------------------- |
+| 1     | `test_{subject}.{evidence}.l1.py`               | `test_parsing.scenario.l1.py`             |
+| 2     | `test_{subject}.{evidence}.l2.py`               | `test_cli.mapping.l2.py`                  |
+| 3     | `test_{subject}.{evidence}.l3.py`               | `test_workflow.property.l3.py`            |
+| 1-3   | `test_{subject}.{evidence}.{level}.{runner}.py` | `test_workflow.property.l2.playwright.py` |
 
 ---
 

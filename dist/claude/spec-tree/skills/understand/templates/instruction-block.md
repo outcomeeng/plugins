@@ -227,7 +227,7 @@ Use this shape for test-evidence audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "test-evidence-auditor",
-    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; gate-1-assertion and applicable gate-2-architectural rows; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguages: <detected language names>\nTask: Resolve and apply every installed audit-{lang}-tests skill for the detected languages. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; gate-1-assertion and applicable gate-2-architectural rows; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
   }
 }
 ```
@@ -363,11 +363,12 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ### TypeScript
 
-| Level | Pattern                           | Example                        |
-| ----- | --------------------------------- | ------------------------------ |
-| 1     | `{subject}.{evidence}.l1.test.ts` | `parsing.scenario.l1.test.ts`  |
-| 2     | `{subject}.{evidence}.l2.test.ts` | `cli.mapping.l2.test.ts`       |
-| 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.property.l3.test.ts` |
+| Level | Pattern                                         | Example                                   |
+| ----- | ----------------------------------------------- | ----------------------------------------- |
+| 1     | `{subject}.{evidence}.l1.test.ts`               | `parsing.scenario.l1.test.ts`             |
+| 2     | `{subject}.{evidence}.l2.test.ts`               | `cli.mapping.l2.test.ts`                  |
+| 3     | `{subject}.{evidence}.l3.test.ts`               | `workflow.property.l3.test.ts`            |
+| 1-3   | `{subject}.{evidence}.{level}.{runner}.test.ts` | `workflow.property.l2.playwright.test.ts` |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
@@ -386,11 +387,12 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ### Python
 
-| Level | Pattern                           | Example                        |
-| ----- | --------------------------------- | ------------------------------ |
-| 1     | `test_{subject}.{evidence}.l1.py` | `test_parsing.scenario.l1.py`  |
-| 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.mapping.l2.py`       |
-| 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.property.l3.py` |
+| Level | Pattern                                         | Example                                   |
+| ----- | ----------------------------------------------- | ----------------------------------------- |
+| 1     | `test_{subject}.{evidence}.l1.py`               | `test_parsing.scenario.l1.py`             |
+| 2     | `test_{subject}.{evidence}.l2.py`               | `test_cli.mapping.l2.py`                  |
+| 3     | `test_{subject}.{evidence}.l3.py`               | `test_workflow.property.l3.py`            |
+| 1-3   | `test_{subject}.{evidence}.{level}.{runner}.py` | `test_workflow.property.l2.playwright.py` |
 
 <!-- /lang:python -->
 

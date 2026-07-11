@@ -263,6 +263,6 @@ The Python test verdict is sound when:
 
 <reference_guides>
 
-- `references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
+- `${CLAUDE_SKILL_DIR}/references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
 
 </reference_guides>
