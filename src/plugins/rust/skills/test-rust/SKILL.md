@@ -42,6 +42,15 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 
 Before writing or repairing Rust evidence, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
 
+Resolve the repository-canonical Rust commands from the root guide, `spx/local/rust.md`, `spx/local/rust-tests.md`, Justfile, Makefile, Cargo aliases, or package scripts, in that order. Prefer a documented wrapper. When no wrapper exists, or when it cannot focus the governed node, run the closest package or workspace scope and record that scope. Use these direct fallbacks:
+
+```bash
+cargo test --all-targets --all-features
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo check --all-targets --all-features
+```
+
 After writing or repairing tests:
 
 1. Run the repository-canonical focused Rust test command for `$node_path/tests/` and record its exit status.
@@ -105,20 +114,16 @@ All Rust test examples are owned by `/rust-test-standards`:
 </reference_guides>
 
 <success_criteria>
-Rust test work is complete when:
+Rust test evidence is sound when:
 
-- every assertion has a complete `/test` clause-evidence matrix and the evidence-design gate passes
-- every subpart trigger has a complete full-chain inventory
-- `/test` chose the assertion type and target level first
-- the source-contract-first gate was applied before test predicates were written or repaired
-- `/rust-standards` and `/rust-test-standards` were loaded before test code was written
-- the test shape follows the canonical Rust test standard and repo-local overlays
-- executed test files declare no `const`, `static`, `let`, fixture parameters, or property-generated parameters
-- controlled implementations preserve coupling to the real seam
-- property claims use property-based testing
-- compile-time claims use compile-fail evidence
-- the focused Rust test gate and repository-canonical formatting, lint, and compile gates all pass
-- in Fix mode, every merged audit finding and same-class instance maps to a completed class-level repair
+- Every assertion-to-evidence matrix names the assertion type, level, linked Rust evidence file, source-coupling path, independent oracle, relevant source branches, and one concrete falsifying mutation per clause.
+- Every subpart trigger inventories each linked test, `<package>-testing` harness, generator, inert fixture, source contract, oracle, and assertion-relevant implementation path.
+- Every Rust evidence file uses the canonical `<subject>.<evidence>.<level>[.<runner>].rs` name and the assertion type's required form from `/rust-test-standards`.
+- Executed test files declare no `const`, `static`, `let`, fixture parameters, property-generated parameters, source vocabulary, expected values, or runner policy.
+- Controlled implementations preserve executable coupling to the real trait or boundary; property claims use meaningful property-based evidence, and compile-time claims use compile-fail evidence.
+- In Write mode, the resolved test command fails only for the expected missing implementation or assertion mismatch; in Fix mode, it reaches the RED or passing state required by the active TDD phase.
+- The resolved `cargo fmt`, `cargo clippy`, and `cargo check` commands, or repository wrappers that cover the same scope, exit zero; the report records every exact command and exit status.
+- Every merged Rust audit finding and same-class instance maps to a completed repair before redispatch.
 
 </success_criteria>
 
