@@ -18,6 +18,26 @@ Creating a new session file pipes to `spx session handoff`. stdin is a single JS
 
 The workflow chooses its stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc; programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `spx session handoff`. Both forms send the same bytes to stdin. Never assemble the body through temporary files, helper files, command substitution, or post-hoc text substitution.
 
+Interactive Claude Code and Codex sessions use this quoted-heredoc form:
+
+```bash
+spx session handoff <<'SPX_SESSION_HANDOFF'
+{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
+<metadata>
+  timestamp: [UTC timestamp]
+  product: [Product name from cwd]
+  git_ref: [work branch]
+  git_status: clean
+</metadata>
+SPX_SESSION_HANDOFF
+```
+
+Programmatic runners that require one physical command line use this form. The rendered command may wrap visually; keep it on one physical line. Literal apostrophes inside a line use the single-quote splice `'"'"'`. Do not use heredocs or backslash-newline continuations in this form:
+
+```bash
+printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '<metadata>' '  timestamp: [UTC timestamp]' '  product: [Product name from cwd]' '  git_ref: [work branch]' '  git_status: clean' '</metadata>' | spx session handoff
+```
+
 **Body** — the content piped after the JSON header:
 
 ```text

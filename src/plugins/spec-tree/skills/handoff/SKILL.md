@@ -117,6 +117,15 @@ Check `$session_mode` and `$prune_mode` for these flags before starting the work
 
 </arguments>
 
+<required_reading>
+
+Read these bundled references before executing the workflows:
+
+- `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md` — authoritative claimed-session and same-conversation artifact resolution
+- `${CLAUDE_SKILL_DIR}/references/session-format.md` — canonical session payload, stdin forms, and stored-field verification
+
+</required_reading>
+
 <workflows>
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed.
 

@@ -83,43 +83,12 @@ Every closure ends with **zero, one, or several** session files — one canonica
 **Fresh session path — new handoff**:
 
 0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"`, plus a real stop condition. Creating a fresh session is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
-1. Compose the canonical continuation using `${SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, optional `git_ref` for a pushed work branch) and the markdown body.
-2. Resolve and record the exact expected pickup anchor before filing: the supplied pushed work branch; otherwise `git branch --show-current` for a named default-branch checkout; otherwise the full `git rev-parse HEAD` SHA for a detached checkout. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`. Supply `git_ref` for a pushed work branch, including linked pool-worktree releases that have been detached to `origin/<default-branch>` after pushing; the command records it after verifying that branch exists on `origin`. Omit `git_ref` only when no work branch must be preserved — default-branch handoffs and commit-SHA handoffs where the command derives the branch name or commit-SHA anchor from git context.
-
-   **Choose the stdin form by harness.**
-
-   Interactive Claude Code or Codex sessions use a quoted heredoc. This keeps the canonical body readable and preserves apostrophes, `$`, backticks, and backslashes literally:
-
-   ```bash
-   spx session handoff <<'SPX_SESSION_HANDOFF'
-   {"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
-   <metadata>
-     timestamp: [UTC timestamp]
-     product: [Product name from cwd]
-     git_ref: [work branch]
-     git_status: clean
-   </metadata>
-   SPX_SESSION_HANDOFF
-   ```
-
-   Programmatic runners that require one physical command line use `printf` with one argument per output line, piped to stdin. The command below may wrap visually in a rendered view; keep it as one physical shell line. Literal apostrophes inside a line use the standard single-quote splice `'"'"'`. Do not use temporary files, helper files, command substitution, heredocs, backslash-newline continuations, `sed`, or `perl` to assemble or repair the body:
-
-   ```bash
-   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '<metadata>' '  timestamp: [UTC timestamp]' '  product: [Product name from cwd]' '  git_ref: [work branch]' '  git_status: clean' '</metadata>' | spx session handoff
-   ```
+1. Compose the canonical continuation using the JSON-header, body, and field contract in `${SKILL_DIR}/references/session-format.md`.
+2. Resolve and record the exact expected pickup anchor before filing: the supplied pushed work branch; otherwise `git branch --show-current` for a named default-branch checkout; otherwise the full `git rev-parse HEAD` SHA for a detached checkout. Invoke the harness-specific stdin form from `${SKILL_DIR}/references/session-format.md` exactly. Do not run `spx session handoff` with empty stdin or YAML frontmatter.
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
 4. Run `spx session show --json <HANDOFF_ID>` and require the stored `git_ref` to equal the expected pickup anchor recorded before filing, whether that anchor was supplied or derived. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available. A missing or different stored anchor leaves the fresh-session partition unverified: archive no artifact from that partition and stop with the mismatch.
 
-**Content of the canonical continuation:**
-
-- Header — a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `git_ref` naming the pushed work branch when one must be preserved, optional `specs`, optional `files`)
-- `<nodes>` — from workflow 01 (anchored nodes)
-- `next_step` header — from `<perspective_next_context>` in `02-reflect.md`
-- `<persisted>` — files committed above, insights written, coordination notes created
-- `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
-- `<constraints>` (optional) — session-specific normative rules; omit when there are none
-- `<coordination>` — unapproved items from workflow 03 that are coordination-only context
-- `<incorporated_sessions>` — include when the claimed-session set or selected partition's `archive_ids` is non-empty; list each claimed session id and selected superseded artifact with archive disposition
+Populate the canonical fields from workflow 01 and workflow 02 using `${SKILL_DIR}/references/session-format.md`; that reference is the sole payload-content contract.
 
 </write_canonical_continuation>
 
