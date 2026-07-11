@@ -1,6 +1,7 @@
 """Mapping evidence for pickup claim verification."""
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
+    clean_state_is_confirmed,
     current_session_frontmatter_shape_still_emits_claims,
     dirty_state_is_discrepancy,
     external_id_surfaces_changed_state,
@@ -12,8 +13,11 @@ from outcomeeng_testing.harnesses.verify_session_claims import (
     node_status_evidence_excludes_child_tree,
     node_status_surfaces_changed_value,
     session_load_failure_is_unverifiable,
+    session_prose_load_failure_is_unverifiable,
     spec_entry_emits_both_path_and_node_status,
     unavailable_external_id_is_unverifiable,
+    unavailable_git_ref_is_unverifiable,
+    unavailable_git_status_is_unverifiable,
     unavailable_node_status_is_unverifiable,
 )
 
@@ -58,6 +62,10 @@ def test_session_load_failure_is_unverifiable() -> None:
     assert session_load_failure_is_unverifiable()
 
 
+def test_session_prose_load_failure_is_unverifiable() -> None:
+    assert session_prose_load_failure_is_unverifiable()
+
+
 def test_missing_injected_path_is_discrepancy() -> None:
     assert missing_injected_path_is_discrepancy()
 
@@ -68,6 +76,18 @@ def test_unavailable_node_status_is_unverifiable() -> None:
 
 def test_dirty_state_is_discrepancy() -> None:
     assert dirty_state_is_discrepancy()
+
+
+def test_clean_state_is_confirmed() -> None:
+    assert clean_state_is_confirmed()
+
+
+def test_unavailable_git_ref_is_unverifiable() -> None:
+    assert unavailable_git_ref_is_unverifiable()
+
+
+def test_unavailable_git_status_is_unverifiable() -> None:
+    assert unavailable_git_status_is_unverifiable()
 
 
 def test_unavailable_external_id_is_unverifiable() -> None:

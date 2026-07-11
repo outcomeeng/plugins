@@ -58,7 +58,7 @@ only what the next session would otherwise re-discover through a live-system que
 (a CI, container, or cluster CLI, for example). Omit this section entirely when
 every fact the next session needs already lives in the repository.
 
-- [Live identifiers and their last-observed state — PR / run / image / job ids with status or conclusion]
+- [Live identifiers and their last-observed state — PR ids use `PR #<number>`; run / image / job ids include status or conclusion]
 - [In-flight workflows or deployments that bear on the first action]
 - [Inventory or baseline counts the next session compares against]
 - [What to re-confirm with one read-only command before acting]
@@ -115,7 +115,7 @@ history.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
 - **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
-- **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next session cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next session needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
+- **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next session cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Record every pull-request identifier in canonical `PR #<number>` form so `/pickup` can parse and reconcile it. Omit the section entirely when the repository already carries everything the next session needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
 - **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or {{! file('root_guide') !}}, not a per-session file.
 - **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
 - **`<incorporated_sessions>`**: Include when the claimed-session set or the superseded same-conversation artifact set resolved by `<resolve_claimed_sessions>` is non-empty. List every claimed session id and every `artifact_ids` entry that this fresh handoff replaces, with archive disposition. Omit the section only when both sets are empty. Every listed session or artifact id must also be archived by workflow 04.

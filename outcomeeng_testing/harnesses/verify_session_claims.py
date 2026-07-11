@@ -349,6 +349,28 @@ def session_load_failure_is_unverifiable() -> bool:
         return True
 
 
+def session_prose_load_failure_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts()
+            | {
+                ("spx", "session", "show", SESSION_ID): (
+                    1,
+                    "",
+                    "session prose unavailable",
+                )
+            },
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.SESSION_METADATA
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
+        assert "session prose unavailable" in verdict.evidence
+        return True
+
+
 def missing_injected_path_is_discrepancy() -> bool:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
@@ -391,6 +413,60 @@ def dirty_state_is_discrepancy() -> bool:
             module.ClaimKind.UNCOMMITTED_STATE,
         )
         assert verdict.verdict == module.Verdict.DISCREPANCY
+        return True
+
+
+def clean_state_is_confirmed() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(git_status="clean"),
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner),
+            module.ClaimKind.UNCOMMITTED_STATE,
+        )
+        assert verdict.verdict == module.Verdict.CONFIRMED
+        return True
+
+
+def unavailable_git_ref_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(git_ref="unavailable-ref")
+            | {
+                (
+                    "git",
+                    "rev-parse",
+                    "--verify",
+                    "--quiet",
+                    "refs/remotes/origin/unavailable-ref",
+                ): (module.COMMAND_UNAVAILABLE_EXIT, "", "git unavailable")
+            },
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner), module.ClaimKind.GIT_REF
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
+        return True
+
+
+def unavailable_git_status_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(git_status="clean")
+            | {("git", "status", "--porcelain"): (1, "", "git unavailable")},
+        )
+        verdict = _only(
+            module.verify(SESSION_ID, repo, runner),
+            module.ClaimKind.UNCOMMITTED_STATE,
+        )
+        assert verdict.verdict == module.Verdict.UNVERIFIABLE
         return True
 
 
