@@ -9,6 +9,9 @@ TEXT_FILE_SUFFIXES: Final = frozenset(
     {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
 )
 DIST_DIR_NAME: Final = "dist"
+INSTRUCTIONS_PLUGIN_NAME: Final = "instructions"
+SKILL_STANDARDS_NAME: Final = "skill-standards"
+SKILL_STANDARDS_REF: Final = f"{INSTRUCTIONS_PLUGIN_NAME}:{SKILL_STANDARDS_NAME}"
 
 
 class Target(StrEnum):

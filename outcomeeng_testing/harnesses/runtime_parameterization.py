@@ -21,11 +21,9 @@ from outcomeeng.distribution.build import (
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import INSTRUCTIONS_PLUGIN_NAME, Target
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
-PLUGIN_NAME = "instructions"
-SKILL_STANDARDS_REF = f"{PLUGIN_NAME}:skill-standards"
 SKILL_NAME = "example-skill"
 TOOL_KIND = "tool"
 FILE_KIND = "file"
@@ -225,14 +223,16 @@ def _render_skill_bodies(body: str) -> dict[Target, str]:
     with TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         builder = SrcTreeBuilder(tmp_path)
-        builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: _skill_with(body)})
+        builder.add_plugin(
+            INSTRUCTIONS_PLUGIN_NAME, skills={SKILL_NAME: _skill_with(body)}
+        )
         build(builder.src_root, tmp_path / "dist")
         return {
             target: (
                 tmp_path
                 / "dist"
                 / target.value
-                / PLUGIN_NAME
+                / INSTRUCTIONS_PLUGIN_NAME
                 / "skills"
                 / SKILL_NAME
                 / "SKILL.md"

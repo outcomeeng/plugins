@@ -1,134 +1,69 @@
-"""Scenarios for parse_directives.
+"""Scenario evidence for source-directive parsing."""
 
-Verifies that parse_directives recognizes the build's directive vocabulary
-in source-text form, returns directives in source order, ignores standard
-Jinja2 syntax, and raises DirectiveSyntaxError on malformed directives.
-"""
-
-from __future__ import annotations
-
-import pytest
-
-from outcomeeng.distribution.build import (
-    BLOCK_DELIMITER_END,
-    BLOCK_DELIMITER_START,
-    IMPLEMENTED,
-    DirectiveSyntaxError,
-    IncludeDirective,
-    RequireSkillDirective,
-    parse_directives,
-)
-from outcomeeng_testing.harnesses.runtime_parameterization import SKILL_STANDARDS_REF
-
-
-@pytest.fixture(autouse=True)
-def _require_module_implemented() -> None:
-    if not IMPLEMENTED:
-        pytest.fail(
-            "outcomeeng.distribution.build is a stub; implement it before "
-            "running this test, or filter via `spx test passing` "
-            "(node is listed in spx/EXCLUDE)"
-        )
-
-
-EMPTY_TEXT = ""
-PLAIN_PROSE = "# Heading\n\nJust prose, no directives."
-
-INCLUDE_PATH = "samplelang/code-standards/fragment.md"
-INCLUDE_DIRECTIVE_TEXT = (
-    f"{BLOCK_DELIMITER_START} include '{INCLUDE_PATH}' {BLOCK_DELIMITER_END}"
-)
-
-REQUIRE_SKILL_DIRECTIVE_TEXT = f"{BLOCK_DELIMITER_START} require_skill '{SKILL_STANDARDS_REF}' {BLOCK_DELIMITER_END}"
-
-STANDARD_JINJA_BLOCK = "Code: {% if user %} ... {% endif %}"
-STANDARD_JINJA_VARIABLE = "Variable: {{ user.name }}"
-
-UNKNOWN_DIRECTIVE_TEXT = (
-    f"{BLOCK_DELIMITER_START} unknown_directive 'arg' {BLOCK_DELIMITER_END}"
+from outcomeeng_testing.harnesses.source_and_templating import (
+    custom_jinja_control_has_no_directives,
+    implementation_is_ready,
+    missing_directive_argument_raises,
+    parse_empty_text_has_no_directives,
+    parse_include_inside_prose,
+    parse_mixed_directives_in_source_order,
+    parse_plain_prose_has_no_directives,
+    parse_reversed_directives_in_source_order,
+    parse_single_include,
+    parse_single_require_skill,
+    standard_jinja_block_has_no_directives,
+    standard_jinja_variable_has_no_directives,
+    unknown_directive_raises,
 )
 
 
-class TestParsesEmptyAndPlainText:
-    """parse_directives returns an empty tuple when there are no directives."""
-
-    def test_empty_text_returns_empty_tuple(self) -> None:
-        assert parse_directives(EMPTY_TEXT) == ()
-
-    def test_plain_prose_returns_empty_tuple(self) -> None:
-        assert parse_directives(PLAIN_PROSE) == ()
+def test_module_is_implemented() -> None:
+    assert implementation_is_ready()
 
 
-class TestParsesIncludeDirective:
-    """parse_directives recognizes include directives."""
-
-    def test_single_include_returns_one_directive(self) -> None:
-        result = parse_directives(INCLUDE_DIRECTIVE_TEXT)
-        assert result == (IncludeDirective(path=INCLUDE_PATH),)
-
-    def test_include_inside_prose_is_recognized(self) -> None:
-        text = f"Before.\n{INCLUDE_DIRECTIVE_TEXT}\nAfter."
-        result = parse_directives(text)
-        assert result == (IncludeDirective(path=INCLUDE_PATH),)
+def test_empty_text_returns_empty_tuple() -> None:
+    assert parse_empty_text_has_no_directives()
 
 
-class TestParsesRequireSkillDirective:
-    """parse_directives recognizes require_skill directives."""
-
-    def test_single_require_skill_returns_one_directive(self) -> None:
-        result = parse_directives(REQUIRE_SKILL_DIRECTIVE_TEXT)
-        assert result == (RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),)
+def test_plain_prose_returns_empty_tuple() -> None:
+    assert parse_plain_prose_has_no_directives()
 
 
-class TestParsesMultipleDirectivesInSourceOrder:
-    """parse_directives preserves source order across mixed directive types."""
-
-    def test_two_directives_returned_in_source_order(self) -> None:
-        text = f"{INCLUDE_DIRECTIVE_TEXT}\n{REQUIRE_SKILL_DIRECTIVE_TEXT}"
-        result = parse_directives(text)
-        assert result == (
-            IncludeDirective(path=INCLUDE_PATH),
-            RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),
-        )
-
-    def test_directives_in_reverse_text_order_returned_in_text_order(self) -> None:
-        text = f"{REQUIRE_SKILL_DIRECTIVE_TEXT}\n{INCLUDE_DIRECTIVE_TEXT}"
-        result = parse_directives(text)
-        assert result == (
-            RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),
-            IncludeDirective(path=INCLUDE_PATH),
-        )
+def test_single_include_returns_one_directive() -> None:
+    assert parse_single_include()
 
 
-class TestIgnoresStandardJinjaSyntax:
-    """Standard Jinja2 delimiters in content are not directives."""
-
-    def test_standard_block_syntax_not_treated_as_directive(self) -> None:
-        assert parse_directives(STANDARD_JINJA_BLOCK) == ()
-
-    def test_standard_variable_syntax_not_treated_as_directive(self) -> None:
-        assert parse_directives(STANDARD_JINJA_VARIABLE) == ()
+def test_include_inside_prose_is_recognized() -> None:
+    assert parse_include_inside_prose()
 
 
-class TestRaisesOnMalformedDirective:
-    """parse_directives raises DirectiveSyntaxError when delimiters wrap an unknown name."""
-
-    def test_unknown_directive_name_raises(self) -> None:
-        with pytest.raises(DirectiveSyntaxError):
-            parse_directives(UNKNOWN_DIRECTIVE_TEXT)
-
-    def test_directive_missing_argument_raises(self) -> None:
-        malformed = f"{BLOCK_DELIMITER_START} include {BLOCK_DELIMITER_END}"
-        with pytest.raises(DirectiveSyntaxError):
-            parse_directives(malformed)
+def test_single_require_skill_returns_one_directive() -> None:
+    assert parse_single_require_skill()
 
 
-class TestIgnoresCustomDelimiterJinjaBlocks:
-    """Custom-delimiter Jinja control statements are not directives."""
+def test_two_directives_returned_in_source_order() -> None:
+    assert parse_mixed_directives_in_source_order()
 
-    def test_conditional_block_returns_no_directives(self) -> None:
-        text = (
-            f"{BLOCK_DELIMITER_START} if target == 'codex' {BLOCK_DELIMITER_END}"
-            f"body{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
-        )
-        assert parse_directives(text) == ()
+
+def test_reverse_text_order_is_preserved() -> None:
+    assert parse_reversed_directives_in_source_order()
+
+
+def test_standard_block_syntax_is_ignored() -> None:
+    assert standard_jinja_block_has_no_directives()
+
+
+def test_standard_variable_syntax_is_ignored() -> None:
+    assert standard_jinja_variable_has_no_directives()
+
+
+def test_unknown_directive_name_raises() -> None:
+    assert unknown_directive_raises()
+
+
+def test_directive_missing_argument_raises() -> None:
+    assert missing_directive_argument_raises()
+
+
+def test_conditional_block_returns_no_directives() -> None:
+    assert custom_jinja_control_has_no_directives()
