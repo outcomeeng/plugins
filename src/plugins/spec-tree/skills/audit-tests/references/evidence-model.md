@@ -68,6 +68,22 @@ it("loads configuration", () => {
 
 May be legitimate when the test exercises cross-module evidence at L2 or L3. Verify the test level matches the assertion level.
 
+**Laundered indirect coupling** — Test imports a test-infrastructure module whose only behavior is returning or re-exporting hardcoded values that the test then asserts. The extra module hides test-owned truth without coupling the assertion to production behavior.
+
+```typescript
+// product_testing/harnesses/status.ts
+export const expectedStatus = () => "accepted";
+
+// spx/55-api.enabler/tests/status.scenario.l1.test.ts
+import { expectedStatus } from "../../../product_testing/harnesses/status";
+
+it("accepts a request", () => {
+  expect(expectedStatus()).toBe("accepted");
+});
+```
+
+Reject even when the infrastructure path is valid. Move protocol vocabulary to its production source contract and make the harness exercise the real behavior.
+
 **False coupling** — Test imports the module but never exercises the code path relevant to the assertion.
 
 ```typescript
