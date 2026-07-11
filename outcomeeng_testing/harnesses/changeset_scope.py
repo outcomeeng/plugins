@@ -323,6 +323,30 @@ def assert_merge_classifier_handles_spaced_coordination_note() -> None:
         assert classifier.is_coordination_note(spaced.note_path)
 
 
+def assert_merge_classifier_counts_unique_change_kinds() -> None:
+    """Prove transport counts cover empty, note-only, mixed, and duplicate paths."""
+    classifier = load_merge_classifier_module()
+    note_path = f"spx/example/{classifier.COORDINATION_NOTE_BASENAMES[0]}"
+    source_path = "src/example.py"
+
+    assert classifier.classify(()) == (0, 0)
+    assert classifier.classify((note_path,)) == (1, 0)
+    assert classifier.classify((note_path, source_path)) == (2, 1)
+    assert classifier.classify((note_path, source_path, source_path)) == (2, 1)
+
+
+def assert_merge_classifier_matches_only_coordination_note_basenames() -> None:
+    """Prove basename matching accepts the source vocabulary and rejects variants."""
+    classifier = load_merge_classifier_module()
+
+    for basename in classifier.COORDINATION_NOTE_BASENAMES:
+        assert classifier.is_coordination_note(basename)
+        assert classifier.is_coordination_note(f"spx/example/{basename}")
+        assert not classifier.is_coordination_note(basename.lower())
+        assert not classifier.is_coordination_note(f"{basename}.bak")
+        assert not classifier.is_coordination_note(f"{basename[:-3]}S.md")
+
+
 def assert_merge_classifier_reports_unconfigured_base() -> None:
     """Prove the merge classifier translates an absent remote default branch."""
     with TemporaryDirectory() as tmp:
