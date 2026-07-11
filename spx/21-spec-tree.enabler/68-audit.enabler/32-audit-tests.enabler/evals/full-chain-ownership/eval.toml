@@ -7,7 +7,12 @@ owned_paths = [
   "src/plugins/spec-tree/skills/audit-tests/**",
   "dist/claude/spec-tree/skills/audit-tests/**",
 ]
-smoke_cases = ["rejects-harness-owned-protocol", "approves-source-owned-protocol"]
+smoke_cases = [
+  "rejects-harness-owned-protocol",
+  "approves-source-owned-protocol",
+  "rejects-unread-import",
+  "rejects-rust-generator-owned-protocol",
+]
 threshold = 0.85
 trials = 1
 
