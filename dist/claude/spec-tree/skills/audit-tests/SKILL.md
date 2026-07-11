@@ -157,7 +157,7 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
 | Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
 
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself.
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself. The finding `file` names the artifact that copied the value, while `remediation_target` names the production contract that must own it — NEVER substitute the artifact role (`harness`, `generator`, or `fixture`) for `source-contract`.
 
 </step>
 
@@ -242,6 +242,7 @@ Check assertion-type-to-strategy alignment:
 | Mapping        | Parameterized over input set                      | Only one example tested   |
 | Property       | Property-based framework (fast-check, Hypothesis) | Only example-based        |
 | Conformance    | Tool or schema validation                         | Manual check              |
+| Compliance     | Rule exercised against violating cases            | Only conforming cases     |
 
 </step>
 

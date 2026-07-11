@@ -273,9 +273,11 @@ Read the spec assertion and the test's expect/assert statements side by side.
    - If yes → misaligned
 
 3. Is the test strategy appropriate for the assertion type?
+   - Scenario assertion → must exercise the concrete Given/When/Then case
    - Property assertion → must use property-based framework
    - Mapping assertion → must be parameterized over the input set
    - Conformance assertion → must use tool/schema validation
+   - Compliance assertion → must exercise the rule against violating cases
 
 **Common misalignment patterns:**
 
@@ -286,6 +288,7 @@ Read the spec assertion and the test's expect/assert statements side by side.
 | "Serialization is deterministic" | Tests one input             | Needs property test — wrong strategy |
 | "API returns 404 for missing"    | Tests 200 for existing      | Wrong scenario — misaligned          |
 | "Parser rejects invalid input"   | Asserts no exception thrown | Inverted assertion — misaligned      |
+| "NEVER accepts unknown fields"   | Tests only a valid payload  | No violating case — wrong strategy   |
 
 </alignment_verification>
 
