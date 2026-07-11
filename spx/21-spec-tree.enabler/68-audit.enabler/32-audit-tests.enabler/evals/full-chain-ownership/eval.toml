@@ -12,6 +12,7 @@ threshold = 0.85
 trials = 1
 
 [prompt_source]
-kind = "producer-file"
+kind = "producer-section"
 producer = "src/plugins/spec-tree/skills/audit-tests/SKILL.md"
+section = "full_chain_ownership"
 template = "prompt.template.md"

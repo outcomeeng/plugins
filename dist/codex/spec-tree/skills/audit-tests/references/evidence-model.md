@@ -242,13 +242,13 @@ Test doubles used under the 7 legitimate exception cases are not "coupling sever
 
 | Exception                | Double type           | Why coupling is maintained                         |
 | ------------------------ | --------------------- | -------------------------------------------------- |
-| 1. Failure modes         | Stub returning errors | Tests error handling of real integration           |
+| 1. Failure simulation    | Stub returning errors | Tests error handling of real integration           |
 | 2. Interaction protocols | Spy recording calls   | Tests call sequence against real interface         |
-| 3. Time/concurrency      | Fake clock            | Tests timing logic with real code                  |
+| 3. Time and concurrency  | Fake clock            | Tests timing logic with real code                  |
 | 4. Safety                | Stub that records     | Tests intent without destructive side effects      |
 | 5. Combinatorial cost    | Configurable fake     | Tests breadth with fake that mirrors real behavior |
 | 6. Observability         | Spy recording details | Tests request details the real system hides        |
-| 7. Contract testing      | Contract stub         | Tests serialization/parsing against real schema    |
+| 7. Contract probes       | Contract stub         | Tests serialization/parsing against real schema    |
 
 For each test double found:
 

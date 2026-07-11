@@ -1,8 +1,8 @@
-<!-- Generated from the complete producer at {producer_path}. -->
+<!-- Generated from the {producer_section_name} concern at {producer_path}. -->
 
-This eval runs in the isolated verifier context required by the producer below. The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Apply the complete producer to the supplied test-evidence package. This assertion begins after required language-concern composition succeeds: treat `input.language_composition` as the authoritative completed Step 3f result, do not invoke or re-run any language-specific concern skill, and judge only the language-neutral evidence chain. Return only the producer's structured JSON verdict.
+This eval runs in the isolated verifier context required by the producer concern below. The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Required language-concern composition has already succeeded, as recorded in `input.language_composition`. Apply the selected language-neutral concern to the supplied test-evidence package. Return only the structured JSON verdict defined by that concern.
 
-{producer_file}
+{producer_section}
 The test-evidence package (JSON-encoded):
 
 ```json

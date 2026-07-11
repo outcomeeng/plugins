@@ -96,7 +96,7 @@ For each included assertion, extract:
 
 </step>
 
-<step name="inventory_evidence_chain">
+<step name="full_chain_ownership">
 
 **Step 2b: Inventory the complete evidence chain**
 
@@ -113,19 +113,11 @@ Read every resolved artifact before continuing. A referenced fixture is inventor
 
 If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
-</step>
-
-<step name="audit_testability">
-
 **Step 3: Testability precondition**
 
 For each assertion, read the governed production source and identify the observable boundary, seam, or injection point through which a test can exercise the assertion-relevant behavior. Judge the source shape before judging the linked test.
 
 If the source exposes no way to observe or drive that behavior, add a `gate-1-assertion` REJECT finding against the source file with rule `untestable-source` and `remediation_target: "source-file"`. State the missing seam and required production refactor. Skip declarations, coupling, falsifiability, alignment, and coverage for that assertion because test evidence cannot remediate untestable source.
-
-</step>
-
-<step name="audit_declarations">
 
 **Step 3a: Ownership across the evidence chain**
 
@@ -158,6 +150,43 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Discovery | Test collection and registration policy | Fixture bodies, domain values, generated cases, or hidden setup policy |
 
 For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself. The finding `file` names the artifact that copied the value, while `remediation_target` names the production contract that must own it — NEVER substitute the artifact role (`harness`, `generator`, or `fixture`) for `source-contract`.
+
+For an isolated ownership-concern verdict, return only this JSON shape. Set `overall` to `APPROVED` only when the gate row passes with no `REJECT` finding. Include every inventoried artifact in `metadata.evidence_chain`; an approval with an unresolved or omitted artifact is invalid.
+
+```json
+{
+  "overall": "APPROVED | REJECTED",
+  "rows": [
+    {
+      "name": "gate-1-assertion",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "stable-finding-id",
+          "file": "repository-relative-path",
+          "line": "line-number-or-location",
+          "assertion": "full assertion text",
+          "property": "failed evidence property",
+          "rule": "failed rule",
+          "severity": "REJECT | WARNING | INFO",
+          "message": "evidentiary gap",
+          "remediation_target": "source-contract | source-file | test | harness | generator | fixture | spec"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "evidence_chain": [
+      {
+        "path": "repository-relative-path",
+        "role": "test | harness | generator | fixture | discovery | production",
+        "imported_from": "repository-relative-path | null",
+        "inspection_status": "inspected | unresolved"
+      }
+    ]
+  }
+}
+```
 
 </step>
 
