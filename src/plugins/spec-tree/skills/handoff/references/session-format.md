@@ -1,3 +1,10 @@
+<contents>
+
+- `<template>` — JSON header, stdin forms, and canonical body
+- `<field_guidance>` — frontmatter and body-field ownership
+
+</contents>
+
 <template>
 This reference defines the JSON header and stdin form, body template, and field guidance for frontmatter and body sections.
 

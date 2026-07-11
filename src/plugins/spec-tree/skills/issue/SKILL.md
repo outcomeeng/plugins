@@ -142,12 +142,10 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 
 <success_criteria>
 
-- [ ] Target dependency checkout directory resolved deterministically or confirmed with the user
-- [ ] Target dependency `git_ref` resolved to a branch that exists on origin or confirmed with the user
-- [ ] Observation captured as observation-only — no dependency node addresses, decision indices, or assertion types
-- [ ] Header carries an output-shaped `goal`, an imperative `next_step`, and the target dependency `git_ref`; `specs` and `files` empty
-- [ ] `spx -C <target-dir> session handoff` filed the follow-up into the target repository's queue
-- [ ] The invoking repository's git state and session queue are unchanged
-- [ ] The created `<HANDOFF_ID>` and `<SESSION_FILE>` reported, naming the target repository
+- The target dependency queue contains one fresh, resumable handoff whose `git_ref` names a branch verified on origin.
+- The handoff records only the observation and an output-shaped continuation goal; it invents no target node, decision, assertion, or implementation detail.
+- The handoff header leaves `specs` and `files` empty so the target session re-derives governance after pickup.
+- The invoking repository's git state and session queue remain byte-for-byte unchanged.
+- The operator receives the target repository identity plus the exact `<HANDOFF_ID>` and `<SESSION_FILE>` needed to inspect the filed follow-up.
 
 </success_criteria>
