@@ -56,8 +56,8 @@ Assertion-relevant path reached: yes
 ```
 
 ```text
-Audit: spx/55-example.enabler/21-transmitter.outcome/
-Verdict: APPROVED
+Analysis target: spx/55-example.enabler/21-transmitter.outcome/
+Analysis conclusion: approval evidence is complete
 
 | # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage trace   | Verdict |
 |---|----------------|----------|--------------------------|-----------|------------------|---------|
@@ -83,8 +83,8 @@ Result: Coupling severed. Real database.query never runs.
 ```
 
 ```text
-Audit: spx/55-example.enabler/21-auth.outcome/
-Verdict: REJECT
+Analysis target: spx/55-example.enabler/21-auth.outcome/
+Analysis conclusion: rejection evidence is present
 
 | # | Assertion     | Property Failed | Finding          | Detail                         |
 |---|---------------|-----------------|------------------|--------------------------------|
@@ -119,8 +119,8 @@ Zero runtime codebase imports -> no coupling.
 ```
 
 ```text
-Audit: spx/55-example.enabler/21-contrast.outcome/
-Verdict: REJECT
+Analysis target: spx/55-example.enabler/21-contrast.outcome/
+Analysis conclusion: rejection evidence is present
 
 | # | Assertion        | Property Failed | Finding     | Detail                                      |
 |---|------------------|-----------------|-------------|---------------------------------------------|
@@ -160,7 +160,7 @@ def run_release_case() -> bool:
     return actual == EXPECTED
 ```
 
-Verdict:
+Analysis conclusion:
 
 ```text
 Artifact: product_testing/harnesses/release.py

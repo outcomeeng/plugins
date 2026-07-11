@@ -227,7 +227,7 @@ Use this shape for test-evidence audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "test-evidence-auditor",
-    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall PASS, FAIL, or UNKNOWN; gate-1-assertion and applicable gate-2-architectural rows; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; gate-1-assertion and applicable gate-2-architectural rows; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
   }
 }
 ```

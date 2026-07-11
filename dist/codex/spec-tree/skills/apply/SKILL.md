@@ -28,11 +28,11 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 <invocation_modes>
 
-The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
+Parse the complete invoking prompt text exactly once before Step 0.
 
-- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
-- `$ARGUMENTS` containing a node path without `--agent` → the work queue is that single node.
-- Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+- invoking prompt begins with `--agent` -> launch the `applier` agent on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- invoking prompt contains a node path without `--agent` -> the work queue is that single node.
+- invoking prompt contains no node path -> determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
 
 When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
@@ -305,17 +305,12 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 <success_criteria>
 
-Scan the conversation for these markers before declaring done:
+The implemented changeset is sound when:
 
-- [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
-- [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
-- [ ] Step 4 `adr-auditor` emitted `APPROVED`
-- [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
-- [ ] Step 8 `implementation-auditor` returned an `spx verification run` token and rendered projection whose `terminalStatus` is `approved`
-- [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
-- [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9
-- [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
-- [ ] The product's declared touched-scope verification command has passed for the changed node and implementation, using the consumer repository's local verification overlay or root instructions to select the concrete command
-- [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
+- Every affected assertion has a complete clause-evidence matrix and source-coupled tests whose evidence type matches the assertion.
+- Architecture, test evidence, and implementation audits approve the exact committed scope, with every required artifact-type evidence audit approving the same head.
+- Cross-node changes have a converged whole-changeset review with no unresolved valid finding.
+- The repository's declared focused and terminal deterministic verification commands pass against the final committed head, with no source or generated change afterward.
+- Default-branch work reaches the default branch on origin through `/merge`; explicitly local-only work ends at its requested boundary with that scope recorded.
 
 </success_criteria>

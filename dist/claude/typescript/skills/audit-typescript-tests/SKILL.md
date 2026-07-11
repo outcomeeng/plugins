@@ -14,7 +14,7 @@ This audit runs inside either the dispatched `test-evidence-auditor` context via
 
 <objective>
 
-A shared-schema JSON verdict on TypeScript test evidence — `PASS`, `FAIL`, or `UNKNOWN`, with each finding naming the assertion or evidence artifact, failed evidence property, and evidence gap.
+A shared-schema JSON verdict on TypeScript test evidence — `APPROVED` or `REJECTED`, with each finding naming the assertion or evidence artifact, failed evidence property, and evidence gap.
 
 </objective>
 
@@ -399,7 +399,7 @@ How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructur
 The TypeScript test verdict is sound when:
 
 - Every in-scope assertion was judged on all eight Gate 1 steps and Gate 2 with none skipped — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
-- The verdict uses the base `/audit-tests` JSON rows and states `overall` as `PASS`, `FAIL`, or `UNKNOWN`, with no assertion left unevaluated.
+- The verdict uses the base `/audit-tests` JSON rows and states `overall` as `APPROVED` or `REJECTED`, with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
 

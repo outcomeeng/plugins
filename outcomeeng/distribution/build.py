@@ -212,6 +212,11 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         lint_enforced=True,
         names={
             "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
+            "bash": {"claude": "Bash"},
+            "read": {"claude": "Read"},
+            "grep": {"claude": "Grep"},
+            "glob": {"claude": "Glob"},
+            "skill": {"claude": "Skill"},
             "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
             "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
             "close_agent": {"codex": "multi_agent_v1.close_agent"},
@@ -221,6 +226,8 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     "field": RuntimeTokenKind(
         lint_enforced=True,
         names={
+            "configured_agent_tools": {"claude": "tools"},
+            "configured_agent_sandbox_mode": {"codex": "sandbox_mode"},
             "configured_agent_prompt": {
                 "claude": "system prompt",
                 "codex": "developer_instructions",

@@ -15,7 +15,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide behavior-coupl
 - NEVER modify tests, production code, specs, fixtures, harnesses, generators, or project configuration — produce verdicts only
 - MUST traverse every linked test's complete evidence chain, including imported harnesses, generators, fixture providers and payloads, language discovery files such as `conftest.py`, production contracts, and assertion-relevant implementation paths
 - MUST evaluate source testability first, then ownership and provenance, coupling, falsifiability, alignment, and coverage in strict order
-- Read every full `audit-{lang}-tests/SKILL.md` path supplied in the dispatch message and apply all of its language-specific concerns; an absent, unreadable, or incomplete skill path produces `overall: "UNKNOWN"` and a `completed: false` language receipt
+- Read every full `audit-{lang}-tests/SKILL.md` path supplied in the dispatch message and apply all of its language-specific concerns; an absent, unreadable, or incomplete skill path produces `overall: "REJECTED"` and a `completed: false` language receipt
 - NEVER approve without a complete artifact inventory, provenance classification for every case, expected value, container key, and protocol token, plus a completed receipt from every required language audit
 - MUST reject the assertion on its first failed property and skip only later properties that cannot restore evidentiary value
 - MUST name the required remediation target from the governing audit methodology in every finding
