@@ -777,100 +777,42 @@ def _repair_claude_runtime_source(
     root: Path,
     runner: CommandRunner,
 ) -> tuple[tuple[str, ...], ...]:
-    stale_managed_sources = tuple(
-        source
-        for source in sources
-        if source.scope == CLAUDE_SCOPE_MANAGED and not _source_matches(source, root)
+    """Reconcile only the user-scope Claude ``outcomeeng`` registration.
+
+    Maintainer sync owns the user-scope marketplace declaration in
+    ``~/.claude/settings.json`` and nothing else. It inspects and mutates only
+    the user-scope (or unscoped) Directory registration, issues every Claude
+    marketplace command at user scope, and never touches a project- or
+    local-scope registration. A user-scope or unscoped Directory source already
+    at ``root`` is accepted without any command.
+
+    ``claude plugin marketplace remove`` without an explicit scope deletes the
+    declaration from *every* settings scope — including a consumer's committed
+    project ``.claude/settings.json`` and its enabled-plugin selections — so the
+    remove here always passes ``--scope user`` to confine its effect to the
+    user settings, and the add mirrors it.
+    """
+    user_level_sources = tuple(
+        source for source in sources if source.scope in (None, CLAUDE_SCOPE_USER)
     )
-    if stale_managed_sources:
-        source = stale_managed_sources[0]
-        raise MarketplaceSourceError(
-            f"Claude Code marketplace `{marketplace}` is managed at "
-            f"{source.path or source.source_type} and cannot be repaired to {root}"
-        )
-    canonical_user_source_exists = any(
-        _user_registration_source_matches(
-            source,
-            root,
-            accept_unscoped=False,
-        )
-        for source in sources
-    )
-    editable_sources = tuple(
-        source
-        for source in sources
-        if source.scope != CLAUDE_SCOPE_MANAGED
-        and not _user_registration_source_matches(
-            source,
-            root,
-            accept_unscoped=False,
-        )
-    )
-    if canonical_user_source_exists and not editable_sources:
+    if any(_source_matches(source, root) for source in user_level_sources):
         return ()
-    source_readd_required = not canonical_user_source_exists or any(
-        _claude_source_removal_can_affect_user_plugins(source)
-        for source in editable_sources
-    )
-    preserved = (
-        _claude_user_plugins_to_preserve(
-            marketplace,
-            runner=runner,
-        )
-        if source_readd_required
-        else ()
-    )
+    preserved = _claude_user_plugins_to_preserve(marketplace, runner=runner)
     commands: list[tuple[str, ...]] = []
-    seen_removals: set[tuple[tuple[str, ...], Path | None]] = set()
-    for source in _claude_removal_order(editable_sources):
-        remove = _claude_marketplace_remove_command(marketplace, source)
-        remove_cwd = _claude_marketplace_remove_cwd(source)
-        removal_key = (remove, remove_cwd)
-        if removal_key in seen_removals:
-            continue
-        seen_removals.add(removal_key)
-        _run_json_command(
-            list(remove),
-            runner=runner,
-            cwd=remove_cwd,
+    if user_level_sources:
+        remove = (
+            *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+            marketplace,
+            "--scope",
+            CLAUDE_SCOPE_USER,
         )
+        _run_json_command(list(remove), runner=runner)
         commands.append(remove)
-    if source_readd_required:
-        add = (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(root))
-        _run_json_command(list(add), runner=runner)
-        commands.append(add)
+    add = (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(root), "--scope", CLAUDE_SCOPE_USER)
+    _run_json_command(list(add), runner=runner)
+    commands.append(add)
     commands.extend(_restore_claude_plugins(preserved, runner=runner))
     return tuple(commands)
-
-
-def _claude_removal_order(
-    sources: tuple[MarketplaceSource, ...],
-) -> tuple[MarketplaceSource, ...]:
-    return tuple(sorted(sources, key=lambda source: source.scope is None))
-
-
-def _claude_source_removal_can_affect_user_plugins(source: MarketplaceSource) -> bool:
-    return source.scope in {None, CLAUDE_SCOPE_USER}
-
-
-def _claude_marketplace_remove_command(
-    marketplace: str,
-    source: MarketplaceSource,
-) -> tuple[str, ...]:
-    if source.scope is None:
-        return (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace)
-    return (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, marketplace, "--scope", source.scope)
-
-
-def _claude_marketplace_remove_cwd(source: MarketplaceSource) -> Path | None:
-    if source.scope not in _CLAUDE_PROJECT_PATH_SCOPES:
-        return None
-    if source.project_path is None:
-        raise MarketplaceSourceError(
-            f"Claude Code marketplace `{source.name}` with {source.scope} scope has "
-            f"no {MARKETPLACE_FIELD_PROJECT_PATH}"
-        )
-    return _normalized_path(source.project_path)
 
 
 def _claude_user_plugins_to_preserve(
