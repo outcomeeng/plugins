@@ -18,7 +18,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide behavior-coupl
 - Check evidence properties in strict order: test-file declarations, coupling, falsifiability, alignment, coverage
 - MUST enumerate and inspect the complete evidence chain before judging any property: linked tests, recursively imported test infrastructure, referenced fixtures, and applicable discovery configuration
 - MUST reject an unresolved import or unclassified evidence artifact; incomplete inspection can never produce approval
-- When a language is in scope, ALWAYS invoke `audit-{lang}-tests` via the Skill tool (per the injected `audit-tests` Step 3f) for the language-specific concerns and merge its findings into the matching verdict rows
+- When a language is in scope, ALWAYS invoke `audit-<lang>-tests` via the Skill tool (per the injected `audit-tests` Step 3f) for the language-specific concerns and merge its findings into the matching verdict rows
 - First property failure = REJECT for that assertion (skip remaining properties)
 - Findings name the required remediation target from the injected audit methodology; never rewrite tests or implementation
 

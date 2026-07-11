@@ -77,25 +77,6 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 </step>
 
-<step name="inventory_evidence_chain">
-
-**Step 2b: Inventory the complete evidence chain**
-
-For every linked test, follow each repository import recursively. Record one inventory entry per artifact:
-
-| Field | Meaning |
-| --- | --- |
-| `path` | Repository-relative artifact path |
-| `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from` | Path that introduced the artifact, or null for the linked test |
-| `inspection_status` | `inspected` or `unresolved` |
-
-Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
-
-If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
-
-</step>
-
 <step name="map_assertions">
 
 **Step 2: Map assertions to test files**
@@ -112,6 +93,25 @@ Read the spec's Assertions section. For each assertion, extract:
 **Missing test file = finding.** Record it and continue to next assertion.
 
 **Compliance assertions with `[audit]` tags** (or the legacy `[review]`) are verified by agent judgment, not by tests. Skip them in the test evidence audit.
+
+</step>
+
+<step name="inventory_evidence_chain">
+
+**Step 2b: Inventory the complete evidence chain**
+
+Starting from the test links mapped in Step 2, follow each repository import recursively. Record one inventory entry per artifact:
+
+| Field | Meaning |
+| --- | --- |
+| `path` | Repository-relative artifact path |
+| `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
+| `imported_from` | Path that introduced the artifact, or null for the linked test |
+| `inspection_status` | `inspected` or `unresolved` |
+
+Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
+
+If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
 </step>
 
@@ -147,7 +147,7 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture | Inert whole payload consumed by path or bytes | Isolated tokens, values, expected outputs, or executable exports |
 | Discovery | Test collection and registration policy | Fixture bodies, domain values, generated cases, or hidden setup policy |
 
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with rule `source-ownership`; a harness location never establishes ownership by itself.
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with rule `source-ownership` and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself.
 
 </step>
 
@@ -265,7 +265,7 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field; when no matching installed skill exists, record the coverage gap rather than guessing from filenames.
+Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-<lang>-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill and return REJECTED; never guess from filenames or approve incomplete coverage.
 
 </step>
 
@@ -302,7 +302,8 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
           "line": null,
           "rule": "<assertion-id-or-property-name>",
           "severity": "REJECT",
-          "message": "<one-line evidentiary gap>"
+          "message": "<one-line evidentiary gap>",
+          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file>"
         }
       ]
     },
@@ -316,7 +317,8 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
           "line": null,
           "rule": "<duplication-pattern>",
           "severity": "REJECT",
-          "message": "<extraction target>: <nearest common test-infrastructure location>"
+          "message": "<extraction target>: <nearest common test-infrastructure location>",
+          "remediation_target": "<source-contract | harness | generator | fixture | eval-case | test-file | source-file>"
         }
       ]
     }
@@ -335,7 +337,7 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
 }
 ```
 
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `remediation_target: "source-contract"`; other findings select the owner that must change from the enumerated remediation targets. No skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 
@@ -389,7 +391,7 @@ How to avoid: Step 2b inventories and reads the complete evidence chain before j
 
 The verdict is sound when:
 
-- Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
+- Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-<lang>-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; every entry is inspected before approval.
 - Every case and protocol value has a named valid source; a harness path alone never establishes ownership.
