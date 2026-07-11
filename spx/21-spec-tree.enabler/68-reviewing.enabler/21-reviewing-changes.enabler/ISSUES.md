@@ -41,3 +41,27 @@ Required handling:
 - Make review run lookup derive the same branch scope for wrapper-agent produced runs and main-session projection reads, or provide a supported branch-scope selector for `spx journal render` and `spx journal read`.
 - Add regression coverage for a review run created by `changes-reviewer` and read from the main session on the same changeset head.
 - Keep direct `.spx/branch/**/review/runs/*.jsonl` reads out of the normal merge workflow once the projection lookup resolves the run token.
+
+## 5. Unsealed prefixes lack a supported inspection projection
+
+Live review run `2026-07-11_12-08-54-490-cf96cc5a58e9` had already recorded complete unique scope coverage and a rejecting finding while the reviewer agent was still running. `render_review_run.py` rejected inspection with `has no terminal completion event`, forcing the caller to query and summarize the raw event prefix.
+
+Required handling:
+
+- Render unsealed prefixes as in-progress projections.
+- Surface findings immediately after their events are appended.
+- Report current unique scope coverage without requiring a terminal event.
+- Preserve the same finding and coverage projection when the run seals.
+
+## 6. Repeated inspection events inflate scope coverage
+
+The sealed run declared 385 changed files and emitted 626 `verification.scope.advanced` events. The projection reported `385 files, 626 examined`; most files appeared three times and `AGENTS.md` appeared four times.
+
+Required handling:
+
+- Preserve repeated inspection events in the append-only history when they represent distinct attempts.
+- Project authoritative coverage by stable scope-unit identity rather than raw event count.
+- Distinguish total inspection attempts from unique covered units when both are useful.
+- Restore prior-run context without copying prior scope events into the new run's authoritative coverage count.
+
+Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
