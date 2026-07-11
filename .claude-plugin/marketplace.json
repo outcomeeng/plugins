@@ -9,9 +9,9 @@
   },
   "plugins": [
     {
-      "name": "develop",
-      "source": "./dist/claude/develop",
-      "description": "Plugin development: /create-skills, /create-subagents"
+      "name": "instructions",
+      "source": "./dist/claude/instructions",
+      "description": "Instruction authoring: /create-skills, /create-subagents"
     },
     {
       "name": "frontend",

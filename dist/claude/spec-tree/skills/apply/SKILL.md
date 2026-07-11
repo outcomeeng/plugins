@@ -14,7 +14,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 <quick_start>
 
-0. Plan the slice when the work is a plan or proposal, not a specific node or queue — invoke `/plan-slice` to select the observable slice whose node set becomes the work queue (see `<invocation_modes>`)
+0. Select the slice when the work is a plan or proposal, not a specific node or queue — invoke `/slice` to select the observable slice whose node set becomes the work queue (see `<invocation_modes>`)
 1. Load methodology (Step 1 — once per session)
 2. Load work item context (Step 2 — every node)
 3. Architect -> audit until APPROVED (Steps 3–4)
@@ -34,7 +34,7 @@ The raw invocation string `$ARGUMENTS` controls what runs before the per-node fl
 - `$ARGUMENTS` containing a node path without `--agent` → the work queue is that single node.
 - Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
 
-When the work is described as a plan or proposal rather than a specific node or queue, invoke `/plan-slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
+When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
@@ -116,7 +116,7 @@ Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected la
 
 | Step | Purpose                  | TypeScript                                              | Python                      | Rust                      |
 | ---- | ------------------------ | ------------------------------------------------------- | --------------------------- | ------------------------- |
-| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                         | same                        | same                      |
+| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                              | same                        | same                      |
 | 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                        | same                      |
 | 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                        | same                      |
 | 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")` | `Skill("architect-rust")` |

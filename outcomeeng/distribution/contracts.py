@@ -9,6 +9,11 @@ TEXT_FILE_SUFFIXES: Final = frozenset(
     {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
 )
 DIST_DIR_NAME: Final = "dist"
+REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
+    "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
+    "unavailable, report the missing skill and continue with the closest "
+    "available workflow."
+)
 
 
 class Target(StrEnum):

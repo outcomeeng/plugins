@@ -28,7 +28,7 @@ the source-layer guard enforces them. The `tool`, `field`, `term`, and `file` ki
 exposed as their own build template global (`tool(…)`, `field(…)`, `term(…)`, `file(…)`)
 rendering through one `resolve_runtime_token` path. The configured-agent concept terms and
 the configured-agent prompt field are populated in the source-owned registry and consumed by
-the `develop` plugin sources. The runtime-token lint
+the `instructions` plugin sources. The runtime-token lint
 (`outcomeeng/validation/runtime_tokens.py`, `forbidden_names`) derives its forbidden set from
 the lint-enforced kinds (`tool`, `field`, `file`) only — the review-only `term` kind is
 excluded because its common-word concept terms would false-positive across prose.

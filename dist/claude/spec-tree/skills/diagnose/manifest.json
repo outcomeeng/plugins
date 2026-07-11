@@ -5,9 +5,9 @@
     "source": "outcomeeng/plugins"
   },
   "expected_plugins": [
-    "develop",
     "frontend",
     "hdl",
+    "instructions",
     "prose",
     "python",
     "rust",

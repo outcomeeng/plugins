@@ -89,7 +89,7 @@ PR #329 exposed avoidable workflow failures where clearer local instructions or 
 
 - **Verification-kind vocabulary.** Treated `reviewing` as a skill-naming violation when it was the verification-kind vocabulary, predating the gerund-to-imperative skill rename.
   Preventing instruction: when a term can belong to both a skill-name grammar and the verification taxonomy, inspect the governing vocabulary source and file history before classifying it as a naming defect.
-  Suggested surfaces: `spec-tree:understand` `verification-kinds.md`; `develop:skill-standards`; `spx/AGENTS.md` historical-context guidance.
+  Suggested surfaces: `spec-tree:understand` `verification-kinds.md`; `instructions:skill-standards`; `spx/AGENTS.md` historical-context guidance.
 
 - **Declared source first.** Looked at implementation/code surfaces before resolving the user-named source of truth.
   Preventing instruction: for vocabulary, taxonomy, and methodology questions, read the declared source first, then use implementation as lower-layer evidence.

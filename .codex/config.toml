@@ -2,7 +2,7 @@
 # Global config keeps installed plugins available but disabled by default; this
 # project layer enables the repository-specific allowlist.
 
-[plugins."develop@outcomeeng"]
+[plugins."instructions@outcomeeng"]
 enabled = true
 
 [plugins."typescript@outcomeeng"]

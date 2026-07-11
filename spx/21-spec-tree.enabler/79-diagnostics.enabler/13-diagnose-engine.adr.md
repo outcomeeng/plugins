@@ -8,7 +8,7 @@ The manifest ships inside the plugin tree; the skill passes it by path. Its fiel
 {
   "spx_floor": "<build-rendered from the product's single source-of-truth floor>",
   "marketplace": { "name": "outcomeeng", "source": "outcomeeng/plugins" },
-  "expected_plugins": ["spec-tree", "develop", "python", "prose"],
+  "expected_plugins": ["spec-tree", "instructions", "python", "prose"],
   "checks": ["session-environment", "spx-reachability", "worktree-pool", "session-store", "marketplace-install"]
 }
 ```

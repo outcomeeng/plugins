@@ -1,0 +1,21 @@
+{
+  "name": "instructions",
+  "version": "0.12.0",
+  "description": "Create and audit instruction assets: skills, subagents, and agent prompt standards",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "development",
+    "plugin",
+    "marketplace",
+    "skill",
+    "agent",
+    "subagent",
+    "prompt",
+    "codex",
+    "claude code"
+  ]
+}

@@ -141,7 +141,7 @@ Once unblocked:
   enumeration is now code, so the determinism claim gains a real grader. This is
   the node's first `[test]` evidence; until the capability publishes, the ADR's
   rules and these assertions stay `[audit]`.
-- `just build-skills`, then `develop:skill-auditor` on the edited skill plus the
+- `just build-skills`, then `instructions:skill-auditor` on the edited skill plus the
   spec and test-evidence auditor gates.
 
 ## Hand-off

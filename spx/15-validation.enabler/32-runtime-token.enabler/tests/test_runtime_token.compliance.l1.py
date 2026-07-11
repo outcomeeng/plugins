@@ -122,7 +122,7 @@ def test_enforced_by_default_only_ignored_files_exempt(tmp_path: Path) -> None:
         _REPO_ROOT
         / "src"
         / "plugins"
-        / "develop"
+        / "instructions"
         / "skills"
         / "create-skills"
         / "SKILL.md"

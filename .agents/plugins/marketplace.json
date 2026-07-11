@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "develop",
+      "name": "instructions",
       "source": {
         "source": "local",
-        "path": "./dist/codex/develop"
+        "path": "./dist/codex/instructions"
       },
       "policy": {
         "installation": "AVAILABLE",
