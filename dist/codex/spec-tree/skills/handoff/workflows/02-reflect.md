@@ -115,7 +115,7 @@ Record one ownership classification per independent closure thread for the threa
 </perspective_existing_sessions>
 
 <continuation_signal>
-Compute the continuation state workflow 04 reads for every independent closure thread — the check that makes `--no-session` answerable to each thread's state rather than an unconditional global skip.
+Compute the continuation state workflow 04 reads for every independent closure thread — the check that makes `<HANDOFF_OPTIONS no_session="true" ... />` answerable to each thread's state rather than an unconditional global skip.
 
 **The signal ranges over the nodes in scope this session (the anchored nodes from workflow 01), independently of `CLAIMED_SESSIONS`.** The claimed-session set decides only what gets archived; it never decides whether to hand off. An empty claimed-session set (no `/pickup` this conversation) therefore NEVER implies an absent signal.
 
@@ -140,7 +140,7 @@ continuation: [the unresolved work, or "no continuation remains"]
 </RESOLVED_CONTINUATION_THREADS>
 ```
 
-Every independent thread appears exactly once. An `existing-owner` record carries `continuation="present"`; an `ambiguous` owner status stops before disposition. `--no-session` is valid per record only when `continuation="absent"` or `owner_status="existing-owner"` with no local blocker. Workflow 04 surfaces a contradiction for each record with `continuation="present"` and no existing owner rather than silently omitting its session file.
+Every independent thread appears exactly once. An `existing-owner` record carries `continuation="present"`; an `ambiguous` owner status stops before disposition. `<HANDOFF_OPTIONS no_session="true" ... />` is valid per record only when `continuation="absent"` or `owner_status="existing-owner"` with no local blocker. Workflow 04 surfaces a contradiction for each record with `continuation="present"` and no existing owner rather than silently omitting its session file.
 
 </continuation_signal>
 

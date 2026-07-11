@@ -2,7 +2,6 @@
 name: handoff
 description: ALWAYS invoke to close a spec-tree session or merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-arguments: [session_mode, prune_mode]
 allowed-tools: Read, Edit, Write, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(spx session release:*), Bash(git status:*), Bash(git branch --show-current), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), Bash(pwd), Bash(ls:*), request_user_input, Glob, Grep, Skill
 ---
 
@@ -113,7 +112,18 @@ NEVER archive others' work. `doing` = claimed by active contexts; archive only t
 - `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch and archiving potentially claimed sessions. Claude skips only thread records with `continuation="absent"` or `owner_status="existing-owner"`. It never overrides a thread with `continuation="present"` and no existing owner — workflow 04 Path A surfaces that thread-specific contradiction instead of silently skipping.
 - `--prune`: after a fresh handoff is created and archived-session cleanup is approved, delete archived sessions. Ignored when no fresh handoff is created.
 
-Check `$session_mode` and `$prune_mode` for these flags before starting the workflows below.
+Parse the whole invocation string `$ARGUMENTS` once before starting the workflows:
+
+1. Split the trimmed string on whitespace. Empty `$ARGUMENTS` means both flags are absent.
+2. Accept only `--no-session` and `--prune`, in either order.
+3. Reject an unknown token or a duplicate flag before any repository, session, or external mutation. Report the invalid token and the accepted forms.
+4. Emit exactly one normalized marker for the workflows:
+
+```text
+<HANDOFF_OPTIONS no_session="true|false" prune="true|false" />
+```
+
+Every option-dependent workflow reads the normalized marker rather than re-parsing `$ARGUMENTS`.
 
 </arguments>
 

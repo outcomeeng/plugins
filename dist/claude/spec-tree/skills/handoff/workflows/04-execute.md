@@ -73,7 +73,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 **Worktree precondition:** any path that invokes `spx session handoff` requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
-**Path A — no fresh handoff for this partition**: valid when the matching thread has `continuation="absent"`, or when `owner_status="existing-owner"` confirms another session carries that thread. Plain merge lifecycle invocations need no `--no-session` when no reader exists. When `--no-session` meets a thread with `continuation="present"` and no existing owner, STOP and surface that thread-specific contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the thread and unresolved stop condition, then ask whether to create its continuation or confirm it has no continuation. NEVER let one valid zero-handoff thread suppress another thread's required fresh session. For a valid `zero-handoff` or `existing-owner` partition, skip to `<archive_claimed_sessions>` and archive only that partition's `archive_ids` after its no-reader or owner state is verified. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — no fresh handoff for this partition**: valid when the matching thread has `continuation="absent"`, or when `owner_status="existing-owner"` confirms another session carries that thread. Plain merge lifecycle invocations need no no-session option when no reader exists. When `<HANDOFF_OPTIONS no_session="true" ... />` meets a thread with `continuation="present"` and no existing owner, STOP and surface that thread-specific contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the thread and unresolved stop condition, then ask whether to create its continuation or confirm it has no continuation. NEVER let one valid zero-handoff thread suppress another thread's required fresh session. For a valid `zero-handoff` or `existing-owner` partition, skip to `<archive_claimed_sessions>` and archive only that partition's `archive_ids` after its no-reader or owner state is verified. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Fresh session path — new handoff**:
 
@@ -141,7 +141,7 @@ Run the command once per id. NEVER archive sessions classified as **unrelated** 
 
 **Closure is incomplete if it creates or keeps more than one canonical continuation per thread in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
-**If `--prune` is in `$session_mode` or `$prune_mode`** (only after at least one fresh continuation is successfully written), require the `<APPROVED_PRUNE ids="...">` marker from workflow 03 and delete only its exact ids. A missing marker means deletion was not approved; preserve every archived session and stop prune processing. An empty approved set is a no-op.
+**If `<HANDOFF_OPTIONS prune="true" ... />` was emitted** (only after at least one fresh continuation is successfully written), require the `<APPROVED_PRUNE ids="...">` marker from workflow 03 and delete only its exact ids. A missing marker means deletion was not approved; preserve every archived session and stop prune processing. An empty approved set is a no-op.
 
 ```bash
 spx session delete <archive-session-id>

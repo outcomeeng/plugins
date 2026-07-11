@@ -33,11 +33,11 @@ Emit exactly one `partition` for every `<RESOLVED_CONTINUATION_THREADS>` record 
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
-When `--prune` is present, read `spx session list --status archive --json` before presenting the header and list every exact archive id proposed for deletion. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the archive is empty. If the operator rejects deletion, omit the marker and preserve every archived session. Without `--prune`, write `Archived sessions to delete after closure: none` and emit no prune marker.
+When `<HANDOFF_OPTIONS prune="true" ... />` was emitted, read `spx session list --status archive --json` before presenting the header and list every exact archive id proposed for deletion. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the archive is empty. If the operator rejects deletion, omit the marker and preserve every archived session. When the marker records `prune="false"`, write `Archived sessions to delete after closure: none` and emit no prune marker.
 
 For each record with `continuation="present"`, a fresh continuation is allowed only if continuation by Claude is impossible now. Do not present a fresh handoff for an actionable coordination note while Claude can act. An `existing-owner` record reports its owner and proposes no fresh session for that thread. An `ambiguous` record stops the entire proposal until the operator resolves that thread's ownership.
 
-When no persistence items require user approval and `--prune` is absent, do not call `{{! tool('ask_user') !}}` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, the exact `--prune` deletion set, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
+When no persistence items require user approval and `<HANDOFF_OPTIONS prune="false" ... />` was emitted, do not call `{{! tool('ask_user') !}}` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, the exact prune deletion set, ambiguous session disposition, user-disputed disposition, or the explicit no-session contradiction handled by workflow 04 Path A.
 
 **STOP if the user disputes the disposition.** If the user objects to any thread disposition, the archive list, or any session id, halt the workflow. Do not proceed to workflow 04, archive, or write a continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
 
@@ -72,7 +72,7 @@ This lets the user verify at a glance that each item is going to the right place
 
 - Session-disposition header printed before the proposal, naming every thread disposition and every session that will be archived.
 - User has reviewed and approved (or rejected) all proposed persistence items, or no approval-required persistence items existed and the workflow proceeded without a structured question.
-- When `--prune` is present, the operator has approved or rejected the exact archived-session deletion set and an approval emits `<APPROVED_PRUNE>`.
+- When `<HANDOFF_OPTIONS prune="true" ... />` was emitted, the operator has approved or rejected the exact archived-session deletion set and an approval emits `<APPROVED_PRUNE>`.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
 
