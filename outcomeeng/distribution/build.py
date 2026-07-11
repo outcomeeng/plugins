@@ -36,6 +36,7 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
@@ -283,12 +284,6 @@ def resolve_runtime_token(
     return name
 
 
-REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
-    "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
-    "unavailable, report the missing skill and continue with the closest "
-    "available workflow."
-)
-
 _DIRECTIVE_RE: Final = re.compile(
     re.escape(BLOCK_DELIMITER_START) + r"\s*(.*?)\s*" + re.escape(BLOCK_DELIMITER_END),
     re.DOTALL,
@@ -465,7 +460,7 @@ def expand_require_skill(directive: RequireSkillDirective) -> str:
     Output is identical for both Claude Code and Codex targets — the text
     instructs the agent to invoke the named skill before proceeding.
     """
-    return REQUIRE_SKILL_TEXT_TEMPLATE.format(skill_ref=directive.skill_ref)
+    return REQUIRE_SKILL_GUIDANCE_TEMPLATE.format(skill_ref=directive.skill_ref)
 
 
 # ---------------------------------------------------------------------------

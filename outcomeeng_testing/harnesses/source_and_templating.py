@@ -13,7 +13,6 @@ from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
     PLUGINS_DIR_NAME,
-    REQUIRE_SKILL_TEXT_TEMPLATE,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     SKILL_FILENAME,
@@ -35,7 +34,7 @@ from outcomeeng.distribution.build import (
     parse_directives,
     render_text,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import REQUIRE_SKILL_GUIDANCE_TEMPLATE, Target
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
@@ -130,7 +129,10 @@ def bound_target_variable_renders_each_target() -> bool:
 
 
 def well_formed_source_tree_builds() -> bool:
-    return all(_well_formed_tree_builds(case) for case in source_scenarios())
+    repository_root = Path(__file__).parents[2]
+    with TemporaryDirectory() as tmp:
+        build(repository_root / "src", Path(tmp) / "dist")
+    return True
 
 
 def ordinary_plugin_root_file_is_ignored() -> bool:
@@ -168,10 +170,10 @@ def require_skill_renders_inline() -> bool:
 
 def bare_conditional_renders_per_target() -> bool:
     template = (
-        f"{BLOCK_DELIMITER_START} if target == 'claude' {BLOCK_DELIMITER_END}"
-        "claude-only"
+        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
+        f"{BLOCK_DELIMITER_END}{Target.CLAUDE.value}-only"
         f"{BLOCK_DELIMITER_START} else {BLOCK_DELIMITER_END}"
-        "codex-only"
+        f"{Target.CODEX.value}-only"
         f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
     )
     with TemporaryDirectory() as tmp:
@@ -185,8 +187,8 @@ def bare_conditional_renders_per_target() -> bool:
             for target in Target
         }
         return (
-            rendered[Target.CLAUDE] == "claude-only"
-            and rendered[Target.CODEX] == "codex-only"
+            rendered[Target.CLAUDE] == f"{Target.CLAUDE.value}-only"
+            and rendered[Target.CODEX] == f"{Target.CODEX.value}-only"
             and all(BLOCK_DELIMITER_START not in body for body in rendered.values())
         )
 
@@ -294,13 +296,6 @@ def _cyclic_includes_raise(case: SourceScenario) -> bool:
         return False
 
 
-def _well_formed_tree_builds(case: SourceScenario) -> bool:
-    with TemporaryDirectory() as tmp:
-        builder = _source_tree(Path(tmp), case)
-        build(builder.src_root, Path(tmp) / "dist")
-        return True
-
-
 def _ordinary_file_ignored(case: SourceScenario) -> bool:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -344,7 +339,7 @@ def _standard_jinja_passes(case: SourceScenario) -> bool:
 def _require_expands_neutrally(case: SourceScenario) -> bool:
     rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
     return (
-        rendered == REQUIRE_SKILL_TEXT_TEMPLATE.format(skill_ref=case.skill_ref)
+        rendered == REQUIRE_SKILL_GUIDANCE_TEMPLATE.format(skill_ref=case.skill_ref)
         and case.skill_ref in rendered
     )
 
@@ -361,7 +356,8 @@ def _skill_dir_escape_survives(case: SourceScenario) -> bool:
     escaped = f"Write `{CLAUDE_SKILL_DIR_TOKEN}/{case.skill}.md` {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}"
     body = (
         f"---\nname: {case.skill}\n---\n\n"
-        f"{BLOCK_DELIMITER_START} if target == 'claude' {BLOCK_DELIMITER_END}"
+        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
+        f"{BLOCK_DELIMITER_END}"
         f"{case.fragment_body}{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}\n"
         f"{escaped}\n"
     )

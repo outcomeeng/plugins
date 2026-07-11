@@ -223,20 +223,26 @@ def _require_implemented() -> None:
 def _render_skill_bodies(body: str) -> dict[Target, str]:
     with TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        scenario = source_scenarios()[0]
         builder = SrcTreeBuilder(tmp_path)
-        builder.add_plugin(scenario.plugin, skills={SKILL_NAME: _skill_with(body)})
+        for scenario in source_scenarios():
+            builder.add_plugin(
+                scenario.plugin,
+                skills={f"{scenario.skill}-{SKILL_NAME}": _skill_with(body)},
+            )
         build(builder.src_root, tmp_path / "dist")
         return {
-            target: (
-                tmp_path
-                / "dist"
-                / target.value
-                / scenario.plugin
-                / "skills"
-                / SKILL_NAME
-                / "SKILL.md"
-            ).read_text()
+            target: "\n".join(
+                (
+                    tmp_path
+                    / "dist"
+                    / target.value
+                    / scenario.plugin
+                    / "skills"
+                    / f"{scenario.skill}-{SKILL_NAME}"
+                    / "SKILL.md"
+                ).read_text()
+                for scenario in source_scenarios()
+            )
             for target in Target
         }
 
