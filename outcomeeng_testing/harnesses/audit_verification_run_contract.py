@@ -103,7 +103,10 @@ def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
 
 
 def language_concern_skill_trios_exist() -> bool:
-    return all(_surface_language_concern_skill_trios_exist(surface) for surface in PLUGIN_SURFACES)
+    return all(
+        _surface_language_concern_skill_trios_exist(surface)
+        for surface in PLUGIN_SURFACES
+    )
 
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
