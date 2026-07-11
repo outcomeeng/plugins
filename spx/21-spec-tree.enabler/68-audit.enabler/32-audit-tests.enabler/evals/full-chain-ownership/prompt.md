@@ -161,7 +161,7 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture | Inert whole payload consumed by path or bytes | Isolated tokens, values, expected outputs, or executable exports |
 | Discovery | Test collection and registration policy | Fixture bodies, domain values, generated cases, or hidden setup policy |
 
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with rule `source-ownership` and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself.
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself.
 
 </step>
 
@@ -355,7 +355,7 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
 }
 ```
 
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `remediation_target: "source-contract"`; other findings select the owner that must change from the enumerated remediation targets. No skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence. A `source-ownership` finding uses `property: "source-ownership"` and `remediation_target: "source-contract"`; other findings select the failed property and owner that must change from the enumerated values. No skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 
