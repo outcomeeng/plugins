@@ -115,6 +115,16 @@ If an import cannot be resolved from the caller's evidence package or repository
 
 </step>
 
+<step name="audit_testability">
+
+**Step 3: Testability precondition**
+
+For each assertion, read the governed production source and identify the observable boundary, seam, or injection point through which a test can exercise the assertion-relevant behavior. Judge the source shape before judging the linked test.
+
+If the source exposes no way to observe or drive that behavior, add a `gate-1-assertion` REJECT finding against the source file with rule `untestable-source` and `remediation_target: "source-file"`. State the missing seam and required production refactor. Skip declarations, coupling, falsifiability, alignment, and coverage for that assertion because test evidence cannot remediate untestable source.
+
+</step>
+
 <step name="audit_declarations">
 
 **Step 3a: Ownership across the evidence chain**
@@ -265,7 +275,7 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-<lang>-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill and return REJECTED; never guess from filenames or approve incomplete coverage.
+Read the detected language or language partitions from the caller's audit request. When the caller omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition instead of guessing. When a language is in scope and an `audit-<lang>-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill and return REJECTED; never approve incomplete coverage.
 
 </step>
 
@@ -391,7 +401,7 @@ How to avoid: Step 2b inventories and reads the complete evidence chain before j
 
 The verdict is sound when:
 
-- Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-<lang>-tests` rows are judged too (coverage-complete).
+- Every assertion passed testability and each preceding evidence property before later properties were judged; a failed precondition or property records its finding and explicitly skips only the inapplicable later checks. When a language is in scope, the composed `/audit-<lang>-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - Every imported evidence artifact appears in verdict metadata with its role, import origin, and inspection status; every entry is inspected before approval.
 - Every case and protocol value has a named valid source; a harness path alone never establishes ownership.

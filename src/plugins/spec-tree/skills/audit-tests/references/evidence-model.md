@@ -2,7 +2,7 @@
 
 Detailed evidence model for test auditing. Read this before auditing any test file.
 
-Four properties define test evidence: coupling, falsifiability, alignment, coverage. This reference provides the taxonomy, verification procedures, and concrete examples for each.
+A source-testability precondition and four properties define test evidence: testability, coupling, falsifiability, alignment, and coverage. This reference provides the taxonomy, verification procedures, and concrete examples for each.
 
 </overview>
 
@@ -11,6 +11,7 @@ Four properties define test evidence: coupling, falsifiability, alignment, cover
 - `<coupling_taxonomy>` — coupling categories and examples
 - `<coupling_verification>` — import and execution-path coupling procedure
 - `<evidence_chain_completeness>` — transitive inventory and ownership provenance
+- `<testability_precondition>` — source observability and finding ownership
 - `<test_file_declaration_model>` — test-file ownership screening before coupling
 - `<falsifiability_model>` — mutation analysis and double exceptions
 - `<alignment_verification>` — assertion-to-expectation alignment
@@ -34,6 +35,14 @@ Ownership follows artifact semantics:
 Every case input, expected value, protocol key, command token, status value, rule identifier, and payload member names a production, platform, generator, or whole-payload fixture source. Missing provenance rejects the declaring artifact with rule `source-ownership`. Placement under a test-infrastructure directory is never provenance.
 
 </evidence_chain_completeness>
+
+<testability_precondition>
+
+Read the governed production source before judging test evidence. Identify the assertion-relevant behavior and the observable boundary, seam, or injection point through which a test can drive and observe it.
+
+When the source exposes no such boundary, reject with rule `untestable-source`, target the source file, and require a production refactor that exposes the behavior. Skip declarations, coupling, falsifiability, alignment, and coverage for that assertion. Those checks judge test evidence and cannot remediate a source shape that prevents evidence from existing.
+
+</testability_precondition>
 
 <coupling_taxonomy>
 
