@@ -141,20 +141,12 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 
 <success_criteria>
 
-A successful closure or handoff:
+A closure or handoff is sound when:
 
-- [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All six perspectives worked through (workflow 02)
-- [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness and reconciled before closure — updated, removed, or pursued now when Claude can still act (workflows 02–04)
-- [ ] Existing `todo` and `doing` sessions searched by node path and topic before any continuation session is proposed or created (workflow 02)
-- [ ] `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation by workflow 02
-- [ ] `<CONTINUATION_SIGNAL>` marker emitted by workflow 02, and `--no-session` honored only when it is `absent` or `status="existing-owner"` confirms another session owns the only remaining continuation and no local blocker remains
-- [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
-- [ ] Session-owned spec, test, code, and coordination-note changes committed before closure (workflow 04)
-- [ ] Continuation need explicitly decided: session file created via `spx session handoff`, or omitted because no continuation reader is needed (workflow 04)
-- [ ] Every session in the resolved claimed-session set archived after the canonical continuation is created or intentionally omitted (workflow 04)
-- [ ] Any session file created is a thin coordination envelope — bulk of value persisted durably
-- [ ] End state has zero, one, or several completely independent session files incorporating everything within the resolved claimed-session set
-- [ ] Closure proof is present: workflow 02 markers exist, workflow 03 disposition names the canonical continuation and archive list, and workflow 04 confirmation names the committed work and archived sessions
+- Every session-owned change and coordination decision is recoverable from committed, published repository state before any continuation document points at it.
+- The continuation disposition matches observable state: no session when no reader is needed, one fresh canonical session per independent continuation thread when work cannot continue now, and no duplicate or mutated session artifact.
+- Every claimed session and superseded same-conversation artifact is archived only after its replacement is verified or zero-handoff closure is established; unrelated and ambiguous sessions remain untouched.
+- Any created session is a thin coordination envelope whose repository anchors, first action, and external-state facts let `/pickup` re-derive current truth without copying durable content.
+- The operator-facing closeout explains product value and changed surface in product language, reports exact verification and inspection evidence, states delivered location and remaining work, and classifies every merge-lifecycle branch with full identities.
 
 </success_criteria>

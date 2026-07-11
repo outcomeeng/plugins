@@ -10,6 +10,8 @@ Lean on the imperfection ledger defined in `/understand` (loaded as a foundation
 
 </required_reading>
 
+<process>
+
 <perspective_imperfections>
 Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained per `/understand`'s `references/imperfection-protocol.md`. If for any reason the ledger has been pruned (e.g., context compaction), reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
 
@@ -146,6 +148,8 @@ Emit the signal so workflow 04 reads it from context:
 `--no-session` asserts either `state="absent"` or `status="existing-owner"` with no local blocker. It never authorizes skipping the session file when the signal is `present` and no existing owner exists. Workflow 04's `<write_canonical_continuation>` Path A acts on this: a `--no-session` invocation that meets a `present` signal without an existing owner surfaces the contradiction rather than silently omitting the session file.
 
 </continuation_signal>
+
+</process>
 
 <success_criteria>
 

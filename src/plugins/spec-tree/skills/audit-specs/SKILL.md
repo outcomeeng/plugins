@@ -15,7 +15,7 @@ This audit runs in the spec-auditor agent's isolated context. When this skill lo
 
 <objective>
 
-A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, parseable runtime/configuration contracts may use deterministic evidence, and no semantic claim about authored prose carries `[test]`).
+A canonical audit-verdict JSON object for one spec node — an enabler or outcome `{slug}.md` — with `PASS`, `FAIL`, or `UNKNOWN` rows for section structure, atemporal voice, and per-assertion tag fitness, plus falsifiable findings for every failed rule.
 
 </objective>
 
@@ -34,9 +34,9 @@ A missing tag, a bare mechanism tag, a tag carried more than once, an assertion 
 
 A node states product truth. "The status rollup reports failing when any child fails" — not "We changed the rollup to propagate failures."
 
-**BINARY VERDICT.**
+**CANONICAL TRI-STATE VERDICT.**
 
-`APPROVED` or `REJECTED`. No middle ground.
+Each row and the overall verdict use `PASS`, `FAIL`, or `UNKNOWN`. `UNKNOWN` is reserved for a property that cannot be evaluated from the available artifact; it never hides a known violation.
 
 **ARTIFACT BOUNDARY.**
 
@@ -119,7 +119,7 @@ For each assertion under `## Assertions`:
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
+Set each property row to `PASS` when the property holds, `FAIL` when a finding proves a violation, or `UNKNOWN` when the property cannot be evaluated. Set `overall` to `FAIL` when any row fails, `UNKNOWN` when no row fails and at least one row is unknown, otherwise `PASS`.
 
 </step>
 
@@ -171,7 +171,7 @@ How to avoid: Step 5 check 2 verifies the assertion type fits the quantifier. Re
 The verdict is sound when:
 
 - Every spec-node rule was judged with none skipped — section structure, atemporal voice, and per-assertion tag fitness (coverage-complete).
-- The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no assertion left unevaluated.
+- The verdict carries one canonical `PASS`, `FAIL`, or `UNKNOWN` overall value and the same tri-state determination for every property row.
 - Each REJECT finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
 - The same node spec yields the same verdict.
 
