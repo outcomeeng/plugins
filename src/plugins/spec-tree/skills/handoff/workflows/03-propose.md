@@ -2,7 +2,7 @@
 A persistence proposal containing the approval-required closure decisions and canonical session disposition.
 </objective>
 
-Use the six reflection perspectives from workflow 02 as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
+Use workflow 02's imperfections, path-forward, next-context, external-state, claimed-sessions, and existing-sessions perspectives plus its continuation signal as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
 
 <session_disposition_header>
 Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
@@ -10,6 +10,7 @@ Before any proposal, print a plain-text header naming the canonical continuation
 ```text
 Canonical continuation: <new handoff | none (--no-session)>
 Sessions to archive after closure: <id-1>, <id-2>, ...
+Archived sessions to delete after closure: <archive-id-1>, <archive-id-2>, ... | none
 ```
 
 The claimed-session list comes from `ids` in the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">` marker emitted by workflow 02. Treat `artifact_ids` as candidates, never as an archive list. Partition those candidates by independent continuation thread against the canonical continuation plan, comparing `goal`, `next_step`, `specs`, and `files`. Emit the authoritative partition marker:
@@ -31,11 +32,13 @@ Build the closure-thread set as the union of every independent continuation thre
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
+When `--prune` is present, read `spx session list --status archive --json` before presenting the header and list every exact archive id proposed for deletion. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the archive is empty. If the operator rejects deletion, omit the marker and preserve every archived session. Without `--prune`, write `Archived sessions to delete after closure: none` and emit no prune marker.
+
 When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is allowed only if continuation by Claude is impossible now. Do not present "create handoff" as a normal option for actionable coordination notes. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, closure is blocked while Claude can still reconcile or execute the note. If a real stop condition exists, workflow 04 may create the canonical continuation only after `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"` confirms the queue will not receive a duplicate.
 
 If `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` exists, report that an existing session already owns the continuation and do not propose a new session. If `status="ambiguous"` exists, STOP and ask the operator to resolve ownership before any continuation proposal.
 
-When no persistence items require user approval, do not call `{{! tool('ask_user') !}}` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
+When no persistence items require user approval and `--prune` is absent, do not call `{{! tool('ask_user') !}}` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, the exact `--prune` deletion set, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
 
 **STOP if the user disputes the disposition.** If the user objects to the canonical continuation plan, the archive list, or any session id in either, halt the workflow. Do not proceed to workflow 04, do not archive, do not write the canonical continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
 
@@ -70,6 +73,7 @@ This lets the user verify at a glance that each item is going to the right place
 
 - Session-disposition header printed before the proposal, naming the canonical continuation plan and every session that will be archived.
 - User has reviewed and approved (or rejected) all proposed persistence items, or no approval-required persistence items existed and the workflow proceeded without a structured question.
+- When `--prune` is present, the operator has approved or rejected the exact archived-session deletion set and an approval emits `<APPROVED_PRUNE>`.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
 

@@ -107,7 +107,7 @@ Run the handoff FROM the worktree that holds the work and step THAT worktree off
 - *"Run the handoff from a worktree that's already clean."* It records `git_ref` at unrelated state and leaves the work branch occupied — the relocation bypass `SKILL.md` `<no_excuses>` forbids.
 - *"Keep the work worktree on its branch so it's ready to continue."* The "ready to continue" worktree is exactly the one the next agent cannot use — `/pickup` cannot claim a branch this context still holds.
 
-**Release mechanics by checkout kind.** First ensure the work branch is committed and pushed — `git push -u origin HEAD:refs/heads/<branch>` when `@{upstream}` is absent, else `git push` — then satisfy the `spx session handoff` git-context gate and step off:
+**Release mechanics by checkout kind.** First ensure the work branch is committed and pushed — `git push -u origin HEAD:refs/heads/<branch>` when `@{upstream}` is absent, else `git push` — then run `git fetch origin` so `refs/remotes/origin/HEAD` and its target are current before satisfying the `spx session handoff` git-context gate and stepping off:
 
 - **Main checkout on a named branch** — the CLI records the branch name; no detach is needed before filing. After the handoff, detach at the remote base tip so the feature branch is unoccupied:
 
@@ -146,10 +146,9 @@ Run the command once per id. NEVER archive sessions classified as **unrelated** 
 
 **Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
-**If `--prune` is in `$session_mode` or `$prune_mode`** (only after the canonical continuation is successfully written):
+**If `--prune` is in `$session_mode` or `$prune_mode`** (only after the canonical continuation is successfully written), require the `<APPROVED_PRUNE ids="...">` marker from workflow 03 and delete only its exact ids. A missing marker means deletion was not approved; preserve every archived session and stop prune processing. An empty approved set is a no-op.
 
 ```bash
-spx session list --status archive --json
 spx session delete <archive-session-id>
 ```
 
