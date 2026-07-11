@@ -74,7 +74,7 @@ Act on the marker:
 </resolve_existing_sessions>
 
 <write_canonical_continuation>
-Every closure ends with **zero, one, or several** session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Process each `<RESOLVED_ARTIFACT_PARTITIONS>` record independently: execute the record's `fresh-session`, `zero-handoff`, or `existing-owner` disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
+Every closure ends with **zero, one, or several** session files — one canonical continuation per independent closure thread whose `<RESOLVED_ARTIFACT_PARTITIONS>` record has a `fresh-session` disposition. Closure threads come from the canonical continuation plan and artifact-only `zero-handoff` or `existing-owner` records; they are independent of whether the claimed-session set is empty. Process each partition independently: execute its disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
@@ -84,7 +84,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"`, plus a real stop condition. Creating a fresh session is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
 1. Compose the canonical continuation using `${SKILL_DIR}/references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, optional `git_ref` for a pushed work branch) and the markdown body.
-2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`. Supply `git_ref` for a pushed work branch, including linked pool-worktree releases that have been detached to `origin/<default-branch>` after pushing; the command records it after verifying that branch exists on `origin`. Omit `git_ref` only when no work branch must be preserved — default-branch handoffs and commit-SHA handoffs where the command derives the branch name or commit-SHA anchor from git context.
+2. Resolve and record the exact expected pickup anchor before filing: the supplied pushed work branch; otherwise `git branch --show-current` for a named default-branch checkout; otherwise the full `git rev-parse HEAD` SHA for a detached checkout. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`. Supply `git_ref` for a pushed work branch, including linked pool-worktree releases that have been detached to `origin/<default-branch>` after pushing; the command records it after verifying that branch exists on `origin`. Omit `git_ref` only when no work branch must be preserved — default-branch handoffs and commit-SHA handoffs where the command derives the branch name or commit-SHA anchor from git context.
 
    **Choose the stdin form by harness.**
 
@@ -108,7 +108,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
    printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '<metadata>' '  timestamp: [UTC timestamp]' '  product: [Product name from cwd]' '  git_ref: [work branch]' '  git_status: clean' '</metadata>' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
-4. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available. When the JSON header supplied `git_ref`, also confirm the stored file contains that work-branch anchor.
+4. Run `spx session show --json <HANDOFF_ID>` and require the stored `git_ref` to equal the expected pickup anchor recorded before filing, whether that anchor was supplied or derived. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available. A missing or different stored anchor leaves the fresh-session partition unverified: archive no artifact from that partition and stop with the mismatch.
 
 **Content of the canonical continuation:**
 

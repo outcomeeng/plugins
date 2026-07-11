@@ -28,14 +28,14 @@ The claimed-session set grows ONLY by user confirmation. Do NOT auto-scan the to
 
 **Step 4 — Locate mid-session artifact candidates.**
 
-Did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
+Did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. When compaction or missing conversation history leaves that set incomplete, resolve the current runtime identity verbatim (`printenv CODEX_THREAD_ID` in Codex; `printenv CLAUDE_SESSION_ID` in Claude Code), read `spx session list --status todo --json`, and add every TODO record whose `agent_session_id` exactly equals that identity. Never use a prefix, timestamp, topic, branch, or path heuristic as a substitute for the exact identity. Cross-reference the resulting ids against the TODO list:
 
 - **Zero artifacts in TODO** → no artifact reconciliation needed; workflow 04 creates a fresh continuation when one is required.
 - **One or more artifacts in TODO** → they become supersession candidates. The flat candidate set is never an archive list. Workflow 03 partitions candidates by independent continuation thread after composing the canonical continuation plan, using each artifact's `goal`, `next_step`, `specs`, and `files`. A fresh continuation archives only the artifacts in its selected partition; Path A archives a partition only when no continuation reader remains for that thread or an existing owner already carries it. If an artifact maps to zero threads or multiple threads, STOP and ask the operator to confirm the mapping before creating or archiving any session. Archive only artifacts this conversation created; never touch artifacts created by other conversations.
 
 **Step 5 — Emit the RESOLVED_CLAIMED_SESSIONS marker.**
 
-After steps 1-4 produce the resolved claimed-session set and artifact candidates, emit a marker into the conversation. The `artifact_ids` attribute carries candidates for workflow 03 to partition; no consumer may archive that flat set directly:
+After steps 1-4 produce the resolved claimed-session set and artifact candidates, emit a marker into the conversation. The `artifact_ids` attribute carries candidates for workflow 03 to partition; no consumer may archive that flat set directly. If another compaction drops the marker, workflow 04 reruns steps 1-4, including the exact `agent_session_id` fallback, rather than depending on candidate provenance from an earlier marker:
 
 ```text
 <RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_ids="id-1,id-2,...">
