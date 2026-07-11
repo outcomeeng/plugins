@@ -6,6 +6,14 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
+<dispatch_gate>
+
+This audit runs inside the dispatched `test-evidence-auditor` verifier context via `audit-tests`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch `test-evidence-auditor`. An already-dispatched test-evidence auditor that preloaded this skill proceeds.
+
+</dispatch_gate>
+
+<required_skills>
+
 {!% require_skill 'typescript:typescript-standards' %!}
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
@@ -14,11 +22,7 @@ allowed-tools: Read, Grep, Glob, Bash, Skill
 
 {!% require_skill 'spec-tree:audit-tests' %!}
 
-<dispatch_gate>
-
-This audit runs inside the dispatched `test-evidence-auditor` verifier context via `audit-tests`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch `test-evidence-auditor`. An already-dispatched test-evidence auditor that preloaded this skill proceeds.
-
-</dispatch_gate>
+</required_skills>
 
 <objective>
 
