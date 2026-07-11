@@ -1,5 +1,5 @@
 <objective>
-A complete closure reflection record containing classified imperfections, path-forward persistence targets, next-context notes, external-state notes, claimed-session resolution, existing-session reconciliation, and continuation signal.
+A complete closure reflection record containing classified imperfections, path-forward persistence targets, next-context notes, external-state notes, claimed-session resolution, and thread-scoped ownership and continuation states.
 </objective>
 
 Lean on the imperfection ledger defined in `/understand` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
@@ -81,7 +81,7 @@ mid_session_artifact_candidates: id-1, id-2, ...
 </RESOLVED_CLAIMED_SESSIONS>
 ```
 
-Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists. The artifact ids are candidates only; workflow 03 partitions them after the canonical continuation plan exists.
+Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_ids=""` when no mid-session artifact exists. The artifact ids are candidates only; workflow 03 partitions them against the resolved continuation-thread records.
 
 For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by creating a fresh continuation when one is needed, then archiving superseded same-conversation artifacts after the fresh session is verified.
 
@@ -97,7 +97,7 @@ spx session list --status todo --json
 spx session list --status doing --json
 ```
 
-Compare every `todo` and `doing` session against this closure's anchored nodes and topic terms:
+Group the anchored work and same-conversation artifact candidates into independent closure threads. Compare every `todo` and `doing` session against each thread's node paths and topic terms:
 
 - Node overlap: any `specs` or `files` path under the same anchored node, or a `goal` / `next_step` naming the same full node path.
 - Topic overlap: meaningful terms from the unresolved note, blocker, or external state appear in the existing session's `goal` or `next_step`.
@@ -110,24 +110,16 @@ Classify overlaps:
 - **unrelated** — no overlapping node and topic.
 - **ambiguous** — overlap exists but ownership or topic match is unclear; STOP and ask the operator before any continuation session is proposed.
 
-Emit a marker:
-
-```text
-<EXISTING_SESSION_RECONCILIATION status="none|same-owner-continuation|existing-owner|ambiguous">
-summary: [what the queue search found]
-</EXISTING_SESSION_RECONCILIATION>
-```
-
-`status="none"` is the only state that permits a fresh session when there is no same-owner artifact, and only when continuation by Claude is impossible now. `status="existing-owner"` blocks fresh-session creation because adding a session would duplicate queue state.
+Record one ownership classification per independent closure thread for the thread marker emitted after continuation-state derivation. `none` permits a fresh session only when continuation by Claude is impossible now; `existing-owner` blocks a fresh session for that thread because another queue entry carries it.
 
 </perspective_existing_sessions>
 
 <continuation_signal>
-Compute the continuation signal workflow 04 reads to decide whether closure is allowed and whether a session reader is needed — the check that makes `--no-session` answerable to state rather than an unconditional skip.
+Compute the continuation state workflow 04 reads for every independent closure thread — the check that makes `--no-session` answerable to each thread's state rather than an unconditional global skip.
 
 **The signal ranges over the nodes in scope this session (the anchored nodes from workflow 01), independently of `CLAIMED_SESSIONS`.** The claimed-session set decides only what gets archived; it never decides whether to hand off. An empty claimed-session set (no `/pickup` this conversation) therefore NEVER implies an absent signal.
 
-The signal is `present` when any of these holds for a node anchored this session:
+A thread's state is `present` when any of these holds for one of its anchored nodes:
 
 - a node-local `PLAN.md` exists and its item is not already satisfied;
 - a node-local `ISSUES.md` carries an unresolved entry;
@@ -135,17 +127,20 @@ The signal is `present` when any of these holds for a node anchored this session
 - a spec assertion touched this session is declared but not yet satisfied (no passing `[test]`/`[eval]`, or an unmet `[audit]`);
 - the path-forward perspective named concrete remaining steps.
 
-A `present` signal blocks closure while Claude can still act. It permits a session file only when continuation by Claude is impossible now: the user halted the work, context is exhausted, or an external blocker prevents the next action. There is no "deferred notes but no session" state: if a note carries no future work, it is removed during closure, not kept while the session file is skipped. Small imperfections are fixed in-session, not deferred into a note.
+A `present` state blocks that thread's closure while Claude can still act. It permits a session file only when continuation by Claude is impossible now: the user halted the work, context is exhausted, or an external blocker prevents the next action. There is no "deferred notes but no session" state: if a note carries no future work, it is removed during closure, not kept while the session file is skipped. Small imperfections are fixed in-session, not deferred into a note.
 
-Emit the signal so workflow 04 reads it from context:
+Emit one record for every independent thread represented by anchored work or same-conversation artifact candidates:
 
 ```text
-<CONTINUATION_SIGNAL state="present|absent">
-<one line: the unresolved work, or "no continuation remains">
-</CONTINUATION_SIGNAL>
+<RESOLVED_CONTINUATION_THREADS>
+<thread thread_id="thread-1" owner_status="none|same-owner-continuation|existing-owner|ambiguous" continuation="present|absent">
+owner: [what the queue search found]
+continuation: [the unresolved work, or "no continuation remains"]
+</thread>
+</RESOLVED_CONTINUATION_THREADS>
 ```
 
-`--no-session` asserts either `state="absent"` or `status="existing-owner"` with no local blocker. It never authorizes skipping the session file when the signal is `present` and no existing owner exists. Workflow 04's `<write_canonical_continuation>` Path A acts on this: a `--no-session` invocation that meets a `present` signal without an existing owner surfaces the contradiction rather than silently omitting the session file.
+Every independent thread appears exactly once. An `existing-owner` record carries `continuation="present"`; an `ambiguous` owner status stops before disposition. `--no-session` is valid per record only when `continuation="absent"` or `owner_status="existing-owner"` with no local blocker. Workflow 04 surfaces a contradiction for each record with `continuation="present"` and no existing owner rather than silently omitting its session file.
 
 </continuation_signal>
 
@@ -154,10 +149,9 @@ Emit the signal so workflow 04 reads it from context:
 <success_criteria>
 
 - The imperfections, path-forward, next-context, external-state, claimed-sessions, and existing-sessions perspectives are complete before proceeding to workflow 03.
-- `<CONTINUATION_SIGNAL>` is derived after those six perspectives rather than counted as another perspective.
+- `<RESOLVED_CONTINUATION_THREADS>` is derived after those six perspectives rather than counted as another perspective.
 - `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation.
-- `<EXISTING_SESSION_RECONCILIATION>` marker emitted into the conversation before any continuation proposal.
-- `<CONTINUATION_SIGNAL>` marker emitted into the conversation.
+- `<RESOLVED_CONTINUATION_THREADS>` contains exactly one ownership and continuation-state record per independent closure thread before any continuation proposal.
 - Stale PLAN.md or ISSUES.md items identified as fix-now work, closure blockers, or operator decisions; no actionable coordination note is converted into a session-only continuation while Claude can still act.
 
 </success_criteria>

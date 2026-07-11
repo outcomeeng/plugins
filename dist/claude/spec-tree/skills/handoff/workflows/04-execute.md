@@ -1,5 +1,5 @@
 <objective>
-A completed closure execution state: approved persistence written, session-owned work committed, claimed sessions archived, and canonical continuation created or intentionally omitted.
+A completed closure execution state: approved persistence written, session-owned work committed, claimed sessions archived, and every thread's canonical continuation created or intentionally omitted.
 </objective>
 
 <process>
@@ -51,7 +51,7 @@ For each anchored node, check `git status` and record:
 <resolve_claimed_sessions>
 Read the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">` marker emitted by workflow 02 (`<perspective_claimed_sessions>`). The `ids` attribute is the authoritative claimed-session archive set. The `artifact_ids` attribute is a candidate set only.
 
-Require the `<RESOLVED_ARTIFACT_PARTITIONS>` marker emitted by workflow 03 whenever the closure-thread set is non-empty: every independent thread in the canonical plan plus every candidate-only thread resolved to `zero-handoff` or `existing-owner`. This includes a canonical thread with no artifact and an artifact-only closure with no canonical continuation. Verify that the marker contains exactly one `partition` for every closure thread, that its `candidate_ids` equals the flat candidate set, and that every candidate appears in exactly one partition's `archive_ids`. A missing or duplicate thread partition, missing marker, duplicate candidate assignment, absent candidate assignment, or zero/multiple-thread mapping stops the workflow and returns to workflow 03 before creating or archiving a session.
+Require the `<RESOLVED_ARTIFACT_PARTITIONS>` marker emitted by workflow 03 whenever `<RESOLVED_CONTINUATION_THREADS>` is non-empty. Verify that it contains exactly one `partition` for every resolved thread and no extra partition, that its `candidate_ids` equals the flat candidate set, and that every candidate appears in exactly one partition's `archive_ids`. A missing or duplicate thread partition, missing marker, thread-set mismatch, duplicate candidate assignment, absent candidate assignment, or zero/multiple-thread mapping stops the workflow and returns to workflow 03 before creating or archiving a session.
 
 **If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `${CLAUDE_SKILL_DIR}/references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
 
@@ -61,28 +61,23 @@ The existence of any session is never permission to archive a claimed session �
 
 </resolve_claimed_sessions>
 
-<resolve_existing_sessions>
-Read the `<EXISTING_SESSION_RECONCILIATION status="…">` marker emitted by workflow 02. If the marker is missing, STOP and return to workflow 02; never create or propose a continuation session before the existing `todo` and `doing` queues have been searched by node path and topic.
+<resolve_continuation_threads>
+Read `<RESOLVED_CONTINUATION_THREADS>` from workflow 02. If it is missing, contains a duplicate thread id, or its thread-id set differs from `<RESOLVED_ARTIFACT_PARTITIONS>`, STOP and return to workflows 02-03. Never create, omit, or archive a thread before its queue ownership and continuation state are resolved.
 
-Act on the marker:
+For each partition, require the matching thread record and disposition: `fresh-session` requires `continuation="present"`, owner status `none` or `same-owner-continuation`, and a real stop condition; `zero-handoff` requires `continuation="absent"`; `existing-owner` requires owner status `existing-owner`; `ambiguous` stops all session-state changes. Process each valid pair independently.
 
-- `status="none"` — the fresh-session path may create a new session only when `<CONTINUATION_SIGNAL state="present">` is backed by a real stop condition.
-- `status="same-owner-continuation"` — the fresh-session path may create a new canonical session, then archive superseded same-conversation artifacts after the fresh session is verified.
-- `status="existing-owner"` — fresh-session creation is forbidden. Another session already owns the continuation; leave that session untouched and close only if no other blocker remains.
-- `status="ambiguous"` — STOP and ask the operator to choose ownership before changing session state.
-
-</resolve_existing_sessions>
+</resolve_continuation_threads>
 
 <write_canonical_continuation>
-Every closure ends with **zero, one, or several** session files — one canonical continuation per independent closure thread whose `<RESOLVED_ARTIFACT_PARTITIONS>` record has a `fresh-session` disposition. Closure threads come from the canonical continuation plan and artifact-only `zero-handoff` or `existing-owner` records; they are independent of whether the claimed-session set is empty. Process each partition independently: execute its disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
+Every closure ends with **zero, one, or several** session files — one canonical continuation per resolved thread whose partition has a `fresh-session` disposition. Threads are independent of whether the claimed-session set is empty. Process each partition independently: execute its disposition, verify that thread's continuation state, then archive only that record's `archive_ids`. Complete one partition before processing the next. Zero sessions is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
-**Path A — zero handoffs**: valid when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`, or when `status="existing-owner"` confirms another session already owns the only remaining continuation and no local blocker remains. Plain merge lifecycle invocations use this path when the signal is `absent`; `--no-session` is not required because no continuation reader exists. When the signal is `present` and no existing owner exists, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the unresolved stop condition and ask whether to create the continuation or confirm there is no continuation. NEVER silently honor `--no-session` against a `present` signal without an existing owner; automation must not skip a session file required by a real stop condition. When this path is valid, or the user explicitly re-confirms omission after a contradiction prompt, skip to `<archive_claimed_sessions>`: claimed sessions and only the selected artifact partition's `archive_ids` are archived, and no handoff file is created. After archiving, confirm through `<confirm>` with the same operator-useful closeout fields as every other path, including **Remaining Branches** for merge lifecycle closeout. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — no fresh handoff for this partition**: valid when the matching thread has `continuation="absent"`, or when `owner_status="existing-owner"` confirms another session carries that thread. Plain merge lifecycle invocations need no `--no-session` when no reader exists. When `--no-session` meets a thread with `continuation="present"` and no existing owner, STOP and surface that thread-specific contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the thread and unresolved stop condition, then ask whether to create its continuation or confirm it has no continuation. NEVER let one valid zero-handoff thread suppress another thread's required fresh session. For a valid `zero-handoff` or `existing-owner` partition, skip to `<archive_claimed_sessions>` and archive only that partition's `archive_ids` after its no-reader or owner state is verified. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Fresh session path — new handoff**:
 
-0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"`, plus a real stop condition. Creating a fresh session is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
+0. Confirm the matching thread record has `continuation="present"`, owner status `none` or `same-owner-continuation`, and a real stop condition. Creating a fresh session is forbidden for ordinary actionable coordination notes and for a thread another `todo` or `doing` session owns.
 1. Compose the canonical continuation using the JSON-header, body, and field contract in `${CLAUDE_SKILL_DIR}/references/session-format.md`.
 2. Resolve and record the exact expected pickup anchor before filing: the supplied pushed work branch; otherwise `git branch --show-current` for a named default-branch checkout; otherwise the full `git rev-parse HEAD` SHA for a detached checkout. Invoke the harness-specific stdin form from `${CLAUDE_SKILL_DIR}/references/session-format.md` exactly. Do not run `spx session handoff` with empty stdin or YAML frontmatter.
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
@@ -144,9 +139,9 @@ spx session archive <session-id>
 
 Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive TODO sessions created by other conversations — the TODO queue is shared across agents.
 
-**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
+**Closure is incomplete if it creates or keeps more than one canonical continuation per thread in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
-**If `--prune` is in `$session_mode` or `$prune_mode`** (only after the canonical continuation is successfully written), require the `<APPROVED_PRUNE ids="...">` marker from workflow 03 and delete only its exact ids. A missing marker means deletion was not approved; preserve every archived session and stop prune processing. An empty approved set is a no-op.
+**If `--prune` is in `$session_mode` or `$prune_mode`** (only after at least one fresh continuation is successfully written), require the `<APPROVED_PRUNE ids="...">` marker from workflow 03 and delete only its exact ids. A missing marker means deletion was not approved; preserve every archived session and stop prune processing. An empty approved set is a no-op.
 
 ```bash
 spx session delete <archive-session-id>
@@ -224,7 +219,7 @@ Why it fails: the label is filled with lifecycle evidence rather than the payloa
 
 Put session mechanics only after the product summary:
 
-- Canonical continuation: "new handoff <id>" | "no handoff (no continuation reader needed)"
+- Continuation threads: one row per thread with "new handoff <id>", "no handoff (no continuation reader needed)", or "existing owner <session-id>"
 - Session-owned work was committed before closure
 - Every session id archived from the resolved claimed-session set and selected artifact partition
 - Checkout state: the releasing context has stepped off the handed-off branch and is detached at the current `origin/<default-branch>` tip, so the branch is unoccupied
@@ -239,13 +234,13 @@ Put session mechanics only after the product summary:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
-- Existing `todo` and `doing` sessions searched by node path and topic before any fresh handoff, with `<EXISTING_SESSION_RECONCILIATION>` present.
+- Existing `todo` and `doing` sessions searched by node path and topic before any fresh handoff, with one `<RESOLVED_CONTINUATION_THREADS>` record per independent thread.
 - Exactly zero or one canonical continuation per independent continuation thread created or intentionally omitted by THIS closure exists in TODO — never two for the same thread. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
-- Continuation path executed via Path A (zero handoffs) or the fresh-session path.
+- Every partition executed through its matching no-fresh-handoff or fresh-session path.
 - `<incorporated_sessions>` section present in the canonical continuation when a fresh handoff is written and the claimed-session set or superseded same-conversation artifact set is non-empty.
 - Every claimed session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: a fresh session replaces it when continuation remains, and superseded artifacts are archived.
-- Confirmation output names the continuation path and the archived ids.
+- Confirmation output names every thread disposition and the archived ids.
 - Default-branch merge closeout includes the branch-state closeout record fields from `/merging-standards` `<branch_state_closeout>` or an explicitly preserved record from the merge transport.
 - Merge lifecycle final output includes `Remaining Branches` grouped under **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**.
 - Confirmation output never uses a top-level `Delivered state` receipt as a substitute for the product-first closeout fields.

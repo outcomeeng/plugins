@@ -54,9 +54,9 @@ Create a session file only when continuation by Claude is impossible now: the us
 
 **Search before adding any continuation.** Before proposing or creating a continuation session, inspect existing `todo` and `doing` sessions with status-filtered reads: `spx session list --status todo --json` and `spx session list --status doing --json`. Compare their `specs`, `files`, `goal`, and `next_step` against the nodes and topic terms from this closure. Reconcile same-conversation artifacts through the workflow's closure-thread partitions: create a fresh session only when continuation remains without an existing owner, and use `zero-handoff` or `existing-owner` when no replacement reader is needed. Archive only sessions this conversation owns, and leave unrelated or ambiguous sessions untouched. Creating a new `todo` entry is valid only after this search shows no existing owner or only superseded same-conversation artifacts, and continuation by Claude is impossible now.
 
-Closing without creating a session file is appropriate when no continuation reader is needed from this closure. That is true when workflow 02's `<CONTINUATION_SIGNAL>` is `absent`: the anchored nodes carry no actionable `PLAN.md`, no unresolved `ISSUES.md` entry, no `spx/EXCLUDE` entry, no declared-but-unsatisfied assertion, and no external blocker. It is also true when `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` confirms another session already owns the only remaining continuation and this closure has no local blocker. A persisted coordination note that represents no future work is removed during closure, because a note no one will act on is deleted, not kept.
+Closing a thread without creating a session file is appropriate when its workflow 02 `<thread>` record has `continuation="absent"`: its anchored nodes carry no actionable `PLAN.md`, unresolved `ISSUES.md` entry, `spx/EXCLUDE` entry, declared-but-unsatisfied assertion, or external blocker. It is also appropriate when that record has `owner_status="existing-owner"`, confirming another session carries the thread's continuation. A persisted coordination note that represents no future work is removed during closure, because a note no one will act on is deleted, not kept.
 
-`--no-session` never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present` and no existing owner exists. When `--no-session` meets that state, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf when a real stop condition requires a continuation reader. When the continuation signal is `absent`, omit the session file even for a plain merge lifecycle invocation; no continuation reader exists. In any other situation, a session file is written only after the existing-session search completes.
+`--no-session` never authorizes skipping a thread whose record has `continuation="present"` without an existing owner. Surface that thread-specific contradiction in workflow 04 Path A — automation never skips a required continuation reader on the user's behalf. A thread with `continuation="absent"` omits its session file even for a plain merge lifecycle invocation. Every fresh session is written only after the existing-session search classifies its thread.
 
 <no_excuses>
 
@@ -75,7 +75,7 @@ Three rules govern a conversation's claimed-session set:
 
 1. The claimed-session set grows only by user confirmation (via `/pickup`).
 2. Closure has exactly one acceptable end state per claimed session: archived after this workflow runs against it.
-3. Quick-release shortcut via `/handoff --no-session` for a wrongly-claimed session the user releases within a few turns of pickup — valid only when the session carries no actionable coordination note or do-able continuation, so the `<CONTINUATION_SIGNAL>` is `absent`.
+3. Quick-release shortcut via `/handoff --no-session` for a wrongly-claimed session the user releases within a few turns of pickup — valid only when every affected thread carries no actionable coordination note or do-able continuation, so each record has `continuation="absent"`.
 
 Permission to archive comes from completing this workflow against the claimed-session set named in `<CLAIMED_SESSIONS ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session session files created by this conversation are workflow artifacts, not members of the claimed-session set.
 
@@ -110,7 +110,7 @@ NEVER archive others' work. `doing` = claimed by active contexts; archive only t
 </multi_agent_awareness>
 
 <arguments>
-- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially claimed sessions, etc. The difference is that Claude skips creating a new session file when no continuation remains or when another existing session already owns the only remaining continuation. It does not override a `present` `<CONTINUATION_SIGNAL>` with no existing owner — workflow 04 Path A surfaces that contradiction instead of silently skipping.
+- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch and archiving potentially claimed sessions. Claude skips only thread records with `continuation="absent"` or `owner_status="existing-owner"`. It never overrides a thread with `continuation="present"` and no existing owner — workflow 04 Path A surfaces that thread-specific contradiction instead of silently skipping.
 - `--prune`: after a fresh handoff is created and archived-session cleanup is approved, delete archived sessions. Ignored when no fresh handoff is created.
 
 Check `$session_mode` and `$prune_mode` for these flags before starting the workflows below.
@@ -132,7 +132,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 1. `${SKILL_DIR}/workflows/01-anchor-to-nodes.md` — identify every node worked on this session
 2. `${SKILL_DIR}/workflows/02-reflect.md` — review imperfections, claimed sessions, and starting point
 3. `${SKILL_DIR}/workflows/03-propose.md` — present persistence proposal to user for approval
-4. `${SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit the canonical continuation session file
+4. `${SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit each thread's canonical continuation session file
 
 </workflows>
 
