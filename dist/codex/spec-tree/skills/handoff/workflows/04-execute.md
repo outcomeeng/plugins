@@ -227,7 +227,7 @@ Put session mechanics only after the product summary:
 - Canonical continuation: "new handoff <id>" | "no handoff (no continuation reader needed)"
 - Session-owned work was committed before closure
 - Every session id archived from the resolved claimed-session set and selected artifact partition
-- Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
+- Checkout state: the releasing context has stepped off the handed-off branch and is detached at the current `origin/<default-branch>` tip, so the branch is unoccupied
 - Worktree occupancy claim preserved for the live process; session-store cleanup used `spx session archive` for claimed sessions and `spx session release` only for verified stale `doing/` records
 
 </confirm>
