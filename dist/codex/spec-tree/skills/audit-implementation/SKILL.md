@@ -176,7 +176,7 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 When the run completes, return the exact run token and rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
-Return BLOCKED when the invocation request is malformed, SPX rejects a command, or a required skill is missing before dispatch. For malformed requests, name the absent labeled fields from `<request_contract>`. For command failures, include the exact command, stderr, and the coverage unit or payload key that failed.
+Return BLOCKED only when the invocation request is malformed before `spx verification run start` or SPX rejects a command. For malformed requests, name the absent labeled fields from `<request_contract>`. For command failures, include the exact command, stderr, and the coverage unit or payload key that failed. After a run starts, record a missing required concern skill as `missing-skill`, finish the run with terminal status `rejected`, render it, and return the run token plus projection.
 
 Each finding row names:
 
@@ -215,9 +215,9 @@ How to avoid: Return BLOCKED before `spx verification run start`, name the missi
 
 What happened: Claude invoked one concern skill before validating that the complete `audit-{lang}-{code|tests|architecture}` trio existed for every language partition.
 
-Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery leaves a partial run.
+Why it failed: The coverage inventory belongs before concern dispatch, so a late missing-skill discovery can leave other concern results without a complete expected-unit classification.
 
-How to avoid: Validate the complete concern-skill trio for every language partition before invoking any concern skill.
+How to avoid: Validate and record the complete concern-skill trio for every language partition before invoking any concern skill. Record an absent required skill as `missing-skill`, then finish and render the rejected run.
 
 **A finding was reported only in prose.**
 
