@@ -9,6 +9,7 @@ owned_paths = [
   "dist/claude/spec-tree/agents/test-evidence-auditor.md",
   "dist/claude/spec-tree/skills/audit-tests/**",
   "dist/codex/spec-tree/agents/test-evidence-auditor.md",
+  "dist/codex/spec-tree/skills/audit-tests/**",
 ]
 smoke_cases = ["rejects-harness-owned-protocol", "approves-source-owned-protocol"]
 threshold = 0.85
