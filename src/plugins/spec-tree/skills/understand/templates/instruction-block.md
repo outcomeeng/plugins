@@ -97,20 +97,20 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 <!-- harness:codex -->
 
-**Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files.
+**Read named files yourself.** Always read explicitly named files in the main conversation. Never use ordinary delegation to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files. Required typed auditors and reviewers are the exception: their governed audit skills require them to read the target artifacts, bundled references, and standards inside their isolated verification context.
 
 - ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
 - NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `{{! tool('spawn_agent', 'codex') !}}` for the named verifier and reviewer roles it lists. Resolve that capability from the current runtime before dispatch; when the rendered tool is absent, discover the available typed agent-spawn tool and use its schema, and when no typed spawn capability exists, record the exact discovery failure and block the gate. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
 
-**Use the multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `multi_agent_v1.wait_agent`. Close every spawned agent with `multi_agent_v1.close_agent` immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
+**Use the multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `{{! tool('wait_agent', 'codex') !}}`. Close every spawned agent with `{{! tool('close_agent', 'codex') !}}` immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
 
 Spawn a typed verifier or reviewer:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "<exact-agent-type>",
     "message": "<scope>"
@@ -122,7 +122,7 @@ Wait once for one or more spawned agents. Use a 10-minute timeout for subagents 
 
 ```json
 {
-  "tool": "multi_agent_v1.wait_agent",
+  "tool": "{{! tool('wait_agent', 'codex') !}}",
   "arguments": {
     "targets": ["<agent-id-from-spawn-agent>"],
     "timeout_ms": 1800000
@@ -134,16 +134,18 @@ Close a completed or no-longer-needed agent:
 
 ```json
 {
-  "tool": "multi_agent_v1.close_agent",
+  "tool": "{{! tool('close_agent', 'codex') !}}",
   "arguments": {
     "target": "<agent-id-from-spawn-agent>"
   }
 }
 ```
 
-If `wait_agent` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
+If `{{! tool('wait_agent', 'codex') !}}` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
 
-**Result collection for verifier and reviewer agents.** The `multi_agent_v1.wait_agent` tool is the planned result-collection mechanism. Read the JSON returned by the tool, keyed by the spawned agent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the agent result; when that final status carries the agent's final message, that final message is the verifier or reviewer output. Do not infer success from a subagent notification, a pending handle, or an open agent id.
+**Result collection for verifier and reviewer agents.** The `{{! tool('wait_agent', 'codex') !}}` tool is the planned result-collection mechanism. Read the JSON returned by the tool, keyed by the spawned agent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the agent result; when that final status carries the agent's final message, that final message is the verifier or reviewer output. Do not infer success from a subagent notification, a pending handle, or an open agent id.
+
+**Audit rejection resets authoring judgment.** When any typed auditor returns `REJECTED`, do not edit from the finding alone. Re-invoke the matching authoring counterpart, reread every `*-standards` skill shared by that authoring and audit pair, reread the rejected artifact and same-class surface, write a standards-derived repair plan, and only then edit. An audit rejection means the prior authoring pass failed to apply its governing standards; intuition and line-local patching are invalid inputs to the repair.
 
 Successful `changes-reviewer` result shape:
 
@@ -182,7 +184,7 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "changes-reviewer",
     "message": "HEAD"
@@ -192,7 +194,7 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "changes-reviewer",
     "message": "origin/<base>...HEAD"
@@ -200,13 +202,13 @@ After a successful `changes-reviewer` result, invoke the `spec-tree:project-run-
 }
 ```
 
-**Use explicit prompts for audit agents.** The `message` field comes from the `multi_agent_v1.spawn_agent` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
+**Use explicit prompts for audit agents.** The `message` field comes from the `{{! tool('spawn_agent', 'codex') !}}` schema. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
 Use this shape for an implementation audit:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "implementation-auditor",
     "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nLive file list: none for a gating audit; full modified and untracked paths only for an advisory pre-commit audit\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection, or the exact blocked spx verification command."
@@ -224,7 +226,7 @@ Use this shape for test-evidence audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "test-evidence-auditor",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguages: <detected language names>\nTask: Resolve and apply every installed audit-{lang}-tests skill for the detected languages. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; gate-1-assertion and applicable gate-2-architectural rows; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
@@ -236,7 +238,7 @@ Use this shape for eval-evidence audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "eval-evidence-auditor",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full [eval] assertion text or exact spec file path plus assertion headings>\nEval artifacts: <full paths to eval.toml, prompt.md, cases.jsonl, and history.jsonl>\nProducer artifacts: <full paths to the producing skill, agent, classifier, script, or command source>\nTask: Audit whether the eval evidence proves the listed assertions without replacing the real producer with a prompt-only simulation. Return the JSON verdict specified by audit-eval-evidence, with overall PASS, FAIL, or UNKNOWN and row findings for failed evidence properties. Do not add prose outside the JSON object."
@@ -248,7 +250,7 @@ Use this shape for spec-node audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "spec-auditor",
     "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with full spx/... paths, governing rule, and required fix."
@@ -260,7 +262,7 @@ Use this shape for decision audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "adr-auditor",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nAudit scope: <exact committed changeset or artifact scope>\nScope classification: <language-neutral | implementation-language partitions: comma-separated languages>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, and every language-specific architecture concern required by the scope classification. Return only the structured JSON verdict specified by audit-adr, with no prose outside the JSON object."
@@ -270,7 +272,7 @@ Use this shape for decision audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "pdr-auditor",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
@@ -282,7 +284,7 @@ Use this shape for skill audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "skill-auditor",
     "message": "Repository: <absolute-repository-path>\nSkill content: <full paths to changed SKILL.md files and changed files under references/, workflows/, templates/, scripts/, or other skill subdirectories>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed skill content for skill-authoring standards, agent-prompt standards, progressive disclosure, portability, voice, and structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
@@ -294,7 +296,7 @@ Use this shape for subagent audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "subagent-auditor",
     "message": "Repository: <absolute-repository-path>\nSubagent files: <full paths to changed agents/*.md files>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed subagent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
