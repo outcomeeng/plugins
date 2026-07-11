@@ -10,6 +10,7 @@ CAN drive a changeset from verified local readiness through merge, declared depl
 
 - Given a feature branch whose local base lags its remote-tracking base and whose working tree contains an uncommitted path, when `/merge` classifies the changeset, then it includes the feature and working-tree paths and excludes the path already merged into the remote-tracking base ([test](tests/test_classify_changeset.scenario.l1.py))
 - Given a modified coordination note under a path containing a space, when `/merge` classifies the working tree, then the path stays unquoted and is recognized as a coordination note ([test](tests/test_classify_changeset.scenario.l1.py))
+- Given a repository whose remote default branch is unconfigured, when `/merge` classifies the changeset, then the classifier exits nonzero with an operator-facing base-ref configuration error and no Python traceback ([test](tests/test_classify_changeset.scenario.l1.py))
 
 ### Mappings
 
