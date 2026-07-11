@@ -92,30 +92,6 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ## Assertions
 
-### Scenarios
-
-- Given source code that does not expose a seam for the spec assertion, when audited, then the verdict targets the source file with finding category "untestable source" and remaining evidence checks are skipped ([test](tests/test_test_auditing.scenario.l1.py))
-- Given source code that exposes a seam for the spec assertion, when audited, then testability passes and the audit proceeds to coupling ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that imports only its test framework, when audited by `/audit-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that imports a codebase module but mocks it entirely, when audited, then the verdict is REJECT with finding category "coupling severed" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file where testability passes, the test imports the correct module, and the test verifies behavior matching the spec assertion, when audited and all four evidence properties hold, then the verdict is APPROVED ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that imports the correct module but asserts on a property unrelated to the spec assertion, when audited, then the verdict is REJECT with finding category "misaligned" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file where no mutation to the imported module would cause a failure, when audited, then the verdict is REJECT with finding category "unfalsifiable" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that does not drive execution into the assertion-relevant source path, established by reading the test against the production code, when audited, then the verdict is REJECT with finding category "no coverage" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file under audit, when coverage is judged, then the auditor names the assertion-relevant code path the test drives execution into — traced by reading the test against the production code, never by running the project's coverage tooling ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file with a bare numeric literal outside the allowlist `{-1, 0, 1, 2}`, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file with a bare string literal outside `""` and descriptive callsites, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that sources every non-allowlist literal from a library origin, a production-owned constant object, or a generator, when audited, then the literal rule passes ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file importing literals from a static-literal fixture file, when audited, then the verdict is REJECT with finding category "fixture laundering" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file importing literals from a test-infrastructure module that exists only to re-export hardcoded values, when audited, then the verdict is REJECT with finding category "laundered indirect" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that reads an authored prose or documentation body (a skill body, a spec, a prompt) and asserts on its content, when audited by `/audit-tests`, then the verdict is REJECT with finding category "prose-coupling" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given an executed test file declaring any variable, constant, framework fixture parameter, or property-generated parameter, when audited by `/audit-tests`, then the verdict is REJECT with finding category "test-owned declaration" and names the proper owner for the value or configuration ([test](tests/test_test_auditing.scenario.l1.py))
-- Given production defines and exports a typed constant used internally and the test imports the same symbol, when audited, then the literal rule passes and the verdict reports the positive pattern as the remediation reference ([test](tests/test_test_auditing.scenario.l1.py))
-
-### Properties
-
-- The audit methodology classifies coupling into at least the nine categories defined in the Coupling Taxonomy — distinct failure modes require distinct audit responses ([test](tests/test_test_auditing.property.l1.py))
-
 ### Compliance
 
 - ALWAYS: given successful required language-concern composition, the language-neutral `/audit-tests` methodology inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and identifies the transitive artifact and required ownership target in its structured verdict ([eval](evals/full-chain-ownership/eval.toml))
