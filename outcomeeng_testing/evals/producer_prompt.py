@@ -15,6 +15,7 @@ from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     PRODUCER_FIELD,
+    PRODUCER_FILE_KIND,
     PRODUCER_SECTION_KIND,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
@@ -71,6 +72,42 @@ def assert_materializes_prompt_from_named_producer_section(tmp_path: Path) -> No
     assert UNRELATED_RULE not in prompt_text
     assert PRODUCER_RELATIVE_PATH in prompt_text
     assert SECTION_NAME in prompt_text
+
+
+@with_temp_workspace
+def assert_materializes_prompt_from_complete_producer_file(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_eval_fixture(
+        tmp_path,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+    )
+    eval_dir = eval_toml.parent
+    producer_text = (repo_root / PRODUCER_RELATIVE_PATH).read_text(encoding="utf-8")
+    (eval_dir / PROMPT_TEMPLATE_FILENAME).write_text(
+        "Producer: {producer_path}\n\n{producer_file}\n",
+        encoding="utf-8",
+    )
+    write_prompt_source_definition(
+        eval_toml,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+        include_section=False,
+    )
+
+    materialize_prompt(eval_toml, repo_root=repo_root)
+
+    prompt_text = (eval_dir / PROMPT_FILENAME).read_text(encoding="utf-8")
+    assert producer_text in prompt_text
+    assert PRODUCER_RELATIVE_PATH in prompt_text
+
+
+@with_temp_workspace
+def assert_producer_file_rejects_section_selector(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_eval_fixture(
+        tmp_path,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+    )
+
+    with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
+        materialize_prompt(eval_toml, repo_root=repo_root)
 
 
 @with_temp_workspace
@@ -521,6 +558,35 @@ def write_eval_fixture(
     )
     (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
     return repo_root, eval_dir / EVAL_TOML_FILENAME
+
+
+def write_prompt_source_definition(
+    eval_toml: Path,
+    *,
+    prompt_source_kind: str,
+    include_section: bool,
+) -> None:
+    prompt_source_lines = [
+        f'{KIND_FIELD} = "{prompt_source_kind}"',
+        f'{PRODUCER_FIELD} = "{PRODUCER_RELATIVE_PATH}"',
+    ]
+    if include_section:
+        prompt_source_lines.append(f'{SECTION_FIELD} = "{SECTION_NAME}"')
+    prompt_source_lines.append(f'{TEMPLATE_FIELD} = "{PROMPT_TEMPLATE_FILENAME}"')
+    eval_toml.write_text(
+        "\n".join(
+            [
+                'title = "producer prompt"',
+                'cases = "cases.jsonl"',
+                f'prompt = "{PROMPT_FILENAME}"',
+                "",
+                f"[{PROMPT_SOURCE_TABLE}]",
+                *prompt_source_lines,
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def producer_section(name: str, body: str) -> str:

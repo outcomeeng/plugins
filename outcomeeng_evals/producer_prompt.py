@@ -17,11 +17,13 @@ PRODUCER_FIELD: Final = "producer"
 SECTION_FIELD: Final = "section"
 TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
+PRODUCER_FILE_KIND: Final = "producer-file"
 PROMPT_FIELD: Final = "prompt"
 
 _PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
+_PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -44,7 +46,8 @@ class ProducerPromptDefinition:
     prompt_path: Path
     producer_path: Path
     producer_relative_path: str
-    section_name: str
+    kind: str
+    section_name: str | None
     template_path: Path
 
 
@@ -130,9 +133,20 @@ def load_producer_prompt_definition(
 
 
 def render_prompt(definition: ProducerPromptDefinition) -> str:
-    """Render a prompt template from the selected producer section."""
+    """Render a prompt template from the declared producer source."""
     template = definition.template_path.read_text(encoding="utf-8")
     producer_text = definition.producer_path.read_text(encoding="utf-8")
+    if definition.kind == PRODUCER_FILE_KIND:
+        return _replace_known_placeholders_once(
+            template,
+            {
+                _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
+                _PRODUCER_FILE_PLACEHOLDER: producer_text,
+            },
+        )
+    if definition.section_name is None:
+        msg = "producer-section definition requires a section name"
+        raise ProducerPromptError(msg)
     producer_section = extract_named_producer_section(
         producer_text,
         section_name=definition.section_name,
@@ -193,10 +207,10 @@ def _resolve_definition(
     prompt_source: dict[str, Any],
 ) -> ProducerPromptDefinition:
     kind = _required_str(prompt_source, KIND_FIELD, eval_toml_path=eval_toml_path)
-    if kind != PRODUCER_SECTION_KIND:
+    if kind not in (PRODUCER_SECTION_KIND, PRODUCER_FILE_KIND):
         msg = (
             f"{eval_toml_path}: unsupported {PROMPT_SOURCE_TABLE}.{KIND_FIELD} "
-            f"{kind!r}; expected {PRODUCER_SECTION_KIND!r}"
+            f"{kind!r}; expected {PRODUCER_SECTION_KIND!r} or {PRODUCER_FILE_KIND!r}"
         )
         raise ProducerPromptError(msg)
 
@@ -206,9 +220,9 @@ def _resolve_definition(
         PRODUCER_FIELD,
         eval_toml_path=eval_toml_path,
     )
-    section_name = _required_str(
+    section_name = _optional_section_name(
         prompt_source,
-        SECTION_FIELD,
+        kind=kind,
         eval_toml_path=eval_toml_path,
     )
     template_relative = _required_str(
@@ -252,6 +266,7 @@ def _resolve_definition(
         prompt_path=prompt_path,
         producer_path=producer_path,
         producer_relative_path=producer_relative,
+        kind=kind,
         section_name=section_name,
         template_path=template_path,
     )
@@ -289,6 +304,27 @@ def _required_str(
         )
         raise ProducerPromptError(msg)
     return value
+
+
+def _optional_section_name(
+    prompt_source: dict[str, Any],
+    *,
+    kind: str,
+    eval_toml_path: Path,
+) -> str | None:
+    if kind == PRODUCER_SECTION_KIND:
+        return _required_str(
+            prompt_source,
+            SECTION_FIELD,
+            eval_toml_path=eval_toml_path,
+        )
+    if SECTION_FIELD in prompt_source:
+        msg = (
+            f"{eval_toml_path}: field {SECTION_FIELD!r} is invalid for "
+            f"{PRODUCER_FILE_KIND!r}"
+        )
+        raise ProducerPromptError(msg)
+    return None
 
 
 def _resolve_repo_relative_path(
