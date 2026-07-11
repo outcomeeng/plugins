@@ -11,7 +11,7 @@ Invoke the `python:python-architecture-standards` skill before proceeding. If th
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A binding Python ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.
+A binding Python ADR whose testability constraints live under `## Verification`, plus an `ADR_AUDIT_REQUIRED` handoff carrying the decision paths, governing node, and Python scope classification.
 </objective>
 
 <foundational_stance>
@@ -28,14 +28,13 @@ After reading those standards, check for `spx/local/python.md`, `spx/local/pytho
 </repo_local_overlay>
 
 <authority_model>
-The architect skill produces ADRs; the architecture reviewer must approve them before implementation begins:
+The architect skill produces ADRs and returns an audit handoff to the outer conversation:
 
 ```
-architect-python  --produces ADRs-->  audit-python-architecture
-                                              | REJECT -> fix and resubmit
-                                              | APPROVE
-                                              v
-                                         code-python  -->  audit-python-code
+architect-python  --produces ADRs + handoff-->  outer conversation
+                                                       |
+                                                       v
+                                                  adr-auditor
 ```
 
 - **code-python** implements exactly what the ADR specifies and fixes issues within ADR constraints — it does not choose alternative approaches or refactor the architecture.
@@ -118,9 +117,15 @@ Execute these phases in order.
 3. Invariants (optional): algebraic properties for all governed code.
 4. Verification: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the dependency-injection testability constraints are `### Audit` rules carrying `([audit])`.
 
+**Gate — authored shape.** Reread every written ADR path. Stop when a path is absent, a required section is absent, a rule lacks the tag required by its verification subsection, or the file contains a section outside the authoritative template.
+
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
-**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, dispatch the generic `adr-auditor` agent — it judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for the Python-specific concerns (DI, no-mocking, level accuracy) against `/test` principles. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
+**Gate — decision consistency.** Stop when any written decision contradicts a loaded ancestor or sibling decision. Name both full paths and the conflicting statements.
+
+**Phase 5 — Return the audit handoff.** Output the written ADR paths and `ADR_AUDIT_REQUIRED` handoff. The outer conversation dispatches the generic `adr-auditor`, which judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for Python-specific concerns. Do not dispatch a verifier from this skill.
+
+**Gate — handoff completeness.** Return the handoff only when it contains `ADR_AUDIT_REQUIRED`, every written decision path, the full governing node path, and `implementation-language partitions: python`.
 
 Common violations to avoid: a phantom Testing Strategy section, `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in `## Verification` (`### Audit`), and any mocking language in the ADR.
 </adr_creation_protocol>
@@ -140,19 +145,15 @@ These principles guide every ADR. Each links to the reference carrying the full 
 - NEVER review code — that is `audit-python-code`.
 - NEVER fix bugs — that is `code-python` in remediation mode.
 - NEVER create work items — the orchestrator does that, informed by the ADRs.
-- NEVER approve the skill's own ADRs for implementation — the architecture reviewer approves, and the orchestrator decides when to proceed.
+- NEVER approve the skill's own ADRs for implementation or dispatch a verifier — return the audit handoff to the outer conversation.
 
 </constraints>
 
 <output_format>
-ONLY after the architecture reviewer has APPROVED, output:
+Output:
 
 ```markdown
 ## Architectural Decisions Created
-
-### Reviewer Status
-
-✅ APPROVED by the architecture reviewer
 
 ### ADRs Written
 
@@ -170,10 +171,28 @@ ONLY after the architecture reviewer has APPROVED, output:
 If any of these assumptions fail, downstream skills must ABORT:
 
 1. {assumption from the ADR}
+
+### Audit Handoff
+
+ADR_AUDIT_REQUIRED
+
+- Decision files: {full ADR paths}
+- Governing node: {full spx node path}
+- Scope classification: implementation-language partitions: python
 ```
 
-Architecture that is APPROVED is complete; per the autonomous flow the next action is `/code-python`.
+The outer conversation dispatches `adr-auditor` before implementation begins.
 </output_format>
+
+<failure_modes>
+
+**What happened:** `architect-python` required dispatching `adr-auditor` before returning.
+
+**Why it failed:** architecture authoring can run in a subagent, where dispatch requires an unsupported second subagent level and leaves the ADR without a usable result.
+
+**How to avoid it:** return `ADR_AUDIT_REQUIRED` to the outer conversation so the verifier launches from the context that owns dispatch.
+
+</failure_modes>
 
 <adr_patterns>
 These patterns show how testability constraints appear under `## Verification`'s `### Audit` subsection. See `/python-architecture-standards` for the canonical section structure.
@@ -237,10 +256,10 @@ See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full patte
 
 <success_criteria>
 
-- Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
-- Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
-- No mocking language anywhere; external SaaS services are never assigned `l2`.
-- Every ADR is submitted to the `adr-auditor` agent (which composes `audit-python-architecture`) and returns APPROVED before output.
-- ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.
+- Every written ADR path exists and rereads successfully.
+- Every ADR contains only the authoritative decision-first sections and every verification rule carries the tag required by its subsection.
+- Every ADR is consistent with the loaded ancestor and sibling decisions.
+- No ADR contains mocking guidance or assigns `l2` to an external SaaS service.
+- The output contains `ADR_AUDIT_REQUIRED`, every written decision path, the full governing node path, and `implementation-language partitions: python`.
 
 </success_criteria>

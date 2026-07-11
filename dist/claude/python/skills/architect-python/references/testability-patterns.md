@@ -270,7 +270,7 @@ def test_calculate_total_always_non_negative(items: list[OrderLine]) -> None:
 
 Architecture decisions affect testability. Make these decisions in ADRs.
 
-### 1. Dependency Injection Enables Mocking
+### 1. Dependency Injection Enables Controlled Implementations
 
 ```python
 # TESTABLE - Dependencies injected
@@ -282,21 +282,21 @@ class UserService:
 
 # In tests:
 def test_user_service_sends_notification() -> None:
-    mock_repo = MockUserRepository()
-    mock_notifier = MockNotifier()
-    service = UserService(mock_repo, mock_notifier)
+    repo = InMemoryUserRepository()
+    notifier = RecordingNotifier()
+    service = UserService(repo, notifier)
 
     service.create_user("John", "john@example.com")
 
-    assert mock_notifier.was_called_with("john@example.com")
+    assert notifier.addresses == ["john@example.com"]
 ```
 
 ```python
 # NOT TESTABLE - Hidden dependencies
 class UserService:
     def __init__(self) -> None:
-        self._repo = PostgresUserRepository()  # Can't mock!
-        self._notifier = SmtpNotifier()  # Can't mock!
+        self._repo = PostgresUserRepository()  # Cannot inject a controlled repository
+        self._notifier = SmtpNotifier()  # Cannot inject a recording notifier
 ```
 
 ---

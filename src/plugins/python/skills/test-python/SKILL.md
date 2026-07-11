@@ -3,7 +3,7 @@ name: test-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
   NEVER write or fix Python tests without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill
 ---
 
 {!% require_skill 'python:python-standards' %!}
@@ -11,6 +11,10 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 {!% require_skill 'python:python-test-standards' %!}
 
 {!% require_skill 'spec-tree:test' %!}
+
+<repo_local_overlay>
+After loading the standards above, check for `spx/local/python.md` and `spx/local/python-tests.md` at the repository root. Read each file that exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
 
 <objective>
 Python test files that supply evidence for a spec-tree node's assertions.
@@ -22,7 +26,7 @@ Determine the mode before editing:
 | Mode  | Signal                                                  | Action                       |
 | ----- | ------------------------------------------------------- | ---------------------------- |
 | Write | The node has no Python evidence file for the assertion  | Follow `<write_workflow>`    |
-| Fix   | `/audit-python-tests` rejected existing Python evidence | Follow `<fix_workflow>`      |
+| Fix   | The caller supplies a structured rejected test-audit verdict | Follow `<fix_workflow>`   |
 | Split | The test requires source architecture changes first     | Change source contract first |
 
 NEVER create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
@@ -39,8 +43,8 @@ Run this workflow for new Python tests:
 6. Put only typed assertion code in the spec node's `tests/` directory.
 7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data.
 8. Import source-owned values from the owning module.
-9. Import variable input domains from `product_testing.generators.*`.
-10. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
+9. Import variable input domains from `{product}_testing.generators.*`.
+10. Import harness entrypoints from `{product}_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
 11. Consume inert fixture files only by path, reading, or copying.
 12. Run the node's canonical pytest command and the repository's lint/type commands.
 
@@ -49,15 +53,17 @@ Run this workflow for new Python tests:
 <fix_workflow>
 Run this workflow for rejected Python tests:
 
-1. Read the rejection and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim.
+1. Read the caller-supplied structured verdict and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim. Do not search conversation history for an earlier verdict.
 2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
 3. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
 4. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
 5. Replace constant-only generators with direct source imports or meaningful variable domains.
-6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
-7. Keep `product_testing.fixtures/` for inert files only.
+6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `{product}_testing.harnesses.*`.
+7. Keep `{product}_testing/fixtures/` for inert files only.
 8. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
 9. Rerun the focused tests and repository-canonical Python validation commands.
+
+**Gate:** stop before editing when the caller supplied no structured verdict or a finding lacks its cited evidence artifact and required correction. Do not reconstruct a verdict from conversation history.
 
 </fix_workflow>
 
@@ -95,6 +101,16 @@ Report the evidence created or repaired with:
 - Remaining rejection, if an audit gate still fails
 
 </reporting>
+
+<failure_modes>
+
+**What happened:** the test-fix workflow inferred its rejection from conversation history.
+
+**Why it failed:** conversation history can contain verdicts from several audit runs and subjects.
+
+**How to avoid it:** require the caller-supplied structured verdict and use only its cited evidence paths and findings.
+
+</failure_modes>
 
 <success_criteria>
 Python test work satisfies this skill when:

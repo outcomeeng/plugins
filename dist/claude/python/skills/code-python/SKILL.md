@@ -3,7 +3,7 @@ name: code-python
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Python.
   NEVER write or fix Python implementation without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -25,9 +25,9 @@ Python implementation code that makes its node's existing tests pass.
    - Check: Tests fail with ImportError or AssertionError
    - Action: Write implementation to make tests pass
 
-2. **FIX mode** - Implementation exists but was rejected by reviewer
-   - Check: Recent `/audit-python-code` output shows REJECT with specific issues
-   - Action: Read the rejection, fix the specific issues, re-run verification
+2. **FIX mode** - The caller supplies implementation-audit findings
+   - Check: The invocation includes concrete findings from the authoritative audit projection
+   - Action: Read every supplied finding, fix the defect class, and re-run verification
 
 **Always check which mode before proceeding.**
 </mode_detection>
@@ -63,6 +63,8 @@ Understand:
 - What behaviors the tests verify
 - What interfaces are expected (function signatures, classes)
 - What the tests import (where implementation should live)
+
+**Gate:** stop before implementation when the tests are absent, do not exercise the asserted behavior, or fail for an unrelated environment reason. Report the exact blocking evidence.
 
 **Step 2 — Write implementation (GREEN).** Write minimal code that makes tests pass.
 
@@ -102,10 +104,10 @@ All tests MUST pass. If any fail, fix implementation and re-run.
 
 ```bash
 # Type checking
-python3 -m mypy product/
+python3 -m mypy <source-root>/
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check <source-root>/
 
 # Tests one more time
 python3 -m pytest {node_path}/tests/ -v
@@ -117,11 +119,13 @@ All must pass before declaring complete.
 
 <fix_mode_workflow>
 
-**Step 1 — Read rejection feedback.** Find the most recent `/audit-python-code` output. Look for:
+**Step 1 — Read supplied findings.** Use only the findings included by the caller from the authoritative audit projection. Require:
 
 - Specific file:line locations
 - Issue categories (magic values, missing DI, etc.)
 - Required fixes
+
+**Gate:** stop before editing when the caller supplied no findings or a finding lacks a subject path and required correction. Do not reconstruct findings from conversation history.
 
 **Step 2 — Apply fixes.** For each rejection reason:
 
@@ -141,10 +145,10 @@ All must pass before declaring complete.
 python3 -m pytest {node_path}/tests/ -v
 
 # Type checking
-python3 -m mypy product/
+python3 -m mypy <source-root>/
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check <source-root>/
 ```
 
 **Step 4 — Report what was fixed.**
@@ -230,9 +234,9 @@ def get_user(user_id: int) -> User | None:
 
 ### Files Created/Modified
 
-| File                 | Action  | Description   |
-| -------------------- | ------- | ------------- |
-| `product/handler.py` | Created | Order handler |
+| File                       | Action  | Description   |
+| -------------------------- | ------- | ------------- |
+| `<source-root>/handler.py` | Created | Order handler |
 
 ### Verification
 
@@ -260,6 +264,16 @@ All checks pass. Ready for re-review.
 ```
 
 </output_format>
+
+<failure_modes>
+
+**What happened:** FIX mode instructed Claude to find the most recent audit output.
+
+**Why it failed:** multiple verification runs in one merge period make “most recent” ambiguous and can apply findings from the wrong subject.
+
+**How to avoid it:** require the caller to supply findings from the authoritative projection for the remediation subject.
+
+</failure_modes>
 
 <success_criteria>
 
