@@ -37,6 +37,7 @@ from outcomeeng.distribution.build import (
     render_text,
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
+from outcomeeng_testing.harnesses.runtime_parameterization import SKILL_STANDARDS_REF
 
 SCOPE = "samplescope"
 INNER_TOPIC = "inner-topic"
@@ -46,7 +47,6 @@ CYCLE_TOPIC_A = "cycle-topic-a"
 CYCLE_TOPIC_B = "cycle-topic-b"
 
 INNER_BODY = "Inner fragment body.\nSecond line.\n"
-SKILL_REF = "instructions:skill-standards"
 
 
 def _fragment_path(topic: str) -> str:
@@ -87,14 +87,16 @@ class TestRecursiveIncludeExpansion:
         self, tmp_path: Path
     ) -> None:
         builder = SrcTreeBuilder(tmp_path)
-        require_directive = format_directive(RequireSkillDirective(SKILL_REF))
+        require_directive = format_directive(RequireSkillDirective(SKILL_STANDARDS_REF))
         builder.add_shared_topic(SCOPE, SKILL_TOPIC, require_directive)
 
         result = render_text(
             _include_text(SKILL_TOPIC), shared_root=builder.shared_root
         )
 
-        assert result == expand_require_skill(RequireSkillDirective(SKILL_REF))
+        assert result == expand_require_skill(
+            RequireSkillDirective(SKILL_STANDARDS_REF)
+        )
         assert require_directive not in result
 
 

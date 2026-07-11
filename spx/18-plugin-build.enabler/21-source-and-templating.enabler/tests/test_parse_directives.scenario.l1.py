@@ -18,6 +18,7 @@ from outcomeeng.distribution.build import (
     RequireSkillDirective,
     parse_directives,
 )
+from outcomeeng_testing.harnesses.runtime_parameterization import SKILL_STANDARDS_REF
 
 
 @pytest.fixture(autouse=True)
@@ -38,10 +39,7 @@ INCLUDE_DIRECTIVE_TEXT = (
     f"{BLOCK_DELIMITER_START} include '{INCLUDE_PATH}' {BLOCK_DELIMITER_END}"
 )
 
-SKILL_REF = "instructions:skill-standards"
-REQUIRE_SKILL_DIRECTIVE_TEXT = (
-    f"{BLOCK_DELIMITER_START} require_skill '{SKILL_REF}' {BLOCK_DELIMITER_END}"
-)
+REQUIRE_SKILL_DIRECTIVE_TEXT = f"{BLOCK_DELIMITER_START} require_skill '{SKILL_STANDARDS_REF}' {BLOCK_DELIMITER_END}"
 
 STANDARD_JINJA_BLOCK = "Code: {% if user %} ... {% endif %}"
 STANDARD_JINJA_VARIABLE = "Variable: {{ user.name }}"
@@ -79,7 +77,7 @@ class TestParsesRequireSkillDirective:
 
     def test_single_require_skill_returns_one_directive(self) -> None:
         result = parse_directives(REQUIRE_SKILL_DIRECTIVE_TEXT)
-        assert result == (RequireSkillDirective(skill_ref=SKILL_REF),)
+        assert result == (RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),)
 
 
 class TestParsesMultipleDirectivesInSourceOrder:
@@ -90,14 +88,14 @@ class TestParsesMultipleDirectivesInSourceOrder:
         result = parse_directives(text)
         assert result == (
             IncludeDirective(path=INCLUDE_PATH),
-            RequireSkillDirective(skill_ref=SKILL_REF),
+            RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),
         )
 
     def test_directives_in_reverse_text_order_returned_in_text_order(self) -> None:
         text = f"{REQUIRE_SKILL_DIRECTIVE_TEXT}\n{INCLUDE_DIRECTIVE_TEXT}"
         result = parse_directives(text)
         assert result == (
-            RequireSkillDirective(skill_ref=SKILL_REF),
+            RequireSkillDirective(skill_ref=SKILL_STANDARDS_REF),
             IncludeDirective(path=INCLUDE_PATH),
         )
 

@@ -33,6 +33,10 @@ from outcomeeng.distribution.build import (
     render_text,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.runtime_parameterization import (
+    PLUGIN_NAME,
+    SKILL_STANDARDS_REF,
+)
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 
@@ -46,10 +50,7 @@ def _require_module_implemented() -> None:
         )
 
 
-SKILL_REF = "instructions:skill-standards"
-PLUGIN_NAME = "instructions"
 SKILL_NAME = "create-skills"
-FRAGMENT_SCOPE = "instructions"
 FRAGMENT_TOPIC = "skill-standards"
 FRAGMENT_BODY = "Shared standards body."
 MISSING_FRAGMENT_BODY = "No fragment exists here."
@@ -60,7 +61,7 @@ STANDARD_JINJA_TEXT = "{% if standard %}unchanged{{ standard }}{% endif %}"
 def test_build_accepts_well_formed_src_tree(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
 
     build(builder.src_root, tmp_path / "dist")
 
@@ -68,7 +69,7 @@ def test_build_accepts_well_formed_src_tree(tmp_path: Path) -> None:
 def test_build_ignores_ordinary_files_under_plugin_root(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
     dist_root = tmp_path / "dist"
     (builder.src_root / PLUGINS_DIR_NAME / PLUGIN_NAME / ".DS_Store").write_text(
         "ignored by git",
@@ -85,7 +86,7 @@ def test_build_ignores_ordinary_files_under_plugin_root(tmp_path: Path) -> None:
 def test_build_rejects_shared_topic_without_fragment(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SKILL_BODY})
-    topic_root = builder.shared_root / FRAGMENT_SCOPE / FRAGMENT_TOPIC
+    topic_root = builder.shared_root / PLUGIN_NAME / FRAGMENT_TOPIC
     topic_root.mkdir(parents=True)
     (topic_root / "notes.md").write_text(MISSING_FRAGMENT_BODY, encoding="utf-8")
 
@@ -106,7 +107,7 @@ def test_jinja_environment_uses_custom_delimiters(tmp_path: Path) -> None:
 
 def test_standard_jinja_syntax_passes_through_rendering(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
 
     rendered = render_text(STANDARD_JINJA_TEXT, shared_root=builder.shared_root)
 
@@ -114,28 +115,26 @@ def test_standard_jinja_syntax_passes_through_rendering(tmp_path: Path) -> None:
 
 
 def test_require_skill_expands_to_coding_agent_neutral_guidance() -> None:
-    rendered = expand_require_skill(RequireSkillDirective(SKILL_REF))
+    rendered = expand_require_skill(RequireSkillDirective(SKILL_STANDARDS_REF))
 
-    assert rendered == REQUIRE_SKILL_TEXT_TEMPLATE.format(skill_ref=SKILL_REF)
-    assert SKILL_REF in rendered
+    assert rendered == REQUIRE_SKILL_TEXT_TEMPLATE.format(skill_ref=SKILL_STANDARDS_REF)
+    assert SKILL_STANDARDS_REF in rendered
 
 
 def test_require_skill_renders_inline(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
-    directive = (
-        f"{BLOCK_DELIMITER_START} require_skill '{SKILL_REF}' {BLOCK_DELIMITER_END}"
-    )
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    directive = f"{BLOCK_DELIMITER_START} require_skill '{SKILL_STANDARDS_REF}' {BLOCK_DELIMITER_END}"
 
     rendered = render_text(directive, shared_root=builder.shared_root)
 
-    assert SKILL_REF in rendered
+    assert SKILL_STANDARDS_REF in rendered
     assert directive not in rendered
 
 
 def test_bare_conditional_block_renders_per_target(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
     # A conditional block with no {{! !}} variable token must still be evaluated,
     # not shipped verbatim.
     template = (
@@ -189,7 +188,7 @@ def test_skill_dir_escape_survives_jinja_pass(tmp_path: Path) -> None:
 
 def test_require_skill_expands_identically_across_targets(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    require_directive = format_directive(RequireSkillDirective(SKILL_REF))
+    require_directive = format_directive(RequireSkillDirective(SKILL_STANDARDS_REF))
     skill_body = (
         f"---\nname: {SKILL_NAME}\n---\n\nBefore.\n{require_directive}\nAfter.\n"
     )
@@ -228,15 +227,15 @@ def test_require_skill_expands_identically_across_targets(tmp_path: Path) -> Non
     # comparison is against emit_skill's own output, not a test re-assembly of
     # its translation sequence.
     assert emitted[Target.CLAUDE] == emitted[Target.CODEX]
-    assert SKILL_REF in emitted[Target.CLAUDE]
+    assert SKILL_STANDARDS_REF in emitted[Target.CLAUDE]
     assert require_directive not in emitted[Target.CLAUDE]
 
 
 def test_include_directive_uses_fragment_file_contract(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    builder.add_shared_topic(PLUGIN_NAME, FRAGMENT_TOPIC, FRAGMENT_BODY)
     include = IncludeDirective(
-        f"{FRAGMENT_SCOPE}/{FRAGMENT_TOPIC}/{SHARED_FRAGMENT_FILENAME}"
+        f"{PLUGIN_NAME}/{FRAGMENT_TOPIC}/{SHARED_FRAGMENT_FILENAME}"
     )
 
     rendered = render_text(

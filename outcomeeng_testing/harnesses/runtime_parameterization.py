@@ -25,6 +25,7 @@ from outcomeeng.distribution.contracts import Target
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 PLUGIN_NAME = "instructions"
+SKILL_STANDARDS_REF = f"{PLUGIN_NAME}:skill-standards"
 SKILL_NAME = "example-skill"
 TOOL_KIND = "tool"
 FILE_KIND = "file"
