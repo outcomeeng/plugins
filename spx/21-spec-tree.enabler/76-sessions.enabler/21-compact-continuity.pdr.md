@@ -14,12 +14,9 @@ Claude Code already produces the compact summary that carries conversation state
 
 ## Verification
 
-### Testing
-
-- NEVER: `.claude/settings.json` defines a `compactPrompt` override ([conformance])
-
 ### Audit
 
 - ALWAYS: the `SessionStart` hook reacts to `source=compact` by identifying the expired methodology authority and directing `/understand` followed by `/contextualize` for every spec node still in scope ([audit])
 - ALWAYS: the post-compact hook leaves task reconstruction to the resuming agent and Claude Code's standard summary ([audit])
+- NEVER: `.claude/settings.json` defines a `compactPrompt` override ([audit])
 - NEVER: spec-tree replaces or augments Claude Code's compact-summary prompt through project configuration ([audit])
