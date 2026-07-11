@@ -5,6 +5,7 @@
 - Example 1: Approved
 - Example 2: Rejected, Coupling Severed By @patch
 - Example 3: Rejected, TYPE_CHECKING Import Disguised As Coupling
+- Example 4: Rejected, Imported Harness Owns Protocol Payload
 
 ## Example 1: Approved
 
@@ -129,3 +130,46 @@ Test declares its own color tuples and checks contrast math against them.
 The actual theme colors in product/theme.py are never imported at runtime. If
 all theme colors are changed to pure white, this test still passes.
 ```
+
+## Example 4: Rejected, Imported Harness Owns Protocol Payload
+
+The executed test is visually thin:
+
+```python
+from product_testing.harnesses.release import run_release_case
+
+
+def test_release_manifest() -> None:
+    assert run_release_case()
+```
+
+Full-chain traversal opens the imported harness:
+
+```python
+MANIFEST = {
+    "producer": "release-cli",
+    "schema-version": "v2",
+    "artifact-path": "dist/plugin.json",
+}
+EXPECTED = {"status": "published", "files": ["dist/plugin.json"]}
+
+
+def run_release_case() -> bool:
+    actual = produce_manifest(MANIFEST)
+    return actual == EXPECTED
+```
+
+Verdict:
+
+```text
+Artifact: product_testing/harnesses/release.py
+Property failed: source ownership
+Finding: harness_owned_vocabulary
+Detail: The harness owns producer identity, schema key, path, status token,
+        and expected projection. None has a named production owner.
+Required fix: Export protocol vocabulary and constructors from the production
+              module; keep only setup, invocation, cleanup, and diagnostics in
+              the harness.
+```
+
+The audit rejects even though the test imports a harness that calls production. Coupling does not repair missing provenance, and describing the payload as synthetic scenario vocabulary does not make the harness its owner.

@@ -1,6 +1,8 @@
 ---
 name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
+argument-hint: "[node-path]"
+arguments: node_path
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -24,6 +26,32 @@ Before writing or revising tests, also check:
 
 </prerequisites>
 
+<mode_detection>
+
+Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
+
+| Mode  | Signal                                                                        | Action                                         |
+| ----- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| Write | The assertion has no Rust evidence file                                       | Follow `<workflow>`                            |
+| Fix   | Merged `test-evidence-auditor` JSON is `FAIL` or `UNKNOWN` with Rust findings | Follow `<fix_workflow>`                        |
+| Split | The source contract cannot expose the asserted behavior                       | Fix the source contract before test predicates |
+
+</mode_detection>
+
+<verification_gates>
+
+Before writing or repairing Rust evidence, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
+
+After writing or repairing tests:
+
+1. Run the repository-canonical focused Rust test command for `$node_path/tests/` and record its exit status.
+2. In Write mode, PASS only when the test fails for the expected missing implementation or assertion mismatch; compilation, harness, workspace, or configuration failures are FAIL unless missing implementation is the declared RED condition.
+3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
+4. Run the repository-canonical Rust formatting, lint, and type/compile commands for the changed scope. Any nonzero result is FAIL.
+5. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, formatting gate, lint gate, and compile gate all pass.
+
+</verification_gates>
+
 <workflow>
 1. Load the governing spec context before editing any co-located `spx/.../tests/` file.
 2. Map each assertion to the assertion type and level chosen by `/test`.
@@ -35,6 +63,17 @@ Before writing or revising tests, also check:
 8. Run the repository's Rust validation commands before reporting the tests complete.
 
 </workflow>
+
+<fix_workflow>
+
+1. Read the merged `test-evidence-auditor` JSON and the Rust findings appended to its gate rows.
+2. Reinvoke `/test` for every affected assertion and rebuild the complete clause-evidence matrix from the governing assertion and source contracts.
+3. If any cited test proves only a subpart, inspect every linked test, `product-testing` harness, generator, inert fixture, source contract, oracle, and assertion-relevant implementation path before editing.
+4. Classify every finding and same-class instance across that chain by coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or workspace-boundary safety.
+5. Fix source architecture before test syntax when the finding exposes a missing enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior.
+6. Apply every class-level repair together, then run `<verification_gates>` once on the stabilized evidence before redispatch.
+
+</fix_workflow>
 
 <router_mapping>
 After running through `/test`, use the canonical mapping in `/rust-test-standards`:
@@ -68,6 +107,8 @@ All Rust test examples are owned by `/rust-test-standards`:
 <success_criteria>
 Rust test work is complete when:
 
+- every assertion has a complete `/test` clause-evidence matrix and the evidence-design gate passes
+- every subpart trigger has a complete full-chain inventory
 - `/test` chose the assertion type and target level first
 - the source-contract-first gate was applied before test predicates were written or repaired
 - `/rust-standards` and `/rust-test-standards` were loaded before test code was written
@@ -76,6 +117,19 @@ Rust test work is complete when:
 - controlled implementations preserve coupling to the real seam
 - property claims use property-based testing
 - compile-time claims use compile-fail evidence
-- repository validation passes or any unavailable validation tool is reported explicitly
+- the focused Rust test gate and repository-canonical formatting, lint, and compile gates all pass
+- in Fix mode, every merged audit finding and same-class instance maps to a completed class-level repair
 
 </success_criteria>
+
+<failure_modes>
+
+**Failure: Patched one Rust finding and redispatched**
+
+Claude changed the cited assertion while adjacent clauses and `product-testing` infrastructure retained the same evidence defect. The next audit rejected another instance and the apply loop lost its autonomous repair boundary.
+
+Why it failed: Claude treated a finding as a single predicate repair instead of evidence that the assertion's full chain and same-class instances were untrusted.
+
+How to avoid: Reinvoke `/test` after the first merged audit failure, rebuild the complete assertion matrix, inspect the full evidence chain, apply every same-class repair together, then run `<verification_gates>` once before redispatch.
+
+</failure_modes>

@@ -212,6 +212,9 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         lint_enforced=True,
         names={
             "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
+            "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
+            "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
+            "close_agent": {"codex": "multi_agent_v1.close_agent"},
             "schedule_wakeup": {"claude": "ScheduleWakeup"},
         },
     ),

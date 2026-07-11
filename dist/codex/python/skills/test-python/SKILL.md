@@ -3,6 +3,8 @@ name: test-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
   NEVER write or fix Python tests without this skill.
+argument-hint: "[node-path]"
+arguments: node_path
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
@@ -19,14 +21,30 @@ Python test files that supply evidence for a spec-tree node's assertions.
 <mode_detection>
 Determine the mode before editing:
 
-| Mode  | Signal                                                  | Action                       |
-| ----- | ------------------------------------------------------- | ---------------------------- |
-| Write | The node has no Python evidence file for the assertion  | Follow `<write_workflow>`    |
-| Fix   | `/audit-python-tests` rejected existing Python evidence | Follow `<fix_workflow>`      |
-| Split | The test requires source architecture changes first     | Change source contract first |
+Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
+
+| Mode  | Signal                                                                          | Action                       |
+| ----- | ------------------------------------------------------------------------------- | ---------------------------- |
+| Write | The node has no Python evidence file for the assertion                          | Follow `<write_workflow>`    |
+| Fix   | Merged `test-evidence-auditor` JSON is `FAIL` or `UNKNOWN` with Python findings | Follow `<fix_workflow>`      |
+| Split | The test requires source architecture changes first                             | Change source contract first |
 
 NEVER create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
 </mode_detection>
+
+<verification_gates>
+
+Before writing or repairing a Python test, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
+
+After writing or repairing tests:
+
+1. Run the repository-canonical focused test command for `$node_path/tests/` and record its exit status.
+2. In Write mode, PASS only when the test fails for the expected missing implementation or assertion mismatch; collection, syntax, harness, or configuration failures are FAIL unless missing implementation is the declared RED condition.
+3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
+4. Run the repository-canonical lint and type commands for the changed scope. Any nonzero result is FAIL.
+5. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, lint gate, and type gate all pass.
+
+</verification_gates>
 
 <write_workflow>
 Run this workflow for new Python tests:
@@ -49,15 +67,17 @@ Run this workflow for new Python tests:
 <fix_workflow>
 Run this workflow for rejected Python tests:
 
-1. Read the rejection and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim.
-2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
-3. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
-4. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
-5. Replace constant-only generators with direct source imports or meaningful variable domains.
-6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
-7. Keep `product_testing.fixtures/` for inert files only.
-8. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
-9. Rerun the focused tests and repository-canonical Python validation commands.
+1. Read the rejection and reinvoke `/test` for every rejected assertion.
+2. Rebuild the complete clause-evidence matrix from the governing assertion and source contracts: exercised path, observable result, independent oracle, and passing-while-false mutation for every clause.
+3. If any cited test proves only a subpart, locate every linked test, harness, generator, fixture path provider, source contract, oracle, assertion-relevant implementation path, and `conftest.py` shim before editing.
+4. Classify each finding and every same-class instance across that chain by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
+5. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
+6. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
+7. Replace constant-only generators with direct source imports or meaningful variable domains.
+8. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
+9. Keep `product_testing.fixtures/` for inert files only.
+10. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
+11. Apply all class-level repairs together, then rerun the focused tests and repository-canonical Python validation commands once on the stabilized evidence.
 
 </fix_workflow>
 
@@ -76,9 +96,9 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 Run the product's canonical test, lint, and type commands — the ones its `AGENTS.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
 ```bash
-python3 -m pytest <node-path>/tests/ -v
-python3 -m ruff check <node-path>/tests/
-python3 -m mypy <node-path>/tests/
+python3 -m pytest $node_path/tests/ -v
+python3 -m ruff check $node_path/tests/
+python3 -m mypy $node_path/tests/
 ```
 
 Report any tool the product lacks rather than silently skipping it.
@@ -107,6 +127,6 @@ Python test work satisfies this skill when:
 - Inert fixtures are consumed only as files
 - `conftest.py` contains discovery or registration only
 - No framework mock replaces the behavior under test
-- Focused tests and repository-canonical validation pass or the remaining failure is reported with the blocking cause
+- The matrix gate, focused test gate, repository-canonical lint gate, and repository-canonical type gate all pass for the changed scope
 
 </success_criteria>

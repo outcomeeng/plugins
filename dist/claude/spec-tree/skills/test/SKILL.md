@@ -1,7 +1,7 @@
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(git mv:*)
 ---
 
 <objective>
@@ -27,6 +27,24 @@ That local reference contains:
 Then follow the spec-tree workflow below.
 
 </prerequisite>
+
+<evidence_design_gate>
+
+Record one row per assertion clause and score every field before scaffolding:
+
+| Check                        | PASS                                                                                                                                                                                 | FAIL                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Clause inventory             | Every independently falsifiable clause has one row                                                                                                                                   | Any claim in the assertion has no row                                       |
+| Exercised path               | The row names the source path the evidence executes                                                                                                                                  | The path is absent, adjacent, or replaced                                   |
+| Observable result            | The row names an assertion-relevant observable                                                                                                                                       | The observation is structural, trivial, or unrelated                        |
+| Independent oracle           | The expected result comes from outside the behavior under test                                                                                                                       | The behavior under test produces its own expected result                    |
+| Passing-while-false mutation | A concrete source mutation makes the clause false and must fail the evidence                                                                                                         | No concrete mutation is named, or the evidence survives it                  |
+| Distrust sweep               | When any existing evidence proves only a subpart, every linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path is inventoried | A subpart trigger exists and any evidence-chain artifact is uninspected     |
+| Source-contract readiness    | Source-owned vocabulary and observable behavior exist in production contracts                                                                                                        | Test predicates would need copied values, hidden data, or replaced behavior |
+
+The gate is `PASS` only when every row passes every check. Any failed check blocks scaffolding and repair. Fix the source contract or evidence design, then score the complete matrix again.
+
+</evidence_design_gate>
 
 <workflow>
 
@@ -90,7 +108,7 @@ For each assertion:
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
-If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via AskUserQuestion before proceeding.
+If any covered link uses a legacy name, derive its canonical name from the assertion type, execution level, and optional runner; rename the tracked file with `git mv`, update every spec link to the new path, and continue only after all links resolve. Canonical naming is a safe local repair, never an operator question.
 
 Report the evidence gap summary before proceeding.
 
@@ -100,14 +118,20 @@ Report the evidence gap summary before proceeding.
 
 **Step 4: Route each assertion through the methodology**
 
-For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SKILL_DIR}/references/methodology.md`:
+For every assertion, including assertions with existing linked evidence, apply the methodology from `${CLAUDE_SKILL_DIR}/references/methodology.md` in this order:
 
-0. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
-1. **Stage 1** — What evidence does this assertion demand?
-2. **Stage 2** — At what execution level does that evidence live? Respect ADRs/PDRs loaded from tree context.
-3. **Stages 3–5** — If `L1` is viable, classify the code, check real system viability, and match an exception if needed.
+0. **Adversarial decomposition** — enumerate independently falsifiable clauses and record the exercised path, observable result, independent oracle, and passing-while-false mutation for each clause.
+1. **Full-chain distrust trigger** — if existing evidence proves only a subpart, inspect every clause, linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path before designing a repair.
+2. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
+3. **Stage 1** — What evidence does this assertion demand?
+4. **Stage 2** — At what execution level does that evidence live? Respect ADRs/PDRs loaded from tree context.
+5. **Stages 3–5** — If `L1` is viable, classify the code, check real system viability, and match an exception if needed.
 
 Document the routing decision for each assertion.
+
+Do not proceed to scaffolding or repair until every clause has a concrete failing mutation and the complete evidence chain has been inspected after any distrust trigger.
+
+Apply `<evidence_design_gate>`. Stop this step with `FAIL` when any check fails. Step 5 starts only from a recorded `PASS` for every assertion.
 
 </step>
 
@@ -132,6 +156,8 @@ Delegate language-specific structure to `/test-python` or `/test-rust` or `/test
 <step name="update_links">
 
 **Step 6: Update spec assertion links**
+
+Before changing a spec link, rescore `<evidence_design_gate>` against the written test and its complete infrastructure chain. Update the link only when every clause still passes and every passing-while-false mutation necessarily fails the written evidence.
 
 After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification, `[eval]` for LLM-driven behavior that emits a parseable structured verdict, or `[audit]` for semantic constraints requiring agent judgment (`[review]` is the legacy spelling of `[audit]`).
 
@@ -164,10 +190,26 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 </cross_cutting_assertions>
 
+<failure_modes>
+
+**Failure: Claude renamed a legacy test from its filename alone.**
+
+What happened: Claude saw a non-canonical linked filename, guessed the evidence type and execution level from the old name, ran `git mv`, and repaired only the link in the target assertion. Another spec still referenced the old path, or the guessed destination collided with evidence for a different assertion.
+
+Why it failed: A legacy filename does not establish its own classification or ownership. The assertion, methodology routing, and complete set of spec references determine the canonical destination.
+
+How to avoid: Derive the destination from the linked assertion's evidence type, routed execution level, and runner; search all spec links to the old path; check that the destination is absent or is the same evidence; run `git mv`; update every referencing spec link; then verify that the old path is absent and every new link resolves before continuing.
+
+</failure_modes>
+
 <success_criteria>
 
 Testing output is sound when:
 
+- A recorded clause-evidence matrix contains one row for every independently falsifiable assertion clause.
+- Every matrix row names an exercised source path, assertion-relevant observable, independent oracle, and concrete passing-while-false mutation.
+- Every assertion records `<evidence_design_gate>` as `PASS` before scaffolding and again before spec-link mutation.
+- Every subpart trigger has a complete inventory of linked tests, harnesses, generators, fixtures, source contracts, oracles, and assertion-relevant implementation paths.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.

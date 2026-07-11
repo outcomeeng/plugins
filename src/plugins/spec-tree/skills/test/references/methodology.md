@@ -9,6 +9,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 - [Before writing any test](#before-writing-any-test)
 - [Source-contract-first gate](#source-contract-first-gate)
 - [Test files own assertions, not data or configuration](#test-files-own-assertions-not-data-or-configuration)
+- [Adversarial evidence decomposition](#adversarial-evidence-decomposition)
 - [The evidence trap](#the-evidence-trap)
 - [Separate the axes](#separate-the-axes)
 - [Assertion types](#assertion-types)
@@ -23,7 +24,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 
 ## Non-negotiable rules
 
-- No mocking. Ever.
+- Never replace the behavior under test with a framework mock. Typed test doubles are allowed only under the seven Stage 5 exception cases and preserve the production boundary they stand in for.
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
 - Test doubles are exceptions, not defaults. The seven exception cases in Stage 5 are the only legitimate reasons to avoid the real dependency.
 - Route every assertion through all five stages. Do not skip ahead.
@@ -78,6 +79,20 @@ Use these ownership rules before writing the test:
 Do not create variables, constants, fixture parameters, or property-generated parameters in the executed test file. Every value or configuration choice those bindings would carry belongs in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Local functions are rejected when they own runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, harness behavior, or source-owned singleton shapes. Naming a value or wrapping it in a local function does not make it evidence. A renamed test-local declaration is still owned by the wrong layer.
 
 Property-based tests need reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
+
+## Adversarial evidence decomposition
+
+Before choosing an assertion type, execution level, runner, test infrastructure, or repair, decompose every assertion into independently falsifiable clauses. Record this matrix for the complete assertion:
+
+| Clause    | Exercised path  | Observable result | Independent oracle                         | Passing-while-false mutation                    |
+| --------- | --------------- | ----------------- | ------------------------------------------ | ----------------------------------------------- |
+| `{claim}` | `{source path}` | `{observable}`    | `{oracle outside the behavior under test}` | `{source mutation that must fail the evidence}` |
+
+Every clause needs a concrete mutation under which the clause is false and the evidence fails. A missing mutation exposes an unfalsifiable clause. An expected value produced by the behavior under test is not an independent oracle.
+
+Treat any existing test that proves only one subpart of an assertion as a full-chain distrust trigger. Inspect every clause, linked test, harness, generator, fixture, source contract, oracle, and assertion-relevant implementation path before changing a predicate or rerunning an audit. Assume adjacent evidence can share the same defect class until the complete matrix proves the cited instance isolated.
+
+After any evidence-audit rejection, rebuild the complete assertion matrix from governing truth and source contracts before repairing evidence. Do not patch findings sequentially. Apply every same-class repair across the full evidence chain, run deterministic verification once on the stabilized result, then redispatch the audit.
 
 ## The evidence trap
 

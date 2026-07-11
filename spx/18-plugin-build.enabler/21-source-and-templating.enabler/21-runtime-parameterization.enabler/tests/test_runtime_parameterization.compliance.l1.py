@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.runtime_parameterization import (
+    apply_argument_source_is_runtime_native,
     conditional_renders_absent_capability_only_where_present,
     configured_agent_model_terms_match_converter_models,
     field_global_is_wired_to_the_resolver,
@@ -18,6 +19,10 @@ from outcomeeng_testing.harnesses.runtime_parameterization import (
     term_registry_names_configured_agent_concepts,
     token_for_capability_absent_on_target_fails,
 )
+
+
+def test_apply_argument_source_is_runtime_native() -> None:
+    assert apply_argument_source_is_runtime_native()
 
 
 def test_registry_token_renders_each_target_name() -> None:

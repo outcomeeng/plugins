@@ -37,6 +37,7 @@ MISSING_CAPABILITY = "nonexistent"
 UNKNOWN_CAPABILITY = "unknown_capability"
 LIVE_FIELD_CAPABILITY = "configured_agent_prompt"
 LIVE_TERM_CAPABILITY = "configured_agent"
+PROJECT_ROOT = Path(__file__).parents[2]
 
 
 def implementation_is_ready() -> bool:
@@ -212,6 +213,18 @@ def field_global_is_wired_to_the_resolver() -> bool:
 def term_global_is_wired_to_the_resolver() -> bool:
     _require_implemented()
     return _kind_global_is_wired_to_the_resolver(TERM_KIND)
+
+
+def apply_argument_source_is_runtime_native() -> bool:
+    claude = (PROJECT_ROOT / "dist/claude/spec-tree/skills/apply/SKILL.md").read_text()
+    codex = (PROJECT_ROOT / "dist/codex/spec-tree/skills/apply/SKILL.md").read_text()
+    return (
+        "complete raw invocation from `$ARGUMENTS`" in claude
+        and "empty `$ARGUMENTS`" in claude
+        and "$ARGUMENTS" not in codex
+        and "complete invoking prompt text" in codex
+        and "invoking prompt contains no node path" in codex
+    )
 
 
 def _require_implemented() -> None:

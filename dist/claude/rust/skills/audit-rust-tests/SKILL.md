@@ -13,7 +13,7 @@ This audit runs inside either the dispatched `test-evidence-auditor` context via
 </dispatch_gate>
 
 <objective>
-A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
+A shared-schema JSON verdict on Rust test evidence — `PASS`, `FAIL`, or `UNKNOWN`, with each finding naming the assertion or evidence artifact, failed evidence property, and evidence gap.
 </objective>
 
 <constraints>
@@ -258,7 +258,7 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 The Rust test verdict is sound when:
 
 - Every in-scope assertion was judged on every Gate 1 step and Gate 2 with none skipped — challenge, scope, evidence-method, controlled implementations, oracle independence, harness-chain tracing, the four properties (coupling, falsifiability, alignment, coverage by reading), and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals).
-- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- The verdict uses the base `/audit-tests` JSON rows and states `overall` as `PASS`, `FAIL`, or `UNKNOWN`, with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
