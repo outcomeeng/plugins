@@ -23,7 +23,7 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 **OWNERSHIP SCREEN, THEN COUPLING.**
 
-An executed test file that declares variables or constants has already broken the evidence boundary. Screen declarations first, then check imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
+An executed test file or imported test-infrastructure module that owns assertion vocabulary, cases, expected values, or protocol payloads has broken the evidence boundary. Traverse the complete evidence chain and screen ownership before checking coupling. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
 
 Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
@@ -72,6 +72,14 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 </step>
 
+<step name="audit_testability">
+
+**Step 2b: Source testability**
+
+For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add an `untestable_source` REJECT finding against the production source. Continue declaration and provenance screening, then skip coupling, falsifiability, alignment, and coverage for that assertion because no test can establish them until the source contract changes.
+
+</step>
+
 <step name="map_assertions">
 
 **Step 2: Map assertions to test files**
@@ -111,6 +119,10 @@ Use language syntax while reading to enumerate declarations, then classify owner
 | Source-owned singleton shape or vocabulary | REJECT — source ownership copied to test  |
 
 Do not treat casing as evidence. Renaming `MAPPING_RUNS` to `mappingRuns` only hides a heuristic trigger; it does not change ownership.
+
+Follow every codebase import and referenced fixture path transitively. Inventory every executed test, harness, generator, fixture provider, fixture payload, discovery module, production contract, oracle, and assertion-relevant implementation path in `metadata.evidence_artifacts`. Apply the same ownership screen to every imported test-infrastructure module. Harnesses may own lifecycle and runner policy; generators may own variable domains; inert fixtures may own complete real-world payloads. None may own copied production vocabulary, protocol payloads, expected projections, arbitrary cases, or source-shaped constants.
+
+For every case, input, expected value, container key, protocol token, path, producer identity, schema field, and projection, append a `metadata.provenance` entry naming its artifact, line, semantic kind, owner, and source. Any unclassified item is a `missing_provenance` REJECT finding. Approval is impossible until both inventories are complete.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
 
@@ -230,7 +242,7 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field; when no matching installed skill exists, record the coverage gap rather than guessing from filenames.
+Read every detected language partition from the caller's audit request. Invoke `audit-{lang}-tests` for every partition and append a `metadata.language_coverage` receipt containing language, skill, `completed: true`, and returned overall status. **Merge every language verdict's findings into matching rows by `name`** — append, never replace. When language classification is absent, a required skill is unavailable, invocation fails, its verdict is malformed, or findings are not merged, add a `missing-language-audit` REJECT finding and record `completed: false`. `overall: "APPROVED"` is forbidden unless every required language receipt is complete.
 
 </step>
 
@@ -267,7 +279,9 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
           "line": null,
           "rule": "<assertion-id-or-property-name>",
           "severity": "REJECT",
-          "message": "<one-line evidentiary gap>"
+          "message": "<one-line evidentiary gap>",
+          "evidence_property": "<failed-property>",
+          "required_fix": "<required remediation>"
         }
       ]
     },
@@ -286,11 +300,22 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
       ]
     }
   ],
-  "metadata": { "branch": "<branch>" }
+  "metadata": {
+    "branch": "<branch>",
+    "evidence_artifacts": [
+      { "path": "<artifact-path>", "kind": "<test|harness|generator|fixture-provider|fixture|discovery|production|oracle>" }
+    ],
+    "provenance": [
+      { "artifact": "<path>", "line": 1, "kind": "<case|input|expected|container-key|protocol-token|path|producer-identity|schema-field|projection>", "value": "<value-or-expression>", "owner": "<named-owner>", "source": "<named-source>" }
+    ],
+    "language_coverage": [
+      { "language": "python", "skill": "audit-python-tests", "completed": true, "overall": "APPROVED" }
+    ]
+  }
 }
 ```
 
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema. Missing transitive artifacts, unclassified provenance items, or incomplete language receipts forbid approval.
 
 </verdict_format>
 
@@ -340,6 +365,7 @@ The verdict is sound when:
 
 - Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
+- Every transitive evidence artifact is inventoried, every case and expected value has a named source, every container key and protocol token has a named owner, and every required language partition has a completed receipt.
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.

@@ -185,6 +185,8 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="5" name="Write tests">
 
+Invoke `/test` over every assertion before invoking the language test skill. Require its clause-evidence matrix to name, for every independently falsifiable clause, the exercised path, observable result, independent oracle, and passing-while-false mutation. When any existing evidence proves only a subpart, require the complete evidence-chain inventory before authoring or repair. Do not proceed while the evidence-design gate is incomplete or failing.
+
 Invoke the testing skill for the detected language.
 
 Write tests for all assertions in the spec. Tests come before implementation — no exceptions.
@@ -199,7 +201,9 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
-**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
+On the first `REJECTED`, clear the prior Step 6 evidence state and reinvoke `/test` over every affected assertion. Rebuild the complete clause-evidence matrix, traverse every linked test and transitive infrastructure artifact, repair every same-class defect, rerun focused deterministic verification, create a new checkpoint commit, and redispatch Step 6 exactly once on the stabilized tree.
+
+If the stabilized redispatch remains `REJECTED`, stop the per-node flow and return the unresolved evidence findings plus the complete reset performed. Concrete evidence findings never trigger an operator question while governing assertions and source contracts determine the repair.
 
 </step>
 
