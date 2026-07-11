@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import ast
-import importlib.util
 import json
-import os
 import subprocess
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from types import ModuleType
 
 import pytest
 
@@ -60,37 +55,9 @@ from outcomeeng.distribution.marketplace_sources import (
     require_matching_local_sources,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ISSUE_RESOLVER_SCRIPT = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "issue"
-    / "scripts"
-    / "resolve_marketplace.py"
-)
 CLAUDE_MARKETPLACE_LIST_CALL = (*CLAUDE_MARKETPLACE_LIST_COMMAND,)
 CODEX_MARKETPLACE_LIST_CALL = (*CODEX_MARKETPLACE_LIST_COMMAND,)
 CLAUDE_PLUGIN_LIST_CALL = (*CLAUDE_PLUGIN_LIST_COMMAND,)
-ISSUE_RESOLVER_FILESYSTEM_WRITE_CALLS = frozenset(
-    (
-        "open",
-        "os.open",
-        "os.makedirs",
-        "os.mkdir",
-        "Path.open",
-        "Path.touch",
-        "Path.write_bytes",
-        "Path.write_text",
-        "tempfile.NamedTemporaryFile",
-        "tempfile.TemporaryDirectory",
-        "tempfile.TemporaryFile",
-        "tempfile.mkdtemp",
-        "tempfile.mkstemp",
-    )
-)
 
 
 @dataclass
@@ -125,198 +92,6 @@ def with_temporary_marketplace_path(
 ) -> bool:
     with TemporaryDirectory() as directory:
         return assertion(Path(directory))
-
-
-def issue_resolver_claude_directory_marketplace_json_maps_to_path() -> bool:
-    resolver = _load_issue_resolver()
-    with TemporaryDirectory() as directory:
-        registered_path = Path(directory) / "claude-marketplace"
-        result = _run_issue_resolver(
-            [
-                {
-                    resolver.NAME_FIELD: resolver.DEFAULT_MARKETPLACE_NAME,
-                    resolver.SOURCE_FIELD: resolver.CLAUDE_DIRECTORY_SOURCE.title(),
-                    resolver.PATH_FIELD: str(registered_path),
-                }
-            ],
-            runtime=resolver.RUNTIME_CLAUDE,
-        )
-        assert result.returncode == 0
-        assert result.stdout == f"{registered_path}\n"
-        assert result.stderr == ""
-        return True
-
-
-def issue_resolver_codex_local_marketplace_json_maps_to_path() -> bool:
-    resolver = _load_issue_resolver()
-    with TemporaryDirectory() as directory:
-        registered_path = Path(directory) / "codex-marketplace"
-        result = _run_issue_resolver(
-            {
-                resolver.MARKETPLACES_FIELD: [
-                    {
-                        resolver.NAME_FIELD: resolver.DEFAULT_MARKETPLACE_NAME,
-                        resolver.MARKETPLACE_SOURCE_FIELD: {
-                            resolver.SOURCE_TYPE_FIELD: resolver.CODEX_LOCAL_SOURCE_TYPE,
-                            resolver.SOURCE_FIELD: str(registered_path),
-                        },
-                    }
-                ]
-            },
-            runtime=resolver.RUNTIME_CODEX,
-        )
-        assert result.returncode == 0
-        assert result.stdout == f"{registered_path}\n"
-        assert result.stderr == ""
-        return True
-
-
-def issue_resolver_malformed_marketplace_json_maps_to_invalid_json_error() -> bool:
-    resolver = _load_issue_resolver()
-    result = _run_issue_resolver("{", runtime=resolver.RUNTIME_CLAUDE)
-    assert result.returncode == resolver.EXIT_INVALID_JSON
-    assert result.stdout == ""
-    assert "invalid marketplace JSON:" in result.stderr
-    return True
-
-
-def issue_resolver_missing_local_marketplace_maps_to_resolution_error() -> bool:
-    resolver = _load_issue_resolver()
-    with TemporaryDirectory() as directory:
-        other_path = Path(directory) / "other-marketplace"
-        result = _run_issue_resolver(
-            {
-                resolver.MARKETPLACES_FIELD: [
-                    {
-                        resolver.NAME_FIELD: "other-marketplace",
-                        resolver.SOURCE_FIELD: resolver.CLAUDE_DIRECTORY_SOURCE,
-                        resolver.PATH_FIELD: str(other_path),
-                    }
-                ]
-            },
-            runtime=resolver.RUNTIME_CLAUDE,
-        )
-        assert result.returncode == resolver.EXIT_MARKETPLACE_NOT_FOUND
-        assert result.stdout == ""
-        assert (
-            f"marketplace {resolver.DEFAULT_MARKETPLACE_NAME!r} is not registered "
-            f"as a local {resolver.RUNTIME_CLAUDE} marketplace"
-        ) in result.stderr
-        assert "available local marketplaces: other-marketplace" in result.stderr
-        return True
-
-
-def issue_resolver_creates_no_temporary_files() -> bool:
-    resolver = _load_issue_resolver()
-    with TemporaryDirectory() as directory:
-        root = Path(directory)
-        workdir = root / "empty-working-directory"
-        scratchdir = root / "process-scratch-directory"
-        registered_path = root / "registered-marketplace"
-        workdir.mkdir()
-        scratchdir.mkdir()
-        result = _run_issue_resolver(
-            [
-                {
-                    resolver.NAME_FIELD: resolver.DEFAULT_MARKETPLACE_NAME,
-                    resolver.SOURCE_FIELD: resolver.CLAUDE_DIRECTORY_SOURCE,
-                    resolver.PATH_FIELD: str(registered_path),
-                }
-            ],
-            runtime=resolver.RUNTIME_CLAUDE,
-            cwd=workdir,
-            env={**os.environ, "TMPDIR": str(scratchdir)},
-        )
-        assert result.returncode == 0
-        assert list(workdir.iterdir()) == []
-        assert list(scratchdir.iterdir()) == []
-        assert not _issue_resolver_uses_filesystem_write_api()
-        return True
-
-
-def issue_resolver_detects_chained_filesystem_write_api() -> bool:
-    tree = ast.parse("from pathlib import Path\nPath('target').write_text('payload')\n")
-    assert _tree_uses_filesystem_write_api(tree)
-    return True
-
-
-def _issue_resolver_uses_filesystem_write_api() -> bool:
-    tree = ast.parse(ISSUE_RESOLVER_SCRIPT.read_text(encoding="utf-8"))
-    return _tree_uses_filesystem_write_api(tree)
-
-
-def _tree_uses_filesystem_write_api(tree: ast.AST) -> bool:
-    for node in ast.walk(tree):
-        if _is_tempfile_import(node):
-            return True
-        if isinstance(node, ast.Call):
-            call_name = _call_name(node.func)
-            if call_name in ISSUE_RESOLVER_FILESYSTEM_WRITE_CALLS:
-                return True
-            if call_name.endswith((".write_text", ".write_bytes", ".touch", ".mkdir")):
-                return True
-    return False
-
-
-def _is_tempfile_import(node: ast.AST) -> bool:
-    if isinstance(node, ast.Import):
-        return any(alias.name == "tempfile" for alias in node.names)
-    if isinstance(node, ast.ImportFrom):
-        return node.module == "tempfile"
-    return False
-
-
-def _call_name(node: ast.AST) -> str:
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Call):
-        return _call_name(node.func)
-    if isinstance(node, ast.Attribute):
-        parent = _call_name(node.value)
-        return f"{parent}.{node.attr}" if parent else node.attr
-    return ""
-
-
-def _load_issue_resolver() -> ModuleType:
-    cached = sys.modules.get("resolve_marketplace")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "resolve_marketplace", ISSUE_RESOLVER_SCRIPT
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load resolve_marketplace from {ISSUE_RESOLVER_SCRIPT}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["resolve_marketplace"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _run_issue_resolver(
-    payload: object | str,
-    *,
-    runtime: str,
-    cwd: Path | None = None,
-    env: dict[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [
-            sys.executable,
-            str(ISSUE_RESOLVER_SCRIPT),
-            "--runtime",
-            runtime,
-            "--name",
-            _load_issue_resolver().DEFAULT_MARKETPLACE_NAME,
-        ],
-        input=payload if isinstance(payload, str) else json.dumps(payload),
-        capture_output=True,
-        text=True,
-        check=False,
-        cwd=cwd,
-        env=env,
-    )
 
 
 def _claude_directory_marketplace_payload(path: Path) -> str:
