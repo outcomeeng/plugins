@@ -47,34 +47,6 @@ def implementation_is_ready() -> bool:
     return IMPLEMENTED
 
 
-def parse_empty_text_has_no_directives() -> bool:
-    return parse_directives("") == ()
-
-
-def parse_plain_prose_has_no_directives() -> bool:
-    return parse_directives("# Heading\n\nJust prose, no directives.") == ()
-
-
-def parse_single_include() -> bool:
-    return all(_parse_single_include(case) for case in source_scenarios())
-
-
-def parse_include_inside_prose() -> bool:
-    return all(_parse_include_inside_prose(case) for case in source_scenarios())
-
-
-def parse_single_require_skill() -> bool:
-    return all(_parse_single_require(case) for case in source_scenarios())
-
-
-def parse_mixed_directives_in_source_order() -> bool:
-    return all(_parse_mixed(case) for case in source_scenarios())
-
-
-def parse_reversed_directives_in_source_order() -> bool:
-    return all(_parse_reversed(case) for case in source_scenarios())
-
-
 def standard_jinja_block_has_no_directives() -> bool:
     return parse_directives("Code: {% if user %} ... {% endif %}") == ()
 
@@ -169,28 +141,7 @@ def require_skill_renders_inline() -> bool:
 
 
 def bare_conditional_renders_per_target() -> bool:
-    template = (
-        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
-        f"{BLOCK_DELIMITER_END}{Target.CLAUDE.value}-only"
-        f"{BLOCK_DELIMITER_START} else {BLOCK_DELIMITER_END}"
-        f"{Target.CODEX.value}-only"
-        f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
-    )
-    with TemporaryDirectory() as tmp:
-        builder = _source_tree(Path(tmp), source_scenarios()[0])
-        rendered = {
-            target: render_text(
-                template,
-                shared_root=builder.shared_root,
-                variables={"target": target.value},
-            )
-            for target in Target
-        }
-        return (
-            rendered[Target.CLAUDE] == f"{Target.CLAUDE.value}-only"
-            and rendered[Target.CODEX] == f"{Target.CODEX.value}-only"
-            and all(BLOCK_DELIMITER_START not in body for body in rendered.values())
-        )
+    return all(_bare_conditional_renders(case) for case in source_scenarios())
 
 
 def skill_dir_escape_survives_jinja_pass() -> bool:
@@ -203,38 +154,6 @@ def require_skill_emits_identically_across_targets() -> bool:
 
 def include_uses_fragment_file_contract() -> bool:
     return all(_include_uses_contract(case) for case in source_scenarios())
-
-
-def _parse_single_include(case: SourceScenario) -> bool:
-    directive = IncludeDirective(_fragment_path(case, case.inner_topic))
-    return parse_directives(format_directive(directive)) == (directive,)
-
-
-def _parse_include_inside_prose(case: SourceScenario) -> bool:
-    directive = IncludeDirective(_fragment_path(case, case.inner_topic))
-    text = f"Before.\n{format_directive(directive)}\nAfter."
-    return parse_directives(text) == (directive,)
-
-
-def _parse_single_require(case: SourceScenario) -> bool:
-    directive = RequireSkillDirective(case.skill_ref)
-    return parse_directives(format_directive(directive)) == (directive,)
-
-
-def _parse_mixed(case: SourceScenario) -> bool:
-    include = IncludeDirective(_fragment_path(case, case.inner_topic))
-    require = RequireSkillDirective(case.skill_ref)
-    return parse_directives(
-        f"{format_directive(include)}\n{format_directive(require)}"
-    ) == (include, require)
-
-
-def _parse_reversed(case: SourceScenario) -> bool:
-    include = IncludeDirective(_fragment_path(case, case.inner_topic))
-    require = RequireSkillDirective(case.skill_ref)
-    return parse_directives(
-        f"{format_directive(require)}\n{format_directive(include)}"
-    ) == (require, include)
 
 
 def _missing_fragment_raises(case: SourceScenario) -> bool:
@@ -350,6 +269,29 @@ def _require_renders_inline(case: SourceScenario) -> bool:
         builder = _source_tree(Path(tmp), case)
         rendered = render_text(directive, shared_root=builder.shared_root)
         return case.skill_ref in rendered and directive not in rendered
+
+
+def _bare_conditional_renders(case: SourceScenario) -> bool:
+    template = (
+        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
+        f"{BLOCK_DELIMITER_END}{case.branch_payloads[Target.CLAUDE]}"
+        f"{BLOCK_DELIMITER_START} else {BLOCK_DELIMITER_END}"
+        f"{case.branch_payloads[Target.CODEX]}"
+        f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
+    )
+    with TemporaryDirectory() as tmp:
+        builder = _source_tree(Path(tmp), case)
+        rendered = {
+            target: render_text(
+                template,
+                shared_root=builder.shared_root,
+                variables={"target": target.value},
+            )
+            for target in Target
+        }
+        return rendered == case.branch_payloads and all(
+            BLOCK_DELIMITER_START not in body for body in rendered.values()
+        )
 
 
 def _skill_dir_escape_survives(case: SourceScenario) -> bool:

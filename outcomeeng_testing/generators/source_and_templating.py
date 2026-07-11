@@ -8,6 +8,7 @@ from outcomeeng.distribution.build import (
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
+from outcomeeng.distribution.contracts import Target
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class SourceScenario:
     outer_topic: str
     cycle_topic: str
     fragment_body: str
+    branch_payloads: dict[Target, str]
 
 
 def source_scenarios() -> tuple[SourceScenario, ...]:
@@ -50,6 +52,13 @@ def source_scenarios() -> tuple[SourceScenario, ...]:
                 )
                 + "\n"
             ),
+            branch_payloads={
+                target: (
+                    f"{target.value}:"
+                    f"{resolve_runtime_token(coordinate.kind, coordinate.capability, coordinate.runtime)}"
+                )
+                for target in Target
+            },
         )
         for coordinate in runtime_token_resolver_cases()
     )
