@@ -1,3 +1,13 @@
+<table_of_contents>
+
+- `<overview>` and `<what_belongs_here>` — Level 1 scope and tooling
+- `<file_placement>` — linked Spec Tree evidence location
+- `<dependency_seam_pattern>` and `<recorder_pattern>` — controlled implementation seams
+- `<tempdir_pattern>` and `<property_pattern>` — infrastructure-backed Level 1 evidence
+- `<anti_patterns>` — rejected Level 1 shapes
+
+</table_of_contents>
+
 <overview>
 Level 1 covers logic that can run with Rust stdlib, normal developer tooling, and temporary local fixtures. The goal is fast, deterministic evidence with direct coupling to the governed code.
 </overview>

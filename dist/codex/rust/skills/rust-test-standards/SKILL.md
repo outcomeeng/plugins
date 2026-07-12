@@ -425,8 +425,8 @@ Do not require `spx validation literal` for Rust tests. The literal validator is
 <reference_guides>
 Use these level guides when concrete Rust-native examples beyond the inline patterns are needed:
 
-- `levels/level-1.md` - pure computation, tempdir, trait seams, and property tests
-- `levels/level-2.md` - CLI binaries, async adapters, local services, and containerized collaborators
-- `levels/level-3.md` - remote systems, browser flows, credentials, isolation, and cleanup
+- `references/level-1.md` - pure computation, tempdir, trait seams, and property tests
+- `references/level-2.md` - CLI binaries, async adapters, local services, and containerized collaborators
+- `references/level-3.md` - remote systems, browser flows, credentials, isolation, and cleanup
 
 </reference_guides>

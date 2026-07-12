@@ -443,6 +443,9 @@ test("API returns flag-gated payload", async () => {
 | `${CLAUDE_SKILL_DIR}/references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
 | `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/test`                 |
 | `${CLAUDE_SKILL_DIR}/references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
+| `${CLAUDE_SKILL_DIR}/references/l1-local-deterministic.md`    | Applying the complete Level 1 evidence contract               |
+| `${CLAUDE_SKILL_DIR}/references/l2-local-infrastructure.md`   | Applying the complete Level 2 evidence contract               |
+| `${CLAUDE_SKILL_DIR}/references/l3-remote-credentialed.md`    | Applying the complete Level 3 evidence contract               |
 
 </reference_guides>
 

@@ -312,11 +312,7 @@ See `/typescript-test-standards` for:
 - **Test data policy** - Source-owned constants, generators, harnesses, fixtures
 - **Anti-patterns** - What to reject or rewrite
 
-Read the matching level guide from `/typescript-test-standards` after choosing a level:
-
-- `/typescript-test-standards` `levels/l1-local-deterministic.md` - pure functions, temp dirs, standard local tools, Stage 5 doubles
-- `/typescript-test-standards` `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and product binaries
-- `/typescript-test-standards` `levels/l3-remote-credentialed.md` - remote services, shared environments, and credentials
+After choosing a level, load its complete guidance through `/typescript-test-standards` `<reference_guides>`; the owning standards capability selects its bundled Level 1, Level 2, or Level 3 reference.
 
 </patterns_reference>
 
