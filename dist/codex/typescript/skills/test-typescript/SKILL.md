@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npm run:*), Bash(pnpm:*), Bash(yarn:*), Bash(bun:*), Bash(just:*), Bash(make:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -32,11 +32,11 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
 <mode_detection>
 **Determine the current mode:**
 
-1. **WRITE mode** - Tests do not exist yet, or starting fresh
-   - Check: `ls $node_path/tests/*.ts` returns nothing or minimal files
-   - Action: Follow full workflow below
+1. **WRITE mode** - The merged test-evidence audit contains no TypeScript rejection, and at least one governed assertion has no linked TypeScript evidence or its existing evidence lacks a required assertion clause
+   - Check: map every governed assertion to its linked evidence file and complete assertion-to-evidence row; select WRITE when any row is absent or incomplete
+   - Action: Follow the full workflow below for every absent or incomplete row, preserving complete existing evidence
 
-2. **FIX mode** - Tests exist but were rejected by `test-evidence-auditor`
+2. **FIX mode** - Existing TypeScript evidence was rejected by `test-evidence-auditor`
    - Check: Merged `test-evidence-auditor` JSON has `overall: REJECTED` or a `FAIL` row with TypeScript findings
    - Action: Reread `/typescript-test-standards`, rebuild the complete assertion-to-evidence matrix, sweep the full evidence chain for every same-class defect, repair the complete class, run deterministic verification on the stabilized evidence, and redispatch the audit
 
@@ -269,7 +269,7 @@ For each rejection reason:
 
 **Verification**
 
-Tests run and fail for expected reasons (RED phase complete).
+The focused tests and repository-canonical TypeScript validation commands pass for the repaired evidence. The committed checkpoint is ready for test-evidence audit redispatch.
 ```
 
 </fix_mode_workflow>
