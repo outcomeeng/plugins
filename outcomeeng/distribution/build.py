@@ -152,8 +152,38 @@ class RuntimeTokenResolverCase:
     runtime: str
 
 
+RUNTIME_TOKEN_TOOL_KIND: Final = "tool"
+RUNTIME_TOKEN_FIELD_KIND: Final = "field"
+RUNTIME_TOKEN_TERM_KIND: Final = "term"
+RUNTIME_TOKEN_FILE_KIND: Final = "file"
+
+RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
+RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
+RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: Final = "configured_agent_prompt"
+RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: Final = "configured_agent"
+RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: Final = (
+    "configured_agent_standard_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: Final = (
+    "configured_agent_fast_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: Final = (
+    "configured_agent_auditor_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: Final = (
+    "configured_agent_strong_models"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
+    "configured_agent_fast_or_standard_models"
+)
+RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
+
+
 CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
-    "configured_agent": {"claude": "subagent", "codex": "custom agent"},
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: {
+        "claude": "subagent",
+        "codex": "custom agent",
+    },
     "configured_agents": {"claude": "subagents", "codex": "custom agents"},
     "configured_agent_file": {
         "claude": "subagent file",
@@ -163,7 +193,7 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
         "claude": "subagent files",
         "codex": "custom agent files",
     },
-    "configured_agent_prompt": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: {
         "claude": "system prompt",
         "codex": "developer instructions",
     },
@@ -171,23 +201,23 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
         "claude": "system prompts",
         "codex": "developer instructions",
     },
-    "configured_agent_standard_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: {
         "claude": "sonnet",
         "codex": CODEX_STANDARD_MODEL,
     },
-    "configured_agent_fast_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: {
         "claude": "haiku",
         "codex": CODEX_FAST_MODEL,
     },
-    "configured_agent_auditor_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: {
         "claude": "sonnet",
         "codex": CODEX_STANDARD_MODEL,
     },
-    "configured_agent_strong_models": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: {
         "claude": "Sonnet",
         "codex": f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}",
     },
-    "configured_agent_fast_or_standard_models": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: {
         "claude": "Haiku or Sonnet",
         "codex": f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}",
     },
@@ -208,10 +238,13 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
 # lint (outcomeeng.validation.runtime_tokens), which derives its forbidden set from
 # the lint-enforced kinds only — not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
-    "tool": RuntimeTokenKind(
+    RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
+            RUNTIME_TOKEN_ASK_USER_CAPABILITY: {
+                "claude": "AskUserQuestion",
+                "codex": "request_user_input",
+            },
             "bash": {"claude": "Bash"},
             "read": {"claude": "Read"},
             "grep": {"claude": "Grep"},
@@ -220,28 +253,31 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
             "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
             "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
             "close_agent": {"codex": "multi_agent_v1.close_agent"},
-            "schedule_wakeup": {"claude": "ScheduleWakeup"},
+            RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: {"claude": "ScheduleWakeup"},
         },
     ),
-    "field": RuntimeTokenKind(
+    RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
             "configured_agent_tools": {"claude": "tools"},
             "configured_agent_sandbox_mode": {"codex": "sandbox_mode"},
-            "configured_agent_prompt": {
+            RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: {
                 "claude": "system prompt",
                 "codex": "developer_instructions",
             },
         },
     ),
-    "term": RuntimeTokenKind(
+    RUNTIME_TOKEN_TERM_KIND: RuntimeTokenKind(
         lint_enforced=False,
         names=CONFIGURED_AGENT_TERM_NAMES,
     ),
-    "file": RuntimeTokenKind(
+    RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            "root_guide": {"claude": "CLAUDE.md", "codex": "AGENTS.md"},
+            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: {
+                "claude": "CLAUDE.md",
+                "codex": "AGENTS.md",
+            },
         },
     ),
 }

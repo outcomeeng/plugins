@@ -12,12 +12,28 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.build import (
+    BuildError,
     CONFIGURED_AGENT_TERM_NAMES,
     IMPLEMENTED,
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_FIELD_KIND,
+    RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_REGISTRY,
+    RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
+    RUNTIME_TOKEN_TERM_KIND,
+    RUNTIME_TOKEN_TOOL_KIND,
     RuntimeTokenError,
     RuntimeTokenKind,
     build,
+    render_text,
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
@@ -26,17 +42,8 @@ from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
-TOOL_KIND = "tool"
-FILE_KIND = "file"
-TERM_KIND = "term"
-FIELD_KIND = "field"
-GUIDE_CAPABILITY = "root_guide"
-BOTH_RUNTIME_CAPABILITY = "ask_user"
-CLAUDE_ONLY_CAPABILITY = "schedule_wakeup"
-MISSING_CAPABILITY = "nonexistent"
+UNKNOWN_TOKEN_KIND = "unknown_kind"
 UNKNOWN_CAPABILITY = "unknown_capability"
-LIVE_FIELD_CAPABILITY = "configured_agent_prompt"
-LIVE_TERM_CAPABILITY = "configured_agent"
 
 
 def implementation_is_ready() -> bool:
@@ -45,94 +52,141 @@ def implementation_is_ready() -> bool:
 
 def registry_token_renders_each_target_name() -> bool:
     _require_implemented()
-    token_names = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[BOTH_RUNTIME_CAPABILITY]
+    token_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].names[
+        RUNTIME_TOKEN_ASK_USER_CAPABILITY
+    ]
     bodies = _render_skill_bodies(
-        f"Ask the user via {{{{! tool('{BOTH_RUNTIME_CAPABILITY}') !}}}} now.",
+        "Ask the user via "
+        f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}') !}}}} "
+        "now.",
     )
     return _target_body_contains_only_target_names(bodies, token_names)
 
 
 def file_kind_renders_guide_filename_per_target() -> bool:
     _require_implemented()
-    guide_names = RUNTIME_TOKEN_REGISTRY[FILE_KIND].names[GUIDE_CAPABILITY]
+    guide_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FILE_KIND].names[
+        RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY
+    ]
     bodies = _render_skill_bodies(
-        f"Read the guide at {{{{! file('{GUIDE_CAPABILITY}') !}}}} once per session.",
+        "Read the guide at "
+        f"{{{{! {RUNTIME_TOKEN_FILE_KIND}('{RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY}') !}}}} "
+        "once per session.",
     )
     return _target_body_contains_only_target_names(bodies, guide_names)
 
 
 def field_kind_renders_live_registry_name_per_target() -> bool:
     _require_implemented()
-    field_names = RUNTIME_TOKEN_REGISTRY[FIELD_KIND].names[LIVE_FIELD_CAPABILITY]
+    field_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FIELD_KIND].names[
+        RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY
+    ]
     bodies = _render_skill_bodies(
-        f"Configure the field {{{{! field('{LIVE_FIELD_CAPABILITY}') !}}}}.",
+        "Configure the field "
+        f"{{{{! {RUNTIME_TOKEN_FIELD_KIND}('{RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY}') !}}}}.",
     )
     return _target_body_contains_only_target_names(bodies, field_names)
 
 
 def term_kind_renders_live_registry_name_per_target() -> bool:
     _require_implemented()
-    term_names = RUNTIME_TOKEN_REGISTRY[TERM_KIND].names[LIVE_TERM_CAPABILITY]
+    term_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].names[
+        RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY
+    ]
     bodies = _render_skill_bodies(
-        f"Configure the {{{{! term('{LIVE_TERM_CAPABILITY}') !}}}}.",
+        "Configure the "
+        f"{{{{! {RUNTIME_TOKEN_TERM_KIND}('{RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY}') !}}}}.",
     )
     return _target_body_contains_only_target_names(bodies, term_names)
 
 
 def runtime_explicit_token_renders_named_runtime_on_every_target() -> bool:
     _require_implemented()
-    claude_name = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[BOTH_RUNTIME_CAPABILITY][
-        "claude"
-    ]
+    claude_name = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].names[
+        RUNTIME_TOKEN_ASK_USER_CAPABILITY
+    ][Target.CLAUDE.value]
     bodies = _render_skill_bodies(
-        f"On Claude this is {{{{! tool('{BOTH_RUNTIME_CAPABILITY}', 'claude') !}}}}.",
+        "On Claude this is "
+        f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}', '{Target.CLAUDE.value}') !}}}}.",
     )
     return all(claude_name in body for body in bodies.values())
 
 
-def token_for_capability_absent_on_target_fails() -> bool:
+def build_fails_on_unknown_kind_capability_or_runtime() -> bool:
     _require_implemented()
-    names = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[CLAUDE_ONLY_CAPABILITY]
-    return "codex" not in names and _raises_runtime_token_error(
-        lambda: _render_skill_bodies(
-            f"Wait via {{{{! tool('{CLAUDE_ONLY_CAPABILITY}') !}}}}.",
+    return (
+        _raises_build_error(
+            lambda: _render_skill_bodies(
+                f"{{{{! {UNKNOWN_TOKEN_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}') !}}}}"
+            )
+        )
+        and _raises_build_error(
+            lambda: _render_skill_bodies(
+                f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{UNKNOWN_CAPABILITY}') !}}}}"
+            )
+        )
+        and _raises_build_error(
+            lambda: _render_skill_bodies(
+                f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY}') !}}}}"
+            )
         )
     )
 
 
 def conditional_renders_absent_capability_only_where_present() -> bool:
     _require_implemented()
-    claude_name = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[CLAUDE_ONLY_CAPABILITY][
-        "claude"
-    ]
-    bodies = _render_skill_bodies(
-        "{!% if target == 'claude' %!}"
-        f"Wait via {{{{! tool('{CLAUDE_ONLY_CAPABILITY}') !}}}}."
-        "{!% endif %!}",
+    claude_name = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].names[
+        RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY
+    ][Target.CLAUDE.value]
+    template = (
+        f"{{!% if target == '{Target.CLAUDE.value}' %!}}"
+        f"Wait via {{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY}') !}}}}."
+        "{!% endif %!}"
+    )
+    bodies = _render_skill_bodies(template)
+    codex_rendered = render_text(
+        template,
+        variables={"target": Target.CODEX.value},
     )
     return (
-        claude_name in bodies[Target.CLAUDE] and claude_name not in bodies[Target.CODEX]
+        claude_name in bodies[Target.CLAUDE]
+        and claude_name not in bodies[Target.CODEX]
+        and codex_rendered == ""
     )
+
+
+def _raises_build_error(call: Callable[[], object]) -> bool:
+    try:
+        call()
+    except BuildError:
+        return True
+    return False
 
 
 def registry_is_keyed_by_kind_with_explicit_guard_enforcement() -> bool:
     _require_implemented()
     return (
-        set(RUNTIME_TOKEN_REGISTRY) == {TOOL_KIND, FIELD_KIND, TERM_KIND, FILE_KIND}
+        set(RUNTIME_TOKEN_REGISTRY)
+        == {
+            RUNTIME_TOKEN_TOOL_KIND,
+            RUNTIME_TOKEN_FIELD_KIND,
+            RUNTIME_TOKEN_TERM_KIND,
+            RUNTIME_TOKEN_FILE_KIND,
+        }
         and all(
             isinstance(kind, RuntimeTokenKind)
             for kind in RUNTIME_TOKEN_REGISTRY.values()
         )
-        and RUNTIME_TOKEN_REGISTRY[TOOL_KIND].lint_enforced is True
-        and RUNTIME_TOKEN_REGISTRY[FIELD_KIND].lint_enforced is True
-        and RUNTIME_TOKEN_REGISTRY[TERM_KIND].lint_enforced is False
-        and RUNTIME_TOKEN_REGISTRY[FILE_KIND].lint_enforced is True
+        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].lint_enforced is True
+        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FIELD_KIND].lint_enforced is True
+        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].lint_enforced is False
+        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FILE_KIND].lint_enforced is True
     )
 
 
 def term_registry_names_configured_agent_concepts() -> bool:
     _require_implemented()
-    terms = RUNTIME_TOKEN_REGISTRY[TERM_KIND].names
+    terms = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].names
     return all(
         terms[capability] == names
         for capability, names in CONFIGURED_AGENT_TERM_NAMES.items()
@@ -141,14 +195,27 @@ def term_registry_names_configured_agent_concepts() -> bool:
 
 def configured_agent_model_terms_match_converter_models() -> bool:
     _require_implemented()
-    terms = RUNTIME_TOKEN_REGISTRY[TERM_KIND].names
+    terms = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].names
     return (
-        terms["configured_agent_standard_model"]["codex"] == CODEX_STANDARD_MODEL
-        and terms["configured_agent_fast_model"]["codex"] == CODEX_FAST_MODEL
-        and terms["configured_agent_auditor_model"]["codex"] == CODEX_STANDARD_MODEL
-        and terms["configured_agent_strong_models"]["codex"]
+        terms[RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY][
+            Target.CODEX.value
+        ]
+        == CODEX_STANDARD_MODEL
+        and terms[RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY][
+            Target.CODEX.value
+        ]
+        == CODEX_FAST_MODEL
+        and terms[RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY][
+            Target.CODEX.value
+        ]
+        == CODEX_STANDARD_MODEL
+        and terms[RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY][
+            Target.CODEX.value
+        ]
         == f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}"
-        and terms["configured_agent_fast_or_standard_models"]["codex"]
+        and terms[RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY][
+            Target.CODEX.value
+        ]
         == f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}"
     )
 
@@ -162,56 +229,14 @@ def resolve_renders_each_kind_from_its_own_sub_registry() -> bool:
     )
 
 
-def resolve_fails_on_unknown_kind_capability_or_runtime() -> bool:
-    _require_implemented()
-    registry = {
-        TOOL_KIND: RuntimeTokenKind(
-            lint_enforced=True,
-            names={
-                BOTH_RUNTIME_CAPABILITY: {
-                    "claude": RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[
-                        BOTH_RUNTIME_CAPABILITY
-                    ]["claude"],
-                },
-            },
-        ),
-    }
-    return (
-        _raises_runtime_token_error(
-            lambda: resolve_runtime_token(
-                FIELD_KIND,
-                BOTH_RUNTIME_CAPABILITY,
-                "claude",
-                registry=registry,
-            )
-        )
-        and _raises_runtime_token_error(
-            lambda: resolve_runtime_token(
-                TOOL_KIND,
-                UNKNOWN_CAPABILITY,
-                "claude",
-                registry=registry,
-            )
-        )
-        and _raises_runtime_token_error(
-            lambda: resolve_runtime_token(
-                TOOL_KIND,
-                BOTH_RUNTIME_CAPABILITY,
-                "codex",
-                registry=registry,
-            )
-        )
-    )
-
-
 def field_global_is_wired_to_the_resolver() -> bool:
     _require_implemented()
-    return _kind_global_is_wired_to_the_resolver(FIELD_KIND)
+    return _kind_global_is_wired_to_the_resolver(RUNTIME_TOKEN_FIELD_KIND)
 
 
 def term_global_is_wired_to_the_resolver() -> bool:
     _require_implemented()
-    return _kind_global_is_wired_to_the_resolver(TERM_KIND)
+    return _kind_global_is_wired_to_the_resolver(RUNTIME_TOKEN_TERM_KIND)
 
 
 def _require_implemented() -> None:
@@ -277,5 +302,5 @@ def _raises_runtime_token_error(call: Callable[[], object]) -> bool:
 
 def _kind_global_is_wired_to_the_resolver(kind: str) -> bool:
     return _raises_runtime_token_error(
-        lambda: _render_skill_bodies(f"{{{{! {kind}('{MISSING_CAPABILITY}') !}}}}")
+        lambda: _render_skill_bodies(f"{{{{! {kind}('{UNKNOWN_CAPABILITY}') !}}}}")
     )
