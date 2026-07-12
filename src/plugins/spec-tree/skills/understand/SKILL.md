@@ -108,7 +108,7 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 <success_criteria>
 
 - The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references and whose declared operational references, templates, and examples resolve from `${CLAUDE_SKILL_DIR}`.
-- The marker's local lifecycle route, default-branch completion boundary, routing-guide state, and `spx/local/` overlay availability match the repository observed during this session.
+- The marker's local lifecycle route, default-branch completion boundary, and routing-guide state match the repository observed during this session.
 - A marker retained by the Step 1 fast path satisfies the same invariants without a duplicate reload; a freshly emitted marker appears only after every declared resource was located.
 - Any contradiction among the loaded foundation references is visible to the operator rather than hidden behind the marker.
 
