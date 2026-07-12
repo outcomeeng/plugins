@@ -11,6 +11,8 @@ from outcomeeng.distribution.build import (
     IMPLEMENTED,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
+    RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
     RUNTIME_TOKEN_FIELD_KIND,
@@ -19,8 +21,12 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
     RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     RuntimeTokenKind,
     build,
     render_text,
@@ -37,9 +43,21 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
-SPEC_STATED_RUNTIME_NAMES = {
+PINNED_RUNTIME_NAMES = {
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): {
         Target(runtime): name for runtime, name in RUNTIME_TOKEN_ASK_USER_NAMES.items()
+    },
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): {
+        Target(runtime): name
+        for runtime, name in RUNTIME_TOKEN_SPAWN_AGENT_NAMES.items()
+    },
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY): {
+        Target(runtime): name
+        for runtime, name in RUNTIME_TOKEN_WAIT_AGENT_NAMES.items()
+    },
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY): {
+        Target(runtime): name
+        for runtime, name in RUNTIME_TOKEN_CLOSE_AGENT_NAMES.items()
     },
     (RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY): {
         Target(runtime): name
@@ -68,7 +86,7 @@ def registry_token_renders_each_target_name() -> bool:
             runtime,
             expected,
         )
-        for (kind, capability), names in SPEC_STATED_RUNTIME_NAMES.items()
+        for (kind, capability), names in PINNED_RUNTIME_NAMES.items()
         for runtime, expected in names.items()
     )
 

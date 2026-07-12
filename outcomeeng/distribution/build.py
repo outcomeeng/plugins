@@ -158,6 +158,9 @@ RUNTIME_TOKEN_TERM_KIND: Final = "term"
 RUNTIME_TOKEN_FILE_KIND: Final = "file"
 
 RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
+RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
+RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
+RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: Final = "close_agent"
 RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
 RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: Final = "configured_agent_prompt"
 RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: Final = "configured_agent"
@@ -181,6 +184,15 @@ RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
     "claude": "AskUserQuestion",
     "codex": "request_user_input",
+}
+RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
+    "codex": "multi_agent_v1.spawn_agent",
+}
+RUNTIME_TOKEN_WAIT_AGENT_NAMES: Final[dict[str, str]] = {
+    "codex": "multi_agent_v1.wait_agent",
+}
+RUNTIME_TOKEN_CLOSE_AGENT_NAMES: Final[dict[str, str]] = {
+    "codex": "multi_agent_v1.close_agent",
 }
 RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
     "claude": "CLAUDE.md",
@@ -254,9 +266,9 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         lint_enforced=True,
         names={
             RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
-            "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
-            "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
-            "close_agent": {"codex": "multi_agent_v1.close_agent"},
+            RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+            RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+            RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
             RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: {"claude": "ScheduleWakeup"},
         },
     ),
