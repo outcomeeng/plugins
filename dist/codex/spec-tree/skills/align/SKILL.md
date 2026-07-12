@@ -25,21 +25,21 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-Invoke `/understand` to load the foundation, then read these concrete sibling-skill paths before checking conformance.
+Invoke `/understand align` through the Skill tool. Proceed only when it returns both a live `<SPEC_TREE_FOUNDATION>` marker and a `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt. The owning skill loads these materials into the conversation; never resolve them through a cross-skill filesystem path.
 
 **References (conformance rules):**
 
-- `${SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- `durable-map` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `what-goes-where` — `<common_misplacements>` table: content in wrong artifact type
+- `node-types` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `adr` — required ADR sections
+- `pdr` — required PDR sections
+- `product` — required product sections
+- `enabler` — required enabler sections
+- `outcome` — required outcome sections
 
 </required_references>
 
@@ -156,8 +156,8 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <workflow>
 
-1. **Gate**: Check the conversation for the live `<SPEC_TREE_FOUNDATION>` marker. Invoke `/understand` when it is absent.
-2. **Load rules**: Use every named reference and template in `<required_references>` from the loaded foundation.
+1. **Gate**: Invoke `/understand align` through the Skill tool, even when a standard foundation marker is already live.
+2. **Load rules**: Require the live foundation marker and `align` materials receipt, then use every named reference and template loaded by that invocation. A missing receipt is a blocked conformance check, never permission to guess or skip a rule.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.

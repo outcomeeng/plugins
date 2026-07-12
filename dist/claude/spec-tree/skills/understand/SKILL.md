@@ -7,6 +7,8 @@ description: >-
   read, create, or modify any file in this repository other than
   CLAUDE.md without loading this skill and all its references
   first.
+argument-hint: "[profile]"
+arguments: profile
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -33,9 +35,21 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 </principles>
 
+<composition_profiles>
+
+Resolve `$profile` before entering the workflow:
+
+- Empty: load the standard foundation.
+- `align`: load the standard foundation plus the conformance references and structural templates owned by this skill, then emit the `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt below.
+- Any other value: STOP and report the unsupported profile.
+
+The `align` profile is the deterministic cross-skill lookup mechanism for `/align`. The caller invokes this capability through the Skill tool and consumes the loaded content and receipt; it never manufactures a filesystem path into this skill's bundle.
+
+</composition_profiles>
+
 <workflow>
 
-1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `${CLAUDE_SKILL_DIR}/references/` or `${CLAUDE_SKILL_DIR}/templates/` file this invocation needs.
+1. Resolve `$profile` through `<composition_profiles>`, then check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present and `$profile` is empty, the foundation is already loaded — skip ahead and read directly whichever `${CLAUDE_SKILL_DIR}/references/` or `${CLAUDE_SKILL_DIR}/templates/` file this invocation needs. The `align` profile never takes this fast path because it must return a fresh materials receipt to its caller.
    A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
    After every compaction, treat the marker as absent until this workflow emits it again.
    Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
@@ -76,6 +90,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - `${CLAUDE_SKILL_DIR}/examples/` — concrete filled specs (read to see what a completed spec looks like)
 
    Locate the five exact template paths with `Glob`, and enumerate examples with `Glob: "${CLAUDE_SKILL_DIR}/examples/*.md"`.
+   When `$profile` is `align`, also read `${CLAUDE_SKILL_DIR}/references/what-goes-where.md` and all five listed templates in full. Steps 2 and 6 then guarantee that `durable-map.md`, `node-types.md`, `what-goes-where.md`, and every structural template are present in the caller's conversation.
 7. Read the product's root routing guide once, if present — `Read: CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
 8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
@@ -89,6 +104,15 @@ Routing guide: loaded from CLAUDE.md | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: ${CLAUDE_SKILL_DIR}/examples/
 </SPEC_TREE_FOUNDATION>
+```
+
+9. When `$profile` is `align`, emit this additional receipt only after every named material has been read in full:
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="align">
+Conformance references loaded by /understand: durable-map, what-goes-where, node-types
+Structural templates loaded by /understand: adr, pdr, product, enabler, outcome
+</SPEC_TREE_FOUNDATION_MATERIALS>
 ```
 
 </workflow>
@@ -108,6 +132,7 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 <success_criteria>
 
 - The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references and whose declared operational references, templates, and examples resolve from `${CLAUDE_SKILL_DIR}`.
+- An `align` profile invocation additionally reads all eight conformance materials in full and emits `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` only after that complete read.
 - The marker's local lifecycle route, default-branch completion boundary, and routing-guide state match the repository observed during this session.
 - A marker retained by the Step 1 fast path satisfies the same invariants without a duplicate reload; a freshly emitted marker appears only after every declared resource was located.
 - Any contradiction among the loaded foundation references is visible to the operator rather than hidden behind the marker.
