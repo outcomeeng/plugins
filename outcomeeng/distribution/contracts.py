@@ -8,14 +8,6 @@ from typing import Final
 TEXT_FILE_SUFFIXES: Final = frozenset(
     {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
 )
-ASK_USER_TOOL_NAMES: Final[dict[str, str]] = {
-    "claude": "AskUserQuestion",
-    "codex": "request_user_input",
-}
-ROOT_GUIDE_FILE_NAMES: Final[dict[str, str]] = {
-    "claude": "CLAUDE.md",
-    "codex": "AGENTS.md",
-}
 DIST_DIR_NAME: Final = "dist"
 REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "

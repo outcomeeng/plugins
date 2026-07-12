@@ -36,9 +36,7 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
-    ASK_USER_TOOL_NAMES,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
-    ROOT_GUIDE_FILE_NAMES,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
@@ -247,7 +245,10 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ASK_USER_CAPABILITY: ASK_USER_TOOL_NAMES,
+            RUNTIME_TOKEN_ASK_USER_CAPABILITY: {
+                "claude": "AskUserQuestion",
+                "codex": "request_user_input",
+            },
             "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
             "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
             "close_agent": {"codex": "multi_agent_v1.close_agent"},
@@ -269,7 +270,10 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: ROOT_GUIDE_FILE_NAMES,
+            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: {
+                "claude": "CLAUDE.md",
+                "codex": "AGENTS.md",
+            },
         },
     ),
 }
