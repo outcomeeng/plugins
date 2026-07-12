@@ -9,7 +9,6 @@ from tempfile import TemporaryDirectory
 from outcomeeng.distribution.build import (
     BuildError,
     IMPLEMENTED,
-    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
     RUNTIME_TOKEN_FIELD_KIND,
@@ -22,7 +21,7 @@ from outcomeeng.distribution.build import (
     RuntimeTokenKind,
     build,
     render_text,
-    resolve_runtime_token,
+    runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.validation.runtime_tokens import forbidden_names
@@ -42,21 +41,9 @@ def implementation_is_ready() -> bool:
 
 def registry_token_renders_each_target_name() -> bool:
     _require_implemented()
-    bodies = _render_skill_bodies(
-        "Ask the user via "
-        f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}') !}}}} "
-        "now.",
-    )
-    return _target_bodies_equal(
-        bodies,
-        {
-            target: (
-                "Ask the user via "
-                f"{_runtime_name(RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY, target)} "
-                "now."
-            )
-            for target in Target
-        },
+    return all(
+        _implicit_registry_case_renders(case.kind, case.capability, Target(case.runtime))
+        for case in runtime_token_resolver_cases()
     )
 
 
@@ -72,7 +59,7 @@ def file_kind_renders_guide_filename_per_target() -> bool:
         {
             target: (
                 "Read the guide at "
-                f"{_runtime_name(RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY, target)} "
+                f"{_registry_name(RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY, target)} "
                 "once per session."
             )
             for target in Target
@@ -91,7 +78,7 @@ def field_kind_renders_live_registry_name_per_target() -> bool:
         {
             target: (
                 "Configure the field "
-                f"{_runtime_name(RUNTIME_TOKEN_FIELD_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY, target)}."
+                f"{_registry_name(RUNTIME_TOKEN_FIELD_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY, target)}."
             )
             for target in Target
         },
@@ -109,7 +96,7 @@ def term_kind_renders_live_registry_name_per_target() -> bool:
         {
             target: (
                 "Configure the "
-                f"{_runtime_name(RUNTIME_TOKEN_TERM_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY, target)}."
+                f"{_registry_name(RUNTIME_TOKEN_TERM_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY, target)}."
             )
             for target in Target
         },
@@ -118,19 +105,49 @@ def term_kind_renders_live_registry_name_per_target() -> bool:
 
 def runtime_explicit_token_renders_named_runtime_on_every_target() -> bool:
     _require_implemented()
-    bodies = _render_skill_bodies(
-        "On Claude this is "
-        f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}', '{Target.CLAUDE.value}') !}}}}.",
+    return all(
+        _explicit_registry_case_renders(
+            case.kind,
+            case.capability,
+            Target(case.runtime),
+        )
+        for case in runtime_token_resolver_cases()
     )
+
+
+def _implicit_registry_case_renders(
+    kind: str,
+    capability: str,
+    runtime: Target,
+) -> bool:
+    template = (
+        f"{{!% if target == '{runtime.value}' %!}}"
+        f"{{{{! {kind}('{capability}') !}}}}"
+        "{!% endif %!}"
+    )
+    bodies = _render_skill_bodies(template)
     return _target_bodies_equal(
         bodies,
         {
-            target: (
-                "On Claude this is "
-                f"{_runtime_name(RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY, Target.CLAUDE)}."
-            )
+            target: _registry_name(kind, capability, runtime)
+            if target is runtime
+            else ""
             for target in Target
         },
+    )
+
+
+def _explicit_registry_case_renders(
+    kind: str,
+    capability: str,
+    runtime: Target,
+) -> bool:
+    bodies = _render_skill_bodies(
+        f"{{{{! {kind}('{capability}', '{runtime.value}') !}}}}"
+    )
+    return _target_bodies_equal(
+        bodies,
+        {target: _registry_name(kind, capability, runtime) for target in Target},
     )
 
 
@@ -180,8 +197,8 @@ def _raises_build_error(call: Callable[[], object]) -> bool:
     return False
 
 
-def _runtime_name(kind: str, capability: str, target: Target) -> str:
-    return resolve_runtime_token(kind, capability, target.value)
+def _registry_name(kind: str, capability: str, target: Target) -> str:
+    return RUNTIME_TOKEN_REGISTRY[kind].names[capability][target.value]
 
 
 def _invalid_runtime_token_case_fails(case: InvalidRuntimeTokenCase) -> bool:
