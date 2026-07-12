@@ -290,13 +290,14 @@ Constraints:
 
 **Intelligence rules** — match structure to complexity:
 
-| Skill class                               | Expected tags                                                                                                                                       |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Simple (single domain)                    | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                                                                                     |
-| Medium (multiple patterns)                | Required + `<workflow>` and/or `<examples>`                                                                                                         |
-| Complex (multi-domain, API, sec)          | Required + router pattern + appropriate conditional tags                                                                                            |
-| Foundation / gate / validator / reference | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                     |
-| Auditor (agent-preloaded)                 | The canonical auditor skeleton — **read** `references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`. |
+| Skill class                      | Expected tags                                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simple (single domain)           | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                                                                                       |
+| Medium (multiple patterns)       | Required + `<workflow>` and/or `<examples>`                                                                                                           |
+| Complex (multi-domain, API, sec) | Required + router pattern + appropriate conditional tags                                                                                              |
+| Foundation / gate / validator    | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                       |
+| Reference                        | Required; add `<workflow>` only when the reference defines an ordered procedure. A declarative standards or vocabulary catalog omits procedural tags. |
+| Auditor (agent-preloaded)        | The canonical auditor skeleton — **read** `references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`.   |
 
 Don't over-engineer simple skills. Don't under-specify complex ones.
 
