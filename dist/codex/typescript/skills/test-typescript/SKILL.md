@@ -50,7 +50,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
 
 **Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
+**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, and `npx eslint . --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. When the ESLint fallback is required, run it from the repository root and record that repository-root scope.
 
 **Workflow:**
 
@@ -127,11 +127,11 @@ Create test files following `/typescript-test-standards`:
 # Resolve from repo docs or scripts; fallback: npx tsc --noEmit
 <product-typecheck-command>
 
-# Resolve from repo docs or scripts; fallback: npx eslint src/ test/
-<product-lint-command> $node_path/tests/
+# Resolve from repo docs or scripts; fallback: npx eslint .
+<product-lint-command>
 ```
 
-If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product test command when no focused form exists.
+When a canonical lint wrapper accepts file or directory arguments, focus it on the changed files. If a canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product command when no focused form exists. When the ESLint fallback is required, run `npx eslint .` and record the repository-root scope.
 
 The focused test gate passes in WRITE mode only when tests fail for the expected missing implementation or assertion mismatch. When Step 3 established that the implementation module is absent and the focused failure names only that missing import, treat the result as the specified-node signal and proceed directly to Step 6; the corresponding missing-import typecheck result does not block that path. Every other collection, syntax, harness, configuration, typecheck, or lint failure stops the workflow. For an existing implementation, proceed only when the focused test has the expected assertion mismatch and typecheck and lint exit zero.
 
@@ -251,8 +251,8 @@ For each rejection reason:
 # Run the repository's canonical TypeScript validation; fallback: npx tsc --noEmit
 <product-typecheck-command>
 
-# Run the repository's canonical lint validation for the changed files; fallback: npx eslint src/ test/
-<product-lint-command> $node_path/tests/
+# Run the repository's canonical lint validation; fallback: npx eslint .
+<product-lint-command>
 ```
 
 **Step 4: Report What Was Fixed**
