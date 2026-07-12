@@ -4,51 +4,15 @@ version: 2.1.84
 date: 2026-03-26
 ---
 
-## How to extend the compact summary
+## How compact continuity works
 
-The `compactPrompt` field in `~/.claude/settings.json` (user-scope) or `.claude/settings.json` (product-scope) is **appended** to Claude Code's base summarization prompt. Anything written there appears under the "additional summarization instructions" clause at the bottom of the base prompt. The base prompt itself is read-only from the marketplace's position.
+Claude Code's standard compact summary is the sole compact-summary prompt surface. The spec-tree plugin defines no user-scope or product-scope `compactPrompt` override.
+
+After compaction, the managed root instruction block reports that the loaded methodology authority expired. It requires `/understand` followed by `/contextualize` for every spec node still in scope. The standard summary carries task reconstruction; the root instruction block carries the reload requirement.
 
 ### Base-prompt constraint
 
-Claude Code's base summarization prompt forces nine numbered sections (see "Base compaction prompt" below). Sections 7 (Pending Tasks), 8 (Current Work), and 9 (Optional Next Step) include imperative framing that `compactPrompt` cannot remove or rewrite. The marketplace accepts these forced sections as residual; the PostCompact hook directive (emitted by `plugins/spec-tree/bin/post-compact`) is the durable correction mechanism, deliberately constructed to be more specific and mechanical than the base prompt's softer "optional" framing.
-
-### Current spec-tree compact instructions (`compactPrompt` value)
-
-The text below is the canonical spec-tree compactPrompt extension. It appends six state-only sections to the base prompt and instructs the LLM to keep all content past-tense and factual. The same text lives as the `compactPrompt` value in this repository's `.claude/settings.json`.
-
-```text
-When spec-tree work occurred this session, append the following sections after the standard summary. Keep all content factual and past-tense — describe what was true at compact time, not what to do next. Do not include imperatives, recommendations, action plans, or "next step" framing in any section below.
-
-### Active spec-tree node
-
-The full path of the spec-tree node being worked on (e.g., `spx/21-spec-tree.enabler/76-sessions.enabler/`), or `none` if no spec-tree node was active this session.
-
-### Pre-compact markers
-
-Foundation markers emitted in this conversation before compaction. List each marker with any attributes (e.g., `<SPEC_TREE_FOUNDATION>`, `<SPEC_TREE_CONTEXT target="spx/...">`, `<CLAIMED_SESSIONS ids="...">`). If none, write `none`.
-
-### Modified files this session
-
-Files Edited or Written by the agent in this conversation, one per line as a relative path. If none, write `none`.
-
-### Open questions
-
-Outstanding `AskUserQuestion` calls awaiting user answers, or unresolved design questions raised but not decided. State each as a factual question; do not propose answers. If none, write `none`.
-
-### Last user request
-
-The most recent user message verbatim, followed by what the agent was doing in response (past tense, factual). Do not propose what to do next.
-
-### In-flight observations
-
-Design insights, audit findings, contradictions, or imperfections noticed during this conversation that have not yet been persisted to durable artifacts. One per line as a factual note (e.g., "noticed that file X uses legacy naming"). If none, write `none`.
-```
-
-### Migration note
-
-Earlier versions of this `compactPrompt` added imperative sections (`Skills`, `Starting Point`, `Persistence Proposal`) directing the receiving agent to invoke specific skills and write specific files. Those sections compounded the residual imperatives in base-prompt sections 7–9 and produced summaries that competed with the SessionStart hook directive — a failure mode where the receiving agent followed self-direction over the hook's mandate.
-
-Projects using a prior version of `compactPrompt` need to replace its value with the canonical text above. The user's `~/.claude/settings.json` is one common location; product-scope `.claude/settings.json` is another.
+Claude Code's base summarization prompt defines the nine numbered sections captured below. The marketplace does not alter those sections or append project-owned summary instructions. The managed root instruction block leaves the summary intact and supplies the independent methodology-reload signal.
 
 ---
 

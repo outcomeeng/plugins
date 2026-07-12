@@ -3,6 +3,12 @@ A node anchor list covering every spec-tree node worked on during this session, 
 
 </objective>
 
+<required_reading>
+
+Use the loaded `/understand` foundation and every active `<SPEC_TREE_CONTEXT>` marker. This workflow requires no additional bundled reference.
+
+</required_reading>
+
 <process>
 List every spec-tree node touched in this session (any path matching `spx/**/*.enabler` or `spx/**/*.outcome`). For each, record:
 
@@ -14,22 +20,11 @@ List every spec-tree node touched in this session (any path matching `spx/**/*.e
 </process>
 
 <no_nodes_case>
-If NO spec-tree nodes were involved in this session, use `AskUserQuestion`:
+If NO spec-tree nodes were involved in this session, use `AskUserQuestion` with stable question id `node_anchor`, header `Node anchor`, and the question `This session's work isn't anchored to any spec-tree node. Why?`. Present these mutually exclusive options:
 
-```json
-{
-  "questions": [{
-    "question": "This session's work isn't anchored to any spec-tree node. Why?",
-    "header": "Node anchor",
-    "multiSelect": false,
-    "options": [
-      { "label": "Create a node now", "description": "Pause handoff to author a node that captures this work, then resume." },
-      { "label": "Exploratory / cross-cutting", "description": "Work belongs to the product but not to a specific node. Proceed with justification." },
-      { "label": "Product-level operations", "description": "Work changed operational state or product-wide guidance rather than a node-local spec." }
-    ]
-  }]
-}
-```
+- `Create a node now` — Pause handoff to author a node that captures this work, then resume.
+- `Exploratory / cross-cutting` — Work belongs to the product but not to a specific node. Proceed with justification.
+- `Product-level operations` — Work changed operational state or product-wide guidance rather than a node-local spec.
 
 If "Create a node now" → invoke `/author` to create the node, then return to this workflow.
 

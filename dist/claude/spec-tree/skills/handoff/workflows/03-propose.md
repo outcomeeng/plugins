@@ -1,54 +1,60 @@
 <objective>
-A persistence proposal containing the approval-required closure decisions and canonical session disposition.
+A persistence proposal containing the approval-required closure decisions and one explicit session disposition per continuation thread.
 </objective>
 
-Use the six reflection perspectives from workflow 02 as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
+<required_reading>
+
+Use workflow 02's imperfections, path-forward, next-context, external-state, claimed-sessions, and existing-sessions perspectives plus its resolved continuation-thread records as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
+
+</required_reading>
 
 <session_disposition_header>
-Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
+Before any proposal, print a plain-text header naming every thread disposition plus every session that will be archived:
 
 ```text
-Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none (--no-session)>
+Continuation threads:
+- <thread-id>: <new handoff | no handoff (no reader) | existing owner <session-id>>
 Sessions to archive after closure: <id-1>, <id-2>, ...
+Archived sessions to delete after closure: <archive-id-1>, <archive-id-2>, ... | none
 ```
 
-The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
+The thread list comes from `<RESOLVED_CONTINUATION_THREADS>`. The claimed-session list comes from `ids` in `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_ids="…">`. Treat `artifact_ids` as candidates, never as an archive list. Partition those candidates by matching `thread_id`, comparing `goal`, `next_step`, `specs`, and `files`. Emit the authoritative partition marker:
+
+```text
+<RESOLVED_ARTIFACT_PARTITIONS candidate_ids="artifact-1,artifact-2,...">
+<partition thread_id="thread-1" disposition="fresh-session|zero-handoff|existing-owner">
+continuation: <canonical continuation identity or existing owner id>
+archive_ids: artifact-1
+</partition>
+<partition thread_id="thread-2" disposition="fresh-session|zero-handoff|existing-owner">
+continuation: <canonical continuation identity or existing owner id>
+archive_ids: artifact-2
+</partition>
+</RESOLVED_ARTIFACT_PARTITIONS>
+```
+
+Emit exactly one `partition` for every `<RESOLVED_CONTINUATION_THREADS>` record and no extra partition. Derive its disposition from that record: `fresh-session` for `continuation="present"` with owner status `none` or `same-owner-continuation` and a real stop condition; `zero-handoff` for `continuation="absent"`; `existing-owner` for owner status `existing-owner`; `ambiguous` stops before proposal. Threads with no prior artifact use an empty `archive_ids:` value. Require every candidate id to appear in exactly one partition's `archive_ids`. A missing or duplicate thread record, mismatch between thread and partition sets, or duplicate, absent, zero-thread, or multi-thread candidate assignment is ambiguous, so STOP and ask the operator before proposing or archiving. The header lists every thread disposition, every claimed id, and the archive ids across all partitions. If both archive sets are empty, write `Sessions to archive after closure: none`.
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
-When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is allowed only if continuation by Claude is impossible now. Do not present "create handoff" as a normal option for actionable coordination notes. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, closure is blocked while Claude can still reconcile or execute the note. If a real stop condition exists, workflow 04 may create or rewrite the canonical continuation only after `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"` confirms the queue will not receive a duplicate.
+When `<HANDOFF_OPTIONS prune="true" ... />` was emitted and at least one partition has `disposition="fresh-session"`, read `spx session list --status archive --json` before presenting the header. Build the proposed deletion set as the exact union of the IDs already in archive and every claimed or partition `archive_ids` entry the header says this closure will archive. Present one dedicated structured approval for that complete deletion set, even when no persistence edit otherwise requires approval. Emit `<APPROVED_PRUNE ids="archive-id-1,archive-id-2,...">` only after approval; emit `ids=""` when the union is empty. If the operator rejects deletion, omit the marker and preserve every archived session. When the marker records `prune="false"`, or no partition creates a fresh session, write `Archived sessions to delete after closure: none` and emit no prune marker.
 
-If `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` exists, report that an existing session already owns the continuation and do not propose a new session. If `status="ambiguous"` exists, STOP and ask the operator to resolve ownership before any continuation proposal.
+For each record with `continuation="present"`, a fresh continuation is allowed only if continuation by Claude is impossible now. Do not present a fresh handoff for an actionable coordination note while Claude can act. An `existing-owner` record reports its owner and proposes no fresh session for that thread. An `ambiguous` record stops the entire proposal until the operator resolves that thread's ownership.
 
-When no persistence items require user approval, do not call `AskUserQuestion` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
+When no persistence items require user approval and `<HANDOFF_OPTIONS prune="false" ... />` was emitted, do not call `AskUserQuestion` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, the exact prune deletion set, ambiguous session disposition, user-disputed disposition, or the explicit no-session contradiction handled by workflow 04 Path A.
 
-**STOP if the user disputes the disposition.** If the user objects to the canonical continuation plan, the archive list, or any session id in either, halt the workflow. Do not proceed to workflow 04, do not archive, do not write the canonical continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
+**STOP if the user disputes the disposition.** If the user objects to any thread disposition, the archive list, or any session id, halt the workflow. Do not proceed to workflow 04, archive, or write a continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
 
 </session_disposition_header>
 
 <process>
-When one or more persistence items require user approval, present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
-
-```json
-{
-  "questions": [{
-    "question": "Review persistence proposal — select items to approve:",
-    "header": "Persist",
-    "multiSelect": true,
-    "options": [
-      { "label": "[Imperfection → destination] summary", "description": "→ target named by nature (e.g., 'code-typescript refs', 'CLAUDE.md', 'typescript-standards', 'ISSUES.md in spx/{node}')" },
-      { "label": "[Insight] summary", "description": "→ target: amend spec / PLAN.md in spx/{node} / remove stale PLAN.md" },
-      { "label": "[Skip] N items", "description": "→ session file only (coordination context)" }
-    ]
-  }]
-}
-```
+When one or more persistence items require user approval, present them through `AskUserQuestion` as one decision per item. Each question names the item and destination and offers two choices: **Approve** (write to the named destination) and **Skip** (keep as coordination context only when a continuation session is valid). Group questions by perspective and send at most three questions per call so the same interaction works on every supported harness.
 
 **Imperfection labels MUST include the destination** from the `<perspective_imperfections>` taxonomy in `02-reflect.md`. Examples:
 
 ```text
 ☑ [Imperfection → code-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
-☑ [Imperfection → typescript-standards-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
+☑ [Imperfection → audit-typescript-architecture skill] ADR audit: 'no ADR exists' is REJECT, not N/A
 ☑ [Imperfection → spec-tree plugin] Invoke /contextualize before suggesting handoff
 ☑ [Imperfection → CLAUDE.md] Require git mv for file moves
 ☑ [Imperfection → ISSUES.md in spx/55-example.enabler] Tests for assertion 3 missing
@@ -56,27 +62,21 @@ When one or more persistence items require user approval, present a single `AskU
 
 This lets the user verify at a glance that each item is going to the right place.
 
-**`AskUserQuestion` has two hard limits: 4 options per question, 4 questions per call.** Batch actionable items so no single question exceeds 4 options, and no call exceeds 4 questions.
-
 **Chunking rules:**
 
-1. **Group items by perspective first.** Each perspective produces one or more questions.
-2. **Perspective has ≤3 actionable items** → one question with those items plus `[Skip this perspective]` as the 4th option.
-3. **Perspective has >3 items** → chunk within the perspective:
-   - Question N: first 3 items + `[See more from this perspective]` as 4th option.
-   - Question N+1: next 3 items + same continuation, repeat.
-   - Final question for the perspective: remaining items + `[Skip remaining]` as the final option.
-4. **Total questions across all perspectives >4** → split into multiple `AskUserQuestion` calls. Wait for the user's answers to each call before presenting the next batch — the user may revise their approach based on what they approved, and late items may become redundant.
-5. **Global skip**: the overall `[Skip] N items → session file only` option appears as the last option in the last question of the last call — never mixed with per-perspective skip options.
-
-Don't collapse a long list into a terse summary option to fit the limit. Each actionable item must be visible and separately approvable.
+1. Group items by perspective first.
+2. Ask one independently answerable question per item, with **Approve** and **Skip** choices.
+3. Send no more than three questions in one `AskUserQuestion` call.
+4. Wait for each call's answers before presenting the next batch; approved items can make later items redundant.
+5. Never collapse multiple actionable items into one summary choice. Every item remains visible and independently approvable.
 
 </process>
 
 <success_criteria>
 
-- Session-disposition header printed before the proposal, naming the canonical continuation plan and every session that will be archived.
+- Session-disposition header printed before the proposal, naming every thread disposition and every session that will be archived.
 - User has reviewed and approved (or rejected) all proposed persistence items, or no approval-required persistence items existed and the workflow proceeded without a structured question.
+- When `<HANDOFF_OPTIONS prune="true" ... />` applies to a fresh-session closure, the operator has approved or rejected the exact union of existing and closure-created archive IDs, and an approval emits `<APPROVED_PRUNE>`.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
 
