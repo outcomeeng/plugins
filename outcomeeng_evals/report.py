@@ -17,6 +17,7 @@ from typing import Any
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.definition import DEFAULT_MODEL
 from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import SuiteResult, TrialResult
 
 
@@ -31,6 +32,8 @@ def serialize_result(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Serialize a ``SuiteResult`` to a JSON-stable plain dict."""
     case_count = len(result.outcomes)
@@ -39,6 +42,8 @@ def serialize_result(
         "schema_version": JSON_SCHEMA_VERSION,
         "title": title,
         "model": model,
+        "max_budget_usd": max_budget_usd,
+        "timeout_seconds": timeout_seconds,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "suite": {
             "passed": result.passed,
@@ -200,10 +205,21 @@ def write_json_report(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:
     """Write only the JSON results document to ``output_path``."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    _dump_json(serialize_result(result, title, model=model), output_path)
+    _dump_json(
+        serialize_result(
+            result,
+            title,
+            model=model,
+            max_budget_usd=max_budget_usd,
+            timeout_seconds=timeout_seconds,
+        ),
+        output_path,
+    )
     return output_path
 
 
@@ -213,6 +229,8 @@ def write_run_reports(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:
     """Write a run's reports: the JSON results document and the HTML viewer.
 
@@ -224,7 +242,13 @@ def write_run_reports(
     path.
     """
     html_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = serialize_result(result, title, model=model)
+    payload = serialize_result(
+        result,
+        title,
+        model=model,
+        max_budget_usd=max_budget_usd,
+        timeout_seconds=timeout_seconds,
+    )
     _dump_json(payload, html_path.with_suffix(".json"))
     html_path.write_text(_render_html_shell(payload), encoding="utf-8")
     return html_path

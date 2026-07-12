@@ -33,6 +33,7 @@ from outcomeeng_evals.testing.factories import (
     make_eval_dir,
 )
 from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 
 PLAN_PLUGIN_DIR: Final = "dist/claude/spec-tree"
 PLAN_OWNED_PATH_PATTERN: Final = "src/plugins/spec-tree/skills/manage-pr/**"
@@ -75,6 +76,8 @@ class RunCliHarness:
     runner: CliRunner
     recorder: RecordingRunner
     models: list[str] = field(default_factory=list)
+    max_budgets_usd: list[float] = field(default_factory=list)
+    timeouts_seconds: list[int] = field(default_factory=list)
 
     @property
     def runner_context(self) -> dict[str, object]:
@@ -85,8 +88,10 @@ class RunCliHarness:
             max_budget_usd: float,
             timeout_seconds: int,
         ) -> ModelRunner:
-            del plugin_dir, max_budget_usd, timeout_seconds
+            del plugin_dir
             self.models.append(model)
+            self.max_budgets_usd.append(max_budget_usd)
+            self.timeouts_seconds.append(timeout_seconds)
             return self.recorder
 
         return {RUNNER_FACTORY_KEY: runner_factory}
@@ -378,7 +383,7 @@ def assert_run_command_model_option_overrides_eval_definition_model() -> None:
 
 
 def assert_run_command_records_selected_model_in_artifacts() -> None:
-    """Assert run artifacts record the selected model."""
+    """Assert run artifacts record the selected model and budget."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(
@@ -387,9 +392,19 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
             model=RUN_DEFAULT_MODEL,
         )
 
+        configured_budget = DEFAULT_MAX_BUDGET_USD * 2
+        configured_timeout = DEFAULT_TIMEOUT_SECONDS * 2
         result = harness.runner.invoke(
             main,
-            _run_argv(harness, "--model", RUN_OVERRIDE_MODEL),
+            _run_argv(
+                harness,
+                "--model",
+                RUN_OVERRIDE_MODEL,
+                "--max-budget-usd",
+                str(configured_budget),
+                "--timeout-seconds",
+                str(configured_timeout),
+            ),
             obj=harness.runner_context,
         )
 
@@ -399,10 +414,15 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
         history_row = json.loads(
             (harness.eval_toml.parent / "history.jsonl").read_text(encoding="utf-8")
         )
-        assert json.loads(result_json.read_text(encoding="utf-8"))["model"] == (
-            RUN_OVERRIDE_MODEL
-        )
+        result_payload = json.loads(result_json.read_text(encoding="utf-8"))
+        assert result_payload["model"] == RUN_OVERRIDE_MODEL
+        assert result_payload["max_budget_usd"] == configured_budget
+        assert result_payload["timeout_seconds"] == configured_timeout
         assert history_row["model"] == RUN_OVERRIDE_MODEL
+        assert history_row["max_budget_usd"] == configured_budget
+        assert history_row["timeout_seconds"] == configured_timeout
+        assert harness.max_budgets_usd == [configured_budget]
+        assert harness.timeouts_seconds == [configured_timeout]
 
 
 def assert_run_command_rejects_inherit_model_option() -> None:

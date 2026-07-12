@@ -18,6 +18,7 @@ from outcomeeng_evals.cli.commands.run import _git_sha, _history_row
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HISTORY_ROW_FIELDS, HistoryRow, append_history_row
 from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
 
@@ -36,6 +37,8 @@ def _passing_row() -> HistoryRow:
         "schema_version": SCHEMA_VERSION,
         "git_sha": GIT_SHA,
         "model": "sonnet",
+        "max_budget_usd": DEFAULT_MAX_BUDGET_USD,
+        "timeout_seconds": DEFAULT_TIMEOUT_SECONDS,
         "passed": True,
         "pass_rate": 1.0,
         "cases_total": 4,
@@ -58,6 +61,8 @@ def _failing_row() -> HistoryRow:
         "schema_version": SCHEMA_VERSION,
         "git_sha": GIT_SHA,
         "model": "claude-sonnet-4-5",
+        "max_budget_usd": DEFAULT_MAX_BUDGET_USD,
+        "timeout_seconds": DEFAULT_TIMEOUT_SECONDS,
         "passed": False,
         "pass_rate": 0.75,
         "cases_total": 4,
@@ -158,9 +163,13 @@ def test_history_row_aggregates_token_counts_across_trials() -> None:
         timestamp=TIMESTAMP,
         result=make_bimodal_cache_suite_result(),
         model="sonnet",
+        max_budget_usd=DEFAULT_MAX_BUDGET_USD,
+        timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         transcript_relative=TRANSCRIPT_REL,
     )
     assert row["model"] == "sonnet"
+    assert row["max_budget_usd"] == pytest.approx(DEFAULT_MAX_BUDGET_USD)
+    assert row["timeout_seconds"] == DEFAULT_TIMEOUT_SECONDS
     assert row["total_input_tokens"] == 22
     assert row["total_output_tokens"] == 12
     assert row["total_cache_read_input_tokens"] == 49600
@@ -207,6 +216,8 @@ def test_history_row_token_aggregates_are_none_without_metadata() -> None:
         timestamp=TIMESTAMP,
         result=result,
         model="sonnet",
+        max_budget_usd=DEFAULT_MAX_BUDGET_USD,
+        timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         transcript_relative=TRANSCRIPT_REL,
     )
     assert row["total_input_tokens"] is None

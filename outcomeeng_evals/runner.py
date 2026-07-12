@@ -30,6 +30,12 @@ from pathlib import Path
 from typing import Protocol
 
 from outcomeeng_evals.definition import DEFAULT_MODEL
+from outcomeeng_evals.settings import (
+    ADVISOR_MODEL_SETTING,
+    DEFAULT_MAX_BUDGET_USD,
+    DEFAULT_TIMEOUT_SECONDS,
+    DISABLED_ADVISOR_MODEL,
+)
 
 
 @dataclass(frozen=True)
@@ -72,8 +78,8 @@ class ClaudeCliRunner:
     plugin_dir: Path
     model: str = DEFAULT_MODEL
     binary: str = "claude"
-    max_budget_usd: float | None = 0.50
-    timeout_seconds: float = 120.0
+    max_budget_usd: float | None = DEFAULT_MAX_BUDGET_USD
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     bare: bool | None = None
 
     def run(self, prompt: str) -> RunResult:
@@ -86,6 +92,11 @@ class ClaudeCliRunner:
                 "--output-format",
                 "json",
                 "--no-session-persistence",
+                "--settings",
+                json.dumps(
+                    {ADVISOR_MODEL_SETTING: DISABLED_ADVISOR_MODEL},
+                    separators=(",", ":"),
+                ),
                 "--model",
                 self.model,
                 "--plugin-dir",

@@ -194,11 +194,11 @@ on:
       max_budget_usd:
         description: "Per-invocation budget passed to the Claude CLI."
         type: string
-        default: "0.50"
+        default: "0.75"
       timeout_seconds:
         description: "Per-invocation timeout for the Claude subprocess."
         type: string
-        default: "120"
+        default: "180"
 
 # Deny-all default; each job grants exactly what it needs.
 permissions: {}
@@ -283,8 +283,8 @@ jobs:
       EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx' }}
       PLUGIN_DIR: ${{ github.event.inputs.plugin_dir || 'dist/claude/spec-tree' }}
       WORKERS: ${{ github.event.inputs.workers || '1' }}
-      MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.50' }}
-      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '120' }}
+      MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.75' }}
+      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '180' }}
       # Pinned tool versions. Renovate advances these via the customManager
       # regex in renovate.json (the inline `# renovate:` annotations name the
       # datasource and package for each).

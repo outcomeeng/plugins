@@ -22,6 +22,7 @@ from outcomeeng_evals.report import (
     write_json_report,
 )
 from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
 
@@ -72,6 +73,8 @@ def test_serialize_result_carries_schema_version_and_suite_summary() -> None:
     assert payload["schema_version"] == JSON_SCHEMA_VERSION
     assert payload["title"] == "my-eval"
     assert payload["model"] == "claude-sonnet-4-5"
+    assert payload["max_budget_usd"] == pytest.approx(DEFAULT_MAX_BUDGET_USD)
+    assert payload["timeout_seconds"] == DEFAULT_TIMEOUT_SECONDS
     assert payload["suite"] == {
         "passed": True,
         "pass_rate": 1.0,
@@ -85,6 +88,21 @@ def test_serialize_result_defaults_to_concrete_model() -> None:
     payload = serialize_result(_suite_result(passed=True), title="my-eval")
 
     assert payload["model"] == "sonnet"
+
+
+def test_serialize_result_preserves_configured_budget() -> None:
+    configured_budget = DEFAULT_MAX_BUDGET_USD * 2
+    configured_timeout = DEFAULT_TIMEOUT_SECONDS * 2
+
+    payload = serialize_result(
+        _suite_result(passed=True),
+        title="my-eval",
+        max_budget_usd=configured_budget,
+        timeout_seconds=configured_timeout,
+    )
+
+    assert payload["max_budget_usd"] == pytest.approx(configured_budget)
+    assert payload["timeout_seconds"] == configured_timeout
 
 
 def test_serialize_result_preserves_case_expectations() -> None:

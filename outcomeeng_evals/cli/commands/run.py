@@ -18,6 +18,7 @@ from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition, validate_
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
 from outcomeeng_evals.runner import ModelRunner, RunMetadata
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
@@ -67,7 +68,7 @@ class RunnerFactory(Protocol):
 @click.option(
     "--max-budget-usd",
     type=float,
-    default=0.50,
+    default=DEFAULT_MAX_BUDGET_USD,
     show_default=True,
     help="Per-invocation budget passed through to the Claude CLI.",
 )
@@ -80,7 +81,7 @@ class RunnerFactory(Protocol):
 @click.option(
     "--timeout-seconds",
     type=click.IntRange(min=1),
-    default=120,
+    default=DEFAULT_TIMEOUT_SECONDS,
     show_default=True,
     help="Per-invocation timeout for the Claude subprocess.",
 )
@@ -132,7 +133,14 @@ def run_command(
     timestamp_label = _timestamp_label()
     runs_dir = eval_dir / RUNS_DIRNAME
     html_path = runs_dir / f"{timestamp_label}.html"
-    write_run_reports(result, html_path, title=definition.title, model=selected_model)
+    write_run_reports(
+        result,
+        html_path,
+        title=definition.title,
+        model=selected_model,
+        max_budget_usd=max_budget_usd,
+        timeout_seconds=timeout_seconds,
+    )
 
     append_history_row(
         eval_dir / HISTORY_FILENAME,
@@ -140,6 +148,8 @@ def run_command(
             timestamp=timestamp_label,
             result=result,
             model=selected_model,
+            max_budget_usd=max_budget_usd,
+            timeout_seconds=timeout_seconds,
             transcript_relative=f"{RUNS_DIRNAME}/{timestamp_label}.json",
         ),
     )
@@ -235,6 +245,8 @@ def _history_row(
     timestamp: str,
     result: SuiteResult,
     model: str,
+    max_budget_usd: float,
+    timeout_seconds: int,
     transcript_relative: str,
 ) -> HistoryRow:
     return {
@@ -242,6 +254,8 @@ def _history_row(
         "schema_version": JSON_SCHEMA_VERSION,
         "git_sha": _git_sha(),
         "model": model,
+        "max_budget_usd": max_budget_usd,
+        "timeout_seconds": timeout_seconds,
         "passed": result.passed,
         "pass_rate": result.pass_rate,
         "cases_total": len(result.outcomes),

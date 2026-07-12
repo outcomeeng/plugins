@@ -29,6 +29,8 @@ class HistoryRow(TypedDict):
     schema_version: str
     git_sha: str
     model: str
+    max_budget_usd: float
+    timeout_seconds: int
     passed: bool
     pass_rate: float
     cases_total: int

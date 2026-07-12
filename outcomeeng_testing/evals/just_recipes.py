@@ -8,6 +8,10 @@ import stat
 import subprocess
 from pathlib import Path
 
+from outcomeeng_evals.settings import (
+    DEFAULT_MAX_BUDGET_USD_TEXT,
+    DEFAULT_TIMEOUT_SECONDS_TEXT,
+)
 from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -28,9 +32,9 @@ def assert_eval_recipe_runs_suite_with_toml_plugin_dir(tmp_path: Path) -> None:
     assert "uv run outcomeeng-evals run" in completed.stdout
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
-    assert "--max-budget-usd 0.50" in completed.stdout
+    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
     assert "--model sonnet" in completed.stdout
-    assert "--timeout-seconds 120" in completed.stdout
+    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
     assert "--case-id" not in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
     assert_printed_command_precedes_suite_result(completed)
@@ -54,9 +58,9 @@ def assert_eval_case_recipe_runs_selected_case_with_toml_plugin_dir(
     assert "uv run outcomeeng-evals run" in completed.stdout
     assert f"--plugin-dir {plugin_dir}" in completed.stdout
     assert "--workers 1" in completed.stdout
-    assert "--max-budget-usd 0.50" in completed.stdout
+    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
     assert "--model sonnet" in completed.stdout
-    assert "--timeout-seconds 120" in completed.stdout
+    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
     assert "--case-id case-pass" in completed.stdout
     assert "suite pass_rate=100.00%" in completed.stdout
     assert_printed_command_precedes_suite_result(completed)
