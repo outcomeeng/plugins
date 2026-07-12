@@ -18,15 +18,15 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <principles>
 
-1. **TRUTH FLOWS DOWN** — Decisions (ADR: `{slug}.adr.md`/PDR: `{slug}.pdr.md`) decide. Specs (`{slug}.md`) declare in alignment with decisions. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never change a decision to match a spec. Never change a spec to match tests. Never change tests to match code. Read `references/durable-map.md`.
+1. **TRUTH FLOWS DOWN** — Decisions (ADR: `{slug}.adr.md`/PDR: `{slug}.pdr.md`) decide. Specs (`{slug}.md`) declare in alignment with decisions. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never change a decision to match a spec. Never change a spec to match tests. Never change tests to match code. Read `${SKILL_DIR}/references/durable-map.md`.
 2. **SPEC TREE IS DECLARATIVE** — The Spec Tree is a durable, declarative map. Nothing moves, nothing closes. Specs declare product truth. Any change to what the operator demands is reflected in the Spec Tree first and naturally induces temporary inconsistency while dependent siblings and lower levels and consumers of decisions are brought up to date.
 3. **DETERMINISTIC CONTEXT** — The Spec Tree structure defines what context Claude receives. No keyword search, no heuristics. This is handled by `/contextualize`, whose context marker carries both document context and lifecycle continuation state.
 4. **ATEMPORAL VOICE** — The Spec Tree states product truth. Never narrate history. Immediately flag temporal language and make a proposal how to address it.
 5. **FULL PATHS ONLY** — In every conversation with the operator and in every markdown link, every Spec Tree decision (ADR and PDR) and Spec Tree node reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
-6. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
+6. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `${SKILL_DIR}/references/node-types.md`.
 7. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertion types derive from PDRs/ADRs and are materialized in specs. Assertions never derive from code or tests.
-8. **VERIFICATION TYPES** — Five verification types establish a node's standing: validate, test, review, audit, evaluate. Two orthogonal axes describe each — verdict mode (deterministic or agentic) and purpose (conformance or correctness). Three of these verification types back the tag an assertion carries: `[test]` indicates the evidence is established via deterministic tests, `[eval]` indicates the evidence is established by a deterministic eval runner scoring the producing skill's structured verdict, `[audit]` indicates the evidence is established by a dedicated audit sub-agent. In contrast, the verification types *validate* and *review* are never used in spec assertions. Instead, validation is based on the product- and language-specific deterministic quality gates like linting and static analysis; review is based on the skill-driven standards executed by a dedicated sub-agent. Read `references/verification-kinds.md`.
-9. **IMPERFECTIONS ARE ADDRESSED** — Claude notices every imperfection and addresses it. Claude researches on its own to find the right fix — never guessing, never assuming a fix is unsafe to make alone when available context could settle it. Only when an imperfection survives that validation does Claude take it to the operator — as options with a clear recommendation that improves the product, naming the skills and instructions behind the recommendation. Read `references/imperfection-protocol.md`.
+8. **VERIFICATION TYPES** — Five verification types establish a node's standing: validate, test, review, audit, evaluate. Two orthogonal axes describe each — verdict mode (deterministic or agentic) and purpose (conformance or correctness). Three of these verification types back the tag an assertion carries: `[test]` indicates the evidence is established via deterministic tests, `[eval]` indicates the evidence is established by a deterministic eval runner scoring the producing skill's structured verdict, `[audit]` indicates the evidence is established by a dedicated audit sub-agent. In contrast, the verification types *validate* and *review* are never used in spec assertions. Instead, validation is based on the product- and language-specific deterministic quality gates like linting and static analysis; review is based on the skill-driven standards executed by a dedicated sub-agent. Read `${SKILL_DIR}/references/verification-kinds.md`.
+9. **IMPERFECTIONS ARE ADDRESSED** — Claude notices every imperfection and addresses it. Claude researches on its own to find the right fix — never guessing, never assuming a fix is unsafe to make alone when available context could settle it. Only when an imperfection survives that validation does Claude take it to the operator — as options with a clear recommendation that improves the product, naming the skills and instructions behind the recommendation. Read `${SKILL_DIR}/references/imperfection-protocol.md`.
 10. **COORDINATION NOTES AND SESSION FILES INFORM WHAT TO WORK ON** — Coordination notes are Spec Tree node-aligned PLAN.md and ISSUES.md node-local coordination notes inside the tree. They are committed to git for one reason: future sessions read them on context load through `/contextualize`. They go stale quickly unless acted upon, so verify a coordination note before it steers work — reconcile it against the decisions (ADR/PDR), specs and verify any referenced downstream files (i.e., tests and implementation), and the current user intent, then act only where it still holds and suggest to update or remove any notes that are out of date. A coordination note never declares product truth, product decisions, architecture decisions, assertions, or evidence. `/contextualize` reads them automatically; conformance checks ignore them. Session files are invisible to Claude and only accessible via the `spx` CLI. Session files are the only Spec Tree-governed files that are *not committed to git* — `spx session` shares them across worktrees.
 11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, testing, merge lifecycle and other skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualize`; consumed by the relevant skill.
 12. **NO VALUE IS DELIVERED WITHOUT MERGE** — ALL work only delivers value when merged to the default branch on origin through `/merge`. Local implementation and verification are progress, not completion; a branch with commits ahead of its resolved base is unfinished even when the working tree is clean. A created branch, a local commit, a pushed branch, an opened PR, or a clean worktree is a transport checkpoint, never a completion boundary. After targeted verification (validation, tests / evals, audit, review) pass according to the guidance in AGENTS.md, continue into `/merge` and follow the selected transport until the change reaches the default branch on origin, or until an explicit lifecycle gate stops with no independent local action remaining without operator input or an external-state change. After committing or pushing a default-branch-destined changeset, invoke `/merge` in the same turn unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work. Do not stop after "implemented", "validated", "tests passed", "committed", or "pushed" when the user asked to make the change. Repository-specific merge behavior belongs in `spx/local/merging.md`, never in a generated guide; never reconstruct the transport from incidental docs when the overlay is absent — invoke `/merge`, the transport dispatcher: it classifies the changeset, selects the merge transport, and delegates to the selected transport's skills. `spx/local/merging.md` is an optional repo-local overlay that may refine the selection and configure transport behavior — a conditional read, read only when present. Its absence is normal and not of interest to the operator; the default lifecycle applies.
@@ -35,21 +35,21 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <workflow>
 
-1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `references/` or `templates/` file this invocation needs.
+1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `${SKILL_DIR}/references/` or `${SKILL_DIR}/templates/` file this invocation needs.
    A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
    After every compaction, treat the marker as absent until this workflow emits it again.
    Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
 2. Read the following references in full and point out any contradictions to the operator immediately:
-   - `references/durable-map.md`
-   - `references/node-types.md`
-   - `references/assertion-types.md`
-   - `references/ordering-rules.md`
-   - `references/verification-kinds.md`
-   - `references/imperfection-protocol.md`
+   - `${SKILL_DIR}/references/durable-map.md`
+   - `${SKILL_DIR}/references/node-types.md`
+   - `${SKILL_DIR}/references/assertion-types.md`
+   - `${SKILL_DIR}/references/ordering-rules.md`
+   - `${SKILL_DIR}/references/verification-kinds.md`
+   - `${SKILL_DIR}/references/imperfection-protocol.md`
 3. List each operational reference and `spx/local/` overlay with its path, last-modified time, and line count — evidence each was located this session, not assumed. These load on demand in other skills:
-   - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
-   - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
-   - `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
+   - `${SKILL_DIR}/references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
+   - `${SKILL_DIR}/references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
+   - `${SKILL_DIR}/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
    - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
 
    Produce the listing with the `Bash(python3:*)` grant:
@@ -84,12 +84,12 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - A blocker exists only after every independent action that does not require operator input is complete: the applicable edits are made, deterministic verification and required local review or audit gates have run or produced concrete failing evidence, and all work that can be committed without the answer is committed on a local branch.
    - Until no independent work remains, continue doing work that does not depend on the answer or removed blocker. When no independent work remains, report the exact blocker, the evidence, and the next operator decision needed.
 6. List each template and example with its path, last-modified time, and line count — evidence each was located, not assumed — then read in full immediately when authoring:
-   - `templates/product/product-name.product.md`
-   - `templates/decisions/decision-name.adr.md`
-   - `templates/decisions/decision-name.pdr.md`
-   - `templates/nodes/enabler-name.md`
-   - `templates/nodes/outcome-name.md`
-   - `examples/` — concrete filled specs (read to see what a completed spec looks like)
+   - `${SKILL_DIR}/templates/product/product-name.product.md`
+   - `${SKILL_DIR}/templates/decisions/decision-name.adr.md`
+   - `${SKILL_DIR}/templates/decisions/decision-name.pdr.md`
+   - `${SKILL_DIR}/templates/nodes/enabler-name.md`
+   - `${SKILL_DIR}/templates/nodes/outcome-name.md`
+   - `${SKILL_DIR}/examples/` — concrete filled specs (read to see what a completed spec looks like)
 
    Produce the listing with the same `Bash(python3:*)` pass:
 
@@ -121,7 +121,7 @@ Local lifecycle route: changes route through /merge (classifies the changeset, s
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
 Routing guide: loaded from AGENTS.md | absent
 Templates available: product, adr, pdr, enabler, outcome
-Examples available in: examples/
+Examples available in: ${SKILL_DIR}/examples/
 </SPEC_TREE_FOUNDATION>
 ```
 
@@ -141,8 +141,9 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 
 <success_criteria>
 
-- [ ] The six references in step 2 are read in full, with any contradictions among them surfaced to the operator
-- [ ] Every operational reference, template, example, and `spx/local/` overlay is listed with its path, last-modified time, and line count — evidence each was located this session, not assumed
-- [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
+- The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references and whose declared operational references, templates, and examples resolve from `${SKILL_DIR}`.
+- The marker's local lifecycle route, default-branch completion boundary, routing-guide state, and `spx/local/` overlay availability match the repository observed during this session.
+- A marker retained by the Step 1 fast path satisfies the same invariants without a duplicate reload; a freshly emitted marker appears only after every declared resource was located.
+- Any contradiction among the loaded foundation references is visible to the operator rather than hidden behind the marker.
 
 </success_criteria>
