@@ -191,3 +191,9 @@ The architect needs to understand testing levels to write effective Verification
 | `src.*` import examples       | Ambiguous convention                           | Use `<package>.*` / `<package>_testing.*` |
 
 </anti_patterns>
+
+<success_criteria>
+
+The Python architecture standards are sound when architecting and auditing skills apply the same ADR sections, atemporal voice, dependency-injection rules, testability constraints, level context, and anti-pattern catalog without introducing product-specific package names or downstream test-design decisions.
+
+</success_criteria>
