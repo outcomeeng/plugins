@@ -134,7 +134,7 @@ Select the merge command only after the mutation-point guard returns `MERGE_READ
 
 </step>
 
-Run the mutation-point guard inspection per /merging-standards `<authority_gates>`, continue only after it returns `MERGE_READY:<head-sha>`, then execute the merge and branch deletion using the single-source sequence in /merging-standards `<merge_cleanup>` — do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
+Run the mutation-point guard inspection per /merging-standards `<authority_gates>` and continue only after it returns `MERGE_READY:<head-sha>`. Enter the single-source /merging-standards `<merge_cleanup>` sequence; its first action runs every overlay-declared preflight check immediately before the merge command, and its post-detach boundary runs every overlay-declared post-cleanup check before branch deletion. Do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
 
 If the project declares deploy or release phases, continue through Step 9 with the branch-state closeout record and the declared phase results.
 
