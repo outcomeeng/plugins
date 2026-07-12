@@ -9,7 +9,7 @@ Claude Code produces the compact summary that carries conversation state. A proj
 ## Product properties
 
 1. Claude Code's standard compact summary is the sole compact-summary prompt surface; the project defines no `compactPrompt` override.
-2. A `SessionStart` event with `source=compact` identifies that the loaded spec-tree foundation and node contexts expired during compaction.
+2. On a `SessionStart` event with `source=compact`, the hook output directs `/understand` followed by `/contextualize` for every spec node still in scope before further spec-tree work.
 3. The post-compact hook directs methodology and node-context reload while leaving task reconstruction to the resuming agent and the standard summary.
 
 ## Verification
