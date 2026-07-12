@@ -1,5 +1,6 @@
 ---
 name: audit-rust-tests
+model: sonnet
 description: >-
   Rust test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Rust tests in scope.
   Reached only through those auditor agents, never the main conversation.

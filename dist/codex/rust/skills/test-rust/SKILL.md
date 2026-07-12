@@ -3,7 +3,7 @@ name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(just:*), Bash(make:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*)
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -28,7 +28,7 @@ Before writing or revising tests, also check:
 
 <mode_detection>
 
-Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
+Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker. Stop before reading or editing tests when neither source provides a governing node path.
 
 | Mode  | Signal                                                                                         | Action                                         |
 | ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------- |
@@ -42,7 +42,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 
 Before writing or repairing Rust evidence, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
 
-Resolve the repository-canonical Rust commands from the root guide, `spx/local/rust.md`, `spx/local/rust-tests.md`, Justfile, Makefile, Cargo aliases, or package scripts, in that order. Prefer a documented wrapper. When no wrapper exists, or when it cannot focus the governed node, run the closest package or workspace scope and record that scope. Use these direct fallbacks:
+Read the canonical rendered root guide at `AGENTS.md`, then `spx/local/rust.md` and `spx/local/rust-tests.md` when present, for repository-specific Rust validation requirements. Run the direct Cargo commands below at the closest package or workspace scope that satisfies those requirements, and record that scope. A required repository wrapper outside this skill's direct-command allowlist needs per-call approval for that exact command.
 
 ```bash
 cargo test --all-targets --all-features
@@ -107,9 +107,7 @@ All Rust test examples are owned by `/rust-test-standards`:
 - `/rust-test-standards` `<property_and_compile_time_patterns>`
 - `/rust-test-standards` `<level_2_patterns>`
 - `/rust-test-standards` `<level_3_patterns>`
-- `/rust-test-standards` Level 1 local deterministic guidance
-- `/rust-test-standards` Level 2 local infrastructure guidance
-- `/rust-test-standards` Level 3 remote credentialed guidance
+- `/rust-test-standards` `<reference_guides>` for the bundled level 1, level 2, and level 3 guides
 
 </reference_guides>
 
