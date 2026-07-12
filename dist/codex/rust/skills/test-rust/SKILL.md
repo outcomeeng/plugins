@@ -66,7 +66,7 @@ After writing or repairing tests:
 2. Map each assertion to the assertion type and level chosen by `/test`.
 3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
-5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
+5. Use `/rust-test-standards` `<router_mapping>` and `<alignment_rules>` to choose the Rust implementation shape, then load only the level-pattern section or bundled level guide selected by that mapping.
 6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `<package>-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
 7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the location prescribed by `/rust-test-standards` and repo-local overlays.
 8. Run the repository's Rust validation commands before reporting the tests complete.
@@ -83,22 +83,6 @@ After writing or repairing tests:
 6. Apply every class-level repair together, then run `<verification_gates>` once on the stabilized evidence before redispatch.
 
 </fix_workflow>
-
-<router_mapping>
-After running through `/test`, use the canonical mapping in `/rust-test-standards`:
-
-| Router Decision       | Rust implementation summary                                              |
-| --------------------- | ------------------------------------------------------------------------ |
-| Stage 2 -> Level 1    | pure functions, temp dirs, hand-written trait impls                      |
-| Stage 2 -> Level 2    | real binaries, local adapters, async runtimes, local services            |
-| Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments |
-| Stage 3A              | direct pure-function tests                                               |
-| Stage 3B              | extracted pure function plus outer boundary evidence                     |
-| Stage 5 exceptions    | controlled implementations that preserve the real seam                   |
-| compile-time contract | compile-fail evidence                                                    |
-| universal invariant   | property-based evidence                                                  |
-
-</router_mapping>
 
 <reference_guides>
 All Rust test examples are owned by `/rust-test-standards`:

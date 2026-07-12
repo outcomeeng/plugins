@@ -71,43 +71,17 @@ Record challenge findings and continue unless the assertion type is invalid.
 </step>
 
 <step name="scope">
-Decompose the assertion text into testable clauses.
-
-Example:
-
-| Assertion                                          | Clauses                                              |
-| -------------------------------------------------- | ---------------------------------------------------- |
-| "MUST exit 0 with no stdout for invalid hook JSON" | (1) invalid JSON input, (2) exit 0, (3) empty stdout |
+Decompose the assertion text into testable clauses using the base `/audit-tests` scope procedure and `/rust-test-standards` `<alignment_rules>`.
 
 The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding.
 </step>
 
 <step name="evidence">
-Match the Rust evidence method to the assertion type:
-
-| Type        | Required Rust evidence                                                                   | Reject if                                    |
-| ----------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Scenario    | concrete inputs through the governed function, module, or binary                         | only existence or truthiness is checked      |
-| Mapping     | table-driven cases, `rstest`, or looped fixtures with at least two meaningful cases      | one example stands in for a mapping          |
-| Conformance | parser, schema, protocol harness, CLI contract, or `trybuild` for compile-time contracts | manual shape checks replace the validator    |
-| Property    | `proptest` or `quickcheck` with meaningful generators and invariants                     | examples are wrapped in property syntax      |
-| Compliance  | violating fixture, lint harness, or explicit `[review]` marker                           | no violating input or review evidence exists |
-
-For property tests, inspect the generator domain. `Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
+Match the Rust evidence method to the assertion type through `/rust-test-standards` `<alignment_rules>` and `<router_mapping>`. Inspect property-generator domains under the canonical property rules; reject finite examples presented as an open-domain property unless the spec declares that finite domain.
 </step>
 
 <step name="controlled_implementations">
-Judge controlled implementations against `/test` exceptions:
-
-| Exception                | Legitimate Rust pattern                                         |
-| ------------------------ | --------------------------------------------------------------- |
-| 1. Failure modes         | trait impl returning deterministic errors                       |
-| 2. Interaction protocols | recorder struct capturing calls                                 |
-| 3. Time/concurrency      | injected clock, paused runtime time, deterministic channels     |
-| 4. Safety                | recorder or no-op implementation preserving the seam            |
-| 5. Combinatorial cost    | configurable in-memory implementation with real-shaped behavior |
-| 6. Observability         | capture struct for spans, logs, events, or serialized output    |
-| 7. Contract probes       | local stub validated against the same contract schema           |
+Judge controlled implementations against `/rust-test-standards` `<router_mapping>` Stage 5 mappings and `<acceptable_doubles>`.
 
 Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact.
 </step>
