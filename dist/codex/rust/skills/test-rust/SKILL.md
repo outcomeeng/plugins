@@ -6,17 +6,17 @@ arguments: node_path
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*)
 ---
 
+<objective>
+Rust tests for what the `/test` router selected, at the chosen level.
+</objective>
+
+<prerequisites>
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-<objective>
-Rust tests for what the `/test` router selected, at the chosen level.
-</objective>
-
-<prerequisites>
 The `/test` router, `/rust-standards`, and `/rust-test-standards` are pre-loaded above.
 
 Before writing or revising tests, also check:

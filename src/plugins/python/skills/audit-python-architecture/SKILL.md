@@ -7,7 +7,9 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
+<prerequisites>
 {!% require_skill 'python:python-architecture-standards' %!}
+</prerequisites>
 
 <dispatch_gate>
 

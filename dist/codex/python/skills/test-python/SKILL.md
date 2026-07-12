@@ -8,13 +8,13 @@ arguments: node_path
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
 ---
 
+<context>
+
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<context>
 
 !`test -f spx/local/python.md && sed -n '1,400p' spx/local/python.md || true`
 

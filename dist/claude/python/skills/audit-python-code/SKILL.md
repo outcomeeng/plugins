@@ -7,7 +7,9 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
+<prerequisites>
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+</prerequisites>
 
 <dispatch_gate>
 

@@ -7,13 +7,13 @@ arguments: node_path
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
 ---
 
+<context>
+
 {!% require_skill 'typescript:typescript-standards' %!}
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
 {!% require_skill 'spec-tree:test' %!}
-
-<context>
 
 !`test -f spx/local/typescript.md && sed -n '1,400p' spx/local/typescript.md || true`
 

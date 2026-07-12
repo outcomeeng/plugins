@@ -6,17 +6,17 @@ arguments: node_path
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*)
 ---
 
+<objective>
+Rust tests for what the `/test` router selected, at the chosen level.
+</objective>
+
+<prerequisites>
 {!% require_skill 'rust:rust-standards' %!}
 
 {!% require_skill 'rust:rust-test-standards' %!}
 
 {!% require_skill 'spec-tree:test' %!}
 
-<objective>
-Rust tests for what the `/test` router selected, at the chosen level.
-</objective>
-
-<prerequisites>
 The `/test` router, `/rust-standards`, and `/rust-test-standards` are pre-loaded above.
 
 Before writing or revising tests, also check:

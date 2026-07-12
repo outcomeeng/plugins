@@ -7,13 +7,13 @@ arguments: node_path
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
 ---
 
+<context>
+
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<context>
 
 !`test -f spx/local/typescript.md && sed -n '1,400p' spx/local/typescript.md || true`
 
