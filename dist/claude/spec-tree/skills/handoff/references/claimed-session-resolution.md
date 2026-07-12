@@ -1,5 +1,5 @@
 <objective>
-Resolve the authoritative set of claimed sessions — every session Claude is responsible for closing. This algorithm is the canonical source of truth for the claimed-session set. Workflow 02 runs it in `<perspective_claimed_sessions>` and emits a `<RESOLVED_CLAIMED_SESSIONS>` marker into the conversation. Workflow 04 reads the marker rather than re-running the algorithm. A missing marker returns to workflow 02; when compaction caused the loss, invoke `/understand` and `/contextualize` for every spec node still in scope before workflow 02 reconstructs any state.
+The authoritative claimed-session set, same-conversation artifact candidates, classifications, and `<RESOLVED_CLAIMED_SESSIONS>` marker consumed by the handoff workflows.
 
 The algorithm also locates any mid-session handoff artifacts (session files this conversation produced by running `spx session handoff` earlier). Workflow 04 reconciles artifacts separately: create a fresh canonical session when continuation remains, then archive every superseded same-conversation artifact.
 

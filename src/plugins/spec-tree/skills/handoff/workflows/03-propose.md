@@ -54,7 +54,7 @@ When one or more persistence items require user approval, present them through `
 
 ```text
 ☑ [Imperfection → code-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
-☑ [Imperfection → typescript-standards-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
+☑ [Imperfection → audit-typescript-architecture skill] ADR audit: 'no ADR exists' is REJECT, not N/A
 ☑ [Imperfection → spec-tree plugin] Invoke /contextualize before suggesting handoff
 ☑ [Imperfection → {{! file('root_guide') !}}] Require git mv for file moves
 ☑ [Imperfection → ISSUES.md in spx/55-example.enabler] Tests for assertion 3 missing
