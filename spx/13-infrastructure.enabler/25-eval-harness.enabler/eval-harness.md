@@ -4,8 +4,6 @@ PROVIDES a generic Python evaluation runner — the `outcomeeng_evals` package �
 SO THAT spec assertions about LLM-driven skill behavior across any project consuming this marketplace
 CAN carry `[eval]` evidence bounded by per-eval expected-verdict structures declared in each case file, governed by the lane declaration in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`, and gated by pass@k thresholds
 
-The runner lives under `outcomeeng_evals/`; its test helpers (stubs, factories) ship as the `outcomeeng_evals.testing` subpackage; marketplace-scoped helpers (link-integrity walker, slice-specific fixture builders) live under `outcomeeng_testing/evals/`. The CLI entry point is `outcomeeng-evals` (declared via `[project.scripts]`), and exposes eight subcommands: `run`, `history`, `view`, `discover`, `plan`, `ci`, `materialize-prompts`, and `materialize-ci-triggers`. Per-eval directories carry an `eval.toml` declaring the suite alongside `cases.jsonl`, `prompt.md`, an append-only `history.jsonl`, and a gitignored `runs/` directory of full transcripts.
-
 An eval definition is the single authored source of its suite's CI ownership. A path-filtered CI workflow decides whether the eval job starts at all, and that decision is evaluated by the CI provider's event router before any code runs — so the trigger list is the one place ownership must be materialized as static text. That text is generated from the definitions rather than transcribed alongside them.
 
 ## Assertions
@@ -54,4 +52,3 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 - NEVER: rely on a sentinel matcher (`#string`, `#notnull`, `#present`) as the only finding-level discriminator — sentinels assert presence and type, not value, so a hallucinated finding matching the sentinel passes trivially; pair every sentinel with at least one coupled discriminating field — `severity` or `concern` — that pins a specific value, in the same spirit as the single-attribute rule above ([review])
 - NEVER: load a case whose expectation contains a list longer than `MAX_EXPECTED_LIST_LENGTH` — `is_subset` matches expected lists against actual lists in O(expected × actual) time, so the loader rejects an oversized expectation with a clear error rather than running slowly ([test](tests/test_eval_harness.compliance.l1.py))
 - NEVER: commit a `runs/` directory under any `evals/{rule}/` — full transcripts are per-developer ephemeral artifacts; `history.jsonl` is the shared trend record ([review])
-- NEVER: place test-only fakes (`StubModelRunner`, `RaisingModelRunner`, `RecordingRunner`) inside `outcomeeng_evals/runner.py` — runtime imports must not pull in test helpers; fakes live under `outcomeeng_evals/testing/fakes.py` ([review])
