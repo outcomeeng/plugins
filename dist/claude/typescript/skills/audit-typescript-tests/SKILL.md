@@ -333,7 +333,7 @@ Coverage here is execution breadth (does the test reach the assertion-relevant l
 
 <verdict_format>
 
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
+This skill inherits the base `/audit-tests` JSON schema and row names. It appends TypeScript structural-reading, literal-laundering, and assertion-evidence findings to `gate-1-assertion`, and appends repeated setup or test-infrastructure extraction findings to `gate-2-architectural`. Every contributed finding populates the base fields `id`, `file`, `line`, `rule`, `severity`, `message`, `evidence_property`, and `required_fix`; this skill introduces no additional required fields. Append findings to matching base rows, never replace a row, and never emit `gate-0-deterministic`. Literal-laundering IDs are L3 (`src-reuse`) and L4 (`test-dupe`), judged by reading per `<literal_laundering_by_reading>`. Gate 2 extracts to `testing/harnesses/{name}.ts`.
 
 </verdict_format>
 

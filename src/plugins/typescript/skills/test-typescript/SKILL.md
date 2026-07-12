@@ -336,6 +336,14 @@ After choosing a level, load its complete guidance through `/typescript-test-sta
 Tests fail for the expected RED reason; typecheck and lint pass. Ready for test-evidence audit.
 ```
 
+For a specified node whose implementation module is absent, report the exception explicitly:
+
+```markdown
+**Specified Node Verification**
+
+Tests and typecheck fail only on the declared missing implementation import; lint passes. The node is listed in `spx/EXCLUDE` and is ready for implementation.
+```
+
 **FIX mode output:**
 
 ```markdown
@@ -394,7 +402,7 @@ How to avoid: Fill the matrix's required-evidence-form field directly from `/typ
 
 Test evidence is ready for audit when:
 
-- [ ] Every created or changed test file lives in the governed node's `tests/` directory and is linked from the corresponding spec assertion
+- [ ] Every created or changed test file lives in the governed node's `tests/` directory and the report identifies its corresponding assertion; the parent `/test` workflow owns spec-link mutation
 - [ ] Every affected assertion has a complete assertion-to-evidence matrix whose language form and linked file match `/typescript-test-standards`
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
