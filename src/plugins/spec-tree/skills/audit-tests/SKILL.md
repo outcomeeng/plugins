@@ -326,11 +326,15 @@ A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated
 
 Claude approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. The tests pass if the entire codebase is deleted. Claude was distracted by clean types, good structure, and comprehensive scenarios, and never checked the imports.
 
+Why it failed: The test had no executable coupling to production behavior, so its assertions were tautologies over test-owned values.
+
 How to avoid: Step 3b checks imports before the other evidence properties. Zero codebase imports = instant REJECT.
 
 **Failure 2: Accepted mocking as legitimate coupling**
 
 Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
+
+Why it failed: The mock replaced the imported behavior, severing the production coupling the import appeared to provide.
 
 How to avoid: Step 3c checks for mocking after confirming coupling. Import + mock = coupling severed.
 
@@ -338,11 +342,15 @@ How to avoid: Step 3c checks for mocking after confirming coupling. Import + moc
 
 Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the caller already passed before dispatch and CI re-runs over the repository. The dispatched audit runs no deterministic verification.
 
+Why it failed: Deterministic coverage belongs to the caller and CI; repeating it changed the audit boundary and repaid an established cost.
+
 How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
 **Failure 4: Distracted by code quality signals**
 
 Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
+
+Why it failed: Code-quality signals were used as a proxy for coupling, falsifiability, alignment, and coverage even though they prove none of those properties.
 
 How to avoid: Essential principles — no mechanical detection. Check the four evidence properties only.
 
@@ -350,11 +358,15 @@ How to avoid: Essential principles — no mechanical detection. Check the four e
 
 Claude audited a test that read an authored skill body and asserted that policy substrings were present, and rated coupling PASS — "direct coupling to the artifact; the text is the thing under test" — and falsifiability PASS — "removing the clause from the skill body breaks the test." The test exercises no code; only an edit to the authored prose falsifies it, so it carries no behavioral evidence, yet the four-property model rationalized it as conformance.
 
+Why it failed: Authored prose can satisfy the test by restating the claim without executing any behavior, so the evidence lane was wrong.
+
 How to avoid: Step 3b — after identifying what a test reads, classify by whether the subject is executable behavior or authored prose/documentation, not by whether the path resolves to a repository file. A read of an authored prose or documentation body asserted for its content is prose-coupling → REJECT, however the path is resolved and whatever harness mediates the read.
 
 **Failure 6: Accepted renamed test-local configuration**
 
 Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. The rename only evaded a heuristic.
+
+Why it failed: Naming style was treated as ownership evidence even though the test file still owned runner policy.
 
 How to avoid: Step 3a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
 
