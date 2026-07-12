@@ -44,12 +44,15 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng.validation.runtime_tokens import forbidden_names
-from outcomeeng_testing.generators.source_and_templating import source_scenarios
+from outcomeeng_testing.generators.source_and_templating import (
+    InvalidRuntimeTokenCase,
+    invalid_runtime_token_capability,
+    invalid_runtime_token_cases,
+    source_scenarios,
+)
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
-UNKNOWN_TOKEN_KIND = "unknown_kind"
-UNKNOWN_CAPABILITY = "unknown_capability"
 
 
 def implementation_is_ready() -> bool:
@@ -137,15 +140,9 @@ def runtime_explicit_token_renders_named_runtime_on_every_target() -> bool:
 def build_fails_on_unknown_kind_capability_or_runtime() -> bool:
     _require_implemented()
     return (
-        _raises_build_error(
-            lambda: _render_skill_bodies(
-                f"{{{{! {UNKNOWN_TOKEN_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}') !}}}}"
-            )
-        )
-        and _raises_build_error(
-            lambda: _render_skill_bodies(
-                f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{UNKNOWN_CAPABILITY}') !}}}}"
-            )
+        all(
+            _invalid_runtime_token_case_fails(case)
+            for case in invalid_runtime_token_cases()
         )
         and _raises_build_error(
             lambda: _render_skill_bodies(
@@ -184,6 +181,14 @@ def _raises_build_error(call: Callable[[], object]) -> bool:
     except BuildError:
         return True
     return False
+
+
+def _invalid_runtime_token_case_fails(case: InvalidRuntimeTokenCase) -> bool:
+    return _raises_build_error(
+        lambda: _render_skill_bodies(
+            f"{{{{! {case.kind}('{case.capability}') !}}}}"
+        )
+    )
 
 
 def registry_is_keyed_by_kind_with_explicit_guard_enforcement() -> bool:
@@ -341,6 +346,9 @@ def _raises_runtime_token_error(call: Callable[[], object]) -> bool:
 
 
 def _kind_global_is_wired_to_the_resolver(kind: str) -> bool:
+    invalid_capability = invalid_runtime_token_capability(kind)
     return _raises_runtime_token_error(
-        lambda: _render_skill_bodies(f"{{{{! {kind}('{UNKNOWN_CAPABILITY}') !}}}}")
+        lambda: _render_skill_bodies(
+            f"{{{{! {kind}('{invalid_capability}') !}}}}"
+        )
     )
