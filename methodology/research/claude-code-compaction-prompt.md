@@ -8,11 +8,11 @@ date: 2026-03-26
 
 Claude Code's standard compact summary is the sole compact-summary prompt surface. The spec-tree plugin defines no user-scope or product-scope `compactPrompt` override.
 
-When Claude Code starts a session with `source=compact`, the spec-tree `SessionStart` hook reports that compaction expired the loaded methodology authority. Its directive requires `/understand` followed by `/contextualize` for every spec node still in scope. The standard summary carries task reconstruction; the hook carries only the reload requirement.
+After compaction, the managed root instruction block reports that the loaded methodology authority expired. It requires `/understand` followed by `/contextualize` for every spec node still in scope. The standard summary carries task reconstruction; the root instruction block carries the reload requirement.
 
 ### Base-prompt constraint
 
-Claude Code's base summarization prompt defines the nine numbered sections captured below. The marketplace does not alter those sections or append project-owned summary instructions. The post-compact hook leaves the summary intact and supplies the independent methodology-reload signal.
+Claude Code's base summarization prompt defines the nine numbered sections captured below. The marketplace does not alter those sections or append project-owned summary instructions. The managed root instruction block leaves the summary intact and supplies the independent methodology-reload signal.
 
 ---
 
