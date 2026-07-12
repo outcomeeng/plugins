@@ -6,13 +6,15 @@ from collections.abc import Collection
 from dataclasses import dataclass
 
 from outcomeeng.distribution.build import (
-    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_REGISTRY,
-    RUNTIME_TOKEN_TOOL_KIND,
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_TOOL_KIND,
+    Target,
+)
 
 
 @dataclass(frozen=True)

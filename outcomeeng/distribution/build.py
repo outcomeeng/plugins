@@ -37,6 +37,30 @@ from outcomeeng.distribution.agents import (
 )
 from outcomeeng.distribution.contracts import (
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_ASK_USER_NAMES,
+    RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_FIELD_KIND,
+    RUNTIME_TOKEN_FILE_KIND,
+    RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
+    RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
+    RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES,
+    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+    RUNTIME_TOKEN_TERM_KIND,
+    RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
@@ -152,53 +176,6 @@ class RuntimeTokenResolverCase:
     runtime: str
 
 
-RUNTIME_TOKEN_TOOL_KIND: Final = "tool"
-RUNTIME_TOKEN_FIELD_KIND: Final = "field"
-RUNTIME_TOKEN_TERM_KIND: Final = "term"
-RUNTIME_TOKEN_FILE_KIND: Final = "file"
-
-RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
-RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
-RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
-RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: Final = "close_agent"
-RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
-RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: Final = "configured_agent_prompt"
-RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: Final = "configured_agent"
-RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: Final = (
-    "configured_agent_standard_model"
-)
-RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: Final = (
-    "configured_agent_fast_model"
-)
-RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: Final = (
-    "configured_agent_auditor_model"
-)
-RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: Final = (
-    "configured_agent_strong_models"
-)
-RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
-    "configured_agent_fast_or_standard_models"
-)
-RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
-
-RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
-    "claude": "AskUserQuestion",
-    "codex": "request_user_input",
-}
-RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
-    "codex": "multi_agent_v1.spawn_agent",
-}
-RUNTIME_TOKEN_WAIT_AGENT_NAMES: Final[dict[str, str]] = {
-    "codex": "multi_agent_v1.wait_agent",
-}
-RUNTIME_TOKEN_CLOSE_AGENT_NAMES: Final[dict[str, str]] = {
-    "codex": "multi_agent_v1.close_agent",
-}
-RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
-    "claude": "CLAUDE.md",
-    "codex": "AGENTS.md",
-}
-
 CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
     "claude": "system prompt",
     "codex": "developer_instructions",
@@ -263,17 +240,19 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
 # the lint-enforced kinds only — not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
-        lint_enforced=True,
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TOOL_KIND],
         names={
             RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
             RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
             RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
             RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
-            RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: {"claude": "ScheduleWakeup"},
+            RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
+                RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
+            ),
         },
     ),
     RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
-        lint_enforced=True,
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FIELD_KIND],
         names={
             RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: (
                 CONFIGURED_AGENT_PROMPT_FIELD_NAMES
@@ -281,11 +260,11 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
         },
     ),
     RUNTIME_TOKEN_TERM_KIND: RuntimeTokenKind(
-        lint_enforced=False,
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TERM_KIND],
         names=CONFIGURED_AGENT_TERM_NAMES,
     ),
     RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
-        lint_enforced=True,
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FILE_KIND],
         names={
             RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
         },

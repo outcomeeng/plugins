@@ -9,30 +9,26 @@ from tempfile import TemporaryDirectory
 from outcomeeng.distribution.build import (
     BuildError,
     IMPLEMENTED,
-    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
-    RUNTIME_TOKEN_ASK_USER_NAMES,
-    RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
-    RUNTIME_TOKEN_FIELD_KIND,
-    RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_REGISTRY,
-    RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
-    RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
-    RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
-    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
-    RUNTIME_TOKEN_TERM_KIND,
-    RUNTIME_TOKEN_TOOL_KIND,
-    RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
-    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     RuntimeTokenKind,
     build,
     render_text,
     runtime_token_resolver_cases,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
+    RUNTIME_TOKEN_FIELD_KIND,
+    RUNTIME_TOKEN_FILE_KIND,
+    RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
+    RUNTIME_TOKEN_REQUIRED_NAMES,
+    RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
+    RUNTIME_TOKEN_TERM_KIND,
+    RUNTIME_TOKEN_TOOL_KIND,
+    Target,
+)
 from outcomeeng.validation.runtime_tokens import forbidden_names
 from outcomeeng_testing.generators.source_and_templating import (
     InvalidRuntimeTokenCase,
@@ -43,27 +39,6 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
-PINNED_RUNTIME_NAMES = {
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): {
-        Target(runtime): name for runtime, name in RUNTIME_TOKEN_ASK_USER_NAMES.items()
-    },
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): {
-        Target(runtime): name
-        for runtime, name in RUNTIME_TOKEN_SPAWN_AGENT_NAMES.items()
-    },
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY): {
-        Target(runtime): name
-        for runtime, name in RUNTIME_TOKEN_WAIT_AGENT_NAMES.items()
-    },
-    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY): {
-        Target(runtime): name
-        for runtime, name in RUNTIME_TOKEN_CLOSE_AGENT_NAMES.items()
-    },
-    (RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY): {
-        Target(runtime): name
-        for runtime, name in RUNTIME_TOKEN_ROOT_GUIDE_NAMES.items()
-    },
-}
 
 
 def implementation_is_ready() -> bool:
@@ -86,8 +61,9 @@ def registry_token_renders_each_target_name() -> bool:
             runtime,
             expected,
         )
-        for (kind, capability), names in PINNED_RUNTIME_NAMES.items()
-        for runtime, expected in names.items()
+        for (kind, capability), names in RUNTIME_TOKEN_REQUIRED_NAMES.items()
+        for runtime_name, expected in names.items()
+        for runtime in (Target(runtime_name),)
     )
 
 
@@ -316,21 +292,15 @@ def registry_is_keyed_by_kind_with_explicit_guard_enforcement() -> bool:
         )
     )
     return (
-        set(RUNTIME_TOKEN_REGISTRY)
-        == {
-            RUNTIME_TOKEN_TOOL_KIND,
-            RUNTIME_TOKEN_FIELD_KIND,
-            RUNTIME_TOKEN_TERM_KIND,
-            RUNTIME_TOKEN_FILE_KIND,
-        }
+        set(RUNTIME_TOKEN_REGISTRY) == set(RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT)
         and all(
             isinstance(kind, RuntimeTokenKind)
             for kind in RUNTIME_TOKEN_REGISTRY.values()
         )
-        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].lint_enforced is True
-        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FIELD_KIND].lint_enforced is True
-        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].lint_enforced is False
-        and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FILE_KIND].lint_enforced is True
+        and all(
+            RUNTIME_TOKEN_REGISTRY[kind].lint_enforced is expected
+            for kind, expected in RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT.items()
+        )
         and forbidden_names() == expected_forbidden
     )
 
