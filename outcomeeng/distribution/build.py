@@ -178,6 +178,14 @@ RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
 )
 RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 
+RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
+    "claude": "AskUserQuestion",
+    "codex": "request_user_input",
+}
+RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
+    "claude": "CLAUDE.md",
+    "codex": "AGENTS.md",
+}
 
 CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
     "claude": "system prompt",
@@ -245,10 +253,7 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ASK_USER_CAPABILITY: {
-                "claude": "AskUserQuestion",
-                "codex": "request_user_input",
-            },
+            RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
             "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
             "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
             "close_agent": {"codex": "multi_agent_v1.close_agent"},
@@ -270,10 +275,7 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: {
-                "claude": "CLAUDE.md",
-                "codex": "AGENTS.md",
-            },
+            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
         },
     ),
 }

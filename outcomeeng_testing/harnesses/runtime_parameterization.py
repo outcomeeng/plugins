@@ -10,12 +10,14 @@ from outcomeeng.distribution.build import (
     BuildError,
     IMPLEMENTED,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_ASK_USER_NAMES,
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
     RUNTIME_TOKEN_FIELD_KIND,
     RUNTIME_TOKEN_FILE_KIND,
     RUNTIME_TOKEN_REGISTRY,
     RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
+    RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
@@ -36,13 +38,12 @@ from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
 SPEC_STATED_RUNTIME_NAMES = {
-    (RUNTIME_TOKEN_TOOL_KIND, "ask_user"): {
-        Target.CLAUDE: "AskUserQuestion",
-        Target.CODEX: "request_user_input",
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): {
+        Target(runtime): name for runtime, name in RUNTIME_TOKEN_ASK_USER_NAMES.items()
     },
     (RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY): {
-        Target.CLAUDE: "CLAUDE.md",
-        Target.CODEX: "AGENTS.md",
+        Target(runtime): name
+        for runtime, name in RUNTIME_TOKEN_ROOT_GUIDE_NAMES.items()
     },
 }
 
