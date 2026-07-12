@@ -1,5 +1,6 @@
 ---
 name: audit-typescript-tests
+model: sonnet
 description: >-
   TypeScript test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the TypeScript tests in scope.
   Reached only through those auditor agents, never the main conversation.

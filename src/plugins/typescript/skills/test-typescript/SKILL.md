@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npm run:*), Bash(pnpm:*), Bash(yarn:*), Bash(bun:*), Bash(just:*), Bash(make:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
 ---
 
 {!% require_skill 'typescript:typescript-standards' %!}
@@ -50,7 +50,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
 
 **Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, and `npx eslint . --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. When the ESLint fallback is required, run it from the repository root and record that repository-root scope.
+**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. A canonical wrapper outside this skill's direct-command allowlist requires per-call approval for that exact command. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, and `npx eslint . --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. When the ESLint fallback is required, run it from the repository root and record that repository-root scope.
 
 **Workflow:**
 
