@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx session list:*), Bash(spx -C:* session handoff*), Bash(spx -C:* session show*), Bash(git status:*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), {!% if target == 'codex' %!}Bash(codex plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% else %!}Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*),{!% endif %!} {{! tool('ask_user') !}}
 ---
 
 <context>
@@ -61,7 +61,7 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 
 <script_testing>
 
-`scripts/resolve_marketplace.py` is covered by this plugin's mapping-level marketplace-resolution test suite.
+`${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py` is covered by this plugin's mapping-level marketplace-resolution test suite.
 
 Tested inputs:
 
@@ -101,7 +101,9 @@ If the target checkout is detached or its current branch does not exist on origi
 
 **Step 4 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
+**Step 5 — Snapshot the invoking repository.** Before filing, capture the exact outputs of `git status --porcelain=v1 --untracked-files=all` and `spx session list --json` from the invoking repository. These snapshots are the before-state for the no-local-mutation check.
+
+**Step 6 — File the follow-up.** Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
 
 ```bash
 spx -C <target-dir> session handoff <<'EOF'
@@ -114,7 +116,9 @@ EOF
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
 
-**Step 6 — Report.** Surface the `<HANDOFF_ID>` and `<SESSION_FILE>` the command emits, naming the target repository the follow-up was filed into.
+**Step 7 — Verify the stored follow-up.** Parse `<HANDOFF_ID>` and `<SESSION_FILE>` from the command output, then run `spx -C <target-dir> session show --json <HANDOFF_ID>`. Require the command to find the handoff in that target repository and require its stored `git_ref` to equal the origin-backed branch resolved in step 2, with `specs` and `files` both empty arrays. Re-run `git status --porcelain=v1 --untracked-files=all` and `spx session list --json` from the invoking repository and require both outputs to match the step 5 snapshots byte-for-byte. A missing handoff, field mismatch, or invoking-repository difference blocks success and is reported with the observed values.
+
+**Step 8 — Report.** Surface the verified `<HANDOFF_ID>` and `<SESSION_FILE>`, naming the target repository the follow-up was filed into.
 
 </workflow>
 
@@ -142,12 +146,11 @@ How to avoid: Resolve the target dependency branch first, verify `refs/remotes/o
 
 <success_criteria>
 
-- [ ] Target dependency checkout directory resolved deterministically or confirmed with the user
-- [ ] Target dependency `git_ref` resolved to a branch that exists on origin or confirmed with the user
-- [ ] Observation captured as observation-only — no dependency node addresses, decision indices, or assertion types
-- [ ] Header carries an output-shaped `goal`, an imperative `next_step`, and the target dependency `git_ref`; `specs` and `files` empty
-- [ ] `spx -C <target-dir> session handoff` filed the follow-up into the target repository's queue
-- [ ] The invoking repository's git state and session queue are unchanged
-- [ ] The created `<HANDOFF_ID>` and `<SESSION_FILE>` reported, naming the target repository
+- [ ] Target resolution produced the exact checkout directory used by every `spx -C <target-dir>` command.
+- [ ] `git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>` succeeded for the stored `git_ref`.
+- [ ] `spx -C <target-dir> session show --json <HANDOFF_ID>` found the created handoff in the target queue and reported the expected `git_ref`, `specs: []`, and `files: []`.
+- [ ] The observation body contains no dependency node address, decision index, or assertion type.
+- [ ] The invoking repository's `git status --porcelain=v1 --untracked-files=all` and `spx session list --json` outputs match their pre-handoff snapshots byte-for-byte.
+- [ ] The verified `<HANDOFF_ID>` and `<SESSION_FILE>` are reported with the target repository.
 
 </success_criteria>
