@@ -1072,6 +1072,46 @@ def source_reconciliation_ignores_claude_project_duplicate_without_shared_codex(
     return True
 
 
+def source_reconciliation_never_adopts_project_only_claude_root(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_GIT,
+                        MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+                    }
+                ]
+            ),
+            CLAUDE_PLUGIN_LIST_CALL: "[]",
+        }
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    # A project-scope Claude source is never adopted as the canonical root, even
+    # in the fallback path when no maintainer-visible Claude or local Codex
+    # source is reported; derivation falls back to the current repo instead.
+    assert result.root != project_root.resolve(strict=False)
+    assert result.root == Path.cwd().resolve(strict=False)
+    return True
+
+
 def source_reconciliation_replaces_git_backed_codex_source(
     tmp_path: Path,
 ) -> bool:

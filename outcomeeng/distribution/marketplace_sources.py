@@ -706,6 +706,7 @@ def _canonical_source_root(
         claude is not None
         and claude.source_type == SOURCE_TYPE_LOCAL
         and claude.path is not None
+        and claude.scope not in _CLAUDE_PROJECT_PATH_SCOPES
     ):
         return _normalized_path(claude.path)
     codex = codex_sources.get(marketplace)

@@ -19,6 +19,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_accepts_duplicate_lower_priority_matching_sources,
     source_reconciliation_accepts_matching_runtime_sources,
     source_reconciliation_ignores_claude_project_duplicate_without_shared_codex,
+    source_reconciliation_never_adopts_project_only_claude_root,
     source_reconciliation_rejects_ambiguous_claude_roots,
     source_reconciliation_rejects_ambiguous_shared_roots,
     source_reconciliation_replaces_git_backed_codex_source,
@@ -146,6 +147,12 @@ def test_source_reconciliation_ignores_claude_project_duplicate_without_shared_c
 ):
     assert with_temporary_marketplace_path(
         source_reconciliation_ignores_claude_project_duplicate_without_shared_codex
+    )
+
+
+def test_source_reconciliation_never_adopts_project_only_claude_root() -> None:
+    assert with_temporary_marketplace_path(
+        source_reconciliation_never_adopts_project_only_claude_root
     )
 
 
