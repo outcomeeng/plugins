@@ -3,7 +3,7 @@ name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(just:*), Bash(make:*)
 ---
 
 {!% require_skill 'rust:rust-standards' %!}
