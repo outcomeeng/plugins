@@ -25,21 +25,21 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-Invoke `/understand` to load the foundation and its indexed references and templates. Use these named foundation materials; do not resolve them through another skill's bundle path.
+Invoke `/understand` to load the foundation, then read these concrete sibling-skill paths before checking conformance.
 
 **References (conformance rules):**
 
-- `durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- `${SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `${SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `decision-name.adr.md` — required ADR sections
-- `decision-name.pdr.md` — required PDR sections
-- `product-name.product.md` — required product sections
-- `enabler-name.md` — required enabler sections
-- `outcome-name.md` — required outcome sections
+- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
+- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
+- `${SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
+- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
+- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
 
 </required_references>
 
