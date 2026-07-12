@@ -1,4 +1,14 @@
 {
-  "passing": ["../verdict_rejected.json", "../verdict_rejected.json"],
-  "failing": ["../verdict_rejected.json", "../verdict_approved.json"]
+  "passing": [
+    "../verdict_rejected.json",
+    "../verdict_rejected.json",
+    "../verdict_rejected.json",
+    "../verdict_approved.json"
+  ],
+  "failing": [
+    "../verdict_rejected.json",
+    "../verdict_rejected.json",
+    "../verdict_approved.json",
+    "../verdict_approved.json"
+  ]
 }

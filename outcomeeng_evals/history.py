@@ -13,6 +13,7 @@ from typing import TypedDict
 
 
 HISTORY_FILENAME = "history.jsonl"
+HISTORY_TRANSCRIPT_FIELD = "transcript"
 
 
 class HistoryRow(TypedDict):

@@ -1,0 +1,3 @@
+```
+{"status":"rejected","findings":[{"rule":"fixture-rule","present":true}]}
+```

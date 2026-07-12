@@ -19,6 +19,7 @@ from outcomeeng_evals.report import (
     write_json_report,
     write_run_reports,
 )
+from outcomeeng_evals.definition import RUNS_DIRNAME
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.testing.factories import (
     ReportFixture,
@@ -28,6 +29,7 @@ from outcomeeng_evals.testing.factories import (
     make_report_suite_result,
     make_stability_suite_result,
 )
+from outcomeeng_testing.harnesses.eval_run_exit import configured_threshold_run
 
 _FIXTURE_PATH = Path(__file__).parents[1] / "fixtures/evals/report_suite.json"
 
@@ -145,6 +147,16 @@ def assert_report_files_match_serialized_payload() -> None:
         _assert_embedded_payload_escapes_script_close,
     ):
         _run_in_temporary_directory(assertion, fixture)
+
+
+def assert_run_command_writes_eval_local_json_report() -> None:
+    """Drive the run entrypoint and verify its authoritative artifact placement."""
+
+    with configured_threshold_run() as eval_dir:
+        runs_dir = eval_dir / RUNS_DIRNAME
+        json_reports = tuple(runs_dir.glob(f"*{JSON_REPORT_SUFFIX}"))
+        assert len(json_reports) == 1
+        assert json_reports[0].parent == runs_dir
 
 
 def _assert_json_report_file(tmp_path: Path, fixture: ReportFixture) -> None:

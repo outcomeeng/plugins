@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from shutil import copytree
 from tempfile import TemporaryDirectory
@@ -42,6 +43,25 @@ def assert_run_command_exit_follows_definition_threshold() -> None:
 
     assert passing == EXIT_SUCCESS
     assert failing != EXIT_SUCCESS
+
+
+@contextmanager
+def configured_threshold_run() -> Iterator[Path]:
+    """Run the real command at the fixture's configured passing threshold."""
+
+    responses = _load_responses()
+    with TemporaryDirectory() as tmp:
+        workspace = Path(tmp)
+        eval_dir = workspace / "eval"
+        copytree(_FIXTURE_ROOT, eval_dir)
+        plugin_dir = workspace / "plugin"
+        plugin_dir.mkdir()
+
+        exit_code = _invoke(
+            eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
+        )
+        assert exit_code == EXIT_SUCCESS
+        yield eval_dir
 
 
 def _invoke(eval_toml: Path, plugin_dir: Path, responses: Iterator[str]) -> int:

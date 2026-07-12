@@ -18,6 +18,8 @@ import pytest
 
 from outcomeeng_evals.cli.commands.run import _git_sha, _history_row
 from outcomeeng_evals.history import (
+    HISTORY_FILENAME,
+    HISTORY_TRANSCRIPT_FIELD,
     HISTORY_TOKEN_FIELDS,
     HistoryRow,
     append_history_row,
@@ -27,6 +29,7 @@ from outcomeeng_evals.testing.factories import (
     make_bimodal_cache_suite_result,
     make_suite_result,
 )
+from outcomeeng_testing.harnesses.eval_run_exit import configured_threshold_run
 
 _FIXTURE_PATH = Path(__file__).parents[1] / "fixtures/evals/history_rows.json"
 
@@ -206,6 +209,16 @@ def assert_history_compliance() -> None:
 
     _assert_history_row_aggregates_token_counts_across_trials()
     _assert_history_row_token_aggregates_are_none_without_metadata()
+    _assert_run_command_appends_eval_local_history()
+
+
+def _assert_run_command_appends_eval_local_history() -> None:
+    with configured_threshold_run() as eval_dir:
+        rows = _read_history(eval_dir / HISTORY_FILENAME)
+        assert len(rows) == 1
+        transcript = rows[0][HISTORY_TRANSCRIPT_FIELD]
+        assert isinstance(transcript, str)
+        assert (eval_dir / transcript).is_file()
 
 
 def _run_in_temporary_directory(assertion: Callable[[Path], None]) -> None:

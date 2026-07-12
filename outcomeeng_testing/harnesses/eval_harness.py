@@ -84,6 +84,12 @@ def assert_verdict_parser_matches_complete_response_fixtures() -> None:
         == expected
     )
     assert (
+        parse_verdict(
+            _fixture_path("verdict_fenced_untagged.md").read_text(encoding="utf-8")
+        )
+        == expected
+    )
+    assert (
         parse_verdict(_fixture_path("verdict_invalid.txt").read_text(encoding="utf-8"))
         is None
     )
