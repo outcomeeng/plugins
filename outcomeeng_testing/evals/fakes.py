@@ -1,15 +1,76 @@
-"""Stub and recording runners for l1 meta-tests of the eval harness."""
+"""Stub and recording runners for l1 eval-harness evidence."""
 
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
 from outcomeeng_evals.runner import ModelRunner, RunMetadata, RunResult
+
+
+def rejected_verdict(rule: str) -> str:
+    return json.dumps(
+        {"status": "rejected", "findings": [{"rule": rule, "present": True}]}
+    )
+
+
+def approved_verdict() -> str:
+    return json.dumps({"status": "approved", "findings": []})
+
+
+def invalid_verdict_response() -> str:
+    return "the model returned prose only"
+
+
+def runner_nonzero_error() -> RuntimeError:
+    return RuntimeError("claude exited 2: boom")
+
+
+def runner_timeout_error() -> subprocess.TimeoutExpired:
+    return subprocess.TimeoutExpired(cmd="claude", timeout=120.0)
+
+
+@dataclass(frozen=True)
+class SubprocessCall:
+    argv: tuple[str, ...]
+    input: str
+    env: dict[str, str]
+
+
+@dataclass
+class RecordingSubprocessRunner:
+    """Return a controlled completed process and record the production boundary."""
+
+    stdout: str
+    returncode: int = 0
+    stderr: str = ""
+    calls: list[SubprocessCall] = field(default_factory=list)
+
+    def __call__(
+        self,
+        argv: list[str],
+        *,
+        input: str,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+        check: bool,
+        env: dict[str, str],
+    ) -> subprocess.CompletedProcess[str]:
+        del capture_output, text, timeout, check
+        self.calls.append(SubprocessCall(tuple(argv), input, dict(env)))
+        return subprocess.CompletedProcess(
+            argv,
+            self.returncode,
+            stdout=self.stdout,
+            stderr=self.stderr,
+        )
+
 
 RECORDING_UV_COMMANDS_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_COMMANDS"
 RECORDING_UV_EXIT_CODE_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_EXIT_CODE"

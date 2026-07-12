@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng_evals.testing.cli import (
+from outcomeeng_testing.evals.cli import (
     assert_ci_subcommand_executes_selected_plan,
     assert_discover_subcommand_lists_eval_toml_files,
     assert_discover_subcommand_succeeds_on_empty_tree,

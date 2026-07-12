@@ -19,7 +19,7 @@ from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HISTORY_ROW_FIELDS, HistoryRow, append_history_row
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
-from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
+from outcomeeng_testing.evals.factories import make_bimodal_cache_suite_result
 
 
 SCHEMA_VERSION = "1"

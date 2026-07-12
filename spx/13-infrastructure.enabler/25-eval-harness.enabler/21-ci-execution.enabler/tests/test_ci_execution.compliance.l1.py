@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
     assert_main_group_exposes_ci_subcommand,
 )

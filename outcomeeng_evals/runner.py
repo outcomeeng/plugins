@@ -16,7 +16,7 @@ streaming watchers. The runner strips ``CLAUDECODE`` from the inherited
 environment so nested invocations from inside a Claude Code session use
 the subprocess contract rather than the interactive guard.
 
-Test fakes (stubs, recorders) live in ``outcomeeng_evals.testing.fakes``.
+Test fakes (stubs, recorders) live in ``outcomeeng_testing.evals.fakes``.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ class RunMetadata:
     """Optional per-invocation metadata.
 
     All fields are ``None`` when the runner does not expose them (for
-    example, the stub runners under ``outcomeeng_evals.testing.fakes`` used
+    example, the stub runners under ``outcomeeng_testing.evals.fakes`` used
     by l1 meta-tests). Downstream callers must tolerate missing metadata.
     """
 
@@ -65,6 +65,43 @@ class ModelRunner(Protocol):
     def run(self, prompt: str) -> RunResult: ...
 
 
+class SubprocessRunner(Protocol):
+    """Execute one bounded Claude CLI subprocess."""
+
+    def __call__(
+        self,
+        argv: list[str],
+        *,
+        input: str,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+        check: bool,
+        env: dict[str, str],
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+def _run_subprocess(
+    argv: list[str],
+    *,
+    input: str,
+    capture_output: bool,
+    text: bool,
+    timeout: float,
+    check: bool,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        argv,
+        input=input,
+        capture_output=capture_output,
+        text=text,
+        timeout=timeout,
+        check=check,
+        env=env,
+    )
+
+
 @dataclass(frozen=True)
 class ClaudeCliRunner:
     """Spawn ``claude`` in non-interactive print mode and return the response."""
@@ -75,6 +112,7 @@ class ClaudeCliRunner:
     max_budget_usd: float | None = 0.50
     timeout_seconds: float = 120.0
     bare: bool | None = None
+    run_command: SubprocessRunner = _run_subprocess
 
     def run(self, prompt: str) -> RunResult:
         argv = [self.binary]
@@ -95,7 +133,7 @@ class ClaudeCliRunner:
         if self.max_budget_usd is not None:
             argv.extend(["--max-budget-usd", f"{self.max_budget_usd:.4f}"])
         start = time.perf_counter()
-        completed = subprocess.run(
+        completed = self.run_command(
             argv,
             input=prompt,
             capture_output=True,

@@ -1,4 +1,4 @@
-"""Test infrastructure for exercising the eval Click CLI."""
+"""CLI testing infrastructure for the eval harness."""
 
 from __future__ import annotations
 
@@ -28,11 +28,11 @@ from outcomeeng_evals.cli.commands.run import (
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.runner import ModelRunner
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings as _assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
     make_eval_dir,
 )
-from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
+from outcomeeng_testing.evals.fakes import RecordingRunner, StubModelRunner
 
 PLAN_PLUGIN_DIR: Final = "dist/claude/spec-tree"
 PLAN_OWNED_PATH_PATTERN: Final = "src/plugins/spec-tree/skills/manage-pr/**"
