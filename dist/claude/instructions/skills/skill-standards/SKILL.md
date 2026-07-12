@@ -134,8 +134,6 @@ The `name` field is the user invocation path (`/skill-name`). Match user speech 
 
 Treat generated runtime output and implementation names as lower-layer evidence, never as the authority for vocabulary classification.
 
-**Material-change rule:** Any material change to a skill implies renaming all skills in the entire plugin to match the latest instruction-authoring rules.
-
 ```yaml
 # ✅ Matches user speech
 name: author # Users say "author a spec"
