@@ -39,9 +39,13 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.13 introduced `spx verification run`, including run start,
-# input replay, scope evidence, finding evidence, finish, status, and render
-# commands used by implementation audits. spx 0.6.10 introduced `spx journal
+# above it. spx 0.6.15 made `spx diagnose` classify a missing, detached, or
+# wrong-branch designated main checkout through the `worktree-pool` record,
+# which this product's merge overlay uses before merge mutation and after
+# feature-worktree cleanup. spx 0.6.13 introduced `spx verification run`,
+# including run start, input replay, scope evidence, finding evidence, finish,
+# status, and render commands used by implementation audits. spx 0.6.10
+# introduced `spx journal
 # list` and branch-scope render selectors used by the review-run inspection
 # helper. spx 0.6.7 introduced
 # `spx -C <path> session handoff`, which the /issue skill uses for
@@ -57,7 +61,7 @@ from typing import Final
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
-REQUIRED_SPX_VERSION: Final = "0.6.13"
+REQUIRED_SPX_VERSION: Final = "0.6.15"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
