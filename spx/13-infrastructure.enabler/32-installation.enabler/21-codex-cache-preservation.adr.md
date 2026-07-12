@@ -40,7 +40,7 @@ The managed Codex plugin set comes from `dist/codex/*/.codex-plugin/plugin.json`
 - ALWAYS: source reconciliation adds an absent Claude Code or Codex `outcomeeng` marketplace registration from the canonical local source before refresh ([conformance])
 - ALWAYS: a Claude user-scope or unscoped Directory source at the reconciliation target is accepted without a Claude marketplace add or remove ([conformance])
 - NEVER: Claude marketplace reconciliation issues a Claude marketplace command outside user scope, removes a project- or local-scope registration, or writes the committed project `.claude/settings.json` ([compliance])
-- ALWAYS: a read-only managed Claude source is left untouched and a user-scope registration at the canonical root is added when no user-scope source exists, regardless of the managed source's path ([scenario])
+- ALWAYS: a read-only managed Claude source is left untouched and a user-scope registration at the canonical root is added when no user-scope source exists, regardless of the managed source's path ([compliance])
 - ALWAYS: the addable Codex plugin set is read from `dist/codex/*/.codex-plugin/plugin.json`, sorted by plugin name ([conformance])
 - Given generated Codex plugin manifests and an installed-set query, local refresh invokes `codex plugin add <plugin>@outcomeeng` for refreshed plugins in deterministic manifest order ([scenario])
 - NEVER: local refresh invokes `codex plugin marketplace upgrade outcomeeng` ([compliance])
