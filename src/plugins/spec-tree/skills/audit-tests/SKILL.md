@@ -1,5 +1,6 @@
 ---
 name: audit-tests
+model: sonnet
 description: >-
   Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
   The test-evidence-auditor audits test evidence against spec assertions; the
