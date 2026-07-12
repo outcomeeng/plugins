@@ -5,7 +5,7 @@ description: >-
   NEVER write or fix Python tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*), Bash(uv run:*), Bash(poetry run:*), Bash(pipenv run:*), Bash(just:*), Bash(make:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -29,7 +29,7 @@ Python test files that supply evidence for a spec-tree node's assertions.
 <mode_detection>
 Determine the mode before editing:
 
-Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker.
+Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker. Stop before reading or editing tests when neither source provides a governing node path.
 
 | Mode  | Signal                                                                                           | Action                       |
 | ----- | ------------------------------------------------------------------------------------------------ | ---------------------------- |
@@ -101,7 +101,7 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 </source_contract_gate>
 
 <verification>
-Run the product's canonical test, lint, and type commands — the ones its `CLAUDE.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
+Run the product's canonical test, lint, and type commands — the ones its `CLAUDE.md`, Justfile, Makefile, or package scripts document. A canonical wrapper outside this skill's direct-command allowlist requires per-call approval for that exact command. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
 ```bash
 python3 -m pytest $node_path/tests/ -v

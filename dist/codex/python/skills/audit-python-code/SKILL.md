@@ -1,5 +1,6 @@
 ---
 name: audit-python-code
+model: sonnet
 description: >-
   Python implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the Python code files in scope.
   Reached only through the dispatched implementation-auditor agent, never the main conversation.

@@ -1,5 +1,6 @@
 ---
 name: audit-python-architecture
+model: sonnet
 description: >-
   Python-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Python concerns in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
