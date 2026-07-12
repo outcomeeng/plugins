@@ -19,6 +19,7 @@ import pytest
 from outcomeeng_evals.cli.commands.run import _git_sha, _history_row
 from outcomeeng_evals.history import (
     HISTORY_FILENAME,
+    HISTORY_ROW_FIELDS,
     HISTORY_TRANSCRIPT_FIELD,
     HISTORY_TOKEN_FIELDS,
     HistoryRow,
@@ -88,7 +89,8 @@ def _assert_row_carries_required_schema_fields(tmp_path: Path) -> None:
     append_history_row(history_path, fixture_row)
 
     row = _read_history(history_path)[0]
-    assert set(row) == set(fixture_row)
+    assert set(fixture_row) == set(HISTORY_ROW_FIELDS)
+    assert set(row) == set(HISTORY_ROW_FIELDS)
     assert row["model"] == fixture_row["model"]
 
 

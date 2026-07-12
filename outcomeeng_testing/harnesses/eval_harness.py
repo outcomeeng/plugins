@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from contextlib import redirect_stderr
 from io import StringIO
@@ -24,8 +25,9 @@ from outcomeeng_evals.case import (
 )
 from outcomeeng_evals.cli.commands.run import _render_prompt
 from outcomeeng_evals.grader import grade, is_subset, parse_verdict
-from outcomeeng_evals.runner import RunResult
-from outcomeeng_evals.suite import run_suite
+from outcomeeng_evals.runner import DEFAULT_CLAUDE_BINARY, RunResult
+from outcomeeng_evals.settings import DEFAULT_TIMEOUT_SECONDS
+from outcomeeng_evals.suite import TIMEOUT_ERROR_PREFIX, run_suite
 from outcomeeng_evals.testing.fakes import (
     ConcurrencyTrackingRunner,
     RaisingModelRunner,
@@ -229,19 +231,36 @@ def assert_prompt_renderer_reports_fixture_placeholder_drift() -> None:
 
 def assert_suite_isolates_runner_failures() -> None:
     cases_path = _fixture_path("eval_suite_cases.jsonl")
-    error = RuntimeError(
-        _fixture_path("verdict_invalid.txt").read_text(encoding="utf-8").strip()
+    errors = (
+        RuntimeError(
+            _fixture_path("verdict_invalid.txt").read_text(encoding="utf-8").strip()
+        ),
+        subprocess.TimeoutExpired(
+            cmd=DEFAULT_CLAUDE_BINARY,
+            timeout=DEFAULT_TIMEOUT_SECONDS,
+        ),
     )
 
-    for workers in (1, len(load_cases(cases_path))):
-        result = run_suite(
-            cases_path=cases_path,
-            runner=RaisingModelRunner(error=error),
-            build_prompt=_fixture_prompt,
-            workers=workers,
-        )
-        assert not result.passed
-        assert all(not outcome.passed for outcome in result.outcomes)
+    for error in errors:
+        for workers in (1, len(load_cases(cases_path))):
+            result = run_suite(
+                cases_path=cases_path,
+                runner=RaisingModelRunner(error=error),
+                build_prompt=_fixture_prompt,
+                workers=workers,
+            )
+            assert not result.passed
+            assert all(not outcome.passed for outcome in result.outcomes)
+            reasons = [
+                reason
+                for outcome in result.outcomes
+                for trial in outcome.trials
+                for reason in trial.grade.reasons
+            ]
+            if isinstance(error, subprocess.TimeoutExpired):
+                assert all(
+                    reason.startswith(TIMEOUT_ERROR_PREFIX) for reason in reasons
+                )
 
 
 def assert_suite_rejects_empty_case_file() -> None:
