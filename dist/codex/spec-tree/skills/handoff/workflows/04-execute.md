@@ -64,7 +64,7 @@ The existence of any session is never permission to archive a claimed session â€
 <resolve_continuation_threads>
 Read `<RESOLVED_CONTINUATION_THREADS>` from workflow 02. If it is missing, contains a duplicate thread id, or its thread-id set differs from `<RESOLVED_ARTIFACT_PARTITIONS>`, STOP and return to workflows 02-03. Never create, omit, or archive a thread before its queue ownership and continuation state are resolved.
 
-For each partition, require the matching thread record and disposition: `fresh-session` requires `continuation="present"`, owner status `none` or `same-owner-continuation`, and a real stop condition; `zero-handoff` requires `continuation="absent"`; `existing-owner` requires owner status `existing-owner`; `ambiguous` stops all session-state changes. Process each valid pair independently.
+Before processing partitions, require every thread record to have a resolved owner status; an `ambiguous` thread record stops all session-state changes and returns to workflow 03 before any partition is processed. For each partition, require the matching thread record and disposition: `fresh-session` requires `continuation="present"`, owner status `none` or `same-owner-continuation`, and a real stop condition; `zero-handoff` requires `continuation="absent"`; `existing-owner` requires owner status `existing-owner`. Process each valid pair independently.
 
 </resolve_continuation_threads>
 

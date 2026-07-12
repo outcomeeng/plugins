@@ -66,7 +66,7 @@ The existence of a mid-session artifact is never, by itself, permission to archi
 This algorithm has two callers:
 
 - **Workflow 02 (`<perspective_claimed_sessions>`)** — uses the resolved claimed-session set and classification to drive reflection and to feed the session-disposition header in workflow 03. Does not archive or write anything.
-- **Workflow 04 (`<resolve_claimed_sessions>`)** — uses the same resolved claimed-session set and classification to drive archival and canonical-continuation selection (Path A zero handoffs or the fresh-session path). Cross-references the user-approved disposition from workflow 03; if the user named additional sessions, adds them before archiving.
+- **Workflow 04 (`<resolve_claimed_sessions>`)** — uses the same resolved claimed-session set and classification to drive archival and canonical-continuation selection (Path A — zero-handoff or existing-owner — or the fresh-session path). Cross-references the user-approved disposition from workflow 03; if the user named additional sessions, adds them before archiving.
 
 Both consumers MUST use this algorithm unchanged. Do not inline copies back into workflow files.
 
