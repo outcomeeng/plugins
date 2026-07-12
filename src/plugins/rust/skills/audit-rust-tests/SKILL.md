@@ -239,17 +239,23 @@ This skill composes the base `/audit-tests` verdict: the row names (`gate-1-asse
 
 Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
 
+Why it failed: The audit required a source import and missed the executable coupling path through the built product binary.
+
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 
 **Failure 2: Approved source-text tests**
 
 Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
 
+Why it failed: Source-text presence was mistaken for behavioral evidence even though the asserted runtime path never executed.
+
 How to avoid: `<structural_reading>` reads in-scope tests for production source-file reads; a test asserting on `src/` text is prose-coupling → REJECT in Gate 1.
 
 **Failure 3: Hard-coded a product-specific Level 3 restriction**
 
 Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
+
+Why it failed: A consumer-specific execution policy was promoted into a portable language standard without governing product truth.
 
 How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing product spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
 </failure_modes>
