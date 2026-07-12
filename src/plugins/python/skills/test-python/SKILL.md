@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'test' %!}
+{!% require_skill 'spec-tree:test' %!}
 
 <context>
 

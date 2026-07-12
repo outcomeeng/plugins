@@ -11,7 +11,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
-{!% require_skill 'test' %!}
+{!% require_skill 'spec-tree:test' %!}
 
 <context>
 
