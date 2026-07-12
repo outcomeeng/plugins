@@ -53,25 +53,22 @@ def implementation_is_ready() -> bool:
 
 def registry_token_renders_each_target_name() -> bool:
     _require_implemented()
-    return (
-        all(
-            _implicit_registry_case_renders(
-                case.kind,
-                case.capability,
-                Target(case.runtime),
-            )
-            for case in runtime_token_resolver_cases()
+    return all(
+        _implicit_registry_case_renders(
+            case.kind,
+            case.capability,
+            Target(case.runtime),
         )
-        and all(
-            _implicit_registry_case_matches_expected(
-                kind,
-                capability,
-                runtime,
-                expected,
-            )
-            for (kind, capability), names in SPEC_STATED_RUNTIME_NAMES.items()
-            for runtime, expected in names.items()
+        for case in runtime_token_resolver_cases()
+    ) and all(
+        _implicit_registry_case_matches_expected(
+            kind,
+            capability,
+            runtime,
+            expected,
         )
+        for (kind, capability), names in SPEC_STATED_RUNTIME_NAMES.items()
+        for runtime, expected in names.items()
     )
 
 
@@ -229,15 +226,12 @@ def _explicit_registry_case_renders(
 
 def build_fails_on_unknown_kind_capability_or_runtime() -> bool:
     _require_implemented()
-    return (
-        all(
-            _invalid_runtime_token_case_fails(case)
-            for case in invalid_runtime_token_cases()
-        )
-        and _raises_build_error(
-            lambda: _render_skill_bodies(
-                f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY}') !}}}}"
-            )
+    return all(
+        _invalid_runtime_token_case_fails(case)
+        for case in invalid_runtime_token_cases()
+    ) and _raises_build_error(
+        lambda: _render_skill_bodies(
+            f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY}') !}}}}"
         )
     )
 
@@ -253,16 +247,20 @@ def conditional_renders_absent_capability_only_where_present() -> bool:
         "{!% endif %!}"
     )
     bodies = _render_skill_bodies(template)
-    return _target_bodies_equal(
-        bodies,
-        {
-            Target.CLAUDE: f"Wait via {claude_name}.",
-            Target.CODEX: "",
-        },
-    ) and render_text(
-        template,
-        variables={"target": Target.CODEX.value},
-    ) == ""
+    return (
+        _target_bodies_equal(
+            bodies,
+            {
+                Target.CLAUDE: f"Wait via {claude_name}.",
+                Target.CODEX: "",
+            },
+        )
+        and render_text(
+            template,
+            variables={"target": Target.CODEX.value},
+        )
+        == ""
+    )
 
 
 def _raises_build_error(call: Callable[[], object]) -> bool:
@@ -279,9 +277,7 @@ def _registry_name(kind: str, capability: str, target: Target) -> str:
 
 def _invalid_runtime_token_case_fails(case: InvalidRuntimeTokenCase) -> bool:
     return _raises_build_error(
-        lambda: _render_skill_bodies(
-            f"{{{{! {case.kind}('{case.capability}') !}}}}"
-        )
+        lambda: _render_skill_bodies(f"{{{{! {case.kind}('{case.capability}') !}}}}")
     )
 
 
@@ -370,7 +366,6 @@ def _target_bodies_equal(
     expected: dict[Target, str],
 ) -> bool:
     return all(
-        rendered_bodies
-        and all(body == expected[target] for body in rendered_bodies)
+        rendered_bodies and all(body == expected[target] for body in rendered_bodies)
         for target, rendered_bodies in bodies.items()
     )
