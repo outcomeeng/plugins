@@ -102,12 +102,12 @@ For each included assertion, extract:
 
 Starting from the test links mapped in Step 2, follow each repository import recursively. Record one inventory entry per artifact:
 
-| Field | Meaning |
-| --- | --- |
-| `path` | Repository-relative artifact path |
-| `role` | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production` |
-| `imported_from` | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
-| `inspection_status` | `inspected` or `unresolved` |
+| Field               | Meaning                                                                                                                      |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `path`              | Repository-relative artifact path                                                                                            |
+| `role`              | `test`, `harness`, `generator`, `fixture`, `discovery`, or `production`                                                      |
+| `imported_from`     | Path that introduced the artifact, or null for root artifacts such as the linked test and applicable discovery configuration |
+| `inspection_status` | `inspected` or `unresolved`                                                                                                  |
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test.
 
@@ -142,12 +142,12 @@ For property-based tests, verify seed and replay behavior by reading the importe
 
 Apply category-specific ownership checks to every imported test-infrastructure artifact:
 
-| Artifact role | Allowed ownership | REJECT with `source-ownership` |
-| --- | --- | --- |
-| Harness | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
-| Generator | Variable domains with meaningful variation and shrinking | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs |
-| Fixture | Inert whole payload consumed by path or bytes | Isolated tokens, values, expected outputs, or executable exports |
-| Discovery | Test collection and registration policy | Fixture bodies, domain values, generated cases, or hidden setup policy |
+| Artifact role | Allowed ownership                                                                      | REJECT with `source-ownership`                                                                              |
+| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Harness       | Setup, teardown, cleanup, resource policy, access to real behavior, replay diagnostics | Protocol keys, command tokens, status values, expected outputs, arbitrary request payloads, or domain truth |
+| Generator     | Variable domains with meaningful variation and shrinking                               | Copied protocol vocabulary, constant-only domains, or hand-picked expected outputs                          |
+| Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
+| Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
 
 For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself. The finding `file` names the artifact that copied the value, while `remediation_target` names the production contract that must own it — NEVER substitute the artifact role (`harness`, `generator`, or `fixture`) for `source-contract`.
 
@@ -213,15 +213,15 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 **Exception**: Test doubles used under these seven legitimate exception cases from the `/test` methodology are not "coupling severed." Identify the matching exception and verify the double type:
 
-| Exception | Double type |
-| --- | --- |
-| Failure simulation | Stub returning errors |
-| Interaction protocols | Spy recording calls |
-| Time and concurrency | Fake clock |
-| Safety | Stub that records |
-| Combinatorial cost | Configurable fake |
-| Observability | Spy recording details |
-| Contract probes | Contract stub |
+| Exception             | Double type           |
+| --------------------- | --------------------- |
+| Failure simulation    | Stub returning errors |
+| Interaction protocols | Spy recording calls   |
+| Time and concurrency  | Fake clock            |
+| Safety                | Stub that records     |
+| Combinatorial cost    | Configurable fake     |
+| Observability         | Spy recording details |
+| Contract probes       | Contract stub         |
 
 </step>
 
