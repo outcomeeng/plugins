@@ -1,22 +1,22 @@
 # Post-Compact Continuity
 
-Post-compact continuity uses Claude Code's standard compact summary as the state record and the spec-tree `SessionStart` hook as the methodology-reload signal. When Claude reports `source=compact`, the hook tells the resuming agent that compaction reset the loaded foundation and requires `/understand` followed by `/contextualize` for every spec node still in scope. The project defines no `compactPrompt` override.
+Post-compact continuity uses Claude Code's standard compact summary as the state record and the managed root instruction block as the methodology-reload signal. The root instruction block requires `/understand` followed by `/contextualize` for every spec node still in scope after compaction. The project defines no `compactPrompt` override, and the `SessionStart` hook remains limited to delegated session-environment and worktree-occupancy behavior.
 
 ## Rationale
 
-Claude Code produces the compact summary that carries conversation state. A project-owned `compactPrompt` duplicates and constrains that summary, embeds runtime-specific wording, and grows stale as the runtime's base prompt evolves. The `SessionStart` payload provides a stable lifecycle signal instead: `source=compact` identifies the one start condition where the loaded methodology authority has expired, and the hook can direct the required reload without prescribing the resumed task.
+Claude Code produces the compact summary that carries conversation state. A project-owned `compactPrompt` duplicates and constrains that summary, embeds runtime-specific wording, and grows stale as the runtime's base prompt evolves. The managed root instruction block survives as the product's routing authority and directs the required methodology reload without replacing the runtime's task summary or expanding the session hook beyond its delegated environment responsibilities.
 
 ## Product properties
 
 1. Claude Code's standard compact summary is the sole compact-summary prompt surface; the project defines no `compactPrompt` override.
-2. On a `SessionStart` event with `source=compact`, the hook output directs `/understand` followed by `/contextualize` for every spec node still in scope before further spec-tree work.
-3. The post-compact hook directs methodology and node-context reload while leaving task reconstruction to the resuming agent and the standard summary.
+2. The managed root instruction block directs `/understand` followed by `/contextualize` for every spec node still in scope before post-compaction spec-tree work.
+3. The `SessionStart` hook delegates session-environment and worktree-occupancy behavior to `spx hook run session-start` and carries no compact-summary or methodology-reload behavior.
 
 ## Verification
 
 ### Audit
 
-- ALWAYS: the `SessionStart` hook reacts to `source=compact` by identifying the expired methodology authority and directing `/understand` followed by `/contextualize` for every spec node still in scope ([audit])
-- ALWAYS: the post-compact hook leaves task reconstruction to the resuming agent and Claude Code's standard summary ([audit])
+- ALWAYS: the managed root instruction block directs `/understand` followed by `/contextualize` for every spec node still in scope after compaction, while task reconstruction remains with the resuming agent and Claude Code's standard summary ([audit])
+- NEVER: the `SessionStart` hook carries compact-summary or methodology-reload behavior — it remains the delegated session-environment and worktree-occupancy hook defined by `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([audit])
 - NEVER: `.claude/settings.json` defines a `compactPrompt` override ([audit])
 - NEVER: spec-tree replaces or augments Claude Code's compact-summary prompt through project configuration ([audit])
