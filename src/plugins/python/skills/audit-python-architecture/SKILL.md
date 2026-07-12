@@ -21,10 +21,10 @@ A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with
 
 <constraints>
 
-- Read-only over the audited repository. Never edit files, stage changes, commit, or open pull requests.
-- Produce only the JSON verdict described in `<verdict_format>`; finding messages state the violated rule and consequence, while corrective examples remain in references and standards.
-- Judge only Python-specific architecture concerns. Generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
-- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
+- MUST remain read-only over the audited repository; NEVER edit files, stage changes, commit, or open pull requests.
+- MUST produce only the JSON verdict described in `<verdict_format>`; finding messages state the violated rule and consequence, while corrective examples remain in references and standards.
+- MUST judge only Python-specific architecture concerns; generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
+- MUST use `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill; the composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
 
 </constraints>
 

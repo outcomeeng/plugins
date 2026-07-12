@@ -28,7 +28,7 @@ A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each 
 - NEVER evaluate test evidence quality — the composing implementation auditor invokes `/audit-python-tests` as a separate concern.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective code samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
-- `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails. `APPROVED` output contains no notes, warnings, or suggestions sections.
+- MUST set `APPROVED` only when every concern row passes or is explicitly not applicable; MUST set `REJECTED` when at least one concern row fails; NEVER add notes, warnings, or suggestions sections to `APPROVED` output.
 
 </constraints>
 
