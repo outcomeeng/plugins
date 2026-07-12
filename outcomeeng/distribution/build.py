@@ -179,6 +179,18 @@ RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
 RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 
 
+ASK_USER_TOOL_NAMES: Final[dict[str, str]] = {
+    "claude": "AskUserQuestion",
+    "codex": "request_user_input",
+}
+CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
+    "claude": "system prompt",
+    "codex": "developer_instructions",
+}
+ROOT_GUIDE_FILE_NAMES: Final[dict[str, str]] = {
+    "claude": "CLAUDE.md",
+    "codex": "AGENTS.md",
+}
 CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: {
         "claude": "subagent",
@@ -241,10 +253,7 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ASK_USER_CAPABILITY: {
-                "claude": "AskUserQuestion",
-                "codex": "request_user_input",
-            },
+            RUNTIME_TOKEN_ASK_USER_CAPABILITY: ASK_USER_TOOL_NAMES,
             "spawn_agent": {"codex": "multi_agent_v1.spawn_agent"},
             "wait_agent": {"codex": "multi_agent_v1.wait_agent"},
             "close_agent": {"codex": "multi_agent_v1.close_agent"},
@@ -254,10 +263,9 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: {
-                "claude": "system prompt",
-                "codex": "developer_instructions",
-            },
+            RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: (
+                CONFIGURED_AGENT_PROMPT_FIELD_NAMES
+            ),
         },
     ),
     RUNTIME_TOKEN_TERM_KIND: RuntimeTokenKind(
@@ -267,10 +275,7 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
         lint_enforced=True,
         names={
-            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: {
-                "claude": "CLAUDE.md",
-                "codex": "AGENTS.md",
-            },
+            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: ROOT_GUIDE_FILE_NAMES,
         },
     ),
 }

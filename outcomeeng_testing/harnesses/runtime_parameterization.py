@@ -12,7 +12,9 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.build import (
+    ASK_USER_TOOL_NAMES,
     BuildError,
+    CONFIGURED_AGENT_PROMPT_FIELD_NAMES,
     CONFIGURED_AGENT_TERM_NAMES,
     IMPLEMENTED,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
@@ -30,6 +32,7 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
+    ROOT_GUIDE_FILE_NAMES,
     RuntimeTokenError,
     RuntimeTokenKind,
     build,
@@ -38,6 +41,7 @@ from outcomeeng.distribution.build import (
     runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import Target
+from outcomeeng.validation.runtime_tokens import forbidden_names
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
@@ -52,64 +56,80 @@ def implementation_is_ready() -> bool:
 
 def registry_token_renders_each_target_name() -> bool:
     _require_implemented()
-    token_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].names[
-        RUNTIME_TOKEN_ASK_USER_CAPABILITY
-    ]
     bodies = _render_skill_bodies(
         "Ask the user via "
         f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}') !}}}} "
         "now.",
     )
-    return _target_body_contains_only_target_names(bodies, token_names)
+    return _target_bodies_equal(
+        bodies,
+        {
+            target: f"Ask the user via {ASK_USER_TOOL_NAMES[target.value]} now."
+            for target in Target
+        },
+    )
 
 
 def file_kind_renders_guide_filename_per_target() -> bool:
     _require_implemented()
-    guide_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FILE_KIND].names[
-        RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY
-    ]
     bodies = _render_skill_bodies(
         "Read the guide at "
         f"{{{{! {RUNTIME_TOKEN_FILE_KIND}('{RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY}') !}}}} "
         "once per session.",
     )
-    return _target_body_contains_only_target_names(bodies, guide_names)
+    return _target_bodies_equal(
+        bodies,
+        {
+            target: f"Read the guide at {ROOT_GUIDE_FILE_NAMES[target.value]} once per session."
+            for target in Target
+        },
+    )
 
 
 def field_kind_renders_live_registry_name_per_target() -> bool:
     _require_implemented()
-    field_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FIELD_KIND].names[
-        RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY
-    ]
     bodies = _render_skill_bodies(
         "Configure the field "
         f"{{{{! {RUNTIME_TOKEN_FIELD_KIND}('{RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY}') !}}}}.",
     )
-    return _target_body_contains_only_target_names(bodies, field_names)
+    return _target_bodies_equal(
+        bodies,
+        {
+            target: (
+                "Configure the field "
+                f"{CONFIGURED_AGENT_PROMPT_FIELD_NAMES[target.value]}."
+            )
+            for target in Target
+        },
+    )
 
 
 def term_kind_renders_live_registry_name_per_target() -> bool:
     _require_implemented()
-    term_names = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].names[
-        RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY
-    ]
     bodies = _render_skill_bodies(
         "Configure the "
         f"{{{{! {RUNTIME_TOKEN_TERM_KIND}('{RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY}') !}}}}.",
     )
-    return _target_body_contains_only_target_names(bodies, term_names)
+    return _target_bodies_equal(
+        bodies,
+        {
+            target: (
+                "Configure the "
+                f"{CONFIGURED_AGENT_TERM_NAMES[RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY][target.value]}."
+            )
+            for target in Target
+        },
+    )
 
 
 def runtime_explicit_token_renders_named_runtime_on_every_target() -> bool:
     _require_implemented()
-    claude_name = RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TOOL_KIND].names[
-        RUNTIME_TOKEN_ASK_USER_CAPABILITY
-    ][Target.CLAUDE.value]
     bodies = _render_skill_bodies(
         "On Claude this is "
         f"{{{{! {RUNTIME_TOKEN_TOOL_KIND}('{RUNTIME_TOKEN_ASK_USER_CAPABILITY}', '{Target.CLAUDE.value}') !}}}}.",
     )
-    return all(claude_name in body for body in bodies.values())
+    expected = f"On Claude this is {ASK_USER_TOOL_NAMES[Target.CLAUDE.value]}."
+    return _target_bodies_equal(bodies, dict.fromkeys(Target, expected))
 
 
 def build_fails_on_unknown_kind_capability_or_runtime() -> bool:
@@ -144,15 +164,16 @@ def conditional_renders_absent_capability_only_where_present() -> bool:
         "{!% endif %!}"
     )
     bodies = _render_skill_bodies(template)
-    codex_rendered = render_text(
+    return _target_bodies_equal(
+        bodies,
+        {
+            Target.CLAUDE: f"Wait via {claude_name}.",
+            Target.CODEX: "",
+        },
+    ) and render_text(
         template,
         variables={"target": Target.CODEX.value},
-    )
-    return (
-        claude_name in bodies[Target.CLAUDE]
-        and claude_name not in bodies[Target.CODEX]
-        and codex_rendered == ""
-    )
+    ) == ""
 
 
 def _raises_build_error(call: Callable[[], object]) -> bool:
@@ -165,6 +186,19 @@ def _raises_build_error(call: Callable[[], object]) -> bool:
 
 def registry_is_keyed_by_kind_with_explicit_guard_enforcement() -> bool:
     _require_implemented()
+    expected_forbidden = tuple(
+        sorted(
+            {
+                name
+                for kind in RUNTIME_TOKEN_REGISTRY.values()
+                if kind.lint_enforced
+                for entry in kind.names.values()
+                for name in entry.values()
+            },
+            key=len,
+            reverse=True,
+        )
+    )
     return (
         set(RUNTIME_TOKEN_REGISTRY)
         == {
@@ -181,6 +215,7 @@ def registry_is_keyed_by_kind_with_explicit_guard_enforcement() -> bool:
         and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FIELD_KIND].lint_enforced is True
         and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_TERM_KIND].lint_enforced is False
         and RUNTIME_TOKEN_REGISTRY[RUNTIME_TOKEN_FILE_KIND].lint_enforced is True
+        and forbidden_names() == expected_forbidden
     )
 
 
@@ -245,7 +280,7 @@ def _require_implemented() -> None:
         raise AssertionError(msg)
 
 
-def _render_skill_bodies(body: str) -> dict[Target, str]:
+def _render_skill_bodies(body: str) -> dict[Target, tuple[str, ...]]:
     with TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         builder = SrcTreeBuilder(tmp_path)
@@ -256,8 +291,8 @@ def _render_skill_bodies(body: str) -> dict[Target, str]:
             )
         build(builder.src_root, tmp_path / "dist")
         return {
-            target: "\n".join(
-                (
+            target: tuple(
+                _rendered_skill_body(
                     tmp_path
                     / "dist"
                     / target.value
@@ -265,7 +300,7 @@ def _render_skill_bodies(body: str) -> dict[Target, str]:
                     / "skills"
                     / f"{scenario.skill}-{SKILL_NAME}"
                     / "SKILL.md"
-                ).read_text()
+                )
                 for scenario in source_scenarios()
             )
             for target in Target
@@ -276,19 +311,22 @@ def _skill_with(body: str) -> str:
     return f"---\nname: {SKILL_NAME}\ndescription: Example skill.\n---\n\n{body}\n"
 
 
-def _target_body_contains_only_target_names(
-    bodies: dict[Target, str],
-    names: dict[str, str],
+def _rendered_skill_body(path: Path) -> str:
+    _, separator, body = path.read_text(encoding="utf-8").partition("---\n\n")
+    if not separator:
+        msg = f"generated skill lacks a frontmatter boundary: {path}"
+        raise AssertionError(msg)
+    return body.strip()
+
+
+def _target_bodies_equal(
+    bodies: dict[Target, tuple[str, ...]],
+    expected: dict[Target, str],
 ) -> bool:
-    claude_name = names["claude"]
-    codex_name = names["codex"]
-    claude_body = bodies[Target.CLAUDE]
-    codex_body = bodies[Target.CODEX]
-    return (
-        claude_name in claude_body
-        and codex_name in codex_body
-        and codex_name not in claude_body
-        and claude_name not in codex_body
+    return all(
+        rendered_bodies
+        and all(body == expected[target] for body in rendered_bodies)
+        for target, rendered_bodies in bodies.items()
     )
 
 
