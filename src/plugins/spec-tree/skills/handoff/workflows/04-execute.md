@@ -165,9 +165,9 @@ The closeout MUST include:
 - **Remaining work**: open follow-up only when one exists, with its owner or tracking location. Say when none remains for this closure.
 - **Remaining Branches**: for merge lifecycle closeout, group branch state under exactly four labels — **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**. Include full branch names and full commit SHAs.
 
-When closing after a default-branch merge, compute or preserve the merge transport's branch-state closeout record from `/merging-standards` `<branch_state_closeout>` before final confirmation. The record includes PR number and merge commit SHA when applicable, merged branch name, remote branch existence, local branch existence, local fully-merged status against `origin/<base>`, gone-upstream tracking status, preservation branch existence, preservation branch ancestry or `git cherry -v --abbrev=40 origin/<base> <branch>` patch-equivalence evidence, final worktree state, and release-source worktree state when a post-merge release or marketplace refresh used one.
+When closing after a default-branch merge, compute or preserve the merge transport's branch-state closeout record from `/merging-standards` `<branch_state_closeout>` before final confirmation. The record includes PR number and merge commit SHA when applicable, merged branch name, remote branch existence, local branch existence, local fully-merged status against `origin/<base>`, gone-upstream tracking status, preservation branch existence, preservation branch ancestry or `git cherry -v --abbrev=40 origin/<base> <branch>` patch-equivalence evidence, final worktree state, and release-source state when a post-merge release used one.
 
-Classify default-branch merge state, installed location, and generated install state under **Delivered state**. Classify marketplace-source refresh, installed plugin version, CI/check state, audit/review outputs, and command evidence under **Verification evidence** or **Inspection references** when they prove the delivered state. Classify branch cleanup under **Remaining Branches**. Classify session archival and handoff state under the session-mechanics block.
+Classify default-branch merge state, installed location, and generated install state under **Delivered state**. Classify release-source refresh, installed artifact version, CI/check state, audit/review outputs, and command evidence under **Verification evidence** or **Inspection references** when they prove the delivered state. Classify branch cleanup under **Remaining Branches**. Classify session archival and handoff state under the session-mechanics block.
 
 Apply the cleanup policy before writing the closeout: delete a still-existing remote feature branch through the approved merge lifecycle deletion command; delete a local feature branch only when it exists, tracks a gone upstream, and is fully merged into `origin/<base>`; delete a no-remote preservation branch when all substantive commits are present on `origin/<base>` by ancestry or patch equivalence unless the branch name or operator instruction marks retained evidence. Never delete a branch checked out in another live worktree; report the exact worktree path and branch. Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`; report the unmatched full SHAs and keep it.
 
@@ -210,10 +210,10 @@ Why it fails: the operator still has to reconstruct the product outcome, changed
 NEVER put delivery, release, branch, version, or session mechanics under **Product outcome**. This sentence shape is the anti-pattern:
 
 ```text
-Product outcome: the changes are now on origin/main, and the marketplace source was refreshed so the installed plugin is current.
+Product outcome: the changes are now on origin/main, and the release source was refreshed so the installed artifact is current.
 ```
 
-Why it fails: the label is filled with lifecycle evidence rather than the payload's changed behavior or shipped product surface. First name what changed in the product, skill, command, workflow, document, or generated artifact contract; then place default-branch, marketplace-source, installed-version, PR, branch, and session facts under the matching evidence, state, reference, branches, or mechanics field.
+Why it fails: the label is filled with lifecycle evidence rather than the payload's changed behavior or shipped product surface. First name what changed in the product, skill, command, workflow, document, or generated artifact contract; then place default-branch, release-source, installed-version, PR, branch, and session facts under the matching evidence, state, reference, branches, or mechanics field.
 
 </rejected_misclassified_product_outcome>
 
