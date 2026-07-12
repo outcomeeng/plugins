@@ -8,9 +8,9 @@ CAN catch severed coupling, generator laundering, pytest-fixture laundering, and
 
 ### Compliance
 
-- ALWAYS: Python test audits trace imports from `product_testing.harnesses.*`, `product_testing.generators.*`, and inert fixture path providers before approving an assertion — test-infrastructure modules participate in evidence quality ([review])
-- ALWAYS: Python test audits inspect `conftest.py` files that affect the test under review and verify they only import explicit pytest fixture callables from canonical `product_testing.harnesses.*` modules or register pytest metadata — `conftest.py` is not a home for fixture body code ([review])
-- ALWAYS: Python test audits reject local test-adjacent modules that carry harness, generator, pytest fixture, or fixture-file behavior outside the canonical `product_testing/` package — `spx/<node>/tests/` contains typed assertion files only ([review])
+- ALWAYS: Python test audits trace imports from `<package>_testing.harnesses.*`, `<package>_testing.generators.*`, and inert fixture path providers before approving an assertion — test-infrastructure modules participate in evidence quality ([review])
+- ALWAYS: Python test audits inspect `conftest.py` files that affect the test under review and verify they only import explicit pytest fixture callables from canonical `<package>_testing.harnesses.*` modules or register pytest metadata — `conftest.py` is not a home for fixture body code ([review])
+- ALWAYS: Python test audits reject local test-adjacent modules that carry harness, generator, pytest fixture, or fixture-file behavior outside the canonical `<package>_testing/` package — `spx/<node>/tests/` contains typed assertion files only ([review])
 - ALWAYS: audit of a generator checks whether it represents a variable input domain with meaningful variation, composition, or shrinkage — property-shaped examples do not satisfy property evidence ([review])
 - ALWAYS: audit of a generator rejects arbitrary literals, duplicated source vocabulary, and constant-only wrappers for source-owned singleton shapes — generator modules cannot launder values out of the test file ([review])
 - ALWAYS: audit of a harness checks setup paths for framework mocks, monkeypatches, network fakes, environment stubs, `sys.path` manipulation, and other replacement mechanisms that hide the behavior under test — indirect coupling still needs real behavior ([review])
