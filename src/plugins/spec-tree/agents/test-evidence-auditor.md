@@ -6,7 +6,7 @@ description: >-
 model: sonnet
 skills:
   - spec-tree:audit-tests
-{!% else %!}tools: Bash, Read, Grep, Glob
+{!% else %!}tools: Bash, Read, Grep, Glob, Skill
 model: gpt-5.4
 sandbox_mode: read-only
 skills:
