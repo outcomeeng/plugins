@@ -156,8 +156,8 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <workflow>
 
-1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Invoke `/understand` when the live foundation is absent, then use every named reference and template in `<required_references>` from that loaded foundation.
+1. **Gate**: Check the conversation for the live `<SPEC_TREE_FOUNDATION>` marker. Invoke `/understand` when it is absent.
+2. **Load rules**: Use every named reference and template in `<required_references>` from the loaded foundation.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.

@@ -95,6 +95,8 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
+{!% if target == 'codex' %!}
+
 <!-- harness:codex -->
 
 **Read named files yourself.** Always read explicitly named files in the main conversation. Never use ordinary delegation to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files. Required typed auditors and reviewers are the exception: their governed audit skills require them to read the target artifacts, bundled references, and standards inside their isolated verification context.
@@ -231,7 +233,7 @@ Use this shape for test-evidence audits:
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "test-evidence-auditor",
-    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nLanguages: <detected language names>\nTask: Resolve and apply every installed audit-{lang}-tests skill for the detected languages. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; metadata.branch; gate-1-assertion and applicable gate-2-architectural rows, omitting Gate 2 when it is not applicable; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nFoundation skill files: <full installed understand/SKILL.md and contextualize/SKILL.md paths>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Load the enabled spec-tree:audit-tests skill, then read and apply every supplied language audit skill and its required standards. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; metadata.branch; gate-1-assertion and applicable gate-2-architectural rows, omitting Gate 2 when it is not applicable; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
   }
 }
 ```
@@ -307,6 +309,8 @@ Use this shape for subagent audits:
 ```
 
 <!-- /harness:codex -->
+
+{!% endif %!}
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
