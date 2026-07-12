@@ -5,7 +5,7 @@ A completed closure execution state: approved persistence written, session-owned
 <required_reading>
 Before writing a session file, read `${SKILL_DIR}/references/session-format.md` for the canonical template.
 
-Before releasing a linked worktree, invoke `/merging-standards` and apply its `<overlay_safety_checks>` declarations.
+Before detaching any checkout, invoke `/merging-standards` and apply its `<overlay_safety_checks>` declarations.
 
 </required_reading>
 
@@ -108,9 +108,15 @@ Run the handoff FROM the worktree that holds the work and step THAT worktree off
 
 - **Main checkout on a named branch** — the CLI records the branch name; no detach is needed before filing. After the handoff, detach at the remote base tip so the feature branch is unoccupied:
 
+  Immediately before detaching, run every overlay-declared preflight check per `/merging-standards` `<overlay_safety_checks>`. A failed check leaves the checkout attached and stops before cleanup.
+
   ```bash
+  # Run every preflight check declared by spx/local/merging.md here.
   git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
+  # Run every post-cleanup check declared by spx/local/merging.md here.
   ```
+
+  Immediately after detaching, run every overlay-declared post-cleanup check per `/merging-standards` `<overlay_safety_checks>` before branch deletion or closeout. A failed check leaves the checkout detached for inspection and stops the remaining cleanup.
 
 - **Linked (pool) worktree** — the CLI's git-context gate accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. Pass the pushed work branch as the header's `git_ref` so the recorded ref is the branch (not the base tip the gate would otherwise record) — the gate still runs on the detached tip and is never bypassed. `/pickup` checks out the branch `git_ref` names. Leave the worktree detached afterward.
 
