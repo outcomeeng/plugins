@@ -7,7 +7,7 @@ description: >-
   read, create, or modify any file in this repository other than
   CLAUDE.md without loading this skill and all its references
   first.
-allowed-tools: Read, Glob, Grep, Bash(python3:*)
+allowed-tools: Read, Glob, Grep
 ---
 
 <objective>
@@ -46,29 +46,13 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - `${CLAUDE_SKILL_DIR}/references/ordering-rules.md`
    - `${CLAUDE_SKILL_DIR}/references/verification-kinds.md`
    - `${CLAUDE_SKILL_DIR}/references/imperfection-protocol.md`
-3. List each operational reference and `spx/local/` overlay with its path, last-modified time, and line count — evidence each was located this session, not assumed. These load on demand in other skills:
+3. List each operational reference and `spx/local/` overlay by path — evidence each was located this session, not assumed. These load on demand in other skills:
    - `${CLAUDE_SKILL_DIR}/references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
    - `${CLAUDE_SKILL_DIR}/references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
    - `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
    - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
 
-   Produce the listing with the `Bash(python3:*)` grant:
-
-   ```bash
-   python3 -c 'import sys, datetime
-   from pathlib import Path
-   for a in sys.argv[1:]:
-       items = sorted(Path(a).glob("*.md")) if Path(a).is_dir() else [Path(a)]
-       for p in items:
-           if not p.exists():
-               continue
-           n = sum(1 for _ in open(p))
-           print(n, "lines", datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat(), p)' \
-     "${CLAUDE_SKILL_DIR}/references/what-goes-where.md" \
-     "${CLAUDE_SKILL_DIR}/references/excluded-nodes.md" \
-     "${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md" \
-     spx/local
-   ```
+   Locate the three exact reference paths with `Glob`, and enumerate product overlays with `Glob: "spx/local/*.md"`.
 4. Check for local lifecycle routing:
    - Changes destined for the default branch route through `/merge`, the transport dispatcher. It classifies the changeset, selects the merge transport, and delegates to the selected transport's skills, reading `spx/local/merging.md` as an optional overlay when present.
    - If `spx/local/merging.md` exists at the repository root, read it. Its declarations refine transport selection and lifecycle configuration. Its absence is normal and not a blocker — the default lifecycle applies, and merge behavior is never reconstructed from other docs or changed by editing a generated guide.
@@ -83,7 +67,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - Stop before `/merge` only when the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work.
    - A blocker exists only after every independent action that does not require operator input is complete: the applicable edits are made, deterministic verification and required local review or audit gates have run or produced concrete failing evidence, and all work that can be committed without the answer is committed on a local branch.
    - Until no independent work remains, continue doing work that does not depend on the answer or removed blocker. When no independent work remains, report the exact blocker, the evidence, and the next operator decision needed.
-6. List each template and example with its path, last-modified time, and line count — evidence each was located, not assumed — then read in full immediately when authoring:
+6. List each template and example by path — evidence each was located, not assumed — then read in full immediately when authoring:
    - `${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md`
    - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md`
    - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md`
@@ -91,25 +75,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - `${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md`
    - `${CLAUDE_SKILL_DIR}/examples/` — concrete filled specs (read to see what a completed spec looks like)
 
-   Produce the listing with the same `Bash(python3:*)` pass:
-
-   ```bash
-   python3 -c 'import sys, datetime
-   from pathlib import Path
-   for a in sys.argv[1:]:
-       items = sorted(Path(a).glob("*.md")) if Path(a).is_dir() else [Path(a)]
-       for p in items:
-           if not p.exists():
-               continue
-           n = sum(1 for _ in open(p))
-           print(n, "lines", datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat(), p)' \
-     "${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md" \
-     "${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md" \
-     "${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md" \
-     "${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md" \
-     "${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md" \
-     "${CLAUDE_SKILL_DIR}/examples"
-   ```
+   Locate the five exact template paths with `Glob`, and enumerate examples with `Glob: "${CLAUDE_SKILL_DIR}/examples/*.md"`.
 7. Read the product's root routing guide once, if present — `Read: CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
 8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
