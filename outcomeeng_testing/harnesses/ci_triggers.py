@@ -138,13 +138,13 @@ def assert_eval_workflow_uses_global_budget_default() -> None:
         _EVAL_WORKFLOW.read_text(encoding="utf-8"),
         Loader=yaml.BaseLoader,
     )
-    dispatch_default = workflow["on"]["workflow_dispatch"]["inputs"][
-        "max_budget_usd"
-    ]["default"]
+    dispatch_default = workflow["on"]["workflow_dispatch"]["inputs"]["max_budget_usd"][
+        "default"
+    ]
     runtime_default = workflow["jobs"]["evals"]["env"]["MAX_BUDGET_USD"]
-    dispatch_timeout = workflow["on"]["workflow_dispatch"]["inputs"][
-        "timeout_seconds"
-    ]["default"]
+    dispatch_timeout = workflow["on"]["workflow_dispatch"]["inputs"]["timeout_seconds"][
+        "default"
+    ]
     runtime_timeout = workflow["jobs"]["evals"]["env"]["TIMEOUT_SECONDS"]
     expected_runtime_default = (
         "${{ github.event.inputs.max_budget_usd || '"

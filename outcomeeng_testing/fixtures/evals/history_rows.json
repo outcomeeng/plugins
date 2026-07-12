@@ -1,0 +1,40 @@
+[
+  {
+    "timestamp": "2026-05-11T15:48:00Z",
+    "schema_version": "1",
+    "git_sha": "9999af81234567890abcdef1234567890abcdef1",
+    "model": "sonnet",
+    "max_budget_usd": 0.75,
+    "timeout_seconds": 180,
+    "passed": true,
+    "pass_rate": 1.0,
+    "cases_total": 4,
+    "cases_passed": 4,
+    "total_cost_usd": 1.04,
+    "total_duration_ms": 18960.0,
+    "total_input_tokens": 40,
+    "total_output_tokens": 24,
+    "total_cache_read_input_tokens": 198560,
+    "total_cache_creation_input_tokens": 0,
+    "transcript": "runs/2026-05-11T15-48-00Z.json"
+  },
+  {
+    "timestamp": "2026-05-12T09:00:00Z",
+    "schema_version": "1",
+    "git_sha": "9999af81234567890abcdef1234567890abcdef1",
+    "model": "claude-sonnet-4-5",
+    "max_budget_usd": 0.75,
+    "timeout_seconds": 180,
+    "passed": false,
+    "pass_rate": 0.75,
+    "cases_total": 4,
+    "cases_passed": 3,
+    "total_cost_usd": 1.04,
+    "total_duration_ms": 18960.0,
+    "total_input_tokens": 39,
+    "total_output_tokens": 31,
+    "total_cache_read_input_tokens": 52160,
+    "total_cache_creation_input_tokens": 33830,
+    "transcript": "runs/2026-05-12T09-00-00Z.json"
+  }
+]

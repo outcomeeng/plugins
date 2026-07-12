@@ -1,0 +1,32 @@
+[
+  {
+    "expected": {"status": "rejected"},
+    "actual": {"status": "rejected", "findings": []},
+    "matches": true
+  },
+  {
+    "expected": {"status": "rejected"},
+    "actual": {"findings": []},
+    "matches": false
+  },
+  {
+    "expected": {"findings": [{"rule": "fixture-rule"}, {"rule": "fixture-rule"}]},
+    "actual": {"findings": [{"rule": "fixture-rule", "present": true}]},
+    "matches": false
+  },
+  {
+    "expected": {"action": "#string"},
+    "actual": {"action": "Apply the fixture correction."},
+    "matches": true
+  },
+  {
+    "expected": {"action": "#notnull"},
+    "actual": {"action": null},
+    "matches": false
+  },
+  {
+    "expected": {"action": "#present"},
+    "actual": {"action": null},
+    "matches": true
+  }
+]

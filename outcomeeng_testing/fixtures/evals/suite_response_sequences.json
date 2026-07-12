@@ -1,0 +1,18 @@
+{
+  "majority": [
+    "verdict_rejected.json",
+    "verdict_rejected.json",
+    "verdict_invalid.txt"
+  ],
+  "below_majority": [
+    "verdict_rejected.json",
+    "verdict_invalid.txt",
+    "verdict_invalid.txt"
+  ],
+  "half_passed": [
+    "verdict_rejected.json",
+    "verdict_invalid.txt",
+    "verdict_rejected.json",
+    "verdict_invalid.txt"
+  ]
+}

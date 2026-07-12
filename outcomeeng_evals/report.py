@@ -25,6 +25,13 @@ from outcomeeng_evals.suite import SuiteResult, TrialResult
 # history.jsonl rows. Bumped on incompatible changes; the committed
 # baseline history rows carry the same value.
 JSON_SCHEMA_VERSION = "1"
+JSON_REPORT_SUFFIX = ".json"
+EMBEDDED_RESULTS_SCRIPT_ID = "eval-results"
+EMBEDDED_RESULTS_SCRIPT_TYPE = "application/json"
+EMBEDDED_RESULTS_SCRIPT_OPEN = (
+    f'<script id="{EMBEDDED_RESULTS_SCRIPT_ID}" type="{EMBEDDED_RESULTS_SCRIPT_TYPE}">'
+)
+EMBEDDED_RESULTS_SCRIPT_CLOSE = "</script>"
 
 
 def serialize_result(
@@ -249,7 +256,7 @@ def write_run_reports(
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
     )
-    _dump_json(payload, html_path.with_suffix(".json"))
+    _dump_json(payload, html_path.with_suffix(JSON_REPORT_SUFFIX))
     html_path.write_text(_render_html_shell(payload), encoding="utf-8")
     return html_path
 
@@ -276,7 +283,7 @@ def _render_html_shell(payload: dict[str, Any]) -> str:
 </head>
 <body>
 <div id="root"></div>
-<script id="eval-results" type="application/json">{embedded}</script>
+{EMBEDDED_RESULTS_SCRIPT_OPEN}{embedded}{EMBEDDED_RESULTS_SCRIPT_CLOSE}
 <script>{_VIEWER_JS}</script>
 </body>
 </html>

@@ -1,0 +1,1 @@
+{"id":"fixture-case","input":{"snippet":"const value = 1;"},"expected_verdict":{"must_contain":[{"status":"rejected","findings":[{"rule":"fixture-rule","present":true}]}],"must_not_contain":[{"status":"approved"}]}}

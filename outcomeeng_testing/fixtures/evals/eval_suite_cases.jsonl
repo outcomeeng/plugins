@@ -1,0 +1,4 @@
+{"id":"fixture-0","input":{"index":0},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"fixture-1","input":{"index":1},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"fixture-2","input":{"index":2},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"fixture-3","input":{"index":3},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}

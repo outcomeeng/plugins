@@ -29,6 +29,7 @@ from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 MIN_WORKERS = 1
 MAX_WORKERS = 16
 RUNNER_FACTORY_KEY: Final = "runner_factory"
+PLUGIN_DIR_OPTION: Final = "--plugin-dir"
 
 
 class RunnerFactory(Protocol):
@@ -50,7 +51,7 @@ class RunnerFactory(Protocol):
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option(
-    "--plugin-dir",
+    PLUGIN_DIR_OPTION,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
     required=True,
     help="Path to a Claude Code plugin directory to load for the eval.",

@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Lock
 from typing import Final
 
-from outcomeeng_evals.runner import ModelRunner, RunMetadata, RunResult
+from outcomeeng_evals.runner import (
+    ModelProcessInvocation,
+    ModelProcessResult,
+    ModelRunner,
+    RunMetadata,
+    RunResult,
+)
 
 RECORDING_UV_COMMANDS_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_COMMANDS"
 RECORDING_UV_EXIT_CODE_ENV: Final = "OUTCOMEENG_EVALS_RECORDING_UV_EXIT_CODE"
@@ -84,6 +92,41 @@ class RecordingRunner:
         result = self.inner.run(prompt)
         self.transcripts.append((prompt, result))
         return result
+
+
+@dataclass
+class RecordingModelProcessLauncher:
+    """Record automated model-process invocations and return a scripted result."""
+
+    result: ModelProcessResult
+    invocations: list[ModelProcessInvocation] = field(default_factory=list)
+
+    def __call__(self, invocation: ModelProcessInvocation) -> ModelProcessResult:
+        self.invocations.append(invocation)
+        return self.result
+
+
+@dataclass
+class ConcurrencyTrackingRunner:
+    """Replay one result while measuring concurrent calls at the runner boundary."""
+
+    result: RunResult
+    delay_seconds: float
+    active_calls: int = 0
+    max_active_calls: int = 0
+    _lock: Lock = field(default_factory=Lock)
+
+    def run(self, prompt: str) -> RunResult:
+        del prompt
+        with self._lock:
+            self.active_calls += 1
+            self.max_active_calls = max(self.max_active_calls, self.active_calls)
+        try:
+            time.sleep(self.delay_seconds)
+            return self.result
+        finally:
+            with self._lock:
+                self.active_calls -= 1
 
 
 @dataclass

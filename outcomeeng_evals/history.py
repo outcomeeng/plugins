@@ -47,6 +47,12 @@ class HistoryRow(TypedDict):
 # Field list with ``HistoryRow`` as the single source of truth — consumed
 # by tests that introspect which keys a row must carry.
 HISTORY_ROW_FIELDS: tuple[str, ...] = tuple(HistoryRow.__annotations__)
+HISTORY_TOKEN_FIELDS: tuple[str, ...] = (
+    "total_input_tokens",
+    "total_output_tokens",
+    "total_cache_read_input_tokens",
+    "total_cache_creation_input_tokens",
+)
 
 
 def append_history_row(history_path: Path, row: HistoryRow) -> None:
