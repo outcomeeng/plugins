@@ -526,6 +526,7 @@ def render_text(
     *,
     shared_root: Path | None = None,
     variables: dict[str, object] | None = None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> str:
     """Render a template by parsing and recursively expanding directives.
 
@@ -556,7 +557,10 @@ def render_text(
         SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
     )
     try:
-        environment = make_jinja_environment(shared_root)
+        environment = make_jinja_environment(
+            shared_root,
+            runtime_token_registry=runtime_token_registry,
+        )
         result = environment.from_string(protected).render(variables or {})
     except TemplateError as exc:
         raise TemplateRenderError(str(exc)) from exc
@@ -765,7 +769,10 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _make_kind_global(kind: str) -> Callable[..., str]:
+def _make_kind_global(
+    kind: str,
+    runtime_token_registry: dict[str, RuntimeTokenKind],
+) -> Callable[..., str]:
     """Build the template global that renders the named registry ``kind``.
 
     Each kind (`tool`, `field`, `term`, `file`) is exposed under its own name. The
@@ -784,12 +791,21 @@ def _make_kind_global(kind: str) -> Callable[..., str]:
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
             )
-        return resolve_runtime_token(kind, capability, resolved)
+        return resolve_runtime_token(
+            kind,
+            capability,
+            resolved,
+            registry=runtime_token_registry,
+        )
 
     return render
 
 
-def make_jinja_environment(shared_root: Path | None = None) -> Environment:
+def make_jinja_environment(
+    shared_root: Path | None = None,
+    *,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> Environment:
     """Return the build's configured Jinja2 environment."""
     loader = FileSystemLoader(str(shared_root)) if shared_root is not None else None
     environment = Environment(
@@ -806,8 +822,8 @@ def make_jinja_environment(shared_root: Path | None = None) -> Environment:
     )
     # One template global per registry kind, named after the kind: tool(), field(),
     # term(), file(). A new kind in the registry is exposed automatically.
-    for kind in RUNTIME_TOKEN_REGISTRY:
-        environment.globals[kind] = _make_kind_global(kind)
+    for kind in runtime_token_registry:
+        environment.globals[kind] = _make_kind_global(kind, runtime_token_registry)
     return environment
 
 

@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.runtime_parameterization import (
     conditional_renders_absent_capability_only_where_present,
     field_kind_renders_live_registry_name_per_target,
     file_kind_renders_guide_filename_per_target,
+    registry_contract_drives_render_path,
     registry_is_keyed_by_kind_with_explicit_guard_enforcement,
     registry_token_renders_each_target_name,
     runtime_explicit_token_renders_named_runtime_on_every_target,
@@ -16,6 +17,10 @@ from outcomeeng_testing.harnesses.runtime_parameterization import (
 
 def test_registry_token_renders_each_target_name() -> None:
     assert registry_token_renders_each_target_name()
+
+
+def test_registry_contract_drives_render_path() -> None:
+    assert registry_contract_drives_render_path()
 
 
 def test_file_kind_renders_guide_filename_per_target() -> None:

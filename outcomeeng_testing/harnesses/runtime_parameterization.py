@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from outcomeeng.distribution.build import (
     BuildError,
     IMPLEMENTED,
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
     RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
     RUNTIME_TOKEN_FIELD_KIND,
@@ -28,6 +29,7 @@ from outcomeeng.validation.runtime_tokens import forbidden_names
 from outcomeeng_testing.generators.source_and_templating import (
     InvalidRuntimeTokenCase,
     invalid_runtime_token_cases,
+    runtime_token_probe_name,
     source_scenarios,
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
@@ -70,6 +72,37 @@ def registry_token_renders_each_target_name() -> bool:
             for (kind, capability), names in SPEC_STATED_RUNTIME_NAMES.items()
             for runtime, expected in names.items()
         )
+    )
+
+
+def registry_contract_drives_render_path() -> bool:
+    _require_implemented()
+    kind = RUNTIME_TOKEN_TOOL_KIND
+    capability = RUNTIME_TOKEN_ASK_USER_CAPABILITY
+    runtime = Target.CODEX
+    kind_entry = RUNTIME_TOKEN_REGISTRY[kind]
+    probe_name = runtime_token_probe_name(kind, capability)
+    runtime_names = {
+        **kind_entry.names[capability],
+        runtime.value: probe_name,
+    }
+    registry = {
+        **RUNTIME_TOKEN_REGISTRY,
+        kind: RuntimeTokenKind(
+            lint_enforced=kind_entry.lint_enforced,
+            names={
+                **kind_entry.names,
+                capability: runtime_names,
+            },
+        ),
+    }
+    return (
+        render_text(
+            f"{{{{! {kind}('{capability}') !}}}}",
+            variables={"target": runtime.value},
+            runtime_token_registry=registry,
+        )
+        == probe_name
     )
 
 

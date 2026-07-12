@@ -57,6 +57,11 @@ def invalid_runtime_token_cases() -> tuple[InvalidRuntimeTokenCase, ...]:
     )
 
 
+def runtime_token_probe_name(kind: str, capability: str) -> str:
+    """Generate a runtime name outside one live capability registry."""
+    return _name_outside(RUNTIME_TOKEN_REGISTRY[kind].names[capability].values())
+
+
 def source_scenarios() -> tuple[SourceScenario, ...]:
     """Compose source-tree cases from every production runtime-token coordinate."""
     return tuple(
