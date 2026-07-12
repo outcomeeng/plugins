@@ -33,6 +33,16 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SKILL_NAME = "example-skill"
+SPEC_STATED_RUNTIME_NAMES = {
+    (RUNTIME_TOKEN_TOOL_KIND, "ask_user"): {
+        Target.CLAUDE: "AskUserQuestion",
+        Target.CODEX: "request_user_input",
+    },
+    (RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY): {
+        Target.CLAUDE: "CLAUDE.md",
+        Target.CODEX: "AGENTS.md",
+    },
+}
 
 
 def implementation_is_ready() -> bool:
@@ -41,9 +51,25 @@ def implementation_is_ready() -> bool:
 
 def registry_token_renders_each_target_name() -> bool:
     _require_implemented()
-    return all(
-        _implicit_registry_case_renders(case.kind, case.capability, Target(case.runtime))
-        for case in runtime_token_resolver_cases()
+    return (
+        all(
+            _implicit_registry_case_renders(
+                case.kind,
+                case.capability,
+                Target(case.runtime),
+            )
+            for case in runtime_token_resolver_cases()
+        )
+        and all(
+            _implicit_registry_case_matches_expected(
+                kind,
+                capability,
+                runtime,
+                expected,
+            )
+            for (kind, capability), names in SPEC_STATED_RUNTIME_NAMES.items()
+            for runtime, expected in names.items()
+        )
     )
 
 
@@ -134,6 +160,23 @@ def _implicit_registry_case_renders(
             else ""
             for target in Target
         },
+    )
+
+
+def _implicit_registry_case_matches_expected(
+    kind: str,
+    capability: str,
+    runtime: Target,
+    expected: str,
+) -> bool:
+    template = (
+        f"{{!% if target == '{runtime.value}' %!}}"
+        f"{{{{! {kind}('{capability}') !}}}}"
+        "{!% endif %!}"
+    )
+    return _target_bodies_equal(
+        _render_skill_bodies(template),
+        {target: expected if target is runtime else "" for target in Target},
     )
 
 
