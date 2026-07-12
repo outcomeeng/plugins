@@ -242,10 +242,13 @@ def configured_local_marketplace_root(
         [*CODEX_MARKETPLACE_LIST_COMMAND],
         runner=runner,
     )
-    claude_source_groups = _parse_marketplace_source_groups(
-        claude_result.stdout or "",
-        runtime="Claude Code",
-    )
+    claude_source_groups = {
+        name: _maintainer_visible_claude_sources(group)
+        for name, group in _parse_marketplace_source_groups(
+            claude_result.stdout or "",
+            runtime="Claude Code",
+        ).items()
+    }
     codex_source_groups = _parse_marketplace_source_groups(
         codex_result.stdout or "",
         runtime="Codex",

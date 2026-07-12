@@ -876,6 +876,40 @@ def source_validation_accepts_shared_root_with_stale_user_duplicate(
     return True
 
 
+def source_validation_rejects_project_only_claude_source_matching_codex(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: _codex_local_marketplace_payload(project_root),
+        }
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        configured_local_marketplace_root(DEFAULT_MARKETPLACE, runner=runner)
+
+    # A project-scope Claude source is excluded even when Codex reports a local
+    # source at the same path, so the ignored-scope path is never adopted as the
+    # shared canonical root; reconciliation reports the Claude source as absent.
+    message = str(exc_info.value)
+    assert "Claude Code marketplace" in message
+    assert "not configured" in message
+    assert str(project_root.resolve(strict=False)) not in message
+    return True
+
+
 def claude_directory_root_does_not_require_codex_configuration(
     tmp_path: Path,
 ) -> bool:

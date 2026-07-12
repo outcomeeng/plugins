@@ -24,6 +24,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_replaces_mismatched_codex_path,
     source_validation_accepts_shared_root_with_stale_user_duplicate,
     source_validation_prefers_user_source_over_stale_project_or_local_duplicate,
+    source_validation_rejects_project_only_claude_source_matching_codex,
     with_temporary_marketplace_path,
 )
 
@@ -113,6 +114,12 @@ def test_source_validation_prefers_user_source_over_stale_project_or_local_dupli
 def test_source_validation_accepts_shared_root_with_stale_user_duplicate() -> None:
     assert with_temporary_marketplace_path(
         source_validation_accepts_shared_root_with_stale_user_duplicate
+    )
+
+
+def test_source_validation_rejects_project_only_claude_source_matching_codex() -> None:
+    assert with_temporary_marketplace_path(
+        source_validation_rejects_project_only_claude_source_matching_codex
     )
 
 
