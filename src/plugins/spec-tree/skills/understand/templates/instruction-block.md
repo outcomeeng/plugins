@@ -228,12 +228,14 @@ Use this shape for an implementation audit:
 
 Use this shape for test-evidence audits:
 
+Derive every affected node and its changed linked test files from the committed changeset scope. Spawn one `test-evidence-auditor` per affected node and aggregate the single-node verdicts; approval requires a completed approving verdict for every affected node.
+
 ```json
 {
   "tool": "{{! tool('spawn_agent', 'codex') !}}",
   "arguments": {
     "agent_type": "test-evidence-auditor",
-    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nFoundation skill files: <full installed understand/SKILL.md and contextualize/SKILL.md paths>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Load the enabled spec-tree:audit-tests skill, then read and apply every supplied language audit skill and its required standards. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; metadata.branch; gate-1-assertion and applicable gate-2-architectural rows, omitting Gate 2 when it is not applicable; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nGoverning node: <one full spx/... node path from the changeset-derived fan-out>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <complete full paths to changed linked test files for this node>\nFoundation skill files: <full installed understand/SKILL.md and contextualize/SKILL.md paths>\nLanguage audit skill files: <full installed audit-{lang}-tests/SKILL.md paths for every detected language>\nTask: Load the enabled spec-tree:audit-tests skill, then read and apply every supplied language audit skill and its required standards. Treat Scope as the completeness boundary for this node and reject any omitted changed linked test file. Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return only the JSON verdict defined by /audit-tests: overall APPROVED or REJECTED; metadata.branch; gate-1-assertion and applicable gate-2-architectural rows, omitting Gate 2 when it is not applicable; complete artifact, provenance, and language-coverage inventories; and REJECT findings with file paths, line numbers, evidence property affected, and required fix. Do not add prose outside the JSON object."
   }
 }
 ```

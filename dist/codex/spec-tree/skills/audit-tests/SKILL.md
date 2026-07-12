@@ -66,7 +66,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 
 Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model.md`
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context. Read the caller's committed changeset scope as the completeness boundary for this node and reject when the supplied test-file inventory omits any changed linked test file for the node. The caller fans a cross-node scope out to one isolated audit per affected node and aggregates their single-node verdicts.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 

@@ -195,9 +195,9 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 <step number="6" name="Test audit" gate="true">
 
-Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, every affected language partition and installed `audit-{lang}-tests` skill path, and the same audit scope chosen in `<scope_detection>`. The auditor composes every partition's language concern inside its isolated context, merges every returned finding, and records a complete language-coverage receipt; approval is forbidden when any partition is absent or incomplete.
+Derive every affected spec node and its changed linked test files from the committed audit scope chosen in `<scope_detection>`. Dispatch one `test-evidence-auditor` per affected node, passing the same committed scope, that node's assertion text or spec path plus assertion headings, the complete changed linked-test inventory for that node, every affected language partition, and every installed `audit-{lang}-tests` skill path. Each auditor composes every partition's language concern inside its isolated context, merges every returned finding, and records a complete language-coverage receipt; aggregate approval is forbidden when a node, changed linked test, or language partition is absent or incomplete.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
+When the scope is cross-node (see `<scope_detection>`), the fan-out covers every affected node in the **whole changeset**. Each auditor retains a single-node verdict schema while the Step 6 aggregate gate rejects when any per-node verdict rejects or any affected node lacks a verdict.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
