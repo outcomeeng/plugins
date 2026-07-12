@@ -76,7 +76,7 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 **Step 2b: Source testability**
 
-For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add an `untestable_source` REJECT finding against the production source. Continue declaration and provenance screening, then skip coupling, falsifiability, alignment, and coverage for that assertion because no test can establish them until the source contract changes.
+For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, evaluate coupling, falsifiability, alignment, and coverage as `FAIL`, with an `untestable_source` REJECT finding on each property naming the absent production contract as the shared cause. Continue declaration and provenance screening so ownership defects remain visible. Do not attempt a downstream execution trace for a property already evaluated as `FAIL`; no property is skipped or left unevaluated.
 
 </step>
 

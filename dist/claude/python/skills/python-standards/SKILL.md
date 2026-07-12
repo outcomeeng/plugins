@@ -50,8 +50,8 @@ def __init__(self, config: Config) -> None:
 
 
 # ✅ REQUIRED: Type annotations on ALL parameters
-def test_creates_file(self, tmp_path: Path) -> None:
-    file = tmp_path / "test.txt"
+def create_file(path: Path) -> None:
+    file = path / "test.txt"
     assert not file.exists()
 
 

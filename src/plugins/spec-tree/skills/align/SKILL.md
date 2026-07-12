@@ -25,19 +25,21 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
+Invoke `/understand` to load the foundation and its indexed references and templates. Use these named foundation materials; do not resolve them through another skill's bundle path.
+
 **References (conformance rules):**
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- `durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `decision-name.adr.md` — required ADR sections
+- `decision-name.pdr.md` — required PDR sections
+- `product-name.product.md` — required product sections
+- `enabler-name.md` — required enabler sections
+- `outcome-name.md` — required outcome sections
 
 </required_references>
 
@@ -155,7 +157,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
+2. **Load rules**: Invoke `/understand` when the live foundation is absent, then use every named reference and template in `<required_references>` from that loaded foundation.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
@@ -204,14 +206,12 @@ Downstream alignment:
 
 <success_criteria>
 
-- [ ] `<SPEC_TREE_FOUNDATION>` marker verified present
-- [ ] All references and templates read from understanding skill
-- [ ] Every `.md` file in scope classified or reported as unrecognized
-- [ ] Structural checks run against correct template per file type
-- [ ] Language checks applied to all files (including unrecognized)
-- [ ] Placement checks applied to all classified files
-- [ ] Changeset checks report higher-level declaration changes that lack lower-spec alignment and `PLAN.md` grounding
-- [ ] Report contains only factual findings — no suggestions, no severity, no "should"
-- [ ] Summary counts emitted
+The alignment report is sound when:
+
+- Every in-scope Spec Tree artifact appears either as a classified subject with factual non-conformances or in the checked-file count with no findings.
+- Every finding names the file, violated conformance dimension, and governing foundation rule or template.
+- Downstream-alignment findings identify the changed higher-level declaration and the absent first-lower-spec or `PLAN.md` grounding.
+- The report contains no remediation advice, severity, prioritization, or unsupported inference.
+- File and finding counts reconcile with the report body.
 
 </success_criteria>

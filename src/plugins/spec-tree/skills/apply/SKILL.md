@@ -49,14 +49,14 @@ If a node's flow cannot reach its gate-specific passing state or a converged rev
 
 <language_detection>
 
-Before starting Step 3, determine the product language:
+Before starting Step 3, determine every implementation-language partition affected by the node and committed scope:
 
 - `tsconfig.json` exists -> **TypeScript**
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
-- Multiple language markers exist -> check the spec node for language indicators, or ask the user
+- Multiple language markers exist -> inspect the governing node, linked evidence, and changed implementation paths and retain every affected partition
 
-Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
+Steps 3, 5, and 7 invoke the matching authoring skill for every affected partition. Steps 4, 6, and 8 pass the complete partition set to their composing auditor; approval requires complete coverage for every partition. Never collapse a multi-language scope to one detected language.
 
 </language_detection>
 
@@ -112,7 +112,7 @@ Before dispatching an applicable evidence auditor, apply `<verification_checkpoi
 
 <skill_map>
 
-Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
+Step 0 and Steps 1–2 are language-independent. Steps 3–8 cover every affected language partition. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
 | Step | Purpose                  | TypeScript                                              | Python                      | Rust                      |
 | ---- | ------------------------ | ------------------------------------------------------- | --------------------------- | ------------------------- |
@@ -163,7 +163,7 @@ Load the full context hierarchy for the specific node — parent chain, sibling 
 
 <step number="3" name="Architect">
 
-Invoke the architecting skill for the detected language.
+Invoke the architecting skill for every affected language partition.
 
 Produce the ADR(s) for the work item. The architecture must be complete before audit.
 
@@ -187,7 +187,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 Invoke `/test` over every assertion before invoking the language test skill. Require its clause-evidence matrix to name, for every independently falsifiable clause, the exercised path, observable result, independent oracle, and passing-while-false mutation. When any existing evidence proves only a subpart, require the complete evidence-chain inventory before authoring or repair. Do not proceed while the evidence-design gate is incomplete or failing.
 
-Invoke the testing skill for the detected language.
+Invoke the testing skill for every affected language partition.
 
 Write tests for all assertions in the spec. Tests come before implementation — no exceptions.
 
@@ -195,7 +195,7 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 <step number="6" name="Test audit" gate="true">
 
-Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-tests` concern inside its isolated context.
+Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, every affected language partition and installed `audit-{lang}-tests` skill path, and the same audit scope chosen in `<scope_detection>`. The auditor composes every partition's language concern inside its isolated context, merges every returned finding, and records a complete language-coverage receipt; approval is forbidden when any partition is absent or incomplete.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
@@ -209,7 +209,7 @@ If a stabilized redispatch remains `REJECTED` with concrete findings, treat each
 
 <step number="7" name="Implement">
 
-Invoke the coding skill for the detected language.
+Invoke the coding skill for every affected language partition.
 
 Write implementation code. All tests from Step 5 must pass.
 
@@ -217,7 +217,7 @@ Write implementation code. All tests from Step 5 must pass.
 
 <step number="8" name="Code audit" gate="true">
 
-Dispatch the `implementation-auditor` agent with the repository path, exact committed changeset scope, no live file list, governing node path, detected language, and deterministic verification already run.
+Dispatch the `implementation-auditor` agent with the repository path, exact committed changeset scope, no live file list, governing node path, every affected language partition, and deterministic verification already run.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
 

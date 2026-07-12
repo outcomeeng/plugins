@@ -133,7 +133,7 @@ Create test files following `/typescript-test-standards`:
 
 If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product test command when no focused form exists.
 
-The focused test gate passes in WRITE mode only when tests fail for the expected missing implementation or assertion mismatch. Collection, syntax, harness, or configuration failures fail the gate. The typecheck and lint gates pass only with zero exit status. Stop before Step 6 unless all three gates pass.
+The focused test gate passes in WRITE mode only when tests fail for the expected missing implementation or assertion mismatch. When Step 3 established that the implementation module is absent and the focused failure names only that missing import, treat the result as the specified-node signal and proceed directly to Step 6; the corresponding missing-import typecheck result does not block that path. Every other collection, syntax, harness, configuration, typecheck, or lint failure stops the workflow. For an existing implementation, proceed only when the focused test has the expected assertion mismatch and typecheck and lint exit zero.
 
 **Step 6: Handle Specified Nodes**
 

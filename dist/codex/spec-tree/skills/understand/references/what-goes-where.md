@@ -1,3 +1,16 @@
+<contents>
+
+- `<overview>` - artifact taxonomy and ADR/PDR classification
+- `<adr>` / `<pdr>` - decision-record content boundaries
+- `<enabler_spec>` / `<outcome_spec>` - node-spec content boundaries
+- `<test_files>` / `<test_infrastructure>` - evidence and infrastructure ownership
+- `<enforcement>` - static enforcement placement
+- `<coordination_notes>` - `PLAN.md` and `ISSUES.md` roles
+- `<flow>` - truth-to-evidence relationship
+- `<common_misplacements>` - placement failure catalog
+
+</contents>
+
 <overview>
 
 Every artifact in the Spec Tree has a specific purpose. Content placed in the wrong artifact creates confusion and duplication.
@@ -24,13 +37,11 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Contains:**
 
-- Purpose — what concern this decision governs
-- Context — business impact and technical constraints
-- Decision — the chosen approach in one sentence
-- Rationale — why this is right given constraints
-- Trade-offs accepted — what was given up and why
-- Invariants — algebraic properties that must hold
-- Compliance — executable verification criteria (MUST / NEVER rules)
+- Decision text directly under the title — the architecture choice as permanent truth
+- Optional `## Rationale` — why the choice fits its constraints
+- Optional `## Invariants` — algebraic properties that hold throughout the governed scope
+- `## Verification` with only the applicable `### Testing`, `### Eval`, and `### Audit` subsections
+- `ALWAYS` / `NEVER` rules carrying the verification tag required by their subsection
 
 **Does NOT contain:** Outcomes, assertions, test references, or implementation code.
 
@@ -44,13 +55,11 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Contains:**
 
-- Purpose — what product behavior this decision governs
-- Context — business impact and technical constraints
-- Decision — the chosen approach in one sentence
-- Rationale — why this is right for users
-- Trade-offs accepted — what was given up and why
-- Product properties — observable behaviors users can always rely on
-- Compliance — product behavior validation criteria (MUST / NEVER rules)
+- Decision text directly under the title — user-observable behavior as permanent truth
+- Optional `## Rationale` — why the behavior fits user needs and constraints
+- Optional `## Product properties` — no more than three observable guarantees
+- `## Verification` with only the applicable `### Testing`, `### Eval`, and `### Audit` subsections
+- `ALWAYS` / `NEVER` rules carrying the verification tag required by their subsection
 
 **Does NOT contain:** Outcomes, assertions, test references, or implementation code.
 
@@ -90,13 +99,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Typed assertion files only, one assertion type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
-
-| Level | Suffix shape                | Question                             |
-| ----- | --------------------------- | ------------------------------------ |
-| 1     | `.<evidence>.l1.test.{ext}` | Is our logic correct?                |
-| 2     | `.<evidence>.l2.test.{ext}` | Does it work with real dependencies? |
-| 3     | `.<evidence>.l3.test.{ext}` | Does it work for users?              |
+**Contains:** Typed assertion files only, one assertion type per file. The product's generated instruction block and installed per-language test standards own the concrete filename syntax. Every syntax encodes subject, evidence kind, execution level (`l1`, `l2`, or `l3`), optional runner, and language test extension in that language's canonical order.
 
 Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
 
