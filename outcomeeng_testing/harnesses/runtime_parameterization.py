@@ -22,6 +22,7 @@ from outcomeeng.distribution.build import (
     RuntimeTokenKind,
     build,
     render_text,
+    resolve_runtime_token,
 )
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.validation.runtime_tokens import forbidden_names
@@ -49,8 +50,12 @@ def registry_token_renders_each_target_name() -> bool:
     return _target_bodies_equal(
         bodies,
         {
-            Target.CLAUDE: "Ask the user via AskUserQuestion now.",
-            Target.CODEX: "Ask the user via request_user_input now.",
+            target: (
+                "Ask the user via "
+                f"{_runtime_name(RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY, target)} "
+                "now."
+            )
+            for target in Target
         },
     )
 
@@ -65,8 +70,12 @@ def file_kind_renders_guide_filename_per_target() -> bool:
     return _target_bodies_equal(
         bodies,
         {
-            Target.CLAUDE: "Read the guide at CLAUDE.md once per session.",
-            Target.CODEX: "Read the guide at AGENTS.md once per session.",
+            target: (
+                "Read the guide at "
+                f"{_runtime_name(RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY, target)} "
+                "once per session."
+            )
+            for target in Target
         },
     )
 
@@ -80,8 +89,11 @@ def field_kind_renders_live_registry_name_per_target() -> bool:
     return _target_bodies_equal(
         bodies,
         {
-            Target.CLAUDE: "Configure the field system prompt.",
-            Target.CODEX: "Configure the field developer_instructions.",
+            target: (
+                "Configure the field "
+                f"{_runtime_name(RUNTIME_TOKEN_FIELD_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY, target)}."
+            )
+            for target in Target
         },
     )
 
@@ -95,8 +107,11 @@ def term_kind_renders_live_registry_name_per_target() -> bool:
     return _target_bodies_equal(
         bodies,
         {
-            Target.CLAUDE: "Configure the subagent.",
-            Target.CODEX: "Configure the custom agent.",
+            target: (
+                "Configure the "
+                f"{_runtime_name(RUNTIME_TOKEN_TERM_KIND, RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY, target)}."
+            )
+            for target in Target
         },
     )
 
@@ -110,8 +125,11 @@ def runtime_explicit_token_renders_named_runtime_on_every_target() -> bool:
     return _target_bodies_equal(
         bodies,
         {
-            Target.CLAUDE: "On Claude this is AskUserQuestion.",
-            Target.CODEX: "On Claude this is AskUserQuestion.",
+            target: (
+                "On Claude this is "
+                f"{_runtime_name(RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY, Target.CLAUDE)}."
+            )
+            for target in Target
         },
     )
 
@@ -160,6 +178,10 @@ def _raises_build_error(call: Callable[[], object]) -> bool:
     except BuildError:
         return True
     return False
+
+
+def _runtime_name(kind: str, capability: str, target: Target) -> str:
+    return resolve_runtime_token(kind, capability, target.value)
 
 
 def _invalid_runtime_token_case_fails(case: InvalidRuntimeTokenCase) -> bool:
