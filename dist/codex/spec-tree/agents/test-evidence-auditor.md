@@ -28,7 +28,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide behavior-coupl
 
 <workflow>
 
-1. Require the spec-tree foundation and complete node context. Read the exact `/understand` and `/contextualize` skill paths supplied by the dispatch message, execute their workflows for the full node path, use `spx spec context <full-node-path>` as the deterministic document manifest, and reject with `overall: "REJECTED"`, a failed row, and a blocking finding when either supplied skill is absent or its workflow cannot complete.
+1. Require the spec-tree foundation and complete node context. Read the exact `/understand` and `/contextualize` skill paths supplied by the dispatch message, execute their current manual enumeration workflows for the full node path, and reject with `overall: "REJECTED"`, a failed row, and a blocking finding when either supplied skill is absent or its workflow cannot complete.
 2. Read the committed changeset scope, identify every assertion with test evidence from the loaded governing spec, and confirm the supplied test-file inventory includes every changed linked test file for that node.
 3. Read the production source each assertion governs. When the assertion-relevant behavior lacks an observable contract, add an `untestable_source` REJECT finding against the source file, continue ownership and provenance screening, and skip coupling, falsifiability, alignment, and coverage for that assertion.
 4. Starting from each linked test file, follow imports and referenced paths transitively through every evidence artifact before issuing a verdict.

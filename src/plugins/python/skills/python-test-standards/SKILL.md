@@ -80,7 +80,7 @@ Where the *values* the cases use live:
 | Whole-payload real-world sample                              | An inert fixture file under `<package>_testing/fixtures/`, read by path         |
 | One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                                |
 
-Executed Python test files are typed assertion files. They introduce no literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Convenience variables and constants may alias values derived solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data; the alias introduces no data or policy of its own.
+Executed Python test files are typed assertion files. They introduce no variable or constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
 
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary — a hand-written key is a hand-picked case for the parser or consumer. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed.
 
@@ -244,7 +244,7 @@ Reject or rewrite these patterns:
 - `INVALID_*_INPUTS` / `INVALID_*_CASES` tuples, or any module- or class-scope bag of invalid values — a hand-picked set standing in for the invalid domain. Remedy by domain: an open or infinite invalid space (arbitrary strings, identifiers, timestamps, keys, generated names) takes a Hypothesis strategy generating values *outside* the valid predicate; a closed, source-owned invalid set (enum variants, a defined protocol set, registry members) imports the source enum or registry rather than hand-copying members
 - Source-owned values copied into local constants
 - Test-file-local constants for values the production module owns
-- Variable or constant declarations in executed test files that introduce data, expected outputs, runner settings, setup policy, literals, numbers, vocabulary, case choices, or configuration rather than aliasing a value derived solely from an imported owner
+- Variable or constant declarations in executed test files, including aliases of imported values
 - Pytest fixture parameters or property-generated parameters in executed test files; the harness owns fixture access and generated-case binding
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer
 - Hand-copied artifact field names from YAML, HCL, bash, JSON schema, or IaC templates as substitutes for imports from the Python module that should render or consume the artifact
@@ -265,7 +265,7 @@ Python test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `test_<subject>.<evidence>.<level>[.<runner>].py`
-- Executed test files introduce no local data or policy; convenience aliases derive solely from imported owners, and fixture parameters or property-generated parameters remain outside the assertion file
+- Executed test files introduce no variable or constant declarations, local data, or policy; fixture parameters and property-generated parameters remain outside the assertion file
 - Source architecture is improved before tests accept copied values, replacement mocks, or fixture laundering
 - Every test case has a documentable source outside the author's head — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
 - Source-owned values come from the owning production module; container keys are imported, not hand-written; runner-tuning values live on the harness that owns the resource

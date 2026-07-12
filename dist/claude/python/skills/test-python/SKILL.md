@@ -63,7 +63,7 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data.
+7. Keep variable and constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
 8. Import source-owned values from the owning module.
 9. Import variable input domains from `<package>_testing.generators.*`.
 10. Import harness entrypoints from `<package>_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
@@ -80,7 +80,7 @@ Run this workflow for rejected Python tests:
 3. If any cited test proves only a subpart, locate every linked test, harness, generator, fixture path provider, source contract, oracle, assertion-relevant implementation path, and `conftest.py` shim before editing.
 4. Classify each finding and every same-class instance across that chain by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
 5. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
-6. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
+6. Replace every variable or constant binding with a direct assertion expression over source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data.
 7. Replace constant-only generators with direct source imports or meaningful variable domains.
 8. Move resource setup, teardown, cleanup, and pytest fixture bodies into `<package>_testing.harnesses.*`.
 9. Keep `<package>_testing/fixtures/` for inert files only.
@@ -145,7 +145,7 @@ Python test work satisfies this skill when:
 
 - Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
-- Tests introduce no local literals, numbers, vocabulary, case data, expected results, or configuration; convenience aliases derive solely from source contracts, generators, harnesses, inert-fixture path providers, or eval case data
+- Tests introduce no variable or constant declarations, local literals, numbers, vocabulary, case data, expected results, or configuration
 - Generators represent meaningful variable domains
 - Harnesses manage resource lifecycle and pytest fixture body code
 - Inert fixtures are consumed only as files

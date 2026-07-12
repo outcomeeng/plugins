@@ -19,7 +19,7 @@ Rust test guidance follows this standard when:
 - property assertions run through a harness that owns `proptest` / `quickcheck` runner policy and emits replay evidence
 - compile-time claims use compile-fail evidence
 - shared harnesses, generators, and fixtures live in a separate workspace-member crate as test-infrastructure production code
-- coverage claims are measured with the repository's real coverage tool or recorded as unavailable
+- the external deterministic gate measures coverage when the repository declares a coverage command; the evidence audit establishes relevant-path coverage by reading the complete evidence chain
 
 </success_criteria>
 
@@ -141,7 +141,7 @@ Use the lightest Rust-native tool that preserves evidence:
 | textual golden output         | `insta` when the output surface itself is the assertion       |
 | compile-fail or diagnostics   | `trybuild`                                                    |
 | local services or containers  | `testcontainers` or repo-native harnesses                     |
-| coverage                      | `cargo llvm-cov` when available                               |
+| deterministic coverage gate   | the repository-declared command, such as `cargo llvm-cov`     |
 
 Snapshot tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -383,12 +383,12 @@ Level 3 tests must declare their isolation boundary, credentials, cleanup behavi
 </level_3_patterns>
 
 <coverage_rules>
-Coverage is evidence only when measured against the exercised module:
+Coverage has separate deterministic and agentic responsibilities:
 
-- Prefer `cargo llvm-cov` for per-file and per-function coverage deltas
-- Compare baseline coverage without the test under audit against coverage with the test included
-- Report the actual delta; do not infer coverage from reading the file
-- If the repository lacks usable coverage tooling, state that limitation explicitly and do not fabricate a coverage pass
+- The caller runs the repository-declared coverage command when one exists; `cargo llvm-cov` is the direct fallback only when the repository declares no wrapper and requires a coverage gate.
+- The test-evidence audit never runs a coverage tool. It reads the complete evidence chain and passes coverage only when the test drives execution into every assertion-relevant source path, or when the path is trivially total and marked `saturated`.
+- A passing deterministic coverage percentage does not replace relevant-path tracing, and relevant-path tracing does not claim a measured percentage.
+- When the repository declares no deterministic coverage gate, record that absence without weakening the audit's read-based coverage requirement.
 
 </coverage_rules>
 

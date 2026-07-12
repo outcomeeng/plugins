@@ -107,7 +107,7 @@ allowed-tools: Bash(./deploy:*)
 ---
 ```
 
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
