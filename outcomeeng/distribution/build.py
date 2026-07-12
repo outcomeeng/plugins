@@ -36,7 +36,9 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    ASK_USER_TOOL_NAMES,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
+    ROOT_GUIDE_FILE_NAMES,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
@@ -179,17 +181,9 @@ RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
 RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
 
 
-ASK_USER_TOOL_NAMES: Final[dict[str, str]] = {
-    "claude": "AskUserQuestion",
-    "codex": "request_user_input",
-}
 CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
     "claude": "system prompt",
     "codex": "developer_instructions",
-}
-ROOT_GUIDE_FILE_NAMES: Final[dict[str, str]] = {
-    "claude": "CLAUDE.md",
-    "codex": "AGENTS.md",
 }
 CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
     RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: {

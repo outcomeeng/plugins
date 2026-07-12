@@ -12,7 +12,6 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.build import (
-    ASK_USER_TOOL_NAMES,
     BuildError,
     CONFIGURED_AGENT_PROMPT_FIELD_NAMES,
     CONFIGURED_AGENT_TERM_NAMES,
@@ -32,7 +31,6 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
     RUNTIME_TOKEN_TERM_KIND,
     RUNTIME_TOKEN_TOOL_KIND,
-    ROOT_GUIDE_FILE_NAMES,
     RuntimeTokenError,
     RuntimeTokenKind,
     build,
@@ -40,7 +38,11 @@ from outcomeeng.distribution.build import (
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    ASK_USER_TOOL_NAMES,
+    ROOT_GUIDE_FILE_NAMES,
+    Target,
+)
 from outcomeeng.validation.runtime_tokens import forbidden_names
 from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
