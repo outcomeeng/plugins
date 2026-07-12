@@ -398,7 +398,7 @@ Test evidence is ready for audit when:
 - [ ] Every affected assertion has a complete assertion-to-evidence matrix whose language form and linked file match `/typescript-test-standards`
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
-- [ ] The product's resolved TypeScript typecheck and lint commands exit zero for the changed scope
+- [ ] The product's resolved TypeScript lint command exits zero; the typecheck command also exits zero unless WRITE mode is on the declared specified-node path where its only failure is the missing implementation import
 - [ ] FIX mode completes every supplied audit repair and every same-class repair found across the full evidence chain, then passes deterministic verification before redispatch
 
 </success_criteria>
