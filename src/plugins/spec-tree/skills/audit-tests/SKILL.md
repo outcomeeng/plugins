@@ -73,14 +73,6 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 </step>
 
-<step name="audit_testability">
-
-**Step 2b: Source testability**
-
-For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add one `untestable_source` REJECT finding to `gate-1-assertion`. Target the production source file, use `source-testability` as the evidence property, name the absent production contract, and require production refactoring that exposes the asserted behavior. Skip coupling, falsifiability, alignment, and coverage for that assertion because those checks cannot apply until the source exposes the behavior. Continue declaration and provenance screening so independent ownership defects remain visible.
-
-</step>
-
 <step name="map_assertions">
 
 **Step 2: Map assertions to test files**
@@ -97,6 +89,14 @@ Read the spec's Assertions section. For each assertion, extract:
 **Missing test file = finding.** Record it and continue to next assertion.
 
 **Compliance assertions with `[audit]` tags** (or the legacy `[review]`) are verified by agent judgment, not by tests. Skip them in the test evidence audit.
+
+</step>
+
+<step name="audit_testability">
+
+**Step 2b: Source testability**
+
+For each mapped `[test]` assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add one `untestable_source` REJECT finding to `gate-1-assertion`. Target the production source file, use `source-testability` as the evidence property, name the absent production contract, and require production refactoring that exposes the asserted behavior. Skip coupling, falsifiability, alignment, and coverage for that assertion because those checks cannot apply until the source exposes the behavior. Continue declaration and provenance screening so independent ownership defects remain visible.
 
 </step>
 

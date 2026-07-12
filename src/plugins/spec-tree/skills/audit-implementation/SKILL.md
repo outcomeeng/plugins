@@ -18,7 +18,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on the requested implementation scope against the installed language concern standards, returned as the raw run token and rendered SPX projection.
+A verdict on the requested implementation scope against the installed language concern standards — approved, or rejected with each SPX-recorded finding naming the unit, producer, violated rule, location, and observed-versus-expected evidence.
 
 </objective>
 
