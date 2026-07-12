@@ -39,10 +39,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.15 made `spx diagnose` classify a missing, detached, or
-# wrong-branch designated main checkout through the `worktree-pool` record,
-# which this product's merge overlay uses before merge mutation and after
-# feature-worktree cleanup. spx 0.6.13 introduced `spx verification run`,
+# above it. spx 0.6.15 made the manifest-independent default `spx diagnose`
+# provider set include `worktree-pool` and classify a missing, detached, or
+# wrong-branch designated main checkout through that record, which this
+# product's merge overlay uses before merge mutation and after feature-worktree
+# cleanup. spx 0.6.13 introduced `spx verification run`,
 # including run start, input replay, scope evidence, finding evidence, finish,
 # status, and render commands used by implementation audits. spx 0.6.10
 # introduced `spx journal

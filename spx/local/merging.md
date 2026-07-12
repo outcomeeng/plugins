@@ -8,7 +8,7 @@ No deployment action is declared. Every change proceeds without deployment autho
 
 ## Canonical checkout safety
 
-Run the released default diagnosis before the first merge mutation, without a manifest:
+Run the released default diagnosis before the first merge mutation, without a manifest. `@outcomeeng/spx` 0.6.15 and newer select every registered diagnostic provider when neither a manifest nor a configured check set is supplied, so the default machine report includes `worktree-pool`; the plugin-shipped manifest remains the fully instrumented contract for the user-invoked `/diagnose` skill:
 
 ```bash
 git rev-parse --show-toplevel
