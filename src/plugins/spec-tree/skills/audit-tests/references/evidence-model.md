@@ -33,23 +33,25 @@ Coupling categories with definitions and code examples.
 **Direct coupling** — Test imports the module under test and calls its functions directly.
 
 ```typescript
-import { parseConfig } from "../src/config-parser";
+import { EXPECTED_NESTED_SECTION, parseConfig, VALID_NESTED_CONFIG } from "../src/config-parser";
 
 it("parses nested sections", () => {
-  const result = parseConfig(input);
-  expect(result.section.key).toBe("value");
+  expect(parseConfig(VALID_NESTED_CONFIG).section).toEqual(
+    EXPECTED_NESTED_SECTION,
+  );
 });
 ```
 
 **Indirect coupling** — Test imports a test harness that wraps the module. Coupling exists but is mediated.
 
 ```typescript
+import { EXPECTED_NESTED_SECTION } from "../src/config-parser";
 import { ConfigTestHarness } from "./harness";
 
 it("parses nested sections", () => {
-  const harness = new ConfigTestHarness();
-  const result = harness.parseAndValidate(input);
-  expect(result.section.key).toBe("value");
+  expect(new ConfigTestHarness().parseAndValidate().section).toEqual(
+    EXPECTED_NESTED_SECTION,
+  );
 });
 ```
 
@@ -59,10 +61,10 @@ When indirect coupling is found, verify the harness itself has direct coupling t
 
 ```typescript
 import { Application } from "../src/app";
+import { EXPECTED_NESTED_SECTION } from "../src/config-parser";
 
 it("loads configuration", () => {
-  const app = new Application();
-  expect(app.config.section.key).toBe("value");
+  expect(new Application().config.section).toEqual(EXPECTED_NESTED_SECTION);
 });
 ```
 
@@ -87,12 +89,11 @@ Reject even when the infrastructure path is valid. Move protocol vocabulary to i
 **False coupling** — Test imports the module but never exercises the code path relevant to the assertion.
 
 ```typescript
-import { parseConfig, validateConfig } from "../src/config-parser";
+import { EXPECTED_VALIDATION, parseConfig, VALID_CONFIG, validateConfig } from "../src/config-parser";
 
 it("validates config structure", () => {
   // Assertion is about PARSING but test only validates
-  const result = validateConfig(hardcodedConfig);
-  expect(result.valid).toBe(true);
+  expect(validateConfig(VALID_CONFIG)).toEqual(EXPECTED_VALIDATION);
   // parseConfig is imported but never called
 });
 ```
@@ -102,12 +103,11 @@ The import exists syntactically but the assertion-relevant function is never cal
 **Partial coupling** — Test exercises some code paths but not the ones the assertion specifies.
 
 ```typescript
-import { parseConfig } from "../src/config-parser";
+import { EXPECTED_FLAT_CONFIG, parseConfig, VALID_FLAT_CONFIG } from "../src/config-parser";
 
 it("parses flat config", () => {
   // Assertion is about NESTED SECTIONS but test covers flat only
-  const result = parseConfig("key=value");
-  expect(result.key).toBe("value");
+  expect(parseConfig(VALID_FLAT_CONFIG)).toEqual(EXPECTED_FLAT_CONFIG);
 });
 ```
 

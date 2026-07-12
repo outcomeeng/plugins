@@ -15,7 +15,7 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
+A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed evidence property or cross-assertion architectural duplication, and the evidentiary gap.
 
 </objective>
 
@@ -283,6 +283,19 @@ Read the detected language or language partitions from the caller's audit reques
 When the caller supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
 
 When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, invoke each skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
+
+</step>
+
+<step name="compose_architectural">
+
+**Step 3g: Roll up composed architectural duplication**
+
+Gate 2 is a composed-language concern. It applies when at least one language-specific verdict returns a `gate-2-architectural` row. Merge every applicable Gate 2 finding by row name, preserving each finding's language-specific rule and extraction target.
+
+- Return Gate 2 `FAIL` when any composed Gate 2 row contains a `REJECT` finding.
+- Return Gate 2 `PASS` when every applicable composed Gate 2 row passes.
+- Omit Gate 2 only when every composed language verdict omits it as non-applicable.
+- Treat a malformed or unevaluated applicable Gate 2 row as failed `language-composition` evidence; never infer architectural approval.
 
 </step>
 
