@@ -103,7 +103,7 @@ allowed-tools: Read
 name: deploy
 disable-model-invocation: true
 description: Deploy the application to production
-allowed-tools: Bash(git *) Bash(./deploy *)
+allowed-tools: Bash(./deploy:*)
 ---
 ```
 
