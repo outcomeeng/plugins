@@ -2,6 +2,7 @@
 
 from outcomeeng_testing.harnesses.marketplace_sources import (
     claude_directory_root_does_not_require_codex_configuration,
+    claude_directory_root_ignores_project_scope_duplicate,
     claude_directory_root_rejects_duplicate_local_roots,
     parse_codex_marketplace_sources_accepts_local_source,
     parse_codex_marketplace_sources_accepts_nested_local_source,
@@ -123,6 +124,12 @@ def test_claude_directory_root_does_not_require_codex_configuration() -> None:
 def test_claude_directory_root_rejects_duplicate_local_roots() -> None:
     assert with_temporary_marketplace_path(
         claude_directory_root_rejects_duplicate_local_roots
+    )
+
+
+def test_claude_directory_root_ignores_project_scope_duplicate() -> None:
+    assert with_temporary_marketplace_path(
+        claude_directory_root_ignores_project_scope_duplicate
     )
 
 

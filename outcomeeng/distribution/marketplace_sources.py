@@ -280,7 +280,7 @@ def configured_claude_directory_marketplace_root(
         runtime="Claude Code",
     )
     root = _single_runtime_local_source_root(
-        claude_source_groups.get(marketplace, ()),
+        _maintainer_visible_claude_sources(claude_source_groups.get(marketplace, ())),
         runtime="Claude Code",
     )
     if root is None:
@@ -640,6 +640,25 @@ def _normalized_path(path: Path) -> Path:
     return path.expanduser().resolve(strict=False)
 
 
+def _maintainer_visible_claude_sources(
+    sources: tuple[MarketplaceSource, ...],
+) -> tuple[MarketplaceSource, ...]:
+    """Claude sources the maintainer root lookup considers.
+
+    Reconciliation manages only the user-scope ``outcomeeng`` registration and
+    deliberately leaves project- and local-scope registrations in place, so
+    every derivation of the canonical Claude root excludes those scopes. A
+    read-only resolver that still counted a project/local duplicate at another
+    path would raise "multiple local marketplace roots" for a state
+    reconciliation reports as already configured. User-, unscoped-, and
+    managed-scope sources are retained: a genuine ambiguity among them is a real
+    misconfiguration the resolver must surface.
+    """
+    return tuple(
+        source for source in sources if source.scope not in _CLAUDE_PROJECT_PATH_SCOPES
+    )
+
+
 def _canonical_source_root(
     marketplace: str,
     *,
@@ -651,28 +670,27 @@ def _canonical_source_root(
 ) -> Path:
     if explicit_root is not None:
         return _normalized_path(explicit_root)
-    shared_root = _shared_local_source_root(
+    claude_group = _maintainer_visible_claude_sources(
         claude_source_groups.get(marketplace, ())
         if claude_source_groups is not None
-        else tuple(claude_sources.values()),
+        else tuple(claude_sources.values())
+    )
+    codex_group = (
         codex_source_groups.get(marketplace, ())
         if codex_source_groups is not None
-        else tuple(codex_sources.values()),
+        else tuple(codex_sources.values())
     )
+    shared_root = _shared_local_source_root(claude_group, codex_group)
     if shared_root is not None:
         return shared_root
     claude_group_root = _single_runtime_local_source_root(
-        claude_source_groups.get(marketplace, ())
-        if claude_source_groups is not None
-        else tuple(claude_sources.values()),
+        claude_group,
         runtime="Claude Code",
     )
     if claude_group_root is not None:
         return claude_group_root
     codex_group_root = _single_runtime_local_source_root(
-        codex_source_groups.get(marketplace, ())
-        if codex_source_groups is not None
-        else tuple(codex_sources.values()),
+        codex_group,
         runtime="Codex",
     )
     if codex_group_root is not None:

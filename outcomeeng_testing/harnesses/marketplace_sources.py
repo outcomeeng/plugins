@@ -459,8 +459,7 @@ def source_reconciliation_rejects_ambiguous_claude_roots(tmp_path: Path) -> bool
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE: "Directory",
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
-                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "project"),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
                     },
                     {
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
@@ -945,6 +944,44 @@ def claude_directory_root_rejects_duplicate_local_roots(
     assert "Claude Code reported multiple local marketplace roots" in message
     assert str(canonical_root.resolve(strict=False)) in message
     assert str(stale_root.resolve(strict=False)) in message
+    assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
+    return True
+
+
+def claude_directory_root_ignores_project_scope_duplicate(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(canonical_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
+                    },
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(stale_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    },
+                ]
+            )
+        }
+    )
+
+    root = configured_claude_directory_marketplace_root(
+        DEFAULT_MARKETPLACE,
+        runner=runner,
+    )
+
+    assert root == canonical_root.resolve(strict=False)
+    assert root != stale_root.resolve(strict=False)
     assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
     return True
 
