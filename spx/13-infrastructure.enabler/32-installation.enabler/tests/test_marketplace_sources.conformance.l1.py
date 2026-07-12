@@ -2,7 +2,9 @@
 
 from outcomeeng_testing.harnesses.marketplace_sources import (
     claude_directory_root_does_not_require_codex_configuration,
+    claude_directory_root_ignores_project_scope_duplicate,
     claude_directory_root_rejects_duplicate_local_roots,
+    claude_directory_root_rejects_project_local_only_registration,
     parse_codex_marketplace_sources_accepts_local_source,
     parse_codex_marketplace_sources_accepts_nested_local_source,
     parse_claude_marketplace_sources_normalizes_directory_source,
@@ -22,6 +24,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_replaces_mismatched_codex_path,
     source_validation_accepts_shared_root_with_stale_user_duplicate,
     source_validation_prefers_user_source_over_stale_project_or_local_duplicate,
+    source_validation_rejects_project_only_claude_source_matching_codex,
     with_temporary_marketplace_path,
 )
 
@@ -114,6 +117,12 @@ def test_source_validation_accepts_shared_root_with_stale_user_duplicate() -> No
     )
 
 
+def test_source_validation_rejects_project_only_claude_source_matching_codex() -> None:
+    assert with_temporary_marketplace_path(
+        source_validation_rejects_project_only_claude_source_matching_codex
+    )
+
+
 def test_claude_directory_root_does_not_require_codex_configuration() -> None:
     assert with_temporary_marketplace_path(
         claude_directory_root_does_not_require_codex_configuration
@@ -123,6 +132,18 @@ def test_claude_directory_root_does_not_require_codex_configuration() -> None:
 def test_claude_directory_root_rejects_duplicate_local_roots() -> None:
     assert with_temporary_marketplace_path(
         claude_directory_root_rejects_duplicate_local_roots
+    )
+
+
+def test_claude_directory_root_ignores_project_scope_duplicate() -> None:
+    assert with_temporary_marketplace_path(
+        claude_directory_root_ignores_project_scope_duplicate
+    )
+
+
+def test_claude_directory_root_rejects_project_local_only_registration() -> None:
+    assert with_temporary_marketplace_path(
+        claude_directory_root_rejects_project_local_only_registration
     )
 
 

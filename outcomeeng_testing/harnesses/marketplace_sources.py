@@ -22,7 +22,9 @@ from outcomeeng.distribution.marketplace_sources import (
     CLAUDE_PLUGIN_ENABLE_COMMAND,
     CLAUDE_PLUGIN_INSTALL_COMMAND,
     CLAUDE_PLUGIN_LIST_COMMAND,
+    CLAUDE_SCOPE_LOCAL,
     CLAUDE_SCOPE_MANAGED,
+    CLAUDE_SCOPE_PROJECT,
     CLAUDE_SCOPE_USER,
     CODEX_MARKETPLACE_ADD_COMMAND,
     CODEX_MARKETPLACE_LIST_COMMAND,
@@ -457,8 +459,7 @@ def source_reconciliation_rejects_ambiguous_claude_roots(tmp_path: Path) -> bool
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE: "Directory",
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
-                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "project"),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
                     },
                     {
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
@@ -498,7 +499,7 @@ def parse_claude_installed_plugins_keeps_scope_state_and_project_path(
         [
             _claude_plugin_payload(
                 "spec-tree",
-                scope="project",
+                scope=CLAUDE_SCOPE_PROJECT,
                 enabled=True,
                 project_path=project_path,
             ),
@@ -514,7 +515,7 @@ def parse_claude_installed_plugins_keeps_scope_state_and_project_path(
     plugins = parse_claude_installed_plugins(payload, DEFAULT_MARKETPLACE)
 
     assert [(plugin.name, plugin.scope, plugin.enabled) for plugin in plugins] == [
-        ("spec-tree", "project", True),
+        ("spec-tree", CLAUDE_SCOPE_PROJECT, True),
         ("rust", CLAUDE_SCOPE_USER, False),
     ]
     assert plugins[0].project_path == project_path
@@ -638,7 +639,12 @@ def source_reconciliation_adds_absent_runtime_sources(tmp_path: Path) -> bool:
         expected_root=marketplace_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             (*CODEX_MARKETPLACE_ADD_COMMAND, str(result.root)),
         ],
         expected_cwd=[None, None, None, None, None],
@@ -654,7 +660,7 @@ def source_reconciliation_unscoped_default_adds_user_registration_and_restores_u
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = RecordingCommandRunner(
@@ -672,7 +678,7 @@ def source_reconciliation_unscoped_default_adds_user_registration_and_restores_u
                     ),
                     _claude_plugin_payload(
                         "spec-tree",
-                        scope="project",
+                        scope=CLAUDE_SCOPE_PROJECT,
                         enabled=True,
                         project_path=project_path,
                     ),
@@ -693,7 +699,12 @@ def source_reconciliation_unscoped_default_adds_user_registration_and_restores_u
         expected_root=marketplace_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             *_user_scope_rust_restore_calls(),
         ],
         expected_cwd=[None, None, None, None, None, None],
@@ -764,7 +775,7 @@ def source_reconciliation_accepts_duplicate_lower_priority_matching_sources(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_LOCAL,
                         MARKETPLACE_FIELD_PATH: str(marketplace_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                         MARKETPLACE_FIELD_PROJECT_PATH: str(project_path),
                     },
                 ]
@@ -803,7 +814,7 @@ def source_validation_prefers_user_source_over_stale_project_or_local_duplicate(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE: "Directory",
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "local",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_LOCAL,
                         MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path),
                     },
                 ]
@@ -862,6 +873,40 @@ def source_validation_accepts_shared_root_with_stale_user_duplicate(
         CLAUDE_MARKETPLACE_LIST_CALL,
         CODEX_MARKETPLACE_LIST_CALL,
     ]
+    return True
+
+
+def source_validation_rejects_project_only_claude_source_matching_codex(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: _codex_local_marketplace_payload(project_root),
+        }
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        configured_local_marketplace_root(DEFAULT_MARKETPLACE, runner=runner)
+
+    # A project-scope Claude source is excluded even when Codex reports a local
+    # source at the same path, so the ignored-scope path is never adopted as the
+    # shared canonical root; reconciliation reports the Claude source as absent.
+    message = str(exc_info.value)
+    assert "Claude Code marketplace" in message
+    assert "not configured" in message
+    assert str(project_root.resolve(strict=False)) not in message
     return True
 
 
@@ -934,6 +979,170 @@ def claude_directory_root_rejects_duplicate_local_roots(
     assert str(canonical_root.resolve(strict=False)) in message
     assert str(stale_root.resolve(strict=False)) in message
     assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
+    return True
+
+
+def claude_directory_root_ignores_project_scope_duplicate(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(canonical_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
+                    },
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(stale_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    },
+                ]
+            )
+        }
+    )
+
+    root = configured_claude_directory_marketplace_root(
+        DEFAULT_MARKETPLACE,
+        runner=runner,
+    )
+
+    assert root == canonical_root.resolve(strict=False)
+    assert root != stale_root.resolve(strict=False)
+    assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
+    return True
+
+
+def claude_directory_root_rejects_project_local_only_registration(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            )
+        }
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        configured_claude_directory_marketplace_root(
+            DEFAULT_MARKETPLACE,
+            runner=runner,
+        )
+
+    message = str(exc_info.value)
+    assert CLAUDE_SCOPE_PROJECT in message
+    assert "maintainer sync ignores" in message
+    assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
+    return True
+
+
+def source_reconciliation_ignores_claude_project_duplicate_without_shared_codex(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(canonical_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
+                    },
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(stale_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    },
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_GIT,
+                        MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+                    }
+                ]
+            ),
+        }
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    # The canonical root derives from the user-scope Claude source even though
+    # Codex is Git-backed and shares no local root; the project-scope duplicate
+    # is excluded, so the single-root lookup does not raise. Claude reconciles
+    # to a no-op (canonical user source present) while Codex is repaired.
+    assert result.root == canonical_root.resolve(strict=False)
+    assert result.changed is True
+    assert runner.calls == [
+        CLAUDE_MARKETPLACE_LIST_CALL,
+        CODEX_MARKETPLACE_LIST_CALL,
+        (*CODEX_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+        (*CODEX_MARKETPLACE_ADD_COMMAND, str(result.root)),
+    ]
+    return True
+
+
+def source_reconciliation_never_adopts_project_only_claude_root(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_GIT,
+                        MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+                    }
+                ]
+            ),
+            CLAUDE_PLUGIN_LIST_CALL: "[]",
+        }
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    # A project-scope Claude source is never adopted as the canonical root, even
+    # in the fallback path when no maintainer-visible Claude or local Codex
+    # source is reported; derivation falls back to the current repo instead.
+    assert result.root != project_root.resolve(strict=False)
+    assert result.root == Path.cwd().resolve(strict=False)
     return True
 
 
@@ -1012,7 +1221,7 @@ def source_reconciliation_repairs_scoped_matching_codex_source(
             ),
             CODEX_MARKETPLACE_LIST_CALL: _scoped_codex_local_marketplace_payload(
                 marketplace_root,
-                scope="project",
+                scope=CLAUDE_SCOPE_PROJECT,
             ),
         }
     )
@@ -1093,7 +1302,7 @@ def source_reconciliation_repairs_scoped_stale_codex_duplicate(
                         MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                         MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_LOCAL,
                         MARKETPLACE_FIELD_PATH: str(stale_root),
-                        MARKETPLACE_FIELD_SCOPE: "project",
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                     },
                 ]
             ),
@@ -1136,8 +1345,18 @@ def source_reconciliation_explicit_root_replaces_stale_runtime_paths(
         expected_root=canonical_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                DEFAULT_MARKETPLACE,
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             (*CODEX_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
             (*CODEX_MARKETPLACE_ADD_COMMAND, str(result.root)),
         ],
@@ -1155,7 +1374,7 @@ def source_reconciliation_preserves_user_scope_claude_plugin_installs(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = _source_repair_runner(
@@ -1173,7 +1392,7 @@ def source_reconciliation_preserves_user_scope_claude_plugin_installs(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
@@ -1199,7 +1418,12 @@ def source_reconciliation_preserves_user_scope_claude_plugin_installs(
                 "--scope",
                 CLAUDE_SCOPE_USER,
             ),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             *_user_scope_rust_restore_calls(),
         ],
         expected_cwd=[None, None, None, None, None, None, None],
@@ -1230,15 +1454,25 @@ def source_reconciliation_repairs_unscoped_stale_claude_runtime_source(
         expected_root=canonical_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                DEFAULT_MARKETPLACE,
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
         ],
         expected_cwd=[None, None, None, None, None],
     )
     return True
 
 
-def source_reconciliation_repairs_unscoped_matching_claude_runtime_source(
+def source_reconciliation_accepts_unscoped_matching_claude_runtime_source(
     tmp_path: Path,
 ) -> bool:
     marketplace_root = tmp_path / "marketplace"
@@ -1249,17 +1483,9 @@ def source_reconciliation_repairs_unscoped_matching_claude_runtime_source(
 
     result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
 
-    _assert_repair_result(
-        result,
-        runner,
-        expected_root=marketplace_root,
-        expected_calls=[
-            *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
-        ],
-        expected_cwd=[None, None, None, None, None],
-    )
+    assert result.changed is False
+    assert result.commands == ()
+    assert runner.calls == _expected_source_discovery_calls()
     return True
 
 
@@ -1271,7 +1497,7 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
     )
     runner = _source_repair_runner(
@@ -1289,7 +1515,7 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
@@ -1305,7 +1531,12 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
         expected_root=marketplace_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             *_user_scope_rust_restore_calls(),
         ],
         expected_cwd=[None, None, None, None, None, None],
@@ -1314,11 +1545,17 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
     return True
 
 
-def source_reconciliation_rejects_stale_managed_claude_source(
+def source_reconciliation_ignores_managed_source_at_non_canonical_path(
     tmp_path: Path,
 ) -> bool:
     canonical_root = tmp_path / "canonical-marketplace"
     managed_root = tmp_path / "managed-marketplace"
+    managed_remove = (
+        *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+        DEFAULT_MARKETPLACE,
+        "--scope",
+        CLAUDE_SCOPE_MANAGED,
+    )
     runner = _source_repair_runner(
         claude_payload=_scoped_claude_directory_marketplace_payload(
             managed_root,
@@ -1327,59 +1564,28 @@ def source_reconciliation_rejects_stale_managed_claude_source(
         codex_root=canonical_root,
     )
 
-    with pytest.raises(MarketplaceSourceError) as exc_info:
-        ensure_local_marketplace_sources(
-            DEFAULT_MARKETPLACE,
-            source_root=canonical_root,
-            runner=runner,
-        )
-
-    message = str(exc_info.value)
-    assert "managed" in message
-    assert str(canonical_root.resolve(strict=False)) in message
-    assert (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE) not in runner.calls
-    return True
-
-
-def source_reconciliation_rejects_stale_duplicate_managed_claude_source(
-    tmp_path: Path,
-) -> bool:
-    canonical_root = tmp_path / "canonical-marketplace"
-    managed_root = tmp_path / "managed-marketplace"
-    runner = _source_repair_runner(
-        claude_payload=json.dumps(
-            [
-                {
-                    MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
-                    MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(canonical_root),
-                    MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
-                },
-                {
-                    MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
-                    MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(managed_root),
-                    MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_MANAGED,
-                },
-            ]
-        ),
-        codex_root=canonical_root,
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
     )
 
-    with pytest.raises(MarketplaceSourceError) as exc_info:
-        ensure_local_marketplace_sources(
-            DEFAULT_MARKETPLACE,
-            source_root=canonical_root,
-            runner=runner,
-        )
-
-    message = str(exc_info.value)
-    assert "managed" in message
-    assert str(managed_root) in message
-    assert runner.calls == [
-        CLAUDE_MARKETPLACE_LIST_CALL,
-        CODEX_MARKETPLACE_LIST_CALL,
-    ]
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=canonical_root,
+        expected_calls=[
+            *_expected_discovery_and_user_plugin_snapshot_calls(),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+        ],
+        expected_cwd=[None, None, None, None],
+    )
+    assert managed_remove not in runner.calls
     return True
 
 
@@ -1422,14 +1628,19 @@ def source_reconciliation_prefers_shared_root_over_stale_user_duplicate(
                 "--scope",
                 CLAUDE_SCOPE_USER,
             ),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
         ],
         expected_cwd=[None, None, None, None, None],
     )
     return True
 
 
-def source_reconciliation_removes_project_duplicate_without_readding_user_source(
+def source_reconciliation_ignores_project_duplicate_when_user_source_canonical(
     tmp_path: Path,
 ) -> bool:
     canonical_root = tmp_path / "canonical-marketplace"
@@ -1448,7 +1659,7 @@ def source_reconciliation_removes_project_duplicate_without_readding_user_source
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
                     MARKETPLACE_FIELD_PATH: str(stale_root),
-                    MARKETPLACE_FIELD_SCOPE: "project",
+                    MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
                     MARKETPLACE_FIELD_PROJECT_PATH: str(project_path),
                 },
             ]
@@ -1458,25 +1669,20 @@ def source_reconciliation_removes_project_duplicate_without_readding_user_source
 
     result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
 
-    _assert_repair_result(
-        result,
-        runner,
-        expected_root=canonical_root,
-        expected_calls=[
-            *_expected_source_discovery_calls(),
-            (
-                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
-                DEFAULT_MARKETPLACE,
-                "--scope",
-                "project",
-            ),
-        ],
-        expected_cwd=[None, None, project_path.resolve(strict=False)],
+    project_remove = (
+        *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+        DEFAULT_MARKETPLACE,
+        "--scope",
+        CLAUDE_SCOPE_PROJECT,
     )
+    assert result.changed is False
+    assert result.commands == ()
+    assert runner.calls == _expected_source_discovery_calls()
+    assert project_remove not in runner.calls
     return True
 
 
-def source_reconciliation_repairs_unscoped_duplicate_when_user_source_exists(
+def source_reconciliation_repairs_stale_user_source_despite_unscoped_canonical_match(
     tmp_path: Path,
 ) -> bool:
     canonical_root = tmp_path / "canonical-marketplace"
@@ -1487,62 +1693,13 @@ def source_reconciliation_repairs_unscoped_duplicate_when_user_source_exists(
                 {
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(canonical_root),
-                    MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
-                },
-                {
-                    MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
-                    MARKETPLACE_FIELD_SOURCE: "Directory",
                     MARKETPLACE_FIELD_PATH: str(stale_root),
-                },
-            ]
-        ),
-        codex_root=canonical_root,
-    )
-
-    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
-
-    _assert_repair_result(
-        result,
-        runner,
-        expected_root=canonical_root,
-        expected_calls=[
-            *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
-        ],
-        expected_cwd=[None, None, None, None, None],
-    )
-    return True
-
-
-def source_reconciliation_removes_scoped_duplicate_before_unscoped_duplicate(
-    tmp_path: Path,
-) -> bool:
-    canonical_root = tmp_path / "canonical-marketplace"
-    stale_unscoped_root = tmp_path / "old-marketplace"
-    stale_project_root = tmp_path / "project-marketplace"
-    project_path = tmp_path / "consumer-project"
-    runner = _source_repair_runner(
-        claude_payload=json.dumps(
-            [
-                {
-                    MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
-                    MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(canonical_root),
                     MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
                 },
                 {
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(stale_unscoped_root),
-                },
-                {
-                    MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
-                    MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(stale_project_root),
-                    MARKETPLACE_FIELD_SCOPE: "project",
-                    MARKETPLACE_FIELD_PROJECT_PATH: str(project_path),
+                    MARKETPLACE_FIELD_PATH: str(canonical_root),
                 },
             ]
         ),
@@ -1561,19 +1718,16 @@ def source_reconciliation_removes_scoped_duplicate_before_unscoped_duplicate(
                 *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
                 DEFAULT_MARKETPLACE,
                 "--scope",
-                "project",
+                CLAUDE_SCOPE_USER,
             ),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
         ],
-        expected_cwd=[
-            None,
-            None,
-            None,
-            project_path.resolve(strict=False),
-            None,
-            None,
-        ],
+        expected_cwd=[None, None, None, None, None],
     )
     return True
 
@@ -1586,7 +1740,7 @@ def source_reconciliation_rejects_project_source_without_project_path(
     runner = _source_repair_runner(
         claude_payload=_scoped_claude_directory_marketplace_payload(
             stale_root,
-            scope="project",
+            scope=CLAUDE_SCOPE_PROJECT,
         ),
         codex_root=canonical_root,
     )
@@ -1605,7 +1759,7 @@ def source_reconciliation_rejects_project_source_without_project_path(
     return True
 
 
-def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
+def source_reconciliation_ignores_project_source_and_adds_user_registration(
     tmp_path: Path,
 ) -> bool:
     canonical_root = tmp_path / "canonical-marketplace"
@@ -1614,13 +1768,19 @@ def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
     project_install = (
         *CLAUDE_PLUGIN_INSTALL_COMMAND,
         "--scope",
-        "project",
+        CLAUDE_SCOPE_PROJECT,
         f"spec-tree@{DEFAULT_MARKETPLACE}",
+    )
+    project_remove = (
+        *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+        DEFAULT_MARKETPLACE,
+        "--scope",
+        CLAUDE_SCOPE_PROJECT,
     )
     runner = _source_repair_runner(
         claude_payload=_scoped_claude_directory_marketplace_payload(
             stale_root,
-            scope="project",
+            scope=CLAUDE_SCOPE_PROJECT,
             project_path=project_path,
         ),
         codex_root=canonical_root,
@@ -1633,7 +1793,7 @@ def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
                 ),
                 _claude_plugin_payload(
                     "spec-tree",
-                    scope="project",
+                    scope=CLAUDE_SCOPE_PROJECT,
                     enabled=True,
                     project_path=project_path,
                 ),
@@ -1654,25 +1814,17 @@ def source_reconciliation_repairs_scoped_runtime_source_as_user_registration(
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
             (
-                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
-                DEFAULT_MARKETPLACE,
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
                 "--scope",
-                "project",
+                CLAUDE_SCOPE_USER,
             ),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
             *_user_scope_rust_restore_calls(),
         ],
-        expected_cwd=[
-            None,
-            None,
-            None,
-            project_path.resolve(strict=False),
-            None,
-            None,
-            None,
-        ],
+        expected_cwd=[None, None, None, None, None, None],
     )
     assert project_install not in runner.calls
+    assert project_remove not in runner.calls
     return True
 
 
@@ -1826,8 +1978,18 @@ def source_reconciliation_ignores_managed_scope_claude_plugins_without_project_p
         expected_root=canonical_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                DEFAULT_MARKETPLACE,
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             *_user_scope_rust_restore_calls(),
         ],
         expected_cwd=[None, None, None, None, None, None, None],
@@ -1867,8 +2029,18 @@ def source_reconciliation_restores_enabled_user_scope_claude_plugins(
         expected_root=canonical_root,
         expected_calls=[
             *_expected_discovery_and_user_plugin_snapshot_calls(),
-            (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-            (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+            (
+                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                DEFAULT_MARKETPLACE,
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
             python_install,
             python_enable,
         ],
