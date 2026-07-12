@@ -2,14 +2,14 @@
 A completed closure execution state: approved persistence written, session-owned work committed, claimed sessions archived, and every thread's canonical continuation created or intentionally omitted.
 </objective>
 
-<process>
-
-Work not committed here is not persisted.
-
 <required_reading>
 Before writing a session file, read `${SKILL_DIR}/references/session-format.md` for the canonical template.
 
 </required_reading>
+
+<process>
+
+Work not committed here is not persisted.
 
 <write_approved_items>
 For each approved item from workflow 03:
