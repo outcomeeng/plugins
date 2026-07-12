@@ -434,7 +434,7 @@ product/
 ├── product/
 │   ├── __init__.py
 │   └── ...
-├── product_testing/
+├── <package>_testing/
 │   ├── __init__.py
 │   ├── generators/
 │   ├── harnesses/

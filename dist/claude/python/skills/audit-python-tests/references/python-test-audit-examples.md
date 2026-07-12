@@ -137,7 +137,7 @@ all theme colors are changed to pure white, this test still passes.
 The executed test is visually thin:
 
 ```python
-from product_testing.harnesses.release import run_release_case
+from <package>_testing.harnesses.release import run_release_case
 
 
 def test_release_manifest() -> None:
@@ -163,7 +163,7 @@ def run_release_case() -> bool:
 Analysis conclusion:
 
 ```text
-Artifact: product_testing/harnesses/release.py
+Artifact: <package>_testing/harnesses/release.py
 Property failed: source ownership
 Finding: harness_owned_vocabulary
 Detail: The harness owns producer identity, schema key, path, status token,

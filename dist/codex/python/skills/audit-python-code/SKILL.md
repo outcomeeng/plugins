@@ -102,15 +102,15 @@ For the codebase as a whole:
 
 Evaluate import structure using the same vocabulary as `/audit-python-tests`:
 
-| Import pattern                                            | Classification                  |
-| --------------------------------------------------------- | ------------------------------- |
-| `import pytest`                                           | Framework -- not reviewed       |
-| `from hypothesis import given`                            | Framework -- not reviewed       |
-| `import json`                                             | Stdlib -- not reviewed          |
-| `from typing import TYPE_CHECKING`                        | Type-only -- erased at runtime  |
-| `from product.config import parse_config`                 | Codebase (production) -- review |
-| `from ..config import parse_config`                       | Codebase (relative) -- review   |
-| `from product_testing.harnesses import ConfigTestHarness` | Codebase (test infra) -- review |
+| Import pattern                                              | Classification                  |
+| ----------------------------------------------------------- | ------------------------------- |
+| `import pytest`                                             | Framework -- not reviewed       |
+| `from hypothesis import given`                              | Framework -- not reviewed       |
+| `import json`                                               | Stdlib -- not reviewed          |
+| `from typing import TYPE_CHECKING`                          | Type-only -- erased at runtime  |
+| `from product.config import parse_config`                   | Codebase (production) -- review |
+| `from ..config import parse_config`                         | Codebase (relative) -- review   |
+| `from <package>_testing.harnesses import ConfigTestHarness` | Codebase (test infra) -- review |
 
 **Import depth rules:**
 
@@ -121,7 +121,7 @@ Evaluate import structure using the same vocabulary as `/audit-python-tests`:
 | 2+ levels       | `from ....helpers ...`    | REJECT -- use package import     |
 | sys.path manip. | `sys.path.insert(0, ...)` | REJECT -- always                 |
 
-For stable locations (`product_testing.harnesses.*`, `product_testing.generators.*`, and inert fixture path providers), package imports are mandatory.
+For stable locations (`<package>_testing.harnesses.*`, `<package>_testing.generators.*`, and inert fixture path providers), package imports are mandatory.
 
 See `${SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
 

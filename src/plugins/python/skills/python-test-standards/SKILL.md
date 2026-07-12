@@ -57,14 +57,14 @@ Scripts and command entrypoints stay thin. Tests verify argument parsing and dis
 <test_data_policy>
 Every test case — input and expected output — derives from a source independent of the test author's invention. The legitimate sources:
 
-| Assertion type | Case source                                                                                                                                                            |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scenario       | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
-| Mapping        | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
-| Property       | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
-| Conformance    | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
-| Compliance     | The decision record being enforced — the case is the rule itself                                                                                                       |
-| Any (fixture)  | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
+| Assertion type | Case source                                                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Scenario       | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                              |
+| Mapping        | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                          |
+| Property       | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                                |
+| Conformance    | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                          |
+| Compliance     | The decision record being enforced — the case is the rule itself                                                                                                         |
+| Any (fixture)  | An inert fixture file under `<package>_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
 
 The first five rows pair an assertion type with the case source it normally takes. The Fixture row is cross-cutting: any assertion type may use an inert fixture file as the case when the assertion is about the code's behavior on a whole real-world payload that the test author did not invent.
 
@@ -72,13 +72,13 @@ A case the author hand-picked because it "looked reasonable" is a tautology dres
 
 Where the *values* the cases use live:
 
-| Value kind                                                   | Lives in                                                                      |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| Production vocabulary (labels, paths, schema fields, tokens) | The owning production module, imported                                        |
-| Variable input domain                                        | A generator under `product_testing/generators/`                               |
-| Resource-bound or runner-tuning value (timeouts, retries)    | The harness module that owns the resource, under `product_testing/harnesses/` |
-| Whole-payload real-world sample                              | An inert fixture file under `product_testing/fixtures/`, read by path         |
-| One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                              |
+| Value kind                                                   | Lives in                                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Production vocabulary (labels, paths, schema fields, tokens) | The owning production module, imported                                          |
+| Variable input domain                                        | A generator under `<package>_testing/generators/`                               |
+| Resource-bound or runner-tuning value (timeouts, retries)    | The harness module that owns the resource, under `<package>_testing/harnesses/` |
+| Whole-payload real-world sample                              | An inert fixture file under `<package>_testing/fixtures/`, read by path         |
+| One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                                |
 
 Executed Python test files are typed assertion files. They introduce no literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Convenience variables and constants may alias values derived solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data; the alias introduces no data or policy of its own.
 
@@ -103,7 +103,7 @@ VERDICT_STATUSES = ("fail", "skipped", "pass")
 Allowed harness-owned tuning:
 
 ```python
-from product_testing.harnesses.subprocess import DEFAULT_TIMEOUT_MS
+from <package>_testing.harnesses.subprocess import DEFAULT_TIMEOUT_MS
 ```
 
 Rejected tuning at test scope (the subprocess harness owns the resource and the timeout):
@@ -159,7 +159,7 @@ NEVER wrap a source-owned singleton with `st.just(...)`, singleton `st.sampled_f
 <harnesses>
 Use harnesses for tests that interact with filesystems, subprocesses, APIs, Docker, Playwright, databases, local services, or pytest discovery entrypoints. A harness manages setup, teardown, cleanup, dependency checks, and access to behavior.
 
-Python harnesses live under `product_testing/harnesses/`:
+Python harnesses live under `<package>_testing/harnesses/`:
 
 ```python
 from collections.abc import Iterator
@@ -176,12 +176,12 @@ def with_test_env(config: Config) -> Iterator[SpecTreeEnv]:
         yield env
 ```
 
-Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. Place their body code under `product_testing/harnesses/`; import them explicitly from `conftest.py` only for pytest discovery.
+Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. Place their body code under `<package>_testing/harnesses/`; import them explicitly from `conftest.py` only for pytest discovery.
 
 ```python
 # conftest.py
-from product_testing.harnesses.database import database_session
-from product_testing.harnesses.filesystem import temp_product
+from <package>_testing.harnesses.database import database_session
+from <package>_testing.harnesses.filesystem import temp_product
 ```
 
 `conftest.py` may register pytest markers, hooks, and explicit fixture imports. It MUST NOT contain fixture body code, harness classes, generated data, source vocabulary, or hidden setup policy.
@@ -253,7 +253,7 @@ Reject or rewrite these patterns:
 - Production modules created only to aggregate values for tests
 - Co-located test-infrastructure modules under `tests/`, `tests/helpers/`, `tests/support/`, or node-local support modules
 - Fixture body code in `conftest.py`
-- Pytest fixture body code under `product_testing/fixtures/`
+- Pytest fixture body code under `<package>_testing/fixtures/`
 - Importing inert fixture files as Python modules
 - Silent skips for required credentialed evidence
 
@@ -271,8 +271,8 @@ Python test guidance follows this standard when:
 - Source-owned values come from the owning production module; container keys are imported, not hand-written; runner-tuning values live on the harness that owns the resource
 - Generators vary, compose, shrink, or explore meaningful alternatives
 - Property tests route through a harness or wrapper that reports the seed or replay directive on failure
-- Harnesses live under `product_testing/harnesses/` and manage resource lifecycles
-- Inert fixture files live under `product_testing/fixtures/` and are consumed only as files
+- Harnesses live under `<package>_testing/harnesses/` and manage resource lifecycles
+- Inert fixture files live under `<package>_testing/fixtures/` and are consumed only as files
 - `conftest.py` is limited to pytest discovery, registration, and explicit imports from canonical harness modules
 - Property assertions use meaningful Hypothesis properties
 - Required credentialed evidence fails loudly when selected credentials are absent

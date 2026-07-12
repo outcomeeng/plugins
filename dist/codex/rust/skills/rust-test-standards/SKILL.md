@@ -150,16 +150,16 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 **Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
 
-| Origin             | What it means                                                 | Where it lives                    |
-| ------------------ | ------------------------------------------------------------- | --------------------------------- |
-| Source-owned       | The production module defines and exports the value           | Import from that module           |
-| Generator-produced | Pure code emits varied values each run                        | `product-testing/src/generators/` |
-| Harness-managed    | Infrastructure mediates interaction with an external resource | `product-testing/src/harnesses/`  |
-| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file           |
+| Origin             | What it means                                                 | Where it lives                      |
+| ------------------ | ------------------------------------------------------------- | ----------------------------------- |
+| Source-owned       | The production module defines and exports the value           | Import from that module             |
+| Generator-produced | Pure code emits varied values each run                        | `<package>-testing/src/generators/` |
+| Harness-managed    | Infrastructure mediates interaction with an external resource | `<package>-testing/src/harnesses/`  |
+| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
-Executed Rust test files are typed assertion files. They do not declare `const`, `static`, or `let` bindings; every value or configuration choice those declarations would bind belongs in the `product-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
+Executed Rust test files are typed assertion files. They do not declare `const`, `static`, or `let` bindings; every value or configuration choice those declarations would bind belongs in the `<package>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
 
 **1. Source-owned values**
 
@@ -182,7 +182,7 @@ Use generators for inputs that vary per run. A generator is a pure function — 
 - Write strategy factories for domain-shaped values
 
 ```rust
-// product-testing/src/generators/audit.rs
+// <package>-testing/src/generators/audit.rs
 
 fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
     prop_oneof![
@@ -198,7 +198,7 @@ fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
 Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
 
 ```rust
-// product-testing/src/harnesses/spec_tree.rs
+// <package>-testing/src/harnesses/spec_tree.rs
 
 pub struct TestEnv {
     pub root: tempfile::TempDir,
@@ -211,24 +211,24 @@ impl TestEnv {
 }
 ```
 
-Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use product_testing::harnesses::spec_tree::TestEnv;`.
+Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <package>_testing::harnesses::spec_tree::TestEnv;`.
 
 **4. Fixture files**
 
-Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `product-testing/` workspace-member crate under `product-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. This is the cross-language test-infrastructure rule.
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `<package>-testing/` workspace-member crate under `<package>-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. This is the cross-language test-infrastructure rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 
 **5. Test infrastructure layout**
 
-Harnesses, generators, and inert fixtures are production code. They live in a separate workspace-member crate (`product-testing/` directory at workspace root, Cargo package `product-testing`, Rust import path `product_testing`), declared as a `[dev-dependencies]` entry of consumers:
+Harnesses, generators, and inert fixtures are production code. They live in a separate workspace-member crate (`<package>-testing/` directory at workspace root, Cargo package `<package>-testing`, Rust import path `<package>_testing`), declared as a `[dev-dependencies]` entry of consumers:
 
-- `product-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
-- `product-testing/src/generators/<name>.rs` — factories producing valid inputs for proptest/quickcheck/parameterized tests.
-- `product-testing/src/fixtures/<name>.rs` — fixture-loading code that reads inert data files by path.
-- `product-testing/fixtures/` (data subdirectory) — inert input files.
+- `<package>-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
+- `<package>-testing/src/generators/<name>.rs` — factories producing valid inputs for proptest/quickcheck/parameterized tests.
+- `<package>-testing/src/fixtures/<name>.rs` — fixture-loading code that reads inert data files by path.
+- `<package>-testing/fixtures/` (data subdirectory) — inert input files.
 
-Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `product-testing/` even when one test file consumes them today. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
+Do not create co-located test-infrastructure modules as homes for setup, data, generator selection, fixture loading, harness behavior, diagnostics, credentials, or source vocabulary. Those concerns belong in `<package>-testing/` even when one test file consumes them today. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
 
 - Do not read production source files as test input to prove behavior
 
@@ -277,8 +277,8 @@ fn rejects_empty_url_sets() {
 Dependency seam example:
 
 ```rust
-use product_testing::harnesses::commands::success_runner;
-use product_testing::generators::repos::source_checkout_path;
+use <package>_testing::harnesses::commands::success_runner;
+use <package>_testing::generators::repos::source_checkout_path;
 
 #[test]
 fn command_builder_reports_success() {
@@ -289,8 +289,8 @@ fn command_builder_reports_success() {
 Tempdir example:
 
 ```rust
-use product_testing::fixtures::configs::valid_site_config;
-use product_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
+use <package>_testing::fixtures::configs::valid_site_config;
+use <package>_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
 
 #[test]
 fn loads_yaml_from_temp_dir() {
@@ -304,8 +304,8 @@ fn loads_yaml_from_temp_dir() {
 Use the product property harness for universal invariants:
 
 ```rust
-use product_testing::generators::configs::valid_config_strategy;
-use product_testing::harnesses::properties::assert_config_roundtrips;
+use <package>_testing::generators::configs::valid_config_strategy;
+use <package>_testing::harnesses::properties::assert_config_roundtrips;
 
 #[test]
 fn config_roundtrips() {
@@ -320,9 +320,9 @@ Use `trybuild` for compile-time guarantees:
 ```rust
 #[test]
 fn ui_contracts_hold() {
-    product_testing::harnesses::trybuild::assert_ui_contracts(
-        product_testing::fixtures::ui::valid_builders(),
-        product_testing::fixtures::ui::invalid_builders(),
+    <package>_testing::harnesses::trybuild::assert_ui_contracts(
+        <package>_testing::fixtures::ui::valid_builders(),
+        <package>_testing::fixtures::ui::invalid_builders(),
     );
 }
 ```
@@ -335,8 +335,8 @@ Use Level 2 when governed behavior needs a real binary, runtime, adapter, or loc
 CLI binary example:
 
 ```rust
-use product_testing::fixtures::projects::empty_project;
-use product_testing::harnesses::commands::assert_init_command_writes_project_files;
+use <package>_testing::fixtures::projects::empty_project;
+use <package>_testing::harnesses::commands::assert_init_command_writes_project_files;
 
 #[test]
 fn init_command_writes_project_files() {
@@ -347,8 +347,8 @@ fn init_command_writes_project_files() {
 Async L2 example:
 
 ```rust
-use product_testing::fixtures::users::valid_user;
-use product_testing::harnesses::database::assert_user_repository_roundtrip;
+use <package>_testing::fixtures::users::valid_user;
+use <package>_testing::harnesses::database::assert_user_repository_roundtrip;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
@@ -366,7 +366,7 @@ Remote API example:
 ```rust
 #[tokio::test]
 async fn published_package_is_fetchable_from_registry() {
-    product_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
+    <package>_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
 }
 ```
 
@@ -375,7 +375,7 @@ Browser workflow example:
 ```rust
 #[tokio::test]
 async fn login_flow_reaches_dashboard() {
-    product_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
+    <package>_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
 }
 ```
 
@@ -394,11 +394,11 @@ Coverage is evidence only when measured against the exercised module:
 
 <failure_modes>
 
-**Failure 1: Placed shared generated domains under `tests/`.** Claude wrote `tests/generators/audit.rs` because the file was only imported by tests. Why it failed: a reusable generator is test-infrastructure production code, so placing it under `tests/` hides ownership and discovery behind an executed-test tree. How to avoid: put reusable Rust generators in `product-testing/src/generators/` and import them through the `product_testing` dev-dependency crate.
+**Failure 1: Placed shared generated domains under `tests/`.** Claude wrote `tests/generators/audit.rs` because the file was only imported by tests. Why it failed: a reusable generator is test-infrastructure production code, so placing it under `tests/` hides ownership and discovery behind an executed-test tree. How to avoid: put reusable Rust generators in `<package>-testing/src/generators/` and import them through the `<package>_testing` dev-dependency crate.
 
 **Failure 2: Copied an owned example into an async harness.** Claude passed `user` by value into `save(user)` and then read `user.id()` and `user.email()` afterward. Why it failed: the example no longer compiled for normal non-`Copy` data and taught consumers to work around ownership rather than express the tested behavior. How to avoid: write Rust examples as executable ownership models; borrow shared generated values when later assertions still need them.
 
-**Failure 3: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `product-testing` property harness and require reproducible failure output.
+**Failure 3: Accepted property runner tuning in a test file.** Claude treated a local `const CASES` or seed setting as harmless test configuration. Why it failed: property seed policy, case count, persistence, and replay diagnostics belong to the harness or wrapper, while the test file owns only the invariant. How to avoid: route property assertions through the `<package>-testing` property harness and require reproducible failure output.
 
 </failure_modes>
 

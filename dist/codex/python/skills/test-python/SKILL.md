@@ -83,7 +83,7 @@ Run this workflow for rejected Python tests:
 6. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
 7. Replace constant-only generators with direct source imports or meaningful variable domains.
 8. Move resource setup, teardown, cleanup, and pytest fixture bodies into `<package>_testing.harnesses.*`.
-9. Keep `<package>_testing.fixtures/` for inert files only.
+9. Keep `<package>_testing/fixtures/` for inert files only.
 10. Remove `tests/helpers`, `tests/support`, node-local test-infrastructure modules, and fixture body code from `conftest.py`.
 11. Apply all class-level repairs together, then rerun the focused tests and repository-canonical Python validation commands once on the stabilized evidence.
 

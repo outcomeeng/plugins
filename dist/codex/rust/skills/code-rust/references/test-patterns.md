@@ -3,14 +3,14 @@ Move from named, inspectable cases to broader coverage without losing the abilit
 </overview>
 
 <source_contract_values>
-Keep reusable source-owned values in source modules and reusable generated domains in `product-testing`.
+Keep reusable source-owned values in source modules and reusable generated domains in `<package>-testing`.
 
 ```rust
 use product::inputs::simple_input_case;
 
 #[test]
 fn processes_simple_input() {
-    product_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
+    <package>_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
 }
 ```
 
@@ -21,7 +21,7 @@ fn processes_simple_input() {
 ```rust
 #[test]
 fn processes_simple_input() {
-    product_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
+    <package>_testing::harnesses::processing::assert_processes_case(simple_input_case(), process);
 }
 ```
 
@@ -33,7 +33,7 @@ Each failure names a concrete category, so the failing case is immediately inspe
 ```rust
 #[test]
 fn rejects_empty_input() {
-    product_testing::harnesses::processing::assert_rejects_empty_input(process);
+    <package>_testing::harnesses::processing::assert_rejects_empty_input(process);
 }
 ```
 
@@ -46,8 +46,8 @@ Use a harness assertion over named cases once the individual scenarios are alrea
 ```rust
 #[test]
 fn processes_known_cases() {
-    product_testing::harnesses::processing::assert_processes_known_cases(
-        product_testing::generators::processing::known_process_cases(),
+    <package>_testing::harnesses::processing::assert_processes_known_cases(
+        <package>_testing::generators::processing::known_process_cases(),
         process,
     );
 }
@@ -61,8 +61,8 @@ Use `proptest` for true universal claims.
 ```rust
 #[test]
 fn canonical_key_roundtrips() {
-    product_testing::harnesses::properties::assert_canonical_key_roundtrips(
-        product_testing::generators::keys::canonical_key_strings(),
+    <package>_testing::harnesses::properties::assert_canonical_key_roundtrips(
+        <package>_testing::generators::keys::canonical_key_strings(),
         CanonicalKey::parse,
     );
 }

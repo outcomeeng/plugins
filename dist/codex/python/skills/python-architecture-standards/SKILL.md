@@ -179,15 +179,15 @@ The architect needs to understand testing levels to write effective Verification
 
 <anti_patterns>
 
-| Anti-pattern                  | Why it is wrong                                | Where it belongs                      |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------- |
-| `## Testing Strategy` section | Not in the authoritative ADR template          | `/test` skill output                  |
-| Level assignment tables       | Downstream concern; depends on spec assertions | `/test` Stage 2                       |
-| Escalation rationale          | Downstream concern; depends on product infra   | `/test` Stage 2                       |
-| `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata         |
-| File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants    |
-| Migration plans               | Temporal; narrates a transition                | Code review / work items              |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-python`                        |
-| `src.*` import examples       | Ambiguous convention                           | Use `product.*` / `product_testing.*` |
+| Anti-pattern                  | Why it is wrong                                | Where it belongs                          |
+| ----------------------------- | ---------------------------------------------- | ----------------------------------------- |
+| `## Testing Strategy` section | Not in the authoritative ADR template          | `/test` skill output                      |
+| Level assignment tables       | Downstream concern; depends on spec assertions | `/test` Stage 2                           |
+| Escalation rationale          | Downstream concern; depends on product infra   | `/test` Stage 2                           |
+| `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata             |
+| File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants        |
+| Migration plans               | Temporal; narrates a transition                | Code review / work items                  |
+| Implementation code           | ADRs constrain implementation, not provide it  | `/code-python`                            |
+| `src.*` import examples       | Ambiguous convention                           | Use `<package>.*` / `<package>_testing.*` |
 
 </anti_patterns>

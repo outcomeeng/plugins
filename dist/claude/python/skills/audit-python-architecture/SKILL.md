@@ -55,7 +55,7 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 6. **Check for mocking language** — reject `unittest.mock.patch`, `respx.mock`, "mock at boundary" in any section, prose AND code examples
 7. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
 8. **Check test double usage** — must document which `/test` exception case applies
-9. **Check Python anti-patterns** — `src.*` import examples should use `product.*` / `product_testing.*`
+9. **Check Python anti-patterns** — `src.*` import examples should use `<package>.*` / `<package>_testing.*`
 10. **Identify all Python-architecture violations** and classify per concern
 11. **Output the JSON verdict** with `overall` set to `APPROVED` or `REJECTED` and every concern row populated
 
@@ -87,7 +87,7 @@ All canonical conventions are in `/python-architecture-standards`. Read it first
 
 **3. Level accuracy** — When the architecture target references testing levels, verify against `/test` definitions. See `<level_context>` in `/python-architecture-standards`. Key rule: SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`).
 
-**4. Python anti-patterns** — Check for Python-specific architecture anti-patterns. See `<anti_patterns>` in `/python-architecture-standards`. Note Python-specific anti-pattern: `src.*` import examples should use `product.*` / `product_testing.*`.
+**4. Python anti-patterns** — Check for Python-specific architecture anti-patterns. See `<anti_patterns>` in `/python-architecture-standards`. Note Python-specific anti-pattern: `src.*` import examples should use `<package>.*` / `<package>_testing.*`.
 
 **5. Test double exception cases** — Any test double usage must document which of the 7 `/test` Stage 5 exceptions applies. No exception = no doubles.
 
