@@ -1385,6 +1385,50 @@ def source_reconciliation_adds_user_registration_for_managed_claude_source(
     return True
 
 
+def source_reconciliation_ignores_managed_source_at_non_canonical_path(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    managed_root = tmp_path / "managed-marketplace"
+    managed_remove = (
+        *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+        DEFAULT_MARKETPLACE,
+        "--scope",
+        CLAUDE_SCOPE_MANAGED,
+    )
+    runner = _source_repair_runner(
+        claude_payload=_scoped_claude_directory_marketplace_payload(
+            managed_root,
+            scope=CLAUDE_SCOPE_MANAGED,
+        ),
+        codex_root=canonical_root,
+    )
+
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
+    )
+
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=canonical_root,
+        expected_calls=[
+            *_expected_discovery_and_user_plugin_snapshot_calls(),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+        ],
+        expected_cwd=[None, None, None, None],
+    )
+    assert managed_remove not in runner.calls
+    return True
+
+
 def source_reconciliation_prefers_shared_root_over_stale_user_duplicate(
     tmp_path: Path,
 ) -> bool:

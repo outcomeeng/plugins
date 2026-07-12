@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_explicit_root_replaces_stale_runtime_paths,
     source_reconciliation_failed_codex_add_surfaces_error,
     source_reconciliation_ignores_managed_scope_claude_plugins_without_project_path,
+    source_reconciliation_ignores_managed_source_at_non_canonical_path,
     source_reconciliation_ignores_project_duplicate_when_user_source_canonical,
     source_reconciliation_ignores_project_source_and_adds_user_registration,
     source_reconciliation_prefers_shared_root_over_stale_user_duplicate,
@@ -83,6 +84,9 @@ def test_source_reconciliation_repairs_user_registration_paths() -> None:
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_ignores_managed_scope_claude_plugins_without_project_path
+    )
+    assert with_temporary_marketplace_path(
+        source_reconciliation_ignores_managed_source_at_non_canonical_path
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_restores_enabled_user_scope_claude_plugins
