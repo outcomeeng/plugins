@@ -76,7 +76,7 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 **Step 2b: Source testability**
 
-For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, evaluate coupling, falsifiability, alignment, and coverage as `FAIL`, with an `untestable_source` REJECT finding on each property naming the absent production contract as the shared cause. Continue declaration and provenance screening so ownership defects remain visible. Do not attempt a downstream execution trace for a property already evaluated as `FAIL`; no property is skipped or left unevaluated.
+For each linked assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add one `untestable_source` REJECT finding to `gate-1-assertion`. Target the production source file, use `source-testability` as the evidence property, name the absent production contract, and require production refactoring that exposes the asserted behavior. Skip coupling, falsifiability, alignment, and coverage for that assertion because those checks cannot apply until the source exposes the behavior. Continue declaration and provenance screening so independent ownership defects remain visible.
 
 </step>
 
@@ -363,10 +363,10 @@ How to avoid: Step 3a reads declarations before coupling and classifies ownershi
 
 The verdict is sound when:
 
-- Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
+- Every source-testable assertion's tests were judged on all four evidence properties — coupling, falsifiability, alignment, and coverage; every untestable assertion instead carries one source-targeted `untestable_source` finding and skips those four inapplicable checks. When a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - Every transitive evidence artifact is inventoried, every case and expected value has a named source, every container key and protocol token has a named owner, and every required language partition has a completed receipt.
-- The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
+- The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, and every assertion either evaluated through the four evidence properties or rejected at the source-testability gate.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.
 
