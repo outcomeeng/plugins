@@ -46,10 +46,10 @@ Return only this JSON shape:
   "target": "<spec-node-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "gate-1-assertion", "status": "PASS | FAIL", "findings": [] },
-    { "name": "gate-2-architectural", "status": "PASS | FAIL", "findings": [] }
+    { "name": "gate-1-assertion", "status": "PASS | FAIL", "findings": [] }
   ],
   "metadata": {
+    "branch": "<branch>",
     "evidence_artifacts": [{ "path": "<path>", "kind": "<kind>" }],
     "provenance": [{ "artifact": "<path>", "line": 1, "kind": "<kind>", "value": "<value-or-expression>", "owner": "<owner>", "source": "<source>" }],
     "language_coverage": [{ "language": "<language>", "skill": "audit-<language>-tests", "completed": true, "overall": "APPROVED | REJECTED" }]
@@ -57,6 +57,6 @@ Return only this JSON shape:
 }
 ```
 
-Each finding contains `id`, `file`, `line`, `rule`, `severity`, `message`, `evidence_property`, and `required_fix`. Use severity `REJECT` for blocking findings, and require both remediation fields on every REJECT. `PASS` requires complete artifact, provenance, and language-coverage inventories. Do not add prose outside the JSON object.
+Include a `gate-2-architectural` row with the same row shape only when Gate 2 applies; omit it otherwise. Each finding contains `id`, `file`, `line`, `rule`, `severity`, `message`, `evidence_property`, and `required_fix`. Use severity `REJECT` for blocking findings, and require both remediation fields on every REJECT. `PASS` requires `metadata.branch` plus complete artifact, provenance, and language-coverage inventories. Do not add prose outside the JSON object.
 
 </output_format>
