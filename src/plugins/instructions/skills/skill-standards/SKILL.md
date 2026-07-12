@@ -30,7 +30,7 @@ Skills follow a **reference pattern** to avoid duplication:
 2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
 3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards loaded by other skills, never invoked directly.
 
-For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed. A cross-plugin build directive is different: `{!% require_skill 'plugin:skill' %!}` requires the fully qualified plugin and skill name, such as `spec-tree:test`, so generated prerequisite guidance resolves one installed skill without ambiguity.
+For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed. A cross-plugin build directive is different: `{{! '{' ~ '!%' !}} require_skill 'plugin:skill' {{! '%' ~ '!}' !}}` requires the fully qualified plugin and skill name, such as `spec-tree:test`, so generated prerequisite guidance resolves one installed skill without ambiguity.
 
 **Skill invocation limitations:** Skills cannot automatically invoke other skills. They can:
 
