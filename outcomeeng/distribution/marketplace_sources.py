@@ -785,8 +785,12 @@ def _repair_claude_runtime_source(
     ``~/.claude/settings.json`` and nothing else. It inspects and mutates only
     the user-scope (or unscoped) Directory registration, issues every Claude
     marketplace command at user scope, and never touches a project- or
-    local-scope registration. A user-scope or unscoped Directory source already
-    at ``root`` is accepted without any command.
+    local-scope registration. Reconciliation is a no-op only when a user-level
+    source is at ``root`` and no other user-level source points elsewhere: a
+    stale user-level source at a non-canonical path is repaired even when a
+    canonical user-level source is also present, because ``_source_selection_rank``
+    ranks an explicit user scope above an unscoped one and would otherwise
+    resolve the stale checkout while sync reported no repair.
 
     ``claude plugin marketplace remove`` without an explicit scope deletes the
     declaration from *every* settings scope — including a consumer's committed
@@ -797,7 +801,13 @@ def _repair_claude_runtime_source(
     user_level_sources = tuple(
         source for source in sources if source.scope in (None, CLAUDE_SCOPE_USER)
     )
-    if any(_source_matches(source, root) for source in user_level_sources):
+    canonical_present = any(
+        _source_matches(source, root) for source in user_level_sources
+    )
+    stale_present = any(
+        not _source_matches(source, root) for source in user_level_sources
+    )
+    if canonical_present and not stale_present:
         return ()
     preserved = _claude_user_plugins_to_preserve(marketplace, runner=runner)
     commands: list[tuple[str, ...]] = []

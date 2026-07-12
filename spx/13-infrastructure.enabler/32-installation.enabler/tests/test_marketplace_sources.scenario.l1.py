@@ -9,13 +9,13 @@ from outcomeeng_testing.harnesses.marketplace_sources import (
     source_reconciliation_ignores_managed_scope_claude_plugins_without_project_path,
     source_reconciliation_ignores_project_duplicate_when_user_source_canonical,
     source_reconciliation_ignores_project_source_and_adds_user_registration,
-    source_reconciliation_ignores_unscoped_duplicate_when_user_source_canonical,
     source_reconciliation_prefers_shared_root_over_stale_user_duplicate,
     source_reconciliation_preserves_user_scope_claude_plugin_installs,
     source_reconciliation_rejects_project_source_without_project_path,
     source_reconciliation_repairs_scoped_matching_codex_source,
     source_reconciliation_repairs_scoped_stale_codex_duplicate,
     source_reconciliation_repairs_stale_codex_duplicate,
+    source_reconciliation_repairs_stale_user_source_despite_unscoped_canonical_match,
     source_reconciliation_repairs_unscoped_stale_claude_runtime_source,
     source_reconciliation_restores_enabled_user_scope_claude_plugins,
     source_reconciliation_unscoped_default_adds_user_registration_and_restores_user_plugins,
@@ -55,7 +55,7 @@ def test_source_reconciliation_repairs_user_registration_paths() -> None:
         source_reconciliation_ignores_project_duplicate_when_user_source_canonical
     )
     assert with_temporary_marketplace_path(
-        source_reconciliation_ignores_unscoped_duplicate_when_user_source_canonical
+        source_reconciliation_repairs_stale_user_source_despite_unscoped_canonical_match
     )
     assert with_temporary_marketplace_path(
         source_reconciliation_rejects_project_source_without_project_path

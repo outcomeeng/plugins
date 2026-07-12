@@ -1441,7 +1441,7 @@ def source_reconciliation_ignores_project_duplicate_when_user_source_canonical(
     return True
 
 
-def source_reconciliation_ignores_unscoped_duplicate_when_user_source_canonical(
+def source_reconciliation_repairs_stale_user_source_despite_unscoped_canonical_match(
     tmp_path: Path,
 ) -> bool:
     canonical_root = tmp_path / "canonical-marketplace"
@@ -1452,13 +1452,13 @@ def source_reconciliation_ignores_unscoped_duplicate_when_user_source_canonical(
                 {
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(canonical_root),
+                    MARKETPLACE_FIELD_PATH: str(stale_root),
                     MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
                 },
                 {
                     MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
                     MARKETPLACE_FIELD_SOURCE: "Directory",
-                    MARKETPLACE_FIELD_PATH: str(stale_root),
+                    MARKETPLACE_FIELD_PATH: str(canonical_root),
                 },
             ]
         ),
@@ -1467,9 +1467,27 @@ def source_reconciliation_ignores_unscoped_duplicate_when_user_source_canonical(
 
     result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
 
-    assert result.changed is False
-    assert result.commands == ()
-    assert runner.calls == _expected_source_discovery_calls()
+    _assert_repair_result(
+        result,
+        runner,
+        expected_root=canonical_root,
+        expected_calls=[
+            *_expected_discovery_and_user_plugin_snapshot_calls(),
+            (
+                *CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+                DEFAULT_MARKETPLACE,
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+            (
+                *CLAUDE_MARKETPLACE_ADD_COMMAND,
+                str(result.root),
+                "--scope",
+                CLAUDE_SCOPE_USER,
+            ),
+        ],
+        expected_cwd=[None, None, None, None, None],
+    )
     return True
 
 
