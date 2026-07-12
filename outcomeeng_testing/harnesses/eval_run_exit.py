@@ -40,9 +40,21 @@ def assert_run_command_exit_follows_definition_threshold() -> None:
         failing = _invoke(
             eval_dir / "eval.toml", plugin_dir, iter(responses["failing"])
         )
+        default_rejects_configured_boundary = _invoke(
+            eval_dir / "eval_default.toml",
+            plugin_dir,
+            iter(responses["passing"]),
+        )
+        default_passing = _invoke(
+            eval_dir / "eval_default.toml",
+            plugin_dir,
+            iter(responses["all_passing"]),
+        )
 
     assert passing == EXIT_SUCCESS
     assert failing != EXIT_SUCCESS
+    assert default_rejects_configured_boundary != EXIT_SUCCESS
+    assert default_passing == EXIT_SUCCESS
 
 
 @contextmanager

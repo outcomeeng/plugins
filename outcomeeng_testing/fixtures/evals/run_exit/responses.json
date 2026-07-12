@@ -10,5 +10,11 @@
     "../verdict_rejected.json",
     "../verdict_approved.json",
     "../verdict_approved.json"
+  ],
+  "all_passing": [
+    "../verdict_rejected.json",
+    "../verdict_rejected.json",
+    "../verdict_rejected.json",
+    "../verdict_rejected.json"
   ]
 }
