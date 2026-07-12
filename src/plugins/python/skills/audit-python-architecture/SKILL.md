@@ -112,15 +112,15 @@ Each finding's `rule` carries the violation pattern (e.g., `missing-testability`
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved ADR with "DI Protocol" but no testing strategy in Verification.** Claude saw a Protocol definition in the decision statement and assumed testing was covered. The ADR had no Verification rules enabling specific levels — the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; an ALWAYS rule requiring it as a parameter is.
+**Approved ADR with "DI Protocol" but no testing strategy in Verification.** What happened: Claude approved a Protocol definition without a Verification rule requiring its use. Why it failed: a design element was mistaken for an enforceable testability constraint. How to avoid: require an ALWAYS rule that binds the Protocol to the relevant parameter boundary.
 
-**Missed "respx.mock" in a code example.** The ADR's `## Verification` rules showed mocking in a code block illustrating the "correct approach." Claude only checked prose for mocking language, not code examples. Check ALL content — prose and code blocks.
+**Missed "respx.mock" in a code example.** What happened: Claude checked prose and missed mocking in a code block. Why it failed: the architecture screen did not cover the complete artifact. How to avoid: inspect prose and code examples for the same mocking prohibition.
 
-**Accepted `l2` for a SaaS service.** Claude didn't verify the "SaaS services jump `l1` to `l3`" rule and accepted `l2` for Trakt.tv API testing. SaaS services cannot run locally — there is no `l2`. This is one of the most commonly violated principles.
+**Accepted `l2` for a SaaS service.** What happened: Claude accepted local-infrastructure classification for a remote SaaS API. Why it failed: execution level was assigned from convenience instead of operational reality. How to avoid: apply the rule that remote SaaS services jump from `l1` to `l3`.
 
-**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. Claude missed this because it only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
+**Confused `sys.path` manipulation with a real import.** What happened: Claude accepted a fake module inserted through `sys.path` as a real dependency. Why it failed: import statements were inspected without runtime path manipulation. How to avoid: inspect `sys.path` and `importlib` behavior in architecture examples.
 
-**Re-judged section structure or temporal voice.** Claude flagged a phantom section or temporal sentence. Those concerns belong to the composing `adr-auditor` reading the canonical template; a structural or voice finding from this skill is out of scope and must be dropped.
+**Re-judged section structure or temporal voice.** What happened: Claude emitted structural or voice findings from the Python concern. Why it failed: generic ADR responsibilities were duplicated inside the language partition. How to avoid: leave template structure and atemporal voice to the composing `adr-auditor`.
 
 </failure_modes>
 

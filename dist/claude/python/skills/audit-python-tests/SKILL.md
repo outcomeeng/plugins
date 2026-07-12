@@ -210,46 +210,65 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
-
-For each finding, include:
-
-- Verdict property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
-- Exact file and line
-- The imported chain when the defect is outside the test file
-- Required fix
-
-Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECTED` when any property fails.
+This skill inherits the base `/audit-tests` JSON schema and row names. It appends coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings to `gate-1-assertion`; it appends repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` to `gate-2-architectural`. Every contributed finding populates the base fields `id`, `file`, `line`, `rule`, `severity`, `message`, `evidence_property`, and `required_fix`; this skill introduces no additional required fields. Append findings to matching base rows, never replace a row, and never emit `gate-0-deterministic`. Emit `APPROVED` only when all evidence-property checks pass; emit `REJECTED` when any property fails.
 </verdict_format>
 
 <failure_modes>
 Failure 1: Accepted `TYPE_CHECKING` import as coupling.
 
-Claude saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and counted it as runtime coupling. The test declared its own color values and never executed production code. Avoid this by ignoring type-only imports for coupling.
+What happened: Claude saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and counted it as runtime coupling. The test declared its own color values and never executed production code.
+
+Why it failed: A type-only import was mistaken for an executable production path.
+
+How to avoid: Ignore type-only imports for coupling.
 
 Failure 2: Missed coupling severed by `@patch`.
 
-Claude saw a production import and approved the test, while `@patch("product.database.query")` replaced the imported behavior. Avoid this by checking decorators, fixtures, monkeypatch usage, and harness setup code.
+What happened: Claude saw a production import and approved the test, while `@patch("product.database.query")` replaced the imported behavior.
+
+Why it failed: The patch replaced the behavior whose import appeared to establish coupling.
+
+How to avoid: Check decorators, fixtures, monkeypatch usage, and harness setup code.
 
 Failure 3: Accepted a generator that only hid a constant.
 
-Claude saw a Hypothesis strategy and treated it as property evidence. The strategy returned one copied source value through `st.just(...)`. Avoid this by inspecting generator bodies and requiring meaningful variation.
+What happened: Claude saw a Hypothesis strategy and treated it as property evidence. The strategy returned one copied source value through `st.just(...)`.
+
+Why it failed: Framework syntax was used as a proxy for a variable generated domain.
+
+How to avoid: Inspect generator bodies and require meaningful variation.
 
 Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
-Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the product's test-infrastructure implementation home. Avoid this by checking every applicable `conftest.py`.
+What happened: Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the product's test-infrastructure implementation home.
+
+Why it failed: Discovery registration and resource-lifecycle ownership were collapsed into one module role.
+
+How to avoid: Check every applicable `conftest.py`.
 
 Failure 5: Accepted a hand-picked test case as evidence.
 
-Claude saw `parse("name=alice")` followed by `assert result.name == "alice"` and approved the test. The string `"name=alice"` was invented by the author to demonstrate their understanding of the parser. The same author wrote (or read) the parser. Every future run confirms the author's understanding — that `"name=alice"` parses to a record with `name` field equal to `"alice"` — never the spec assertion about parser correctness. Avoid this by asking, for every case, where the case comes from: a generator, an oracle, a fixture, source-owned vocabulary, or the spec assertion text itself. If the answer is "the author chose it because it seemed reasonable", REJECT.
+What happened: Claude saw `parse("name=alice")` followed by `assert result.name == "alice"` and approved the test. The string `"name=alice"` was invented by the author to demonstrate their understanding of the parser.
+
+Why it failed: The same understanding supplied both input and expected output, so the case had no independent source or oracle.
+
+How to avoid: Ask, for every case, whether it comes from a generator, oracle, fixture, source-owned vocabulary, or the spec assertion itself. REJECT a case chosen only because it seemed reasonable.
 
 Failure 6: Container-literal keys treated as opaque scaffolding.
 
-Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and classified it as test-fixture scaffolding because the *values* were synthetic. The *keys* were production-owned label vocabulary the author hand-wrote into the template — hand-picked cases for the parser or consumer that reads the JSON. Avoid this by auditing keys and values separately; the construction `json.dumps({LABEL: synthetic_value, ...})` with `LABEL` imported is the only legitimate form.
+What happened: Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and classified it as test-fixture scaffolding because the values were synthetic. The keys were production-owned label vocabulary hand-written into the template.
+
+Why it failed: Container keys were treated as opaque syntax instead of protocol vocabulary with a production owner.
+
+How to avoid: Audit keys and values separately; use imported source-owned keys with generated or synthetic values.
 
 Failure 7: "Artifact is the source-of-truth" rationalization.
 
-Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an HCL attribute, or a systemd unit path. The value appeared in a parsed artifact file but no Python module owned it. Claude classified the artifact as the source-of-truth and accepted the case. The artifact is downstream — a Python module either renders or consumes it, and the absence of that Python module is the architectural defect, not the test's fault for finding nothing to import. Avoid this by naming the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
+What happened: Claude accepted a hand-copied YAML field, HCL attribute, or systemd path because it appeared in a parsed artifact and no Python module owned it.
+
+Why it failed: A downstream artifact was mistaken for the production contract, hiding the missing owning module.
+
+How to avoid: Name the missing source-contract module and governing spec-tree node; reject against the missing owner.
 </failure_modes>
 
 <success_criteria>
