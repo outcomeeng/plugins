@@ -61,22 +61,6 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 
 </audit_workflow>
 
-<failure_modes>
-
-These are real failures from past audits. Study them to avoid repeating them.
-
-**Approved ADR with "DI Protocol" but no testing strategy in Verification.** Claude saw a Protocol definition in the decision statement and assumed testing was covered. The ADR had no Verification rules enabling specific levels — the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; an ALWAYS rule requiring it as a parameter is.
-
-**Missed "respx.mock" in a code example.** The ADR's `## Verification` rules showed mocking in a code block illustrating the "correct approach." Claude only checked prose for mocking language, not code examples. Check ALL content — prose and code blocks.
-
-**Accepted `l2` for a SaaS service.** Claude didn't verify the "SaaS services jump `l1` to `l3`" rule and accepted `l2` for Trakt.tv API testing. SaaS services cannot run locally — there is no `l2`. This is one of the most commonly violated principles.
-
-**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. Claude missed this because it only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
-
-**Re-judged section structure or temporal voice.** Claude flagged a phantom section or temporal sentence. Those concerns belong to the composing `adr-auditor` reading the canonical template; a structural or voice finding from this skill is out of scope and must be dropped.
-
-</failure_modes>
-
 <principles_to_enforce>
 
 All canonical conventions are in `/python-architecture-standards`. Read it first. This skill checks only the Python-specific concerns:
@@ -122,6 +106,22 @@ The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPL
 Each finding's `rule` carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the relevant implementation file or ADR path; `message` carries the one-line violated rule and consequence, while `observed` and `expected` carry the evidence. Corrective examples and remediation narrative stay in the referenced example and standards files rather than the verdict.
 
 </verdict_format>
+
+<failure_modes>
+
+These are real failures from past audits. Study them to avoid repeating them.
+
+**Approved ADR with "DI Protocol" but no testing strategy in Verification.** Claude saw a Protocol definition in the decision statement and assumed testing was covered. The ADR had no Verification rules enabling specific levels — the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; an ALWAYS rule requiring it as a parameter is.
+
+**Missed "respx.mock" in a code example.** The ADR's `## Verification` rules showed mocking in a code block illustrating the "correct approach." Claude only checked prose for mocking language, not code examples. Check ALL content — prose and code blocks.
+
+**Accepted `l2` for a SaaS service.** Claude didn't verify the "SaaS services jump `l1` to `l3`" rule and accepted `l2` for Trakt.tv API testing. SaaS services cannot run locally — there is no `l2`. This is one of the most commonly violated principles.
+
+**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. Claude missed this because it only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
+
+**Re-judged section structure or temporal voice.** Claude flagged a phantom section or temporal sentence. Those concerns belong to the composing `adr-auditor` reading the canonical template; a structural or voice finding from this skill is out of scope and must be dropped.
+
+</failure_modes>
 
 <what_to_avoid>
 

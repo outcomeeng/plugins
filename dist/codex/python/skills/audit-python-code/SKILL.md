@@ -138,22 +138,6 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 </audit_workflow>
 
-<failure_modes>
-
-These are real failures from past audits. Study them to avoid repeating them.
-
-**Approved code that passed ruff+mypy but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
-
-**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
-
-**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
-
-**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
-
-**Accepted code with tangled IO.** A `process_orders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (1.2) would have caught it: "Can core logic be tested without IO? No."
-
-</failure_modes>
-
 <verdict_format>
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
@@ -179,6 +163,22 @@ The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPL
 Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "blocking | debt"`, `message`, `observed`, and `expected`. The message names the violated rule and consequence only; it contains no corrective code sample, implementation patch, prescribed refactor, or required-change summary.
 
 </verdict_format>
+
+<failure_modes>
+
+These are real failures from past audits. Study them to avoid repeating them.
+
+**Approved code that passed ruff+mypy but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
+
+**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
+
+**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
+
+**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
+
+**Accepted code with tangled IO.** A `process_orders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (1.2) would have caught it: "Can core logic be tested without IO? No."
+
+</failure_modes>
 
 <what_to_avoid>
 

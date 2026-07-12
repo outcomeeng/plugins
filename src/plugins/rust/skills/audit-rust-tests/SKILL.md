@@ -18,7 +18,7 @@ A shared-schema JSON verdict on Rust test evidence — `APPROVED` or `REJECTED`,
 
 <constraints>
 
-This audit is read-only. Produce a verdict over test evidence; never edit tests, production code, specs, fixtures, harnesses, generators, or project configuration.
+This audit MUST remain read-only. ALWAYS produce only a verdict over test evidence. NEVER edit tests, production code, specs, fixtures, harnesses, generators, or project configuration.
 
 </constraints>
 

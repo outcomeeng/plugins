@@ -117,8 +117,6 @@ Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per th
 
 </frontmatter>
 
----
-
 <naming_conventions>
 
 The `name` field is the user invocation path (`/skill-name`). Match user speech patterns.
@@ -303,8 +301,6 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
 
----
-
 <progressive_disclosure>
 
 SKILL.md is an overview. Reference files carry detail. Claude loads reference files only when needed.
@@ -332,8 +328,6 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 **Every reference file must be cited.** A file in `references/` that is not mentioned by SKILL.md or any workflow file is orphaned — it costs ~1,800+ tokens per speculative read (Claude tends to open siblings of cited references) and signals either dead content or a missing cross-reference. Either delete the file or add an explicit `<required_reading>` from the workflow that needs it. Verify before committing: `grep -rn "<filename>" <skill-dir>/`.
 
 </progressive_disclosure>
-
----
 
 <conciseness>
 
@@ -366,8 +360,6 @@ The context window is shared. A skill competes for tokens with the system prompt
 
 </conciseness>
 
----
-
 <skill_types>
 
 Six skill types. Each has a distinct purpose and primary output.
@@ -391,8 +383,6 @@ Six skill types. Each has a distinct purpose and primary output.
 - Shares knowledge multiple skills need → Reference
 
 </skill_types>
-
----
 
 <reference_skills>
 
@@ -441,23 +431,17 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 
 </reference_skills>
 
----
-
 <templates_and_variables>
 
 Reference skill-bundled files with the Claude Code skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
 
 </templates_and_variables>
 
----
-
 <platform_constraints>
 
 Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read `${CLAUDE_SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences or `!` command syntax.
 
 </platform_constraints>
-
----
 
 <xml_tag_formatting>
 
@@ -486,8 +470,6 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 Enforced by the `fix-xml-spacing` pre-commit hook (`scripts/fix-xml-spacing.py`).
 
 </xml_tag_formatting>
-
----
 
 <script_standards>
 
