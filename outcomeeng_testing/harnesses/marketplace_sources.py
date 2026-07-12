@@ -986,6 +986,92 @@ def claude_directory_root_ignores_project_scope_duplicate(
     return True
 
 
+def claude_directory_root_rejects_project_local_only_registration(
+    tmp_path: Path,
+) -> bool:
+    project_root = tmp_path / "consumer-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(project_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    }
+                ]
+            )
+        }
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        configured_claude_directory_marketplace_root(
+            DEFAULT_MARKETPLACE,
+            runner=runner,
+        )
+
+    message = str(exc_info.value)
+    assert CLAUDE_SCOPE_PROJECT in message
+    assert "maintainer sync ignores" in message
+    assert runner.calls == [CLAUDE_MARKETPLACE_LIST_CALL]
+    return True
+
+
+def source_reconciliation_ignores_claude_project_duplicate_without_shared_codex(
+    tmp_path: Path,
+) -> bool:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            CLAUDE_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(canonical_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_USER,
+                    },
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE: "Directory",
+                        MARKETPLACE_FIELD_PATH: str(stale_root),
+                        MARKETPLACE_FIELD_SCOPE: CLAUDE_SCOPE_PROJECT,
+                        MARKETPLACE_FIELD_PROJECT_PATH: str(tmp_path / "consumer"),
+                    },
+                ]
+            ),
+            CODEX_MARKETPLACE_LIST_CALL: json.dumps(
+                [
+                    {
+                        MARKETPLACE_FIELD_NAME: DEFAULT_MARKETPLACE,
+                        MARKETPLACE_FIELD_SOURCE_TYPE: SOURCE_TYPE_GIT,
+                        MARKETPLACE_FIELD_URL: "https://github.com/outcomeeng/plugins.git",
+                    }
+                ]
+            ),
+        }
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    # The canonical root derives from the user-scope Claude source even though
+    # Codex is Git-backed and shares no local root; the project-scope duplicate
+    # is excluded, so the single-root lookup does not raise. Claude reconciles
+    # to a no-op (canonical user source present) while Codex is repaired.
+    assert result.root == canonical_root.resolve(strict=False)
+    assert result.changed is True
+    assert runner.calls == [
+        CLAUDE_MARKETPLACE_LIST_CALL,
+        CODEX_MARKETPLACE_LIST_CALL,
+        (*CODEX_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+        (*CODEX_MARKETPLACE_ADD_COMMAND, str(result.root)),
+    ]
+    return True
+
+
 def source_reconciliation_replaces_git_backed_codex_source(
     tmp_path: Path,
 ) -> bool:

@@ -286,6 +286,12 @@ def configured_claude_directory_marketplace_root(
     if root is None:
         claude_sources = _select_marketplace_sources(claude_source_groups)
         claude = _required_source(claude_sources, marketplace, runtime="Claude Code")
+        if claude.scope in _CLAUDE_PROJECT_PATH_SCOPES:
+            raise MarketplaceSourceError(
+                f"Claude Code marketplace `{marketplace}` is registered only at "
+                f"{claude.scope} scope, which maintainer sync ignores; no "
+                f"user-scope or managed Directory source is configured"
+            )
         raise MarketplaceSourceError(
             f"Claude Code marketplace `{marketplace}` must be a local Directory "
             f"source with a path; found {claude.source_type}"
