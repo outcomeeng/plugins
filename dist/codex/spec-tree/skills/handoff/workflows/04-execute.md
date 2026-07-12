@@ -114,7 +114,10 @@ Run the handoff FROM the worktree that holds the work and step THAT worktree off
 
 - **Linked (pool) worktree** — the CLI's git-context gate accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. Pass the pushed work branch as the header's `git_ref` so the recorded ref is the branch (not the base tip the gate would otherwise record) — the gate still runs on the detached tip and is never bypassed. `/pickup` checks out the branch `git_ref` names. Leave the worktree detached afterward.
 
+  Immediately before detaching, run every overlay-declared preflight check per `/merging-standards` `<overlay_safety_checks>`. A failed check leaves the checkout attached and stops before session mutation.
+
   ```bash
+  # Run every preflight check declared by spx/local/merging.md here.
   git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
   # Run every post-cleanup check declared by spx/local/merging.md here.
   # then run spx session handoff with "git_ref": "<work-branch>" in the JSON header
