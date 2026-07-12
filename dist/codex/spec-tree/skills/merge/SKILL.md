@@ -67,6 +67,8 @@ The direct-push transport publishes a verified changeset straight to the default
 
 **Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose and proceed autonomously; there is no confirmation pause. The plan names the changeset, the selected direct-push transport, the destination ref on origin, the commit, push, deploy, and release actions, why the overlay allows proceeding without confirmation, and the verification and review gates that must hold before the push. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
 
+After the plan or required confirmation, run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>` immediately before Step D2's commit or branch mutation. A failed check stops before the direct-push lifecycle changes the checkout.
+
 **Step D2 — Commit.** Invoke `/commit-changes`. Branch hygiene from /merging-standards `<branch_hygiene>` does not apply unchanged here — direct-push publishes to the default branch on origin, so the working changeset is committed on the default-branch-tracking checkout or a short-lived branch per the overlay's direct-push configuration.
 
 **Step D3 — Establish `VERIFICATION_READINESS`.** All predicates per /merging-standards `<authority_gates>`:
