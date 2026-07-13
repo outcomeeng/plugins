@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when Claude auto-activates the skill by description-match, passive when it is invoked only by exact name or by a parent skill (a `user-invocable: false` reference, or a user-invocable protocol/loop skill a timer targets), and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -44,78 +44,9 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 <frontmatter>
 
-Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
+Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
 
-| Field                      | Required    | Constraint                                                                                                                                                                                                                        |
-| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                     | No          | Lowercase letters, numbers, hyphens. ≤64 chars. Must match the directory name when set. If omitted, the directory name is used.                                                                                                   |
-| `description`              | Recommended | Directive style for invoked skills (see `<descriptions>`); passive for references. Combined with `when_to_use` the listing is capped at 1,536 chars; put the key trigger first.                                                   |
-| `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                              |
-| `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                             |
-| `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                   |
-| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit (read-only) and reference skills.                                                               |
-| `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
-| `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
-| `model`                    | No          | Model override for this skill (`opus`, `sonnet`, `haiku`, or `inherit`). Marketplace verification-sensitive surfaces use explicit `sonnet` and never use session inheritance.                                                     |
-| `effort`                   | No          | Effort level (`low`, `medium`, `high`, `xhigh`, `max`) — overrides the session effort while the skill is active.                                                                                                                  |
-| `context`                  | No          | `fork` to run the skill in a forked subagent context. Combine with `agent`.                                                                                                                                                       |
-| `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                        |
-| `hooks`                    | No          | Hooks scoped to this skill's lifecycle. See the Claude Code hooks reference for shape.                                                                                                                                            |
-| `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                                  |
-| `shell`                    | No          | `bash` (default) or `powershell` for the skill's inline and fenced command-injection blocks. The `powershell` value requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                 |
-
-**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately. Automation re-entry — a scheduled wakeup, heartbeat, or `/loop` — arrives as a user-style prompt because the harness offers no Claude-private heartbeat, so it follows the `User /skill` column exactly:
-
-| Frontmatter                      | User `/skill` | Claude (Skill tool) | Subagent preload | Automation re-entry | Description in context |
-| -------------------------------- | ------------- | ------------------- | ---------------- | ------------------- | ---------------------- |
-| *(default)*                      | Yes           | Yes                 | Yes              | Yes                 | Always                 |
-| `disable-model-invocation: true` | Yes           | **No**              | **No**           | Yes                 | Not in context         |
-| `user-invocable: false`          | **No**        | Yes                 | Yes              | **No**              | Always                 |
-
-Pick the gate by role:
-
-- A reference skill another SKILL.md loads via the Skill tool, or a background-knowledge skill, uses `user-invocable: false` — hidden from the `/` menu, still loadable by Claude and preloadable into subagents.
-- A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
-- A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
-
-```yaml
-# Invoked skill (routing, workflow, creation)
----
-name: create-skills
-description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-  NEVER create or modify skills without this skill.
----
-```
-
-```yaml
-# Reference skill (standards, loaded programmatically by other skills)
----
-name: skill-standards
-user-invocable: false
-description: >-
-  Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
----
-```
-
-```yaml
-# User-only command (side effects; Claude must not auto-trigger)
----
-name: deploy
-disable-model-invocation: true
-description: Deploy the application to production
-allowed-tools: Bash(./deploy:*)
----
-```
-
-Audit skills (`audit-*`) remain read-only and load composed skills by installed name through Codex's skill invocation surface — audit runs never modify files.
-
-**Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
-
-**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent invoke it by installed name through the runtime's skill-invocation surface — there is no preload field on the consumer side.
-
-**Command-capability fields.** A SKILL.md carries every capability a slash command had — `argument-hint`/`arguments`, `allowed-tools` restriction, plus `!`-dynamic context and `@` file references in the body. The authoring and audit rules for that surface live in `${SKILL_DIR}/references/command-capabilities.md`; read it before authoring a skill that takes arguments, injects state, or restricts tools.
+Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
 
 </frontmatter>
 
@@ -151,62 +82,7 @@ name: typescript-unit-framework # Wrong order
 
 <descriptions>
 
-The description field governs skill selection. Claude has a character budget for all skill metadata — when exceeded, skills become invisible.
-
-**Activation rates by style** (Seleznov, 650 automated trials, Feb 2026):
-
-| Style         | Activation | Pattern                          |
-| ------------- | ---------- | -------------------------------- |
-| Passive       | ~77%       | `Use when…`                      |
-| Expanded      | ~93%       | `…or any X-related task`         |
-| **Directive** | **~100%**  | `ALWAYS invoke… NEVER X without` |
-
-**Use directive descriptions for invoked skills:**
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when <triggers>.
-```
-
-**NEVER constraint — add only when it disambiguates.** A NEVER line helps when:
-
-- The skill is the only one with that negative (e.g., `NEVER work on the spec tree without loading context` — only contextualizing says this).
-- Claude has a strong built-in alternative the negative prevents (e.g., `NEVER run git commit without this skill` — Claude would just run `git commit` directly).
-
-Omit NEVER when multiple skills share the same negative (adds noise) or the ALWAYS trigger is already specific enough.
-
-**Language-after-artifact** (matches user speech):
-
-```yaml
-# ✅ "audit ADRs for Python"
-ALWAYS invoke this skill when auditing ADRs for Python.
-
-# ❌ "audit Python ADRs"
-ALWAYS invoke this skill when auditing Python ADRs.
-```
-
-**Match user speech over formal jargon:** Use abbreviations users would use (ADR not Architecture Decision Record). Avoid corporate speak.
-
-**Reference skills** use `user-invocable: false` with a passive description:
-
-```yaml
-user-invocable: false
-description: >-
-  Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
-```
-
-**Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
-
-**Agent-preloaded audit skills** — an `audit-*` skill a dedicated `*-auditor` agent preloads through its `skills:` field — keep a passive, dispatch-steering description and carry a `<dispatch_gate>` at the top of the body. The auditor agent's own directive description is the description-match entry point; a directive `ALWAYS invoke this skill` on the audit skill only pulls the main conversation into running the audit in its own context — the very bias the dispatched agent's isolated context exists to remove. The skill keeps its `allowed-tools` and stays user-invocable so the auditor agent can preload it; NEVER block the main conversation with `disable-model-invocation`, which also blocks that preload and skill-to-skill loading — the passive description plus the dispatch gate carry the rule instead.
-
-```yaml
-description: >-
-  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
-  Dispatch test-evidence-auditor to audit test evidence; the main conversation
-  reaches this audit only through that agent.
-```
-
-**Conflict resolution:** If Claude picks the wrong skill, descriptions are too similar. Make trigger terms distinct — "sales data in Excel" vs "log files and system metrics".
+Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and route isolated audits through their configured auditor role.
 
 </descriptions>
 
@@ -303,29 +179,7 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 <progressive_disclosure>
 
-SKILL.md is an overview. Reference files carry detail. Claude loads reference files only when needed.
-
-**Rules:**
-
-- Keep SKILL.md under 500 lines.
-- References live in `references/` one level deep from SKILL.md. Do not nest references that read other references — Claude may only partially read transitive files.
-- Reference files over 100 lines need a table of contents at the top, so partial reads still see the full scope.
-- Use forward slashes in every path — `references/guide.md`, never `references\guide.md`. Works across platforms.
-
-**Token efficiency:** simple task loads SKILL.md only (~500 tokens); medium loads SKILL.md + one reference (~1000); complex loads SKILL.md + multiple (~2000+).
-
-```text
-✅ One level deep
-SKILL.md → references/advanced.md (complete info)
-         → references/examples.md (complete info)
-
-❌ Nested
-SKILL.md → references/advanced.md → references/details.md → actual info
-```
-
-**Name reference files descriptively** — `xml-structure-examples.md`, not `examples.md`. The filename is also a table-of-contents entry in `<reference_index>`.
-
-**Every reference file must be cited.** A file in `references/` that is not mentioned by SKILL.md or any workflow file is orphaned — it costs ~1,800+ tokens per speculative read (Claude tends to open siblings of cited references) and signals either dead content or a missing cross-reference. Either delete the file or add an explicit `<required_reading>` from the workflow that needs it. Verify before committing: `grep -rn "<filename>" <skill-dir>/`.
+Keep SKILL.md under 500 lines and move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
 
 </progressive_disclosure>
 
@@ -333,16 +187,16 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 The context window is shared. A skill competes for tokens with the developer instructions, conversation history, other skills' metadata, and the user's request.
 
-**Test every sentence:** "Does removing this reduce Claude's effectiveness at the task?" If no — cut it.
+**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
 
-**What Claude already knows (never include):**
+**What the executing runtime already knows (never include):**
 
 - General programming knowledge
 - Language syntax and standard-library APIs
 - Common design patterns
 - How to use its own tools
 
-**What Claude needs (include):**
+**What the executing runtime needs (include):**
 
 - Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
@@ -406,7 +260,7 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 
-**How consuming skills reference it.** Write the reference skill path in running text; Claude loads the reference into context on encounter.
+**How consuming skills reference it.** Write the reference skill path in running text and invoke it through the runtime's documented skill-composition surface.
 
 ```markdown
 # In test-typescript/SKILL.md:
@@ -439,7 +293,7 @@ Reference skill-bundled files with the Codex skill-directory token. Its scope an
 
 <platform_constraints>
 
-Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read `${SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences or `!` command syntax.
+Read `${SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences. Apply only constraints that the reference identifies for Codex.
 
 </platform_constraints>
 

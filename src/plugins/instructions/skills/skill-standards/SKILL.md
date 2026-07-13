@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when Claude auto-activates the skill by description-match, passive when it is invoked only by exact name or by a parent skill (a `user-invocable: false` reference, or a user-invocable protocol/loop skill a timer targets), and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -42,6 +42,7 @@ For language-specific skill prose that references a foundation, use the unqualif
 
 </skill_organization>
 
+{!% if target == 'claude' %!}
 <frontmatter>
 
 Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
@@ -122,6 +123,15 @@ Audit skills (`audit-*`) remain read-only and load composed skills by installed 
 **Command-capability fields.** A SKILL.md carries every capability a slash command had — `argument-hint`/`arguments`, `allowed-tools` restriction, plus `!`-dynamic context and `@` file references in the body. The authoring and audit rules for that surface live in `${CLAUDE_SKILL_DIR}/references/command-capabilities.md`; read it before authoring a skill that takes arguments, injects state, or restricts tools.
 
 </frontmatter>
+{!% else %!}
+<frontmatter>
+
+Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
+
+Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
+
+</frontmatter>
+{!% endif %!}
 
 <naming_conventions>
 
@@ -153,6 +163,7 @@ name: typescript-unit-framework # Wrong order
 
 </naming_conventions>
 
+{!% if target == 'claude' %!}
 <descriptions>
 
 The description field governs skill selection. Claude has a character budget for all skill metadata — when exceeded, skills become invisible.
@@ -213,6 +224,13 @@ description: >-
 **Conflict resolution:** If Claude picks the wrong skill, descriptions are too similar. Make trigger terms distinct — "sales data in Excel" vs "log files and system metrics".
 
 </descriptions>
+{!% else %!}
+<descriptions>
+
+Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and route isolated audits through their configured auditor role.
+
+</descriptions>
+{!% endif %!}
 
 <xml_structure>
 
@@ -305,6 +323,7 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
 
+{!% if target == 'claude' %!}
 <progressive_disclosure>
 
 SKILL.md is an overview. Reference files carry detail. Claude loads reference files only when needed.
@@ -332,21 +351,28 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 **Every reference file must be cited.** A file in `references/` that is not mentioned by SKILL.md or any workflow file is orphaned — it costs ~1,800+ tokens per speculative read (Claude tends to open siblings of cited references) and signals either dead content or a missing cross-reference. Either delete the file or add an explicit `<required_reading>` from the workflow that needs it. Verify before committing: `grep -rn "<filename>" <skill-dir>/`.
 
 </progressive_disclosure>
+{!% else %!}
+<progressive_disclosure>
+
+Keep SKILL.md under 500 lines and move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
+
+</progressive_disclosure>
+{!% endif %!}
 
 <conciseness>
 
 The context window is shared. A skill competes for tokens with the {{! term('configured_agent_prompt') !}}, conversation history, other skills' metadata, and the user's request.
 
-**Test every sentence:** "Does removing this reduce Claude's effectiveness at the task?" If no — cut it.
+**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
 
-**What Claude already knows (never include):**
+**What the executing runtime already knows (never include):**
 
 - General programming knowledge
 - Language syntax and standard-library APIs
 - Common design patterns
 - How to use its own tools
 
-**What Claude needs (include):**
+**What the executing runtime needs (include):**
 
 - Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
@@ -410,7 +436,7 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 
-**How consuming skills reference it.** Write the reference skill path in running text; Claude loads the reference into context on encounter.
+**How consuming skills reference it.** Write the reference skill path in running text and invoke it through the runtime's documented skill-composition surface.
 
 ```markdown
 # In test-typescript/SKILL.md:
@@ -445,11 +471,19 @@ Reference skill-bundled files with the Codex skill-directory token. Its scope an
 
 </templates_and_variables>
 
+{!% if target == 'claude' %!}
 <platform_constraints>
 
 Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read `${CLAUDE_SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences or `!` command syntax.
 
 </platform_constraints>
+{!% else %!}
+<platform_constraints>
+
+Read `${CLAUDE_SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences. Apply only constraints that the reference identifies for Codex.
+
+</platform_constraints>
+{!% endif %!}
 
 <xml_tag_formatting>
 

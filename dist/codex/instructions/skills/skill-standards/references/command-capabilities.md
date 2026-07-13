@@ -7,7 +7,7 @@ Use Codex's supported skill syntax.
 Prefer stable forms that preserve the caller's input contract:
 
 - Use `$ARGUMENTS` for free-form whole-instruction capture, especially when one skill forwards instructions to another skill or when a user-invoked skill accepts natural-language instructions.
-- Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill Claude or a wrapper agent invokes.
+- Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill invocation or wrapper.
 - Use richer runtime-specific forms only when the active runtime documents them and they preserve the skill's input contract.
 
 </overview>

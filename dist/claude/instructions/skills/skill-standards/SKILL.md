@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when Claude auto-activates the skill by description-match, passive when it is invoked only by exact name or by a parent skill (a `user-invocable: false` reference, or a user-invocable protocol/loop skill a timer targets), and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -333,16 +333,16 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 The context window is shared. A skill competes for tokens with the system prompt, conversation history, other skills' metadata, and the user's request.
 
-**Test every sentence:** "Does removing this reduce Claude's effectiveness at the task?" If no — cut it.
+**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
 
-**What Claude already knows (never include):**
+**What the executing runtime already knows (never include):**
 
 - General programming knowledge
 - Language syntax and standard-library APIs
 - Common design patterns
 - How to use its own tools
 
-**What Claude needs (include):**
+**What the executing runtime needs (include):**
 
 - Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
@@ -406,7 +406,7 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 
-**How consuming skills reference it.** Write the reference skill path in running text; Claude loads the reference into context on encounter.
+**How consuming skills reference it.** Write the reference skill path in running text and invoke it through the runtime's documented skill-composition surface.
 
 ```markdown
 # In test-typescript/SKILL.md:
