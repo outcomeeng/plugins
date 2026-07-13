@@ -7,11 +7,15 @@ taking ownership of their workflows.
 
 ## Contents
 
+- `AGENTS.md` — the prototype-local authorization and hard safety bounds for
+  the foreground waiter exception.
 - `SKILL.md` — the agentic supervision loop.
 - `scripts/wait_for_panes.py` — one foreground, machine-wide pane-change
   waiter. The script is limited to 50 lines.
 
 ## Waiter
+
+The bounded polling exception and its rationale are defined in `AGENTS.md`.
 
 ```bash
 python3 prototypes/supervise-agents/scripts/wait_for_panes.py
