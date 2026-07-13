@@ -25,7 +25,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Test files are not read by `/contextualize`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
-  - Right: `/contextualize 21-infra.enabler/32-parser.outcome`
+  - Right: `/contextualize spx/21-infra.enabler/32-parser.outcome`
 
 **BOOTSTRAP MODE**: When the target path doesn't exist yet and the operation is authoring, return an empty manifest with `bootstrap=true` instead of aborting. This allows creating the first node in an empty tree.
 
@@ -67,7 +67,7 @@ If the invocation supplies no target path, ABORT: "A full `spx/...` node path is
 Glob: "spx/*.product.md"
 
 # Verify target path exists
-Glob: "spx/{target-path}/*.md"
+Glob: "{target-path}/*.md"
 ```
 
 If the product file is missing, ABORT: "No product file found in spx/. Create one with `/author` first."
@@ -129,10 +129,10 @@ For each directory along the path from product root to the target node:
 
 ```bash
 # The spec file is {slug}.md (no type suffix, no numeric prefix)
-Read: spx/{path-to-dir}/{slug}.md
+Read: {path-to-dir}/{slug}.md
 
 # Read harness guide in this directory if present
-Read: spx/{path-to-dir}/CLAUDE.md  (if exists)
+Read: {path-to-dir}/CLAUDE.md  (if exists)
 ```
 
 ABORT if the spec file is missing.
@@ -142,8 +142,8 @@ A missing on-path guide is normal. Read a guide only when it exists, and record 
 **2b. Read all ADRs and PDRs in this directory**
 
 ```bash
-Glob: "spx/{path-to-dir}/*-*.adr.md"
-Glob: "spx/{path-to-dir}/*-*.pdr.md"
+Glob: "{path-to-dir}/*-*.adr.md"
+Glob: "{path-to-dir}/*-*.pdr.md"
 ```
 
 **Read EVERY file returned.** Verification: glob count must equal read count.
@@ -151,8 +151,8 @@ Glob: "spx/{path-to-dir}/*-*.pdr.md"
 **2c. Check for coordination notes in this directory**
 
 ```bash
-Glob: "spx/{path-to-dir}/PLAN.md"
-Glob: "spx/{path-to-dir}/ISSUES.md"
+Glob: "{path-to-dir}/PLAN.md"
+Glob: "{path-to-dir}/ISSUES.md"
 ```
 
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous agents via `/handoff`. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
@@ -163,10 +163,10 @@ The target node has an index (e.g., `43` in `43-feature.outcome`). Existing lowe
 
 ```bash
 # List all sibling directories (same parent, different from target)
-Glob: "spx/{parent-path}/*-*.{enabler,outcome}/"
+Glob: "{parent-path}/*-*.{enabler,outcome}/"
 
 # For each sibling with a lower index than the target:
-Read: spx/{parent-path}/{sibling-dir}/{sibling-slug}.md
+Read: {parent-path}/{sibling-dir}/{sibling-slug}.md
 ```
 
 Lower-index siblings' ADRs/PDRs are NOT read — only the sibling's spec itself. Existing numeric order makes the sibling's spec part of the target context, while the sibling's internal decisions are its own concern.
@@ -183,21 +183,21 @@ Siblings with the same index as the target are independent — they neither cons
 
 ```bash
 # Read target spec
-Read: spx/{target-path}/{slug}.md
+Read: {target-path}/{slug}.md
 
 # Read target ADRs and PDRs
-Glob: "spx/{target-path}/*-*.adr.md"
-Glob: "spx/{target-path}/*-*.pdr.md"
+Glob: "{target-path}/*-*.adr.md"
+Glob: "{target-path}/*-*.pdr.md"
 
 # Enumerate children (if any)
-Glob: "spx/{target-path}/*-*.{enabler,outcome}/"
+Glob: "{target-path}/*-*.{enabler,outcome}/"
 
 # Check for tests directory
-Glob: "spx/{target-path}/tests/*"
+Glob: "{target-path}/tests/*"
 
 # Check for coordination notes
-Glob: "spx/{target-path}/PLAN.md"
-Glob: "spx/{target-path}/ISSUES.md"
+Glob: "{target-path}/PLAN.md"
+Glob: "{target-path}/ISSUES.md"
 ```
 
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
