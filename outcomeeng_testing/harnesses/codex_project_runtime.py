@@ -12,11 +12,12 @@ import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
+from outcomeeng.distribution.agents import convert_agents, render_agent_toml
 from outcomeeng.distribution.codex_project import (
     CODEX_COMMAND,
     CODEX_HOME_ENV,
@@ -105,6 +106,8 @@ class AgentResolutionObservation:
     configured_names: tuple[str, ...]
     parsed_names: tuple[str, ...]
     project_layer_names: tuple[str, ...]
+    expected_digests: tuple[str, ...]
+    resolved_digests: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -121,7 +124,13 @@ class ProjectCodexRuntimeObservation:
 
 def observe_project_codex_runtime() -> ProjectCodexRuntimeObservation:
     """Run real Codex and return checkout-local resolution observations."""
-    source_root = Path.cwd().resolve()
+    return _observe_project_codex_runtime(Path.cwd().resolve())
+
+
+@cache
+def _observe_project_codex_runtime(
+    source_root: Path,
+) -> ProjectCodexRuntimeObservation:
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
         project_root = temporary_root / "project"
@@ -344,10 +353,12 @@ def _observe_agent_resolution(
         _required_mapping(agent_layer, Field.CONFIG),
         CONFIG_AGENTS_KEY,
     )
+    converted_agents = convert_agents(paths.dist_root)
     expected_names = tuple(
-        sorted(path.stem for path in generated_agent_files(paths.dist_root))
+        sorted(_required_string(agent.values, NAME_KEY) for agent in converted_agents)
     )
     parsed_names: list[str] = []
+    resolved_digests: list[str] = []
     for name, value in configured_agents.items():
         binding = _as_mapping(value)
         agent_path = paths.codex_home / _required_string(
@@ -356,11 +367,16 @@ def _observe_agent_resolution(
         )
         with agent_path.open("rb") as stream:
             parsed_names.append(_required_string(tomllib.load(stream), NAME_KEY))
+        resolved_digests.append(_file_digest(agent_path))
     return AgentResolutionObservation(
         expected_names=expected_names,
         configured_names=tuple(sorted(configured_agents)),
         parsed_names=tuple(sorted(parsed_names)),
         project_layer_names=tuple(sorted(project_layer_agents)),
+        expected_digests=tuple(
+            sorted(_text_digest(render_agent_toml(agent)) for agent in converted_agents)
+        ),
+        resolved_digests=tuple(sorted(resolved_digests)),
     )
 
 
@@ -522,3 +538,7 @@ def _single_mapping(
 
 def _file_digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _text_digest(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()

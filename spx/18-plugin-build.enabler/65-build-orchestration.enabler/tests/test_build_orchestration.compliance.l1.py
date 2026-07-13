@@ -55,49 +55,63 @@ def test_quality_gate_runs_the_build_orchestration_contract() -> None:
 
 
 def test_dist_diff_surfaces_invoke_the_actionable_reporter() -> None:
-    dist_diff_argvs = {
-        step.argv for step in VALIDATION_STEPS if step.label == "dist-diff"
+    assert {step.argv for step in VALIDATION_STEPS if step.label == "dist-diff"} == {
+        DIST_DIFF_ARGV
     }
-    assert dist_diff_argvs == {DIST_DIFF_ARGV}
     assert DIST_DIFF_MODULE_NAME in DIST_DIFF_ARGV
     assert "diff" not in DIST_DIFF_ARGV
-
-    command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
-    assert DIST_DIFF_MODULE_NAME in command
-    assert "git diff --exit-code" not in command
+    assert DIST_DIFF_MODULE_NAME in lefthook_build_command(
+        load_lefthook_config(LEFTHOOK_PATH)
+    )
+    assert "git diff --exit-code" not in lefthook_build_command(
+        load_lefthook_config(LEFTHOOK_PATH)
+    )
 
 
 def test_justfile_declares_build_skills_recipe() -> None:
-    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
-    commands = just_recipe_commands(justfile)
-
-    assert just_recipe_names(justfile).count(BUILD_RECIPE_NAME) == 1
-    assert BUILD_COMMAND_ARGV in commands
+    assert (
+        just_recipe_names(JUSTFILE_PATH.read_text(encoding="utf-8")).count(
+            BUILD_RECIPE_NAME
+        )
+        == 1
+    )
+    assert BUILD_COMMAND_ARGV in just_recipe_commands(
+        JUSTFILE_PATH.read_text(encoding="utf-8")
+    )
 
 
 def test_justfile_declares_checkout_local_codex_recipe() -> None:
-    observation = observe_checkout_local_codex_recipe()
-
-    assert observation.recipe_names.count(CODEX_LOCAL_RECIPE_NAME) == 1
-    assert CODEX_LOCAL_BUILD_ARGV in observation.commands
-    assert PROJECT_RUNTIME_BUILD_ARGV in observation.commands
-    assert CODEX_LOCAL_LAUNCH_ARGV in observation.commands
+    assert (
+        observe_checkout_local_codex_recipe().recipe_names.count(
+            CODEX_LOCAL_RECIPE_NAME
+        )
+        == 1
+    )
+    assert CODEX_LOCAL_BUILD_ARGV in observe_checkout_local_codex_recipe().commands
+    assert PROJECT_RUNTIME_BUILD_ARGV in observe_checkout_local_codex_recipe().commands
+    assert CODEX_LOCAL_LAUNCH_ARGV in observe_checkout_local_codex_recipe().commands
 
 
 def test_lefthook_runs_build_and_checks_dist_drift() -> None:
-    config = load_lefthook_config(LEFTHOOK_PATH)
-
-    assert lefthook_build_command(config) == LEFTHOOK_BUILD_COMMAND
+    assert (
+        lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
+        == LEFTHOOK_BUILD_COMMAND
+    )
 
 
 def test_claude_marketplace_points_at_dist_claude() -> None:
-    data = load_json_document(CLAUDE_MARKETPLACE_PATH)
-    sources = claude_marketplace_plugin_sources(data)
-
-    assert claude_marketplace_plugin_root(data) == CLAUDE_RUNTIME_ROOT
-    assert sources
+    assert (
+        claude_marketplace_plugin_root(load_json_document(CLAUDE_MARKETPLACE_PATH))
+        == CLAUDE_RUNTIME_ROOT
+    )
+    assert claude_marketplace_plugin_sources(
+        load_json_document(CLAUDE_MARKETPLACE_PATH)
+    )
     assert all(
-        path_is_under_runtime_root(source, CLAUDE_RUNTIME_ROOT) for source in sources
+        path_is_under_runtime_root(source, CLAUDE_RUNTIME_ROOT)
+        for source in claude_marketplace_plugin_sources(
+            load_json_document(CLAUDE_MARKETPLACE_PATH)
+        )
     )
     assert not path_is_under_runtime_root(
         f"{CLAUDE_RUNTIME_ROOT}-extra/develop", CLAUDE_RUNTIME_ROOT
@@ -108,12 +122,12 @@ def test_claude_marketplace_points_at_dist_claude() -> None:
 
 
 def test_codex_marketplace_points_at_dist_codex() -> None:
-    data = load_json_document(CODEX_MARKETPLACE_PATH)
-    sources = codex_marketplace_plugin_sources(data)
-
-    assert sources
+    assert codex_marketplace_plugin_sources(load_json_document(CODEX_MARKETPLACE_PATH))
     assert all(
-        path_is_under_runtime_root(source, CODEX_RUNTIME_ROOT) for source in sources
+        path_is_under_runtime_root(source, CODEX_RUNTIME_ROOT)
+        for source in codex_marketplace_plugin_sources(
+            load_json_document(CODEX_MARKETPLACE_PATH)
+        )
     )
     assert not path_is_under_runtime_root(
         f"{CODEX_RUNTIME_ROOT}-extra/develop", CODEX_RUNTIME_ROOT

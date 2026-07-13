@@ -8,17 +8,27 @@ from outcomeeng_testing.harnesses.codex_project_runtime import (
 
 
 def test_project_codex_runtime_resolves_worktree_artifacts() -> None:
-    observation = observe_project_codex_runtime()
-
-    assert observation.skills.errors == ()
-    assert Counter(observation.skills.expected_digests) <= Counter(
-        observation.skills.resolved_digests
+    assert observe_project_codex_runtime().skills.errors == ()
+    assert Counter(observe_project_codex_runtime().skills.expected_digests) <= Counter(
+        observe_project_codex_runtime().skills.resolved_digests
     )
-    assert observation.agents.project_layer_names == ()
-    assert observation.agents.configured_names == observation.agents.expected_names
-    assert observation.agents.parsed_names == observation.agents.expected_names
-    assert observation.user_state_after == observation.user_state_before
+    assert observe_project_codex_runtime().agents.project_layer_names == ()
     assert (
-        observation.generated_plugin_version
-        != observation.seeded_user_plugin_version
+        observe_project_codex_runtime().agents.configured_names
+        == observe_project_codex_runtime().agents.expected_names
+    )
+    assert (
+        observe_project_codex_runtime().agents.parsed_names
+        == observe_project_codex_runtime().agents.expected_names
+    )
+    assert Counter(observe_project_codex_runtime().agents.expected_digests) == Counter(
+        observe_project_codex_runtime().agents.resolved_digests
+    )
+    assert (
+        observe_project_codex_runtime().user_state_after
+        == observe_project_codex_runtime().user_state_before
+    )
+    assert (
+        observe_project_codex_runtime().generated_plugin_version
+        != observe_project_codex_runtime().seeded_user_plugin_version
     )
