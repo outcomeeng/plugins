@@ -4,7 +4,7 @@ PROVIDES the plugin catalog generator that emits a sentinel-bounded markdown tab
 SO THAT the README and any other repository documentation that surfaces the catalog
 CAN reflect the plugin set deterministically without manual edits to the catalog section
 
-The `outcomeeng.catalog.plugin_catalog` module reads the marketplace catalog at `.claude-plugin/marketplace.json` and each plugin's `SKILL.md`, agents, and commands, then emits a Markdown block bounded by the source-owned `BEGIN_SENTINEL` and `END_SENTINEL` comments. The module supports three modes: stdout (default), `--write` (rewrite `README.md` in place between the sentinels), and `--check` (compare `README.md` against the generated content and exit non-zero on drift).
+The catalog is a Markdown block bounded by `BEGIN_SENTINEL` and `END_SENTINEL` comments and derived from the marketplace catalog plus each plugin's skills, agents, and commands. Its command writes the block to stdout by default, rewrites the sentinel-bounded `README.md` region with `--write`, and reports drift with a non-zero exit through `--check`.
 
 ## Assertions
 
