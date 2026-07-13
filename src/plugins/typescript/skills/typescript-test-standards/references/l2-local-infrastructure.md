@@ -29,6 +29,7 @@ Examples: `postgres-user-store.scenario.l2.test.ts`, `checkout.scenario.l2.playw
 import { createGeneratedUser } from "@testing/generators/users";
 import { assertPostgresUserRoundtrip } from "@testing/harnesses/postgres";
 import { describe, it } from "vitest";
+import { UserStore } from "../../src/user-store";
 
 describe("UserStore", () => {
   it("persists and reloads users through the local database", async () => {

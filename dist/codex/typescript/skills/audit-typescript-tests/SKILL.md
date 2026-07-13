@@ -69,6 +69,12 @@ Property-based tests must route the property assertion through a harness or wrap
 
 </test_file_declarations>
 
+<structural_reading>
+
+Before Gate 1, read every linked TypeScript test filename and runner configuration. Require `<subject>.<evidence>.<level>[.<runner>].test.ts`, where the evidence token matches the assertion type, the level is `l1`, `l2`, or `l3`, and the optional runner token appears exactly when a non-default runner executes the file. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, `.spec.ts`, a missing evidence or level token, and a runner token that disagrees with runner configuration. Append each violation to `gate-1-assertion` as a structural-reading finding before judging assertion evidence.
+
+</structural_reading>
+
 <gate_1_assertion>
 
 Entry point is the spec, not the test file.
@@ -345,7 +351,7 @@ The standard in `/typescript-test-standards` rejects `.e2e.test.ts`, `.unit.test
 
 Why it failed: The operational guide contradicted the canonical standard and did not state the standard's authority, so local specificity displaced governing truth.
 
-How to avoid: `/typescript-test-standards` defines the filename convention. Gate 1 step 1 challenges the assertion type; the deferral carveout no longer exists.
+How to avoid: Apply `<structural_reading>` to every linked test before Gate 1; `/typescript-test-standards` remains the canonical filename and runner-token authority.
 
 **Failure 2 — Harness coupling camouflage: the mock lives in the harness**
 
