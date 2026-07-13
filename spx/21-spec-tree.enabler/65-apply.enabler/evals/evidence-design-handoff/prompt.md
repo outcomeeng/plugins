@@ -1,10 +1,14 @@
+<!-- Generated from the complete producer at src/plugins/spec-tree/skills/apply/SKILL.md. -->
+
+Apply the complete producer to the supplied apply-lifecycle input. Decide the next test-design action and return only the producer's structured evidence-design routing result.
+
 ---
 name: apply
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[--agent] [node-path]"
-allowed-tools: Read, Skill, Agent, request_user_input
+allowed-tools: Read, Skill, Agent, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -304,7 +308,7 @@ Steps 4, 6, and 8 are blocking audit gates. Steps 4 and 6 emit verdicts from the
 
 On `REJECTED`, `UNKNOWN`, or `BLOCKED` at Steps 4 and 6; projection `terminalStatus: rejected` or a blocked result at Step 8; or an unaddressed valid finding at Step 9: fix the defect class or exact blocked command, re-dispatch the same auditor, and inspect the new result.
 
-**3 consecutive rejected, unknown, or blocked results on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
+**3 consecutive rejected, unknown, or blocked results on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `{{! tool('ask_user') !}}`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal Claude's approach is unstable; refactor the approach before asking the same gate again.
 
 </review_gates>
 
@@ -346,3 +350,9 @@ Scan the conversation for these markers before declaring done:
 - [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
 
 </success_criteria>
+
+The apply-lifecycle input (JSON-encoded):
+
+```json
+{input_json}
+```

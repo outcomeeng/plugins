@@ -40,6 +40,7 @@ Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; othe
 For every in-scope test assertion, inspect the full evidence chain:
 
 - The spec assertion and selected assertion type
+- The authoring evidence-design packet and fixture decision when supplied, as context only
 - The executed test file
 - Imported production modules
 - Imported `product_testing.harnesses.*` modules
@@ -53,6 +54,32 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 <no_deterministic_verification>
 This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The caller brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the caller owns, not a step this audit re-pays.
 </no_deterministic_verification>
+
+<evidence_design_audit>
+Before the declaration and coupling screens, reconstruct the Python evidence design from the spec, decisions, production source, test, and every imported infrastructure artifact. The authoring packet supplies context and never supplies proof. Re-derive each packet field: quantifier and domain, independent oracle, pass-while-false condition, execution level, source-contract needs, harness needs, generator variation, fixture suitability and approval, and property replay path.
+
+Validate references by declared role:
+
+- Assertion subject: exact assertion text plus a product-root-relative Markdown link to its assertion-bearing spec under `spx/`.
+- Source contract, harness, generator, or fixture: product-root-relative Markdown link to the exact governing spec file or full decision record under `spx/`, paired with a product-root-relative Markdown link to the Python implementation when it exists.
+- Deterministic evidence: exact co-located typed Python test file from the assertion's `[test]` link.
+- Eval evidence: exact `eval.toml` from the assertion's `[eval]` link.
+- External authority: stable canonical identifier plus a product-root-relative Markdown link to the local spec or full decision that adopts it.
+- Replay identity: verbatim seed, replay token, or run token, paired with product-root-relative Markdown links to the harness or run-journal implementation and its exact governing spec or full decision.
+
+An import statement or implementation path establishes execution coupling and implementation location; it never replaces the governing spec or decision link. Reject prose-only names, inline-code paths, absolute paths, `file://` URIs, leading `/`, `./`, traversal paths, backslashes, directories, missing targets, target-kind mismatches, and incomplete governance/implementation pairings. Planned infrastructure links its governing spec, records implementation as absent, and blocks dependent test writing; never accept a broken invented implementation link.
+
+Apply these Python design checks:
+
+- Open or composable domains use meaningful Hypothesis variation. Fixed examples, deterministic fixture sets, `st.just(...)`, singleton `st.sampled_from(...)`, and constant-returning factories produce `insufficient-domain-variation`.
+- Expected results derive from an independent oracle, source-owned mapping, or generated relation. Computing the expectation through the implementation under test produces `missing-independent-oracle`.
+- Property evidence reaches a `product_testing.harnesses.*` entrypoint that owns Hypothesis profile, seed or replay input, run count, and failure diagnostics. Missing ownership produces `missing-replay-harness`.
+- A fixture is an inert complete payload consumed by path, bytes, read, or copy. Python modules, exported constants, token bags, expected outputs, and finite substitutes for open domains produce `fixture-not-whole-payload`.
+- A valid fixture candidate requires the scoped `/test` operator decision. Missing approval produces `fixture-approval-missing`; approval never clears `insufficient-domain-variation` for a separate open-domain claim.
+- Governed infrastructure or source contracts with implementation-only traceability produce `missing-governing-reference`; other syntax, path, target, and pairing defects produce `invalid-reference`.
+
+Collect every applicable design finding across every assertion and infrastructure artifact before moving to the downstream evidence properties. The first verdict reports the complete observed defect set rather than one finding per retry.
+</evidence_design_audit>
 
 <test_file_declarations>
 Apply the base `/audit-tests` declaration screen before coupling. Any Python assignment, annotated assignment, named expression, loop binding, context-manager binding, exception binding, pattern binding, pytest fixture parameter, or property-generated parameter in an executed test file is a `test_owned_declaration` finding. Local functions are findings when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary. Name the right owner for the value or configuration: production source contract, `product_testing.harnesses.*`, `product_testing.generators.*`, inert fixture data, or eval case data.
@@ -209,11 +236,11 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
+This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put reference validity, fixture suitability and approval, domain variation, oracle independence, and replayability findings from `<evidence_design_audit>` in `gate-0-evidence-design`. Put coupling, falsifiability, alignment, coverage, source ownership, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit a deterministic-verification row.
 
 For each finding, include:
 
-- Verdict property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
+- Verdict property: reference validity, fixture suitability, fixture approval, replayability, coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
 - Exact file and line
 - The imported chain when the defect is outside the test file
 - Required fix
@@ -249,12 +276,17 @@ Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and class
 Failure 7: "Artifact is the source-of-truth" rationalization.
 
 Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an HCL attribute, or a systemd unit path. The value appeared in a parsed artifact file but no Python module owned it. Claude classified the artifact as the source-of-truth and accepted the case. The artifact is downstream — a Python module either renders or consumes it, and the absence of that Python module is the architectural defect, not the test's fault for finding nothing to import. Avoid this by naming the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
+
+Failure 8: Implementation link accepted as governance.
+
+Claude accepted a harness because the packet linked `product_testing/harnesses/git.py` and the test imported it. The link established implementation location but named no assertion-bearing spec or full decision record governing cleanup, real-behavior access, or replay. Avoid this by reporting `missing-governing-reference`, continuing the design reconstruction, and including every other observed design defect in the same verdict.
 </failure_modes>
 
 <success_criteria>
 The Python test verdict is sound when:
 
 - Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- Every evidence-design row was reconstructed independently of its authoring packet, every local reference was validated by role, and all observable design defects were included in the first verdict.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
 - The same test node yields the same verdict regardless of run order (reproducible).

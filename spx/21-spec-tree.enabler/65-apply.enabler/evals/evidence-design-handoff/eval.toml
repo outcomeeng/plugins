@@ -1,0 +1,24 @@
+title = "evidence-design-handoff"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/65-apply.enabler/apply.md",
+  "spx/21-spec-tree.enabler/65-apply.enabler/evals/evidence-design-handoff/**",
+  "src/plugins/spec-tree/skills/apply/**",
+  "src/plugins/spec-tree/skills/test/**",
+  "dist/claude/spec-tree/skills/apply/**",
+  "dist/claude/spec-tree/skills/test/**",
+]
+smoke_cases = [
+  "missing-packet-runs-foundational-gate",
+  "fixture-decision-stops-before-language-testing",
+  "approved-packet-enters-audit-as-context",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/apply/SKILL.md"
+template = "prompt.template.md"

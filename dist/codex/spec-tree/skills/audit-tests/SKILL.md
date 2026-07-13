@@ -21,6 +21,12 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 <essential_principles>
 
+**RECONSTRUCT THE EVIDENCE DESIGN.**
+
+Before judging the executed test, independently derive the assertion's quantifier and domain, independent oracle, execution level, source-contract needs, test-infrastructure needs, generator variation, fixture suitability and approval, property replay path, and a concrete way the proposed evidence could pass while the assertion remained false. An authoring packet is context only. Reproduce every conclusion from the spec, decisions, source, tests, and imported evidence chain.
+
+Validate every reference by its declared role. A local path establishes traceability only as a product-root-relative Markdown link to an exact role-compatible target. Governed source contracts, harnesses, generators, and fixtures require the governing spec or full decision-record link plus the implementation link when implementation exists. An implementation-only link never establishes governance.
+
 **OWNERSHIP SCREEN, THEN COUPLING.**
 
 An executed test file that declares variables or constants has already broken the evidence boundary. Screen declarations first, then check imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
@@ -54,6 +60,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
+- ALWAYS report every observable evidence-design defect in the first verdict; never stop after the first failed design check.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
 
 </constraints>
@@ -84,6 +91,7 @@ Read the spec's Assertions section. For each assertion, extract:
 | Assertion type | Scenario / Mapping / Conformance / Property / Compliance |
 | Test link      | Path from `([test](path))`                               |
 | Link status    | File exists or missing                                   |
+| Design packet  | Authoring packet supplied as context, or absent          |
 
 **Missing test file = finding.** Record it and continue to next assertion.
 
@@ -91,9 +99,64 @@ Read the spec's Assertions section. For each assertion, extract:
 
 </step>
 
+<step name="audit_testability">
+
+**Step 3: Testability**
+
+Read the source path the assertion governs. Identify the observable seam through which a test can exercise the asserted behavior: an exported function, typed constructor, protocol, injected collaborator, command boundary, or externally observable result.
+
+When the source exposes no assertion-relevant seam, record `untestable-source` against the source file with the missing boundary and required source refactor. Skip coupling, falsifiability, alignment, and coverage for that assertion because no test can satisfy them until the source is testable. Continue auditing every other assertion and every evidence-design row so the verdict still reports all observable defect classes.
+
+</step>
+
+<step name="audit_evidence_design">
+
+**Step 4: Evidence design and references**
+
+Read any supplied authoring packet as context. Reconstruct every row independently from the governing assertion and the live evidence chain. For each assertion, record:
+
+| Field                      | Required determination                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| Quantifier and domain      | existential, finite source-owned, external contract, open, or composable             |
+| Independent oracle         | source outside the implementation under test that decides the expectation            |
+| Pass-while-false condition | concrete condition under which the evidence passes while the assertion remains false |
+| Execution level            | dependency and execution-pain classification                                         |
+| Source contracts           | governing and implementation references, or explicit absent implementation           |
+| Harness                    | resource, cleanup, replay, and diagnostic ownership                                  |
+| Generator                  | meaningful variation, composition, shrinking, or systematic exploration              |
+| Fixture                    | `none`, or inert whole-payload candidate with scoped operator approval               |
+| Replay                     | harness-owned seed/replay input and failure diagnostics for property evidence        |
+
+Validate local references by role:
+
+| Role                                         | Required primary reference                                                                                 | Required secondary reference                                                                                                |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Assertion subject                            | Exact assertion text plus a product-root-relative Markdown link to its assertion-bearing spec under `spx/` | Stable heading fragment when durable                                                                                        |
+| Source contract, harness, generator, fixture | Product-root-relative Markdown link to the exact governing spec file or full decision record under `spx/`  | Product-root-relative Markdown link to implementation when it exists                                                        |
+| Deterministic test                           | Assertion's `[test]` link to the exact co-located typed test file                                          | Imported infrastructure implementation links                                                                                |
+| Eval                                         | Assertion's `[eval]` link to the exact `eval.toml`                                                         | Producer and sibling eval artifact links                                                                                    |
+| External authority                           | Stable canonical URL, schema identifier, or standard identifier                                            | Product-root-relative Markdown link to the local spec or full decision adopting it                                          |
+| Runtime replay identity                      | Verbatim seed, replay token, run token, or source-emitted identifier                                       | Product-root-relative Markdown links to the harness or run-journal implementation and exact governing spec or full decision |
+
+Reject prose-only names, inline-code paths, absolute paths, `file://` URIs, leading `/`, leading `./`, traversal with `../`, backslashes, directories, missing targets, and targets whose artifact kind does not match the declared role. A planned source-contract or infrastructure implementation uses its governing link plus an explicit absent-implementation status and blocks dependent test writing; a fabricated broken implementation link is never valid.
+
+Record every applicable finding before leaving this step:
+
+- `missing-governing-reference` — governed source or infrastructure has only prose or implementation traceability
+- `invalid-reference` — syntax, path shape, target existence, target kind, or required pairing fails
+- `missing-independent-oracle` — the expectation derives from the implementation under test or has no independent source
+- `insufficient-domain-variation` — an open or composable domain is reduced to fixed examples or a constant-only generator
+- `fixture-not-whole-payload` — the proposed fixture is a constant bag, expected output, token set, or imported module rather than inert complete input
+- `fixture-approval-missing` — a valid fixture candidate lacks scoped operator approval recording the rationale and surrendered coverage
+- `missing-replay-harness` — property evidence lacks harness-owned seed, replay input, or failure diagnostics
+
+Fixture approval never upgrades finite examples into property evidence. Keep `insufficient-domain-variation` when the domain remains open or composable even if the operator approved a whole-payload fixture for a different payload role.
+
+</step>
+
 <step name="audit_declarations">
 
-**Step 3a: Test-file declarations**
+**Step 5a: Test-file declarations**
 
 Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, or property-generated parameter and classify the proper owner:
 
@@ -118,7 +181,7 @@ For property-based tests, verify seed and replay behavior by reading the importe
 
 <step name="audit_coupling">
 
-**Step 3b: Coupling**
+**Step 5b: Coupling**
 
 Read the test file's import statements. Classify each import:
 
@@ -152,7 +215,7 @@ Coupling means exercising executable **behavior**, never reading a document's co
 
 <step name="audit_falsifiability">
 
-**Step 3c: Falsifiability**
+**Step 5c: Falsifiability**
 
 For each codebase import, name a concrete mutation to the imported module that would cause this test to fail. Write it down:
 
@@ -180,7 +243,7 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 <step name="audit_alignment">
 
-**Step 3d: Alignment**
+**Step 5d: Alignment**
 
 Read the spec assertion text. Read the test's expect/assert statements. Answer:
 
@@ -202,7 +265,7 @@ Check assertion-type-to-strategy alignment:
 
 <step name="audit_coverage">
 
-**Step 3e: Coverage**
+**Step 5e: Coverage**
 
 Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Re-running the coverage command here re-pays a cost already paid.
 
@@ -226,17 +289,17 @@ The judgment is traced from the code and named in the finding — never a measur
 
 <step name="compose_language">
 
-**Step 3f: Compose language-specific test-evidence concerns**
+**Step 5f: Compose language-specific test-evidence concerns**
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field; when no matching installed skill exists, record the coverage gap rather than guessing from filenames.
+Read the detected language or language partitions from the caller's audit request. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-0-evidence-design`, `gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When the caller omits language classification, return REJECTED with the missing request field; when no matching installed skill exists, record the coverage gap rather than guessing from filenames.
 
 </step>
 
 <step name="verdict">
 
-**Step 4: Issue verdict**
+**Step 6: Issue verdict**
 
 Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECTED.**
 
@@ -257,6 +320,20 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
   "target": "<spec-node-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
+    {
+      "name": "gate-0-evidence-design",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "<spec-source-test-or-infrastructure-file>",
+          "line": null,
+          "rule": "<reference-or-evidence-design-category>",
+          "severity": "REJECT",
+          "message": "<one-line design or traceability gap>"
+        }
+      ]
+    },
     {
       "name": "gate-1-assertion",
       "status": "PASS | FAIL",
@@ -290,7 +367,7 @@ The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; oth
 }
 ```
 
-A non-applicable Gate 2 row is omitted. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+A non-applicable Gate 2 row is omitted. Gate 0 is always present because every test-evidence audit reconstructs the design and validates its references. A required gate that cannot be evaluated uses `status: "FAIL"` with a `REJECT` finding naming the missing evidence; no skill emits a deterministic-verification row because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 
@@ -330,7 +407,13 @@ How to avoid: Step 3b — after identifying what a test reads, classify by wheth
 
 Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. The rename only evaded a heuristic.
 
-How to avoid: Step 3a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
+How to avoid: Step 5a reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
+
+**Failure 7: Trusted an implementation-only infrastructure reference**
+
+Claude accepted "the Git harness in `testing/harnesses/git.ts`" because the file existed and the test imported it. The packet established implementation location but supplied no governing declaration, so the auditor could not determine which behavior or lifecycle contract the harness promised.
+
+How to avoid: Step 4 validates references by role. A governed source contract, harness, generator, or fixture requires the exact governing spec or decision link and the existing implementation link. Report `missing-governing-reference` and continue the row so every other design defect appears in the same verdict.
 
 </failure_modes>
 
@@ -339,6 +422,7 @@ How to avoid: Step 3a reads declarations before coupling and classifies ownershi
 The verdict is sound when:
 
 - Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
+- Every assertion's evidence design was reconstructed independently of the authoring packet, every reference was validated by role, and all observable design defects were reported in the first verdict.
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.

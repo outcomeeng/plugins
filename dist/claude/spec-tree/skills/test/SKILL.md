@@ -1,11 +1,11 @@
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, AskUserQuestion
 ---
 
 <objective>
-Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
+Spec-tree assertion tests whose evidence architecture is approved before mutation, canonically named, source-contract-coupled, and reproducible for property failures.
 </objective>
 
 <prerequisite>
@@ -27,6 +27,56 @@ That local reference contains:
 Then follow the spec-tree workflow below.
 
 </prerequisite>
+
+<evidence_design_gate>
+
+Before creating or changing an executed test file, emit one structured evidence-design row per assertion. No test-file mutation is allowed until every row has `status: "PROCEED"` and the packet has `mutation_allowed: true`.
+
+Each row determines:
+
+- assertion id, exact assertion text, quantifier, and finite or open/composable domain;
+- independent oracle and a concrete way the proposed evidence could pass while the assertion remained false;
+- assertion type and execution level;
+- source-contract, harness, generator, and fixture requirements;
+- property seed, replay, and failure-diagnostic ownership;
+- reference validity by role.
+
+Open or composable domains default to a variable generator or property evidence. Reject a constant-only generator with `insufficient-domain-variation`. A property design without harness-owned seed, replay input, and failure diagnostics stops with `missing-replay-harness`. Expected output derived from the implementation under test stops with `missing-independent-oracle`.
+
+An inert whole-payload fixture is an operator-approved exception. Before requesting approval, state why the complete payload shape is material, why variable generation or property evidence is infeasible or wasteful, which state-space coverage is surrendered, which harness owns setup, cleanup, seed policy, replay, and diagnostics, and the recommended generator or property alternative. Use `AskUserQuestion` with the recommended variable-evidence path first, fixture approval second, and pause/inspect third. Approval applies only to the named assertion and payload role. A module, constant bag, copied protocol value, expected-output file, or finite substitute for an open domain is never an approvable fixture.
+
+Validate references before emitting a row:
+
+1. A local artifact reference is a Markdown link whose target is a product-root-relative path. Reject prose-only names, inline-code paths, absolute paths, `file://` URIs, targets beginning with `/` or `./`, traversal segments, and backslashes.
+2. Resolve the target from the product root and require an existing file whose kind matches the declared role.
+3. A governing reference targets the exact assertion-bearing spec file or full ADR/PDR path under `spx/`. A node directory, bare node name, or implementation file fails governance.
+4. A source contract, harness, generator, or fixture requires the governing reference and, when implementation exists, a second link to that implementation. An implementation link is mandatory secondary traceability and never sufficient by itself.
+5. A `[test]` reference targets the exact co-located typed test file. An `[eval]` reference targets the exact `eval.toml`. An external conformance authority uses its stable canonical URL or identifier together with a product-root-relative Markdown link to the local spec or full decision that adopts it. A seed, replay token, or run token remains a verbatim source-emitted value and pairs with product-root-relative Markdown links to its owning harness or journal implementation and exact governing spec or full decision.
+6. Planned infrastructure with no implementation links its governing spec, records implementation as absent, and stops dependent test-file authoring. Never manufacture a broken implementation link.
+
+Emit this JSON contract:
+
+```json
+{
+  "status": "PROCEED | STOP | OPERATOR_DECISION_REQUIRED",
+  "mutation_allowed": false,
+  "rows": [
+    {
+      "assertion_id": "<id>",
+      "evidence_shape": "SCENARIO | MAPPING | CONFORMANCE | PROPERTY | COMPLIANCE | FIXTURE",
+      "reference_status": "VALID | INVALID | MISSING",
+      "fixture_status": "NOT_REQUIRED | APPROVAL_REQUIRED | APPROVED"
+    }
+  ],
+  "findings": [
+    { "rule": "<rule>", "assertion_id": "<id>" }
+  ]
+}
+```
+
+Set `mutation_allowed` true only with `status: "PROCEED"`, valid references, an independent oracle, sufficient domain variation, replayable property evidence, and every fixture decision resolved.
+
+</evidence_design_gate>
 
 <workflow>
 
@@ -109,6 +159,8 @@ For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SK
 
 Document the routing decision for each assertion.
 
+Then execute `<evidence_design_gate>` and report its packet before any Step 5 mutation. Stop when the packet blocks or requests operator approval.
+
 </step>
 
 <step name="generate_scaffolds">
@@ -168,6 +220,8 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 Testing output is sound when:
 
+- The evidence-design packet was emitted before test-file mutation, every row proceeded, and any fixture exception has scoped operator approval.
+- Every local artifact reference passed role, path-shape, existence, target-kind, and governance-pairing validation.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.

@@ -14,15 +14,20 @@ from outcomeeng.test_evidence import (
     AuditStatus,
     COUPLING_TAXONOMY_CATEGORIES,
     CouplingEvidence,
+    EvidenceDesignCase,
     FindingCategory,
     FindingTarget,
     LiteralOrigin,
+    LocalReference,
     MIN_COUPLING_TAXONOMY_CATEGORIES,
+    ReferenceRole,
     TEST_OWNED_DECLARATION_REMEDIATION_OWNERS,
     UNTESTABLE_SOURCE_SKIPPED_CHECKS,
     audit_case_after_testability,
     audit_case_verdict,
+    audit_evidence_design,
     coupling_taxonomy_category_count,
+    local_reference_target,
 )
 from outcomeeng_testing.generators.audit_tests import coupling_taxonomy_categories
 
@@ -141,6 +146,140 @@ def partial_coupling_is_rejected() -> bool:
 
 def complete_evidence_is_approved() -> bool:
     return audit_case_verdict(_audit_case()).status is AuditStatus.APPROVED
+
+
+def implementation_only_reference_is_rejected() -> bool:
+    verdict = audit_evidence_design(
+        _evidence_design_case(governance_reference=None),
+        _product_root(),
+    )
+    return verdict.status is AuditStatus.REJECT and verdict.findings == {
+        FindingCategory.MISSING_GOVERNING_REFERENCE
+    }
+
+
+def role_compatible_references_are_approved() -> bool:
+    product_root = _product_root()
+    verdict = audit_evidence_design(_evidence_design_case(), product_root)
+    typed_references = (
+        LocalReference(
+            ReferenceRole.TEST,
+            "[scenario evidence](spx/21-spec-tree.enabler/68-audit.enabler/"
+            "32-audit-tests.enabler/tests/test_test_auditing.scenario.l1.py)",
+        ),
+        LocalReference(
+            ReferenceRole.EVAL,
+            "[merge eval](spx/21-spec-tree.enabler/76-merging.enabler/"
+            "evals/local-completion-boundary/eval.toml)",
+        ),
+    )
+    return (
+        verdict.status is AuditStatus.APPROVED
+        and not verdict.findings
+        and all(
+            local_reference_target(reference, product_root) is not None
+            for reference in typed_references
+        )
+    )
+
+
+def invalid_local_reference_shapes_are_rejected() -> bool:
+    product_root = _product_root()
+    invalid_references = (
+        LocalReference(ReferenceRole.IMPLEMENTATION, "outcomeeng/test_evidence.py"),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "`outcomeeng/test_evidence.py`",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[absolute](/outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[file URI](file://outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[dot relative](./outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[traversal](../outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[backslash](outcomeeng\\test_evidence.py)",
+        ),
+        LocalReference(ReferenceRole.IMPLEMENTATION, "[directory](outcomeeng)"),
+        LocalReference(
+            ReferenceRole.GOVERNANCE,
+            "[implementation as governance](outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[spec as implementation](spx/21-spec-tree.enabler/"
+            "68-audit.enabler/32-audit-tests.enabler/audit-tests.md)",
+        ),
+        LocalReference(
+            ReferenceRole.TEST,
+            "[implementation as test](outcomeeng/test_evidence.py)",
+        ),
+        LocalReference(
+            ReferenceRole.EVAL,
+            "[eval directory](spx/21-spec-tree.enabler/35-evidence.enabler/"
+            "evals/evidence-design-gate)",
+        ),
+        LocalReference(
+            ReferenceRole.IMPLEMENTATION,
+            "[missing](outcomeeng/missing.py)",
+        ),
+    )
+    return all(
+        local_reference_target(reference, product_root) is None
+        for reference in invalid_references
+    )
+
+
+def invalid_implementation_reference_is_rejected() -> bool:
+    verdict = audit_evidence_design(
+        _evidence_design_case(
+            implementation_reference=LocalReference(
+                ReferenceRole.IMPLEMENTATION,
+                "[spec as implementation](spx/21-spec-tree.enabler/"
+                "68-audit.enabler/32-audit-tests.enabler/audit-tests.md)",
+            )
+        ),
+        _product_root(),
+    )
+    return verdict.status is AuditStatus.REJECT and verdict.findings == {
+        FindingCategory.INVALID_REFERENCE
+    }
+
+
+def complete_evidence_design_reports_all_findings() -> bool:
+    verdict = audit_evidence_design(
+        _evidence_design_case(
+            independent_oracle=False,
+            open_or_composable_domain=True,
+            generator_varies=False,
+            property_evidence=True,
+            replay_harness=False,
+            fixture_requested=True,
+            fixture_whole_payload=False,
+            fixture_approved=False,
+            governance_reference=None,
+        ),
+        _product_root(),
+    )
+    return verdict.findings == {
+        FindingCategory.FIXTURE_APPROVAL_MISSING,
+        FindingCategory.FIXTURE_NOT_WHOLE_PAYLOAD,
+        FindingCategory.INSUFFICIENT_DOMAIN_VARIATION,
+        FindingCategory.MISSING_GOVERNING_REFERENCE,
+        FindingCategory.MISSING_INDEPENDENT_ORACLE,
+        FindingCategory.MISSING_REPLAY_HARNESS,
+    }
 
 
 def misaligned_evidence_is_rejected() -> bool:
@@ -933,6 +1072,44 @@ def _audit_case(
         coverage_path=coverage_path,
         positive_pattern=positive_pattern,
     )
+
+
+def _evidence_design_case(
+    *,
+    independent_oracle: bool = True,
+    open_or_composable_domain: bool = False,
+    generator_varies: bool = True,
+    property_evidence: bool = False,
+    replay_harness: bool = True,
+    fixture_requested: bool = False,
+    fixture_whole_payload: bool = True,
+    fixture_approved: bool = True,
+    governance_reference: LocalReference | None = LocalReference(
+        ReferenceRole.GOVERNANCE,
+        "[audit-tests spec](spx/21-spec-tree.enabler/68-audit.enabler/"
+        "32-audit-tests.enabler/audit-tests.md)",
+    ),
+    implementation_reference: LocalReference | None = LocalReference(
+        ReferenceRole.IMPLEMENTATION,
+        "[implementation](outcomeeng/test_evidence.py)",
+    ),
+) -> EvidenceDesignCase:
+    return EvidenceDesignCase(
+        independent_oracle=independent_oracle,
+        open_or_composable_domain=open_or_composable_domain,
+        generator_varies=generator_varies,
+        property_evidence=property_evidence,
+        replay_harness=replay_harness,
+        fixture_requested=fixture_requested,
+        fixture_whole_payload=fixture_whole_payload,
+        fixture_approved=fixture_approved,
+        governance_reference=governance_reference,
+        implementation_reference=implementation_reference,
+    )
+
+
+def _product_root() -> Path:
+    return Path(__file__).resolve().parents[2]
 
 
 def _scanner() -> DeclarationScanner:

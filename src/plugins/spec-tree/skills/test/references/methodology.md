@@ -8,6 +8,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 - [Why tests exist](#why-tests-exist)
 - [Before writing any test](#before-writing-any-test)
 - [Source-contract-first gate](#source-contract-first-gate)
+- [Evidence-design gate](#evidence-design-gate)
 - [Test files own assertions, not data or configuration](#test-files-own-assertions-not-data-or-configuration)
 - [The evidence trap](#the-evidence-trap)
 - [Separate the axes](#separate-the-axes)
@@ -25,7 +26,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 
 - No mocking. Ever.
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
-- Test doubles are exceptions, not defaults. The seven exception cases in Stage 5 are the only legitimate reasons to avoid the real dependency.
+- Test doubles are limited to the seven exception cases in Stage 5.
 - Route every assertion through all five stages. Do not skip ahead.
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the shape of the assertion, never from the section a rule appears in. A MUST/NEVER rule under a `## Compliance` heading does not imply the `compliance` assertion type.
@@ -61,6 +62,14 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or mock away behavior the assertion claims to verify.
 
+## Evidence-design gate
+
+Before an executed test file changes, determine the evidence architecture for every assertion. Record its quantifier and domain, independent oracle, pass-while-assertion-fails counterexample, execution level, source-contract needs, harness needs, generator needs, fixture status, and property replay ownership.
+
+An open or composable input space defaults to generated or property-based evidence. A generator varies, composes, shrinks, or systematically explores meaningful alternatives. A property harness owns seed selection, run count, replay input, and failure diagnostics. A fixture is an inert whole-payload input whose complete shape is material; using one requires a structured operator decision that exposes the surrendered state-space coverage and recommends the variable-evidence alternative.
+
+Every local artifact reference is a product-root-relative Markdown link validated by role. Source contracts, harnesses, generators, and fixtures link first to the exact governing spec or full decision and also to existing implementation. Test links target typed co-located test files; eval links target `eval.toml`; external authorities retain canonical identifiers alongside a product-root-relative Markdown link to the local spec or full decision that adopts them; runtime replay identities remain verbatim and pair with product-root-relative Markdown links to the harness or run-journal implementation and its exact governing spec or full decision. A planned artifact with no implementation links its governing declaration, records the implementation as absent, and blocks dependent test-file mutation.
+
 ## Test files own assertions, not data or configuration
 
 An executed test file is a typed assertion file. It owns the assertion flow: arrange the behavior through imported source contracts or infrastructure, execute the behavior, and assert the outcome. It does not own reusable values or execution policy.
@@ -81,7 +90,7 @@ Property-based tests need reproducible failures. Use a harness that owns seed se
 
 ## The evidence trap
 
-Agents often skip the evidence question. They see code and decide to test the shape of the code instead of the behavior that matters.
+The workflow can skip the evidence question and test code shape instead of the behavior that matters.
 
 - **Wrong**: See `OrderProcessor` calling `repository.save()`, create an `InMemoryRepository`, and claim persistence is covered.
 - **Right**: Ask what evidence is needed, realize the question is whether orders persist correctly, then test with a real database at the lowest level that can prove persistence.

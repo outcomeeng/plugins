@@ -14,7 +14,11 @@ Testability findings target source code; coupling, falsifiability, alignment, an
 
 ## Test Evidence Model
 
-When testability passes, the audit checks four evidence properties in order:
+When testability passes, the audit reconstructs the evidence design independently before checking the four established evidence properties. The authoring packet is audit context and never proof. Reconstruction determines the assertion quantifier and domain, independent oracle, execution level, source-contract needs, harness needs, generator variation, fixture suitability and approval, replay path, and the concrete condition under which the evidence could pass while the assertion remained false.
+
+Every local artifact reference is validated by role. A governing reference is a product-root-relative Markdown link to the exact assertion-bearing spec file or full decision path under `spx/`. A source contract, harness, generator, or fixture also links its implementation when that implementation exists, but implementation-only traceability fails. Test evidence links resolve to typed files under the governing node's `tests/`; eval links resolve to `eval.toml`; external authorities use stable canonical identifiers paired with a product-root-relative Markdown link to the local spec or full decision that adopts them; runtime seeds and run tokens remain verbatim source-emitted identities paired with product-root-relative Markdown links to the harness or run-journal implementation and its exact governing spec or full decision. Bare paths, inline-code paths, absolute paths, `file://` URIs, traversal paths, directories, and broken planned-implementation links fail validation.
+
+The audit then checks four evidence properties in order:
 
 1. **Coupling** — the test imports and exercises code from the codebase
 2. **Falsifiability** — a breaking change to the implementation causes a test failure
@@ -94,6 +98,14 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ### Scenarios
 
+- Given evidence that cites a harness only by implementation path or prose name, when audited, then the verdict reports `missing-governing-reference` even when the implementation exists ([test](tests/test_test_auditing.scenario.l1.py))
+- Given an evidence-design packet whose local references use product-root-relative Markdown links to exact role-compatible targets, including both governing spec and existing implementation for infrastructure, when audited, then reference validation passes ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a local reference that is prose-only, inline code, absolute, URI-shaped, traversal-shaped, directory-shaped, missing, or role-incompatible, when audited, then reference validation rejects it and reports `invalid-reference`, except an implementation-only governed artifact reports `missing-governing-reference` ([test](tests/test_test_auditing.scenario.l1.py))
+- Given an open or composable input domain represented by deterministic fixture examples or a constant-only generator, when audited, then the verdict reports `insufficient-domain-variation`; fixture approval cannot upgrade finite examples into property evidence ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a fixture candidate that is not an inert whole-payload input or lacks scoped operator approval, when audited, then the verdict reports `fixture-not-whole-payload` or `fixture-approval-missing` as applicable ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a property test without a harness-owned seed, replay input, and failure diagnostics, when audited, then the verdict reports `missing-replay-harness` ([test](tests/test_test_auditing.scenario.l1.py))
+- Given expected output derived from the implementation under test rather than an independent oracle, when audited, then the verdict reports `missing-independent-oracle` ([test](tests/test_test_auditing.scenario.l1.py))
+
 - Given source code that does not expose a seam for the spec assertion, when audited, then the verdict targets the source file with finding category "untestable source" and remaining evidence checks are skipped ([test](tests/test_test_auditing.scenario.l1.py))
 - Given source code that exposes a seam for the spec assertion, when audited, then testability passes and the audit proceeds to coupling ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that imports only its test framework, when audited by `/audit-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test_test_auditing.scenario.l1.py))
@@ -123,6 +135,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([review])
+- ALWAYS: reconstruct the evidence design independently, validate every reference by role, and report every observable evidence-design defect class in the first verdict; the authoring packet supplies context and never supplies proof ([review])
 - ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the caller and CI own coverage measurement, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])

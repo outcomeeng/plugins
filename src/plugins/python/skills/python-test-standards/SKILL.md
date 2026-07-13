@@ -17,11 +17,11 @@ When another skill loads this reference inside a repository, it must also check 
 <core_model>
 Every Python test file name encodes three independent axes:
 
-| Axis     | Tokens                                                         | Meaning                                    |
-| -------- | -------------------------------------------------------------- | ------------------------------------------ |
-| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of evidence the test provides    |
-| Level    | `l1`, `l2`, `l3`                                               | How painful the test is to run             |
-| Runner   | optional token such as `playwright`                            | Which non-default runner executes the file |
+| Axis           | Tokens                                                         | Meaning                                       |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------- |
+| Assertion type | `scenario`, `mapping`, `conformance`, `property`, `compliance` | Which quantifier-shaped claim the test proves |
+| Level          | `l1`, `l2`, `l3`                                               | How painful the test is to run                |
+| Runner         | optional token such as `playwright`                            | Which non-default runner executes the file    |
 
 Canonical filename:
 
@@ -31,6 +31,23 @@ test_<subject>.<evidence>.<level>[.<runner>].py
 
 Do not use `.unit.py`, `.integration.py`, `.e2e.py`, or `.spec.py` as the signal for evidence, level, or runner.
 </core_model>
+
+<evidence_design_contract>
+Python test writing starts only from a foundational `/test` evidence-design packet whose `status` permits proceeding and whose `mutation_allowed` is `true`. The packet records one row per assertion: quantifier and domain, independent oracle, pass-while-false condition, execution level, source-contract needs, harness needs, generator needs, fixture status, property replay path, and typed references. A missing or stopped packet returns to `/test`; the Python skill never invents a fixture decision or bypasses the foundational gate.
+
+Open or composable Python domains default to Hypothesis strategies or other generated evidence with meaningful variation. Property evidence also requires a harness-owned profile, seed or replay input, and failure diagnostics. Deterministic fixture examples and `st.just(...)` wrappers cannot satisfy that domain even when an operator approved a separate inert-payload fixture role.
+
+Every local artifact reference in the packet is a product-root-relative Markdown link to an exact role-compatible target:
+
+- Assertion subjects carry the exact assertion text and link to the assertion-bearing spec file under `spx/`.
+- Source contracts, harnesses, generators, and fixtures link first to their exact governing spec file or full decision record under `spx/`, then link to the implementation when it exists. An implementation path by itself never establishes governance.
+- Deterministic evidence links to the exact co-located typed test file. Eval evidence links to the exact `eval.toml`.
+- External authorities retain a stable canonical URL or identifier plus a product-root-relative Markdown link to the local spec or full decision that adopts it. Runtime seeds, replay tokens, and run tokens remain verbatim values paired with product-root-relative Markdown links to the harness or run-journal implementation and its exact governing spec or full decision.
+
+Reject prose-only names, inline-code paths, absolute paths, `file://` URIs, leading `/`, `./`, traversal paths, backslashes, directories, missing targets, and target kinds incompatible with the declared role. Planned infrastructure or source contracts link to the governing spec, record implementation as absent, and block dependent test mutation until the implementation exists.
+
+The Python implementation home is the product's importable package name with the `_testing` suffix. Under that package, harnesses live in `harnesses/`, generators in `generators/`, and inert payloads in `fixtures/`. Each implementation link is mandatory secondary traceability beside its governing spec or decision link.
+</evidence_design_contract>
 
 <execution_levels>
 Choose the level from execution pain and dependency availability:
@@ -57,16 +74,16 @@ Scripts and command entrypoints stay thin. Tests verify argument parsing and dis
 <test_data_policy>
 Every test case — input and expected output — derives from a source independent of the test author's invention. The legitimate sources:
 
-| Assertion type | Case source                                                                                                                                                            |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scenario       | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
-| Mapping        | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
-| Property       | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
-| Conformance    | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
-| Compliance     | The decision record being enforced — the case is the rule itself                                                                                                       |
-| Any (fixture)  | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
+| Assertion type | Case source                                                                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario       | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                                              |
+| Mapping        | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                                          |
+| Property       | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                                                |
+| Conformance    | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                                          |
+| Compliance     | The decision record being enforced — the case is the rule itself                                                                                                                         |
+| Any (fixture)  | An operator-approved inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
 
-The first five rows pair an assertion type with the case source it normally takes. The Fixture row is cross-cutting: any assertion type may use an inert fixture file as the case when the assertion is about the code's behavior on a whole real-world payload that the test author did not invent.
+The first five rows pair an assertion type with the case source it normally takes. The Fixture row is cross-cutting: any assertion type may use an inert fixture file as the case when the assertion is about the code's behavior on a whole real-world payload and `/test` records scoped operator approval for that payload role.
 
 A case the author hand-picked because it "looked reasonable" is a tautology dressed as a measurement. The author wrote or read the implementation, so the invention encodes the same model the code embodies, and every future run confirms that shared model rather than the spec. The defect is in the case's *origin*; lexical location (`Final` at module scope, plain assignment, inline literal), syntactic form, and reuse pattern (shared bag, single-value, parametrize row) are irrelevant.
 
@@ -264,6 +281,7 @@ Do not require `spx validation literal` for Python tests. The literal validator 
 Python test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
+- A proceeding `/test` evidence-design packet exists before mutation, retains role-valid governing and implementation links, and is preserved for audit handoff
 - Test filenames use `test_<subject>.<evidence>.<level>[.<runner>].py`
 - Executed test files introduce no local data or policy; convenience aliases derive solely from imported owners, and fixture parameters or property-generated parameters remain outside the assertion file
 - Source architecture is improved before tests accept copied values, replacement mocks, or fixture laundering

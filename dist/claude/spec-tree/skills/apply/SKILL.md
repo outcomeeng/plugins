@@ -110,24 +110,50 @@ Before dispatching an applicable evidence auditor, apply `<verification_checkpoi
 
 </evidence_auditor_gate>
 
+<evidence_design_handoff>
+
+Before language-specific test writing, require the structured packet emitted by `/test`'s evidence-design gate.
+
+- A missing packet returns `STOP_FOR_EVIDENCE_DESIGN` and runs `/test`; direct delegation to `/test-{language}` is forbidden.
+- A packet with `status: "STOP"` returns to `/test` for evidence redesign.
+- A packet with `status: "OPERATOR_DECISION_REQUIRED"` or a pending fixture decision requests the fixture decision through `/test` and performs no test-file mutation.
+- A packet with `status: "PROCEED"`, `mutation_allowed: true`, valid references, and a resolved fixture decision delegates to `/test-{language}`.
+- The committed test-evidence-auditor handoff includes the packet and fixture decision as context. The auditor reconstructs the evidence design independently; the packet is never proof and never pre-approves a row.
+
+When asked to classify an apply-lifecycle input, emit only:
+
+```json
+{
+  "status": "STOP_FOR_EVIDENCE_DESIGN | OPERATOR_DECISION_REQUIRED | CONTINUE_TO_LANGUAGE_TESTING",
+  "next_action": "RUN_TEST_EVIDENCE_GATE | REQUEST_FIXTURE_APPROVAL | DELEGATE_LANGUAGE_TESTING",
+  "fixture_decision": "NOT_REQUIRED | PENDING | APPROVED",
+  "packet_in_audit_handoff": false,
+  "packet_treated_as_proof": false
+}
+```
+
+Set `packet_in_audit_handoff` true when a valid packet exists for the test-audit handoff. `packet_treated_as_proof` is always false.
+
+</evidence_design_handoff>
+
 <skill_map>
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                              | Python                      | Rust                      |
-| ---- | ------------------------ | ------------------------------------------------------- | --------------------------- | ------------------------- |
-| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                              | same                        | same                      |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                        | same                      |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                        | same                      |
-| 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")` | `Skill("architect-rust")` |
-| 4    | Architecture audit       | `adr-auditor` agent                                     | same                        | same                      |
-| 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`      | `Skill("test-rust")`      |
-| 6    | Test audit               | `test-evidence-auditor` agent                           | same                        | same                      |
-| 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`      | `Skill("code-rust")`      |
-| 8    | Implementation audit     | `implementation-auditor` agent                          | same                        | same                      |
-| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                        | same                      |
-| 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                        | same                      |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                        | same                      |
+| Step | Purpose                  | TypeScript                                                 | Python                                                 | Rust                                                 |
+| ---- | ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                                 | same                                                   | same                                                 |
+| 1    | Load methodology         | `Skill("spec-tree:understand")`                            | same                                                   | same                                                 |
+| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")`    | same                                                   | same                                                 |
+| 3    | Architect                | `Skill("architect-typescript")`                            | `Skill("architect-python")`                            | `Skill("architect-rust")`                            |
+| 4    | Architecture audit       | `adr-auditor` agent                                        | same                                                   | same                                                 |
+| 5    | Design and write tests   | `Skill("spec-tree:test")`, then `Skill("test-typescript")` | `Skill("spec-tree:test")`, then `Skill("test-python")` | `Skill("spec-tree:test")`, then `Skill("test-rust")` |
+| 6    | Test audit               | `test-evidence-auditor` agent                              | same                                                   | same                                                 |
+| 7    | Implement                | `Skill("code-typescript")`                                 | `Skill("code-python")`                                 | `Skill("code-rust")`                                 |
+| 8    | Implementation audit     | `implementation-auditor` agent                             | same                                                   | same                                                 |
+| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents    | same                                                   | same                                                 |
+| 9    | Whole-changeset review † | `changes-reviewer` agent                                   | same                                                   | same                                                 |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                 | same                                                   | same                                                 |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
@@ -185,7 +211,9 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 <step number="5" name="Write tests">
 
-Invoke the testing skill for the detected language.
+Invoke `/test` first and apply `<evidence_design_handoff>`. Report its evidence-design packet before mutation. Proceed only when the packet reports `status: "PROCEED"` and `mutation_allowed: true`, with every fixture decision resolved.
+
+Then invoke the testing skill for the detected language and pass the packet as its design input.
 
 Write tests for all assertions in the spec. Tests come before implementation — no exceptions.
 
@@ -194,6 +222,8 @@ Write tests for all assertions in the spec. Tests come before implementation —
 <step number="6" name="Test audit" gate="true">
 
 Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-tests` concern inside its isolated context.
+
+Include the evidence-design packet and any fixture decision as context. State that the auditor reconstructs the evidence design independently and that the packet supplies no proof.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
@@ -307,6 +337,7 @@ Scan the conversation for these markers before declaring done:
 - [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
 - [ ] Step 4 `adr-auditor` emitted `APPROVED`
 - [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
+- [ ] Step 5 entered language-specific test writing only after `/test` emitted a proceeding evidence-design packet, with every fixture decision resolved
 - [ ] Step 8 `implementation-auditor` returned an `spx verification run` token and rendered projection whose `terminalStatus` is `approved`
 - [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff before Step 9
 - [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact diff before Step 9

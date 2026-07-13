@@ -2,13 +2,15 @@
 
 Detailed evidence model for test auditing. Read this before auditing any test file.
 
-Four properties define test evidence: coupling, falsifiability, alignment, coverage. This reference provides the taxonomy, verification procedures, and concrete examples for each.
+Evidence design establishes whether the proposed proof shape can carry the assertion. Four downstream properties then define executed test evidence: coupling, falsifiability, alignment, and coverage. This reference provides the design reconstruction, reference contract, taxonomy, verification procedures, and concrete examples.
 
 </overview>
 
 <table_of_contents>
 
 - `<coupling_taxonomy>` — coupling categories and examples
+- `<evidence_design_model>` — independent pre-test reconstruction and defect classes
+- `<reference_validation>` — role-specific traceability contract
 - `<coupling_verification>` — import and execution-path coupling procedure
 - `<test_file_declaration_model>` — test-file ownership screening before coupling
 - `<falsifiability_model>` — mutation analysis and double exceptions
@@ -16,6 +18,65 @@ Four properties define test evidence: coupling, falsifiability, alignment, cover
 - `<coverage_protocol>` — coverage-by-reading procedure
 
 </table_of_contents>
+
+<evidence_design_model>
+
+Reconstruct the evidence design from the governing declaration and the live evidence chain. The packet produced during authoring is useful context and never proof. For each assertion, determine:
+
+1. The assertion quantifier and domain: existential, finite source-owned, external contract, open, or composable.
+2. The independent oracle that decides the expected result without asking the implementation under test.
+3. A concrete condition under which the evidence could pass while the assertion remained false.
+4. Execution level from dependency availability and execution pain.
+5. Required source contracts and whether their implementation exists.
+6. Required harness responsibilities: setup, teardown, cleanup, real-behavior access, seed policy, replay, and diagnostics.
+7. Required generator behavior: meaningful variation, composition, shrinking, or systematic exploration.
+8. Fixture status: absent, rejected shape, or inert whole-payload candidate with scoped operator approval.
+9. Property replay path: harness-owned seed or replay input plus failure diagnostics.
+
+An open or composable input space defaults to generated or property-based evidence. Fixed examples and constant-only generator wrappers surrender most of that state space and produce `insufficient-domain-variation`. Operator approval of a fixture exception does not turn fixed examples into property evidence.
+
+A fixture candidate is acceptable only when the complete payload shape is material to the behavior and the payload is passed as inert input by path, bytes, copy, or directory tree. Fixture modules, constant bags, copied protocol values, token lists, expected-output files, and finite stand-ins for open domains produce `fixture-not-whole-payload`.
+
+Scoped fixture approval records all of these facts for the named assertion and payload role:
+
+- why the complete payload is material;
+- why generation or property evidence is infeasible or wasteful;
+- which state-space coverage is surrendered;
+- which harness owns setup, cleanup, seed policy, replay, and diagnostics;
+- the recommended generated or property-based alternative.
+
+A valid candidate lacking that decision produces `fixture-approval-missing`.
+
+Record every observable design defect before leaving the design pass. One defect never suppresses another row or assertion. The core defect vocabulary is:
+
+- `missing-governing-reference`
+- `invalid-reference`
+- `missing-independent-oracle`
+- `insufficient-domain-variation`
+- `fixture-not-whole-payload`
+- `fixture-approval-missing`
+- `missing-replay-harness`
+
+</evidence_design_model>
+
+<reference_validation>
+
+Local evidence-design references use Markdown links whose targets are relative to the product root. A valid local target has no leading `/`, `./`, or `../`, contains no traversal segment or backslash, resolves to an existing exact artifact, and matches the declared role. A prose name, inline-code path, absolute path, `file://` URI, or directory does not establish traceability.
+
+| Role                                            | Primary reference                                                           | Secondary reference                                                                                                         | Validation                                                                                                |
+| ----------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Governed test infrastructure or source contract | Exact assertion-bearing spec file or full decision-record path under `spx/` | Existing implementation artifact                                                                                            | The governance target exists and is a spec or decision file; implementation-only traceability fails       |
+| Assertion subject                               | Exact assertion text plus its assertion-bearing spec file under `spx/`      | Stable heading fragment when durable                                                                                        | The target exists and contains the assertion                                                              |
+| Deterministic test evidence                     | Exact co-located typed file from the assertion's `[test]` link              | Imported infrastructure implementations                                                                                     | Target exists under the governing node's `tests/` and filename encodes assertion type and execution level |
+| Eval evidence                                   | Exact `eval.toml` from the assertion's `[eval]` link                        | Producer and sibling eval artifacts                                                                                         | Definition exists; an eval-directory link fails                                                           |
+| External authority                              | Stable canonical URL, schema identifier, or standard identifier             | Product-root-relative Markdown link to the local spec or full decision adopting it                                          | External authority never replaces local governance                                                        |
+| Runtime replay identity                         | Verbatim source-emitted seed, replay token, or run token                    | Product-root-relative Markdown links to the harness or run-journal implementation and exact governing spec or full decision | Identity is copied exactly and never invented as a file link                                              |
+
+When governed implementation exists, both governance and implementation links are mandatory. When it is planned and absent, link the governing spec, record the implementation as absent, and stop dependent test authoring until its TDD flow creates the artifact. Never manufacture a broken implementation link.
+
+Validate syntax, path shape, target existence, target artifact kind, and required pairings. Use `missing-governing-reference` when an implementation or prose name is the only traceability for a governed artifact; use `invalid-reference` for every other reference-contract failure.
+
+</reference_validation>
 
 <coupling_taxonomy>
 

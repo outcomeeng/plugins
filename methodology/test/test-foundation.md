@@ -4,9 +4,9 @@
 
 - No mocking. Ever.
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
-- Test doubles are exceptions, not defaults. The seven exception cases in `test-router.md` are the only legitimate reasons to avoid the real dependency.
+- Test doubles are limited to the seven exception cases in [the test router](test-router.md).
 - Route every assertion through all five stages. Do not skip ahead.
-- Name tests by subject, evidence mode, execution level, and optional runner.
+- Name tests by subject, assertion type, execution level, and optional runner.
 
 ## Why tests exist
 
@@ -30,7 +30,7 @@ If you cannot answer all three, stop.
 
 ## The evidence trap
 
-Agents often skip the evidence question. They see code and decide to test the shape of the code instead of the behavior that matters.
+The workflow fails when it skips the evidence question and tests code shape instead of the behavior that matters.
 
 - **Wrong**: See `OrderProcessor` calling `repository.save()`, create an `InMemoryRepository`, and claim persistence is covered.
 - **Right**: Ask what evidence is needed, realize the question is whether orders persist correctly, then test with a real database at the lowest level that can prove persistence.
@@ -39,7 +39,8 @@ Agents often skip the evidence question. They see code and decide to test the sh
 
 Do not collapse evidence, execution pain, and tool choice into one label.
 
-- **Evidence mode** describes what kind of evidence the test provides.
+- **Verification type** describes how the assertion is verified: test, evaluate, or audit.
+- **Assertion type** describes the quantifier-driven test strategy under the test verification type.
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
@@ -50,7 +51,7 @@ Examples:
 
 The runner does not define the level, and the level does not define the runner.
 
-## Evidence modes
+## Assertion types
 
 Use evidence terms that describe what the test proves:
 
@@ -80,7 +81,7 @@ Assume a product default runner unless the file name says otherwise.
 
 - Omit the runner token when the default runner is used.
 - Add an explicit runner token for non-default runners.
-- Keep runner choice orthogonal to the evidence mode and the execution level.
+- Keep runner choice orthogonal to the assertion type and the execution level.
 
 ## Four-part progression
 
@@ -105,7 +106,7 @@ Follow this progression when deciding how to place evidence:
    - Observability gaps
    - Contract probes
 
-The detailed routing rules live in [test-router.md](./test-router.md). The naming rules live in [test-naming.md](./test-naming.md).
+The detailed routing rules live in [the test router](test-router.md). The naming rules live in [the test naming contract](test-naming.md).
 
 ## Anti-patterns
 
@@ -123,4 +124,4 @@ Avoid these patterns:
 
 Keep tests next to the governing spec work, and name them for what they prove and how painful they are to run.
 
-See [test-naming.md](./test-naming.md) for the naming contract.
+See [the test naming contract](test-naming.md).

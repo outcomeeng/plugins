@@ -1,7 +1,11 @@
+<!-- Generated from the complete producer at src/plugins/spec-tree/skills/test/SKILL.md. -->
+
+Apply the complete producer to the supplied test-authoring input. Execute its pre-mutation evidence-design gate and return only the producer's structured evidence-design packet.
+
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -10,7 +14,7 @@ Spec-tree assertion tests whose evidence architecture is approved before mutatio
 
 <prerequisite>
 
-**PREREQUISITE**: Read `${SKILL_DIR}/references/methodology.md` before writing any test.
+**PREREQUISITE**: Read `${CLAUDE_SKILL_DIR}/references/methodology.md` before writing any test.
 
 That local reference contains:
 
@@ -43,7 +47,7 @@ Each row determines:
 
 Open or composable domains default to a variable generator or property evidence. Reject a constant-only generator with `insufficient-domain-variation`. A property design without harness-owned seed, replay input, and failure diagnostics stops with `missing-replay-harness`. Expected output derived from the implementation under test stops with `missing-independent-oracle`.
 
-An inert whole-payload fixture is an operator-approved exception. Before requesting approval, state why the complete payload shape is material, why variable generation or property evidence is infeasible or wasteful, which state-space coverage is surrendered, which harness owns setup, cleanup, seed policy, replay, and diagnostics, and the recommended generator or property alternative. Use `request_user_input` with the recommended variable-evidence path first, fixture approval second, and pause/inspect third. Approval applies only to the named assertion and payload role. A module, constant bag, copied protocol value, expected-output file, or finite substitute for an open domain is never an approvable fixture.
+An inert whole-payload fixture is an operator-approved exception. Before requesting approval, state why the complete payload shape is material, why variable generation or property evidence is infeasible or wasteful, which state-space coverage is surrendered, which harness owns setup, cleanup, seed policy, replay, and diagnostics, and the recommended generator or property alternative. Use `{{! tool('ask_user') !}}` with the recommended variable-evidence path first, fixture approval second, and pause/inspect third. Approval applies only to the named assertion and payload role. A module, constant bag, copied protocol value, expected-output file, or finite substitute for an open domain is never an approvable fixture.
 
 Validate references before emitting a row:
 
@@ -140,7 +144,7 @@ For each assertion:
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
-If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via request_user_input before proceeding.
+If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via {{! tool('ask_user') !}} before proceeding.
 
 Report the evidence gap summary before proceeding.
 
@@ -150,7 +154,7 @@ Report the evidence gap summary before proceeding.
 
 **Step 4: Route each assertion through the methodology**
 
-For each assertion that needs a test, apply the 5-stage router from `${SKILL_DIR}/references/methodology.md`:
+For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SKILL_DIR}/references/methodology.md`:
 
 0. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
 1. **Stage 1** — What evidence does this assertion demand?
@@ -172,7 +176,7 @@ For each assertion needing a new test:
 1. Determine test pattern from assertion type (Step 2 table).
 2. Determine execution level from methodology routing (Step 4).
 3. Create the test file in the spec node's `tests/` directory.
-4. Name the file using the canonical model in `${SKILL_DIR}/references/methodology.md`.
+4. Name the file using the canonical model in `${CLAUDE_SKILL_DIR}/references/methodology.md`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
 Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript`.
@@ -229,3 +233,9 @@ Testing output is sound when:
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
 
 </success_criteria>
+
+The test-authoring input (JSON-encoded):
+
+```json
+{input_json}
+```

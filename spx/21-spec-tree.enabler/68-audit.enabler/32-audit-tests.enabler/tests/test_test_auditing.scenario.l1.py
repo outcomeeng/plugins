@@ -2,6 +2,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     async_local_function_declarations_are_detected,
     block_comment_declarations_are_ignored,
     complete_evidence_is_approved,
+    complete_evidence_design_reports_all_findings,
     coupling_severed_is_rejected,
     coverage_trace_names_code_path,
     false_coupling_is_rejected,
@@ -9,6 +10,9 @@ from outcomeeng_testing.harnesses.audit_tests import (
     local_function_declaration_is_rejected,
     laundered_indirect_coupling_is_rejected,
     laundered_indirect_is_rejected,
+    implementation_only_reference_is_rejected,
+    invalid_implementation_reference_is_rejected,
+    invalid_local_reference_shapes_are_rejected,
     misaligned_evidence_is_rejected,
     multiple_typescript_declarations_are_detected,
     no_coupling_is_rejected,
@@ -16,6 +20,7 @@ from outcomeeng_testing.harnesses.audit_tests import (
     numeric_literal_is_rejected,
     owned_declaration_categories_are_rejected,
     positive_pattern_is_reported,
+    role_compatible_references_are_approved,
     partial_coupling_is_rejected,
     prose_coupling_is_rejected,
     property_failure_notes_include_seed_and_replay,
@@ -88,6 +93,26 @@ def test_rejects_partial_coupling() -> None:
 
 def test_approves_complete_evidence() -> None:
     assert complete_evidence_is_approved()
+
+
+def test_rejects_implementation_only_reference() -> None:
+    assert implementation_only_reference_is_rejected()
+
+
+def test_approves_role_compatible_references() -> None:
+    assert role_compatible_references_are_approved()
+
+
+def test_rejects_invalid_local_reference_shapes() -> None:
+    assert invalid_local_reference_shapes_are_rejected()
+
+
+def test_reports_invalid_implementation_reference() -> None:
+    assert invalid_implementation_reference_is_rejected()
+
+
+def test_reports_all_evidence_design_findings() -> None:
+    assert complete_evidence_design_reports_all_findings()
 
 
 def test_rejects_misaligned_evidence() -> None:
