@@ -143,7 +143,19 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
   "target": "<node-spec-file-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL", "findings": [] },
+    {
+      "name": "section-structure",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "location": "<section or assertion>",
+          "rule": "<violation pattern>",
+          "evidence": "<quoted artifact evidence>",
+          "message": "<one-line detail>",
+          "severity": "REJECT | WARNING | INFO"
+        }
+      ]
+    },
     { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
     { "name": "tag-fitness", "status": "PASS | FAIL", "findings": [] }
   ],
@@ -151,7 +163,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, `prose-coupling`); the `message` field carries the one-line detail.
+Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
 
 </verdict_format>
 
