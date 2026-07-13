@@ -48,7 +48,8 @@ For behavior changes:
 1. Locate the right test home:
    - `spx/.../tests/{subject}.{evidence}.l1.rs`
    - `spx/.../tests/{subject}.{evidence}.l2.rs`
-   - inline `#[cfg(test)]` if the module already owns that evidence
+   - `spx/.../tests/{subject}.{evidence}.l3.rs` when remote evidence is selected
+   - inline `#[cfg(test)]` only for non-linked compile checks that do not claim Spec Tree behavioral evidence
 2. Write or extend the tests.
 3. Run the relevant test target to confirm the new case fails for the expected reason.
 
