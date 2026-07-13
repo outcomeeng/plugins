@@ -7,15 +7,15 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
-<prerequisites>
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-</prerequisites>
-
 <dispatch_gate>
 
 This audit runs inside the dispatched `implementation-auditor` verifier context composing this skill for the Python code files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside `implementation-auditor`, STOP — the audit must run in that verifier context. An already-dispatched implementation-auditor that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
+
+<prerequisites>
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+</prerequisites>
 
 <objective>
 

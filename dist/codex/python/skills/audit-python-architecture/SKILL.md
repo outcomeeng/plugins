@@ -7,15 +7,15 @@ description: >-
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
-<prerequisites>
-Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-</prerequisites>
-
 <dispatch_gate>
 
 This audit runs inside a dispatched artifact-type auditor's verifier context — `implementation-auditor` composing this skill for Python implementation architecture scope, or `adr-auditor` composing it for a Python ADR's language-specific architecture concerns — isolated from the author context that produced the work under audit. This skill judges only Python-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, Python anti-patterns, and test-double exception cases. Generic decision-record structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` when the target is an ADR and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
 
 </dispatch_gate>
+
+<prerequisites>
+Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+</prerequisites>
 
 <objective>
 A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Python anti-patterns, ancestor consistency, and test-double exception cases.
