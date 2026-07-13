@@ -163,6 +163,20 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 
 </adr_creation_protocol>
 
+<verification_gates>
+
+**Gate 1 — context and decision inventory, before Phase 3:**
+
+- PASS only when a live context receipt matches the target node, every product and ancestor ADR/PDR listed by that context has been read, the authoritative ADR template is loaded, and the decisions needed are listed.
+- FAIL when any receipt, governing decision, template, or decision-list entry is absent; stop before drafting and load the missing material.
+
+**Gate 2 — artifact consistency, before reporting completion:**
+
+- PASS only when every written ADR has the template-required decision, Rationale, and Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
+- FAIL when a required section or audit rule is absent, a citation is ambiguous, or any governing decision conflicts; repair the ADR and repeat this gate.
+
+</verification_gates>
+
 <out_of_scope>
 
 1. **Do NOT write implementation code**. ADRs constrain implementation; they are not it.
@@ -220,13 +234,10 @@ Key Constraints
 <success_criteria>
 ADR is complete when:
 
-- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/rust-architecture-standards`
-- [ ] `/rust-standards` was loaded before `/rust-architecture-standards`
-- [ ] `/rust-test-standards` was loaded before testing methodology was applied
-- [ ] All architectural choices documented
-- [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
-- [ ] No contradictions with existing ADRs
-- [ ] Ownership, type-system, and resource-lifecycle considerations addressed
-- [ ] Security boundaries identified
+- [ ] Every ADR contains a direct decision statement, `## Rationale`, and `## Verification`, with no `Purpose` or `Context` section
+- [ ] `## Verification` contains `### Audit` rules that state DI and no-mocking testability boundaries as ALWAYS/NEVER guarantees
+- [ ] Every applicable ownership, type, error, concurrency, resource-lifecycle, unsafe, and security commitment is decided or explicitly marked not applicable in the decision or Rationale
+- [ ] Every governing-decision citation uses a full `spx/...` path, and the final comparison records no contradiction with loaded product or ancestor decisions
+- [ ] The completion report lists every written ADR path, scope, decision summary, and resulting constraint
 
 </success_criteria>

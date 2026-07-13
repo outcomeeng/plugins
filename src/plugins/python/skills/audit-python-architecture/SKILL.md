@@ -13,10 +13,6 @@ This audit runs inside a dispatched artifact-type auditor's verifier context —
 
 </dispatch_gate>
 
-<prerequisites>
-{!% require_skill 'python:python-architecture-standards' %!}
-</prerequisites>
-
 <objective>
 A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Python anti-patterns, ancestor consistency, and test-double exception cases.
 </objective>
@@ -31,6 +27,8 @@ A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with
 </constraints>
 
 <audit_workflow>
+{!% require_skill 'python:python-architecture-standards' %!}
+
 **For spec-tree work items: the composing auditor has already loaded the governing context.**
 
 When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` on the node and loaded the complete governing context. Use that loaded context:
@@ -62,9 +60,7 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 10. **Identify all Python-architecture violations** and classify per concern
 11. **Output the JSON verdict** with `overall` set to `APPROVED` or `REJECTED` and every concern row populated
 
-</audit_workflow>
-
-<principles_to_enforce>
+**Principles to enforce:**
 
 All canonical conventions are in `/python-architecture-standards`. Read it first. This skill checks only the Python-specific concerns:
 
@@ -80,7 +76,7 @@ All canonical conventions are in `/python-architecture-standards`. Read it first
 
 Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
 
-</principles_to_enforce>
+</audit_workflow>
 
 <verdict_format>
 
@@ -126,29 +122,6 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 </failure_modes>
 
-<what_to_avoid>
-
-**Don't:**
-
-- Judge section structure, atemporal voice, or per-rule tag validity — those belong to the composing `adr-auditor`
-- Reference specific line numbers (they change) — use section names or quoted text
-- Provide grep commands — focus on principles, not tooling
-- Approve an architecture target just because a Protocol is defined — check that an ALWAYS rule mandates it for ADR targets or that implementation code follows the loaded architecture constraint
-
-**Do:**
-
-- Reference `/python-architecture-standards` section names (e.g., `<testability_in_verification>`, `<di_patterns>`)
-- Reference `/test` methodology by its real heading, `Stage 2: At what level does that evidence live?`, for level rules
-- Reference `/python-architecture-standards` `<di_patterns>` for Python-specific Protocol patterns
-- Keep corrective architecture examples in the referenced standards and example files, never in the emitted verdict
-- Be direct about violations
-
-</what_to_avoid>
-
-<example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
-</example_review>
-
 <success_criteria>
 The verdict is sound when:
 
@@ -159,3 +132,15 @@ The verdict is sound when:
 - The same architecture scope and governing context produce the same JSON verdict.
 
 </success_criteria>
+
+<reference_guidance>
+
+- Do NOT judge section structure, atemporal voice, or per-rule tag validity — those belong to the composing `adr-auditor`.
+- Use section names or quoted text instead of line numbers, and focus findings on principles instead of grep commands.
+- Do NOT approve an architecture target because a Protocol exists; require an ALWAYS rule that binds it for ADR targets or evidence that implementation follows the loaded constraint.
+- Reference `/python-architecture-standards` section names and `/test`'s `Stage 2: At what level does that evidence live?` when identifying violated rules.
+- Keep corrective examples in the referenced standards and example files, outside the verdict.
+
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the Python concern types: SaaS `l2` violation, mocking language, and missing testability in `## Verification`.
+
+</reference_guidance>

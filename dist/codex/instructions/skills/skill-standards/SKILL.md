@@ -92,7 +92,7 @@ Descriptions state when Codex selects a skill and distinguish adjacent skills wi
 
 Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) anywhere in the body. Keep markdown formatting *within* content (bold, italic, lists, tables, code blocks, links).
 
-**Why pure XML:** unambiguous section boundaries, consistent cross-skill structure, better token efficiency, better Claude performance.
+**Why pure XML:** unambiguous section boundaries, consistent cross-skill structure, better token efficiency, and more reliable runtime interpretation.
 
 **Required tags (every skill):**
 

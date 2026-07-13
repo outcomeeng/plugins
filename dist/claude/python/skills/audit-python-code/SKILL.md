@@ -13,10 +13,6 @@ This audit runs inside the dispatched `implementation-auditor` verifier context 
 
 </dispatch_gate>
 
-<prerequisites>
-Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-</prerequisites>
-
 <objective>
 
 A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, the violated rule, and the evidence.
@@ -34,38 +30,19 @@ A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each 
 
 </constraints>
 
-<repo_local_overlay>
-Load every required standard named above before continuing. Check for `spx/local/python.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-</repo_local_overlay>
-
-<essential_principles>
-
-**Comprehension is the whole job.**
-
-This audit reads and judges Python implementation code; it runs no deterministic verification of its own. The caller brings the project's linters, type-checker, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository — so do NOT run or re-check what those gates already verified. Spend the whole audit on comprehension.
-
-**Comprehension is the core value.**
-
-Automated tools catch syntax errors, type mismatches, and lint violations. Claude catches: functions that do more than their name says, dead parameters required by no Protocol, IO tangled with logic, and designs that will break under change. The predict/verify protocol (Phase 1) is how these surface.
-
-**Test evidence is out of scope.**
-
-`/audit-python-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the caller already passed it before dispatch. Do not duplicate that work.
-
-**Binary verdict, no caveats.**
-
-The verdict is the only output. Findings prove violations; they do not prescribe fixes.
-
-</essential_principles>
-
 <audit_workflow>
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Load the required standard before continuing. Check for `spx/local/python.md` at the repository root. Read it when present and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+
+This audit reads and judges Python implementation code; it runs no deterministic verification of its own. The caller brings the project's linters, type-checker, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository. Spend the audit on comprehension. `/audit-python-tests` owns test-evidence quality as a separate concern. The verdict is the only output; findings prove violations without prescribing fixes.
 
 Execute phases IN ORDER. Do not skip. This audit runs no deterministic verification — no linter, type-checker, or test run. The caller brought the project's validation and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository; re-running them here only re-pays a cost already paid.
 
 **Phase 0: Scope and Product Config**
 
 1. Determine target files/directories
-2. Check `pyproject.toml`, `CLAUDE.md`, and `README.md` for tool and project configuration that informs comprehension (ruff, mypy, pytest settings; naming conventions) — read for context, never to run a gate. The linters already handled type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
+2. Read each project configuration or guide that exists among `pyproject.toml`, `setup.cfg`, `tox.ini`, `ruff.toml`, `.ruff.toml`, `mypy.ini`, `.mypy.ini`, `pytest.ini`, `CLAUDE.md`, `README.md`, and `CONTRIBUTING.md`. Use these files only for tool settings and project conventions that inform comprehension; absence of an optional surface is not a finding. The linters already handled type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
 
 **Phase 1: Code Comprehension**
 
@@ -183,22 +160,6 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 </failure_modes>
 
-<what_to_avoid>
-
-- Do NOT run or re-check the project's linters, type-checker, or tests — the caller passed them on the changeset before dispatch, and CI re-runs them over the whole repository
-- Do NOT evaluate test evidence quality; the composing implementation auditor invokes `/audit-python-tests` separately
-- Do NOT commit or modify code (this skill is read-only)
-- Do NOT generate fixes, replacement code, refactors, or required-change summaries
-- Do NOT approve with caveats (binary verdict only)
-- Do NOT reject for code style when comprehension found no design flaws
-
-</what_to_avoid>
-
-<example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for complete PASS and FAIL examples.
-
-</example_review>
-
 <success_criteria>
 
 A sound verdict has these properties:
@@ -210,3 +171,14 @@ A sound verdict has these properties:
 - [ ] The same repository state and audit scope can reproduce the verdict from the listed evidence
 
 </success_criteria>
+
+<reference_guidance>
+
+- Do NOT run or re-check the project's linters, type-checker, or tests — the caller passed them on the changeset before dispatch, and CI re-runs them over the whole repository.
+- Do NOT evaluate test evidence quality; the composing implementation auditor invokes `/audit-python-tests` separately.
+- Do NOT commit or modify code, generate fixes, replacement code, refactors, or required-change summaries.
+- Do NOT approve with caveats or reject for code style when comprehension found no design flaw.
+
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for complete PASS and FAIL verdict examples.
+
+</reference_guidance>

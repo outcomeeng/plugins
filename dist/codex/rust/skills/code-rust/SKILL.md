@@ -121,11 +121,10 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 <success_criteria>
 
-- repo-local Rust overlays were loaded when present
-- `/rust-test-standards` was loaded before behavior-changing implementation work
-- codebase discovery happened before implementation
-- behavior-changing work is backed by tests or an explicit review constraint
-- new code follows repository patterns for seams, ownership, errors, and modules
-- full validation passed before completion
+- Every implemented behavior satisfies its linked spec assertion and passes the corresponding Rust evidence tests.
+- Public APIs, ownership boundaries, typed errors, modules, and injected seams conform to the loaded ADRs and repository contracts.
+- Controlled implementations preserve the real production boundary and do not replace the behavior under test with generated mocks.
+- Every unsafe block or FFI boundary states and upholds its safety invariant when the implementation contains unsafe code.
+- The completion report records the exact formatting, lint, compile, and test commands, each with exit status zero.
 
 </success_criteria>
