@@ -3,6 +3,7 @@
 !.claude/settings.json
 .codex/*
 !.codex/config.toml
+.pi-subagents/
 
 # Local MCP server registration (machine-specific absolute paths)
 .mcp.json
