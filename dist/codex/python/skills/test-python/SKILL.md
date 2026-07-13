@@ -61,7 +61,7 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Keep variable and constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Use the zero-parameter wrapper pattern from `/python-test-standards`: import and call one harness entrypoint in the assertion expression.
+7. Keep variable and constant declarations, domain or assertion literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. One-off descriptive test titles and diagnostic messages remain inline. Use the zero-parameter wrapper pattern from `/python-test-standards`: import and call one harness entrypoint in the assertion expression.
 8. Import source-owned values from the owning module.
 9. Keep variable input domains and Hypothesis-generated parameters inside `<package>_testing.generators.*` and the consuming harness entrypoint.
 10. Import zero-parameter harness entrypoints from `<package>_testing.harnesses.*`; use `conftest.py` only for marker and hook registration, never fixture discovery imports.
@@ -128,13 +128,17 @@ Report the evidence created or repaired with:
 
 Claude changed the expectation named by an audit finding while another clause of the same assertion still had no source-owned case or mutation-sensitive observable. The next audit rejected a different subpart of the same evidence chain.
 
-Avoid this by rebuilding the complete clause-evidence matrix and inspecting every linked test, harness, generator, fixture, source contract, oracle, and `conftest.py` shim before editing.
+Why it failed: the repair treated one reported predicate as the defect instead of treating the finding as evidence that the complete assertion chain was untrusted.
+
+How to avoid: rebuild the complete clause-evidence matrix and inspect every linked test, harness, generator, fixture, source contract, oracle, and `conftest.py` shim before editing.
 
 **Failure 2: Moved protocol vocabulary into a harness**
 
 Claude removed literals from the executed test by placing schema keys, CLI tokens, paths, producer identities, and expected projections in a harness. The test became visually thin while the harness still owned production truth.
 
-Avoid this by exporting protocol vocabulary and constructors from the owning production module. Harnesses own lifecycle, resource access, replay policy, and diagnostics only.
+Why it failed: relocating protocol vocabulary changed its file without restoring ownership to the production contract that defines it.
+
+How to avoid: export protocol vocabulary and constructors from the owning production module. Harnesses own lifecycle, resource access, replay policy, and diagnostics only.
 
 </failure_modes>
 
@@ -143,11 +147,11 @@ Python test work satisfies this skill when:
 
 - Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
-- Tests introduce no variable or constant declarations, local literals, numbers, vocabulary, case data, expected results, or configuration
+- Tests introduce no variable or constant declarations, domain or assertion literals, numbers, vocabulary, case data, expected results, or configuration; one-off descriptive titles and diagnostics remain inline
 - Generators represent meaningful variable domains
-- Harnesses manage resource lifecycle and pytest fixture body code
+- Harnesses manage resource lifecycle and generated-case binding through zero-parameter entrypoints
 - Inert fixtures are consumed only as files
-- `conftest.py` contains discovery or registration only
+- `conftest.py` contains marker or hook registration only
 - No framework mock replaces the behavior under test
 - The matrix gate, focused test gate, repository-canonical lint gate, and repository-canonical type gate all pass for the changed scope
 

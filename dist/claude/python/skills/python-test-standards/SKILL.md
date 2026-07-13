@@ -80,7 +80,7 @@ Where the *values* the cases use live:
 | Whole-payload real-world sample                              | An inert fixture file under `<package>_testing/fixtures/`, read by path         |
 | One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                                |
 
-Executed Python test files are typed assertion files. They introduce no variable or constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
+Executed Python test files are typed assertion files. They introduce no variable or constant declarations, domain or assertion literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. One-off descriptive test titles and diagnostic messages remain inline. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
 
 <executed_test_binding_pattern>
 Executed tests use zero-parameter wrappers. Resource and generated-case binding occurs inside imported harness entrypoints:

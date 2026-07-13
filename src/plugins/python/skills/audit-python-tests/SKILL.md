@@ -180,13 +180,13 @@ Inspect every `conftest.py` that applies to the test path.
 
 Allowed content:
 
-- Explicit imports of pytest fixture callables from `<package>_testing.harnesses.*`
 - Pytest marker registration
 - Pytest hooks that configure collection or reporting
 
 Rejected content:
 
 - Fixture body code
+- Imports of pytest fixture callables
 - Harness classes or setup policy
 - Generated data
 - Source-owned protocol values
