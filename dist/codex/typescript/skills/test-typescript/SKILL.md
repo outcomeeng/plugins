@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <prerequisites>

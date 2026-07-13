@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {!% if target == 'claude' %!}Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*){!% else %!}Bash{!% endif %!}
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill{!% if target == 'claude' %!}, Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*){!% endif %!}
 ---
 
 <prerequisites>
