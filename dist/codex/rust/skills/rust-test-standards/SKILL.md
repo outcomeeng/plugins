@@ -25,6 +25,8 @@ Rust test guidance follows this standard when:
 
 <reference_note>
 This is a reference skill. `/test-rust` uses it to produce tests and `/audit-rust-tests` uses it to judge their evidence quality.
+
+Rust code examples use `acme_testing` as the compilable stand-in for the consumer package's `<package>_testing` dev-dependency crate.
 </reference_note>
 
 <repo_local_overlay>
@@ -211,7 +213,7 @@ impl TestEnv {
 }
 ```
 
-Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <package>_testing::harnesses::spec_tree::TestEnv;`.
+Consumers depend on the workspace-member crate via `[dev-dependencies]`; the examples import it as `use acme_testing::harnesses::spec_tree::TestEnv;`.
 
 **4. Fixture files**
 
@@ -277,8 +279,8 @@ fn rejects_empty_url_sets() {
 Dependency seam example:
 
 ```rust
-use <package>_testing::harnesses::commands::success_runner;
-use <package>_testing::generators::repos::source_checkout_path;
+use acme_testing::harnesses::commands::success_runner;
+use acme_testing::generators::repos::source_checkout_path;
 
 #[test]
 fn command_builder_reports_success() {
@@ -289,8 +291,8 @@ fn command_builder_reports_success() {
 Tempdir example:
 
 ```rust
-use <package>_testing::fixtures::configs::valid_site_config;
-use <package>_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
+use acme_testing::fixtures::configs::valid_site_config;
+use acme_testing::harnesses::filesystem::assert_loads_yaml_from_temp_config;
 
 #[test]
 fn loads_yaml_from_temp_dir() {
@@ -304,8 +306,8 @@ fn loads_yaml_from_temp_dir() {
 Use the product property harness for universal invariants:
 
 ```rust
-use <package>_testing::generators::configs::valid_config_strategy;
-use <package>_testing::harnesses::properties::assert_config_roundtrips;
+use acme_testing::generators::configs::valid_config_strategy;
+use acme_testing::harnesses::properties::assert_config_roundtrips;
 
 #[test]
 fn config_roundtrips() {
@@ -320,9 +322,9 @@ Use `trybuild` for compile-time guarantees:
 ```rust
 #[test]
 fn ui_contracts_hold() {
-    <package>_testing::harnesses::trybuild::assert_ui_contracts(
-        <package>_testing::fixtures::ui::valid_builders(),
-        <package>_testing::fixtures::ui::invalid_builders(),
+    acme_testing::harnesses::trybuild::assert_ui_contracts(
+        acme_testing::fixtures::ui::valid_builders(),
+        acme_testing::fixtures::ui::invalid_builders(),
     );
 }
 ```
@@ -335,8 +337,8 @@ Use Level 2 when governed behavior needs a real binary, runtime, adapter, or loc
 CLI binary example:
 
 ```rust
-use <package>_testing::fixtures::projects::empty_project;
-use <package>_testing::harnesses::commands::assert_init_command_writes_project_files;
+use acme_testing::fixtures::projects::empty_project;
+use acme_testing::harnesses::commands::assert_init_command_writes_project_files;
 
 #[test]
 fn init_command_writes_project_files() {
@@ -347,8 +349,8 @@ fn init_command_writes_project_files() {
 Async L2 example:
 
 ```rust
-use <package>_testing::fixtures::users::valid_user;
-use <package>_testing::harnesses::database::assert_user_repository_roundtrip;
+use acme_testing::fixtures::users::valid_user;
+use acme_testing::harnesses::database::assert_user_repository_roundtrip;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
@@ -366,7 +368,7 @@ Remote API example:
 ```rust
 #[tokio::test]
 async fn published_package_is_fetchable_from_registry() {
-    <package>_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
+    acme_testing::harnesses::registry::assert_sandbox_package_publish_and_fetch().await;
 }
 ```
 
@@ -375,7 +377,7 @@ Browser workflow example:
 ```rust
 #[tokio::test]
 async fn login_flow_reaches_dashboard() {
-    <package>_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
+    acme_testing::harnesses::browser::assert_login_flow_reaches_dashboard().await;
 }
 ```
 
@@ -394,7 +396,7 @@ Coverage has separate deterministic and agentic responsibilities:
 
 <failure_modes>
 
-**Failure 1: Placed shared generated domains under `tests/`.** Claude wrote `tests/generators/audit.rs` because the file was only imported by tests. Why it failed: a reusable generator is test-infrastructure production code, so placing it under `tests/` hides ownership and discovery behind an executed-test tree. How to avoid: put reusable Rust generators in `<package>-testing/src/generators/` and import them through the `<package>_testing` dev-dependency crate.
+**Failure 1: Placed shared generated domains under `tests/`.** Claude wrote `tests/generators/audit.rs` because the file was only imported by tests. Why it failed: a reusable generator is test-infrastructure production code, so placing it under `tests/` hides ownership and discovery behind an executed-test tree. How to avoid: put reusable Rust generators in `<package>-testing/src/generators/` and import them through the package's underscore-normalized dev-dependency crate name, represented as `acme_testing` in these examples.
 
 **Failure 2: Copied an owned example into an async harness.** Claude passed `user` by value into `save(user)` and then read `user.id()` and `user.email()` afterward. Why it failed: the example no longer compiled for normal non-`Copy` data and taught consumers to work around ownership rather than express the tested behavior. How to avoid: write Rust examples as executable ownership models; borrow shared generated values when later assertions still need them.
 

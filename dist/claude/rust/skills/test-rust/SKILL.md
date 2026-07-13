@@ -3,7 +3,7 @@ name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(cargo llvm-cov:*)
 ---
 
 <objective>
@@ -49,7 +49,10 @@ cargo test --all-targets --all-features
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo check --all-targets --all-features
+cargo llvm-cov --workspace --all-features
 ```
+
+Run `cargo llvm-cov` only when the repository requires a deterministic coverage gate and declares no wrapper; otherwise omit it or use the repository-declared coverage command.
 
 After writing or repairing tests:
 

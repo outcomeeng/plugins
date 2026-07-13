@@ -31,8 +31,8 @@ Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 <cli_binary_pattern>
 
 ```rust
-use <package>_testing::fixtures::projects::empty_project;
-use <package>_testing::harnesses::commands::assert_init_command_writes_project_files;
+use acme_testing::fixtures::projects::empty_project;
+use acme_testing::harnesses::commands::assert_init_command_writes_project_files;
 
 #[test]
 fn init_command_writes_project_files() {
@@ -45,8 +45,8 @@ fn init_command_writes_project_files() {
 <async_adapter_pattern>
 
 ```rust
-use <package>_testing::fixtures::users::valid_user;
-use <package>_testing::harnesses::database::assert_user_repository_roundtrip;
+use acme_testing::fixtures::users::valid_user;
+use acme_testing::harnesses::database::assert_user_repository_roundtrip;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
@@ -61,7 +61,7 @@ async fn repository_persists_and_loads_user() {
 ```rust
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
-    <package>_testing::harnesses::queue::assert_worker_consumes_real_queue_messages(
+    acme_testing::harnesses::queue::assert_worker_consumes_real_queue_messages(
         job_fixture(),
         run_worker_once,
     ).await;
