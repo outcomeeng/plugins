@@ -4,10 +4,7 @@ prompt = "prompt.md"
 plugin_dir = "dist/codex/spec-tree"
 owned_paths = [
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
-  "src/plugins/spec-tree/agents/test-evidence-auditor.md",
-  "src/plugins/spec-tree/skills/audit-tests/**",
-  "dist/codex/spec-tree/agents/test-evidence-auditor.md",
-  "dist/codex/spec-tree/skills/audit-tests/**",
+  "dist/codex/spec-tree/skills/audit-tests/SKILL.md",
 ]
 smoke_cases = [
   "rejects-harness-owned-protocol",
