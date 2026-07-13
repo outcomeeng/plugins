@@ -137,22 +137,6 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 </audit_workflow>
 
-<failure_modes>
-
-These are real failures from past audits. Study them to avoid repeating them.
-
-**Approved code that passed linters but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
-
-**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` interface contract -- other implementations used it. Before flagging dead parameters, check if the function implements an interface or Protocol.
-
-**Tried to evaluate test evidence instead of delegating.** Claude found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/audit-typescript-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
-
-**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and JSDoc completeness. Meanwhile, a branch condition was inverted -- `if (isValid)` should have been `if (!isValid)`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
-
-**Accepted code with tangled IO.** A `processOrders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (1.2) would have caught it: "Can core logic be tested without IO? No."
-
-</failure_modes>
-
 <verdict_format>
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
@@ -179,6 +163,34 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 
 </verdict_format>
 
+<failure_modes>
+
+These are real failures from past audits. Study them to avoid repeating them.
+
+**Approved code that passed linters but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
+
+**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` interface contract -- other implementations used it. Before flagging dead parameters, check if the function implements an interface or Protocol.
+
+**Tried to evaluate test evidence instead of delegating.** Claude found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/audit-typescript-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
+
+**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and JSDoc completeness. Meanwhile, a branch condition was inverted -- `if (isValid)` should have been `if (!isValid)`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
+
+**Accepted code with tangled IO.** A `processOrders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (1.2) would have caught it: "Can core logic be tested without IO? No."
+
+</failure_modes>
+
+<success_criteria>
+
+A sound verdict has these properties:
+
+- [ ] The verdict states exactly one overall determination: `APPROVED` or `REJECTED`
+- [ ] Every applicable TypeScript concern in the verdict table was judged, with no skipped concern hidden by an approval
+- [ ] Each `FAIL` finding names the file, line, violated concern or rule, and concrete evidence
+- [ ] Each `NOT_APPLICABLE` row explains why the concern does not apply; a missing or blocked required inspection produces `FAIL`
+- [ ] The same repository state and audit scope can reproduce the verdict from the listed evidence
+
+</success_criteria>
+
 <what_to_avoid>
 
 - Do NOT run or re-check the project's linters, type-checker, or tests — the caller passed them on the changeset before dispatch, and CI re-runs them over the whole repository
@@ -194,15 +206,3 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 Read `${SKILL_DIR}/references/example-audit.md` for complete PASS and FAIL examples.
 
 </example_review>
-
-<success_criteria>
-
-A sound verdict has these properties:
-
-- [ ] The verdict states exactly one overall determination: `APPROVED` or `REJECTED`
-- [ ] Every applicable TypeScript concern in the verdict table was judged, with no skipped concern hidden by an approval
-- [ ] Each `FAIL` finding names the file, line, violated concern or rule, and concrete evidence
-- [ ] Each `NOT_APPLICABLE` row explains why the concern does not apply; a missing or blocked required inspection produces `FAIL`
-- [ ] The same repository state and audit scope can reproduce the verdict from the listed evidence
-
-</success_criteria>

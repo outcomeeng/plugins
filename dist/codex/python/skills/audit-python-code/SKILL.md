@@ -42,7 +42,7 @@ Execute phases IN ORDER. Do not skip. This audit runs no deterministic verificat
 **Phase 0: Scope and Product Config**
 
 1. Determine target files/directories
-2. Read each project configuration or guide that exists among `pyproject.toml`, `setup.cfg`, `tox.ini`, `ruff.toml`, `.ruff.toml`, `mypy.ini`, `.mypy.ini`, `pytest.ini`, `AGENTS.md`, `README.md`, and `CONTRIBUTING.md`. Use these files only for tool settings and project conventions that inform comprehension; absence of an optional surface is not a finding. The linters already handled type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
+2. Read each project configuration or guide that exists among `pyproject.toml`, `setup.cfg`, `tox.ini`, `ruff.toml`, `.ruff.toml`, `mypy.ini`, `.mypy.ini`, `pytest.ini`, `AGENTS.md`, `README.md`, and `CONTRIBUTING.md`. Use these files only for tool settings and project conventions that inform comprehension; absence of an optional surface is not a finding. The linters already handled type annotations, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — semantic-literal ownership, deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
 
 **Phase 1: Code Comprehension**
 
@@ -77,6 +77,7 @@ For the codebase as a whole:
 - **Single responsibility** -- Each module/class does one thing? Each function does one thing?
 - **Error quality** -- Errors include what failed and with what input?
 - **Domain exceptions** -- Custom exceptions for domain errors, or everything generic `ValueError`/`RuntimeError`?
+- **Semantic-literal ownership** -- Domain-significant strings, numbers, paths, keys, and tokens come from the production module that owns their meaning rather than unexplained call-site literals?
 
 **1.3 Import Evaluation**
 
@@ -107,7 +108,7 @@ See `${SKILL_DIR}/references/false-positive-handling.md` for application context
 
 **Phase 2: ADR/PDR Compliance**
 
-Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify each constraint is followed. Undocumented deviations make this concern `FAIL`. If the product has no spec hierarchy, this concern is `NOT_APPLICABLE`.
+Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify each constraint is followed. Undocumented deviations make this concern `FAIL`. A missing or unreadable governing spec hierarchy makes this concern `FAIL`; required decision context cannot be skipped as `NOT_APPLICABLE`.
 
 | Decision Record Constraint                  | Violation Example                   | Verdict |
 | ------------------------------------------- | ----------------------------------- | ------- |

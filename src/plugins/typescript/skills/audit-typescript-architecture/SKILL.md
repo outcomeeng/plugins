@@ -60,38 +60,6 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 
 </audit_workflow>
 
-<failure_modes>
-
-These are real failures from past audits. Study them to avoid repeating them.
-
-**Claude approved a Verification rule that cannot falsify non-conforming code.** The ADR mandated DI for all external calls, but the Verification rules were so vague ("use good practices") that they couldn't catch anything. Why it failed: a rule that cannot reject a violating example is not a rule. How to avoid: require each Verification rule to name a concrete pattern a test or review can falsify.
-
-**Claude rejected an ADR for a false positive.** Claude flagged a parameter in a DI interface as "dead code" because it wasn't used in the example. Why it failed: the parameter was required by an interface contract other implementations rely on. How to avoid: before flagging a dead parameter in an interface, check whether the interface is implemented elsewhere.
-
-**Claude missed mocking hidden behind DI.** The ADR said "dependency injection" but injected `vi.fn()` as the controlled implementation. Why it failed: DI is the delivery mechanism, but `vi.fn()` is still a mock. How to avoid: require DI to inject a controlled *real* implementation (a simple function or object), not a mock framework spy.
-
-**Claude accepted `l2` for a SaaS service.** Why it failed: SaaS services cannot run locally — there is no `l2`; they jump `l1` to `l3`. How to avoid: reject `l2` whenever the dependency is a SaaS API.
-
-**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns belong to the composing `adr-auditor` reading the canonical template, not this skill. How to avoid: drop any structural, voice, or tag finding — this skill judges only TypeScript-specific concerns.
-
-</failure_modes>
-
-<principles_to_enforce>
-
-All canonical conventions are in `/typescript-architecture-standards`. Read it first. This skill checks only the TypeScript-specific concerns:
-
-**1. Testability constraints** — ADR targets must include ALWAYS/NEVER rules under `## Verification` / `### Audit` that enable appropriate testing; implementation targets must comply with the loaded architecture decisions' testability constraints. See `<testability_in_verification>` in `/typescript-architecture-standards` for the correct ADR pattern. Level assignment tables are violations.
-
-**2. Mocking prohibition** — No mocking language anywhere in the architecture target; reject "stub" or "fake" unless tied to a `/test` exception case. See `<di_patterns>` in `/typescript-architecture-standards` for what to check and correct ADR language.
-
-**3. Level accuracy** — When the architecture target references testing levels, verify against `/test` definitions. See `<level_context>` in `/typescript-architecture-standards`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
-
-**4. TypeScript anti-patterns** — Check for TypeScript-specific architecture anti-patterns. See `<anti_patterns>` in `/typescript-architecture-standards` for the full table.
-
-Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
-
-</principles_to_enforce>
-
 <verdict_format>
 
 Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
@@ -120,6 +88,49 @@ Each finding's `rule` field carries the violation pattern (e.g., `missing-testab
 
 </verdict_format>
 
+<failure_modes>
+
+These are real failures from past audits. Study them to avoid repeating them.
+
+**Claude approved a Verification rule that cannot falsify non-conforming code.** The ADR mandated DI for all external calls, but the Verification rules were so vague ("use good practices") that they couldn't catch anything. Why it failed: a rule that cannot reject a violating example is not a rule. How to avoid: require each Verification rule to name a concrete pattern a test or review can falsify.
+
+**Claude rejected an ADR for a false positive.** Claude flagged a parameter in a DI interface as "dead code" because it wasn't used in the example. Why it failed: the parameter was required by an interface contract other implementations rely on. How to avoid: before flagging a dead parameter in an interface, check whether the interface is implemented elsewhere.
+
+**Claude missed mocking hidden behind DI.** The ADR said "dependency injection" but injected `vi.fn()` as the controlled implementation. Why it failed: DI is the delivery mechanism, but `vi.fn()` is still a mock. How to avoid: require DI to inject a controlled *real* implementation (a simple function or object), not a mock framework spy.
+
+**Claude accepted `l2` for a SaaS service.** Why it failed: SaaS services cannot run locally — there is no `l2`; they jump `l1` to `l3`. How to avoid: reject `l2` whenever the dependency is a SaaS API.
+
+**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns belong to the composing `adr-auditor` reading the canonical template, not this skill. How to avoid: drop any structural, voice, or tag finding — this skill judges only TypeScript-specific concerns.
+
+</failure_modes>
+
+<success_criteria>
+The verdict is sound when:
+
+- Every applicable TypeScript architecture concern row is evaluated, with inapplicable concerns marked `NOT_APPLICABLE` and explained rather than skipped.
+- `overall` is `REJECTED` when any concern row is `FAIL` and `APPROVED` when every concern row is `PASS` or explained `NOT_APPLICABLE`; missing required context produces a failing row and `REJECTED`.
+- Each rejecting finding names the relevant implementation file or ADR path, violated rule and consequence in `message`, and concrete evidence in `observed` and `expected`.
+- No finding judges generic ADR structure, atemporal voice, or per-rule tag validity.
+- The same architecture scope and governing context produce the same JSON verdict.
+
+</success_criteria>
+
+<principles_to_enforce>
+
+All canonical conventions are in `/typescript-architecture-standards`. Read it first. This skill checks only the TypeScript-specific concerns:
+
+**1. Testability constraints** — ADR targets must include ALWAYS/NEVER rules under `## Verification` / `### Audit` that enable appropriate testing; implementation targets must comply with the loaded architecture decisions' testability constraints. See `<testability_in_verification>` in `/typescript-architecture-standards` for the correct ADR pattern. Level assignment tables are violations.
+
+**2. Mocking prohibition** — No mocking language anywhere in the architecture target; reject "stub" or "fake" unless tied to a `/test` exception case. See `<di_patterns>` in `/typescript-architecture-standards` for what to check and correct ADR language.
+
+**3. Level accuracy** — When the architecture target references testing levels, verify against `/test` definitions. See `<level_context>` in `/typescript-architecture-standards`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
+
+**4. TypeScript anti-patterns** — Check for TypeScript-specific architecture anti-patterns. See `<anti_patterns>` in `/typescript-architecture-standards` for the full table.
+
+Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
+
+</principles_to_enforce>
+
 <what_to_avoid>
 
 **Don't:**
@@ -141,14 +152,3 @@ Each finding's `rule` field carries the violation pattern (e.g., `missing-testab
 <example_review>
 Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete ADR-target `REJECTED` JSON verdict showing the TypeScript concern types: missing testability in `## Verification`, mocking language, unjustified test-double language, and SaaS `l2` violation.
 </example_review>
-
-<success_criteria>
-The verdict is sound when:
-
-- Every applicable TypeScript architecture concern row is evaluated, with inapplicable concerns marked `NOT_APPLICABLE` and explained rather than skipped.
-- `overall` is `REJECTED` when any concern row is `FAIL` and `APPROVED` when every concern row is `PASS` or explained `NOT_APPLICABLE`; missing required context produces a failing row and `REJECTED`.
-- Each rejecting finding names the relevant implementation file or ADR path, violated rule and consequence in `message`, and concrete evidence in `observed` and `expected`.
-- No finding judges generic ADR structure, atemporal voice, or per-rule tag validity.
-- The same architecture scope and governing context produce the same JSON verdict.
-
-</success_criteria>
