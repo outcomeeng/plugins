@@ -141,8 +141,7 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  *   LHCI_SERVER_URL  - LHCI server base URL
  *   LHCI_TOKEN       - build token
  *
- * Where to find: 1Password "Engineering/Test Credentials"
- * Setup: cp .env.test.example .env.test and fill in values
+ * Credential source and setup: see the consumer repository's test guide.
  */
 
 import { createLhciUploadRequest } from "@testing/harnesses/lhci/upload-request";

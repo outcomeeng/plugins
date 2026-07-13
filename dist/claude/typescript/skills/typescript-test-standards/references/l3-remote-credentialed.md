@@ -37,7 +37,7 @@ describe("Stripe webhook contract", () => {
 });
 ```
 
-This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly from the credential harness instead of producing a passing test. `submitSignedFixture` reads the illustrative fixture path from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
+This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly from the credential harness instead of producing a passing test. `assertSignedStripeFixtureAccepted` reads the illustrative fixture path from disk, signs its contents locally, submits the payload, and returns the remote response; the remote endpoint never receives a filesystem path.
 
 </example>
 
