@@ -2,7 +2,7 @@
 name: audit-implementation
 model: sonnet
 description: >-
-  Implementation-audit orchestration methodology preloaded by the
+  Implementation-audit orchestration methodology used by the
   implementation-auditor agent. Dispatch implementation-auditor for
   implementation audits; the main conversation reaches this audit only through
   that agent.

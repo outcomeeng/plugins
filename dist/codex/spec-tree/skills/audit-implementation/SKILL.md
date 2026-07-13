@@ -2,7 +2,7 @@
 name: audit-implementation
 model: sonnet
 description: >-
-  Implementation-audit orchestration methodology preloaded by the
+  Implementation-audit orchestration methodology used by the
   implementation-auditor agent. Dispatch implementation-auditor for
   implementation audits; the main conversation reaches this audit only through
   that agent.
@@ -12,7 +12,7 @@ allowed-tools: Read, Bash, Glob, Grep, Skill
 
 <dispatch_gate>
 
-This orchestration runs in the `implementation-auditor` agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched implementation-auditor agent, STOP — dispatch `implementation-auditor` with the repository path, concrete changeset scope, governing node paths, and deterministic verification already run. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched implementation-auditor that preloaded this skill proceeds.
+This orchestration runs in the `implementation-auditor` agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched implementation-auditor agent, STOP — dispatch `implementation-auditor` with the repository path, concrete changeset scope, governing node paths, and deterministic verification already run. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. A dispatched implementation-auditor must explicitly load `spec-tree:audit-implementation`; once this skill is loaded in that isolated context, proceed.
 
 </dispatch_gate>
 

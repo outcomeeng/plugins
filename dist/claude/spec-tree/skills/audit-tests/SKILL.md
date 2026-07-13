@@ -2,7 +2,7 @@
 name: audit-tests
 model: sonnet
 description: >-
-  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
+  Test-evidence audit methodology used by the test-evidence-auditor agent.
   The test-evidence-auditor audits test evidence against spec assertions; the
   main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill

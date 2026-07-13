@@ -1,7 +1,7 @@
 ---
 name: audit-specs
 description: >-
-  Spec-node audit methodology preloaded by the spec-auditor agent. Dispatch
+  Spec-node audit methodology used by the spec-auditor agent. Dispatch
   spec-auditor to audit a spec node; the main conversation reaches this audit
   only through that agent.
 model: sonnet

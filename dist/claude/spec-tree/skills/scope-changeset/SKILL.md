@@ -1,12 +1,21 @@
 ---
 name: scope-changeset
-description: ALWAYS invoke this skill when deriving a changeset's base ref, branch slug, branch identity, or merge-base diff scope from git. NEVER re-implement branch-slug or base-ref derivation inside another skill's scripts.
+user-invocable: false
+description: >-
+  Canonical changeset-scope primitives composed by verification and merge
+  workflows. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
 <objective>
 The canonical deterministic git-derived changeset primitives — branch identity, on-disk addressing slug, base-ref resolution, remote-tracking ref form, and merge-base diff scope — derived once for every verification surface to import.
 </objective>
+
+<reference_note>
+
+Compose this reference by installed name before deriving a base ref, branch slug, branch identity, or merge-base diff scope. Consumer skills call the exported Python API from their own scripts; the main conversation does not execute these primitives as an interactive workflow.
+
+</reference_note>
 
 <api_surface>
 

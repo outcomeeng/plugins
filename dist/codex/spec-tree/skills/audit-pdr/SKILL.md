@@ -1,14 +1,14 @@
 ---
 name: audit-pdr
 description: >-
-  PDR audit methodology preloaded by the pdr-auditor agent. Dispatch pdr-auditor
+  PDR audit methodology used by the pdr-auditor agent. Dispatch pdr-auditor
   to audit a PDR; the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
 
-This audit runs in the pdr-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the pdr-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs in the pdr-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the pdr-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. A dispatched pdr-auditor must explicitly load `spec-tree:audit-pdr`; once this skill is loaded in that isolated context, proceed.
 
 </dispatch_gate>
 

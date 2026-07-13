@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[--agent] [node-path]"
-allowed-tools: Read, Skill, {!% if target == 'claude' %!}Agent{!% else %!}{{! tool('spawn_agent') !}}{!% endif %!}, {{! tool('ask_user') !}}
+allowed-tools: Read, Skill, {!% if target == 'claude' %!}Agent{!% else %!}{{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}}{!% endif %!}, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -31,6 +31,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 The complete raw invocation from `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0. Do not scan quoted examples, handoff context, or unrelated prompt prose for node paths.
 
 - `$ARGUMENTS` begins with `--agent` -> launch the `applier` agent on the optional node path that follows it through {!% if target == 'claude' %!}the `Agent` tool{!% else %!}`{{! tool('spawn_agent') !}}`{!% endif %!}. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+  {!% if target == 'codex' %!}After spawning, collect the final result through `{{! tool('wait_agent') !}}` and close the completed agent immediately through `{{! tool('close_agent') !}}` before resuming the main-context lifecycle.{!% endif %!}
 - `$ARGUMENTS` contains a node path without `--agent` -> the work queue is that single node.
 - Empty `$ARGUMENTS` -> determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE`, treat each non-comment, non-blank entry as relative to `spx/`, prefix it with `spx/`, and queue the resulting full node paths. If no work is found, report "Nothing to apply" and stop.
 
