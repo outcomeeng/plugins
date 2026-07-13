@@ -25,7 +25,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Test files are not read by `/contextualize`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
-  - Right: `/contextualize spx/21-infra.enabler/32-parser.outcome`
+  - Right: `/contextualize spx/{path-to-node}`
 
 **BOOTSTRAP MODE**: When the target path doesn't exist yet and the operation is authoring, return an empty manifest with `bootstrap=true` instead of aborting. This allows creating the first node in an empty tree.
 
