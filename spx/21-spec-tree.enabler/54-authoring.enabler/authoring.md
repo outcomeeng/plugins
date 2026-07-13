@@ -1,22 +1,13 @@
 # Authoring
 
-PROVIDES template-driven authoring of spec tree artifacts and node-address delegation for multi-child decomposition
-SO THAT all spec authors
-CAN create correctly structured artifacts while preserving decomposition structure for the decomposition workflow
+PROVIDES an operator-facing specification workflow backed by a decision-ready artifact-writing protocol
+SO THAT spec authors and implementation workflows
+CAN change durable declarations through one context-complete boundary without duplicating placement, drafting, or validation behavior
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: read the appropriate template before drafting — templates are the structural authority ([review])
-- ALWAYS: preserve the three-part hypothesis when authoring outcome nodes — outcome specs declare output, outcome, and impact ([review])
-- ALWAYS: invoke `/contextualize` on the parent directory before creating any node — sibling enumeration prevents index collisions ([review])
-- ALWAYS: create single nodes or decision records only when the parent, artifact type, and collision-free index are clear from loaded context ([review])
-- ALWAYS: delegate decision-record placement to `/decompose` before proposing a path when the owning directory depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach ([review])
-- ALWAYS: after authoring a product spec, ADR, PDR, or ancestor spec assertion, invoke `/align` over the changeset, align the first affected lower specs in the same change, and record remaining downstream implementation in the first affected node's `PLAN.md` ([review])
-- ALWAYS: flag content misplacement when scenario, mapping, conformance, or property assertions appear in ADRs/PDRs or implementation details appear in specs ([review])
-- ALWAYS: when a request creates or restructures multiple sibling nodes, record the user's decomposition intent, constraints, and known issues in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decompose` with only the target address (`spx/` for product-root children or a node address for nested children) ([review])
-- ALWAYS: reference nodes, ADRs, and PDRs by full path from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])
-- NEVER: pass proposed child nodes, proposed indices, or pre-baked dependency order to `/decompose` — decomposition owns the structure model ([review])
-- NEVER: place implementation details in specs — "how" belongs in ADRs or code ([review])
-- NEVER: select an assertion's verification type or assertion type, write or edit a test file, or implement a work item — type selection and test authoring route to `/apply` (which invokes `/test`); authoring writes assertion text and the evidence-tag requirement only ([audit])
+- ALWAYS: operator-driven creation, modification, or removal of durable declarations enters through `/spec`, which owns requirements convergence and delegates decision-ready writes to `/author` ([audit])
+- ALWAYS: `/spec` and `/author` preserve the loaded context, structure ownership, templates, durable-map voice, and downstream alignment rules across every declaration change ([audit])
+- NEVER: `/author` acts as a second operator-facing specification workflow — it is an internal protocol invoked with a decision-ready artifact packet ([audit])

@@ -1,0 +1,22 @@
+title = "spec-auditing-structure"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md",
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md",
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/**",
+  "src/plugins/spec-tree/skills/audit-specs/**",
+  "dist/claude/spec-tree/skills/audit-specs/**",
+]
+smoke_cases = [
+  "universal-audit-compliance-approved",
+  "verification-heading-rejected",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/audit-specs/SKILL.md"
+template = "prompt.template.md"
