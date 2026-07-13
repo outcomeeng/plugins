@@ -5,7 +5,7 @@ description: >-
   NEVER write or fix Python tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, {!% if target == 'claude' %!}Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*){!% else %!}Bash{!% endif %!}
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill{!% if target == 'claude' %!}, Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*){!% endif %!}
 ---
 
 <prerequisites>

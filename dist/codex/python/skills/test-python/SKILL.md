@@ -5,7 +5,7 @@ description: >-
   NEVER write or fix Python tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill
 ---
 
 <prerequisites>
