@@ -130,7 +130,7 @@ def observe_metadata_without_duration() -> MetadataObservation:
 
 def observe_metadata_with_optional_fields_absent() -> MetadataObservation:
     envelope = _load_envelope()
-    reduced_envelope = {
+    reduced_envelope: dict[str, object] = {
         ClaudeResultField.RESULT: envelope[ClaudeResultField.RESULT],
     }
     return MetadataObservation(
