@@ -32,7 +32,11 @@ A skill that operates on user-supplied input handles it explicitly:
 - ALWAYS: preserve whole-string capture with `$ARGUMENTS` when collapsing input into positional tokens would change behavior.
 - ALWAYS: substitute every declared named argument in the body, and declare every `$name` the body substitutes.
 - NEVER: migrate a free-form instruction skill from `$ARGUMENTS` to a named positional argument unless the runtime contract proves the named argument preserves the full rest-of-line input.
-- NEVER: require authored source to avoid Claude-supported syntax solely because Codex generated output may need a different form; fix the renderer for Codex.
+  {!% if target == 'claude' %!}
+- NEVER: require authored source to avoid Claude-supported syntax solely because Codex generated output may need a different form; the marketplace renderer owns Codex adaptation.
+  {!% else %!}
+- NEVER: use an argument form the Codex skill surface does not support; choose a documented Codex form that preserves the caller's input contract.
+  {!% endif %!}
 
 Examples:
 

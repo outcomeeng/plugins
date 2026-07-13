@@ -437,7 +437,11 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 
 <templates_and_variables>
 
+{!% if target == 'claude' %!}
 Reference skill-bundled files with the runtime's skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
+{!% else %!}
+Reference skill-bundled files with the Codex skill-directory token. Its scope and bundled-file examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. This standard declares no Codex hook-command or plugin-root variable until Codex documents that contract.
+{!% endif %!}
 
 </templates_and_variables>
 
