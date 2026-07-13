@@ -1,7 +1,7 @@
 ---
 name: code-rust
 description: ALWAYS invoke this skill when writing or fixing implementation code for Rust. NEVER write or repair Rust implementation code without this skill.
-allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
+allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(cargo test:*)
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -34,10 +34,10 @@ Do not search the product directory for skill files when the loading message alr
 <quick_start>
 
 1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
-2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
+2. If this is a spec-tree work item, invoke `/contextualize` before editing code.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
 4. Use `/test-rust` when behavior changes require new or revised tests.
-5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
+5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check --all-targets --all-features`, and `cargo test --all-targets`.
 
 </quick_start>
 
@@ -102,7 +102,7 @@ Use `/rust-test-standards` as the canonical source for filenames, evidence level
 <context_loading>
 If this work belongs to a spec-tree node:
 
-1. invoke `spec-tree:contextualize` with the full path
+1. invoke `/contextualize` with the full path
 2. abort if required context is missing
 3. implement only after the context is loaded
 

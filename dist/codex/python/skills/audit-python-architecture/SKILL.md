@@ -31,7 +31,7 @@ Invoke the `python:python-architecture-standards` skill before proceeding. If th
 
 **For spec-tree work items: the composing auditor has already loaded the governing context.**
 
-When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` on the node and loaded the complete governing context. Use that loaded context:
+When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching artifact-type auditor has already invoked `/contextualize` on the node and loaded the complete governing context. Use that loaded context:
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Target node spec with typed assertions

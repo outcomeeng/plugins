@@ -2,7 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
-allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
+allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -246,11 +246,11 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **If working on a spec-tree work item** (enabler/outcome):
 
-1. **Invoke `spec-tree:contextualize` FIRST** with the node path
+1. **Invoke `/contextualize` FIRST** with the node path
 2. **If context loading fails**: ABORT - do not proceed until all required documents exist
 3. **If context loading succeeds**: Proceed with implementation using loaded context
 
-**The `spec-tree:contextualize` skill provides:**
+**The `/contextualize` skill provides:**
 
 - Complete ancestor hierarchy (product → all ancestor nodes → target)
 - All ADRs/PDRs at every level along the path
@@ -259,7 +259,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **Example invocation:** Invoke `/contextualize` with `spx/<node-path>`.
 
-**If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
+**If `/contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
 **If NOT working on spec-tree work item**: Proceed directly to implementation mode with provided spec.
 </context_loading>

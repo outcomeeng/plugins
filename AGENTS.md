@@ -115,13 +115,25 @@ Spawn a typed verifier or reviewer:
 }
 ```
 
-Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `implementation-auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
+Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `implementation-auditor`, `spec-auditor`):
 
 ```json
 {
   "tool": "multi_agent_v1.wait_agent",
   "arguments": {
     "targets": ["<agent-id-from-spawn-agent>"],
+    "timeout_ms": 600000
+  }
+}
+```
+
+Use a 30-minute timeout for a subagent acting on an entire changeset (`changes-reviewer`):
+
+```json
+{
+  "tool": "multi_agent_v1.wait_agent",
+  "arguments": {
+    "targets": ["<changes-reviewer-id-from-spawn-agent>"],
     "timeout_ms": 1800000
   }
 }

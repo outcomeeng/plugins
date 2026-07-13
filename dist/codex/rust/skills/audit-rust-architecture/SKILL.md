@@ -30,7 +30,7 @@ A JSON verdict on a Rust architecture scope — `APPROVED`, or `REJECTED` with c
 </constraints>
 
 <audit_workflow>
-When this skill is composed for a spec-tree work item, the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` and loaded the full governing context; review the target implementation architecture scope or ADR's Rust concerns against that hierarchy.
+When this skill is composed for a spec-tree work item, the dispatching artifact-type auditor has already invoked `/contextualize` and loaded the full governing context; review the target implementation architecture scope or ADR's Rust concerns against that hierarchy.
 
 After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 

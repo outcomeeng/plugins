@@ -1,7 +1,7 @@
 <required_reading>
 
 - Read the specification completely: node spec, ADR/PDR, design note, ticket, or user request.
-- Read repository-local authority before existing code: root guide, docs, and any spec-tree context already loaded by `spec-tree:contextualize`.
+- Read repository-local authority before existing code: root guide, docs, and any spec-tree context already loaded by `/contextualize`.
 - Read `/typescript-standards` and `/typescript-test-standards`; they own TypeScript code and test conventions.
 - Read `package.json`, `tsconfig*`, test configuration, and relevant local overlays or harness guides before selecting commands.
 

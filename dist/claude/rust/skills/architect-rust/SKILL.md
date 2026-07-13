@@ -31,11 +31,11 @@ After reading those standards, check for `spx/local/rust.md` and `spx/local/rust
 
 When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualize`** with the node path
+1. **Invoke `/contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualize` skill provides:**
+**The `/contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes

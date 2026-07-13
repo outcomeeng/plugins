@@ -3,7 +3,7 @@ name: code-python
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Python.
   NEVER write or fix Python implementation without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -38,7 +38,7 @@ Before invoking this skill:
 
 1. **Tests must exist** - Written by `/test-python`
 2. **Tests must be reviewed** - Approved by `/audit-python-tests`
-3. **Spec must be loaded** - Context from `/spec-tree:contextualize`
+3. **Spec must be loaded** - Context from `/contextualize`
 4. **Standards are pre-loaded above**
 
 If tests don't exist or aren't approved, go back to earlier steps.

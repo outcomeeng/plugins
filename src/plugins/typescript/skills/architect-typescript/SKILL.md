@@ -14,7 +14,7 @@ A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rule
 <essential_principles>
 **Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
-- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- ADRs follow the authoritative template: title + decision stated directly, Rationale (optional), Invariants (optional), Verification
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - No `any` without explicit justification in ADR
 - Design for dependency injection (NO MOCKING)
@@ -27,11 +27,11 @@ A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rule
 
 When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualize`** with the node path
+1. **Invoke `/contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualize` skill provides:**
+**The `/contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes
@@ -118,7 +118,7 @@ Execute these phases IN ORDER.
 
 **Phase 1: Identify Decisions Needed**
 
-For each TRD section, ask:
+For each requirement and typed assertion in the node spec, ask:
 
 - What architectural choices does this imply?
 - What patterns or approaches should be mandated?
@@ -141,7 +141,7 @@ For each decision, consider:
 Use the canonical section contract from `/typescript-architecture-standards` `<adr_sections>`, which derives from the `/understand` ADR template. The ADR is decision-first:
 
 1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
-2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
+2. **Rationale** (optional): Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
 3. **Invariants** (optional): Algebraic properties for all governed code
 4. **Verification**: ALWAYS/NEVER rules grouped under `### Testing` (`[{assertion type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
 
@@ -162,7 +162,7 @@ Use the canonical section contract from `/typescript-architecture-standards` `<a
 
 **Gate 2 — artifact consistency, before reporting completion:**
 
-- PASS only when every written ADR has a direct decision statement plus the permitted Rationale, optional Invariants, and Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
+- PASS only when every written ADR has a direct decision statement plus the permitted optional Rationale, optional Invariants, and required Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
 - FAIL when a required section or audit rule is absent, an unpermitted section is present, a citation is ambiguous, or any governing decision conflicts; repair the ADR and repeat this gate.
 
 </verification_gates>

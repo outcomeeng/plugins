@@ -244,10 +244,18 @@ Ruff's S101 rule flags `assert` statements because they can be disabled with Pyt
 2. Tests are never run with `-O` optimization
 3. The alternative (`if not x: raise AssertionError`) adds noise
 
-**Required product configuration** in `pyproject.toml`:
+**Required product configuration:** Configure the test-path `S101` exclusions in the active Ruff configuration surface. For `pyproject.toml`:
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["S101"]
+"**/tests/**/*.py" = ["S101"]
+```
+
+For standalone `ruff.toml` or `.ruff.toml`:
+
+```toml
+[lint.per-file-ignores]
 "**/test_*.py" = ["S101"]
 "**/tests/**/*.py" = ["S101"]
 ```
@@ -427,36 +435,9 @@ from lib.utils import helper  # Only works if CWD is product root
 
 **Required Product Setup**
 
-**1. Use explicit product package layout:**
+The production package and its `<package>_testing` package MUST be importable through the repository's declared development and test environment without `sys.path` mutation or working-directory assumptions. A flat layout, `src/` layout, workspace layout, packaging backend, and environment installer are repository choices; this standard prescribes none of them.
 
-```text
-product/
-├── product/
-│   ├── __init__.py
-│   └── ...
-├── <package>_testing/
-│   ├── __init__.py
-│   ├── generators/
-│   ├── harnesses/
-│   └── fixtures/
-└── pyproject.toml
-```
-
-**2. Configure `pyproject.toml`:**
-
-```toml
-[project]
-name = "product"
-
-[tool.setuptools.packages.find]
-where = ["."]
-```
-
-**3. Install in editable mode** (portable fallback; prefer the product's own wrapper):
-
-```bash
-python3 -m pip install -e .
-```
+Use the product's published wrapper or package-manager command to prepare that environment. When none exists, follow the active packaging backend's documented development-install procedure rather than assuming setuptools, pip, or a specific source root.
 
 </import_hygiene>
 
