@@ -94,6 +94,10 @@ Read: AGENTS.md  (if exists)
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"
 
+# Check for product-level coordination notes
+Glob: "spx/PLAN.md"
+Glob: "spx/ISSUES.md"
+
 # Enumerate local overlays
 Glob: "spx/local/*.md"
 
@@ -106,6 +110,8 @@ Read: spx/local/merging.md  (if exists)
 **Verification**: Count files returned by globs. Count files actually read. These must match.
 
 **Guide files**: Read `AGENTS.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
+
+**Coordination notes**: Read product-level `PLAN.md` and `ISSUES.md` when present. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -320,6 +326,10 @@ Claude invoked `/sync-base`, received `already_current` or completed a clean reb
 
 Claude loaded the structural ancestor context for a plugin-shipping node and saw full-path citations to methodology-governance decisions under an independent sibling subtree, but did not read the cited PDRs because they were outside the structural ancestor path. The answer used an incomplete methodology model. Scan loaded specs and decision records for full-path ADR/PDR citations, including citations from newly read cited decisions, before emitting `<SPEC_TREE_CONTEXT>`.
 
+**Failure 10: Omitted product-level coordination notes**
+
+Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level coordination disappeared from every target context even though it applied tree-wide. Check and read product-level coordination notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
+
 </failure_modes>
 
 <success_criteria>
@@ -338,7 +348,7 @@ Context loading is complete when:
 - [ ] Children enumerated
 - [ ] Test links listed from the target spec and co-located test files listed without reading test bodies
 - [ ] Implementation state reported as unknown unless a prior workflow already established it
-- [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
+- [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at product root, each ancestor, and target
 - [ ] Coordination-note citations excluded from cited-governance loading
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
