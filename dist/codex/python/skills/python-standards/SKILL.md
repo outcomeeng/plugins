@@ -449,7 +449,7 @@ product/
 name = "product"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 ```
 
 **3. Install in editable mode** (portable fallback; prefer the product's own wrapper):

@@ -358,7 +358,7 @@ Keep tests next to the governing spec work, and name them for what they prove an
 
 Canonical filename model:
 
-- TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
+- TypeScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
 - Rust: `<subject>.<evidence>.<level>[.<runner>].rs`
 

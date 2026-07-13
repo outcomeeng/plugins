@@ -55,6 +55,13 @@ For behavior changes:
 
 </phase>
 
+<verification_gate name="ready_to_implement">
+
+- PASS when the changed behavior, interfaces, data types, failure modes, and proving test target are named; for a behavior change, the new or revised test has run and failed for the expected requirement-relevant reason.
+- FAIL when any required behavior or boundary remains unclear, the proving test is unidentified, or a behavior-changing test passes before implementation or fails for an unrelated reason. Stop and repair the requirement or evidence path before editing implementation code.
+
+</verification_gate>
+
 <phase name="implement_the_code">
 Write the smallest coherent change that makes the test pass.
 
@@ -80,11 +87,19 @@ Run the full validation sequence:
 ```bash
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
+cargo check --all-targets --all-features
 cargo test --all-targets
 ```
 
 If the repository publishes stricter commands, use them.
 </phase>
+
+<verification_gate name="ready_to_complete">
+
+- PASS when the repository's formatting, lint, compile/type-check, and test commands each exit zero and every implemented behavior is covered by its selected evidence.
+- FAIL when any command is absent or nonzero, or any implemented behavior lacks evidence. Repair the implementation or evidence and repeat the complete validation sequence.
+
+</verification_gate>
 
 <phase name="summarize">
 When the validation passes, summarize:
@@ -92,6 +107,7 @@ When the validation passes, summarize:
 - files changed
 - behavior added or fixed
 - tests added or extended
+- each exact formatting, lint, compile/type-check, and test command with its exit status
 - any deliberate constraint or trade-off that remains
 
 </phase>

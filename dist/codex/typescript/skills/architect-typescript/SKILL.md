@@ -114,7 +114,7 @@ Execute these phases IN ORDER.
 6. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-7. Read `/author` skill for ADR template
+7. Use the loaded `/typescript-architecture-standards` `<adr_sections>` contract as the canonical ADR section shape; invoke `/author` only when placement or sparse ordering must be determined
 
 **Phase 1: Identify Decisions Needed**
 
@@ -138,7 +138,7 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the authoritative template (from `/understand`). The ADR is decision-first:
+Use the canonical section contract from `/typescript-architecture-standards` `<adr_sections>`, which derives from the `/understand` ADR template. The ADR is decision-first:
 
 1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
 2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
@@ -152,6 +152,20 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 - Nested ADRs must not contradict parent-level ADRs
 
 </adr_creation_protocol>
+
+<verification_gates>
+
+**Gate 1 — context and decision inventory, before Phase 3:**
+
+- PASS only when a live context receipt matches the target node, every product and ancestor ADR/PDR listed by that context has been read, the `/typescript-architecture-standards` `<adr_sections>` contract is loaded, and the decisions needed are listed.
+- FAIL when any receipt, governing decision, section contract, or decision-list entry is absent; stop before drafting and load the missing material.
+
+**Gate 2 — artifact consistency, before reporting completion:**
+
+- PASS only when every written ADR has a direct decision statement plus the permitted Rationale, optional Invariants, and Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
+- FAIL when a required section or audit rule is absent, an unpermitted section is present, a citation is ambiguous, or any governing decision conflicts; repair the ADR and repeat this gate.
+
+</verification_gates>
 
 <out_of_scope>
 
@@ -210,11 +224,10 @@ When ADR creation is complete, provide:
 <success_criteria>
 ADR is complete when:
 
-- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/typescript-architecture-standards`
-- [ ] All architectural choices documented
-- [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
-- [ ] No contradictions with existing ADRs
-- [ ] Type safety considerations addressed
-- [ ] Security boundaries identified
+- [ ] Every ADR contains a direct decision statement and `## Verification`; `## Rationale` and `## Invariants` appear only when applicable, and no other sections appear
+- [ ] `## Verification` contains `### Audit` rules that state DI and no-mocking testability boundaries as ALWAYS/NEVER guarantees carrying `([audit])`
+- [ ] Each type-system, architecture, security, and testability question identified in Phase 2 is answered in the decision or Rationale, or recorded as not applicable there
+- [ ] Every governing-decision citation uses a full `spx/...` path, and the final comparison records no contradiction with loaded product or ancestor decisions
+- [ ] The completion report lists every written ADR path, scope, decision summary, and resulting constraint
 
 </success_criteria>

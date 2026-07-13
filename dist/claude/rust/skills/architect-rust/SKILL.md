@@ -119,7 +119,7 @@ Execute these phases IN ORDER.
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-8. Read `/author` skill for ADR template
+8. Use the loaded `/rust-architecture-standards` `<adr_sections>` contract as the canonical ADR section shape; invoke `/author` only when placement or sparse ordering must be determined
 
 **Phase 1: Identify Decisions Needed**
 
@@ -148,7 +148,7 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the authoritative template (from `/understand`). The ADR is decision-first:
+Use the canonical section contract from `/rust-architecture-standards` `<adr_sections>`, which derives from the `/understand` ADR template. The ADR is decision-first:
 
 1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
 2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
@@ -172,8 +172,8 @@ Use the authoritative template (from `/understand`). The ADR is decision-first:
 
 **Gate 2 — artifact consistency, before reporting completion:**
 
-- PASS only when every written ADR has the template-required decision, Rationale, and Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
-- FAIL when a required section or audit rule is absent, a citation is ambiguous, or any governing decision conflicts; repair the ADR and repeat this gate.
+- PASS only when every written ADR has a direct decision statement plus the permitted optional Rationale, optional Invariants, and required Verification sections; `## Verification` contains `### Audit` testability rules for DI and no mocking; every cited decision uses its full `spx/...` path; and a comparison against every loaded governing decision finds no contradiction.
+- FAIL when a required section or audit rule is absent, an unpermitted section is present, a citation is ambiguous, or any governing decision conflicts; repair the ADR and repeat this gate.
 
 </verification_gates>
 
@@ -234,7 +234,7 @@ Key Constraints
 <success_criteria>
 ADR is complete when:
 
-- [ ] Every ADR contains a direct decision statement, `## Rationale`, and `## Verification`, with no `Purpose` or `Context` section
+- [ ] Every ADR contains a direct decision statement and `## Verification`; `## Rationale` and `## Invariants` appear only when applicable, and no other sections appear
 - [ ] `## Verification` contains `### Audit` rules that state DI and no-mocking testability boundaries as ALWAYS/NEVER guarantees
 - [ ] Every applicable ownership, type, error, concurrency, resource-lifecycle, unsafe, and security commitment is decided or explicitly marked not applicable in the decision or Rationale
 - [ ] Every governing-decision citation uses a full `spx/...` path, and the final comparison records no contradiction with loaded product or ancestor decisions

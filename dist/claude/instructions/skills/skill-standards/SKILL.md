@@ -416,14 +416,13 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 
 **Always add a blank line before a closing pseudo-XML tag that follows an unordered list.** Without it, markdown parsers indent the closing tag as part of the last list item.
 
-```markdown
+```text
 # ❌ WRONG
 
 <section>
 
 - Item 1
 - Item 2
-
 </section>
 
 # ✅ CORRECT

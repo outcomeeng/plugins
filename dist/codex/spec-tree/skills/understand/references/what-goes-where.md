@@ -89,7 +89,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 **Contains:**
 
 - Three-part hypothesis: WE BELIEVE THAT [output] WILL [outcome] CONTRIBUTING TO [impact]
-- Assertions specifying the output — locally verifiable by tests or review
+- Assertions specifying the output — locally verifiable through `[test]`, `[eval]`, or `[audit]` evidence
 
 **Does NOT contain:** Architecture decisions (→ ADR), product decisions (→ PDR), implementation details.
 
@@ -164,12 +164,13 @@ Higher-level truth belongs in product specs, ADRs, PDRs, and ancestor specs. Low
 <flow>
 
 ```text
-                             ┌──[test]────→ Test
+                             ┌──[test]────→ Deterministic test
                              │               "does it hold?"
-ADR/PDR ──governs──→ Spec ──┤
+                             ├──[eval]────→ Deterministic eval score
+ADR/PDR ──governs──→ Spec ──┤               "does the producer meet the case contract?"
                              │
-                             └──[audit]───→ Human/agent
-                                            "does the design follow W?"
+                             └──[audit]───→ Dedicated audit sub-agent
+                                            "does the semantic constraint hold?"
 ```
 
 </flow>

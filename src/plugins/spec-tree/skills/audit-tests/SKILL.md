@@ -77,7 +77,9 @@ Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` m
 
 **Step 2: Map assertions to test files**
 
-Read the spec's Assertions section. For each assertion, extract:
+Read the spec's Assertions section. Classify every assertion by its evidence tag first. Skip every `[eval]`, `[audit]`, and legacy `[review]` assertion regardless of its heading or quantifier; those tags route to different verification producers.
+
+For each remaining assertion carrying a `[test]` link, extract:
 
 | Field          | Extract                                                  |
 | -------------- | -------------------------------------------------------- |
@@ -87,8 +89,6 @@ Read the spec's Assertions section. For each assertion, extract:
 | Link status    | File exists or missing                                   |
 
 **Missing test file = finding.** Record it and continue to next assertion.
-
-**Compliance assertions with `[audit]` tags** (or the legacy `[review]`) are verified by agent judgment, not by tests. Skip them in the test evidence audit.
 
 </step>
 
