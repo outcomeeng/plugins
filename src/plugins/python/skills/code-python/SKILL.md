@@ -28,8 +28,8 @@ Python implementation code that makes its node's existing tests pass.
    - Action: Write implementation to make tests pass
 
 2. **FIX mode** - Implementation exists but was rejected by reviewer
-   - Check: Recent `/audit-python-code` output shows REJECT with specific issues
-   - Action: Read the rejection, fix the specific issues, re-run verification
+   - Check: The latest `implementation-auditor` projection reports `rejected` with Python code findings
+   - Action: Read the merged Python code concern, fix the complete defect class, re-run verification
 
 **Always check which mode before proceeding.**
 </mode_detection>
@@ -39,7 +39,7 @@ Python implementation code that makes its node's existing tests pass.
 Before invoking this skill:
 
 1. **Tests must exist** - Written by `/test-python`
-2. **Tests must be reviewed** - Approved by `/audit-python-tests`
+2. **Tests must be reviewed** - The dispatched `test-evidence-auditor` verdict is `APPROVED`, including the Python concern composed through `/audit-tests`
 3. **Spec must be loaded** - Context from `/contextualize`
 4. **Standards are pre-loaded above**
 
@@ -51,6 +51,8 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 <write_mode_workflow>
 
 Run the product's own canonical commands when it documents them — a `{{! file('root_guide') !}}` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
+
+Follow the active runtime approval flow for every repository wrapper or direct fallback shell call. Codex output omits shell metadata when the workflow's narrow command boundary cannot be expressed and relies on per-call approval instead.
 
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
@@ -119,7 +121,7 @@ All must pass before declaring complete.
 
 <fix_mode_workflow>
 
-**Step 1 — Read rejection feedback.** Find the most recent `/audit-python-code` output. Look for:
+**Step 1 — Read rejection feedback.** Read the latest `implementation-auditor` projection and its merged Python code concern. Look for:
 
 - Specific file:line locations
 - Issue categories (magic values, missing DI, etc.)
@@ -137,6 +139,8 @@ All must pass before declaring complete.
 | Security issues          | Fix the vulnerability (don't suppress)           |
 
 **Step 3 — Verify fixes.**
+
+Follow the active runtime approval flow for every repository wrapper or direct fallback shell call. Codex output omits shell metadata when the workflow's narrow command boundary cannot be expressed and relies on per-call approval instead.
 
 ```bash
 # Run tests

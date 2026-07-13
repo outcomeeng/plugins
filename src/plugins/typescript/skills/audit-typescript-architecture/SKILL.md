@@ -16,7 +16,7 @@ This audit runs inside a dispatched artifact-type auditor's verifier context —
 </dispatch_gate>
 
 <objective>
-A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.
+A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, test-double exception cases, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.
 </objective>
 
 <constraints>
@@ -48,14 +48,15 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 **Procedure:**
 
 1. **Read `/typescript-architecture-standards`**, then `spx/local/typescript-architecture.md` if present, for canonical conventions
-2. **Read repo-local test overlay** `spx/local/typescript-tests.md` if present before judging level references or test-double exception cases.
-3. **Read the architecture target** completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition
-4. **Check testability constraints** — ADR targets express them in `## Verification` / `### Audit`; implementation targets must conform to the loaded architecture decisions' DI and no-mocking constraints
-5. **Check for mocking and unjustified test-double language** — reject `vi.mock()`, `jest.mock()`, "mock at boundary", or "stub"/"fake" without a `/test` exception case in any section, prose AND code examples
-6. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
-7. **Check TypeScript anti-patterns** — architecture target content that violates `<anti_patterns>`
-8. **Identify all TypeScript-architecture violations** and classify per concern
-9. **Output the JSON verdict** with `overall` set to `APPROVED` or `REJECTED` and every concern row populated
+2. **Invoke `/test` and read its Stage 2 level definitions and test-double exception cases** before judging either concern; never reconstruct those contracts from memory.
+3. **Read repo-local test overlay** `spx/local/typescript-tests.md` if present before judging level references or test-double exception cases.
+4. **Read the architecture target** completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition
+5. **Check testability constraints** — ADR targets express them in `## Verification` / `### Audit`; implementation targets must conform to the loaded architecture decisions' DI and no-mocking constraints
+6. **Check for mocking and unjustified test-double language** — reject `vi.mock()`, `jest.mock()`, "mock at boundary", or "stub"/"fake" without a loaded `/test` exception case in any section, prose AND code examples
+7. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
+8. **Check TypeScript anti-patterns** — architecture target content that violates `<anti_patterns>`
+9. **Identify all TypeScript-architecture violations** and classify per concern
+10. **Output the JSON verdict** with `overall` set to `APPROVED` or `REJECTED` and every concern row populated
 
 </audit_workflow>
 
@@ -106,6 +107,7 @@ The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPL
   "rows": [
     { "name": "testability-in-verification", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
     { "name": "mocking-prohibition", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
+    { "name": "test-double-exception-cases", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
     { "name": "level-accuracy", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
     { "name": "anti-patterns", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] },
     { "name": "ancestor-consistency", "status": "PASS | FAIL | NOT_APPLICABLE", "explanation": "<required when NOT_APPLICABLE>", "findings": [] }

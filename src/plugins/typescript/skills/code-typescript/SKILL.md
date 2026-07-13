@@ -45,9 +45,9 @@ Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/loc
 <mandatory_code_patterns>
 These patterns are enforced by the reviewer. Violations will be REJECTED.
 
-**Constants**
+**Domain-significant constants**
 
-All literal values (strings, numbers) must be module-level constants:
+Name domain-significant literals as module-level constants. Preserve the idiomatic exemptions from `/typescript-standards`: `0`, `1`, and `-1` in array indexes and enum values do not need constants.
 
 ```typescript
 // ❌ REJECTED: Magic values inline
@@ -93,8 +93,19 @@ async function syncFiles(src: string, dest: string): Promise<boolean> {
 }
 
 // ✅ REQUIRED: Dependency injection
+const RSYNC_COMMAND = "rsync";
+
+interface CommandResult {
+  exitCode: number;
+}
+
+type CommandRunner = (
+  command: string,
+  args: readonly string[],
+) => Promise<CommandResult>;
+
 interface SyncDeps {
-  execa: typeof execa;
+  runCommand: CommandRunner;
 }
 
 async function syncFiles(
@@ -102,7 +113,7 @@ async function syncFiles(
   dest: string,
   deps: SyncDeps,
 ): Promise<boolean> {
-  const result = await deps.execa("rsync", [src, dest]);
+  const result = await deps.runCommand(RSYNC_COMMAND, [src, dest]);
   return result.exitCode === 0;
 }
 ```
