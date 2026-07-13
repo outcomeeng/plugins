@@ -12,9 +12,10 @@ keeps structural enumeration locally until the published CLI capability satisfie
 that contract, while it already reads cited full-path ADR/PDR governance decisions
 from loaded specs and decisions.
 
-`spx spec context` is published in `spx` 0.6.16, and the repository floor plus CI
-pin are 0.6.15. The publication and floor gates are clear. Consumption remains
-BLOCKED because the published JSON contract does not yet satisfy
+`spx spec context` is published in `spx` 0.6.16, while the repository floor plus
+CI pin remain 0.6.15. The publication gate is clear; the consuming floor has not
+advanced to the observed release. Consumption also remains BLOCKED because the
+published JSON contract does not yet satisfy
 `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
 it emits `documents`, `methodology`, `productDir`, `siblings`, and `target`, but
 omits a cited governance decision observed for this node and exposes no
