@@ -64,7 +64,7 @@ ADR vs PDR is decided by content only. A decision's reach — the nodes it const
 
 **Step 2: Load context for placement**
 
-Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, invoke `/contextualize` for the parent directory where the artifact will be placed.
+Check for `<SPEC_TREE_CONTEXT>` marker. If absent or targeting a different path, invoke `/contextualize` with the canonical full parent address where the artifact will be placed: exact `spx/` for a top-level node, or the full `spx/...` node path for a nested artifact.
 
 This loads:
 
@@ -296,7 +296,7 @@ How to avoid: Apply the decision table from `node-types.md` before selecting a t
 
 Claude created a new outcome at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
 
-How to avoid: Always invoke `/contextualize` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
+How to avoid: Always invoke `/contextualize` with the canonical full parent address before creating any node — exact `spx/` for a top-level node or the full `spx/...` path for a nested node. The sibling enumeration in the context manifest reveals all occupied indices.
 
 **Failure 5: Rewrite pattern for temporal language**
 

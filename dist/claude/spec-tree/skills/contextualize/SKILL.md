@@ -1,13 +1,13 @@
 ---
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
-argument-hint: "<full-spx-node-path>"
+argument-hint: "<spx-root-or-full-node-path>"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
 <objective>
 
-A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, cited methodology-governance decision, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
+A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a product-root or node target — every applicable ancestor spec, lower-index sibling spec, ADR, PDR, cited methodology-governance decision, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
 
 </objective>
 
@@ -22,8 +22,8 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
-- Test files are not read by `/contextualize`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
-- **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
+- Test files are not read by `/contextualize`. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
+- **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
   - Right: `/contextualize spx/{path-to-node}`
 
@@ -58,28 +58,30 @@ Before reading any product or spec content, invoke `/sync-base` so the loaded co
 
 <step name="locate">
 
-**Step 0: Locate target node**
+**Step 0: Locate target**
 
-If the invocation supplies no target path, ABORT: "A full `spx/...` node path is required. Invoke `/contextualize spx/{path-to-node}`."
+If the invocation supplies no target path, ABORT: "A canonical target is required. Invoke `/contextualize spx/` for the product root or `/contextualize spx/{path-to-node}` for a node."
 
-Before the first filesystem lookup, require the target to be a relative path beginning with `spx/`, with no empty, `.` or `..` segments, and require every segment after `spx/` to match the node-directory grammar `{index}-{slug}.{enabler|outcome}`. Otherwise ABORT: "Invalid target path: {target-path}. Supply one full `spx/...` node path."
+Before the first filesystem lookup, accept either the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{enabler|outcome}`. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: {target-path}. Supply `spx/` or one canonical full `spx/...` node path."
+
+Set `product_root_target=true` only for the exact target `spx/`. Every other accepted target is a node target.
 
 ```bash
 # Find the product file
 Glob: "spx/*.product.md"
 
-# Verify target path exists
-Glob: "{target-path}/*.md"
+# Verify a node target exists; product-root mode already addresses spx/
+Glob: "{target-path}/*.md"  (node targets only)
 ```
 
 If the product file is missing, ABORT: "No product file found in spx/. Create one with `/author` first."
 
-If the target path doesn't exist:
+If a node target path doesn't exist:
 
 - If operation is `author` → return empty manifest with `bootstrap=true`
 - Otherwise → ABORT: "Target path not found: {path}. Check the path or create it with `/author`."
 
-Extract the path segments from product root to target. Each segment is a directory to walk.
+For a node target, extract the path segments from product root to target. Each segment is a directory to walk. For the product-root target, the segment list is empty.
 
 </step>
 
@@ -125,7 +127,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Step 2: Walk the tree from root to target**
 
-For each directory along the path from product root to the target node:
+For each directory along the path from product root to a node target. In product-root mode the path contains zero node directories, so skip Step 2.
 
 **2a. Read the directory's spec file**
 
@@ -181,7 +183,9 @@ Siblings with the same index as the target are independent — they neither cons
 
 <step name="target">
 
-**Step 3: Load target node context**
+**Step 3: Load target context**
+
+For a node target, load the target context below.
 
 ```bash
 # Read target spec
@@ -205,6 +209,8 @@ Glob: "{target-path}/ISSUES.md"
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
+
+For the product-root target, the product spec and product-level decisions and coordination notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.{enabler,outcome}/"`, list test links from the product spec, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
 
 </step>
 
@@ -234,7 +240,7 @@ Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 <SPEC_TREE_CONTEXT target="{full-target-path}">
 
 Product: {product-name}
-Target: {target-path} ({enabler|outcome})
+Target: {target-path} ({enabler|outcome|product root})
 
 Documents loaded:
   Product spec: {product-file}
@@ -246,11 +252,14 @@ Documents loaded:
   Guide files: {list} | none
 Sync-base status: {already_current|rebased|dirty_tree|git_failure plus detail}
 
-Hierarchy:
+Hierarchy (node target):
   {product-name}
   └── {ancestor-1} ({enabler|outcome})
       └── {ancestor-2} ({enabler|outcome})
           └── {target} ({enabler|outcome}) ← TARGET
+
+Hierarchy (product-root target):
+  {product-name} ← TARGET
 
 Children: {count} ({list if any})
 Test links: {list from target spec, full paths resolved from target} | none
@@ -334,6 +343,10 @@ Claude loaded the structural ancestor context for a plugin-shipping node and saw
 
 Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level coordination disappeared from every target context even though it applied tree-wide. Check and read product-level coordination notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
 
+**Failure 11: Rejected a canonical product-root caller**
+
+Claude required at least one node-directory segment after `spx/`, so `/author` could not contextualize the parent of a top-level node even though `spx/` is the canonical product-root address. Treat exact `spx/` as product-root mode, walk zero node segments, and emit product-level context without attempting node-spec lookup.
+
 </failure_modes>
 
 <success_criteria>
@@ -342,15 +355,15 @@ Context loading is complete when:
 
 - [ ] `<SPEC_TREE_FOUNDATION>` marker present (loaded via `/understand`)
 - [ ] Product spec located and read
+- [ ] Target accepted before filesystem lookup only when it is exact `spx/` or a canonical full `spx/...` node path
 - [ ] All product-level ADRs/PDRs read (glob count = read count)
 - [ ] Every ancestor along the path: spec read, ADRs/PDRs read
 - [ ] Runtime guide files checked at product root and on each directory along the target path; present guides read and listed
 - [ ] Lower-index siblings' specs read at each directory level
-- [ ] Target spec read
-- [ ] Target ADRs/PDRs read
+- [ ] Node target spec and ADRs/PDRs read, or product-root mode recorded with top-level children enumerated
 - [ ] Full-path ADR/PDR citations in loaded specs and decisions read transitively, with citing files recorded
 - [ ] Children enumerated
-- [ ] Test links listed from the target spec and co-located test files listed without reading test bodies
+- [ ] Test links listed from the node target spec or product-root product spec, with co-located test files listed without reading test bodies
 - [ ] Implementation state reported as unknown unless a prior workflow already established it
 - [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at product root, each ancestor, and target
 - [ ] Coordination-note citations excluded from cited-governance loading

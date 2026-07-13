@@ -114,7 +114,7 @@ Rule 3 always resolves a single node, so node multiplicity never triggers a user
 Invoke on the selected node:
 
 ```text
-Skill tool → { "skill": "spec-tree:contextualize", "args": "spx/{node-path}" }
+Skill tool → { "skill": "spec-tree:contextualize", "args": "{selected-full-spx-node-path}" }
 ```
 
 After context is loaded, review session evidence before asking the operator anything. The operator must never decide from the session id, raw `next_step`, or unreviewed coordination notes.
