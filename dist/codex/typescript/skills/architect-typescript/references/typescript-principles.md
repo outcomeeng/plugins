@@ -35,9 +35,13 @@ interface Config {
 
 ```typescript
 // GOOD: Dependencies as parameters
+export interface BuildCommandRunner {
+  run(command: string, args: readonly string[]): Promise<{ exitCode: number }>;
+}
+
 export interface BuildDependencies {
-  execa: typeof execa;
-  mkdtemp: (prefix: string) => Promise<string>;
+  commandRunner: BuildCommandRunner;
+  createTempDirectory: (prefix: string) => Promise<string>;
 }
 
 export async function buildHugo(
@@ -64,7 +68,7 @@ export async function buildHugo(siteDir: string): Promise<BuildResult> {
 
 ```typescript
 // GOOD: Safe subprocess execution
-await execa("hugo", ["--destination", outputDir]); // Array args, no shell
+await commandRunner.run("hugo", ["--destination", outputDir]); // Array args, no shell
 
 // BAD: Shell injection risk
 await exec(`hugo --destination ${outputDir}`); // Shell interpolation
@@ -79,9 +83,17 @@ await exec(`hugo --destination ${outputDir}`); // Shell interpolation
 
 ```typescript
 // GOOD: Testable design with DI
+export interface LhciCommandRunner {
+  run(command: string, args: readonly string[]): Promise<{ exitCode: number }>;
+}
+
+export interface PortAllocator {
+  availablePort(): Promise<number>;
+}
+
 export interface LhciDependencies {
-  execa: typeof execa;
-  getPort: typeof getPort;
+  commandRunner: LhciCommandRunner;
+  portAllocator: PortAllocator;
 }
 
 export async function runLhci(

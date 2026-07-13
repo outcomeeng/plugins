@@ -412,8 +412,8 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 # Bare-repo fallback examples only when no repository wrapper exists:
 # npx tsc --noEmit
-# npx eslint src/ test/ --fix
-# npx eslint src/ test/
+# npx eslint . --fix
+# npx eslint .
 # npx vitest run
 ```
 
