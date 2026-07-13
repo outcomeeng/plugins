@@ -1,5 +1,14 @@
 # TypeScript Architectural Principles
 
+## Contents
+
+- [Type Safety First](#type-safety-first)
+- [Clean Architecture](#clean-architecture)
+- [Security by Design](#security-by-design)
+- [Testability by Design](#testability-by-design)
+- [Interface Design](#interface-design)
+- [Error Handling](#error-handling)
+
 ## Type Safety First
 
 - Strict mode: `strict: true` in tsconfig.json

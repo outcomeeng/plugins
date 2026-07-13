@@ -63,12 +63,12 @@ exec("git status");
 ```
 
 ```typescript
+import { parseUser, ValidationError } from "@/users";
+import { assertRejectsEmptyEmail } from "@testing/harnesses/users";
+
 it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
   // Regression: Reviewer caught missing empty email handling.
-  const input = { name: "John", email: "" };
-
-  expect(() => parseUser(input)).toThrow(ValidationError);
-  expect(() => parseUser(input)).toThrow(/email/);
+  assertRejectsEmptyEmail(parseUser, ValidationError);
 });
 ```
 

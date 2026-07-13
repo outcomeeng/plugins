@@ -1,5 +1,12 @@
 # Code Patterns
 
+## Contents
+
+- [Pattern: Subprocess Execution](#pattern-subprocess-execution)
+- [Pattern: Resource Cleanup with Disposable](#pattern-resource-cleanup-with-disposable)
+- [Pattern: Configuration with Validation (Zod)](#pattern-configuration-with-validation-zod)
+- [Pattern: Typed Error Classes](#pattern-typed-error-classes)
+
 ## Pattern: Subprocess Execution
 
 ```typescript

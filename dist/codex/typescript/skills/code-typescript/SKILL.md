@@ -70,7 +70,9 @@ function validateScore(score: number): boolean {
 // src/scoring.ts
 export const MIN_SCORE = 0;
 export const MAX_SCORE = 100;
+```
 
+```typescript
 // spx/.../tests/scoring.mapping.l1.test.ts
 import { MIN_SCORE, validateScore } from "@/scoring";
 

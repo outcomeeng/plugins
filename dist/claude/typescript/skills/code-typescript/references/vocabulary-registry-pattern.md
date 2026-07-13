@@ -1,5 +1,14 @@
 # Vocabulary Registry Pattern (Flat `as const` + `keyof typeof`)
 
+## Contents
+
+- [When to use](#when-to-use)
+- [The pattern](#the-pattern)
+- [Why it satisfies "string occurs exactly once"](#why-it-satisfies-string-occurs-exactly-once)
+- [Anti-patterns](#anti-patterns)
+- [Sibling-codebase references](#sibling-codebase-references)
+- [Testing](#testing)
+
 ## When to use
 
 Any time a domain has a closed set of named values (kinds, statuses, event names, etc.) that:
@@ -79,12 +88,14 @@ export const NODE_SUFFIXES: readonly string[] = Object.values(KIND_REGISTRY).map
 Never extract typed literal values to named constants to satisfy lint warnings:
 
 ```typescript
-// ❌ WRONG: adds no information
+// ❌ WRONG: test-owned alias for source vocabulary
 const STATE_DECLARED: NodeState = "declared";
 expect(state).toBe(STATE_DECLARED);
 
-// ✅ RIGHT: the type annotation is the documentation
-expect(state).toBe("declared" as NodeState); // or leave the literal; the test reads fine
+// ✅ RIGHT: import the source-owned registry member
+import { NODE_STATES } from "@/state/registry";
+
+expect(state).toBe(NODE_STATES.DECLARED);
 ```
 
 ## Sibling-codebase references
@@ -97,20 +108,15 @@ The pattern is pure type algebra at compile time; runtime components (the object
 
 ```typescript
 import { DECISION_KINDS, KIND_REGISTRY, NODE_KINDS } from "@/spec/config";
-import { describe, expect, it } from "vitest";
+import { assertProperty } from "@testing/harnesses/properties";
+import { kindRegistryDerivationProperty } from "@testing/harnesses/spec-kind-registry";
+import { describe, it } from "vitest";
 
 describe("KIND_REGISTRY", () => {
-  it("every node kind has category 'node'", () => {
-    for (const kind of NODE_KINDS) {
-      expect(KIND_REGISTRY[kind].category).toBe("node");
-    }
-  });
-
-  it("no suffix collisions within a category", () => {
-    const nodeSuffixes = NODE_KINDS.map((k) => KIND_REGISTRY[k].suffix);
-    expect(new Set(nodeSuffixes).size).toBe(nodeSuffixes.length);
+  it("derives disjoint kind partitions and collision-free suffixes", () => {
+    assertProperty(kindRegistryDerivationProperty(KIND_REGISTRY, NODE_KINDS, DECISION_KINDS));
   });
 });
 ```
 
-Tests that need a scoped registry construct their own as-const object and pass it in — the production registry is never intercepted. See `test-typescript` for the DI pattern.
+Tests that need variable registry inputs use a generator to produce meaningful registry candidates and pass them through a harness. Source-owned keys and metadata enter through production contracts, and the production registry is never intercepted. See `test-typescript` for the DI pattern.
