@@ -43,7 +43,7 @@ Resolve `$profile` before entering the workflow:
 - `align`: load the standard foundation plus the conformance references and structural templates owned by this skill, then emit the `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt below.
 - Any other value: STOP and report the unsupported profile.
 
-The `align` profile is the deterministic cross-skill lookup mechanism for `/align`. The caller invokes this capability through the Skill tool and consumes the loaded content and receipt; it never manufactures a filesystem path into this skill's bundle.
+The `align` profile is the deterministic cross-skill lookup mechanism for `/align`. The caller invokes `/understand align` as a composed skill capability and consumes the loaded content and receipt; it never manufactures a filesystem path into this skill's bundle.
 
 </composition_profiles>
 
@@ -131,7 +131,8 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 
 <success_criteria>
 
-- The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references and whose declared operational references, templates, and examples resolve from `${SKILL_DIR}`.
+- The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references.
+- Every bundled operational reference, template, and example resolves from `${SKILL_DIR}`; repo-local overlays are enumerated separately from `spx/local/`.
 - An `align` profile invocation additionally reads all eight conformance materials in full and emits `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` only after that complete read.
 - The marker's local lifecycle route, default-branch completion boundary, and routing-guide state match the repository observed during this session.
 - A marker retained by the Step 1 fast path satisfies the same invariants without a duplicate reload; a freshly emitted marker appears only after every declared resource was located.

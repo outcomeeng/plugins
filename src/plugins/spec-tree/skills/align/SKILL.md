@@ -25,7 +25,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-Invoke `/understand align` through the Skill tool. Proceed only when it returns both a live `<SPEC_TREE_FOUNDATION>` marker and a `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt. The owning skill loads these materials into the conversation; never resolve them through a cross-skill filesystem path.
+Invoke `/understand align` as a composed skill capability. Proceed only when it returns both a live `<SPEC_TREE_FOUNDATION>` marker and a `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt. The owning skill loads these materials into the conversation; never resolve them through a cross-skill filesystem path.
 
 **References (conformance rules):**
 
@@ -156,7 +156,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <workflow>
 
-1. **Gate**: Invoke `/understand align` through the Skill tool, even when a standard foundation marker is already live.
+1. **Gate**: Invoke `/understand align` as a composed skill capability, even when a standard foundation marker is already live.
 2. **Load rules**: Require the live foundation marker and `align` materials receipt, then use every named reference and template loaded by that invocation. A missing receipt is a blocked conformance check, never permission to guess or skip a rule.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
