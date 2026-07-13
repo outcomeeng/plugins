@@ -57,6 +57,8 @@ This audit runs no deterministic verification — no test collection, lint, type
 
 <test_file_declarations>
 Apply the base `/audit-tests` declaration screen before coupling. Any Python assignment, annotated assignment, named expression, loop binding, context-manager binding, exception binding, pattern binding, pytest fixture parameter, or property-generated parameter in an executed test file is a `test_owned_declaration` finding. Local functions are findings when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary. Name the right owner for the value or configuration: production source contract, `<package>_testing.harnesses.*`, `<package>_testing.generators.*`, inert fixture data, or eval case data.
+
+A zero-parameter test function that only calls an imported harness entrypoint is the compliant binding pattern. Trace through that harness: resource context, Hypothesis decorator and generated parameter, invariant assertion, oracle, and cleanup must all be inspectable there. Reject a fixture or generated parameter in the executed test file even when pytest or Hypothesis would inject it successfully.
 </test_file_declarations>
 
 <coupling_audit>

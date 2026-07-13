@@ -82,6 +82,35 @@ Where the *values* the cases use live:
 
 Executed Python test files are typed assertion files. They introduce no variable or constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
 
+<executed_test_binding_pattern>
+Executed tests use zero-parameter wrappers. Resource and generated-case binding occurs inside imported harness entrypoints:
+
+```python
+# <package>_testing/harnesses/properties.py
+from hypothesis import given, settings
+
+from <package>_testing.generators.identifiers import valid_identifiers
+
+
+@settings(print_blob=True)
+@given(valid_identifiers())
+def assert_identifier_roundtrips(identifier: str) -> None:
+    assert decode(encode(identifier)) == identifier
+```
+
+```python
+# spx/.../tests/test_identifiers.property.l1.py
+from <package>_testing.harnesses.properties import assert_identifier_roundtrips
+
+
+def test_identifier_roundtrips() -> None:
+    assert_identifier_roundtrips()
+```
+
+The same shape governs resource setup: a zero-parameter test calls a harness entrypoint that opens its context manager, performs the assertion-relevant operation, asserts the observable, and cleans up. Executed evidence never receives a pytest fixture parameter. Audit traces through the imported harness to the production path, generator, oracle, and cleanup boundary.
+
+</executed_test_binding_pattern>
+
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary — a hand-written key is a hand-picked case for the parser or consumer. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed.
 
 **Artifacts are downstream of Python.** A YAML, HCL, bash, JSON schema, or IaC template file is not a legitimate source-of-truth. A Python module either renders the artifact or consumes it; that module owns the artifact's vocabulary. A test that hand-copies an artifact field name has invented the case — the production-owning module is the source, even if it has to be created first.
@@ -176,15 +205,9 @@ def with_test_env(config: Config) -> Iterator[SpecTreeEnv]:
         yield env
 ```
 
-Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. Place their body code under `<package>_testing/harnesses/`; import them explicitly from `conftest.py` only for pytest discovery.
+Do not expose setup, teardown, cleanup, or dependency access as pytest fixture parameters in evidence files. Put that lifecycle in zero-parameter harness entrypoints and call them through `<executed_test_binding_pattern>`.
 
-```python
-# conftest.py
-from <package>_testing.harnesses.database import database_session
-from <package>_testing.harnesses.filesystem import temp_product
-```
-
-`conftest.py` may register pytest markers, hooks, and explicit fixture imports. It MUST NOT contain fixture body code, harness classes, generated data, source vocabulary, or hidden setup policy.
+`conftest.py` may register pytest markers and hooks. It MUST NOT contain or import fixture callables, fixture body code, harness classes, generated data, source vocabulary, or hidden setup policy.
 </harnesses>
 
 <fixtures>
@@ -211,16 +234,16 @@ Allowed doubles are explicit objects or classes passed through dependency inject
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require Hypothesis and a meaningful property.
 
-| Code type               | Required property        | Pattern       |
-| ----------------------- | ------------------------ | ------------- |
-| Parsers                 | `parse(format(x)) == x`  | `@given(...)` |
-| Serialization           | `decode(encode(x)) == x` | `@given(...)` |
-| Mathematical operations | algebraic laws           | `@given(...)` |
-| Complex algorithms      | invariant preservation   | `@given(...)` |
+| Code type               | Required property        | Pattern                     |
+| ----------------------- | ------------------------ | --------------------------- |
+| Parsers                 | `parse(format(x)) == x`  | harness-owned `@given(...)` |
+| Serialization           | `decode(encode(x)) == x` | harness-owned `@given(...)` |
+| Mathematical operations | algebraic laws           | harness-owned `@given(...)` |
+| Complex algorithms      | invariant preservation   | harness-owned `@given(...)` |
 
 `@given` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
 
-Property tests MUST run through a harness or wrapper that owns the Hypothesis profile, seed policy, run count, deadline, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare `@settings(...)`, seeds, example databases, run counts, or retry policy. On failure, the harness output must include the seed or Hypothesis replay directive needed to reproduce the generated case.
+Property tests MUST run through `<executed_test_binding_pattern>`. The harness owns the Hypothesis decorator, generated parameter, invariant assertion, profile, seed policy, run count, deadline, and replay diagnostics. The zero-parameter test imports and calls that harness entrypoint. On failure, the harness output must include the seed or Hypothesis replay directive needed to reproduce the generated case.
 </property_based_testing>
 
 <boundary_validation>
@@ -273,7 +296,7 @@ Python test guidance follows this standard when:
 - Property tests route through a harness or wrapper that reports the seed or replay directive on failure
 - Harnesses live under `<package>_testing/harnesses/` and manage resource lifecycles
 - Inert fixture files live under `<package>_testing/fixtures/` and are consumed only as files
-- `conftest.py` is limited to pytest discovery, registration, and explicit imports from canonical harness modules
+- `conftest.py` is limited to marker and hook registration; evidence files use zero-parameter harness entrypoints instead of fixture parameters
 - Property assertions use meaningful Hypothesis properties
 - Required credentialed evidence fails loudly when selected credentials are absent
 

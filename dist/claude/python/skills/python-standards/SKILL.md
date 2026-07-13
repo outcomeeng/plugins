@@ -407,7 +407,7 @@ from .position import Position
 from .......tests.helpers import with_temp_product
 
 # ✅ REQUIRED: Absolute import
-from myproject_testing.harnesses import with_temp_product
+from <package>_testing.harnesses import with_temp_product
 ```
 
 **Anti-Patterns**

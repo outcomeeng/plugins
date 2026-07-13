@@ -5,10 +5,10 @@ description: >-
   NEVER write or fix Python tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
 ---
 
-<context>
+<prerequisites>
 
 {!% require_skill 'python:python-standards' %!}
 
@@ -16,11 +16,9 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(test -f:*), Bash(sed -
 
 {!% require_skill 'spec-tree:test' %!}
 
-!`test -f spx/local/python.md && sed -n '1,400p' spx/local/python.md || true`
+Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist.
 
-!`test -f spx/local/python-tests.md && sed -n '1,400p' spx/local/python-tests.md || true`
-
-</context>
+</prerequisites>
 
 <objective>
 Python test files that supply evidence for a spec-tree node's assertions.
@@ -63,10 +61,10 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Keep variable and constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Import source contracts, generators, harness entrypoints, fixture-path providers, and justified eval case data directly into the assertion expression.
+7. Keep variable and constant declarations, literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Use the zero-parameter wrapper pattern from `/python-test-standards`: import and call one harness entrypoint in the assertion expression.
 8. Import source-owned values from the owning module.
-9. Import variable input domains from `<package>_testing.generators.*`.
-10. Import harness entrypoints from `<package>_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
+9. Keep variable input domains and Hypothesis-generated parameters inside `<package>_testing.generators.*` and the consuming harness entrypoint.
+10. Import zero-parameter harness entrypoints from `<package>_testing.harnesses.*`; use `conftest.py` only for marker and hook registration, never fixture discovery imports.
 11. Consume inert fixture files only by path, reading, or copying.
 12. Run the node's canonical pytest command and the repository's lint/type commands.
 
