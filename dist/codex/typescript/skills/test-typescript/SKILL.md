@@ -4,10 +4,10 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(test -f:*), Bash(sed -n:*), Bash(true), Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
 ---
 
-<context>
+<prerequisites>
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
@@ -15,11 +15,9 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-!`test -f spx/local/typescript.md && sed -n '1,400p' spx/local/typescript.md || true`
+Read `spx/local/typescript.md` and `spx/local/typescript-tests.md` when they exist.
 
-!`test -f spx/local/typescript-tests.md && sed -n '1,400p' spx/local/typescript-tests.md || true`
-
-</context>
+</prerequisites>
 
 <objective>
 TypeScript test files that supply evidence for a node specification's assertions.
