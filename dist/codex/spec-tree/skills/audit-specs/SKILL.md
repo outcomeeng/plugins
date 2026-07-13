@@ -1,7 +1,7 @@
 ---
 name: audit-specs
 description: >-
-  Spec-node audit methodology used by the spec-auditor agent. Dispatch
+  Spec-node audit methodology preloaded by the spec-auditor agent. Dispatch
   spec-auditor to audit a spec node; the main conversation reaches this audit
   only through that agent.
 model: sonnet
@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Bash, Skill
 
 <dispatch_gate>
 
-This audit runs in the spec-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the spec-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. A dispatched spec-auditor must explicitly load `spec-tree:audit-specs`; once this skill is loaded in that isolated context, proceed.
+This audit runs in the spec-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the spec-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 

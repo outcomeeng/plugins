@@ -1,7 +1,7 @@
 ---
 name: audit-pdr
 description: >-
-  PDR audit methodology used by the pdr-auditor agent. Dispatch pdr-auditor
+  PDR audit methodology preloaded by the pdr-auditor agent. Dispatch pdr-auditor
   to audit a PDR; the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---

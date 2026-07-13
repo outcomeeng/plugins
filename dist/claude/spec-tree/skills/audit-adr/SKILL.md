@@ -1,7 +1,7 @@
 ---
 name: audit-adr
 description: >-
-  ADR audit methodology used by the adr-auditor agent. Dispatch adr-auditor
+  ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
   to audit an ADR; the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
