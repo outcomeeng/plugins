@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Skill
 
 <objective>
 
-A factual report of Spec Tree files' non-conformances to templates, atemporal voice, and content-placement rules — no fixes, severities, or prioritization.
+A factual report of Spec Tree files' non-conformances to templates, atemporal voice, and content-placement rules.
 
 </objective>
 
