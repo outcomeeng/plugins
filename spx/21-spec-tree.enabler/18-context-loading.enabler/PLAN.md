@@ -8,18 +8,19 @@ the target architecture derives a target's complete read-set from
 `spx spec context --json`, with the deterministic tree walk and
 cited-governance decision resolver living in the SPX CLI as a trusted third
 party per `spx/12-shipped-scripting.adr.md`. The current `/contextualize` skill
-keeps structural enumeration locally until that CLI capability publishes, but it
-already reads cited full-path ADR/PDR governance decisions from loaded specs and
-decisions.
+keeps structural enumeration locally until the published CLI capability satisfies
+that contract, while it already reads cited full-path ADR/PDR governance decisions
+from loaded specs and decisions.
 
-What remains is the CLI-backed structural enumeration implementation, and it is
-BLOCKED: the CLI capability does not yet exist, and the published-floor rule
-(`AGENTS.md`;
-`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`)
-forbids the consuming skill or its tests from depending on an unpublished `spx`
-capability. The current skill-level cited-decision read closes the
-cross-methodology-governance loading gap for moved PDRs while the broader
-structural enumeration target remains blocked.
+`spx spec context` is published in `spx` 0.6.16, and the repository floor plus CI
+pin are 0.6.15. The publication and floor gates are clear. Consumption remains
+BLOCKED because the published JSON contract does not yet satisfy
+`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
+it emits `documents`, `methodology`, `productDir`, `siblings`, and `target`, but
+omits a cited governance decision observed for this node and exposes no
+citation provenance, guides, local overlays, bootstrap flag, or schema version.
+The current skill-level cited-decision read therefore remains necessary while
+the dependency contract is completed.
 
 ## The data already exists in spx
 
@@ -113,15 +114,17 @@ Contract specifics:
   non-zero exit with the missing path on stderr — the CLI surfaces the abort the
   skill currently raises.
 
-## Plugins-side structural-enumeration consumption (BLOCKED on publish + floor advance)
+## Plugins-side structural-enumeration consumption (BLOCKED on contract completion)
 
 This slice cannot ship until:
 
-1. `spx spec context` is released to npm.
+1. A published `spx spec context` release satisfies the output contract above,
+   including cited-governance provenance and guide, overlay, bootstrap, and
+   schema-version metadata.
 2. `REQUIRED_SPX_VERSION` (`outcomeeng/validation/spx_version.py`) is advanced to
    that release.
-3. CI `SPX_VERSION` (`.github/workflows/check.yml`) is bumped to a published
-   version at or above the floor.
+3. CI `SPX_VERSION` (`.github/workflows/check.yml`) is bumped to the same
+   published version or newer.
 
 Once unblocked:
 
@@ -139,17 +142,17 @@ Once unblocked:
 - Retag the read-completeness, lower-index-sibling, and determinism assertions in
   `context-loading.md` from `[audit]` to `[test]` against the CLI output — the
   enumeration is now code, so the determinism claim gains a real grader. This is
-  the node's first `[test]` evidence; until the capability publishes, the ADR's
-  rules and these assertions stay `[audit]`.
+  the node's first `[test]` evidence; until the complete contract publishes, the
+  ADR's rules and these assertions stay `[audit]`.
 - `just build-skills`, then `instructions:skill-auditor` on the edited skill plus the
   spec and test-evidence auditor gates.
 
 ## Hand-off
 
-The CLI capability is spec-tree-methodology work in the external spx repo, the
-same shape as other SPX-CLI methodology hand-offs. Build and test
-`spx spec context` there against the contract above; return here for the
-consumption slice once it is published and the floor is advanced.
+SPX dependency session `2026-07-13_13-20-53` records the observed published
+contract gap. Complete and publish `spx spec context` against the contract above;
+return here for the consumption slice once the satisfying release exists and the
+floor is advanced to it.
 
 ## Done in this changeset
 
