@@ -14,7 +14,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Skill{!% if target == 'claude' %!}
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist.
 

@@ -14,7 +14,7 @@ Invoke the `python:python-standards` skill before proceeding. If that skill is u
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist.
 

@@ -31,7 +31,7 @@ This audit MUST remain read-only. ALWAYS produce only a verdict over test eviden
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
 
