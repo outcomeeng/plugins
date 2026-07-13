@@ -236,6 +236,17 @@ Read the spec assertion text. Read the test's expect/assert statements. Answer:
 
 If yes to question 2: **REJECT — "misaligned."**
 
+Judge the test against the executable source contract without making the test
+duplicate or parse the authored spec text. When production exports a value or
+typed contract, uses it in the behavior under test, and the test imports that
+same contract while exercising the behavior, a change to the source contract is
+an intentional behavior change rather than a mutation the test must reject.
+Name a mutation to the consuming behavior that would break the test. NEVER
+require a test or test-infrastructure artifact to parse spec or decision Markdown
+or copy a literal from that prose as an independent oracle; authored prose is
+verified through spec audit and review, and duplicated literals violate source
+ownership.
+
 Check assertion-type-to-strategy alignment:
 
 | Assertion type | Required test strategy                            | REJECT if                 |
