@@ -109,12 +109,12 @@ See `${SKILL_DIR}/references/false-positive-handling.md` for application context
 
 Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify each constraint is followed. Undocumented deviations make this concern `FAIL`. If the product has no spec hierarchy, this concern is `NOT_APPLICABLE`.
 
-| Decision Record Constraint           | Violation Example                   | Verdict |
-| ------------------------------------ | ----------------------------------- | ------- |
-| "Use dependency injection" (ADR)     | Direct imports of external services | FAIL    |
-| "`l1` tests for logic" (ADR)         | `l1` tests hitting network          | FAIL    |
-| "No ORM" (ADR)                       | SQLAlchemy models introduced        | FAIL    |
-| "Lifecycle is Draft→Published" (PDR) | Added hidden `Archived` state       | FAIL    |
+| Decision Record Constraint                  | Violation Example                   | Verdict |
+| ------------------------------------------- | ----------------------------------- | ------- |
+| "Use dependency injection" (ADR)            | Direct imports of external services | FAIL    |
+| "External calls use injected runners" (ADR) | Direct subprocess imports           | FAIL    |
+| "No ORM" (ADR)                              | SQLAlchemy models introduced        | FAIL    |
+| "Lifecycle is Draft→Published" (PDR)        | Added hidden `Archived` state       | FAIL    |
 
 </audit_workflow>
 

@@ -63,7 +63,7 @@ Execute phases IN ORDER. Do not skip. This audit runs no deterministic verificat
 **Phase 0: Scope and Product Config**
 
 1. Determine target files/directories
-2. Check `tsconfig.json`, `package.json`, and `{{! file('root_guide') !}}`/`README.md` for tool and project configuration that informs comprehension (lint, type-check, test settings; naming conventions) — read for context, never to run a gate. The linters already handled type annotations, naming, unused imports, commented-out code, and security rules; comprehension covers what they cannot — deep relative imports, unqualified `any`, and `@ts-ignore` without justification.
+2. Check `tsconfig.json` and `package.json`, then read `{{! file('root_guide') !}}` and `README.md` when each exists, for tool and project configuration that informs comprehension (lint, type-check, test settings; naming conventions) — read for context, never to run a gate. The linters already handled type annotations, naming, unused imports, commented-out code, and security rules; comprehension covers what they cannot — deep relative imports, unqualified `any`, and `@ts-ignore` without justification.
 
 **Phase 1: Code Comprehension**
 

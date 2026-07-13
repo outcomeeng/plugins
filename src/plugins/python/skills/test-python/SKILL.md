@@ -103,8 +103,8 @@ Run the product's canonical test, lint, and type commands — the ones its `{{! 
 
 ```bash
 python3 -m pytest $node_path/tests/ -v
-python3 -m ruff check $node_path/tests/
-python3 -m mypy $node_path/tests/
+python3 -m ruff check .
+python3 -m mypy .
 ```
 
 Report any tool the product lacks rather than silently skipping it.
