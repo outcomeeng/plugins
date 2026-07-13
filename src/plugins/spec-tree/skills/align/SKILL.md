@@ -199,7 +199,7 @@ Downstream alignment:
 
 - Omit dimension headings (Structural / Language / Placement) when a file has no findings for that dimension
 - Omit files with zero findings entirely
-- If all files pass all checks: `"0 findings."`
+- If all files pass all checks: `"{N} files checked. 0 findings."`
 - For unrecognized files, replace the Classification line with: `Classification: Unrecognized — {reason}`
 
 </report_format>

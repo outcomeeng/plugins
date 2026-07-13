@@ -1,5 +1,6 @@
 ---
 name: audit-typescript-code
+model: sonnet
 description: >-
   TypeScript implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the TypeScript code files in scope.
   Reached only through the dispatched implementation-auditor agent, never the main conversation.

@@ -1,5 +1,6 @@
 ---
 name: audit-rust-code
+model: sonnet
 description: >-
   Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by implementation-auditor for the Rust code files in scope.
   Reached only through the dispatched implementation-auditor agent, never the main conversation.

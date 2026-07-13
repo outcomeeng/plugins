@@ -3,6 +3,8 @@ name: code-python
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Python.
   NEVER write or fix Python implementation without this skill.
+argument-hint: "[node-path]"
+arguments: node_path
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill
 ---
 
@@ -42,6 +44,8 @@ Before invoking this skill:
 4. **Standards are pre-loaded above**
 
 If tests don't exist or aren't approved, go back to earlier steps.
+
+Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker. Stop before reading or editing implementation when neither source provides a governing node path.
 </prerequisites>
 
 <write_mode_workflow>
@@ -50,12 +54,10 @@ Run the product's own canonical commands when it documents them — a `AGENTS.md
 
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
-```bash
-# Read test files
-cat {node_path}/tests/*.py
+Use `Glob` to list `$node_path/tests/*.py`, then `Read` every listed test file. Run the focused tests to see the current failures:
 
-# Run tests to see failures
-python3 -m pytest {node_path}/tests/ -v
+```bash
+python3 -m pytest $node_path/tests/ -v
 ```
 
 Understand:
@@ -87,7 +89,7 @@ class Deps:
 **Step 3 — Run tests (verify GREEN).**
 
 ```bash
-python3 -m pytest {node_path}/tests/ -v
+python3 -m pytest $node_path/tests/ -v
 ```
 
 All tests MUST pass. If any fail, fix implementation and re-run.
@@ -102,13 +104,13 @@ All tests MUST pass. If any fail, fix implementation and re-run.
 
 ```bash
 # Type checking
-python3 -m mypy product/
+python3 -m mypy .
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check .
 
 # Tests one more time
-python3 -m pytest {node_path}/tests/ -v
+python3 -m pytest $node_path/tests/ -v
 ```
 
 All must pass before declaring complete.
@@ -138,13 +140,13 @@ All must pass before declaring complete.
 
 ```bash
 # Run tests
-python3 -m pytest {node_path}/tests/ -v
+python3 -m pytest $node_path/tests/ -v
 
 # Type checking
-python3 -m mypy product/
+python3 -m mypy .
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check .
 ```
 
 **Step 4 — Report what was fixed.**
@@ -226,13 +228,13 @@ def get_user(user_id: int) -> User | None:
 ```markdown
 ## Implementation Complete
 
-### Node: {node_path}
+### Node: $node_path
 
 ### Files Created/Modified
 
-| File                 | Action  | Description   |
-| -------------------- | ------- | ------------- |
-| `product/handler.py` | Created | Order handler |
+| File                   | Action  | Description   |
+| ---------------------- | ------- | ------------- |
+| `<package>/handler.py` | Created | Order handler |
 
 ### Verification
 
@@ -260,6 +262,14 @@ All checks pass. Ready for re-review.
 ```
 
 </output_format>
+
+<failure_modes>
+
+**Claude ran fallback checks against a hard-coded package root.** What happened: the workflow invoked mypy and Ruff on `product/` in a consumer repository whose packages lived elsewhere. Why it failed: a marketplace skill projected one repository layout onto every consumer. How to avoid: use the product's canonical wrapper; when none exists, run the direct fallback against the repository root so the active tool configuration selects its own package scope.
+
+**Claude patched one FIX-mode finding without reapplying the shared standard.** What happened: one reported line changed, then the next audit found another instance of the same defect class. Why it failed: reviewer prose replaced `/python-standards` as the repair authority. How to avoid: reload the shared standards, inventory every same-class occurrence across the supplied scope, and stabilize the complete repair before rerunning verification.
+
+</failure_modes>
 
 <success_criteria>
 

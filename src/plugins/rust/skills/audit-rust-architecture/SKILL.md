@@ -1,5 +1,6 @@
 ---
 name: audit-rust-architecture
+model: sonnet
 description: >-
   Rust-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Rust concerns in scope.
   Reached only through a dispatched auditor agent, never the main conversation.

@@ -119,6 +119,12 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 </reference_guides>
 
+<failure_modes>
+
+**Claude completed Rust validation without a compile check.** What happened: formatting, clippy, and tests passed, while the workflow claimed a separate compile/type-check result it never ran. Why it failed: the quick start and implementation workflow carried different validation bundles. How to avoid: use the repository's canonical validation sequence, or run the complete fallback sequence including `cargo check --all-targets --all-features`, then report every exact command and exit status.
+
+</failure_modes>
+
 <success_criteria>
 
 - Every implemented behavior satisfies its linked spec assertion and passes the corresponding Rust evidence tests.

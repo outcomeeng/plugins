@@ -10,21 +10,19 @@ The canonical Rust test standards — filename conventions, level mapping, accep
 </objective>
 
 <success_criteria>
-Rust test guidance follows this standard when:
+The standards artifact is complete when it defines:
 
-- `/test` determines the assertion type, execution level, and exception path before implementation
-- `/rust-standards` is loaded before this reference
-- co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
-- doubles preserve coupling to the real trait, function, protocol, or binary seam
-- property assertions run through a harness that owns `proptest` / `quickcheck` runner policy and emits replay evidence
-- compile-time claims use compile-fail evidence
-- shared harnesses, generators, and fixtures live in a separate workspace-member crate as test-infrastructure production code
-- the external deterministic gate measures coverage when the repository declares a coverage command; the evidence audit establishes relevant-path coverage by reading the complete evidence chain
+- the canonical `<subject>.<evidence>.<level>[.<runner>].rs` filename contract and independent evidence, level, and runner axes
+- the level mapping for local Rust, local infrastructure, and remote or credentialed dependencies
+- source-owned data, zero-declaration evidence files, and separate workspace-member ownership for harnesses, generators, and fixtures
+- controlled implementations that preserve coupling to the real trait, function, protocol, or binary seam
+- harness-owned property runner policy with replay evidence and compile-fail evidence for compile-time claims
+- the boundary between external deterministic coverage measurement and relevant-path coverage established by reading the complete evidence chain
 
 </success_criteria>
 
 <reference_note>
-This is a reference skill. `/test-rust` uses it to produce tests and `/audit-rust-tests` uses it to judge their evidence quality.
+This is a reference skill. `/test-rust` uses it to produce tests and `/audit-rust-tests` uses it to judge their evidence quality. Consuming workflows load `/rust-standards` before this reference and use `/test` to determine assertion type, execution level, and exception path.
 
 Rust code examples use `acme_testing` as the compilable stand-in for the consumer package's `<package>_testing` dev-dependency crate.
 </reference_note>
