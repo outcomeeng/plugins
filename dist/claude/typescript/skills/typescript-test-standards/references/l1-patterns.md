@@ -1,11 +1,11 @@
 <l1_patterns>
 
-Table of contents: [pure_function](#pure_function) · [typed_factory](#typed_factory) · [temp_dirs](#temp_dirs)
+Contents: `<pure_function>`, `<typed_factory>`, `<temp_dirs>`
 
 <pure_function>
 
 ```typescript
-import { ARCHIVE_FLAGS } from "@/archive-command";
+import { ARCHIVE_FLAGS, buildCommand } from "@/archive-command";
 import { archiveCommandCase } from "@testing/generators/archive-command";
 import { archiveCommandIncludesSourcePathProperty } from "@testing/harnesses/archive-command/properties";
 import { assertProperty } from "@testing/harnesses/properties";
@@ -29,7 +29,9 @@ describe("buildCommand", () => {
 Generate test data with full type inference. Never use arbitrary literals.
 
 ```typescript
+import { analyzeResults } from "@/audit-results";
 import { createFailingPerformanceAuditResult } from "@testing/generators/audits";
+import { describe, expect, it } from "vitest";
 
 describe("analyzeResults", () => {
   it("fails on low performance", () => {
@@ -45,6 +47,7 @@ describe("analyzeResults", () => {
 Temp dirs are not external dependencies -- use them freely at `l1`.
 
 ```typescript
+import { loadConfig } from "@/config";
 import { assertLoadsTempConfig } from "@testing/harnesses/config";
 import { describe, it } from "vitest";
 

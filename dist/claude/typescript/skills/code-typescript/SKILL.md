@@ -14,7 +14,7 @@ TypeScript implementation code that makes its node's tests pass.
 </objective>
 
 <accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
+When this skill is invoked, the runtime provides the skill base directory in the loading message:
 
 ```
 Base directory for this skill: ${CLAUDE_SKILL_DIR}

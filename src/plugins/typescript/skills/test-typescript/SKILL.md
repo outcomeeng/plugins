@@ -13,7 +13,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill{!% if target == 'claude' %!}
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 Read `spx/local/typescript.md` and `spx/local/typescript-tests.md` when they exist.
 
@@ -173,6 +173,7 @@ Every string or number in a test represents either source-owned protocol data or
 When the value is source-owned, improve the code under test so the owner exports a registry, typed constructor, or source-owned constant, then import that source API directly. When the value is test input with a real domain, use or create an `fc.Arbitrary` for it:
 
 ```typescript
+import { processPath } from "@/paths/process";
 import { arbitrarySourceFilePath } from "@testing/generators/paths";
 import { assertProperty } from "@testing/harnesses/properties";
 import { sourcePathProcessingProperty } from "@testing/harnesses/properties/source-paths";

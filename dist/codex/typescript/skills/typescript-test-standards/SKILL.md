@@ -144,7 +144,9 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  * Credential source and setup: see the consumer repository's test guide.
  */
 
+import { uploadAuditResults } from "@/lhci/client";
 import { createLhciUploadRequest } from "@testing/harnesses/lhci/upload-request";
+import { describe, expect, it } from "vitest";
 
 describe("LHCI", () => {
   it("uploads audit results to server", async () => {
@@ -167,7 +169,9 @@ Forbidden patterns:
 Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define those doubles in `@testing/harnesses/*`; the executed test file imports the harness assertion.
 
 ```typescript
+import { PaymentProcessor } from "@/payments/processor";
 import { assertPaymentGatewayRecordsCharge } from "@testing/harnesses/payments";
+import { test } from "vitest";
 
 test("records charge requests", async () => {
   await assertPaymentGatewayRecordsCharge(PaymentProcessor);

@@ -1,14 +1,16 @@
 <exception_implementations>
 
-Table of contents: [exception_1](#exception_1) · [exception_2](#exception_2) · [exception_3](#exception_3) · [exception_4](#exception_4) · [exception_6](#exception_6)
+Contents: `<exception_1>`, `<exception_2>`, `<exception_3>`, `<exception_4>`, `<exception_6>`
 
 <exception_1>
 
 Retry logic, circuit breakers, error handling.
 
 ```typescript
+import { fetchWithRetry } from "@/http/retry";
 import { FETCH_RETRY_CASES } from "@/retry-policy";
 import { assertRetryPolicy } from "@testing/harnesses/http/retry";
+import { describe, it } from "vitest";
 
 describe("fetchWithRetry", () => {
   it("retries on timeout", async () => {
@@ -28,8 +30,10 @@ describe("fetchWithRetry", () => {
 Call sequences, ordering, "no extra calls."
 
 ```typescript
+import { CachingWrapper } from "@/cache/caching-wrapper";
 import { assertCachingClientDoesNotRefetch } from "@testing/harnesses/cache";
 import { assertCompensatingSagaOrder } from "@testing/harnesses/saga";
+import { describe, it } from "vitest";
 
 describe("Saga", () => {
   it("compensates in reverse order on failure", async () => {
@@ -51,6 +55,7 @@ describe("CachingWrapper", () => {
 Use `vi.useFakeTimers()` or an injected clock.
 
 ```typescript
+import { TokenRefresher } from "@/auth/token-refresher";
 import { assertLeaseRenewsBeforeExpiry, assertTokenRefreshesBeforeExpiry } from "@testing/harnesses/time";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 
@@ -77,8 +82,10 @@ describe("TokenRefresher", () => {
 Record intent without executing the dangerous operation.
 
 ```typescript
+import { OrderProcessor } from "@/orders/order-processor";
 import { orderWithCharge } from "@testing/generators/orders";
 import { assertRefundIssuedForCancelledOrder } from "@testing/harnesses/payments";
+import { describe, it } from "vitest";
 
 describe("OrderProcessor", () => {
   it("issues refund for cancelled order", async () => {
@@ -94,8 +101,10 @@ describe("OrderProcessor", () => {
 Capture request details the real system cannot expose.
 
 ```typescript
+import { PaymentClient } from "@/payments/client";
 import { createChargeRequest } from "@testing/generators/payments";
 import { assertChargeRequestCarriesIdempotencyKey } from "@testing/harnesses/http/requests";
+import { describe, it } from "vitest";
 
 describe("PaymentClient", () => {
   it("includes idempotency key in every request", async () => {

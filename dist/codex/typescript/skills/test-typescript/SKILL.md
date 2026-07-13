@@ -13,7 +13,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read `spx/local/typescript.md` and `spx/local/typescript-tests.md` when they exist.
 
@@ -173,6 +173,7 @@ Every string or number in a test represents either source-owned protocol data or
 When the value is source-owned, improve the code under test so the owner exports a registry, typed constructor, or source-owned constant, then import that source API directly. When the value is test input with a real domain, use or create an `fc.Arbitrary` for it:
 
 ```typescript
+import { processPath } from "@/paths/process";
 import { arbitrarySourceFilePath } from "@testing/generators/paths";
 import { assertProperty } from "@testing/harnesses/properties";
 import { sourcePathProcessingProperty } from "@testing/harnesses/properties/source-paths";
