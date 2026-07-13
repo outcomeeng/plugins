@@ -3,7 +3,7 @@ name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(cargo llvm-cov:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {!% if target == 'claude' %!}Bash(cargo test:*), Bash(cargo nextest:*), Bash(cargo fmt:*), Bash(cargo clippy:*), Bash(cargo check:*), Bash(cargo llvm-cov:*){!% else %!}Bash{!% endif %!}
 ---
 
 <objective>
@@ -17,7 +17,7 @@ Rust tests for what the `/test` router selected, at the chosen level.
 
 {!% require_skill 'spec-tree:test' %!}
 
-The `/test` router, `/rust-standards`, and `/rust-test-standards` are pre-loaded above.
+Invoke every prerequisite declaration above and proceed only after `/test`, `/rust-standards`, and `/rust-test-standards` load successfully.
 
 Before writing or revising tests, also check:
 
@@ -42,7 +42,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 
 Before writing or repairing Rust evidence, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
 
-Read the canonical rendered root guide at `{{! file('root_guide') !}}`, then `spx/local/rust.md` and `spx/local/rust-tests.md` when present, for repository-specific Rust validation requirements. Run the direct Cargo commands below at the closest package or workspace scope that satisfies those requirements, and record that scope. A required repository wrapper outside this skill's direct-command allowlist needs per-call approval for that exact command.
+Read the canonical rendered root guide at `{{! file('root_guide') !}}`, then `spx/local/rust.md` and `spx/local/rust-tests.md` when present, for repository-specific Rust validation requirements. Run the direct Cargo commands below at the closest package or workspace scope that satisfies those requirements, and record that scope. Follow the active runtime's approval flow for the exact repository wrapper command; never infer approval from shell patterns in skill metadata.
 
 ```bash
 cargo test --all-targets --all-features
