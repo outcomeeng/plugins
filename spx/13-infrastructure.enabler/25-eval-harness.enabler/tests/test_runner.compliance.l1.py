@@ -1,91 +1,131 @@
-"""Binding-free compliance wrappers for the eval runner."""
+"""Compliance evidence for the eval runner subprocess and envelope contract."""
 
-from outcomeeng_testing.evals.assert_runner import (
-    assert_subprocess_env_strips_claudecode_marker,
-    assert_metadata_from_envelope_extracts_duration_and_cost,
-    assert_metadata_from_envelope_extracts_usage_breakdown,
-    assert_metadata_from_envelope_falls_back_to_wall_clock_when_duration_missing,
-    assert_metadata_from_envelope_returns_none_for_missing_fields,
-    assert_stub_runner_returns_run_result_with_supplied_metadata,
-    assert_stub_runner_uses_responder_callable_when_supplied,
-    assert_claude_cli_runner_returns_text_and_metadata_from_envelope,
-    assert_claude_cli_runner_passes_model_to_subprocess,
-    assert_claude_cli_runner_passes_env_without_claudecode,
-    assert_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit,
-    assert_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set,
-    assert_claude_cli_runner_omits_bare_when_only_oauth_token_is_set,
-    assert_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty,
-    assert_claude_cli_runner_omits_bare_when_no_env_auth_is_set,
-    assert_claude_cli_runner_forces_bare_when_override_is_true,
-    assert_claude_cli_runner_forces_no_bare_when_override_is_false,
+import pytest
+
+from outcomeeng_evals.runner import (
+    CLAUDE_OUTPUT_FORMAT,
+    ClaudeCliArgument,
+    ClaudeEnvironmentVariable,
+)
+from outcomeeng_testing.harnesses.eval_runner import (
+    observe_default_runner,
+    observe_metadata_with_optional_fields_absent,
+    observe_metadata_without_duration,
+    observe_runner_with_api_key,
+    observe_runner_with_bare_override,
+    observe_runner_with_empty_api_key,
+    observe_runner_with_nesting_marker,
+    observe_runner_with_non_bare_override,
+    observe_runner_with_oauth_token,
 )
 
 
-def test_subprocess_env_strips_claudecode_marker() -> None:
-    assert_subprocess_env_strips_claudecode_marker()
+def test_runner_reads_text_duration_and_cost_from_the_envelope() -> None:
+    observation = observe_default_runner()
+
+    assert observation.result.text == observation.fixture_result
+    assert observation.result.metadata.duration_ms == pytest.approx(
+        observation.fixture_duration_ms
+    )
+    assert observation.result.metadata.total_cost_usd == pytest.approx(
+        observation.fixture_total_cost_usd
+    )
 
 
-def test_metadata_from_envelope_extracts_duration_and_cost() -> None:
-    assert_metadata_from_envelope_extracts_duration_and_cost()
+def test_runner_reads_usage_metadata_from_the_envelope() -> None:
+    observation = observe_default_runner()
+
+    assert observation.result.metadata.input_tokens == observation.fixture_input_tokens
+    assert (
+        observation.result.metadata.output_tokens == observation.fixture_output_tokens
+    )
+    assert (
+        observation.result.metadata.cache_read_input_tokens
+        == observation.fixture_cache_read_input_tokens
+    )
+    assert (
+        observation.result.metadata.cache_creation_input_tokens
+        == observation.fixture_cache_creation_input_tokens
+    )
+    assert observation.result.metadata.num_turns == observation.fixture_num_turns
+    assert observation.result.metadata.stop_reason == observation.fixture_stop_reason
 
 
-def test_metadata_from_envelope_extracts_usage_breakdown() -> None:
-    assert_metadata_from_envelope_extracts_usage_breakdown()
+def test_runner_invokes_the_configured_print_mode_contract() -> None:
+    observation = observe_default_runner()
+
+    assert observation.call.argv[0] == observation.runner.binary
+    assert ClaudeCliArgument.PRINT in observation.call.argv
+    assert ClaudeCliArgument.NO_SESSION_PERSISTENCE in observation.call.argv
+    assert (
+        observation.call.argv[
+            observation.call.argv.index(ClaudeCliArgument.OUTPUT_FORMAT) + 1
+        ]
+        == CLAUDE_OUTPUT_FORMAT
+    )
+    assert (
+        observation.call.argv[observation.call.argv.index(ClaudeCliArgument.MODEL) + 1]
+        == observation.runner.model
+    )
+    assert observation.call.argv[
+        observation.call.argv.index(ClaudeCliArgument.PLUGIN_DIR) + 1
+    ] == str(observation.runner.plugin_dir)
 
 
-def test_metadata_from_envelope_falls_back_to_wall_clock_when_duration_missing() -> (
-    None
-):
-    assert_metadata_from_envelope_falls_back_to_wall_clock_when_duration_missing()
+def test_runner_strips_the_nesting_marker_and_preserves_inherited_auth() -> None:
+    observation = observe_runner_with_nesting_marker()
+
+    assert ClaudeEnvironmentVariable.NESTING_MARKER not in observation.call.env
+    assert (
+        observation.call.env[ClaudeEnvironmentVariable.CLAUDE_CODE_OAUTH_TOKEN]
+        == observation.provisioned_oauth_token
+    )
 
 
-def test_metadata_from_envelope_returns_none_for_missing_fields() -> None:
-    assert_metadata_from_envelope_returns_none_for_missing_fields()
+def test_runner_derives_bare_mode_from_a_nonempty_api_key() -> None:
+    observation = observe_runner_with_api_key()
+
+    assert ClaudeCliArgument.BARE in observation.call.argv
 
 
-def test_stub_runner_returns_run_result_with_supplied_metadata() -> None:
-    assert_stub_runner_returns_run_result_with_supplied_metadata()
+def test_runner_omits_bare_mode_for_oauth_auth() -> None:
+    observation = observe_runner_with_oauth_token()
+
+    assert ClaudeCliArgument.BARE not in observation.call.argv
+    assert (
+        observation.call.env[ClaudeEnvironmentVariable.CLAUDE_CODE_OAUTH_TOKEN]
+        == observation.provisioned_oauth_token
+    )
 
 
-def test_stub_runner_uses_responder_callable_when_supplied() -> None:
-    assert_stub_runner_uses_responder_callable_when_supplied()
+def test_runner_treats_an_empty_api_key_as_non_bare_auth() -> None:
+    observation = observe_runner_with_empty_api_key()
+
+    assert ClaudeCliArgument.BARE not in observation.call.argv
 
 
-def test_claude_cli_runner_returns_text_and_metadata_from_envelope() -> None:
-    assert_claude_cli_runner_returns_text_and_metadata_from_envelope()
+def test_runner_constructor_can_force_bare_mode() -> None:
+    observation = observe_runner_with_bare_override()
+
+    assert ClaudeCliArgument.BARE in observation.call.argv
 
 
-def test_claude_cli_runner_passes_model_to_subprocess() -> None:
-    assert_claude_cli_runner_passes_model_to_subprocess()
+def test_runner_constructor_can_force_non_bare_mode() -> None:
+    observation = observe_runner_with_non_bare_override()
+
+    assert ClaudeCliArgument.BARE not in observation.call.argv
 
 
-def test_claude_cli_runner_passes_env_without_claudecode() -> None:
-    assert_claude_cli_runner_passes_env_without_claudecode()
+def test_metadata_duration_falls_back_to_observed_wall_clock_time() -> None:
+    observation = observe_metadata_without_duration()
+
+    assert observation.metadata.duration_ms == observation.wall_clock_ms
 
 
-def test_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit() -> None:
-    assert_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit()
+def test_missing_optional_metadata_remains_absent() -> None:
+    observation = observe_metadata_with_optional_fields_absent()
 
-
-def test_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set() -> None:
-    assert_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set()
-
-
-def test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set() -> None:
-    assert_claude_cli_runner_omits_bare_when_only_oauth_token_is_set()
-
-
-def test_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty() -> None:
-    assert_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty()
-
-
-def test_claude_cli_runner_omits_bare_when_no_env_auth_is_set() -> None:
-    assert_claude_cli_runner_omits_bare_when_no_env_auth_is_set()
-
-
-def test_claude_cli_runner_forces_bare_when_override_is_true() -> None:
-    assert_claude_cli_runner_forces_bare_when_override_is_true()
-
-
-def test_claude_cli_runner_forces_no_bare_when_override_is_false() -> None:
-    assert_claude_cli_runner_forces_no_bare_when_override_is_false()
+    assert observation.metadata.total_cost_usd is None
+    assert observation.metadata.input_tokens is None
+    assert observation.metadata.output_tokens is None
+    assert observation.metadata.stop_reason is None

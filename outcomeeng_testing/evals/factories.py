@@ -1,4 +1,4 @@
-"""Factories for constructing eval-domain objects in tests.
+"""Factory helpers for constructing eval-domain objects in tests.
 
 The ``make_*`` helpers accept keyword overrides so a test can build a
 ``Case``, ``TrialResult``, ``CaseOutcome``, ``SuiteResult``, or a complete
@@ -15,7 +15,7 @@ from string import printable
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, cast
+from typing import Any
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.ci_execution import (
@@ -138,35 +138,6 @@ def make_case(
     )
 
 
-def write_cases_file(directory: Path, *records: dict[str, Any]) -> Path:
-    path = directory / "cases.jsonl"
-    path.write_text(
-        "\n".join(json.dumps(record) for record in records) + "\n",
-        encoding="utf-8",
-    )
-    return path
-
-
-def make_case_record(case_id: str) -> dict[str, Any]:
-    return {
-        "id": case_id,
-        "input": {},
-        "expected_verdict": {"must_contain": [{"status": "rejected"}]},
-    }
-
-
-def load_claude_result_envelope() -> dict[str, Any]:
-    path = (
-        Path(__file__).parents[1] / "fixtures" / "evals" / "claude_result_envelope.json"
-    )
-    payload: object = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise TypeError(
-            f"expected object envelope fixture, got {type(payload).__name__}"
-        )
-    return cast(dict[str, Any], payload)
-
-
 def make_trial_result(
     *,
     case_id: str = _DEFAULT_CASE_ID,
@@ -217,68 +188,6 @@ def make_suite_result(
         threshold=threshold,
         passed=passed,
     )
-
-
-def make_report_suite_result(*, passed: bool, reason: str | None = None) -> SuiteResult:
-    verdict = {
-        "status": "rejected",
-        "findings": [{"rule": "r-1", "present": True}],
-    }
-    case = make_case(
-        case_id="c-1",
-        case_input={"path": "foo.ts", "content": "stub"},
-        must_contain=({"findings": [{"rule": "r-1"}]},),
-    )
-    trial = TrialResult(
-        case_id=case.id,
-        trial_index=0,
-        prompt="prompt body",
-        response=json.dumps(verdict),
-        verdict=verdict,
-        grade=GradeResult(passed=passed, reasons=(reason,) if reason else ()),
-        metadata=RunMetadata(
-            duration_ms=2608.0,
-            total_cost_usd=0.22,
-            input_tokens=5,
-            output_tokens=6,
-            cache_read_input_tokens=18240,
-            cache_creation_input_tokens=33830,
-            num_turns=1,
-            stop_reason="end_turn",
-        ),
-    )
-    return make_suite_result(
-        outcomes=(make_case_outcome(case=case, trials=(trial,), passed=passed),),
-        pass_rate=1.0 if passed else 0.0,
-        passed=passed,
-    )
-
-
-def make_stability_outcomes(
-    *pass_patterns: tuple[bool, ...],
-) -> tuple[CaseOutcome, ...]:
-    case = make_case(case_id="c", must_contain=({"status": "rejected"},))
-    outcomes: list[CaseOutcome] = []
-    for case_index, pattern in enumerate(pass_patterns):
-        trials = tuple(
-            make_trial_result(
-                case_id=f"c-{case_index}",
-                trial_index=index,
-                response="r",
-                verdict=None,
-                passed=passed,
-            )
-            for index, passed in enumerate(pattern)
-        )
-        pass_count = sum(pattern)
-        outcomes.append(
-            make_case_outcome(
-                case=case,
-                trials=trials,
-                passed=pass_count > len(pattern) / 2,
-            )
-        )
-    return tuple(outcomes)
 
 
 def make_eval_plan_item(

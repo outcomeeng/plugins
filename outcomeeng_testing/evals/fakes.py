@@ -1,4 +1,4 @@
-"""Stub and recording runners for l1 eval-harness evidence."""
+"""Stub and recording runners for l1 meta-tests of the eval harness."""
 
 from __future__ import annotations
 
@@ -13,41 +13,25 @@ from typing import Final
 from outcomeeng_evals.runner import ModelRunner, RunMetadata, RunResult
 
 
-def rejected_verdict(rule: str) -> str:
-    return json.dumps(
-        {"status": "rejected", "findings": [{"rule": rule, "present": True}]}
-    )
-
-
-def approved_verdict() -> str:
-    return json.dumps({"status": "approved", "findings": []})
-
-
-def invalid_verdict_response() -> str:
-    return "the model returned prose only"
-
-
-def runner_nonzero_error() -> RuntimeError:
-    return RuntimeError("claude exited 2: boom")
-
-
-def runner_timeout_error() -> subprocess.TimeoutExpired:
-    return subprocess.TimeoutExpired(cmd="claude", timeout=120.0)
-
-
 @dataclass(frozen=True)
 class SubprocessCall:
+    """Observed arguments for one injected subprocess invocation."""
+
     argv: tuple[str, ...]
     input: str
+    capture_output: bool
+    text: bool
+    timeout: float
+    check: bool
     env: dict[str, str]
 
 
 @dataclass
 class RecordingSubprocessRunner:
-    """Return a controlled completed process and record the production boundary."""
+    """Record a subprocess boundary and return a controlled process result."""
 
     stdout: str
-    returncode: int = 0
+    returncode: int = os.EX_OK
     stderr: str = ""
     calls: list[SubprocessCall] = field(default_factory=list)
 
@@ -62,8 +46,17 @@ class RecordingSubprocessRunner:
         check: bool,
         env: dict[str, str],
     ) -> subprocess.CompletedProcess[str]:
-        del capture_output, text, timeout, check
-        self.calls.append(SubprocessCall(tuple(argv), input, dict(env)))
+        self.calls.append(
+            SubprocessCall(
+                argv=tuple(argv),
+                input=input,
+                capture_output=capture_output,
+                text=text,
+                timeout=timeout,
+                check=check,
+                env=dict(env),
+            )
+        )
         return subprocess.CompletedProcess(
             argv,
             self.returncode,

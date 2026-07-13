@@ -1,4 +1,4 @@
-"""CLI testing infrastructure for the eval harness."""
+"""Test infrastructure for exercising the eval Click CLI."""
 
 from __future__ import annotations
 

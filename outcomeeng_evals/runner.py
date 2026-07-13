@@ -26,10 +26,56 @@ import os
 import subprocess
 import time
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
 from outcomeeng_evals.definition import DEFAULT_MODEL
+
+
+class ClaudeCliArgument(StrEnum):
+    """Source-owned command-line vocabulary for Claude print-mode runs."""
+
+    BARE = "--bare"
+    PRINT = "--print"
+    OUTPUT_FORMAT = "--output-format"
+    NO_SESSION_PERSISTENCE = "--no-session-persistence"
+    MODEL = "--model"
+    PLUGIN_DIR = "--plugin-dir"
+    MAX_BUDGET_USD = "--max-budget-usd"
+
+
+class ClaudeEnvironmentVariable(StrEnum):
+    """Environment keys that affect Claude runner behavior."""
+
+    ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY"
+    CLAUDE_CODE_OAUTH_TOKEN = "CLAUDE_CODE_OAUTH_TOKEN"
+    NESTING_MARKER = "CLAUDECODE"
+
+
+class ClaudeResultField(StrEnum):
+    """Top-level fields consumed from the Claude JSON result envelope."""
+
+    RESULT = "result"
+    RESPONSE = "response"
+    CONTENT = "content"
+    DURATION_MS = "duration_ms"
+    TOTAL_COST_USD = "total_cost_usd"
+    USAGE = "usage"
+    NUM_TURNS = "num_turns"
+    STOP_REASON = "stop_reason"
+
+
+class ClaudeUsageField(StrEnum):
+    """Usage fields consumed from the Claude JSON result envelope."""
+
+    INPUT_TOKENS = "input_tokens"
+    OUTPUT_TOKENS = "output_tokens"
+    CACHE_READ_INPUT_TOKENS = "cache_read_input_tokens"
+    CACHE_CREATION_INPUT_TOKENS = "cache_creation_input_tokens"
+
+
+CLAUDE_OUTPUT_FORMAT = "json"
 
 
 @dataclass(frozen=True)
@@ -117,21 +163,26 @@ class ClaudeCliRunner:
     def run(self, prompt: str) -> RunResult:
         argv = [self.binary]
         if self._effective_bare():
-            argv.append("--bare")
+            argv.append(ClaudeCliArgument.BARE)
         argv.extend(
             [
-                "--print",
-                "--output-format",
-                "json",
-                "--no-session-persistence",
-                "--model",
+                ClaudeCliArgument.PRINT,
+                ClaudeCliArgument.OUTPUT_FORMAT,
+                CLAUDE_OUTPUT_FORMAT,
+                ClaudeCliArgument.NO_SESSION_PERSISTENCE,
+                ClaudeCliArgument.MODEL,
                 self.model,
-                "--plugin-dir",
+                ClaudeCliArgument.PLUGIN_DIR,
                 str(self.plugin_dir),
             ]
         )
         if self.max_budget_usd is not None:
-            argv.extend(["--max-budget-usd", f"{self.max_budget_usd:.4f}"])
+            argv.extend(
+                [
+                    ClaudeCliArgument.MAX_BUDGET_USD,
+                    f"{self.max_budget_usd:.4f}",
+                ]
+            )
         start = time.perf_counter()
         completed = self.run_command(
             argv,
@@ -167,7 +218,7 @@ class ClaudeCliRunner:
         """
         if self.bare is not None:
             return self.bare
-        return bool(os.environ.get("ANTHROPIC_API_KEY"))
+        return bool(os.environ.get(ClaudeEnvironmentVariable.ANTHROPIC_API_KEY))
 
 
 def _subprocess_env() -> dict[str, str]:
@@ -181,7 +232,7 @@ def _subprocess_env() -> dict[str, str]:
     contract.
     """
     env = dict(os.environ)
-    env.pop("CLAUDECODE", None)
+    env.pop(ClaudeEnvironmentVariable.NESTING_MARKER, None)
     return env
 
 
@@ -198,7 +249,11 @@ def _assistant_text(envelope: object) -> str:
         raise ValueError(
             f"expected JSON object envelope, got {type(envelope).__name__}"
         )
-    for key in ("result", "response", "content"):
+    for key in (
+        ClaudeResultField.RESULT,
+        ClaudeResultField.RESPONSE,
+        ClaudeResultField.CONTENT,
+    ):
         value = envelope.get(key)
         if isinstance(value, str):
             return value
@@ -214,22 +269,24 @@ def _metadata_from_envelope(
 
     Falls back to wall-clock duration when the envelope omits ``duration_ms``.
     """
-    duration_ms = _coerce_float(envelope.get("duration_ms"))
+    duration_ms = _coerce_float(envelope.get(ClaudeResultField.DURATION_MS))
     if duration_ms is None:
         duration_ms = wall_clock_ms
-    raw_usage = envelope.get("usage")
+    raw_usage = envelope.get(ClaudeResultField.USAGE)
     usage: dict[str, object] = raw_usage if isinstance(raw_usage, dict) else {}
     return RunMetadata(
         duration_ms=duration_ms,
-        total_cost_usd=_coerce_float(envelope.get("total_cost_usd")),
-        input_tokens=_coerce_int(usage.get("input_tokens")),
-        output_tokens=_coerce_int(usage.get("output_tokens")),
-        cache_read_input_tokens=_coerce_int(usage.get("cache_read_input_tokens")),
-        cache_creation_input_tokens=_coerce_int(
-            usage.get("cache_creation_input_tokens")
+        total_cost_usd=_coerce_float(envelope.get(ClaudeResultField.TOTAL_COST_USD)),
+        input_tokens=_coerce_int(usage.get(ClaudeUsageField.INPUT_TOKENS)),
+        output_tokens=_coerce_int(usage.get(ClaudeUsageField.OUTPUT_TOKENS)),
+        cache_read_input_tokens=_coerce_int(
+            usage.get(ClaudeUsageField.CACHE_READ_INPUT_TOKENS)
         ),
-        num_turns=_coerce_int(envelope.get("num_turns")),
-        stop_reason=_coerce_str(envelope.get("stop_reason")),
+        cache_creation_input_tokens=_coerce_int(
+            usage.get(ClaudeUsageField.CACHE_CREATION_INPUT_TOKENS)
+        ),
+        num_turns=_coerce_int(envelope.get(ClaudeResultField.NUM_TURNS)),
+        stop_reason=_coerce_str(envelope.get(ClaudeResultField.STOP_REASON)),
     )
 
 
