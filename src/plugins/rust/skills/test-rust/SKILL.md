@@ -15,7 +15,7 @@ Rust tests for what the `/test` router selected, at the chosen level.
 
 {!% require_skill 'rust:rust-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 Invoke every prerequisite declaration above and proceed only after `/test`, `/rust-standards`, and `/rust-test-standards` load successfully.
 

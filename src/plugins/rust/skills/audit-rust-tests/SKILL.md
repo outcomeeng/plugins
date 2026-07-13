@@ -31,7 +31,7 @@ This audit MUST remain read-only. ALWAYS produce only a verdict over test eviden
 
 {!% require_skill 'rust:rust-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'test' %!}
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
