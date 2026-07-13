@@ -2,7 +2,12 @@
 
 A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them.
 
-Use syntax supported by the active runtime surface.
+{!# Authored marketplace source targets Claude Code SKILL.md syntax; the build renders target-native Codex guidance. #!}
+{!% if target == 'claude' %!}
+Use Claude Code's supported SKILL.md syntax.
+{!% else %!}
+Use Codex's supported skill syntax.
+{!% endif %!}
 
 Prefer stable forms that preserve the caller's input contract:
 

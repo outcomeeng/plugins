@@ -109,11 +109,15 @@ allowed-tools: Bash(./deploy:*)
 ---
 ```
 
+{!% if target == 'claude' %!}
 Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
+{!% else %!}
+Audit skills (`audit-*`) remain read-only and load composed skills by installed name through Codex's skill invocation surface — audit runs never modify files.
+{!% endif %!}
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
-**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent skill invoke it via the Skill tool — there is no preload field on the consumer side.
+**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent invoke it by installed name through the runtime's skill-invocation surface — there is no preload field on the consumer side.
 
 **Command-capability fields.** A SKILL.md carries every capability a slash command had — `argument-hint`/`arguments`, `allowed-tools` restriction, plus `!`-dynamic context and `@` file references in the body. The authoring and audit rules for that surface live in `${CLAUDE_SKILL_DIR}/references/command-capabilities.md`; read it before authoring a skill that takes arguments, injects state, or restricts tools.
 

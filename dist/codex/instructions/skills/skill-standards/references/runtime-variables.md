@@ -1,6 +1,6 @@
 <overview>
 
-Runtime variable scopes and how to reference skill-bundled files. Read this before referencing files from a SKILL.md body or wiring hook `command:` paths.
+Runtime variable scopes and how to reference skill-bundled files.
 
 </overview>
 
@@ -23,22 +23,10 @@ Do NOT define aliases, add troubleshooting sections, or explain compatibility to
 
 <variable_scopes>
 
-| Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
-| ----------------------- | -------------------------- | ---------------------------- | --------------------- |
-| `${SKILL_DIR}`          | Skill's SKILL.md directory | Yes                          | **No**                |
-| `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
-| `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
-| `$CLAUDE_PROJECT_DIR`   | Product working directory  | No                           | **Yes**               |
+| Variable       | Scope                      | Skill content |
+| -------------- | -------------------------- | ------------- |
+| `${SKILL_DIR}` | Skill's SKILL.md directory | Yes           |
 
-For hook scripts bundled with a plugin skill, use `${CLAUDE_PLUGIN_ROOT}`:
-
-```yaml
-hooks:
-  PostToolUse:
-    - matcher: "Skill"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
-```
+Codex exposes the rendered skill-directory token for bundled references and scripts. This reference declares no plugin-root, plugin-data, project-root, or hook-command variable without a Codex runtime contract.
 
 </variable_scopes>

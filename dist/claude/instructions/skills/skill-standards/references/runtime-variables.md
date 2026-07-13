@@ -1,6 +1,6 @@
 <overview>
 
-Runtime variable scopes and how to reference skill-bundled files. Read this before referencing files from a SKILL.md body or wiring hook `command:` paths.
+Runtime variable scopes and how to reference skill-bundled files.
 
 </overview>
 
