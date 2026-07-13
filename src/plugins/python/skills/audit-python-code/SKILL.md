@@ -35,7 +35,7 @@ A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each 
 </constraints>
 
 <repo_local_overlay>
-Standards are pre-loaded above. Check for `spx/local/python.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+Load every required standard named above before continuing. Check for `spx/local/python.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <essential_principles>

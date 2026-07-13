@@ -50,7 +50,7 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 
 **Procedure:**
 
-1. **Standards are pre-loaded above.** Read repo-local `spx/local/python-architecture.md` if present; an overlay routes skill behavior to the product's governing specs and decisions and supplements skill behavior without declaring product truth.
+1. **Load the required standards first.** Proceed only after every prerequisite declaration above succeeds. Read repo-local `spx/local/python-architecture.md` if present; an overlay routes skill behavior to the product's governing specs and decisions and supplements skill behavior without declaring product truth.
 2. **Read repo-local test overlay** `spx/local/python-tests.md` if present before judging level references or test-double exception cases.
 3. **Read `/test`** for methodology (5 stages, 5 factors, 7 exceptions)
 4. **Read the architecture target** completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition

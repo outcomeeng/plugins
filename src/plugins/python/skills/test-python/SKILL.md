@@ -5,7 +5,7 @@ description: >-
   NEVER write or fix Python tests without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, {!% if target == 'claude' %!}Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*){!% else %!}Bash{!% endif %!}
 ---
 
 <prerequisites>
@@ -99,7 +99,7 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 </source_contract_gate>
 
 <verification>
-Run the product's canonical test, lint, and type commands — the ones its `{{! file('root_guide') !}}`, Justfile, Makefile, or package scripts document. A canonical wrapper outside this skill's direct-command allowlist requires per-call approval for that exact command. When the product ships no wrapper, fall back to the tools directly only when they are installed:
+Run the product's canonical test, lint, and type commands — the ones its `{{! file('root_guide') !}}`, Justfile, Makefile, or package scripts document. Follow the active runtime's approval flow for the exact wrapper command; never infer approval from shell patterns in skill metadata. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
 ```bash
 python3 -m pytest $node_path/tests/ -v
