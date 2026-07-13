@@ -315,7 +315,7 @@ Read the spec assertion and the test's expect/assert statements side by side.
 **Edge cases:**
 
 - **No coverage tooling**: irrelevant to this audit. Do not record a finding for missing tooling.
-- **Trivially total path**: when the assertion-relevant behavior is one total path and the test reaches it, annotate as `saturated`; the other three properties carry assertion strength.
+- **Trivially total path**: when the assertion-relevant behavior is one total path and the test reaches it, record `judgment: "saturated"` in the verdict's `metadata.coverage_traces`; the other three properties carry assertion strength.
 - **Shared execution path**: multiple tests may reach the same path. Judge whether this test reaches the path; do not compare deltas.
 
 </coverage_protocol>

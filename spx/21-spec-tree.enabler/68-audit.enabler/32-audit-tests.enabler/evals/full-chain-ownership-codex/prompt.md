@@ -268,7 +268,7 @@ Trace, by reading, whether the test drives execution into the assertion-relevant
 
 - **Reaches the assertion-relevant path**: the test exercises the behavior the assertion claims. ✓
 - **Imports the module but never drives execution into the assertion-relevant path**: REJECT — "no coverage." Name the specific assertion-relevant path the test fails to reach, traced from the code.
-- **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): annotate as `saturated` in the verdict table. The test's evidentiary value comes from the other three properties.
+- **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): record `judgment: "saturated"` in `metadata.coverage_traces`. The test's evidentiary value comes from the other three properties.
 
 Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds behavior-coupled evidence that reading captures and a line count would not.
 
@@ -286,7 +286,7 @@ Read the detected language or language partitions from the caller's audit reques
 
 When the caller supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
 
-When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, invoke each skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
+When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, load and apply each skill through the runtime's supported skill mechanism. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
 </step>
 
@@ -319,7 +319,7 @@ Emit a structured verdict consumed by the composing verification workflow. The s
 
 The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
-The `metadata.evidence_chain` array MUST project the complete Step 2b inventory. Preserve every applicable discovery artifact in the array even when it carries no finding; omitting an inspected artifact makes the verdict incomplete.
+The `metadata.evidence_chain` array MUST project the complete Step 2b inventory. Preserve every applicable discovery artifact in the array even when it carries no finding; omitting an inspected artifact makes the verdict incomplete. The `metadata.coverage_traces` array MUST carry one entry per audited assertion, naming the assertion-relevant source path, the test path followed into it, and the coverage judgment. Use `saturated` only for a trivially total path reached by the test.
 
 ```json
 {
@@ -371,6 +371,14 @@ The `metadata.evidence_chain` array MUST project the complete Step 2b inventory.
         "role": "test | harness | generator | fixture | discovery | production",
         "imported_from": "<repository-relative-path-or-null>",
         "inspection_status": "inspected | unresolved"
+      }
+    ],
+    "coverage_traces": [
+      {
+        "assertion": "<full-assertion-text-or-stable-id>",
+        "source_path": "<repository-relative-assertion-relevant-path>",
+        "test_path": "<repository-relative-test-path-and-call-chain>",
+        "judgment": "reaches | saturated | missing"
       }
     ]
   }

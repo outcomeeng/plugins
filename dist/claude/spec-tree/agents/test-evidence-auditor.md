@@ -4,7 +4,6 @@ description: >-
   ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
 tools: Bash, Read, Grep, Glob, Skill
 model: sonnet
-permissionMode: readOnly
 skills:
   - spec-tree:audit-tests
 ---
