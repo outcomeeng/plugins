@@ -3,7 +3,6 @@ name: test-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
   NEVER write or fix Python tests without this skill.
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(just:*), Bash(make:*), Bash(pnpm:*), Bash(npm:*), Bash(yarn:*), Bash(uv run:*), Bash(python3 -m pytest:*), Bash(python3 -m mypy:*), Bash(python3 -m ruff:*)
 ---
 
 {!% require_skill 'python:python-standards' %!}
@@ -38,7 +37,7 @@ Run this workflow for new Python tests:
 1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
 2. For each assertion, use `/test` to select the assertion type, execution level, and any Stage 5 exception.
 3. Apply the source-contract-first gate in `<source_contract_gate>`: inspect the code under test and identify the production contract the test will exercise.
-4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
+4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, invoke `/code-python` to add that contract before resuming test work.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
 7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data.
@@ -55,7 +54,7 @@ Run this workflow for rejected Python tests:
 
 1. Read the caller-supplied structured verdict and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim. Do not search conversation history for an earlier verdict.
 2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
-3. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
+3. Apply the source-contract-first gate in `<source_contract_gate>` and invoke `/code-python` to repair source architecture before fixing test syntax when the finding exposes missing source contracts.
 4. Replace bindings that introduce data, expected outputs, configuration, vocabulary, case choices, or policy with source-owned exports, harness-owned configuration, variable generators, fixture-path providers, or justified eval case data. Preserve convenience aliases derived solely from those imported owners.
 5. Replace constant-only generators with direct source imports or meaningful variable domains.
 6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `{product}_testing.harnesses.*`.
@@ -104,7 +103,7 @@ Report the evidence created or repaired with:
 
 <failure_modes>
 
-**What happened:** the test-fix workflow inferred its rejection from conversation history.
+**What happened:** Claude inferred a test rejection from conversation history.
 
 **Why it failed:** conversation history can contain verdicts from several audit runs and subjects.
 
