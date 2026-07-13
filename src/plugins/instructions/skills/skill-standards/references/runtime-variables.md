@@ -6,18 +6,18 @@ Runtime variable scopes and how to reference skill-bundled files. Read this befo
 
 <skill_file_references>
 
-Use the runtime's skill-directory token to reference files within the current skill directory. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`.
+Use the runtime's skill-directory token to reference files within the current skill directory.
 
 Authored source examples, using files bundled with the skill that contains the prose:
 
 ```markdown
-Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md` {!# no-codex-skill-dir-rewrite #!}
-Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>` {!# no-codex-skill-dir-rewrite #!}
+Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
+Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 ```
 
-NEVER write Codex's skill-directory token in source. NEVER reference a skill-bundled file through repository-local authored or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path.
+NEVER reference a skill-bundled file through repository-local authored or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path.
 
-Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
+Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens.
 
 </skill_file_references>
 

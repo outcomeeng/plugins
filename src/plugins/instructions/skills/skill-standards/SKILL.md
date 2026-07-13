@@ -433,7 +433,7 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 
 <templates_and_variables>
 
-Reference skill-bundled files with the Claude Code skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
+Reference skill-bundled files with the runtime's skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
 
 </templates_and_variables>
 
@@ -466,8 +466,6 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 
 </section>
 ```
-
-Enforced by the `fix-xml-spacing` pre-commit hook, which runs `uv run python -m outcomeeng.hygiene.xml_spacing {staged_files}`.
 
 </xml_tag_formatting>
 
