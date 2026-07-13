@@ -18,7 +18,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
-5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. Invoke `/understand` when it is absent before continuing.
+5. **ALIGN MATERIALS REQUIRED** — Invoke `/understand align` on every run, even when a generic `<SPEC_TREE_FOUNDATION>` marker is live. Continue only with both the foundation marker and the matching materials receipt.
 6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, invoke `/scope-changeset` and use `branch_scope(base, repo=repo)` from its `changeset_scope.py` API. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
@@ -203,6 +203,14 @@ Downstream alignment:
 - For unrecognized files, replace the Classification line with: `Classification: Unrecognized — {reason}`
 
 </report_format>
+
+<failure_modes>
+
+**Failure 1: Claude reused a generic foundation marker.** Claude began conformance checks without invoking `/understand align`, then guessed template and reference rules from memory. Why: the generic marker proves methodology loading but carries no `align` materials receipt. Avoid: invoke `/understand align` on every run and stop when either required marker is absent.
+
+**Failure 2: Claude narrowed discovery before classification.** Claude scanned only filenames that already looked like recognized specs, so unrecognized markdown and downstream changeset alignment escaped the report. Why: classification was used as a discovery filter. Avoid: discover every in-scope markdown file first, apply only the explicit skip list, then classify every remaining file and run the changeset alignment dimension when applicable.
+
+</failure_modes>
 
 <success_criteria>
 
