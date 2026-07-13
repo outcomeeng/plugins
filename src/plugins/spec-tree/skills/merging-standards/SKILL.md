@@ -34,7 +34,7 @@ The overlay cannot override the open-ready mandate — once `VERIFICATION_READIN
 </repo_local_overlay>
 
 <overlay_safety_checks>
-When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry. `/manage-github-pr` and the direct-push transport run them before branch or commit work, `/open-pr` before push, direct-push runs them again before its default-branch push, `/manage-pr` runs them as the first action of `<merge_cleanup>` before the merge command, and `/handoff` runs them before every detach. A failed check stops before mutation with its output preserved.
+When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry. `/manage-github-pr` and the direct-push transport run them before branch or commit work, `/open-pr` before push, direct-push runs them again before its default-branch push, `/manage-pr` runs them after its initial read-only inspection and before base sync, finding repair, commit, push, or merge work, and `/handoff` runs them before every detach. `<merge_cleanup>` repeats the checks immediately before the merge command. A failed check stops before mutation with its output preserved.
 
 When the overlay declares post-cleanup checks, run all of them immediately after every detach-based cleanup and before branch deletion, session persistence, deploy, release, or closeout. This applies both to `<merge_cleanup>` and whenever `/handoff` detaches a checkout. A failed post-cleanup check stops the remaining cleanup and preserves the detached checkout for inspection.
 </overlay_safety_checks>
