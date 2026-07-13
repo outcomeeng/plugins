@@ -2,7 +2,7 @@
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
 argument-hint: "<full-spx-node-path>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*)
+allowed-tools: Read, Glob, Grep, Skill
 ---
 
 <objective>
@@ -59,6 +59,8 @@ Before reading any product or spec content, invoke `/sync-base` so the loaded co
 <step name="locate">
 
 **Step 0: Locate target node**
+
+If the invocation supplies no target path, ABORT: "A full `spx/...` node path is required. Invoke `/contextualize spx/{path-to-node}`."
 
 ```bash
 # Find the product file
