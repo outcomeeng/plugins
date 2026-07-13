@@ -3,9 +3,20 @@
 ## Pattern: Subprocess Execution
 
 ```typescript
-import { execa, type ExecaReturnValue } from "execa";
-
 const TIMEOUT_MS = 60_000;
+
+export interface CommandResult {
+  exitCode: number;
+  stderr: string;
+}
+
+export interface CommandRunner {
+  run(
+    command: string,
+    args: readonly string[],
+    options: { timeout: number; reject: boolean },
+  ): Promise<CommandResult>;
+}
 
 export class CommandError extends Error {
   constructor(
@@ -19,7 +30,7 @@ export class CommandError extends Error {
 }
 
 export interface CommandDeps {
-  execa: typeof execa;
+  commandRunner: CommandRunner;
 }
 
 export async function runCommand(
@@ -27,12 +38,12 @@ export async function runCommand(
   logger: Logger,
   deps: CommandDeps,
   options: { timeout?: number; check?: boolean } = {},
-): Promise<ExecaReturnValue> {
+): Promise<CommandResult> {
   const { timeout = TIMEOUT_MS, check = true } = options;
 
   logger.debug(`Running: ${cmd.join(" ")}`);
 
-  const result = await deps.execa(cmd[0], cmd.slice(1), {
+  const result = await deps.commandRunner.run(cmd[0], cmd.slice(1), {
     timeout,
     reject: false,
   });

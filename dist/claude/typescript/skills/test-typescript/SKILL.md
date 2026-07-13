@@ -291,7 +291,8 @@ Before declaring tests complete:
 - [ ] Source-owned singleton shapes come from production constructors, not test constants or constant-only generators
 - [ ] Variable input data comes from generators (`fc.Arbitrary`), not hardcoded constants
 - [ ] No test-owned constant groups like `TEST_FIXTURES`, `SAMPLE_PATHS`, etc.
-- [ ] Tests run and fail for expected reasons (RED phase)
+- [ ] WRITE mode: tests run and fail for the expected missing implementation or assertion mismatch (RED phase)
+- [ ] FIX mode: focused tests, typecheck, and lint pass after the complete defect-class repair (GREEN phase)
 
 </test_writing_checklist>
 

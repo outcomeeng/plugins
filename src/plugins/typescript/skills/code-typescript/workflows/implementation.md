@@ -125,8 +125,18 @@ try {
 
 ```typescript
 // GOOD - Dependencies as parameters
+const RSYNC_COMMAND = "rsync";
+
+export interface CommandResult {
+  exitCode: number;
+}
+
+export interface CommandRunner {
+  run(command: string, args: readonly string[]): Promise<CommandResult>;
+}
+
 export interface SyncDependencies {
-  execa: typeof execa;
+  commandRunner: CommandRunner;
   logger: Logger;
 }
 
@@ -136,6 +146,7 @@ export async function syncFiles(
   deps: SyncDependencies,
 ): Promise<SyncResult> {
   deps.logger.info(`Syncing ${source} to ${dest}`);
+  await deps.commandRunner.run(RSYNC_COMMAND, [source, dest]);
   // ...
 }
 
