@@ -50,10 +50,13 @@ git switch --detach origin/main
 git rev-parse --show-toplevel
 just marketplace-source-root outcomeeng
 spx diagnose --format json
-git push origin --delete <branch>
 ```
 
-Inspect the post-cleanup `worktree-pool` record and both path command outputs under the canonical checkout safety predicates before running the final deletion command. A failed check leaves the feature worktree detached and the remote branch intact for inspection.
+Stop and inspect the post-cleanup `worktree-pool` record and both path command outputs under the canonical checkout safety predicates. A failed check leaves the feature worktree detached and the remote branch intact for inspection. Only after every predicate passes, run:
+
+```bash
+git push origin --delete <branch>
+```
 
 ## Deterministic verification commands
 

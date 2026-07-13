@@ -318,7 +318,6 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 </authority_gates>
 
 <merge_cleanup>
-
 Once `MERGE_READINESS` authorizes the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
 
 Immediately before the merge command, run every overlay-declared preflight check per `<overlay_safety_checks>`. Immediately after the detach command, run every overlay-declared post-cleanup check before local or remote branch deletion. These checks are part of the sequence for every overlay-selected merge flag, not optional prose around the default commands.
@@ -329,6 +328,7 @@ branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
 gh pr merge <pr-number> --rebase --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
+# Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
 held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
 if [ -n "$held_worktree" ]; then echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
 elif [ -n "$(git branch --list "$branch_from_pr")" ]; then git branch -D "$branch_from_pr"; fi
