@@ -85,7 +85,7 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
-1. Run the touched-scope deterministic verification required by the repository overlay over the stabilized changes. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
+1. Run the touched-scope deterministic verification required by the repository overlay over the stabilized changes. Do not run an aggregate gate whose generated-output drift check requires the source and generated artifacts to be committed before creating the checkpoint.
 2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local verification checkpoint.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
 4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.

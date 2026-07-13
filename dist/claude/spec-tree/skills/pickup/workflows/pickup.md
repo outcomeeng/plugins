@@ -20,11 +20,11 @@ Before asking the operator to continue, build a no-surprises proposal. The opera
 
 - Expected outcome — what product or workflow state will be true if continuation succeeds.
 - Current classification — `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`.
-- Changed product surface — answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is likely to be better if continuation succeeds. Before `/contextualize`, use the current session evidence without raw repository storage words; after `/contextualize`, refine the wording with the loaded node context. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, marketplace-source paths, installed-version receipts, CI/check ids, session ids, or archive receipts. Put those mechanics under inspection references or remaining-work expectation instead.
+- Changed product surface — answer which user-facing, operator-facing, methodology-facing, command, workflow, document, API, page, data projection, configuration, generated contract, skill contract, or other shipped product behavior is likely to be better if continuation succeeds. Before `/contextualize`, use the current session evidence without raw repository storage words; after `/contextualize`, refine the wording with the loaded node context. This is a value field, so keep transport, storage, and artifact identifiers out of it: no PR numbers or links, branch names, commit SHAs, merge commits, file names, file paths, generated-output paths, internal storage roots, installed-version receipts, CI/check ids, session ids, or archive receipts. Put those mechanics under inspection references or remaining-work expectation instead.
 - Planned skill path — methodology, authoring, testing, audit, review, commit, merge, or lifecycle skills expected before completion.
 - Evidence infrastructure — known test files, harnesses, generators, fixtures, evals, audit agents, review agents, generated artifacts, and validation commands the work is expected to touch or depend on.
 - Verification plan — deterministic commands and agentic gates expected before reporting completion.
-- Inspection references — where the operator can inspect the result: PR, commit, local file paths, generated `dist/` paths, session id, run token, or command output summary.
+- Inspection references — where the operator can inspect the result: PR, commit, local file paths, generated artifacts or local output paths when they exist, session id, run token, or command output summary.
 - Remaining-work expectation — whether completion leaves no continuation, creates or updates a coordination note, parks on an external blocker, or defers to an existing session owner.
 
 The proposal does not need to enumerate every eventual file. It must name the known surfaces and evidence categories clearly enough that approval does not hide foreseeable work. After the operator approves continuation, avoid surprises: if a new required skill, evidence surface, external dependency, ownership conflict, or verification class appears that was not represented in the proposal, stop at the next safe checkpoint and present the delta before continuing.
@@ -85,7 +85,7 @@ Show the `<persisted>` section:
 
 - What was committed (trust these are in place)
 - What is uncommitted (may need `/commit-changes` before continuing)
-- What insights were written to CLAUDE.md/memory/skills
+- What insights were written to CLAUDE.md, memory, or skills
 - What coordination notes were written and where
 
 **Step 7: Present coordination context**
