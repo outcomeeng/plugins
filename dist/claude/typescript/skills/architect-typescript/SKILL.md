@@ -221,6 +221,14 @@ When ADR creation is complete, provide:
 
 </output_format>
 
+<failure_modes>
+
+**Claude copied a nearby ADR instead of the canonical template.** What happened: the draft inherited stale sections and omitted the current verification gates. Why it failed: existing files displaced `/typescript-architecture-standards` and the template as structural authority. How to avoid: load the standards and canonical template before drafting, then compare every required section before validation.
+
+**Claude treated a coherent decision narrative as a finished ADR.** What happened: the design rationale was complete, but the verification rules did not state falsifiable dependency-injection and no-mocking constraints. Why it failed: prose quality replaced operational verification. How to avoid: require concrete ALWAYS/NEVER verification rules and run the repository-selected validation before submitting the ADR.
+
+</failure_modes>
+
 <success_criteria>
 ADR is complete when:
 

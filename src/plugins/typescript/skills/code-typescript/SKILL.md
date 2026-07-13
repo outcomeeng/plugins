@@ -419,6 +419,14 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 </tool_invocation>
 
+<failure_modes>
+
+**Claude converted every literal into a constant.** What happened: implementation guidance treated idiomatic `0`, `1`, and array indexes like domain vocabulary. Why it failed: a blanket local rule displaced `/typescript-standards` and obscured the constants whose meaning mattered. How to avoid: name domain-significant literals and preserve the standard's explicit idiomatic exemptions.
+
+**Claude presented dependency injection while retaining the direct dependency.** What happened: the approved example typed its injected field as `typeof execa`, so the module still needed the same direct import the rejected example prohibited. Why it failed: an injected value was mistaken for an independent boundary contract. How to avoid: define a source-owned runner interface and inject an implementation at the composition boundary.
+
+</failure_modes>
+
 <success_criteria>
 The implementation is ready for review when:
 

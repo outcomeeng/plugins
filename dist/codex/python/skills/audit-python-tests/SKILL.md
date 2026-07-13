@@ -27,6 +27,8 @@ This audit MUST remain read-only. ALWAYS produce only a verdict over test eviden
 
 <prerequisites>
 
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -212,7 +214,64 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill inherits the base `/audit-tests` JSON schema and row names. It appends coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings to `gate-1-assertion`; it appends repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` to `gate-2-architectural`. Every contributed finding populates the base fields `id`, `file`, `line`, `rule`, `severity`, `message`, `evidence_property`, and `required_fix`; this skill introduces no additional required fields. Append findings to matching base rows, never replace a row, and never emit `gate-0-deterministic`. Emit `APPROVED` only when all evidence-property checks pass; emit `REJECTED` when any property fails.
+Emit the complete `/audit-tests` verdict shape with Python findings merged into its rows. Append coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings to `gate-1-assertion`; append repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` to `gate-2-architectural`. Omit `gate-2-architectural` when Gate 1 fails. Never emit `gate-0-deterministic`.
+
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-tests",
+  "target": "<spec-node-path>",
+  "overall": "APPROVED | REJECTED",
+  "rows": [
+    {
+      "name": "gate-1-assertion",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "<stable-finding-id>",
+          "file": "<artifact-path>",
+          "line": null,
+          "rule": "<assertion-id-or-property-name>",
+          "severity": "REJECT | WARNING | INFO",
+          "message": "<one-line-evidentiary-gap>",
+          "evidence_property": "<failed-property>",
+          "required_fix": "<required-remediation>"
+        }
+      ]
+    },
+    {
+      "name": "gate-2-architectural",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "id": "<stable-finding-id>",
+          "file": "<test-file>",
+          "line": null,
+          "rule": "<duplication-pattern>",
+          "severity": "REJECT | WARNING | INFO",
+          "message": "<extraction-target>",
+          "evidence_property": "architectural-dry",
+          "required_fix": "<required-extraction>"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "branch": "<branch>",
+    "evidence_artifacts": [
+      { "path": "<artifact-path>", "kind": "<test|harness|generator|fixture-provider|fixture|discovery|production|oracle>" }
+    ],
+    "provenance": [
+      { "artifact": "<path>", "line": 1, "kind": "<case|input|expected|container-key|protocol-token|path|producer-identity|schema-field|projection>", "value": "<value-or-expression>", "owner": "<named-owner>", "source": "<named-source>" }
+    ],
+    "language_coverage": [
+      { "language": "python", "skill": "audit-python-tests", "completed": true, "overall": "APPROVED | REJECTED" }
+    ]
+  }
+}
+```
+
+`overall` is `APPROVED` only when every applicable row is `PASS`, every transitive artifact is inventoried, every provenance item is classified, and the Python language receipt is complete. A required inspection that cannot be completed produces a `FAIL` row and `REJECT` finding.
 </verdict_format>
 
 <failure_modes>
@@ -285,6 +344,6 @@ The Python test verdict is sound when:
 
 <reference_guides>
 
-- `${SKILL_DIR}/references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
+- `${SKILL_DIR}/references/python-test-audit-examples.md` — worked Python test-audit cases covering approval, severed and type-only coupling, and an imported harness that owns protocol payload. Read alongside the coupling and source-ownership checks for concrete verdict shapes.
 
 </reference_guides>

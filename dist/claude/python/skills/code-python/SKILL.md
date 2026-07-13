@@ -52,7 +52,7 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 
 Run the product's own canonical commands when it documents them — a `CLAUDE.md` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
 
-Follow the active runtime approval flow for every repository wrapper or direct fallback shell call. Codex output omits shell metadata when the workflow's narrow command boundary cannot be expressed and relies on per-call approval instead.
+Follow the active runtime approval flow for every repository wrapper or direct fallback shell call.
 
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
@@ -140,7 +140,7 @@ All must pass before declaring complete.
 
 **Step 3 — Verify fixes.**
 
-Follow the active runtime approval flow for every repository wrapper or direct fallback shell call. Codex output omits shell metadata when the workflow's narrow command boundary cannot be expressed and relies on per-call approval instead.
+Follow the active runtime approval flow for every repository wrapper or direct fallback shell call.
 
 ```bash
 # Run tests

@@ -69,20 +69,20 @@ Apply these coding rules while implementing:
 
 ```typescript
 // GOOD - Complete type annotations
+/**
+ * Process items according to config.
+ *
+ * @param items - List of item identifiers to process.
+ * @param config - Processing configuration.
+ * @param logger - Logger instance for diagnostics.
+ * @returns ProcessResult containing success/failure counts.
+ * @throws ValidationError if items contain invalid identifiers.
+ */
 export async function processItems(
   items: readonly string[],
   config: Config,
   logger: Logger,
 ): Promise<ProcessResult> {
-  /**
-   * Process items according to config.
-   *
-   * @param items - List of item identifiers to process.
-   * @param config - Processing configuration.
-   * @param logger - Logger instance for diagnostics.
-   * @returns ProcessResult containing success/failure counts.
-   * @throws ValidationError if items contain invalid identifiers.
-   */
   // ...
 }
 
