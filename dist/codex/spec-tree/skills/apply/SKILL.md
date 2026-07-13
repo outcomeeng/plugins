@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[--agent] [node-path]"
-allowed-tools: Read, Skill, Agent, request_user_input
+allowed-tools: Read, Skill, request_user_input
 ---
 
 <objective>
