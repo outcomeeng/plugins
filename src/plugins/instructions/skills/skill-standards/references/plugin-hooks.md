@@ -1,3 +1,13 @@
+{!% if target == 'claude' %!}
+<contents>
+
+- `<overview>` — hook safety boundary
+- `<session_identity>` — `SessionStart` identity propagation
+- `<hooks_directory>` — plugin layout and runtime paths
+- `<anti_patterns>` — unsafe hook forms
+
+</contents>
+
 <overview>
 
 Plugin hook patterns for injecting session identity and runtime context into agent Bash tool calls. Read before authoring a hook script or `hooks/hooks.json`.
@@ -111,3 +121,16 @@ It fails every property of the guarded command above:
 A hook missing any one of these guards is unsafe regardless of how reliable its script looks today.
 
 </anti_patterns>
+{!% else %!}
+<overview>
+
+Claude plugin hooks are not a Codex skill contract. Do not author `hooks`, `$CLAUDE_ENV_FILE`, `${CLAUDE_PLUGIN_ROOT}`, or `${CLAUDE_PLUGIN_DATA}` behavior for Codex from this reference.
+
+</overview>
+
+<codex_session_identity>
+
+Codex provides `$CODEX_THREAD_ID` to shell commands when session identity is available. Read it directly from the runtime environment; do not install a hook to synthesize a second identity variable.
+
+</codex_session_identity>
+{!% endif %!}

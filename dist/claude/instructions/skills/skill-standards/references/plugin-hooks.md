@@ -1,3 +1,12 @@
+<contents>
+
+- `<overview>` — hook safety boundary
+- `<session_identity>` — `SessionStart` identity propagation
+- `<hooks_directory>` — plugin layout and runtime paths
+- `<anti_patterns>` — unsafe hook forms
+
+</contents>
+
 <overview>
 
 Plugin hook patterns for injecting session identity and runtime context into agent Bash tool calls. Read before authoring a hook script or `hooks/hooks.json`.

@@ -79,42 +79,7 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-```yaml
-# Invoked skill (routing, workflow, creation)
----
-name: create-skills
-description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-  NEVER create or modify skills without this skill.
----
-```
-
-```yaml
-# Reference skill (standards, loaded programmatically by other skills)
----
-name: skill-standards
-user-invocable: false
-description: >-
-  Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
----
-```
-
-```yaml
-# User-only command (side effects; Claude must not auto-trigger)
----
-name: deploy
-disable-model-invocation: true
-description: Deploy the application to production
-allowed-tools: Bash(./deploy:*)
----
-```
-
-{!% if target == 'claude' %!}
 Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
-{!% else %!}
-Audit skills (`audit-*`) remain read-only and load composed skills by installed name through Codex's skill invocation surface — audit runs never modify files.
-{!% endif %!}
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
@@ -129,6 +94,8 @@ Audit skills (`audit-*`) remain read-only and load composed skills by installed 
 Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted by Codex's current skill validator. `name` matches the skill directory, `description` states the selection contract, and tool restrictions grant only capabilities the workflow needs. Do not project Claude-only visibility, preload, heartbeat, hook, or invocation semantics onto Codex fields.
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
+
+Read `${CLAUDE_SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
 
 </frontmatter>
 {!% endif %!}
@@ -467,6 +434,8 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 Reference skill-bundled files with the runtime's skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
 {!% else %!}
 Reference skill-bundled files with the Codex skill-directory token. Its scope and bundled-file examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. This standard declares no Codex hook-command or plugin-root variable until Codex documents that contract.
+
+Read `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md` for the explicit boundary between Claude hook contracts and Codex's runtime-provided session identity; do not project Claude hook fields or variables onto Codex.
 {!% endif %!}
 
 </templates_and_variables>

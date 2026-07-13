@@ -48,6 +48,8 @@ Every Codex SKILL.md starts with YAML frontmatter and uses only fields accepted 
 
 Reference skills stay hidden from ordinary user selection while remaining available to composed workflows through Codex's documented skill invocation surface. Audit skills remain read-only. A field or reachability behavior without a documented Codex contract is omitted.
 
+Read `${SKILL_DIR}/references/command-capabilities.md` before authoring arguments, dynamic context, tool restrictions, or file references for Codex.
+
 </frontmatter>
 
 <naming_conventions>
@@ -288,6 +290,8 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 <templates_and_variables>
 
 Reference skill-bundled files with the Codex skill-directory token. Its scope and bundled-file examples live in `${SKILL_DIR}/references/runtime-variables.md`. This standard declares no Codex hook-command or plugin-root variable until Codex documents that contract.
+
+Read `${SKILL_DIR}/references/plugin-hooks.md` for the explicit boundary between Claude hook contracts and Codex's runtime-provided session identity; do not project Claude hook fields or variables onto Codex.
 
 </templates_and_variables>
 

@@ -59,6 +59,7 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 <tool_restriction_security>
 
+{!% if target == 'claude' %!}
 `allowed-tools` restricts what a skill may do without per-call approval — a security boundary, not only a convenience:
 
 - **Specificity** — restrict bash to the narrowest pattern that works: `Bash(git add:*)`, `Bash(git commit:*)`, never bare `Bash` or `Bash(git *)` when specific verbs suffice. A broad grant re-admits the destructive and exfiltrating commands the restriction exists to bar.
@@ -68,6 +69,13 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 - ALWAYS: grant the narrowest `allowed-tools` the skill's task needs, restricting bash to specific verb patterns.
 - NEVER: grant a destructive or network tool a skill's task does not require, or leave a security-sensitive skill unrestricted.
+  {!% else %!}
+  Codex skill metadata names supported capability boundaries; it does not enforce Claude-style shell-subcommand patterns such as `Bash(git add:*)`.
+
+- ALWAYS: render only Codex-supported tool identifiers or capability categories in `allowed-tools`.
+- ALWAYS: keep exact command constraints in workflow prose and follow the active Codex approval policy for each shell call.
+- NEVER: describe a shell-subcommand pattern in Codex skill metadata as an approval or containment boundary.
+  {!% endif %!}
 
 </tool_restriction_security>
 

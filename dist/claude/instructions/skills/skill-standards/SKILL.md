@@ -78,37 +78,6 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-```yaml
-# Invoked skill (routing, workflow, creation)
----
-name: create-skills
-description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-  NEVER create or modify skills without this skill.
----
-```
-
-```yaml
-# Reference skill (standards, loaded programmatically by other skills)
----
-name: skill-standards
-user-invocable: false
-description: >-
-  Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
----
-```
-
-```yaml
-# User-only command (side effects; Claude must not auto-trigger)
----
-name: deploy
-disable-model-invocation: true
-description: Deploy the application to production
-allowed-tools: Bash(./deploy:*)
----
-```
-
 Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
