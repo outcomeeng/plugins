@@ -2,6 +2,20 @@
 
 Open items carried forward from the eval-harness refactor. None block the harness as shipped; each is a follow-up decision or enhancement.
 
+## Direct assertion flow beyond the runner slice
+
+Session `2026-07-12_22-40-10` owns the remaining evidence migration outside
+`tests/test_runner.compliance.l1.py`. Its next slice audits every non-runner
+co-located test and imported `outcomeeng_testing` module under this node,
+starting with the assertion entrypoints in `outcomeeng_testing/evals/cli.py`
+and `outcomeeng_testing/evals/factories.py`, then moves each verdict into the
+typed test file while leaving resource setup and observations in test
+infrastructure.
+
+Revisit after the runner slice reaches `origin/main`; sweep the full imported
+evidence chain and require the test-evidence audit to approve each migrated
+slice.
+
 ## Cross-suite parallelism
 
 The harness supports `--workers` for parallelism within a suite. `run --all` could also parallelize across suites. Defer; today's use case is one eval at a time.
