@@ -31,6 +31,7 @@ The skill's entire output is the JSON concern verdict. These examples show `PASS
   "target": "src/orders/",
   "overall": "REJECTED",
   "rows": [
+    { "name": "function-comprehension", "status": "PASS", "findings": [] },
     {
       "name": "design-coherence",
       "status": "FAIL",
@@ -45,7 +46,9 @@ The skill's entire output is the JSON concern verdict. These examples show `PASS
           "expected": "core order calculation is independently observable and external delivery crosses an injected boundary"
         }
       ]
-    }
+    },
+    { "name": "import-structure", "status": "PASS", "findings": [] },
+    { "name": "adr-pdr-compliance", "status": "PASS", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }

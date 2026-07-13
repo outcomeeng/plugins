@@ -38,6 +38,20 @@ This ADR-target example is the complete JSON output for a rejected TypeScript ar
       ]
     },
     {
+      "name": "test-double-exception-cases",
+      "status": "FAIL",
+      "findings": [
+        {
+          "rule": "unclassified-test-double",
+          "file": "spx/example.enabler/15-build-runner.adr.md",
+          "severity": "blocking",
+          "message": "The architecture permits a test double without a loaded Stage 5 exception case.",
+          "observed": "The decision calls the injected runner a fake without identifying the exception that requires it.",
+          "expected": "Every permitted test double is tied to one applicable Stage 5 exception from /test."
+        }
+      ]
+    },
+    {
       "name": "level-accuracy",
       "status": "FAIL",
       "findings": [
