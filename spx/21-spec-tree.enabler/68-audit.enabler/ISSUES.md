@@ -2,6 +2,34 @@
 
 Known follow-ups for the audit node. Coordination note; not spec truth.
 
+## Implementation audit accepts no unvalidated artifact context
+
+An implementation-auditor invocation is valid only for a non-empty set of
+implementation code, test, and implementation-architecture subjects. A spec,
+instruction, general documentation, or other artifact class in that requested
+subject set is a caller-shape error. SPX rejects the request atomically before a
+run journal is created; the auditor neither filters the request nor records the
+invalid artifact as unsupported implementation coverage.
+
+The verification context binds the exact committed changeset, exact subject
+paths, implementation audit class, workflow predicate, and run purpose. Run
+start consumes that context identity. Local and restored CI execution use the
+same validation path. An empty implementation subject set is also rejected; the
+caller skips implementation-auditor when no implementation context exists.
+
+This differs from a valid implementation subject whose language has no installed
+concern skill. That case starts a run, records unsupported or missing-skill
+coverage through the published audit payload contract, and ends rejected.
+
+Current SPX verification context records a changeset plus opaque caller-supplied
+predicate and workflow strings, while run start creates a generic audit context.
+It therefore cannot enforce this boundary yet.
+
+Revisit condition: a published SPX version accepts a caller-created context for
+run start and deterministically rejects empty or mixed-class implementation
+subjects before journal creation. At that point, advance the repository SPX
+floor and execute the Python runtime slice in `PLAN.md`.
+
 ## Generic auditor has no workflow-YAML audit surface
 
 During PR 420 local verification, the `auditor` agent rejected audit setup when

@@ -36,6 +36,9 @@ from outcomeeng.distribution.orchestration import (
     load_lefthook_config,
     path_is_under_runtime_root,
 )
+from outcomeeng_testing.harnesses.build_orchestration import (
+    observe_checkout_local_codex_recipe,
+)
 from outcomeeng.validation._steps import VALIDATION_STEPS
 from outcomeeng.validation.build_orchestration import (
     main as validate_build_orchestration,
@@ -73,13 +76,12 @@ def test_justfile_declares_build_skills_recipe() -> None:
 
 
 def test_justfile_declares_checkout_local_codex_recipe() -> None:
-    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
-    commands = just_recipe_commands(justfile, CODEX_LOCAL_RECIPE_NAME)
+    observation = observe_checkout_local_codex_recipe()
 
-    assert just_recipe_names(justfile).count(CODEX_LOCAL_RECIPE_NAME) == 1
-    assert CODEX_LOCAL_BUILD_ARGV in commands
-    assert PROJECT_RUNTIME_BUILD_ARGV in commands
-    assert CODEX_LOCAL_LAUNCH_ARGV in commands
+    assert observation.recipe_names.count(CODEX_LOCAL_RECIPE_NAME) == 1
+    assert CODEX_LOCAL_BUILD_ARGV in observation.commands
+    assert PROJECT_RUNTIME_BUILD_ARGV in observation.commands
+    assert CODEX_LOCAL_LAUNCH_ARGV in observation.commands
 
 
 def test_lefthook_runs_build_and_checks_dist_drift() -> None:

@@ -16,6 +16,12 @@ from outcomeeng.distribution.contracts import (
     SOURCE_ROOT_NAME as _SOURCE_ROOT_NAME,
     Target as _Target,
 )
+from outcomeeng.distribution.codex_project import (
+    CODEX_LOCAL_BUILD_ARGV,
+    CODEX_LOCAL_LAUNCH_ARGV,
+    CODEX_LOCAL_RECIPE_NAME,
+    PROJECT_RUNTIME_BUILD_ARGV,
+)
 
 SOURCE_PLUGINS_DIR: Final = Path(_SOURCE_ROOT_NAME) / "plugins"
 
@@ -120,10 +126,31 @@ def path_is_under_runtime_root(path: str, runtime_root: str) -> bool:
     )
 
 
+def check_checkout_local_codex_recipe(root: Path) -> list[str]:
+    """Report drift from the checkout-local Codex recipe contract."""
+    justfile = (root / JUSTFILE_PATH).read_text(encoding="utf-8")
+    commands = just_recipe_commands(justfile, CODEX_LOCAL_RECIPE_NAME)
+    errors: list[str] = []
+    if just_recipe_names(justfile).count(CODEX_LOCAL_RECIPE_NAME) != 1:
+        errors.append(f"{JUSTFILE_PATH}: expected one {CODEX_LOCAL_RECIPE_NAME} recipe")
+    for required in (
+        CODEX_LOCAL_BUILD_ARGV,
+        PROJECT_RUNTIME_BUILD_ARGV,
+        CODEX_LOCAL_LAUNCH_ARGV,
+    ):
+        if required not in commands:
+            errors.append(
+                f"{JUSTFILE_PATH}: {CODEX_LOCAL_RECIPE_NAME} must run "
+                f"{' '.join(required)}"
+            )
+    return errors
+
+
 def check_build_orchestration(root: Path) -> list[str]:
     """Report build orchestration drift from the runtime-tree contract."""
 
     errors: list[str] = []
+    errors.extend(check_checkout_local_codex_recipe(root))
 
     justfile = (root / JUSTFILE_PATH).read_text(encoding="utf-8")
     recipe_names = just_recipe_names(justfile)
