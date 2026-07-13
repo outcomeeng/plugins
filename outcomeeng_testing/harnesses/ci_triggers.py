@@ -108,17 +108,18 @@ def eval_trigger_repo(
         yield EvalTriggerRepo(repo_root=base, root=root, workflow=workflow)
 
 
-def assert_ci_policy_controls_trigger_contribution(policy: CiPolicy) -> None:
+def assert_ci_policy_controls_trigger_contribution() -> None:
     """Assert a suite's CI policy decides whether it contributes trigger paths."""
 
-    owned = ("src/plugins/example/**", "spx/example.md")
-    with eval_trigger_repo({_PROBE_SUITE: (policy, owned)}) as repo:
-        derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
-        contributes = policy is not CiPolicy.MANUAL
+    for policy in CiPolicy:
+        owned = ("src/plugins/example/**", "spx/example.md")
+        with eval_trigger_repo({_PROBE_SUITE: (policy, owned)}) as repo:
+            derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
+            contributes = policy is not CiPolicy.MANUAL
 
-        for owned_path in owned:
-            assert (owned_path in derived) is contributes
-        assert (repo.eval_dir_glob(_PROBE_SUITE) in derived) is contributes
+            for owned_path in owned:
+                assert (owned_path in derived) is contributes
+            assert (repo.eval_dir_glob(_PROBE_SUITE) in derived) is contributes
 
 
 def assert_universal_paths_always_contribute() -> None:
