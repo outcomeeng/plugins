@@ -11,10 +11,6 @@ allowed-tools: Read
 The shared merge-lifecycle vocabulary — the concepts, predicates, gates, commands, and tokens that `/merge`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` all read.
 </objective>
 
-<reference_note>
-This is a reference skill. /merge, /manage-github-pr, /open-pr, and /manage-pr load this vocabulary automatically. Do not invoke directly.
-</reference_note>
-
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
@@ -22,7 +18,7 @@ When loaded inside a repository, check for `spx/local/merging.md` at the reposit
 
 Topics the overlay MAY refine:
 
-- Extra pre-flight checks beyond `<branch_hygiene>`.
+- **Safety checks** — preflight checks that run immediately before a lifecycle entry's first checkout-sensitive mutation, and post-cleanup checks that run immediately after detach-based cleanup. See `<overlay_safety_checks>`.
 - The project's local deterministic-verification scope for `VERIFICATION_READINESS`: validation and testing commands for the touched scope by default, plus any documented escalation cases that require a wider local run. Full-repository validation and testing are CI's responsibility unless the overlay explicitly requires a local full-repository predicate for a class of change.
 - The terminal full deterministic gate: when the overlay requires a local full-repository bundle, its command runs only after all applicable evidence auditors and agentic reviews have converged on the same clean committed head. The full gate runs once at that terminal point, never before agentic verification, inside an agent, or concurrently with another heavy command. Any later change invalidates it and reopens the affected agentic gates before the full gate runs again.
 - Push command overrides — the explicit destination ref form must be preserved.
@@ -36,6 +32,12 @@ If `spx/local/merging.md` is absent or silent on a topic, the defaults in this r
 
 The overlay cannot override the open-ready mandate — once `VERIFICATION_READINESS` holds the PR is created `ready_for_review`. There is no draft phase and no gated draft-to-ready promotion; a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges.
 </repo_local_overlay>
+
+<overlay_safety_checks>
+When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry. `/manage-github-pr` and the direct-push transport run them before branch or commit work, `/open-pr` before push, direct-push runs them again before its default-branch push, `/manage-pr` runs them after its initial read-only inspection and before base sync, finding repair, commit, push, or merge work, and `/handoff` runs them before every detach. `<merge_cleanup>` repeats the checks immediately before the merge command. A failed check stops before mutation with its output preserved.
+
+When the overlay declares post-cleanup checks, run all of them immediately after every detach-based cleanup and before branch deletion, session persistence, deploy, release, or closeout. This applies both to `<merge_cleanup>` and whenever `/handoff` detaches a checkout. A failed post-cleanup check stops the remaining cleanup and preserves the detached checkout for inspection.
+</overlay_safety_checks>
 
 <delivered_value_boundary>
 
@@ -316,8 +318,9 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 </authority_gates>
 
 <merge_cleanup>
-
 Once `MERGE_READINESS` authorizes the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
+
+Immediately before the merge command, run every overlay-declared preflight check per `<overlay_safety_checks>`. Immediately after the detach command, run every overlay-declared post-cleanup check before local or remote branch deletion. These checks are part of the sequence for every overlay-selected merge flag, not optional prose around the default commands.
 
 ```bash
 base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
@@ -325,6 +328,7 @@ branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
 gh pr merge <pr-number> --rebase --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
+# Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
 held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
 if [ -n "$held_worktree" ]; then echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
 elif [ -n "$(git branch --list "$branch_from_pr")" ]; then git branch -D "$branch_from_pr"; fi
@@ -338,7 +342,7 @@ esac
 git status --porcelain
 ```
 
-Order matters: merge while the branch is still checked out — `gh pr merge` fails with "could not determine current branch" from a detached HEAD even with an explicit PR number — then detach this worktree, then delete the local branch, then delete the remote branch unless the host already auto-deleted it.
+Order matters: run preflight, merge while the branch is still checked out — `gh pr merge` fails with "could not determine current branch" from a detached HEAD even with an explicit PR number — detach this worktree, run post-cleanup checks, then delete the local and remote branches unless the host already auto-deleted the remote branch.
 
 **Why the default passes `--delete-branch=false` explicitly.** `gh pr merge --delete-branch` — or the bare flag where a `gh` version or config defaults it on — run from the worktree on the branch being merged, makes `gh` switch that worktree to the base branch as part of deleting the local branch. In a multi-worktree checkout where the base (for example `main`) is checked out in another worktree, that switch fails with `fatal: '<base>' is already used by worktree at <path>` — the merge completes on the host, but the local branch is left undeleted and the flow ends in an error state. Omitting the flag is not enough: this methodology ships to consumer environments whose `gh` default for the omitted flag is unknowable, so the default states `--delete-branch=false` explicitly, guaranteeing `gh` never attempts that switch regardless of environment. Deliberate deletion stays in the worktree-safe manual sequence above, which behaves identically in single- and multi-worktree checkouts and tolerates a host that already auto-deleted the remote branch. A project that is always single-worktree MAY opt the overlay into inline `gh pr merge --rebase --delete-branch` per `<repo_local_overlay>`.
 
@@ -346,7 +350,6 @@ The merge flag follows the overlay when it declares one (`--merge` or `--squash`
 
 </merge_cleanup>
 
-<step name="pr_check_wait">
 <pr_check_wait>
 
 Waiting for PR checks or the current-head CI review uses exactly one foreground command:
@@ -360,8 +363,6 @@ After that command exits, immediately run the full managing inspection again bef
 Forbidden waits: shell `sleep`, `gh run watch`, background keep-alives, and `until`/`while` polling. Never wrap `gh pr checks --watch` in a loop or background it. The Bash tool does not reliably reap detached subprocess trees across turns; fork-bomb-class accumulation results when those patterns are repeated.
 
 </pr_check_wait>
-</step>
-<step name="review_inspection">
 <review_inspection>
 
 Inspect all three review surfaces. Automated reviewers (and humans) may post as **formal reviews** OR as **PR-level issue comments** OR as **review-thread comments on specific lines** — checking only one or two surfaces misses feedback.
@@ -384,7 +385,6 @@ Completeness is checked per invocation. Every `gh pr view --json` invocation tha
 Compare timestamps against the most recent push. Entries after that push are re-reviews of the latest state — read them in full.
 
 </review_inspection>
-</step>
 <review_classification>
 
 Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
@@ -466,11 +466,7 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 <action_tokens>
 Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`, including the exact trigger condition and required follow-up for each token.
 </action_tokens>
-
-<self_reference>
-No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.
-
-</self_reference>
+<self_reference>No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.</self_reference>
 
 <success_criteria>
 The flows that consume this vocabulary satisfy their contracts when, at minimum:
@@ -493,6 +489,8 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions and structured base-sync conflict reports.
 - The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` — never in a worktree a live agent holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
 - `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.
+- Every overlay-declared preflight runs before the lifecycle entry's first checkout-sensitive mutation, direct-push repeats it before default-branch publication, and a failed check preserves its output and stops mutation.
+- Every detach-based cleanup runs overlay-declared post-cleanup checks before branch deletion, session persistence, deploy, release, or closeout; failure preserves the detached checkout and stops remaining mutation.
 - Merge runs via rebase merge followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; Claude does not enforce it), not Claude's choice from the gate alone.
 - The lifecycle runs from the determined changeset autonomously when the overlay declares no pre-mutation confirmation; when the overlay opts in, the structured-question plan presentation precedes the first mutating action and Claude waits for confirmation.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
