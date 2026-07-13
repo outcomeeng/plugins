@@ -8,6 +8,7 @@ description: >-
   Spec-node audit methodology preloaded by the spec-auditor agent. Dispatch
   spec-auditor to audit a spec node; the main conversation reaches this audit
   only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -36,7 +37,7 @@ A missing tag, a bare mechanism tag, a tag carried more than once, an assertion 
 
 **HEADINGS DESCRIBE CLAIM SHAPE.**
 
-The headings under `## Assertions` group claims by shape independently of verification type. `### Scenarios` holds specific existential interactions. `### Mappings`, `### Conformance`, `### Properties`, and `### Compliance` hold their corresponding universal claim shapes. A universal ALWAYS/NEVER rule remains under `### Compliance` when its verification type is `[audit]` or `[eval]`; the heading does not assign the test-only compliance assertion type. A verification-type heading such as `### Test`, `### Eval`, or `### Audit` is outside the node-template shape and is a `heading-mismatch` finding.
+The headings under `## Assertions` group claims by shape independently of verification type. `### Scenarios` holds specific existential interactions. `### Mappings`, `### Conformance`, `### Properties`, and `### Compliance` hold their corresponding universal claim shapes. Classify the assertion text before considering its tag: a `Given … when … then …` assertion is an existential scenario under every verification type and is mismatched under `### Compliance`; an `ALWAYS:` or `NEVER:` assertion is universal and belongs under `### Compliance` unless its content establishes a mapping, conformance rule, or property. A universal ALWAYS/NEVER rule remains under `### Compliance` when its verification type is `[audit]` or `[eval]`; the heading does not assign the test-only compliance assertion type. A verification-type heading such as `### Test`, `### Eval`, or `### Audit` is outside the node-template shape and is a `heading-mismatch` finding.
 
 **ATEMPORAL VOICE.**
 
@@ -87,7 +88,7 @@ Verify three structural properties:
 
 1. The node opens with a well-formed kind statement (no "Purpose" preamble) — an enabler's `PROVIDES … SO THAT … CAN …` carrying all three clauses, or an outcome's `WE BELIEVE THAT … WILL … CONTRIBUTING TO …` carrying all three. A missing clause, or a template that does not match the node's kind, is a malformed kind statement.
 2. An `## Assertions` section is present and carries at least one claim-shape heading.
-3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape independently of its verification-type tag. A `### Scenarios` heading whose assertions are universal is mismatched; a `### Compliance` heading whose assertions are universal remains valid with `[test]`, `[eval]`, or `[audit]`; and a verification-type heading such as `### Audit` is unsupported.
+3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape independently of its verification-type tag. Classify explicit forms first: `Given … when … then …` is a scenario and belongs only under `### Scenarios`; `ALWAYS:` and `NEVER:` are universal and belong under `### Compliance` unless their content establishes a mapping, conformance rule, or property. A `### Scenarios` heading whose assertions are universal is mismatched; a `### Compliance` heading whose assertions are universal remains valid with `[test]`, `[eval]`, or `[audit]`; a `### Compliance` heading containing a `Given … when … then …` assertion is mismatched; and a verification-type heading such as `### Audit` is unsupported.
 
 **No kind statement or no `## Assertions` section → REJECT — "missing-section." A kind statement that does not match its node's enabler/outcome template → REJECT — "malformed-kind-statement." An empty or unsupported heading, or a heading whose assertions have a different claim shape → REJECT — "heading-mismatch."**
 
@@ -177,6 +178,12 @@ How to avoid: Step 5 check 2 verifies the assertion type fits the quantifier. Re
 Claude read the evidence node's universal `[audit]` rules under `### Compliance` and rejected them as `heading-mismatch` because audit assertions carry no assertion type. That conflated the heading's claim-shape grouping with the test-only compliance assertion type and contradicted the canonical node templates.
 
 How to avoid: Step 3 judges the heading from the claim's quantifier and form independently of its verification-type tag. Keep universal ALWAYS/NEVER rules under `### Compliance` with `[test]`, `[eval]`, or `[audit]`; reject verification-type headings such as `### Audit` instead.
+
+**Failure 4: Passed an existential scenario under `### Compliance`**
+
+Claude read a `Given … when … then …` assertion under `### Compliance` and approved the node because the assertion carried `[eval]`. The tag described how the verdict was established; it did not change the assertion from a specific existential interaction into a universal rule.
+
+How to avoid: Step 3 classifies explicit assertion form before verification type. Treat every `Given … when … then …` assertion as a scenario and reject it under any heading other than `### Scenarios` with `heading-mismatch`.
 
 </failure_modes>
 
