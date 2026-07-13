@@ -120,7 +120,7 @@ Pure computation and filesystem tests at `l1` use direct function calls, typed f
 <exception_implementations>
 When `/test` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `${SKILL_DIR}/references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
 
-Exception 5 (combinatorial cost: configurable fake with real-shaped behavior) is listed in `<router_mapping>` but does not yet have a TypeScript example.
+Exceptions 5 (combinatorial cost) and 7 (contract probes) are defined in `<router_mapping>` but do not have bundled TypeScript examples.
 </exception_implementations>
 
 <l2_patterns>

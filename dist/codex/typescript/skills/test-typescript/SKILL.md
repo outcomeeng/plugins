@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(npx vitest:*), Bash(npx tsc:*), Bash(npx eslint:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash
 ---
 
 <prerequisites>
@@ -46,9 +46,9 @@ Resolve `$node_path` from the optional argument. When it is empty, use the full 
 
 **Output:** Test files written to `$node_path/tests/` directory
 
-**Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
+**Prerequisites:** Invoke every prerequisite declaration above and proceed only after the standards and `/test` router load successfully. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. A canonical wrapper outside this skill's direct-command allowlist requires per-call approval for that exact command. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, and `npx eslint . --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. When the ESLint fallback is required, run it from the repository root and record that repository-root scope.
+**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Follow the active runtime's approval flow for the exact wrapper command; never infer approval from shell patterns in skill metadata. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, and `npx eslint . --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. When the ESLint fallback is required, run it from the repository root and record that repository-root scope.
 
 **Workflow:**
 
@@ -302,7 +302,7 @@ See `/typescript-test-standards` for:
 - **Level tooling** - Vitest vs Playwright, l1/l2/l3 infrastructure
 - **Router mapping** - `/test` Stage decisions to TypeScript patterns
 - **l1 patterns** - Pure functions, typed factories, temp dirs
-- **Exception implementations** - The 7 exception cases in TypeScript
+- **Exception implementations** - Full examples for exceptions 1–4 and 6; router mappings for exceptions 5 and 7
 - **l2 patterns** - Typed harness factory and usage
 - **l3 patterns** - Credential management, fail-loudly policy
 - **Dependency injection** - Typed interfaces and recording doubles
