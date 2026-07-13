@@ -62,6 +62,8 @@ Before reading any product or spec content, invoke `/sync-base` so the loaded co
 
 If the invocation supplies no target path, ABORT: "A full `spx/...` node path is required. Invoke `/contextualize spx/{path-to-node}`."
 
+Before the first filesystem lookup, require the target to be a relative path beginning with `spx/`, with no empty, `.` or `..` segments, and require every segment after `spx/` to match the node-directory grammar `{index}-{slug}.{enabler|outcome}`. Otherwise ABORT: "Invalid target path: {target-path}. Supply one full `spx/...` node path."
+
 ```bash
 # Find the product file
 Glob: "spx/*.product.md"
