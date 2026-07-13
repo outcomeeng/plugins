@@ -30,15 +30,15 @@ Skills follow a **reference pattern** to avoid duplication:
 2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
 3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards loaded by other skills, never invoked directly.
 
-For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed. A cross-plugin build directive is different: `{!% require_skill 'plugin:skill' %!}` requires the fully qualified plugin and skill name, such as `spec-tree:test`, so generated prerequisite guidance resolves one installed skill without ambiguity.
+For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed.
 
 **Skill-tool composition:** A skill may invoke another skill when the parent workflow explicitly composes that capability. Composition obeys these limits:
 
-1. The parent carries `Skill` in `allowed-tools` and names the exact installed skill to invoke.
+1. The parent carries the runtime's skill-invocation capability in `allowed-tools` and names the exact installed skill to invoke.
 2. The target remains model-invocable; `disable-model-invocation: true` is forbidden on composed and reference skills.
 3. The parent owns sequencing, validates the returned shape, and merges the child result into its own output contract.
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
-5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the Skill tool when their full standards govern the work.
+5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
 </skill_organization>
 

@@ -8,7 +8,7 @@ Runtime variable scopes and how to reference skill-bundled files. Read this befo
 
 Use the runtime's skill-directory token to reference files within the current skill directory.
 
-Authored source examples, using files bundled with the skill that contains the prose:
+Examples using files bundled with the skill that contains the prose:
 
 ```markdown
 Read `${SKILL_DIR}/references/<bundled-reference>.md`

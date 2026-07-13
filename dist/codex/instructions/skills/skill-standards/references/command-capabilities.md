@@ -2,13 +2,13 @@
 
 A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them.
 
-Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
+Use syntax supported by the active runtime surface.
 
-Prefer the intersection of Claude Code and Codex syntax only when it improves reliability or convenience:
+Prefer stable forms that preserve the caller's input contract:
 
 - Use `$ARGUMENTS` for free-form whole-instruction capture, especially when one skill forwards instructions to another skill or when a user-invoked skill accepts natural-language instructions.
 - Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill Claude or a wrapper agent invokes.
-- Use richer Claude-only authoring forms when they make the authored skill clearer; if Codex cannot consume that form directly, update build rendering rather than weakening the source.
+- Use richer runtime-specific forms only when the active runtime documents them and they preserve the skill's input contract.
 
 </overview>
 
