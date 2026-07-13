@@ -74,6 +74,8 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 - ALWAYS: render only Codex-supported tool identifiers or capability categories in `allowed-tools`.
 - ALWAYS: keep exact command constraints in workflow prose and follow the active Codex approval policy for each shell call.
+- ALWAYS: omit shell from `allowed-tools` when Codex cannot express the workflow's narrow command boundary; require per-call approval instead.
+- NEVER: replace a narrow Claude shell grant with bare `Bash` in Codex output.
 - NEVER: describe a shell-subcommand pattern in Codex skill metadata as an approval or containment boundary.
   {!% endif %!}
 
