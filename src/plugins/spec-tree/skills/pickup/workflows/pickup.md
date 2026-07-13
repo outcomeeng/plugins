@@ -73,8 +73,8 @@ The script reads only — it reaches `spx session show`, `spx spec status`, `gh`
 Present the per-claim verdict report. Then, for each node in the `<nodes>` section, check for coordination-note paths only:
 
 ```bash
-Glob: "spx/{node-path}/PLAN.md"
-Glob: "spx/{node-path}/ISSUES.md"
+Glob: "{full-spx-node-path}/PLAN.md"
+Glob: "{full-spx-node-path}/ISSUES.md"
 ```
 
 If found, list their paths. Do not read `PLAN.md` or `ISSUES.md` content in this step. `/contextualize` reads node-local coordination notes after product context and ancestry are loaded; acting on note content before then violates the spec-tree context guarantee.
@@ -147,7 +147,7 @@ For every other classification, present a post-context checkpoint with a no-surp
 Pickup reviewed session `[claimed-session-id]`.
 
 Goal: [session goal]
-Loaded context: spx/{node-path}
+Loaded context: {selected-full-spx-node-path}
 Classification: [classification]
 
 Evidence:
@@ -182,7 +182,7 @@ Wait for the user's selection before continuing. The checkpoint completes only a
 After the checkpoint completes, emit a canonical post-context marker using the claimed session id from `<PICKUP_CLAIM>` and carry the full claimed-session set from the most recent `<CLAIMED_SESSIONS ids="...">`:
 
 ```text
-<PICKUP_CHECKPOINT id="[claimed-session-id]" claimed="[first-pickup],...,[claimed-session-id]" target="spx/{node-path}" mode="[ask|auto-continue]">
+<PICKUP_CHECKPOINT id="[claimed-session-id]" claimed="[first-pickup],...,[claimed-session-id]" target="{selected-full-spx-node-path}" mode="[ask|auto-continue]">
   next_action: [selected or resumed next action]
 </PICKUP_CHECKPOINT>
 ```
