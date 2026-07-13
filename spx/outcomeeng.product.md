@@ -27,11 +27,6 @@ The marketplace serves plugin producers and plugin consumers.
 - Marketplace maintainers render and publish runtime-native plugin artifacts.
 - Product engineers consume those artifacts inside their own repositories.
 
-## Product structure
-
-- Agentic execution is the bounded semantic domain for configured-agent task intent, execution policy, and runtime-independent invariants.
-- Coding agents are the provided runtime boundary through which Claude Code and Codex render, invoke, and configure agentic execution in their native protocols.
-
 ## Product hypothesis
 
 WE BELIEVE THAT a plugin marketplace delivering Spec Tree methodology through Codex and Claude Code plugins for context loading, spec authoring, testing, and TDD implementation
