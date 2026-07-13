@@ -3,6 +3,7 @@
 from outcomeeng_testing.harnesses.eval_report import (
     assert_report_cost_summary_preserves_metadata_absence,
     assert_report_files_match_serialized_payload,
+    assert_run_command_report_preserves_configured_ceilings,
     assert_run_command_writes_eval_local_json_report,
     assert_report_serialization_matches_fixture_contract,
     assert_report_serialization_preserves_configured_ceilings,
@@ -32,3 +33,7 @@ def test_report_files_match_serialized_payload() -> None:
 
 def test_run_command_writes_eval_local_json_report() -> None:
     assert_run_command_writes_eval_local_json_report()
+
+
+def test_run_command_report_preserves_configured_ceilings() -> None:
+    assert_run_command_report_preserves_configured_ceilings()

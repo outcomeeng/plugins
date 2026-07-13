@@ -30,7 +30,10 @@ from outcomeeng_evals.testing.factories import (
     make_bimodal_cache_suite_result,
     make_suite_result,
 )
-from outcomeeng_testing.harnesses.eval_run_exit import configured_threshold_run
+from outcomeeng_testing.harnesses.eval_run_exit import (
+    configured_ceiling_run,
+    configured_threshold_run,
+)
 
 _FIXTURE_PATH = Path(__file__).parents[1] / "fixtures/evals/history_rows.json"
 
@@ -212,6 +215,7 @@ def assert_history_compliance() -> None:
     _assert_history_row_aggregates_token_counts_across_trials()
     _assert_history_row_token_aggregates_are_none_without_metadata()
     _assert_run_command_appends_eval_local_history()
+    _assert_run_command_history_preserves_configured_ceilings()
 
 
 def _assert_run_command_appends_eval_local_history() -> None:
@@ -221,6 +225,14 @@ def _assert_run_command_appends_eval_local_history() -> None:
         transcript = rows[0][HISTORY_TRANSCRIPT_FIELD]
         assert isinstance(transcript, str)
         assert (eval_dir / transcript).is_file()
+
+
+def _assert_run_command_history_preserves_configured_ceilings() -> None:
+    with configured_ceiling_run() as run:
+        rows = _read_history(run.eval_dir / HISTORY_FILENAME)
+        assert len(rows) == 1
+        assert rows[0]["max_budget_usd"] == pytest.approx(run.max_budget_usd)
+        assert rows[0]["timeout_seconds"] == run.timeout_seconds
 
 
 def _run_in_temporary_directory(assertion: Callable[[Path], None]) -> None:

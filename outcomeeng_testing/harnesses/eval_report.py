@@ -29,7 +29,10 @@ from outcomeeng_evals.testing.factories import (
     make_report_suite_result,
     make_stability_suite_result,
 )
-from outcomeeng_testing.harnesses.eval_run_exit import configured_threshold_run
+from outcomeeng_testing.harnesses.eval_run_exit import (
+    configured_ceiling_run,
+    configured_threshold_run,
+)
 
 _FIXTURE_PATH = Path(__file__).parents[1] / "fixtures/evals/report_suite.json"
 
@@ -157,6 +160,18 @@ def assert_run_command_writes_eval_local_json_report() -> None:
         json_reports = tuple(runs_dir.glob(f"*{JSON_REPORT_SUFFIX}"))
         assert len(json_reports) == 1
         assert json_reports[0].parent == runs_dir
+
+
+def assert_run_command_report_preserves_configured_ceilings() -> None:
+    """Drive explicit CLI ceilings through the persisted JSON report."""
+
+    with configured_ceiling_run() as run:
+        reports = tuple((run.eval_dir / RUNS_DIRNAME).glob(f"*{JSON_REPORT_SUFFIX}"))
+        assert len(reports) == 1
+        with reports[0].open(encoding="utf-8") as report_file:
+            payload = json.load(report_file)
+        assert payload["max_budget_usd"] == pytest.approx(run.max_budget_usd)
+        assert payload["timeout_seconds"] == run.timeout_seconds
 
 
 def _assert_json_report_file(tmp_path: Path, fixture: ReportFixture) -> None:

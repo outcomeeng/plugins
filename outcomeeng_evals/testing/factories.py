@@ -741,6 +741,10 @@ def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
 
     for character in magic:
         assert OWNED_PATH_ALPHABET.fullmatch(character) is None
+        _assert_definition_raises(
+            lines=(f'owned_paths = ["src{character}nested"]',),
+            match="owned_paths",
+        )
 
 
 def assert_definition_accepts_trials_at_cap() -> None:

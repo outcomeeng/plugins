@@ -30,6 +30,8 @@ MIN_WORKERS = 1
 MAX_WORKERS = 16
 RUNNER_FACTORY_KEY: Final = "runner_factory"
 PLUGIN_DIR_OPTION: Final = "--plugin-dir"
+MAX_BUDGET_USD_OPTION: Final = "--max-budget-usd"
+TIMEOUT_SECONDS_OPTION: Final = "--timeout-seconds"
 
 
 class RunnerFactory(Protocol):
@@ -67,7 +69,7 @@ class RunnerFactory(Protocol):
     ),
 )
 @click.option(
-    "--max-budget-usd",
+    MAX_BUDGET_USD_OPTION,
     type=float,
     default=DEFAULT_MAX_BUDGET_USD,
     show_default=True,
@@ -80,7 +82,7 @@ class RunnerFactory(Protocol):
     help="Model passed through to the Claude CLI. Defaults to eval.toml model.",
 )
 @click.option(
-    "--timeout-seconds",
+    TIMEOUT_SECONDS_OPTION,
     type=click.IntRange(min=1),
     default=DEFAULT_TIMEOUT_SECONDS,
     show_default=True,
