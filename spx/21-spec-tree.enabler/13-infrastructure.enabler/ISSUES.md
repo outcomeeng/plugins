@@ -145,3 +145,16 @@ Likely descendants, created only when assertions justify the extra depth:
 | `65-workflow-evolution.enabler` | `21-dependency-maintenance.enabler`, `32-runner-runtime-upgrades.enabler`, `43-workflow-rearchitecture.enabler`         |
 
 Coordinate with the sibling `22-github-actions.enabler` before creating these children. That directory may be another agent's active work on the same problem, and the final tree should have one coherent GitHub Actions branch rather than duplicate siblings.
+
+## Parent infrastructure evidence requires source-contract repair
+
+The property assertion in [`spx/21-spec-tree.enabler/13-infrastructure.enabler/infrastructure.md`](infrastructure.md) links to `tests/test_infrastructure.property.l1.py`, which has never existed. Commit `b8817fb61b284b628c9f37d38d61c47d19ebab87` introduced the link while placing the concrete host-authentication, workflow-observability, and remote-parsing behavior under [`spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler`](21-github-actions.enabler/32-workflow-observability.enabler/workflow-observability.md).
+
+The repair must preserve the semantic hierarchy and current test-evidence standards:
+
+1. Decide whether the parent keeps a cross-cutting invariant or delegates the behavior completely to the workflow-observability child. Remove the stale parent link if the child owns the complete contract.
+2. If deterministic parent evidence remains, reclassify the assertion from `property` when its domain is the finite, source-owned helper set. Route the replacement through `/test` before choosing `mapping` or `compliance`.
+3. Expose source-owned command-construction contracts from `src/plugins/spec-tree/skills/inspect-github-actions/scripts/gh_access.py` and `src/plugins/spec-tree/skills/inspect-github-actions/scripts/workflow_inspect.py` before asserting command selection. Evidence must import those contracts rather than copy `gh api`, `gh run view --json`, or `git remote get-url origin` literals.
+4. Repair parallel evidence debt in `spx/21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-observability.enabler/tests/`: executed tests currently own path, helper, schema, and allowed-module constants and use monkeypatch replacement around the behavior they claim to verify. Apply the current `/test-python` source-ownership and dependency-boundary rules across the whole touched evidence class.
+
+Revisit this issue before the next change to the `inspect-github-actions` helper scripts, or before claiming `spx/21-spec-tree.enabler/13-infrastructure.enabler` as passing.
