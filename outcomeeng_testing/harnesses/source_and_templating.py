@@ -56,7 +56,7 @@ from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
 )
-from outcomeeng_testing.generators.directives import directives
+from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
 from outcomeeng_testing.generators.fragments import (
     fragment_bodies,
     include_chain_depths,
@@ -89,6 +89,15 @@ def implementation_is_ready() -> bool:
 def directive_roundtrip_property_holds() -> bool:
     run_replayable_property(
         _directive_roundtrip_property,
+        seed_value=SOURCE_PROPERTY_SEED,
+        replay_path=DIRECTIVE_PROPERTY_REPLAY_PATH,
+    )
+    return True
+
+
+def standard_jinja_syntax_property_holds() -> bool:
+    run_replayable_property(
+        _standard_jinja_syntax_property,
         seed_value=SOURCE_PROPERTY_SEED,
         replay_path=DIRECTIVE_PROPERTY_REPLAY_PATH,
     )
@@ -150,6 +159,20 @@ def property_failure_notes_include_seed_and_replay() -> bool:
 @given(directive=directives())
 def _directive_roundtrip_property(directive: Directive) -> None:
     assert parse_directives(format_directive(directive)) == (directive,)
+
+
+@seed(SOURCE_PROPERTY_SEED)
+@settings(
+    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    deadline=None,
+    print_blob=True,
+)
+@given(text=standard_jinja_syntax())
+def _standard_jinja_syntax_property(text: str) -> None:
+    with TemporaryDirectory() as temporary_directory:
+        shared_root = Path(temporary_directory)
+        assert parse_directives(text) == ()
+        assert render_text(text, shared_root=shared_root) == text
 
 
 @seed(SOURCE_PROPERTY_SEED)
@@ -222,14 +245,6 @@ def _recursive_include_property(case: SourceScenario, depth: int) -> None:
         assert rendered == case.fragment_body
 
 
-def standard_jinja_block_has_no_directives() -> bool:
-    return all(_standard_jinja_block_passes(case) for case in source_scenarios())
-
-
-def standard_jinja_variable_has_no_directives() -> bool:
-    return all(_standard_jinja_variable_passes(case) for case in source_scenarios())
-
-
 def unknown_directive_raises() -> bool:
     return _raises_directive_syntax(
         f"{BLOCK_DELIMITER_START} unknown_directive 'arg' {BLOCK_DELIMITER_END}"
@@ -300,13 +315,6 @@ def jinja_environment_uses_custom_delimiters() -> bool:
         )
 
 
-def standard_jinja_syntax_passes_through() -> bool:
-    return (
-        standard_jinja_block_has_no_directives()
-        and standard_jinja_variable_has_no_directives()
-    )
-
-
 def require_skill_expands_to_neutral_guidance() -> bool:
     return all(_require_expands_neutrally(case) for case in source_scenarios())
 
@@ -365,7 +373,10 @@ def _missing_fragment_raises(case: SourceScenario) -> bool:
         builder.shared_root.mkdir(parents=True)
         missing = _fragment_path(case, case.cycle_topic)
         try:
-            expand_include(IncludeDirective(missing), shared_root=builder.shared_root)
+            render_text(
+                format_directive(IncludeDirective(missing)),
+                shared_root=builder.shared_root,
+            )
         except IncludeResolutionError:
             return True
         return False
@@ -479,26 +490,6 @@ def _fragment_required(case: SourceScenario) -> bool:
         except SourceFormatError:
             return True
         return False
-
-
-def _standard_jinja_block_passes(case: SourceScenario) -> bool:
-    text = f"{{% if {case.skill} %}}{case.fragment_body}{{% endif %}}"
-    with TemporaryDirectory() as tmp:
-        builder = _source_tree(Path(tmp), case)
-        return (
-            parse_directives(text) == ()
-            and render_text(text, shared_root=builder.shared_root) == text
-        )
-
-
-def _standard_jinja_variable_passes(case: SourceScenario) -> bool:
-    text = f"{{{{ {case.skill} }}}}"
-    with TemporaryDirectory() as tmp:
-        builder = _source_tree(Path(tmp), case)
-        return (
-            parse_directives(text) == ()
-            and render_text(text, shared_root=builder.shared_root) == text
-        )
 
 
 def _require_expands_neutrally(case: SourceScenario) -> bool:

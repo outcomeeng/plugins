@@ -15,9 +15,19 @@ from hypothesis import strategies as st
 from hypothesis.strategies import DrawFn, SearchStrategy
 
 from outcomeeng.distribution.build import (
+    BLOCK_DELIMITER_END,
+    BLOCK_DELIMITER_START,
     Directive,
     IncludeDirective,
     RequireSkillDirective,
+    VARIABLE_DELIMITER_END,
+    VARIABLE_DELIMITER_START,
+)
+from outcomeeng.distribution.contracts import (
+    STANDARD_JINJA_BLOCK_DELIMITER_END,
+    STANDARD_JINJA_BLOCK_DELIMITER_START,
+    STANDARD_JINJA_VARIABLE_DELIMITER_END,
+    STANDARD_JINJA_VARIABLE_DELIMITER_START,
 )
 
 _KEBAB_ALPHABET = "abcdefghijklmnopqrstuvwxyz"
@@ -28,6 +38,7 @@ MAX_SEGMENT_LENGTH = 12
 MIN_PATH_DEPTH = 1
 MAX_PATH_DEPTH = 4
 MARKDOWN_EXTENSION = ".md"
+MAX_STANDARD_JINJA_BODY_LENGTH = 64
 
 
 def _kebab_segment_strategy() -> SearchStrategy[str]:
@@ -82,3 +93,33 @@ def require_skill_directives(draw: DrawFn) -> RequireSkillDirective:
 def directives() -> SearchStrategy[Directive]:
     """Strategy producing either IncludeDirective or RequireSkillDirective."""
     return st.one_of(include_directives(), require_skill_directives())
+
+
+def standard_jinja_syntax() -> SearchStrategy[str]:
+    """Generate standard-Jinja forms that contain no custom build delimiter."""
+    custom_delimiter_characters = "".join(
+        {
+            *BLOCK_DELIMITER_START,
+            *BLOCK_DELIMITER_END,
+            *VARIABLE_DELIMITER_START,
+            *VARIABLE_DELIMITER_END,
+        }
+    )
+    body = st.text(
+        alphabet=st.characters(blacklist_characters=custom_delimiter_characters),
+        max_size=MAX_STANDARD_JINJA_BODY_LENGTH,
+    )
+    return st.one_of(
+        body.map(
+            lambda value: (
+                f"{STANDARD_JINJA_BLOCK_DELIMITER_START}{value}"
+                f"{STANDARD_JINJA_BLOCK_DELIMITER_END}"
+            )
+        ),
+        body.map(
+            lambda value: (
+                f"{STANDARD_JINJA_VARIABLE_DELIMITER_START}{value}"
+                f"{STANDARD_JINJA_VARIABLE_DELIMITER_END}"
+            )
+        ),
+    )

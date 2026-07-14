@@ -14,7 +14,6 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     shared_topic_references_travel_with_fragment,
     shared_topic_without_fragment_is_rejected,
     skill_dir_escape_survives_jinja_pass,
-    standard_jinja_syntax_passes_through,
     well_formed_source_tree_builds,
 )
 
@@ -41,10 +40,6 @@ def test_shared_topic_references_travel_with_fragment() -> None:
 
 def test_jinja_environment_uses_custom_delimiters() -> None:
     assert jinja_environment_uses_custom_delimiters()
-
-
-def test_standard_jinja_syntax_passes_through_rendering() -> None:
-    assert standard_jinja_syntax_passes_through()
 
 
 def test_require_skill_expands_to_neutral_guidance() -> None:
