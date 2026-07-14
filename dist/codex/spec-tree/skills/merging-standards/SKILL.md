@@ -444,7 +444,7 @@ Read `${SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycl
 
 **Failure 1: Required gone-upstream tracking for local cleanup.** Upstream configuration is optional metadata, so merged local branches without it accumulated. Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry.
 
-**Failure 2: Force-deleted the local branch before proving safety.** The branch could contain commits absent from the base. Follow `references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
+**Failure 2: Force-deleted the local branch before proving safety.** The branch could contain commits absent from the base. Follow `${SKILL_DIR}/references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
 
 **Failure 3: Let `gh pr merge` clean up the branch.** Host or CLI behavior can switch onto a base held by another worktree and fail after merging. Pass `--delete-branch=false`, then run the explicit cleanup sequence.
 

@@ -7,7 +7,7 @@ Run every overlay-declared preflight check before the merge command and every po
 ```bash
 base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-gh pr merge <pr-number> --rebase --delete-branch=false
+gh pr merge <pr-number> <overlay-merge-flag-or---rebase> --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"
 # Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
