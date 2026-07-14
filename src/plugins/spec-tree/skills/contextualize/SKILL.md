@@ -28,7 +28,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
   - Wrong: `/contextualize 32-parser.outcome`
   - Right: `/contextualize spx/{path-to-node}`
 
-**BOOTSTRAP MODE**: When the target path doesn't exist yet and the operation is authoring, return an empty manifest with `bootstrap=true` instead of aborting. This allows creating the first node in an empty tree.
+**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared caller operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; authoring a new node contextualizes its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
 
 </essential_principles>
 
@@ -75,12 +75,11 @@ Glob: "spx/*.product.md"
 Glob: "$target/*.md"  (node targets only)
 ```
 
-If the product file is missing, ABORT: "No product file found in spx/. Create one with `/author` first."
+If the product file is missing, ABORT: "No product file found in spx/. Create one with `/bootstrap` first."
 
-If a node target path doesn't exist:
+If a node target path doesn't exist, ABORT: "Target path not found: $target. Check the path or contextualize its existing parent before creating it with `/author`."
 
-- If operation is `author` → return empty manifest with `bootstrap=true`
-- Otherwise → ABORT: "Target path not found: {path}. Check the path or create it with `/author`."
+For the exact product-root target `spx/`, list top-level node directories after locating the product spec. Set `bootstrap=true` when none exist and `bootstrap=false` otherwise. For every node target, set `bootstrap=false`.
 
 For a node target, extract the path segments from product root to target. Each segment is a directory to walk. For the product-root target, the segment list is empty.
 
@@ -242,6 +241,7 @@ Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 
 Product: {product-name}
 Target: $target ({enabler|outcome|product root})
+Bootstrap: {true|false}
 
 Documents loaded:
   Product spec: {product-file}
@@ -294,7 +294,7 @@ When a required document is missing, ABORT immediately with:
 
 | Missing       | Remediation                                                                           |
 | ------------- | ------------------------------------------------------------------------------------- |
-| Product file  | "Create with `/author` — every tree needs a product spec"                             |
+| Product file  | "Create with `/bootstrap` — every tree needs a product spec"                          |
 | Ancestor spec | "Node directory exists but spec file is missing. Create `{slug}.md`"                  |
 | Target spec   | "Target directory exists but spec file is missing. Create `{slug}.md` with `/author`" |
 
@@ -373,6 +373,7 @@ Context loading is complete when:
 - [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
+- [ ] Bootstrap state derives only from `$target` and the observed tree: exact `spx/` with a product spec and no nodes is `true`; every node target is `false`, and a missing node target aborts
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
 

@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Return an assertion whose evidence link is unresolved to the calling workflow for `/test` classification before writing the artifact. Never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -163,7 +163,7 @@ Read the appropriate foundation template through `/understand`. Fill it using th
 **Assertion rules** (from the assertion-types foundation loaded by `/understand`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: a repository-relative `[test]` path supplied under the active language-specific `/test-*` naming contract for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- Each assertion in the decision-ready packet must already link to evidence selected by the calling workflow through `/test`: a repository-relative `[test]` path under the active language-specific `/test-*` naming contract for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
@@ -193,10 +193,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
+- [ ] All assertions carry caller-supplied evidence links selected through `/test`: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet); unresolved evidence returns to the calling workflow before any write
 - [ ] Verification type and assertion type are left to `/test` — authoring does not select them
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
-- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
+- [ ] Spec compliance assertions preserve the caller-supplied verification-type tag selected through `/test`: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file follows the repository's active language-specific `/test-*` naming contract, including its evidence-kind and execution-level encoding; if a legacy or noncanonical name is found, flag it as an imperfection and surface it via AskUserQuestion before proceeding
 - [ ] No content misplacement (per `/understand`'s what-goes-where operational reference)
 
@@ -376,7 +376,7 @@ An authored artifact is sound when:
 - [ ] Its artifact type and structure match the applicable canonical template
 - [ ] Its full path and index are canonical, collision-free, and consistent with the loaded ordering constraints
 - [ ] Its declarations use atemporal voice, full-path Spec Tree references, and the required node or decision shape
-- [ ] Existing evidence links are valid and unresolved evidence needs are explicitly handed to `/test`; authoring invents neither verification types nor assertion types
+- [ ] Every assertion carries a valid caller-supplied evidence link; unresolved evidence is returned to the calling workflow for `/test` classification before writing, and authoring invents neither verification types nor assertion types
 - [ ] Every directly affected lower declaration is aligned, with remaining downstream work recorded at the first affected node when needed
 - [ ] Every reported changed artifact exists at its canonical path and passes the repository's declared validation
 
