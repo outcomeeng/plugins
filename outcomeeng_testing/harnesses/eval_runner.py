@@ -50,24 +50,21 @@ def assert_subprocess_environment_strips_claudecode_marker() -> None:
 def assert_metadata_matches_captured_envelope() -> None:
     fixture = _fixture()
 
-    metadata = _metadata_from_envelope(
-        fixture.envelope,
-        wall_clock_ms=fixture.expected_metadata.duration_ms or 0.0,
-    )
+    metadata = _metadata_from_envelope(fixture.envelope)
 
     assert metadata == fixture.expected_metadata
 
 
 def assert_metadata_preserves_absence() -> None:
-    fixture = _fixture()
+    metadata = _metadata_from_envelope({})
 
-    metadata = _metadata_from_envelope(
-        {}, wall_clock_ms=fixture.expected_metadata.duration_ms or 0.0
-    )
-
+    assert metadata.duration_ms is None
     assert metadata.total_cost_usd is None
     assert metadata.input_tokens is None
     assert metadata.output_tokens is None
+    assert metadata.cache_read_input_tokens is None
+    assert metadata.cache_creation_input_tokens is None
+    assert metadata.num_turns is None
     assert metadata.stop_reason is None
 
 

@@ -341,7 +341,6 @@ def make_recording_model_process_launcher(
             returncode=returncode,
             stdout=json.dumps(fixture.envelope) if returncode == os.EX_OK else "",
             stderr="" if returncode == os.EX_OK else "model process failed",
-            duration_ms=fixture.expected_metadata.duration_ms or 0.0,
         )
     )
 

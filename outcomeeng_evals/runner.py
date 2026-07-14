@@ -24,7 +24,6 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -103,7 +102,6 @@ class ModelProcessResult:
     returncode: int
     stdout: str
     stderr: str
-    duration_ms: float
 
 
 class ModelProcessLauncher(Protocol):
@@ -115,7 +113,6 @@ class ModelProcessLauncher(Protocol):
 def launch_model_process(invocation: ModelProcessInvocation) -> ModelProcessResult:
     """Execute the repository's single automated model-process boundary."""
 
-    start = time.perf_counter()
     completed = subprocess.run(
         invocation.argv,
         input=invocation.prompt,
@@ -129,7 +126,6 @@ def launch_model_process(invocation: ModelProcessInvocation) -> ModelProcessResu
         returncode=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
-        duration_ms=(time.perf_counter() - start) * 1000.0,
     )
 
 
@@ -187,7 +183,7 @@ class ClaudeCliRunner:
         envelope = json.loads(completed.stdout)
         return RunResult(
             text=_assistant_text(envelope),
-            metadata=_metadata_from_envelope(envelope, completed.duration_ms),
+            metadata=_metadata_from_envelope(envelope),
         )
 
     def _effective_bare(self, environment: Mapping[str, str]) -> bool:
@@ -242,20 +238,13 @@ def _assistant_text(envelope: object) -> str:
     )
 
 
-def _metadata_from_envelope(
-    envelope: dict[str, object], wall_clock_ms: float
-) -> RunMetadata:
-    """Pull cost and timing fields out of a claude JSON envelope.
+def _metadata_from_envelope(envelope: dict[str, object]) -> RunMetadata:
+    """Pull optional cost and timing fields out of a Claude JSON envelope."""
 
-    Falls back to wall-clock duration when the envelope omits ``duration_ms``.
-    """
-    duration_ms = _coerce_float(envelope.get("duration_ms"))
-    if duration_ms is None:
-        duration_ms = wall_clock_ms
     raw_usage = envelope.get("usage")
     usage: dict[str, object] = raw_usage if isinstance(raw_usage, dict) else {}
     return RunMetadata(
-        duration_ms=duration_ms,
+        duration_ms=_coerce_float(envelope.get("duration_ms")),
         total_cost_usd=_coerce_float(envelope.get("total_cost_usd")),
         input_tokens=_coerce_int(usage.get("input_tokens")),
         output_tokens=_coerce_int(usage.get("output_tokens")),
