@@ -55,6 +55,7 @@ Before starting Step 3, determine the product language:
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
 - Multiple language markers exist -> check the spec node for language indicators, or ask the user
+- No supported language marker exists -> STOP before Step 3. Report the markers checked and that the installed apply flow supports TypeScript, Python, and Rust. Ask the operator to identify the implementation language only when an installed language plugin supplies the matching architect, test, code, and audit skills; otherwise report the unsupported-language blocker.
 
 Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
 
