@@ -1,14 +1,24 @@
+<contents>
+
+- `<overview>` — runtime syntax and input-contract principles
+- `<arguments>` — argument declaration, substitution, and empty-input behavior
+- `<dynamic_context>` — bounded state-dependent context injection
+- `<tool_restriction_security>` — runtime-specific capability boundaries
+- `<file_references>` — renderer tokens, product files, and bundled skill files
+
+</contents>
+
 <overview>
 
 A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them.
 
-Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
+Use Claude Code's supported SKILL.md syntax.
 
-Prefer the intersection of Claude Code and Codex syntax only when it improves reliability or convenience:
+Prefer stable forms that preserve the caller's input contract:
 
 - Use `$ARGUMENTS` for free-form whole-instruction capture, especially when one skill forwards instructions to another skill or when a user-invoked skill accepts natural-language instructions.
-- Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill Claude or a wrapper agent invokes.
-- Use richer Claude-only authoring forms when they make the authored skill clearer; if Codex cannot consume that form directly, update build rendering rather than weakening the source.
+- Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill invocation or wrapper.
+- Use richer runtime-specific forms only when the active runtime documents them and they preserve the skill's input contract.
 
 </overview>
 
@@ -27,7 +37,8 @@ A skill that operates on user-supplied input handles it explicitly:
 - ALWAYS: preserve whole-string capture with `$ARGUMENTS` when collapsing input into positional tokens would change behavior.
 - ALWAYS: substitute every declared named argument in the body, and declare every `$name` the body substitutes.
 - NEVER: migrate a free-form instruction skill from `$ARGUMENTS` to a named positional argument unless the runtime contract proves the named argument preserves the full rest-of-line input.
-- NEVER: require authored source to avoid Claude-supported syntax solely because Codex generated output may need a different form; fix the renderer for Codex.
+
+- NEVER: require authored source to avoid Claude-supported syntax solely because Codex generated output may need a different form; the marketplace renderer owns Codex adaptation.
 
 Examples:
 
@@ -63,6 +74,26 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 </tool_restriction_security>
 
 <file_references>
+
+Authored marketplace source is a build template, not the final runtime
+SKILL.md. Use the source-owned renderer tokens when a product filename or tool
+name varies by runtime:
+
+```markdown
+Read `CLAUDE.md` for the active runtime's product guide.
+Use `AskUserQuestion` for the active runtime's structured-question tool.
+```
+
+The renderer resolves `file('root_guide')` to the target harness's root guide
+filename and resolves `tool(...)` through the runtime-token registry. An
+explicit target argument, such as `file('root_guide', 'codex')` or
+`tool('ask_user', 'claude')`, selects that target's emitted token. These forms
+are valid only in authored marketplace source that the distribution build
+renders. Generated runtime SKILL.md files MUST contain the resolved filename or
+tool name and MUST contain no unresolved renderer token.
+
+Renderer tokens do not address skill-bundled files. A bundled reference,
+workflow, template, or script always uses the skill-directory token below.
 
 A skill body references a specific product file with the `@` prefix (`@path/to/file`), injecting its content — the same affordance a command had. Use `@` for product files in the consumer's tree; combine it with an argument (`@$target`) for a caller-named product file.
 

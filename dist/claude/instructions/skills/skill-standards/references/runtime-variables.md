@@ -1,6 +1,6 @@
 <overview>
 
-Runtime variable scopes and how to reference skill-bundled files. Read this before referencing files from a SKILL.md body or wiring hook `command:` paths.
+Runtime variable scopes and how to reference skill-bundled files.
 
 </overview>
 
@@ -8,7 +8,7 @@ Runtime variable scopes and how to reference skill-bundled files. Read this befo
 
 Use the runtime's skill-directory token to reference files within the current skill directory. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`.
 
-Authored source examples, using files bundled with the skill that contains the prose:
+Examples using files bundled with the skill that contains the prose:
 
 ```markdown
 Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
