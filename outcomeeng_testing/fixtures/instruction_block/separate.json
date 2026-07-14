@@ -1,0 +1,7 @@
+{
+  "files": {
+    "CLAUDE.md": "# Claude Root\n\nClaude repository instructions.\n",
+    "AGENTS.md": "# Agents Root\n\nCodex repository instructions.\n"
+  },
+  "symlinks": {}
+}
