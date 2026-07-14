@@ -7,7 +7,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Agentic-execution domain
 
 - **Current:** New structure
-- **Receiver:** `spx/43-agentic-execution.domain`
+- **Receiver:** [`spx/43-agentic-execution.enabler`](43-agentic-execution.enabler/agentic-execution.md), projected as the agentic-execution domain when the methodology admits domain suffixes
 - **Action:** Invoke `decompose-next` on [`spx/43-agentic-execution.enabler`](43-agentic-execution.enabler/agentic-execution.md). Review the receiver, reach, and sibling index before authoring the configured-agent task-profile product decision record (PDR).
 - **Prerequisite:** Retain the `.enabler` holding suffix until Spec Tree tooling admits `.domain`. Keep the target kind in the reviewed projection.
 - **Verify:** Run the PDR audit, spec audit, `spx validation markdown`, and `spx spec status --format json`.
@@ -15,7 +15,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Configured-agent classification
 
 - **Current:** [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md), [`spx/21-spec-tree.enabler/17-audit.adr.md`](21-spec-tree.enabler/17-audit.adr.md), and the [configured-agent definitions](../src/plugins/)
-- **Receiver:** `spx/43-agentic-execution.domain`
+- **Receiver:** [`spx/43-agentic-execution.enabler`](43-agentic-execution.enabler/agentic-execution.md), projected as the agentic-execution domain when the methodology admits domain suffixes
 - **Action:** Classify every configured agent as verification, implementation, or maintenance. Define explicit per-agent Claude Code and Codex model and effort selections. Update direct decision citations at semantic consumer boundaries.
 - **Prerequisite:** The task-profile PDR governs semantics. Runtime renderers preserve explicit choices without cross-runtime inference.
 - **Verify:** Run the PDR audit, affected spec audits, subagent audit, focused agent-conversion tests, and changeset review.
@@ -23,7 +23,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Codex custom-agent conversion
 
 - **Current:** [`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler`](18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md)
-- **Receiver:** `spx/68-coding-agents.surface/21-codex.surface/21-custom-agents.surface/21-custom-agent-conversion.capability`
+- **Receiver:** [`spx/68-coding-agents.enabler`](68-coding-agents.enabler/coding-agents.md); the future projection places custom-agent conversion under the Codex custom-agent surface
 - **Action:** Invoke `decompose-next` on [`spx/68-coding-agents.enabler`](68-coding-agents.enabler/coding-agents.md) to project the Claude Code and Codex peer surfaces. Split Codex custom-agent conversion from installation.
 - **Prerequisite:** Retain `.enabler` holding suffixes for every projected child. Assign target indices from consumer-side dependency evidence.
 - **Verify:** Run spec audits, focused conversion tests, the implementation audit, and changeset review.
@@ -31,7 +31,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Codex custom-agent installation
 
 - **Current:** Installation behavior in [`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler`](18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md) and sync sequencing in [`spx/32-distribution.enabler/21-sync.enabler`](32-distribution.enabler/21-sync.enabler/sync.md)
-- **Receiver:** `spx/68-coding-agents.surface/21-codex.surface/21-custom-agents.surface/32-custom-agent-installation.capability`
+- **Receiver:** [`spx/68-coding-agents.enabler`](68-coding-agents.enabler/coding-agents.md); the future projection places custom-agent installation under the Codex custom-agent surface
 - **Action:** Move installation ownership beneath the Codex custom-agent surface. Sync retains marketplace sequencing and invokes installation.
 - **Prerequisite:** Conversion precedes installation. Installation remains separate from marketplace sync orchestration.
 - **Verify:** Run spec audits, focused installation and sync tests, the implementation audit, and changeset review.
@@ -41,7 +41,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Verification branch
 
 - **Current dependency:** [`spx/21-spec-tree.enabler/16-verification.enabler`](21-spec-tree.enabler/16-verification.enabler/verification.md)
-- **Provider:** `spx/43-agentic-execution.domain`
+- **Provider:** [`spx/43-agentic-execution.enabler`](43-agentic-execution.enabler/agentic-execution.md), projected as the agentic-execution domain when domain suffixes become available
 - **Missing context:** The index-21 verification branch cannot inherit a later sibling specification as lower-index context.
 - **Bridge:** Cite the task-profile PDR directly from the first semantic consumer specs and decisions.
 - **Settlement:** Move verification-agent semantics beneath the target domain, or place the provider before its consumers in the modernized structure.
@@ -49,7 +49,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Audit branch
 
 - **Current dependency:** [`spx/21-spec-tree.enabler/17-audit.adr.md`](21-spec-tree.enabler/17-audit.adr.md) and [`spx/21-spec-tree.enabler/68-audit.enabler`](21-spec-tree.enabler/68-audit.enabler/audit.md)
-- **Provider:** `spx/43-agentic-execution.domain`
+- **Provider:** [`spx/43-agentic-execution.enabler`](43-agentic-execution.enabler/agentic-execution.md), projected as the agentic-execution domain when domain suffixes become available
 - **Missing context:** Audit-specific configured-agent taxonomy precedes its shared semantic provider.
 - **Bridge:** Keep audit composition in the audit decision and cite the task-profile PDR for shared task and model policy.
 - **Settlement:** Audit-specific consumers retain only audit composition. Shared configured-agent semantics resolve through the target domain.
@@ -57,7 +57,7 @@ This plan moves shared configured-agent semantics into the agentic-execution dom
 ### Agent conversion
 
 - **Current dependency:** [`spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler`](18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md)
-- **Provider:** `spx/68-coding-agents.surface`
+- **Provider:** [`spx/68-coding-agents.enabler`](68-coding-agents.enabler/coding-agents.md), projected as the coding-agents surface when surface suffixes become available
 - **Missing context:** Conversion and installation behavior remains in an earlier build holding path.
 - **Bridge:** Treat the current node as inventory. Change no ownership claim until the target child projection is reviewed.
 - **Settlement:** Move conversion and installation declarations, evidence, and implementation beneath the Codex custom-agent surface.
