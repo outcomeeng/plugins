@@ -42,7 +42,6 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Properties
 
-- Every rendered router block contains exactly one blank line between its opening marker and its first body content ([test](tests/test_instruction_block.property.l1.py))
 - After generation, each router block's `template_version` equals the installed template version ([test](tests/test_instruction_block.property.l1.py))
 - Every rendered managed surface ends with exactly one trailing newline ([test](tests/test_instruction_block.property.l1.py))
 - Staleness ordering matches dotted-numeric version order: a product version is stale exactly when it is numerically below the installed template version ([test](tests/test_instruction_block.property.l1.py))
@@ -54,6 +53,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 ### Compliance
 
 - ALWAYS: generation emits and validates a managed router that requires a live `SPEC_TREE_FOUNDATION` marker before direct filesystem access under `spx/` or access to source and test content, while exempting `spx session` operations — including inspection, archive, and release — `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology until their output is followed into product content ([test](tests/test_instruction_block.compliance.l1.py))
+- ALWAYS: every rendered router block contains exactly one blank line between its opening marker and its first body content ([test](tests/test_router_spacing.compliance.l1.py))
 - ALWAYS: the Codex router block begins with the operator-override rule as its first rendered body content, before the `Spec Tree Instructions` heading, while the Claude router block omits that Codex-only rule ([audit])
 - ALWAYS: the Codex router block acquires subagents through individual sequential `multi_agent_v1.spawn_agent` calls, records each returned agent id verbatim before issuing another spawn, permits already-spawned agents to execute concurrently, and forbids fail-fast batched spawning, fabricated agent ids, and hard-coded thread limits ([audit])
 - ALWAYS: the Codex router block governs every spawned subagent through a registry-driven lifecycle that preserves the complete final result before immediate close, treats timeout as non-final, closes abandoned work explicitly, reconciles known ids before new spawning and after spawn failure, interruption, or compaction, and leaves no known subagent open before asking the operator, merging, publishing, or ending the turn ([audit])
