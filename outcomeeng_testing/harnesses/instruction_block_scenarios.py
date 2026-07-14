@@ -56,15 +56,16 @@ def _case_write_preserves_shared_region_and_independent_prose(
     harness.write_both_root_files_with_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    marker = "INDEPENDENT PROSE MARKER"
+    independent_prose = harness.ROOT_CLAUDE_BODY
     claude = repo / harness.INSTRUCTION_CLAUDE
     claude.write_text(
-        claude.read_text(encoding="utf-8") + f"\n{marker}\n", encoding="utf-8"
+        claude.read_text(encoding="utf-8") + "\n" + independent_prose,
+        encoding="utf-8",
     )
 
     harness.run_generator_write_primary(repo, _template(tmp_path))
     result = claude.read_text(encoding="utf-8")
-    assert marker in result
+    assert independent_prose in result
     assert (
         MODULE.parse_shared_regions(result)[harness.SHARED_REGION_NAME]
         == harness.SHARED_REGION_BODY

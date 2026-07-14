@@ -236,8 +236,18 @@ def materialize_root_instruction_topology(
 
 
 def harness_line(harness: str) -> str:
-    """The body the harness emits inside a harness block — what render keeps or drops."""
-    return f"{harness.upper()} runs the audit as a subagent."
+    """Read the harness-specific body from the inert whole-template fixture."""
+    open_marker = f"<!-- harness:{harness} -->"
+    close_marker = f"<!-- /harness:{harness} -->"
+    try:
+        body = _BASE_TEMPLATE.split(open_marker, maxsplit=1)[1].split(
+            close_marker, maxsplit=1
+        )[0]
+    except IndexError as error:
+        raise AssertionError(
+            f"template fixture has no harness block: {harness}"
+        ) from error
+    return body.strip()
 
 
 def render_build_macro() -> str:
@@ -505,8 +515,8 @@ def assert_refresh_pr_step_exits_cleanly_without_drift() -> None:
         repo.mkdir()
         init_git_identity(repo)
         git_command(repo, "config", "commit.gpgsign", "false")
-        (repo / INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
-        (repo / INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
+        (repo / INSTRUCTION_CLAUDE).write_text(ROOT_CLAUDE_BODY, encoding="utf-8")
+        (repo / INSTRUCTION_AGENTS).write_text(ROOT_AGENTS_BODY, encoding="utf-8")
         git_command(repo, "add", ".")
         git_command(repo, "commit", "-m", "seed instruction files")
         output = run_refresh_pr_step(repo, gh_log)
@@ -528,19 +538,19 @@ def assert_refresh_pr_step_stages_obsolete_deletions() -> None:
         git_command(repo, "config", "commit.gpgsign", "false")
         spx_dir = repo / "spx"
         spx_dir.mkdir()
-        for path in (
-            repo / INSTRUCTION_CLAUDE,
-            repo / INSTRUCTION_AGENTS,
-            spx_dir / INSTRUCTION_CLAUDE,
-            spx_dir / INSTRUCTION_AGENTS,
-        ):
-            path.write_text(f"{path.name}\n", encoding="utf-8")
+        for root_dir in (repo, spx_dir):
+            root_dir.joinpath(INSTRUCTION_CLAUDE).write_text(
+                ROOT_CLAUDE_BODY, encoding="utf-8"
+            )
+            root_dir.joinpath(INSTRUCTION_AGENTS).write_text(
+                ROOT_AGENTS_BODY, encoding="utf-8"
+            )
         git_command(repo, "add", ".")
         git_command(repo, "commit", "-m", "seed instruction files")
         git_command(repo, "branch", "-M", "main")
         git_command(repo, "push", "-u", "origin", "main")
-        (repo / INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
-        (repo / INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
+        (repo / INSTRUCTION_CLAUDE).write_text(ROOT_SHARED_BODY, encoding="utf-8")
+        (repo / INSTRUCTION_AGENTS).write_text(ROOT_SHARED_BODY, encoding="utf-8")
         (spx_dir / INSTRUCTION_CLAUDE).unlink()
         (spx_dir / INSTRUCTION_AGENTS).unlink()
         run_refresh_pr_step(repo, gh_log)
