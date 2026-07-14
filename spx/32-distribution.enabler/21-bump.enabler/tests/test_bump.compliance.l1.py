@@ -6,10 +6,12 @@ from outcomeeng_testing.harnesses.bump import (
     already_bumped_plugin_is_skipped_not_rewritten,
     already_bumped_plugin_skipped_in_dry_run,
     already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped,
+    auto_detected_segment_is_patch_for_modification_only_changes,
     auto_detection_never_writes_a_major_bump_through_the_orchestrator,
     dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary,
     dry_run_skips_already_bumped_plugin_and_reports_the_other,
     dual_manifest_plugin_writes_every_owned_manifest,
+    explicit_segment_patch_overrides_detected_minor_with_warning,
     missing_required_tool_fails_fast_with_diagnostic,
     mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max,
     mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump,
@@ -74,3 +76,11 @@ def test_dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary() -> None:
 
 def test_auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> None:
     assert auto_detection_never_writes_a_major_bump_through_the_orchestrator()
+
+
+def test_auto_detected_segment_is_patch_for_modification_only_changes() -> None:
+    assert auto_detected_segment_is_patch_for_modification_only_changes()
+
+
+def test_explicit_segment_patch_overrides_detected_minor_with_warning() -> None:
+    assert explicit_segment_patch_overrides_detected_minor_with_warning()

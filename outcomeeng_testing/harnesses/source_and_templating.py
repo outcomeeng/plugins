@@ -62,6 +62,7 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
 from outcomeeng_testing.generators.fragments import (
     fragment_bodies,
+    include_chain_indices,
     inert_fragment_bodies,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
@@ -237,24 +238,28 @@ def _rendered_include_property(
 @given(
     case=st.sampled_from(source_scenarios()),
     body=inert_fragment_bodies(),
+    indices=include_chain_indices(),
 )
-def _recursive_include_property(case: SourceScenario, body: str) -> None:
+def _recursive_include_property(
+    case: SourceScenario,
+    body: str,
+    indices: list[int],
+) -> None:
     with TemporaryDirectory() as temporary_directory:
         builder = SrcTreeBuilder(Path(temporary_directory))
-        builder.add_shared_topic(case.scope, case.inner_topic, body)
-        base_template = _include_text(case, case.inner_topic)
-        base_rendered = render_text(base_template, shared_root=builder.shared_root)
-        builder.add_shared_topic(
-            case.scope,
-            case.outer_topic,
-            base_template,
-        )
-        extended_rendered = render_text(
-            _include_text(case, case.outer_topic),
+        topics = tuple(f"{case.outer_topic}-{index}" for index in indices)
+        for position, topic in enumerate(topics):
+            fragment = (
+                body
+                if position == len(topics) - 1
+                else _include_text(case, topics[position + 1])
+            )
+            builder.add_shared_topic(case.scope, topic, fragment)
+        rendered = render_text(
+            _include_text(case, topics[0]),
             shared_root=builder.shared_root,
         )
-        assert base_rendered == body
-        assert extended_rendered == base_rendered
+        assert rendered == body
 
 
 def unknown_directive_raises() -> bool:

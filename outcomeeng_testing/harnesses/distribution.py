@@ -204,8 +204,24 @@ def skill_collection_union_holds() -> bool:
 
 
 def distribution_workflow_uses_runtime_and_source_paths() -> bool:
-    """Return whether workflow triggers match distribution source contracts."""
+    """Exercise workflow path rules against conforming and violating variants."""
     paths = _push_paths(_workflow())
+    runtime_path = f"{CLAUDE_DIST_RELATIVE}/{RECURSIVE_GLOB}"
+    source_path = f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
+    retired_source_path = f"{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
+    codex_path = f"{DIST_DIR_NAME}/{Target.CODEX.value}/{RECURSIVE_GLOB}"
+    violating_variants = (
+        paths - {runtime_path},
+        paths - {source_path},
+        paths | {retired_source_path},
+        paths | {codex_path},
+    )
+    return _distribution_paths_comply(paths) and all(
+        not _distribution_paths_comply(variant) for variant in violating_variants
+    )
+
+
+def _distribution_paths_comply(paths: set[str]) -> bool:
     runtime_path = f"{CLAUDE_DIST_RELATIVE}/{RECURSIVE_GLOB}"
     source_path = f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
     retired_source_prefix = f"{PLUGINS_DIR_NAME}/"
@@ -219,8 +235,18 @@ def distribution_workflow_uses_runtime_and_source_paths() -> bool:
 
 
 def distribution_workflow_uses_project_python() -> bool:
-    """Return whether workflow Python matches project metadata."""
-    return _distribution_python_version(_workflow()) == _requires_python_version()
+    """Exercise Python-version alignment against a source-derived mismatch."""
+    required_version = _requires_python_version()
+    workflow_version = _distribution_python_version(_workflow())
+    violating_version = f"{MINIMUM_VERSION_PREFIX}{required_version}"
+    return _python_versions_comply(
+        workflow_version,
+        required_version,
+    ) and not _python_versions_comply(violating_version, required_version)
+
+
+def _python_versions_comply(workflow_version: str, required_version: str) -> bool:
+    return workflow_version == required_version
 
 
 @seed(DISTRIBUTION_PROPERTY_SEED)
