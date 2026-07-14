@@ -1074,6 +1074,7 @@ def assert_language_block_appears_iff_enabled() -> None:
 def assert_check_maps_router_state_to_report() -> None:
     """Assert every declared router state maps to its check report."""
     module = load_instruction_block_module()
+    status = module.InstructionStatus
     with _temporary_root() as directory:
         tmp_path = pathlib.Path(directory).resolve()
         repo = tmp_path / "repo"
@@ -1088,9 +1089,9 @@ def assert_check_maps_router_state_to_report() -> None:
                 module.instruction_status(claude, NEW_VERSION, languages, repo),
             )
 
-        assert check((LANG_PRIMARY,)) == "current"
+        assert check((LANG_PRIMARY,)) == status.CURRENT
         claude.unlink()
-        assert check((LANG_PRIMARY,)) == "absent"
+        assert check((LANG_PRIMARY,)) == status.ABSENT
         stale_block = module.render(
             build_template(OLD_VERSION),
             (LANG_PRIMARY,),
@@ -1100,9 +1101,9 @@ def assert_check_maps_router_state_to_report() -> None:
         claude.write_text(
             module.prepend_router_block(stale_block, ""), encoding="utf-8"
         )
-        assert check((LANG_PRIMARY,)) == "stale"
+        assert check((LANG_PRIMARY,)) == status.STALE
         run_generator_write_primary(repo, template)
-        assert check((LANG_SECONDARY,)) == "stale"
+        assert check((LANG_SECONDARY,)) == status.STALE
 
 
 def assert_check_maps_shared_region_state_to_report() -> None:

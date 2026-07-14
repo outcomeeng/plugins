@@ -270,7 +270,7 @@ def _case_cli_check_reports_absent_when_one_file_missing(
     )
     assert code == 0
     # absent dominates: one missing file makes the worst-across-both status absent
-    assert capsys.readouterr().out.strip() == "absent"
+    assert capsys.readouterr().out.strip() == MODULE.InstructionStatus.ABSENT
 
 
 def _case_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None:
@@ -290,7 +290,7 @@ def _case_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None
         MODULE.instruction_status(
             claude, harness.NEW_VERSION, tuple(reversed(languages)), repo
         )
-        == "current"
+        == MODULE.InstructionStatus.CURRENT
     )
 
 
@@ -312,13 +312,13 @@ def _case_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> N
 
     # router first -> current
     claude.write_text(MODULE.prepend_router_block(block, "PRODUCT"), encoding="utf-8")
-    assert check() == "current"
+    assert check() == MODULE.InstructionStatus.CURRENT
     # product prose before the router -> stale; the router must be the first content of the file
     claude.write_text(
         "PRODUCT PROSE FIRST\n\n" + MODULE.prepend_router_block(block, "PRODUCT"),
         encoding="utf-8",
     )
-    assert check() == "stale"
+    assert check() == MODULE.InstructionStatus.STALE
 
 
 def _case_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
@@ -337,7 +337,7 @@ def _case_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
         MODULE.instruction_status(
             claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
         )
-        == "stale"
+        == MODULE.InstructionStatus.STALE
     )
 
 
@@ -397,7 +397,7 @@ def _case_legacy_marker_block_reported_stale_and_replaced(
         MODULE.instruction_status(
             claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
         )
-        == "stale"
+        == MODULE.InstructionStatus.STALE
     )
 
     harness.run_generator_write_primary(repo, _template(tmp_path))
@@ -475,7 +475,7 @@ def _case_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> No
         MODULE.instruction_status(
             claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
         )
-        == "stale"
+        == MODULE.InstructionStatus.STALE
     )
     assert "commands" in MODULE.shared_region_drift(repo)
 
