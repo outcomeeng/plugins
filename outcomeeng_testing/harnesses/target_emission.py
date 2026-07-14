@@ -17,7 +17,8 @@ from outcomeeng.distribution.build import (
     COMMANDS_SUBDIR_NAME,
     DISABLE_MODEL_INVOCATION_FIELD,
     EmissionAction,
-    EXECUTION_TIME_INJECTION_TOKEN,
+    EXECUTION_TIME_INJECTION_END,
+    EXECUTION_TIME_INJECTION_START,
     IGNORED_SOURCE_DIRECTORY_NAMES,
     IGNORED_SOURCE_FILE_SUFFIXES,
     PLUGIN_SUBDIRS,
@@ -27,6 +28,7 @@ from outcomeeng.distribution.build import (
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     IncludeDirective,
     build,
+    contains_execution_time_skill_dir_injection,
     format_directive,
     frontmatter_field_names,
     plan_emissions,
@@ -260,16 +262,35 @@ def frontmatter_strip_is_idempotent() -> bool:
 
 
 def outputs_exclude_execution_time_injection() -> bool:
-    token = EXECUTION_TIME_INJECTION_TOKEN.encode()
     snapshot = _canonical_emission_snapshot()
+    return (
+        _execution_time_injection_detector_covers_generated_commands()
+        and all(
+            not contains_execution_time_skill_dir_injection(text)
+            for target in Target
+            for text in _text_files(snapshot.target(target)).values()
+        )
+        and all(
+            not contains_execution_time_skill_dir_injection(text)
+            for target in Target
+            for text in _text_files(
+                _synthetic_emission_snapshot().target(target)
+            ).values()
+        )
+    )
+
+
+def _execution_time_injection_detector_covers_generated_commands() -> bool:
     return all(
-        token not in content
-        for target in Target
-        for _path, content in snapshot.target(target)
-    ) and all(
-        token not in content
-        for target in Target
-        for _path, content in _synthetic_emission_snapshot().target(target)
+        contains_execution_time_skill_dir_injection(
+            f"{EXECUTION_TIME_INJECTION_START}{case.inner_topic} "
+            f"{skill_dir_token}/{case.outer_topic}{EXECUTION_TIME_INJECTION_END}"
+        )
+        and not contains_execution_time_skill_dir_injection(
+            f"{skill_dir_token}/{case.outer_topic}"
+        )
+        for case in source_scenarios()
+        for skill_dir_token in (CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
     )
 
 

@@ -130,7 +130,13 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (DISABLE_MODEL_INVOCATION_FIELD,)
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
-EXECUTION_TIME_INJECTION_TOKEN: Final = "!`cat"
+EXECUTION_TIME_INJECTION_START: Final = "!`"
+EXECUTION_TIME_INJECTION_END: Final = "`"
+EXECUTION_TIME_SKILL_DIR_INJECTION_PATTERN: Final = re.compile(
+    rf"{re.escape(EXECUTION_TIME_INJECTION_START)}[^`\r\n]*"
+    rf"(?:{re.escape(CLAUDE_SKILL_DIR_TOKEN)}|{re.escape(CODEX_SKILL_DIR_TOKEN)})"
+    rf"[^`\r\n]*{re.escape(EXECUTION_TIME_INJECTION_END)}"
+)
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
 # the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
@@ -624,6 +630,11 @@ def rewrite_paths_for_target(text: str, *, target: _Target) -> str:
 
     translated = protected.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
     return translated.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
+
+
+def contains_execution_time_skill_dir_injection(text: str) -> bool:
+    """Return whether dynamic-context syntax reads from a bundled skill path."""
+    return EXECUTION_TIME_SKILL_DIR_INJECTION_PATTERN.search(text) is not None
 
 
 def _protect_skill_dir_rewrite_escapes(text: str) -> str:
