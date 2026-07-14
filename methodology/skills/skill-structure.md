@@ -309,18 +309,29 @@ Foundation skills emit XML markers into the conversation when loaded. All declar
 
 ## Template ownership
 
-`understand` owns all templates. Action skills access them via the foundation skill's base directory:
+`understand` owns the foundation references, examples, and templates. Other skills name the
+owning template capability rather than manufacturing a cross-skill filesystem token:
 
 ```text
-${UNDERSTAND_DIR}/
+understand/
 ├── SKILL.md
+├── examples/
+│   ├── adr-example.md
+│   ├── enabler-example.md
+│   ├── outcome-example.md
+│   └── pdr-example.md
 ├── references/
-│   ├── durable-map.md
-│   ├── node-types.md
 │   ├── assertion-types.md
+│   ├── durable-map.md
+│   ├── excluded-nodes.md
+│   ├── imperfection-protocol.md
+│   ├── node-types.md
 │   ├── ordering-rules.md
+│   ├── product-domain-shapes.md
+│   ├── verification-kinds.md
 │   └── what-goes-where.md
 └── templates/
+    ├── instruction-block.md
     ├── product/
     │   └── product-name.product.md
     ├── decisions/
@@ -331,7 +342,10 @@ ${UNDERSTAND_DIR}/
         └── outcome-name.md
 ```
 
-Action skills reference templates with: `Read: ${UNDERSTAND_DIR}/templates/nodes/outcome-name.md`
+Action skills request the owning capability by template identity, for example: "Use
+`understand`'s `templates/nodes/outcome-name.md` node template." The owning skill resolves its
+bundled file. Do not introduce a second base-directory variable or a repository-local plugin
+path.
 
 ## Conversational flow contract
 
