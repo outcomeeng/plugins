@@ -171,15 +171,15 @@ Produce the ADR(s) for the work item. The architecture must be complete before a
 
 <step number="4" name="Architecture audit" gate="true">
 
-Classify the ADR itself before dispatch: use `language-neutral` when the decision constrains no implementation language; otherwise enumerate every implementation-language partition the decision constrains. Derive the partitions from the ADR's governed implementation surface and the committed audit scope, preserving every language for a cross-language decision instead of collapsing the classification to the flow's detected language.
+Enumerate every ADR Step 3 created or modified. Classify each ADR before dispatch: use `language-neutral` when the decision constrains no implementation language; otherwise enumerate every implementation-language partition that decision constrains. Derive the partitions from each ADR's governed implementation surface and the committed audit scope, preserving every language for a cross-language decision instead of collapsing the classification to the flow's detected language.
 
-Dispatch `adr-auditor` with the ADR path, governing node path, exact committed audit scope chosen in `<scope_detection>`, and `Scope classification: language-neutral` or `Scope classification: implementation-language partitions: <comma-separated languages>`. Require only the structured JSON verdict specified by `audit-adr`. The auditor composes each declared language's `audit-{lang}-architecture` concern inside its isolated context.
+After applying `<stabilized_diff_rule>` and `<verification_checkpoint>` once, dispatch one `adr-auditor` per enumerated ADR, in parallel against that same committed head. Give each auditor its ADR path, governing node path, exact committed audit scope chosen in `<scope_detection>`, and `Scope classification: language-neutral` or `Scope classification: implementation-language partitions: <comma-separated languages>`. Require only the structured JSON verdict specified by `audit-adr`. Each auditor composes every declared language's `audit-{lang}-architecture` concerns inside its isolated context.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
+When the scope is cross-node (see `<scope_detection>`), point every ADR audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 
-Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
+The gate passes only when every enumerated ADR has an `APPROVED` verdict for the same committed head. If any verdict is absent, malformed, blocked, or `REJECTED`, fix the defect class or blocked command, rerun deterministic verification, create a new verification checkpoint, and re-dispatch every ADR audit so the complete approval set binds to the new head.
 
-**REJECTED -> fix the defect class -> re-dispatch this step.** Loop until APPROVED.
+**ANY NON-APPROVED RESULT -> fix the defect class or blocked command -> re-dispatch the complete ADR set.** Loop until all are APPROVED on one head.
 
 </step>
 
@@ -273,7 +273,7 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 Steps 4, 6, 8, and applicable Step 8a evidence audits are blocking audit gates. Steps 4 and 6 emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; an exact blocked command is a blocked result. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a retry-loop gate, but a hard precondition for declaring the flow complete.
 
-- Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
+- Before starting Step 5: scan the conversation for one Step 4 verdict per enumerated ADR on the same committed head. If any `APPROVED` verdict is absent, stop — invoke Step 4 for the complete ADR set.
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 9, Step 10, or a user-requested local delivery boundary: if the change touches a Step 8a evidence surface, scan for the applicable clean evidence-auditor verdict. If it is absent or unresolved, stop — invoke or repair Step 8a.
@@ -314,7 +314,7 @@ Scan the conversation for these markers before declaring done:
 
 - [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
 - [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
-- [ ] Step 4 `adr-auditor` emitted `APPROVED`
+- [ ] Step 4 emitted one `adr-auditor` `APPROVED` verdict per enumerated ADR, all against the same committed head
 - [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
 - [ ] Step 8 `implementation-auditor` returned an `spx verification run` token and rendered projection whose `terminalStatus` is `approved`
 - [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact diff at Step 8a before Step 9, Step 10, or a local delivery boundary

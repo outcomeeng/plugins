@@ -1,7 +1,7 @@
 ---
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
-argument-hint: "[--list] [--auto-continue]"
+argument-hint: "[session-id | --list] [--auto-continue]"
 allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3:*verify_session_claims.py*), request_user_input, Glob, Skill
 ---
 
@@ -86,7 +86,21 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
 </session_management>
 
 <claim>
-**If `$ARGUMENTS` contains `--list`:**
+**If `$ARGUMENTS` contains a session ID:**
+
+1. Normalize a trailing `.md` suffix away so the canonical ID remains `YYYY-MM-DD_HH-MM-SS`.
+2. Resolve that exact session through structured output without presenting or processing its content before the foundation loads:
+   ```bash
+   spx session show --json <session-id>
+   ```
+3. Claim that exact session:
+   ```bash
+   spx session pickup <session-id>
+   ```
+
+This direct-ID branch takes precedence over `--list` and automatic selection. Preserve `--auto-continue` for the post-context checkpoint; it does not change which session is claimed.
+
+**Otherwise, if `$ARGUMENTS` contains `--list`:**
 
 1. Get all todo sessions:
    ```bash
