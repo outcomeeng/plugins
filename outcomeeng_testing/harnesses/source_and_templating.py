@@ -273,8 +273,18 @@ def custom_jinja_control_has_no_directives() -> bool:
     return all(_bare_conditional_renders(case) for case in source_scenarios())
 
 
+def render_missing_fragment() -> None:
+    with _missing_fragment_case() as case:
+        render_text(case.template, shared_root=case.shared_root)
+
+
+def plan_missing_fragment() -> None:
+    with _missing_fragment_case() as case:
+        plan_emissions(case.src_root)
+
+
 @contextmanager
-def missing_fragment_case() -> Iterator[MissingFragmentCase]:
+def _missing_fragment_case() -> Iterator[MissingFragmentCase]:
     case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
     with TemporaryDirectory() as tmp:
         builder = SrcTreeBuilder(Path(tmp))

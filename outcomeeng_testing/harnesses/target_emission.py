@@ -32,6 +32,7 @@ from outcomeeng.distribution.build import (
     format_directive,
     frontmatter_field_names,
     plan_emissions,
+    render_source_text,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
 )
@@ -126,9 +127,13 @@ def repeated_include_emits_shared_source_once() -> bool:
 def claude_output_preserves_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.claude)
+    rendered_sources = {
+        path: _rendered_canonical_source(path, target=Target.CLAUDE)
+        for path in _text_files(snapshot.source)
+    }
     relevant = {
         path: text
-        for path, text in _text_files(snapshot.source).items()
+        for path, text in rendered_sources.items()
         if CLAUDE_SKILL_DIR_TOKEN in text
     }
     failures = tuple(
@@ -138,7 +143,8 @@ def claude_output_preserves_skill_dir_token() -> bool:
             _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
         )
         for path, text in relevant.items()
-        if CLAUDE_SKILL_DIR_TOKEN not in _decode_text(output_files[path])
+        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+        != text.count(CLAUDE_SKILL_DIR_TOKEN)
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
@@ -154,9 +160,13 @@ def claude_output_preserves_skill_dir_token() -> bool:
 def codex_output_rewrites_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.codex)
+    rendered_sources = {
+        path: _rendered_canonical_source(path, target=Target.CODEX)
+        for path in _text_files(snapshot.source)
+    }
     relevant = {
         path: text
-        for path, text in _text_files(snapshot.source).items()
+        for path, text in rendered_sources.items()
         if _unescaped_skill_dir_count(text)
     }
     failures = tuple(
@@ -169,8 +179,9 @@ def codex_output_rewrites_skill_dir_token() -> bool:
         )
         for path, text in relevant.items()
         if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        > _escaped_skill_dir_count(text)
-        or CODEX_SKILL_DIR_TOKEN not in _decode_text(output_files[path])
+        != _escaped_skill_dir_count(text)
+        or _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN)
+        != _unescaped_skill_dir_count(text)
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
@@ -520,6 +531,14 @@ def _text_files(snapshot: PathSnapshot) -> dict[Path, str]:
 
 def _decode_text(content: bytes) -> str:
     return content.decode("utf-8")
+
+
+def _rendered_canonical_source(path: Path, *, target: Target) -> str:
+    return render_source_text(
+        CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME / path,
+        target=target,
+        src_root=CANONICAL_SOURCE_ROOT,
+    )
 
 
 def _unescaped_skill_dir_count(text: str) -> int:
