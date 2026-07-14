@@ -255,6 +255,17 @@ An assertion that a field, parser, or constructor rejects values outside a predi
 A `property`-floor rejection rule is not satisfied by a finite parametrize over a hand-picked subset of an open space. Mode selection is `/test`'s authority (see the boundary-validation router in `/test`'s methodology); this standard teaches only the Python expression of that router's output.
 </boundary_validation>
 
+<specified_node_verification>
+A specified node is the one narrow exception to an all-green Python type gate. Apply it only in Write mode after source-contract inspection establishes that the owning production module does not exist yet.
+
+- The focused test MUST fail only because that declared production module or its owned symbol cannot be imported. Collection, syntax, harness, configuration, discovery, and unrelated import failures remain failures.
+- Ruff or the repository's canonical lint command MUST exit zero over the changed scope.
+- Mypy or the repository's canonical type command may exit nonzero only when every diagnostic is the direct consequence of that same missing production module or owned symbol. Any unrelated type diagnostic fails the gate.
+- Record the exact missing owner and diagnostics, and add the node path relative to `spx/` to `spx/EXCLUDE`.
+- Once implementation exists, the exception ends and the normal passing type gate applies.
+
+</specified_node_verification>
+
 <anti_patterns>
 Reject or rewrite these patterns:
 
@@ -299,5 +310,6 @@ Python test guidance follows this standard when:
 - `conftest.py` is limited to marker and hook registration; evidence files use zero-parameter harness entrypoints instead of fixture parameters
 - Property assertions use meaningful Hypothesis properties
 - Required credentialed evidence fails loudly when selected credentials are absent
+- Specified-node verification accepts only the declared missing-owner import or type diagnostics while lint remains green
 
 </success_criteria>

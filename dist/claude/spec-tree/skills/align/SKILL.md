@@ -19,7 +19,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **ALIGN MATERIALS REQUIRED** — Invoke `/understand align` on every run, even when a generic `<SPEC_TREE_FOUNDATION>` marker is live. Continue only with both the foundation marker and the matching materials receipt.
-6. **CHANGESET SCOPE IS CALLER-SUPPLIED** — Check downstream alignment for a branch changeset only when the caller supplies its concrete changed-file set. This read-only skill neither derives git scope nor executes the passive `/scope-changeset` API.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — For every branch-changeset check, invoke `/scope-changeset`, resolve the base through `detect_base_ref(repo)`, and derive the complete changed-file set through `branch_scope(base, repo=repo)`. Never accept a caller-supplied subset as the completeness boundary and never hand-roll base-ref or git-diff derivation.
 
 </principles>
 
@@ -141,7 +141,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use the concrete changed-file set supplied by the caller's governing lifecycle.
+Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, invoke `/scope-changeset` and derive the complete changed-file set through `detect_base_ref(repo)` followed by `branch_scope(base, repo=repo)`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -158,7 +158,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Invoke `/understand align` as a composed skill capability, even when a standard foundation marker is already live.
 2. **Load rules**: Require the live foundation marker and `align` materials receipt, then use every named reference and template loaded by that invocation. A missing receipt is a blocked conformance check, never permission to guess or skip a rule.
-3. **Scope**: Use the user-specified path, or default to `spx/` in the product root. When the caller supplies a concrete changed-file set, retain it for downstream-alignment checks. When a branch changeset request omits that set, report the missing input and stop instead of deriving git scope inside `/align`.
+3. **Scope**: Use the user-specified path, or default to `spx/` in the product root. For a branch changeset request, invoke `/scope-changeset`, resolve the base through `detect_base_ref(repo)`, and derive the complete changed-file set through `branch_scope(base, repo=repo)` before checking downstream alignment.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:

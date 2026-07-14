@@ -45,9 +45,9 @@ Before writing or repairing a Python test, require the generic `/test` `<evidenc
 After writing or repairing tests:
 
 1. Run the repository-canonical focused test command for `$node_path/tests/` and record its exit status.
-2. In Write mode, PASS only when the test fails for the expected missing implementation or assertion mismatch; collection, syntax, harness, or configuration failures are FAIL unless missing implementation is the declared RED condition.
+2. In Write mode, PASS only when the test fails for the expected assertion mismatch, or when `<source_contract_gate>` established before the run that the owning production module is absent and the focused failure contains only that missing module or owned-symbol import. Collection, syntax, harness, configuration, discovery, and unrelated import failures are FAIL.
 3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
-4. Run the repository-canonical lint and type commands for the changed scope. Any nonzero result is FAIL.
+4. Run the repository-canonical lint and type commands for the changed scope. Lint MUST exit zero. Type checking MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct consequence of the same missing production module or owned symbol; any unrelated diagnostic is FAIL.
 5. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, lint gate, and type gate all pass.
 
 </verification_gates>
@@ -153,6 +153,6 @@ Python test work satisfies this skill when:
 - Inert fixtures are consumed only as files
 - `conftest.py` contains marker or hook registration only
 - No framework mock replaces the behavior under test
-- The matrix gate, focused test gate, repository-canonical lint gate, and repository-canonical type gate all pass for the changed scope
+- The matrix gate and focused test gate pass; lint exits zero; type checking exits zero except on the declared specified-node path where its only diagnostics are the same missing production module or owned symbol
 
 </success_criteria>

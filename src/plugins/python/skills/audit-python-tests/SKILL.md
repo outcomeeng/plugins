@@ -54,7 +54,7 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 </audit_scope>
 
 <no_deterministic_verification>
-This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The caller brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the caller owns, not a step this audit re-pays.
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. Before dispatch, the caller satisfies `/python-test-standards` `<specified_node_verification>` or brings tests, lint, and type checking to passing on the changeset; CI re-runs the repository gates. Spend the whole audit on reading the evidence chain; deterministic verification is a caller-owned precondition, not a step this audit re-pays.
 </no_deterministic_verification>
 
 <test_file_declarations>

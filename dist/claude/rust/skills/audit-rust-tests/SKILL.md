@@ -40,7 +40,7 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Before dispatch, the caller satisfies `/rust-test-standards` `<specified_node_verification>` or brings formatting, linting, tests, compilation, and applicable coverage to passing on the changeset; CI re-runs the repository gates. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
 

@@ -57,10 +57,10 @@ Run `cargo llvm-cov` only when the repository requires a deterministic coverage 
 After writing or repairing tests:
 
 1. Run the repository-canonical focused Rust test command for `$node_path/tests/` and record its exit status.
-2. In Write mode, PASS only when the test fails for the expected missing implementation or assertion mismatch; compilation, harness, workspace, or configuration failures are FAIL unless missing implementation is the declared RED condition.
+2. In Write mode, PASS only when the test fails for the expected assertion mismatch, or when the source-contract gate established before the run that the owning production module or item is absent and the focused failure contains only that missing owner. Syntax, harness, workspace, manifest, configuration, and unrelated compilation failures are FAIL.
 3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
-4. Run the repository-canonical Rust formatting, lint, and type/compile commands for the changed scope. Any nonzero result is FAIL.
-5. When the repository requires a deterministic coverage gate, run its declared coverage command, falling back to `cargo llvm-cov --workspace --all-features` only when no wrapper exists. Exit zero is PASS; any nonzero result is FAIL.
+4. Run the repository-canonical Rust formatting, lint, and type/compile commands for the changed scope. Formatting MUST exit zero. Lint and compile commands MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct compiler consequence of the same missing production module or item; actual lint diagnostics and unrelated compiler diagnostics are FAIL.
+5. When the repository requires a deterministic coverage gate, run its declared coverage command, falling back to `cargo llvm-cov --workspace --all-features` only when no wrapper exists. Exit zero is PASS; any nonzero result is FAIL. On the declared specified-node path, record coverage as not applicable until implementation exists.
 6. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, formatting gate, lint gate, compile gate, and applicable coverage gate all pass.
 
 </verification_gates>
@@ -108,8 +108,8 @@ Rust test evidence is sound when:
 - Executed test files declare no `const`, `static`, `let`, fixture parameters, property-generated parameters, source vocabulary, expected values, or runner policy.
 - Controlled implementations preserve executable coupling to the real trait or boundary; property claims use meaningful property-based evidence, and compile-time claims use compile-fail evidence.
 - In Write mode, the resolved test command fails only for the expected missing implementation or assertion mismatch; in Fix mode, it reaches the RED or passing state required by the active TDD phase.
-- The resolved `cargo fmt`, `cargo clippy`, and `cargo check` commands, or repository wrappers that cover the same scope, exit zero; the report records every exact command and exit status.
-- The repository-declared coverage command exits zero when coverage is required; when no coverage gate is declared, the report records that the coverage gate is not applicable.
+- The resolved formatting command exits zero; lint and compile commands exit zero except on the declared specified-node path where every diagnostic is the direct compiler consequence of the same missing production module or item; the report records every exact command and exit status.
+- The repository-declared coverage command exits zero when coverage is required; when no coverage gate is declared or the node is on the declared specified-node path, the report records that coverage is not applicable.
 - Every merged Rust audit finding and same-class instance maps to a completed repair before redispatch.
 
 </success_criteria>

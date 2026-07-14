@@ -382,6 +382,18 @@ async fn login_flow_reaches_dashboard() {
 Level 3 tests must declare their isolation boundary, credentials, cleanup behavior, and expected runtime. If the repository has no safe Level 3 lane, stop and surface that product decision rather than hiding the dependency behind a skipped test.
 </level_3_patterns>
 
+<specified_node_verification>
+A specified node is the one narrow exception to all-green Rust compile-bearing gates. Apply it only in Write mode after source-contract inspection establishes that the owning production module or item does not exist yet.
+
+- The focused test MUST fail only because that declared production module or owned item is missing. Syntax, harness, workspace, manifest, configuration, and unrelated compilation failures remain failures.
+- `cargo fmt` or the repository's canonical formatting command MUST exit zero.
+- `cargo clippy`, `cargo check`, and repository equivalents may exit nonzero only when every diagnostic is the direct compiler consequence of that same missing production module or item. Actual lint diagnostics and unrelated compiler diagnostics fail the gate.
+- Deterministic coverage is not applicable until the implementation exists; record that state instead of running a coverage command that can only repeat the missing-item failure.
+- Record the exact missing owner and diagnostics, and add the node path relative to `spx/` to `spx/EXCLUDE`.
+- Once implementation exists, the exception ends and the normal passing lint, compile, and applicable coverage gates apply.
+
+</specified_node_verification>
+
 <coverage_rules>
 Coverage has separate deterministic and agentic responsibilities:
 
