@@ -20,6 +20,7 @@ documents as strings; no filesystem is involved.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import pathlib
 import subprocess
@@ -51,6 +52,13 @@ CANONICAL_TEMPLATE_PATH = (
     / "understand"
     / "templates"
     / "instruction-block.md"
+)
+FOUNDATION_POLICY_CONTRACT_PATH: Final = (
+    REPO_ROOT
+    / "outcomeeng_testing"
+    / "fixtures"
+    / "instruction_block"
+    / "foundation_access_policy.json"
 )
 
 INSTRUCTION_CLAUDE: Final = "CLAUDE.md"
@@ -422,7 +430,7 @@ def write_root_instructions_from_dist(
 
 
 def assert_generated_foundation_access_policy() -> None:
-    """Exercise the production writer and every source-owned foundation-policy guard."""
+    """Exercise generated routers against the independent spec-derived policy contract."""
     from outcomeeng.distribution import instruction_block as dist
 
     module = load_instruction_block_module()
@@ -440,12 +448,14 @@ def assert_generated_foundation_access_policy() -> None:
     dist.validate_foundation_access_policy(documents)
 
     target_harness = next(iter(documents))
-    for requirement, required_text in dist.FOUNDATION_POLICY_REQUIREMENTS:
+    for requirement, required_text in foundation_access_policy_contract():
+        for agent_harness, document in documents.items():
+            if required_text not in document:
+                raise AssertionError(
+                    f"generated {agent_harness} router omitted contract requirement "
+                    f"{requirement!r}"
+                )
         broken = dict(documents)
-        if required_text not in broken[target_harness]:
-            raise AssertionError(
-                f"generated router omitted source requirement {requirement!r}"
-            )
         broken[target_harness] = broken[target_harness].replace(required_text, "", 1)
         try:
             dist.validate_foundation_access_policy(broken)
@@ -454,6 +464,37 @@ def assert_generated_foundation_access_policy() -> None:
         raise AssertionError(
             f"foundation policy validator accepted missing requirement {requirement!r}"
         )
+
+
+def foundation_access_policy_contract() -> tuple[tuple[str, str], ...]:
+    """Load the spec-derived foundation-policy oracle outside production source."""
+    payload: object = json.loads(
+        FOUNDATION_POLICY_CONTRACT_PATH.read_text(encoding="utf-8")
+    )
+    if not isinstance(payload, dict):
+        raise AssertionError("foundation access policy contract must be an object")
+    requirements = payload.get("requirements")
+    if not isinstance(requirements, list) or not requirements:
+        raise AssertionError(
+            "foundation access policy contract must declare non-empty requirements"
+        )
+
+    parsed: list[tuple[str, str]] = []
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            raise AssertionError(
+                "foundation access policy requirement must be an object"
+            )
+        name = requirement.get("name")
+        text = requirement.get("text")
+        if not isinstance(name, str) or not name:
+            raise AssertionError("foundation access policy requirement needs a name")
+        if not isinstance(text, str) or not text:
+            raise AssertionError(
+                f"foundation access policy requirement {name!r} needs text"
+            )
+        parsed.append((name, text))
+    return tuple(parsed)
 
 
 def root_document_with_shared_region(
