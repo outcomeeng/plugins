@@ -511,14 +511,14 @@ def _require_expands_neutrally(case: SourceScenario) -> bool:
 
 def _runtime_specific_names() -> tuple[str, ...]:
     return tuple(
-        {
+        dict.fromkeys(
             resolve_runtime_token(
                 coordinate.kind,
                 coordinate.capability,
                 coordinate.runtime,
             )
             for coordinate in runtime_token_resolver_cases()
-        }
+        )
     )
 
 

@@ -1116,32 +1116,58 @@ def _planned_fan_out_emissions(
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
     ):
         return ()
-    result: list[PlannedEmission] = []
-    for directive in parse_directives(source_file.read_text(encoding="utf-8")):
-        if not isinstance(directive, IncludeDirective):
-            continue
-        expand_include(directive, shared_root=shared_root)
-        topic_root = _resolve_under_root(shared_root, directive.path).parent
-        for child in sorted(topic_root.iterdir()):
-            if child.name == SHARED_FRAGMENT_FILENAME:
-                continue
-            child_files = (
-                tuple(sorted(path for path in child.rglob("*") if path.is_file()))
-                if child.is_dir()
-                else (child,)
+    directives = (
+        directive
+        for directive in parse_directives(source_file.read_text(encoding="utf-8"))
+        if isinstance(directive, IncludeDirective)
+    )
+    return tuple(
+        dict.fromkeys(
+            emission
+            for directive in directives
+            for emission in _planned_include_emissions(
+                directive,
+                target=target,
+                relative_path=relative_path,
+                shared_root=shared_root,
             )
-            for child_file in child_files:
-                result.append(
-                    PlannedEmission(
-                        source=child_file,
-                        target=target,
-                        relative_path=(
-                            relative_path.parent / child_file.relative_to(topic_root)
-                        ),
-                        action=EmissionAction.FAN_OUT,
-                    )
-                )
-    return tuple(dict.fromkeys(result))
+        )
+    )
+
+
+def _planned_include_emissions(
+    directive: IncludeDirective,
+    *,
+    target: _Target,
+    relative_path: Path,
+    shared_root: Path,
+) -> tuple[PlannedEmission, ...]:
+    expand_include(directive, shared_root=shared_root)
+    topic_root = _resolve_under_root(shared_root, directive.path).parent
+    return tuple(
+        PlannedEmission(
+            source=child_file,
+            target=target,
+            relative_path=relative_path.parent / child_file.relative_to(topic_root),
+            action=EmissionAction.FAN_OUT,
+        )
+        for child_file in _fan_out_topic_files(topic_root)
+    )
+
+
+def _fan_out_topic_files(topic_root: Path) -> tuple[Path, ...]:
+    return tuple(
+        child_file
+        for child in sorted(topic_root.iterdir())
+        if child.name != SHARED_FRAGMENT_FILENAME
+        for child_file in _fan_out_child_files(child)
+    )
+
+
+def _fan_out_child_files(child: Path) -> tuple[Path, ...]:
+    if child.is_dir():
+        return tuple(sorted(path for path in child.rglob("*") if path.is_file()))
+    return (child,)
 
 
 def _is_authored_source_file(path: Path) -> bool:
