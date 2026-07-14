@@ -575,11 +575,18 @@ def assert_extension_to_language_mapping() -> None:
 
 
 def assert_detected_language_set_mapping() -> None:
-    """Assert extension detection yields the normalized source-owned language set."""
+    """Assert tree extension detection yields the source-owned language set."""
     module = load_instruction_block_module()
-    assert module.detect_languages(
-        tuple(module.LANGUAGE_BY_EXTENSION)
-    ) == module.normalize_languages(module.LANGUAGE_BY_EXTENSION.values())
+    with TemporaryDirectory() as directory:
+        spx_dir = pathlib.Path(directory) / module.OBSOLETE_SPX_DIR_NAME
+        tests_dir = spx_dir / "10-node.enabler" / "tests"
+        tests_dir.mkdir(parents=True)
+        for extension in module.LANGUAGE_BY_EXTENSION:
+            (tests_dir / f"test_subject.mapping.l1.{extension}").touch()
+
+        assert module.detect_languages_from_tree(spx_dir) == module.normalize_languages(
+            module.LANGUAGE_BY_EXTENSION.values()
+        )
 
 
 def assert_language_block_filter_mapping() -> None:
@@ -613,6 +620,10 @@ def assert_router_status_mapping() -> None:
         assert (
             module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
             == "current"
+        )
+        assert (
+            module.instruction_status(claude, NEW_VERSION, (LANG_SECONDARY,), repo)
+            == "stale"
         )
 
         claude.unlink()
@@ -674,6 +685,11 @@ def assert_shared_region_status_mapping() -> None:
 def assert_bootstrap_topology_mapping() -> None:
     """Assert every source-owned initial topology maps to its bootstrap outcome."""
     module = load_instruction_block_module()
+    template = build_template(NEW_VERSION)
+    blocks = {
+        harness: module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
+        for harness in TEMPLATE_HARNESSES
+    }
     for topology in (
         root_instruction_topology_only_claude(),
         root_instruction_topology_only_agents(),
@@ -688,8 +704,10 @@ def assert_bootstrap_topology_mapping() -> None:
             template = write_template(root, NEW_VERSION)
             run_generator_write_primary(repo, template)
 
-            claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-            agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+            claude_path = repo / INSTRUCTION_CLAUDE
+            agents_path = repo / INSTRUCTION_AGENTS
+            claude = claude_path.read_text(encoding="utf-8")
+            agents = agents_path.read_text(encoding="utf-8")
             seeds_identical = seeds[INSTRUCTION_CLAUDE] == seeds[INSTRUCTION_AGENTS]
 
             assert bool(module.parse_shared_regions(claude)) == seeds_identical
@@ -699,21 +717,87 @@ def assert_bootstrap_topology_mapping() -> None:
                 )
             assert claude.startswith(module.ROUTER_MARKER_PREFIX)
             assert agents.startswith(module.ROUTER_MARKER_PREFIX)
+            assert claude_path.is_file() and not claude_path.is_symlink()
+            assert agents_path.is_file() and not agents_path.is_symlink()
+
+    identical_documents = module.build_root_instruction_documents(
+        {HARNESS_CLAUDE: ROOT_SHARED_BODY, HARNESS_CODEX: ROOT_SHARED_BODY},
+        blocks,
+    )
+    for document in identical_documents.values():
+        assert module.parse_shared_regions(document) == {
+            module.BOOTSTRAP_SHARED_REGION_NAME: ROOT_SHARED_BODY.strip("\n")
+        }
+
+    retired_open, retired_close = module.LEGACY_MANAGED_BLOCK_MARKERS[0]
+    retired_block = (
+        f"{retired_open}\n"
+        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {OLD_VERSION} -->\n"
+        f"{retired_close}"
+    )
+    retired_seed = f"{retired_block}\n\n{ROOT_SHARED_BODY}"
+    retired_documents = module.build_root_instruction_documents(
+        {HARNESS_CLAUDE: retired_seed, HARNESS_CODEX: retired_seed},
+        blocks,
+    )
+    for document in retired_documents.values():
+        assert retired_open not in document
+        assert retired_close not in document
+        assert module.parse_shared_regions(document) == {
+            module.BOOTSTRAP_SHARED_REGION_NAME: ROOT_SHARED_BODY.strip("\n")
+        }
+
+    above_threshold_documents = module.build_root_instruction_documents(
+        {
+            HARNESS_CLAUDE: ROOT_NEAR_IDENTICAL_CLAUDE,
+            HARNESS_CODEX: ROOT_NEAR_IDENTICAL_CODEX,
+        },
+        blocks,
+    )
+    expected_shared_body = _NEAR_IDENTICAL_COMMON.strip("\n")
+    for document in above_threshold_documents.values():
+        assert module.parse_shared_regions(document) == {
+            module.BOOTSTRAP_SHARED_REGION_NAME: expected_shared_body
+        }
+    assert "CLAUDE specific tail" in above_threshold_documents[HARNESS_CLAUDE]
+    assert "CODEX specific tail" in above_threshold_documents[HARNESS_CODEX]
+
+    below_threshold_documents = module.build_root_instruction_documents(
+        {HARNESS_CLAUDE: ROOT_CLAUDE_BODY, HARNESS_CODEX: ROOT_AGENTS_BODY},
+        blocks,
+    )
+    for document in below_threshold_documents.values():
+        assert module.parse_shared_regions(document) == {}
 
 
 def assert_span_ratio_wrap_mapping() -> None:
-    """Assert span ratios above and below the threshold map to wrapping decisions."""
+    """Assert exact maximal spans and ratios map to wrapping decisions."""
     module = load_instruction_block_module()
-    _, ratio_identical = module.biggest_identical_span(
+    span_identical, ratio_identical = module.biggest_identical_span(
         ROOT_SHARED_BODY, ROOT_SHARED_BODY
     )
+    assert span_identical == ROOT_SHARED_BODY
+    assert ratio_identical == 1.0
     assert ratio_identical > module.BOOTSTRAP_SHARED_THRESHOLD
     wrapped_a, wrapped_b = module.bootstrap_wrap(ROOT_SHARED_BODY, ROOT_SHARED_BODY)
     assert module.parse_shared_regions(wrapped_a)
     assert module.parse_shared_regions(wrapped_b)
 
-    _, ratio_divergent = module.biggest_identical_span(
+    span_maximal, ratio_maximal = module.biggest_identical_span(
+        ROOT_STRADDLING_CLAUDE, ROOT_STRADDLING_CODEX
+    )
+    assert span_maximal == _STRADDLING_BLOCK
+    assert ratio_maximal == len(_STRADDLING_BLOCK) / max(
+        len(ROOT_STRADDLING_CLAUDE), len(ROOT_STRADDLING_CODEX)
+    )
+
+    span_divergent, ratio_divergent = module.biggest_identical_span(
         ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY
+    )
+    assert span_divergent in ROOT_CLAUDE_BODY
+    assert span_divergent in ROOT_AGENTS_BODY
+    assert ratio_divergent == len(span_divergent) / max(
+        len(ROOT_CLAUDE_BODY), len(ROOT_AGENTS_BODY)
     )
     assert ratio_divergent <= module.BOOTSTRAP_SHARED_THRESHOLD
     no_wrap_a, no_wrap_b = module.bootstrap_wrap(ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY)
