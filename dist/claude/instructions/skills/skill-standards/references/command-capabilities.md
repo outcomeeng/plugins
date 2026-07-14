@@ -4,7 +4,7 @@
 - `<arguments>` — argument declaration, substitution, and empty-input behavior
 - `<dynamic_context>` — bounded state-dependent context injection
 - `<tool_restriction_security>` — runtime-specific capability boundaries
-- `<file_references>` — renderer tokens, product files, and bundled skill files
+- `<file_references>` — product files and bundled skill files
 
 </contents>
 
@@ -75,35 +75,22 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 <file_references>
 
-Authored marketplace source is a build template, not the final runtime
-SKILL.md. Use the source-owned renderer tokens when a product filename or tool
-name varies by runtime:
+Use the active runtime's product filename and tool name:
 
 ```markdown
 Read `CLAUDE.md` for the active runtime's product guide.
 Use `AskUserQuestion` for the active runtime's structured-question tool.
 ```
 
-The renderer resolves `file('root_guide')` to the target harness's root guide
-filename and resolves `tool(...)` through the runtime-token registry. An
-explicit target argument, such as `file('root_guide', 'codex')` or
-`tool('ask_user', 'claude')`, selects that target's emitted token. These forms
-are valid only in authored marketplace source that the distribution build
-renders. Generated runtime SKILL.md files MUST contain the resolved filename or
-tool name and MUST contain no unresolved renderer token.
-
-Renderer tokens do not address skill-bundled files. A bundled reference,
-workflow, template, or script always uses the skill-directory token below.
-
 A skill body references a specific product file with the `@` prefix (`@path/to/file`), injecting its content — the same affordance a command had. Use `@` for product files in the consumer's tree; combine it with an argument (`@$target`) for a caller-named product file.
 
-For skill-bundled files, use the runtime's skill-directory token instead of `@` or a repository path. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`:
+For skill-bundled files, use the runtime's skill-directory token instead of `@` or a repository path:
 
 ```markdown
 Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
 Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 ```
 
-NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
+NEVER reference bundled plugin files with repository-local source or generated paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
 
 </file_references>

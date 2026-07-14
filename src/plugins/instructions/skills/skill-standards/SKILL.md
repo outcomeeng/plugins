@@ -430,7 +430,13 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 
 <templates_and_variables>
 
-In authored source, reference skill-bundled files with the Claude Code token named `CLAUDE_SKILL_DIR`. The build emits generated Codex runtime output with the Codex token named `SKILL_DIR`. The runtime variable scopes, source-to-rendered mapping, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
+The runtime variable scopes and bundled-file path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files.
+
+{!% if target == 'claude' %!}
+Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism, hook `command:` paths, and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`. Read it before wiring hook commands.
+{!% else %!}
+Codex session-identity guidance for `$CODEX_THREAD_ID` lives in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`. Read it before consuming session identity from a skill.
+{!% endif %!}
 
 </templates_and_variables>
 
