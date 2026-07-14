@@ -20,13 +20,22 @@ documents as strings; no filesystem is involved.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import pathlib
+import re
 import subprocess
 from dataclasses import dataclass
 import sys
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, cast
+
+from outcomeeng.distribution.agents import (
+    CODEX_AGENT_ENV_VAR,
+    CODEX_AGENT_ID_PLACEHOLDER,
+    CodexAgentIdentityBlockingSignal,
+)
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-instruction-block skill directory name; a rename there must update
@@ -160,6 +169,30 @@ class RootInstructionTopology:
     symlinks: dict[str, str]
 
 
+@dataclass(frozen=True)
+class ConfiguredAgentProtocolStep:
+    """One typed configured-agent tool step parsed from rendered guidance."""
+
+    tool: str
+    message: str
+    agent_type: str | None
+    target: str | None
+    position: int
+
+
+@dataclass(frozen=True)
+class RenderedConfiguredAgentIdentityProtocol:
+    """Configured-agent identity protocol rendered for both harnesses."""
+
+    codex_document: str
+    claude_document: str
+    spawn: ConfiguredAgentProtocolStep
+    role: ConfiguredAgentProtocolStep
+    blocking_policy: str
+    blocking_policy_position: int
+    claude_native_guidance: str
+
+
 def root_instruction_topology_only_claude() -> RootInstructionTopology:
     """Return a root topology with only the Claude harness instruction file present."""
     return RootInstructionTopology(
@@ -236,6 +269,81 @@ def materialize_root_instruction_topology(
     return seeds
 
 
+def _assert_root_instruction_topology_mapping(
+    topology: RootInstructionTopology, expected: dict[str, str]
+) -> None:
+    """Materialize one topology and assert its source-owned seed mapping."""
+    with TemporaryDirectory() as directory:
+        assert (
+            materialize_root_instruction_topology(pathlib.Path(directory), topology)
+            == expected
+        )
+
+
+def assert_only_claude_topology_maps_to_both_harnesses() -> None:
+    """Assert a lone Claude instruction file seeds both harness paths."""
+    _assert_root_instruction_topology_mapping(
+        root_instruction_topology_only_claude(),
+        {
+            INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+            INSTRUCTION_AGENTS: ROOT_CLAUDE_BODY,
+        },
+    )
+
+
+def assert_only_agents_topology_maps_to_both_harnesses() -> None:
+    """Assert a lone Agents instruction file seeds both harness paths."""
+    _assert_root_instruction_topology_mapping(
+        root_instruction_topology_only_agents(),
+        {
+            INSTRUCTION_CLAUDE: ROOT_AGENTS_BODY,
+            INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+        },
+    )
+
+
+def assert_separate_topology_maps_each_harness_body() -> None:
+    """Assert separate instruction files retain their matching bodies."""
+    _assert_root_instruction_topology_mapping(
+        root_instruction_topology_separate(),
+        {
+            INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+            INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+        },
+    )
+
+
+def assert_symlinked_topology_maps_shared_body() -> None:
+    """Assert a symlinked topology seeds both harness paths from the target."""
+    _assert_root_instruction_topology_mapping(
+        root_instruction_topology_symlinked(),
+        {
+            INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
+            INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
+        },
+    )
+
+
+def assert_symlinked_topology_materializes_regular_files() -> None:
+    """Assert symlink normalization preserves bodies in regular files."""
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        materialized = materialize_root_instruction_topology(
+            root, root_instruction_topology_symlinked()
+        )
+        claude_path = root / INSTRUCTION_CLAUDE
+        agents_path = root / INSTRUCTION_AGENTS
+
+        assert claude_path.is_file()
+        assert agents_path.is_file()
+        assert not claude_path.is_symlink()
+        assert not agents_path.is_symlink()
+        assert claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+        assert agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+        assert materialized[INSTRUCTION_CLAUDE] == ROOT_SHARED_BODY
+        assert materialized[INSTRUCTION_AGENTS] == ROOT_SHARED_BODY
+
+
 def harness_line(harness: str) -> str:
     """The body the harness emits inside a harness block — what render keeps or drops."""
     return f"{harness.upper()} runs the audit as a subagent."
@@ -267,6 +375,114 @@ def load_instruction_block_module() -> ModuleType:
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def _configured_agent_protocol_step(
+    payload: object, position: int
+) -> ConfiguredAgentProtocolStep | None:
+    """Return a typed configured-agent step when ``payload`` has role-step shape."""
+    if not isinstance(payload, dict):
+        return None
+    tool = payload.get("tool")
+    arguments = payload.get("arguments")
+    if not isinstance(tool, str) or not isinstance(arguments, dict):
+        return None
+    message = arguments.get("message")
+    if not isinstance(message, str):
+        return None
+    agent_type = arguments.get("agent_type")
+    target = arguments.get("target")
+    if agent_type is not None and not isinstance(agent_type, str):
+        return None
+    if target is not None and not isinstance(target, str):
+        return None
+    if agent_type is None and target is None:
+        return None
+    return ConfiguredAgentProtocolStep(
+        tool=tool,
+        message=message,
+        agent_type=agent_type,
+        target=target,
+        position=position,
+    )
+
+
+def _paragraph_containing(document: str, token: str) -> tuple[str, int]:
+    """Return the Markdown paragraph containing ``token`` and its start offset."""
+    token_position = document.index(token)
+    start = document.rfind("\n\n", 0, token_position) + 2
+    end = document.find("\n\n", token_position)
+    if end == -1:
+        end = len(document)
+    return document[start:end], start
+
+
+def read_configured_agent_identity_protocol() -> (
+    RenderedConfiguredAgentIdentityProtocol
+):
+    """Render and parse the canonical configured-agent identity protocol."""
+    template = read_canonical_template()
+    module = load_instruction_block_module()
+    version = module.parse_template_version(template)
+    codex = module.render(template, TEMPLATE_LANGUAGES, version, HARNESS_CODEX)
+    claude = module.render(template, TEMPLATE_LANGUAGES, version, HARNESS_CLAUDE)
+    steps = tuple(
+        step
+        for match in re.finditer(r"```json\n(.*?)\n```", codex, re.DOTALL)
+        if (
+            step := _configured_agent_protocol_step(
+                json.loads(match.group(1)), match.start()
+            )
+        )
+        is not None
+    )
+    spawn = next(step for step in steps if step.agent_type is not None)
+    role = next(
+        step
+        for step in steps
+        if step.position > spawn.position and step.target is not None
+    )
+    blocking_policy, blocking_policy_position = _paragraph_containing(
+        codex, CodexAgentIdentityBlockingSignal.UNEXPECTED
+    )
+    claude_open = "<!-- harness:claude -->"
+    claude_close = "<!-- /harness:claude -->"
+    claude_native_guidance = (
+        template.split(claude_open, maxsplit=1)[1]
+        .split(claude_close, maxsplit=1)[0]
+        .strip()
+    )
+    return RenderedConfiguredAgentIdentityProtocol(
+        codex_document=codex,
+        claude_document=claude,
+        spawn=spawn,
+        role=role,
+        blocking_policy=blocking_policy,
+        blocking_policy_position=blocking_policy_position,
+        claude_native_guidance=claude_native_guidance,
+    )
+
+
+def assert_canonical_configured_agent_identity_protocol() -> None:
+    """Assert both harness renders preserve their configured-agent contracts."""
+    protocol = read_configured_agent_identity_protocol()
+
+    assert CODEX_AGENT_ENV_VAR in protocol.codex_document
+    assert CODEX_AGENT_ENV_VAR in protocol.spawn.message
+    assert protocol.spawn.agent_type is not None
+    assert protocol.role.target == CODEX_AGENT_ID_PLACEHOLDER
+    assert protocol.role.agent_type is None
+    assert protocol.role.tool != protocol.spawn.tool
+    assert CodexAgentIdentityBlockingSignal.UNSET in protocol.spawn.message
+    assert CodexAgentIdentityBlockingSignal.UNSET in protocol.blocking_policy
+    assert CodexAgentIdentityBlockingSignal.UNEXPECTED in protocol.blocking_policy
+    assert protocol.blocking_policy_position < protocol.role.position
+    assert protocol.claude_native_guidance
+    assert protocol.claude_native_guidance in protocol.claude_document
+    assert protocol.claude_native_guidance not in protocol.codex_document
+    assert CODEX_AGENT_ENV_VAR not in protocol.claude_document
+    assert protocol.spawn.tool not in protocol.claude_document
+    assert protocol.role.tool not in protocol.claude_document
 
 
 def extract_markdown_section(document: str, heading: str) -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from enum import StrEnum
 import json
 import re
 import sys
@@ -57,6 +58,7 @@ UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+CODEX_AGENT_ID_PLACEHOLDER: Final = "<agent-id-from-spawn-agent>"
 MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
 MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
 MANUAL_REVIEW_GUIDANCE_CLOSE: Final = f"</{MANUAL_REVIEW_GUIDANCE_TAG}>"
@@ -66,6 +68,13 @@ READ_ONLY_TOOLS: Final = frozenset({"Glob", "Grep", "Read"})
 SCRIPT_CAPABLE_TOOLS: Final = frozenset({"Bash", "Skill"})
 WEB_CAPABLE_TOOLS: Final = frozenset({"WebFetch", "WebSearch"})
 WRITE_CAPABLE_TOOLS: Final = frozenset({"Edit", "NotebookEdit", "Write"})
+
+
+class CodexAgentIdentityBlockingSignal(StrEnum):
+    """Source-owned results that stop role work during identity preflight."""
+
+    UNSET = "AGENT_IDENTITY_UNSET"
+    UNEXPECTED = "unexpected marker"
 
 
 class AgentConversionError(Exception):
@@ -940,6 +949,7 @@ __all__ = [
     "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
+    "CODEX_AGENT_ID_PLACEHOLDER",
     "DEFAULT_SOURCE_ROOT",
     "DEFAULT_TARGET_ROOT",
     "EFFORT_MAPPINGS",
@@ -957,6 +967,7 @@ __all__ = [
     "WRITE_CAPABLE_TOOLS",
     "AgentConversionError",
     "CodexAgent",
+    "CodexAgentIdentityBlockingSignal",
     "SourceAgent",
     "TomlArrayTable",
     "agent_environment_marker",

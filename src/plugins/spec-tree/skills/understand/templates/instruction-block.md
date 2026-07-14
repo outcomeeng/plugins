@@ -322,6 +322,12 @@ Use this shape for subagent audits:
 
 <!-- /harness:codex -->
 
+<!-- harness:claude -->
+
+**Use each configured verifier or reviewer through its configured subagent type.** Launch the subagent with the role task in its initial turn, collect the final message through the native result surface, and apply the role-specific output contract to that result. The configured type binds the child to its agent definition.
+
+<!-- /harness:claude -->
+
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
 | "Implement this outcome"                   | `/contextualize`       | —                       |

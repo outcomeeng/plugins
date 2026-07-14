@@ -92,6 +92,8 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
+**Use each configured verifier or reviewer through its configured subagent type.** Launch the subagent with the role task in its initial turn, collect the final message through the native result surface, and apply the role-specific output contract to that result. The configured type binds the child to its agent definition.
+
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
 | "Implement this outcome"                   | `/contextualize`       | —                       |
