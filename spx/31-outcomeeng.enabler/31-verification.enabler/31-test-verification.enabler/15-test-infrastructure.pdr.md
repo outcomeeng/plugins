@@ -17,10 +17,10 @@ Test-infrastructure implementations live outside `spx/` and outside any `tests/`
 | -------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **TypeScript** | `src/` or product root                      | `testing/` at product root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                  |
 | **Python**     | `<package>/`                                | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/`. `<package>` is the product's importable Python package name declared by its packaging metadata; illustrative example: `outcomeeng/` paired with `outcomeeng_testing/`     |
-| **Rust**       | `src/` of the product crate                 | A separate workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a dev-dependency of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
+| **Rust**       | `src/` of the product crate                 | A separate workspace-member crate at `<package>-testing/` (Cargo package `<package>-testing`, Rust import path `<package>_testing`), declared as a dev-dependency of consumers; modules `<package>_testing::harnesses::*`, `<package>_testing::generators::*`, `<package>_testing::fixtures::*` |
 | **Go**         | Module packages (root, `internal/`, `cmd/`) | `internal/testinfra/` (package `testinfra` — not `test`, which collides with the standard library): `internal/testinfra/harnesses/`, `internal/testinfra/generators/`, `internal/testinfra/fixtures/`, imported as `<module>/internal/testinfra/...`                                            |
 
-For Rust, Cargo normalizes hyphens to underscores in import paths: package `<product>-testing` is imported as `<product>_testing`.
+For Rust, Cargo normalizes hyphens to underscores in import paths: package `<package>-testing` is imported as `<package>_testing`.
 
 Each language plugin declares its normative path in this table or in a PDR amendment that extends this table. Language ADRs govern implementation mechanics such as `tsconfig` path mapping, Python package discovery, Cargo workspace configuration, or Go module and `internal/` placement.
 
@@ -62,7 +62,7 @@ Language skills may teach these examples:
 | -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | **TypeScript** | A `.ts` file under `testing/fixtures/` passed by path to ESLint, TypeScript, a parser, a scanner, or a pre-commit tool | `import { VALID_CASES } from "@testing/fixtures/rule-cases"` in an executed test |
 | **Python**     | A `.py`, `.json`, `.yaml`, or directory fixture read by path, copied into `tmp_path`, or passed to a validator         | `from package_testing.fixtures.cases import EXPECTED_VALUES` in an executed test |
-| **Rust**       | A `.rs`, `.toml`, `.json`, or directory fixture copied into a `tempfile::TempDir` or passed as a path to a parser/tool | `use product_testing::fixtures::VALID_CASES;` from executed test code            |
+| **Rust**       | A `.rs`, `.toml`, `.json`, or directory fixture copied into a `tempfile::TempDir` or passed as a path to a parser/tool | `use <package>_testing::fixtures::VALID_CASES;` from executed test code          |
 
 Strings and numbers are never valid fixtures by themselves. Protocol tokens, status values, command names, rule identifiers, message identifiers, expected outputs, and edge-case sets come from source-owned contracts or generators, not from fixture files.
 
@@ -102,7 +102,7 @@ Methodology users rely on four predictable properties: where implementation file
 
 **Why harnesses manage resources, not truth.** A harness removes repetition around lifecycle and external systems. It must not own domain truth or replace the behavior under test. A context manager, RAII guard, or typed factory that cleans up resources increases evidence quality; a harness that mocks the asserted behavior or stores expected outputs severs evidence.
 
-**Why audits traverse the chain.** A test file can look clean while the defect lives in `@testing/generators/*`, `<package>_testing/fixtures/*`, or `<product>_testing::harnesses::*`. Full-chain inspection is the only way to reject literal laundering and coupling camouflage reliably.
+**Why audits traverse the chain.** A test file can look clean while the defect lives in `@testing/generators/*`, `<package>_testing/fixtures/*`, or `<package>_testing::harnesses::*`. Full-chain inspection is the only way to reject literal laundering and coupling camouflage reliably.
 
 The decision accepts these trade-offs:
 
