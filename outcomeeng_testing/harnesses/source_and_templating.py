@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final
+from typing import Final, Iterator
 
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
@@ -31,7 +33,6 @@ from outcomeeng.distribution.build import (
     Directive,
     DirectiveSyntaxError,
     IncludeDirective,
-    IncludeResolutionError,
     RequireSkillDirective,
     SourceFormatError,
     build,
@@ -41,7 +42,6 @@ from outcomeeng.distribution.build import (
     format_directive,
     make_jinja_environment,
     parse_directives,
-    plan_emissions,
     render_text,
     resolve_runtime_token,
     runtime_token_resolver_cases,
@@ -81,6 +81,15 @@ RENDER_PROPERTY_REPLAY_PATH: Final = (
     "just test spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/"
     "test_render_text.property.l1.py"
 )
+
+
+@dataclass(frozen=True)
+class MissingFragmentCase:
+    """One spec-declared missing-fragment scenario with harness-owned resources."""
+
+    template: str
+    shared_root: Path
+    src_root: Path
 
 
 def implementation_is_ready() -> bool:
@@ -262,12 +271,21 @@ def custom_jinja_control_has_no_directives() -> bool:
     return all(_bare_conditional_renders(case) for case in source_scenarios())
 
 
-def missing_fragment_raises() -> bool:
-    return all(_missing_fragment_raises(case) for case in source_scenarios())
-
-
-def missing_fragment_planning_raises() -> bool:
-    return all(_missing_fragment_planning_raises(case) for case in source_scenarios())
+@contextmanager
+def missing_fragment_case() -> Iterator[MissingFragmentCase]:
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    with TemporaryDirectory() as tmp:
+        builder = SrcTreeBuilder(Path(tmp))
+        builder.shared_root.mkdir(parents=True)
+        template = format_directive(
+            IncludeDirective(_fragment_path(case, case.cycle_topic))
+        )
+        builder.add_plugin(case.plugin, skills={case.skill: template})
+        yield MissingFragmentCase(
+            template=template,
+            shared_root=builder.shared_root,
+            src_root=builder.src_root,
+        )
 
 
 def nested_include_expands() -> bool:
@@ -370,38 +388,6 @@ def require_skill_emits_identically_across_targets() -> bool:
 
 def include_uses_fragment_file_contract() -> bool:
     return all(_include_uses_contract(case) for case in source_scenarios())
-
-
-def _missing_fragment_raises(case: SourceScenario) -> bool:
-    with TemporaryDirectory() as tmp:
-        builder = SrcTreeBuilder(Path(tmp))
-        builder.shared_root.mkdir(parents=True)
-        missing = _fragment_path(case, case.cycle_topic)
-        try:
-            render_text(
-                format_directive(IncludeDirective(missing)),
-                shared_root=builder.shared_root,
-            )
-        except IncludeResolutionError:
-            return True
-        return False
-
-
-def _missing_fragment_planning_raises(case: SourceScenario) -> bool:
-    with TemporaryDirectory() as tmp:
-        builder = SrcTreeBuilder(Path(tmp))
-        missing = _fragment_path(case, case.cycle_topic)
-        builder.add_plugin(
-            case.plugin,
-            skills={
-                case.skill: format_directive(IncludeDirective(missing)),
-            },
-        )
-        try:
-            plan_emissions(builder.src_root)
-        except IncludeResolutionError:
-            return True
-        return False
 
 
 def _nested_include_expands(case: SourceScenario) -> bool:
