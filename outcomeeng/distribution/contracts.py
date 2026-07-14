@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from pathlib import Path
 from typing import Final
 
 TEXT_FILE_SUFFIXES: Final = frozenset(
@@ -32,6 +33,16 @@ CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
 REFERENCES_SUBDIR_NAME: Final = "references"
 SKILL_FILENAME: Final = "SKILL.md"
 MARKDOWN_FILE_SUFFIX: Final = ".md"
+GIT_METADATA_DIR_NAME: Final = ".git"
+SKILL_NAME_FIELD: Final = "name"
+SKILL_DESCRIPTION_FIELD: Final = "description"
+COLLECTED_SKILL_SOURCE_FIELD: Final = "source"
+COLLECTED_SKILL_DIR_NAME_FIELD: Final = "dir_name"
+FRONTMATTER_DELIMITER: Final = "---"
+DIRECTIVE_DESCRIPTION_PREFIX: Final = "ALWAYS invoke this skill when "
+DIRECTIVE_DESCRIPTION_BOUNDARY: Final = ". NEVER"
+SENTENCE_TERMINATOR: Final = "."
+RECURSIVE_GLOB: Final = "**"
 PLUGIN_SUBDIRS: Final = frozenset(
     {
         SKILLS_SUBDIR_NAME,
@@ -52,6 +63,14 @@ REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
 def build_variable_token(variable: str) -> str:
     """Return the authored-source token for one build render variable."""
     return f"{BUILD_VARIABLE_DELIMITER_START} {variable} {BUILD_VARIABLE_DELIMITER_END}"
+
+
+def format_runtime_token(kind: str, capability: str) -> str:
+    """Return the authored template token for one runtime registry capability."""
+    return (
+        f"{BUILD_VARIABLE_DELIMITER_START} {kind}({capability!r}) "
+        f"{BUILD_VARIABLE_DELIMITER_END}"
+    )
 
 
 class Target(StrEnum):
@@ -139,6 +158,24 @@ RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
 
 
 SOURCE_ROOT_NAME: Final = "src"
+CLAUDE_DIST_RELATIVE: Final = Path(DIST_DIR_NAME) / Target.CLAUDE.value
+DISTRIBUTION_WORKFLOW_RELATIVE: Final = (
+    Path(".github") / "workflows" / "distribute-skills.yml"
+)
+PROJECT_METADATA_RELATIVE: Final = Path("pyproject.toml")
+WORKFLOW_ON_FIELD: Final = "on"
+WORKFLOW_PUSH_FIELD: Final = "push"
+WORKFLOW_PATHS_FIELD: Final = "paths"
+WORKFLOW_JOBS_FIELD: Final = "jobs"
+WORKFLOW_DISTRIBUTION_JOB: Final = "distribute"
+WORKFLOW_STEPS_FIELD: Final = "steps"
+WORKFLOW_STEP_NAME_FIELD: Final = "name"
+WORKFLOW_SETUP_PYTHON_STEP: Final = "Set up Python"
+WORKFLOW_WITH_FIELD: Final = "with"
+WORKFLOW_PYTHON_VERSION_FIELD: Final = "python-version"
+PROJECT_FIELD: Final = "project"
+PROJECT_REQUIRES_PYTHON_FIELD: Final = "requires-python"
+MINIMUM_VERSION_PREFIX: Final = ">="
 BUILD_MODULE_NAME: Final = "outcomeeng.distribution.build"
 BUILD_COMMAND_ARGV: Final = (
     "uv",

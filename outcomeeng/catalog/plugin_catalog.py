@@ -40,6 +40,10 @@ from outcomeeng.distribution.build import _render_variables, render_text
 from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     MARKDOWN_FILE_SUFFIX,
+    SKILL_DESCRIPTION_FIELD,
+    SKILL_FILENAME,
+    SKILL_NAME_FIELD,
+    SKILLS_SUBDIR_NAME,
     Target,
 )
 
@@ -48,6 +52,10 @@ BEGIN_SENTINEL = (
 )
 END_SENTINEL = "<!-- END PLUGIN CATALOG -->"
 SOURCE_PLUGINS_ROOT = Path("src") / "plugins"
+MARKETPLACE_CATALOG_RELATIVE = Path(".claude-plugin") / "marketplace.json"
+MARKETPLACE_PLUGINS_FIELD = "plugins"
+CATALOG_SKILL_KIND = "Skill"
+CATALOG_AGENT_KIND = "Agent"
 CATALOG_TARGET_LABELS: dict[Target, str] = {
     Target.CLAUDE: "Claude",
     Target.CODEX: "Codex",
@@ -130,27 +138,29 @@ def _catalog_name(
     variants: Mapping[Target, dict[str, str]],
     default: str,
 ) -> str:
-    names = {target: meta.get("name") or default for target, meta in variants.items()}
-    first = names[Target.CLAUDE]
-    if all(name == first for name in names.values()):
+    names = {
+        target: meta.get(SKILL_NAME_FIELD) or default
+        for target, meta in variants.items()
+    }
+    return render_target_values(names)
+
+
+def render_target_values(values: Mapping[Target, str]) -> str:
+    """Render one value directly or qualify divergent values by runtime target."""
+    first = values[Target.CLAUDE]
+    if all(value == first for value in values.values()):
         return first
     return "; ".join(
-        f"{CATALOG_TARGET_LABELS[target]}: {name}" for target, name in names.items()
+        f"{CATALOG_TARGET_LABELS[target]}: {value}" for target, value in values.items()
     )
 
 
 def _catalog_purpose(variants: Mapping[Target, dict[str, str]]) -> str:
     purposes = {
-        target: shorten_purpose(meta.get("description", ""))
+        target: shorten_purpose(meta.get(SKILL_DESCRIPTION_FIELD, ""))
         for target, meta in variants.items()
     }
-    first = purposes[Target.CLAUDE]
-    if all(purpose == first for purpose in purposes.values()):
-        return first
-    return "; ".join(
-        f"{CATALOG_TARGET_LABELS[target]}: {purpose}"
-        for target, purpose in purposes.items()
-    )
+    return render_target_values(purposes)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -233,12 +243,12 @@ def shorten_purpose(description: str) -> str:
 
 
 def collect_skills(plugin_dir: Path) -> list[CatalogEntry]:
-    skills_dir = plugin_dir / "skills"
+    skills_dir = plugin_dir / SKILLS_SUBDIR_NAME
     if not skills_dir.is_dir():
         return []
     entries: list[CatalogEntry] = []
     for skill_dir in sorted(skills_dir.iterdir()):
-        skill_md = skill_dir / "SKILL.md"
+        skill_md = skill_dir / SKILL_FILENAME
         if not skill_md.is_file():
             continue
         variants = _catalog_frontmatter_variants(
@@ -247,7 +257,9 @@ def collect_skills(plugin_dir: Path) -> list[CatalogEntry]:
         )
         name = _catalog_name(variants, skill_dir.name)
         purpose = _catalog_purpose(variants)
-        entries.append(CatalogEntry(kind="Skill", name=f"`/{name}`", purpose=purpose))
+        entries.append(
+            CatalogEntry(kind=CATALOG_SKILL_KIND, name=f"`/{name}`", purpose=purpose)
+        )
     return entries
 
 
@@ -265,20 +277,22 @@ def collect_agents(plugin_dir: Path) -> list[CatalogEntry]:
         )
         name = _catalog_name(variants, path.stem)
         purpose = _catalog_purpose(variants)
-        entries.append(CatalogEntry(kind="Agent", name=f"`{name}`", purpose=purpose))
+        entries.append(
+            CatalogEntry(kind=CATALOG_AGENT_KIND, name=f"`{name}`", purpose=purpose)
+        )
     return entries
 
 
 def collect_plugins(repo_root: Path) -> list[PluginCatalog]:
-    manifest_path = repo_root / ".claude-plugin" / "marketplace.json"
+    manifest_path = repo_root / MARKETPLACE_CATALOG_RELATIVE
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     plugins: list[PluginCatalog] = []
-    for entry in manifest.get("plugins", []):
-        name = entry["name"]
+    for entry in manifest.get(MARKETPLACE_PLUGINS_FIELD, []):
+        name = entry[SKILL_NAME_FIELD]
         plugin_dir = repo_root / SOURCE_PLUGINS_ROOT / name
         catalog = PluginCatalog(
             name=name,
-            description=entry.get("description", ""),
+            description=entry.get(SKILL_DESCRIPTION_FIELD, ""),
             entries=tuple(
                 collect_skills(plugin_dir) + collect_agents(plugin_dir),
             ),

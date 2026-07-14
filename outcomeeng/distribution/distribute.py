@@ -23,12 +23,26 @@ from typing import Any, cast
 
 import yaml  # type: ignore[import-untyped]
 
+from outcomeeng.distribution.contracts import (
+    CLAUDE_DIST_RELATIVE,
+    COLLECTED_SKILL_DIR_NAME_FIELD,
+    COLLECTED_SKILL_SOURCE_FIELD,
+    DIRECTIVE_DESCRIPTION_BOUNDARY,
+    DIRECTIVE_DESCRIPTION_PREFIX,
+    FRONTMATTER_DELIMITER,
+    GIT_METADATA_DIR_NAME,
+    SENTENCE_TERMINATOR,
+    SKILL_DESCRIPTION_FIELD,
+    SKILL_FILENAME,
+    SKILL_NAME_FIELD,
+    SKILLS_SUBDIR_NAME,
+)
+
 MONOREPO_ROOT = Path(__file__).resolve().parents[2]
 DISTRIBUTION_CONFIG = MONOREPO_ROOT / "scripts" / "distribution.yml"
 README_TEMPLATE = MONOREPO_ROOT / "scripts" / "templates" / "README.md.tpl"
 LICENSE_FILE = MONOREPO_ROOT / "LICENSE"
 MARKETPLACE_REPO = "plugins"
-CLAUDE_DIST_RELATIVE = Path("dist") / "claude"
 
 
 def load_config() -> dict[str, Any]:
@@ -39,38 +53,46 @@ def load_config() -> dict[str, Any]:
 def parse_skill_frontmatter(skill_md: Path) -> dict[str, str]:
     """Extract name and description from SKILL.md YAML frontmatter."""
     text = skill_md.read_text()
-    if not text.startswith("---"):
+    if not text.startswith(FRONTMATTER_DELIMITER):
         return {}
-    end = text.index("---", 3)
-    frontmatter = yaml.safe_load(text[3:end])
+    delimiter_length = len(FRONTMATTER_DELIMITER)
+    end = text.index(FRONTMATTER_DELIMITER, delimiter_length)
+    frontmatter = yaml.safe_load(text[delimiter_length:end])
     return {
-        "name": frontmatter.get("name", skill_md.parent.name),
-        "description": frontmatter.get("description", ""),
+        SKILL_NAME_FIELD: frontmatter.get(SKILL_NAME_FIELD, skill_md.parent.name),
+        SKILL_DESCRIPTION_FIELD: frontmatter.get(SKILL_DESCRIPTION_FIELD, ""),
     }
 
 
-def collect_skills(plugins: list[str]) -> list[dict[str, Any]]:
+def collect_skills(
+    plugins: list[str],
+    *,
+    monorepo_root: Path | None = None,
+) -> list[dict[str, Any]]:
     """Collect all skill directories from the given plugins."""
+    repository_root = monorepo_root if monorepo_root is not None else MONOREPO_ROOT
     skills = []
     for plugin_name in plugins:
-        skills_dir = MONOREPO_ROOT / CLAUDE_DIST_RELATIVE / plugin_name / "skills"
+        skills_dir = (
+            repository_root / CLAUDE_DIST_RELATIVE / plugin_name / SKILLS_SUBDIR_NAME
+        )
         if not skills_dir.is_dir():
             print(f"  Warning: {skills_dir} does not exist, skipping")
             continue
         for skill_dir in sorted(skills_dir.iterdir()):
             if not skill_dir.is_dir():
                 continue
-            skill_md = skill_dir / "SKILL.md"
+            skill_md = skill_dir / SKILL_FILENAME
             if not skill_md.exists():
                 print(f"  Warning: {skill_dir} has no SKILL.md, skipping")
                 continue
             meta = parse_skill_frontmatter(skill_md)
             skills.append(
                 {
-                    "source": skill_dir,
-                    "name": meta.get("name", skill_dir.name),
-                    "description": meta.get("description", ""),
-                    "dir_name": skill_dir.name,
+                    COLLECTED_SKILL_SOURCE_FIELD: skill_dir,
+                    SKILL_NAME_FIELD: meta.get(SKILL_NAME_FIELD, skill_dir.name),
+                    SKILL_DESCRIPTION_FIELD: meta.get(SKILL_DESCRIPTION_FIELD, ""),
+                    COLLECTED_SKILL_DIR_NAME_FIELD: skill_dir.name,
                 }
             )
     return skills
@@ -82,18 +104,24 @@ def clean_description(desc: str) -> str:
     desc = desc.strip()
     # Try to extract just the action part from "ALWAYS invoke ... when X. NEVER Y."
     match = re.match(
-        r"ALWAYS invoke this skill when (.+?)\.\s*NEVER",
+        rf"{re.escape(DIRECTIVE_DESCRIPTION_PREFIX)}(.+?)"
+        rf"{re.escape(DIRECTIVE_DESCRIPTION_BOUNDARY)}",
         desc,
         re.DOTALL,
     )
     if match:
         return match.group(1).strip()
     # Try "ALWAYS invoke ... when X."
-    match = re.match(r"ALWAYS invoke this skill when (.+?)\.", desc, re.DOTALL)
+    match = re.match(
+        rf"{re.escape(DIRECTIVE_DESCRIPTION_PREFIX)}(.+?)"
+        rf"{re.escape(SENTENCE_TERMINATOR)}",
+        desc,
+        re.DOTALL,
+    )
     if match:
         return match.group(1).strip()
     # Fallback: return first sentence
-    first_sentence = desc.split(".")[0].strip()
+    first_sentence = desc.split(SENTENCE_TERMINATOR)[0].strip()
     return first_sentence if first_sentence else desc
 
 
@@ -113,8 +141,8 @@ def generate_readme(
     # Build skill table
     skill_rows = []
     for skill in skills:
-        desc = clean_description(skill["description"])
-        skill_rows.append(f"| `{skill['name']}` | {desc} |")
+        desc = clean_description(skill[SKILL_DESCRIPTION_FIELD])
+        skill_rows.append(f"| `{skill[SKILL_NAME_FIELD]}` | {desc} |")
     skill_table = "\n".join(skill_rows)
 
     # Build prerequisites section
@@ -228,7 +256,7 @@ def clone_or_fetch(
 def clear_repo_contents(repo_path: Path) -> None:
     """Remove all files except .git directory."""
     for item in repo_path.iterdir():
-        if item.name == ".git":
+        if item.name == GIT_METADATA_DIR_NAME:
             continue
         if item.is_dir():
             shutil.rmtree(item)
@@ -249,8 +277,8 @@ def _ignore_broken_symlinks(directory: str, contents: list[str]) -> set[str]:
 
 def copy_skill(skill: dict[str, Any], dest_dir: Path) -> None:
     """Copy a skill directory to the destination, skipping broken symlinks."""
-    source = skill["source"]
-    target = dest_dir / skill["dir_name"]
+    source = skill[COLLECTED_SKILL_SOURCE_FIELD]
+    target = dest_dir / skill[COLLECTED_SKILL_DIR_NAME_FIELD]
     shutil.copytree(source, target, dirs_exist_ok=True, ignore=_ignore_broken_symlinks)
 
 
