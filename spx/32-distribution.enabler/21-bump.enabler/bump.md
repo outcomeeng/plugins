@@ -30,11 +30,11 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 
 ### Mappings
 
-- `--segment patch` increments the third semver component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.mapping.l1.py))
 - Auto-detection maps each `(file-status, path-pattern)` pair to a segment within any recognized distribution-surface root: an `A`/`C`/`D`/`R` change to `skills/{slug}/SKILL.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
 
 ### Properties
 
+- For every semantic `Version` triple, `--segment patch` increments the third component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.property.l1.py))
 - ALWAYS: changes are detected only under `src/plugins/{name}/**`, `dist/claude/{name}/**`, or `dist/codex/{name}/**` — any file change inside one of those prefixes counts as a distribution-surface change for plugin `{name}`, and no path outside those prefixes triggers any bump ([test](tests/test_bump.property.l1.py))
 
 ### Compliance
