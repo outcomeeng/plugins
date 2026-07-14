@@ -54,9 +54,10 @@ Before starting Step 3, determine the product language:
 - `tsconfig.json` exists -> **TypeScript**
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
-- Multiple language markers exist -> check the spec node for language indicators, or ask the user
+- Multiple supported language markers exist -> inspect the loaded spec node for a single applicable language; when ambiguity remains, ask the operator and stop before Step 3 until one language is selected
+- No supported marker exists, or the selected language has no installed architecture, test, and code skills -> stop before Step 3 and report the exact marker state plus the missing language-plugin capability
 
-Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
+Proceed to Step 3 only after exactly one supported language and its required skill surface resolve. Use that language for ALL Steps 3–8. Do not switch mid-flow.
 
 </language_detection>
 
