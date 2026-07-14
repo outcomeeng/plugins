@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     ordinary_plugin_root_file_is_accepted,
     require_skill_emits_identically_across_targets,
     require_skill_expands_to_neutral_guidance,
+    require_skill_neutrality_oracle_rejects_runtime_specific_guidance,
     require_skill_renders_inline,
     shared_topic_references_travel_with_fragment,
     shared_topic_without_fragment_is_rejected,
@@ -47,6 +48,10 @@ def test_standard_jinja_syntax_passes_through_rendering() -> None:
 
 def test_require_skill_expands_to_neutral_guidance() -> None:
     assert require_skill_expands_to_neutral_guidance()
+
+
+def test_neutral_guidance_oracle_rejects_runtime_specific_wording() -> None:
+    assert require_skill_neutrality_oracle_rejects_runtime_specific_guidance()
 
 
 def test_require_skill_renders_inline() -> None:
