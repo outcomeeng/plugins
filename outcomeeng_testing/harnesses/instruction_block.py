@@ -338,7 +338,7 @@ def canonical_router_spacing_is_valid_for_all_mappings() -> bool:
     for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
         for enabled_languages in _language_subsets(languages):
             marker = module.router_marker(version, enabled_languages)
-            separator = f"{marker}\n\n"
+            separator = f"{marker}{module.ROUTER_BODY_SEPARATOR}"
             rendered = module.render(
                 template,
                 enabled_languages,
