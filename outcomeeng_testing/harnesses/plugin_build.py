@@ -12,7 +12,7 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
-    AGENT_FILE_SUFFIX,
+    MARKDOWN_FILE_SUFFIX,
     IMPLEMENTED,
     PLUGIN_SUBDIRS,
     SHARED_DIR_NAME,
@@ -181,7 +181,7 @@ def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:
 def _materialize_source(builder: SrcTreeBuilder, source: PluginBuildSource) -> None:
     for plugin_source in source.plugins:
         case = plugin_source.scenario
-        reference_name = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
+        reference_name = f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}"
         builder.add_shared_topic(
             case.scope,
             case.inner_topic,

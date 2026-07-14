@@ -9,7 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
-    AGENT_FILE_SUFFIX,
+    MARKDOWN_FILE_SUFFIX,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -342,7 +342,7 @@ def _execution_time_injection_detector_covers_generated_commands() -> bool:
 
 
 def _execution_time_commands(case: SourceScenario) -> tuple[str, ...]:
-    reference_name = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
+    reference_name = f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}"
     sibling_paths = (
         f"../{case.skill}/{SKILL_FILENAME}",
         f"../{case.skill}/*",
@@ -423,7 +423,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             ),
         )
     )
-    artifact_filename = f"{case.cycle_topic}{AGENT_FILE_SUFFIX}"
+    artifact_filename = f"{case.cycle_topic}{MARKDOWN_FILE_SUFFIX}"
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
         builder = SrcTreeBuilder(root)
@@ -431,7 +431,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             case.scope,
             case.inner_topic,
             case.fragment_body,
-            references={f"{case.outer_topic}{AGENT_FILE_SUFFIX}": fan_out_body},
+            references={f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}": fan_out_body},
         )
         builder.add_plugin(
             case.plugin,
@@ -493,7 +493,7 @@ def _synthetic_inventory_is_complete() -> bool:
 
 
 def _repeated_include_failures(case: SourceScenario) -> tuple[str, ...]:
-    reference_filename = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
+    reference_filename = f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}"
     directive = format_directive(
         IncludeDirective(f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}")
     )
@@ -772,7 +772,7 @@ def _frontmatter_strip_is_idempotent(case: SourceScenario) -> bool:
 
 
 def _claude_reference(case: SourceScenario) -> str:
-    return f"{CLAUDE_SKILL_DIR_TOKEN}/{case.outer_topic}{AGENT_FILE_SUFFIX}"
+    return f"{CLAUDE_SKILL_DIR_TOKEN}/{case.outer_topic}{MARKDOWN_FILE_SUFFIX}"
 
 
 def _frontmatter_source(case: SourceScenario) -> str:

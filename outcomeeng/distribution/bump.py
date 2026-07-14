@@ -38,12 +38,21 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    CLAUDE_PLUGIN_SUBDIR_NAME,
+    CODEX_PLUGIN_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
+
 REQUIRED_TOOLS: tuple[str, ...] = ("git",)
 SOURCE_PLUGINS_DIR: str = "src/plugins"
 DIST_CLAUDE_PLUGINS_DIR: str = "dist/claude"
 DIST_CODEX_PLUGINS_DIR: str = "dist/codex"
-CLAUDE_MANIFEST: str = ".claude-plugin/plugin.json"
-CODEX_MANIFEST: str = ".codex-plugin/plugin.json"
+CLAUDE_MANIFEST: str = f"{CLAUDE_PLUGIN_SUBDIR_NAME}/plugin.json"
+CODEX_MANIFEST: str = f"{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json"
 
 _PLUGIN_CHANGE_ROOTS: tuple[str, ...] = (
     SOURCE_PLUGINS_DIR,
@@ -209,7 +218,6 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     Structural paths (relative to any recognized distribution-surface root):
 
     - `skills/{slug}/SKILL.md`
-    - `commands/{slug}.md`
     - `agents/{slug}.md`
     - `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`
     """
@@ -241,13 +249,17 @@ def _is_minor_triggering_path(path: str) -> bool:
             break
     if rest is None:
         return False
-    if len(rest) == 3 and rest[0] == "skills" and rest[2] == "SKILL.md":
-        return True
-    if len(rest) == 2 and rest[0] in ("commands", "agents") and rest[1].endswith(".md"):
+    if len(rest) == 3 and rest[0] == SKILLS_SUBDIR_NAME and rest[2] == SKILL_FILENAME:
         return True
     if (
         len(rest) == 2
-        and rest[0] in (".claude-plugin", ".codex-plugin")
+        and rest[0] == AGENTS_SUBDIR_NAME
+        and rest[1].endswith(MARKDOWN_FILE_SUFFIX)
+    ):
+        return True
+    if (
+        len(rest) == 2
+        and rest[0] in (CLAUDE_PLUGIN_SUBDIR_NAME, CODEX_PLUGIN_SUBDIR_NAME)
         and rest[1] == "plugin.json"
     ):
         return True

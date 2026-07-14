@@ -11,6 +11,7 @@ from outcomeeng.distribution.build import (
     runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import (
+    PLUGIN_SUBDIRS,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_TOOL_KIND,
     Target,
@@ -100,11 +101,19 @@ def source_scenarios() -> tuple[SourceScenario, ...]:
         )
         for coordinate in runtime_token_resolver_cases()
     )
-
-
 def _name_outside(domain: Collection[str]) -> str:
     names = set(domain)
     candidate = f"{max(names)}_outside_domain"
     while candidate in names:
         candidate = f"{candidate}_outside_domain"
     return candidate
+
+
+def unrecognized_plugin_subdirectory_names() -> tuple[str, ...]:
+    """Return generated directory names outside the production allowlist."""
+    candidates = {
+        name
+        for scenario in source_scenarios()
+        for name in (scenario.outer_topic, scenario.cycle_topic)
+    }
+    return tuple(sorted(candidates.difference(PLUGIN_SUBDIRS)))

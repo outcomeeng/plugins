@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     shared_topic_references_travel_with_fragment,
     shared_topic_without_fragment_is_rejected,
     skill_dir_escape_survives_jinja_pass,
+    unrecognized_plugin_subdirectories_are_rejected,
     well_formed_source_tree_builds,
 )
 
@@ -28,6 +29,10 @@ def test_build_accepts_well_formed_src_tree() -> None:
 
 def test_build_accepts_ordinary_files_under_plugin_root() -> None:
     assert ordinary_plugin_root_file_is_accepted()
+
+
+def test_build_rejects_unrecognized_plugin_subdirectories() -> None:
+    assert unrecognized_plugin_subdirectories_are_rejected()
 
 
 def test_build_rejects_shared_topic_without_fragment() -> None:

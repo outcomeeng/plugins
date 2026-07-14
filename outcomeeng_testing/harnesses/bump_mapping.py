@@ -6,8 +6,8 @@ Covers the segment-increment and auto-detection mapping assertions:
   component; MINOR increments the second and resets the third to 0;
   MAJOR increments the first and resets the second and third to 0.
 - The auto-detection (file-status, path-pattern) → segment mapping:
-  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `commands/<slug>.md`,
-  `agents/<slug>.md`, or `{.claude,.codex}-plugin/plugin.json` yields
+  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `agents/<slug>.md`,
+  or `{.claude,.codex}-plugin/plugin.json` yields
   `MINOR`; everything else yields `PATCH`.
 
 Evidence is exercised against the `Version` and `auto_segment` source

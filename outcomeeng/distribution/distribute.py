@@ -30,9 +30,6 @@ LICENSE_FILE = MONOREPO_ROOT / "LICENSE"
 MARKETPLACE_REPO = "plugins"
 CLAUDE_DIST_RELATIVE = Path("dist") / "claude"
 
-# Directories inside a plugin that are NOT distributed (Claude-specific)
-SKIP_DIRS = {"commands", "agents", ".claude-plugin"}
-
 
 def load_config() -> dict[str, Any]:
     with open(DISTRIBUTION_CONFIG) as f:

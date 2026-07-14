@@ -24,6 +24,24 @@ PLUGIN_NAME_VARIABLE: Final = "plugin_name"
 DIST_DIR_NAME: Final = "dist"
 PLUGINS_DIR_NAME: Final = "plugins"
 SKILLS_SUBDIR_NAME: Final = "skills"
+AGENTS_SUBDIR_NAME: Final = "agents"
+SCRIPTS_SUBDIR_NAME: Final = "scripts"
+HOOKS_SUBDIR_NAME: Final = "hooks"
+CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
+CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
+REFERENCES_SUBDIR_NAME: Final = "references"
+SKILL_FILENAME: Final = "SKILL.md"
+MARKDOWN_FILE_SUFFIX: Final = ".md"
+PLUGIN_SUBDIRS: Final = frozenset(
+    {
+        SKILLS_SUBDIR_NAME,
+        AGENTS_SUBDIR_NAME,
+        SCRIPTS_SUBDIR_NAME,
+        HOOKS_SUBDIR_NAME,
+        CLAUDE_PLUGIN_SUBDIR_NAME,
+        CODEX_PLUGIN_SUBDIR_NAME,
+    }
+)
 REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
     "unavailable, report the missing skill and continue with the closest "

@@ -37,6 +37,7 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
     BUILD_BLOCK_DELIMITER_END,
     BUILD_BLOCK_DELIMITER_START,
     BUILD_COMMENT_DELIMITER_END,
@@ -44,8 +45,14 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     BUILD_VARIABLE_DELIMITER_END,
     BUILD_VARIABLE_DELIMITER_START,
+    CLAUDE_PLUGIN_SUBDIR_NAME,
+    CODEX_PLUGIN_SUBDIR_NAME,
+    HOOKS_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX as MARKDOWN_FILE_SUFFIX,
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
+    PLUGIN_SUBDIRS,
+    REFERENCES_SUBDIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -71,6 +78,8 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_TOOL_KIND,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+    SCRIPTS_SUBDIR_NAME,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     SOURCE_ROOT_NAME,
     SPX_FLOOR_VARIABLE,
@@ -103,24 +112,6 @@ IMPLEMENTED: Final = True
 
 SHARED_DIR_NAME: Final = "_shared"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
-AGENTS_SUBDIR_NAME: Final = "agents"
-SCRIPTS_SUBDIR_NAME: Final = "scripts"
-HOOKS_SUBDIR_NAME: Final = "hooks"
-CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
-CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
-REFERENCES_SUBDIR_NAME: Final = "references"
-PLUGIN_SUBDIRS: Final = frozenset(
-    {
-        SKILLS_SUBDIR_NAME,
-        AGENTS_SUBDIR_NAME,
-        SCRIPTS_SUBDIR_NAME,
-        HOOKS_SUBDIR_NAME,
-        CLAUDE_PLUGIN_SUBDIR_NAME,
-        CODEX_PLUGIN_SUBDIR_NAME,
-    }
-)
-SKILL_FILENAME: Final = "SKILL.md"
-AGENT_FILE_SUFFIX: Final = ".md"
 
 
 # ---------------------------------------------------------------------------

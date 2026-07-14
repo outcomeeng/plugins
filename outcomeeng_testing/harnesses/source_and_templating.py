@@ -13,7 +13,7 @@ from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import (
     AGENTS_SUBDIR_NAME,
-    AGENT_FILE_SUFFIX,
+    MARKDOWN_FILE_SUFFIX,
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -56,6 +56,7 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
+    unrecognized_plugin_subdirectory_names,
 )
 from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
 from outcomeeng_testing.generators.fragments import (
@@ -327,6 +328,13 @@ def ordinary_plugin_root_file_is_accepted() -> bool:
     return all(_ordinary_file_is_emitted(case) for case in source_scenarios())
 
 
+def unrecognized_plugin_subdirectories_are_rejected() -> bool:
+    return all(
+        _unrecognized_plugin_subdirectory_is_rejected(name)
+        for name in unrecognized_plugin_subdirectory_names()
+    )
+
+
 def shared_topic_without_fragment_is_rejected() -> bool:
     return all(_fragment_required(case) for case in source_scenarios())
 
@@ -463,6 +471,20 @@ def _ordinary_file_is_emitted(case: SourceScenario) -> bool:
         )
 
 
+def _unrecognized_plugin_subdirectory_is_rejected(name: str) -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        case = source_scenarios()[0]
+        builder = _source_tree(root, case)
+        unexpected = builder.src_root / PLUGINS_DIR_NAME / case.plugin / name
+        unexpected.mkdir()
+        try:
+            build(builder.src_root, root / DIST_DIR_NAME)
+        except SourceFormatError as error:
+            return str(unexpected.relative_to(builder.src_root)) in str(error)
+        return False
+
+
 def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
@@ -476,7 +498,9 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
         plugin_root = builder.src_root / PLUGINS_DIR_NAME / case.plugin
         authored_plugin_files = (
             plugin_root / SKILLS_SUBDIR_NAME / case.skill / SKILL_FILENAME,
-            plugin_root / AGENTS_SUBDIR_NAME / f"{case.outer_topic}{AGENT_FILE_SUFFIX}",
+            plugin_root
+            / AGENTS_SUBDIR_NAME
+            / f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}",
         )
         required_files = (
             *authored_plugin_files,
@@ -688,8 +712,8 @@ def _include_uses_contract(case: SourceScenario) -> bool:
 
 
 def _shared_topic_reference_travels(case: SourceScenario) -> bool:
-    inner_reference_name = f"{case.inner_topic}{AGENT_FILE_SUFFIX}"
-    outer_reference_name = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
+    inner_reference_name = f"{case.inner_topic}{MARKDOWN_FILE_SUFFIX}"
+    outer_reference_name = f"{case.outer_topic}{MARKDOWN_FILE_SUFFIX}"
     reference_bodies = dict.fromkeys(
         (inner_reference_name, outer_reference_name),
         case.fragment_body,

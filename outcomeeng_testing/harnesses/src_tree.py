@@ -17,7 +17,7 @@ from typing import Iterator, Mapping
 
 from outcomeeng.distribution.build import (
     AGENTS_SUBDIR_NAME,
-    AGENT_FILE_SUFFIX,
+    MARKDOWN_FILE_SUFFIX,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
@@ -77,7 +77,7 @@ def write_agent_source(
         / PLUGINS_DIR_NAME
         / plugin_name
         / AGENTS_SUBDIR_NAME
-        / f"{agent_name}{AGENT_FILE_SUFFIX}"
+        / f"{agent_name}{MARKDOWN_FILE_SUFFIX}"
     )
 
 
@@ -187,7 +187,7 @@ def _write_agents(plugin_root: Path, agents: Mapping[str, str] | None) -> None:
     agents_root = plugin_root / AGENTS_SUBDIR_NAME
     agents_root.mkdir(exist_ok=True)
     for agent_name, content in agents.items():
-        (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
+        (agents_root / f"{agent_name}{MARKDOWN_FILE_SUFFIX}").write_text(
             content, encoding="utf-8"
         )
 
