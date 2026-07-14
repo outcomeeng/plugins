@@ -128,7 +128,7 @@ Review these inputs:
 - Coordination section from Step 7.
 - Note content loaded by `/contextualize` for any found `PLAN.md` or `ISSUES.md`; treat notes as stale-prone inputs and verify them against the loaded specs, decisions, assertions, tests, implementation, and current user intent before they steer work.
 - Existing `doing` sessions from `spx session list --status doing --json`, comparing their `specs`, `files`, `goal`, and `next_step` with this session's target node and topic terms.
-- Branch/worktree ownership from `git branch` and `git worktree list` when the session names a feature branch, branch-like `git_ref`, or a live-branch conflict.
+- Branch/worktree ownership from `git branch --list` and `git worktree list` when the session names a feature branch, branch-like `git_ref`, or a live-branch conflict.
 - PR ownership from `gh pr list` or `gh pr view` when the session names a PR, branch, or merged/open PR state.
 
 Classify the session:
