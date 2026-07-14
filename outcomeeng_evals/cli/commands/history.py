@@ -7,6 +7,19 @@ from pathlib import Path
 
 import click
 
+from outcomeeng_evals.history import (
+    HISTORY_CASES_PASSED_FIELD,
+    HISTORY_CASES_TOTAL_FIELD,
+    HISTORY_GIT_SHA_FIELD,
+    HISTORY_PASSED_FIELD,
+    HISTORY_PASS_RATE_FIELD,
+    HISTORY_TIMESTAMP_FIELD,
+)
+
+
+HISTORY_PASS_VERDICT = "PASS"
+HISTORY_FAIL_VERDICT = "FAIL"
+
 
 @click.command(name="history")
 @click.argument(
@@ -28,9 +41,9 @@ def history_command(history_path: Path, limit: int) -> None:
         return
     recent = rows[-limit:]
     for row in recent:
-        passed = bool(row.get("passed"))
-        verdict = "PASS" if passed else "FAIL"
-        pass_rate = row.get("pass_rate")
+        passed = bool(row.get(HISTORY_PASSED_FIELD))
+        verdict = HISTORY_PASS_VERDICT if passed else HISTORY_FAIL_VERDICT
+        pass_rate = row.get(HISTORY_PASS_RATE_FIELD)
         # ``bool`` is an ``int`` subclass, so the ``bool`` rejection must
         # come before the ``(int, float)`` check — otherwise a stray
         # ``true``/``false`` in the JSON row would be formatted as 100%/0%
@@ -41,9 +54,10 @@ def history_command(history_path: Path, limit: int) -> None:
             else "?"
         )
         click.echo(
-            f"{row.get('timestamp', '?')}  {verdict}  pass_rate={pct}  "
-            f"cases={row.get('cases_passed', '?')}/{row.get('cases_total', '?')}  "
-            f"git={row.get('git_sha', '?')}"
+            f"{row.get(HISTORY_TIMESTAMP_FIELD, '?')}  {verdict}  pass_rate={pct}  "
+            f"cases={row.get(HISTORY_CASES_PASSED_FIELD, '?')}/"
+            f"{row.get(HISTORY_CASES_TOTAL_FIELD, '?')}  "
+            f"git={row.get(HISTORY_GIT_SHA_FIELD, '?')}"
         )
 
 

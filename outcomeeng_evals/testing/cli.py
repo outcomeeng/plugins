@@ -18,6 +18,7 @@ from outcomeeng_evals.cli import (
     EXIT_SUCCESS,
     main,
 )
+from outcomeeng_evals.cli.commands.history import HISTORY_PASS_VERDICT
 from outcomeeng_evals.cli.commands.run import (
     MAX_WORKERS,
     MIN_WORKERS,
@@ -27,6 +28,16 @@ from outcomeeng_evals.cli.commands.run import (
 )
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
+from outcomeeng_evals.history import (
+    HISTORY_CASES_PASSED_FIELD,
+    HISTORY_CASES_TOTAL_FIELD,
+    HISTORY_GIT_SHA_FIELD,
+    HISTORY_PASSED_FIELD,
+    HISTORY_PASS_RATE_FIELD,
+    HISTORY_SCHEMA_VERSION_FIELD,
+    HISTORY_TIMESTAMP_FIELD,
+)
+from outcomeeng_evals.report import JSON_SCHEMA_VERSION
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.testing.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings as _assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
@@ -218,7 +229,7 @@ def assert_discover_subcommand_succeeds_on_empty_tree() -> None:
 
 
 def assert_history_subcommand_reads_version_1_compatible_rows() -> None:
-    """Assert history accepts version-1 rows before and after additive fields."""
+    """Assert history renders version-1 rows before and after additive fields."""
 
     with TemporaryDirectory() as tmp:
         eval_dir = Path(tmp) / "evals" / "rule"
@@ -233,7 +244,26 @@ def assert_history_subcommand_reads_version_1_compatible_rows() -> None:
             encoding="utf-8"
         ) as fixture_file:
             rows = tuple(json.loads(line) for line in fixture_file if line.strip())
-        assert all(row["timestamp"] in result.output for row in rows)
+        assert all(
+            row[HISTORY_SCHEMA_VERSION_FIELD] == JSON_SCHEMA_VERSION for row in rows
+        )
+        assert result.output.splitlines() == [
+            _expected_history_summary(row) for row in rows
+        ]
+
+
+def _expected_history_summary(row: dict[str, object]) -> str:
+    """Build the independent expected CLI summary for one fixture row."""
+    assert row[HISTORY_PASSED_FIELD] is True
+    pass_rate = row[HISTORY_PASS_RATE_FIELD]
+    assert isinstance(pass_rate, float)
+    return (
+        f"{row[HISTORY_TIMESTAMP_FIELD]}  {HISTORY_PASS_VERDICT}  "
+        f"pass_rate={pass_rate:.1%}  "
+        f"cases={row[HISTORY_CASES_PASSED_FIELD]}/"
+        f"{row[HISTORY_CASES_TOTAL_FIELD]}  "
+        f"git={row[HISTORY_GIT_SHA_FIELD]}"
+    )
 
 
 def assert_history_subcommand_handles_missing_file() -> None:

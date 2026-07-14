@@ -13,6 +13,13 @@ from typing import TypedDict
 
 
 HISTORY_FILENAME = "history.jsonl"
+HISTORY_TIMESTAMP_FIELD = "timestamp"
+HISTORY_SCHEMA_VERSION_FIELD = "schema_version"
+HISTORY_GIT_SHA_FIELD = "git_sha"
+HISTORY_PASSED_FIELD = "passed"
+HISTORY_PASS_RATE_FIELD = "pass_rate"
+HISTORY_CASES_TOTAL_FIELD = "cases_total"
+HISTORY_CASES_PASSED_FIELD = "cases_passed"
 HISTORY_TRANSCRIPT_FIELD = "transcript"
 
 
