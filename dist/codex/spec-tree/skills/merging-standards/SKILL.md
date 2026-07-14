@@ -329,9 +329,6 @@ gh pr merge <pr-number> --rebase --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
 # Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
-held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
-if [ -n "$held_worktree" ]; then echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
-elif [ -n "$(git branch --list "$branch_from_pr")" ]; then git branch -D "$branch_from_pr"; fi
 remote_branch_status=0
 git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
 case "$remote_branch_status" in
@@ -339,6 +336,17 @@ case "$remote_branch_status" in
   2) ;;
   *) exit "$remote_branch_status" ;;
 esac
+held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
+if [ -n "$held_worktree" ]; then
+  echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
+elif git show-ref --verify --quiet "refs/heads/$branch_from_pr"; then
+  local_branch_sha=$(git rev-parse "refs/heads/$branch_from_pr")
+  if git merge-base --is-ancestor "$local_branch_sha" "origin/$base_from_pr"; then
+    git branch -d "$branch_from_pr"
+  else
+    echo "Local branch kept: branch=$branch_from_pr tip=$local_branch_sha reason=not-ancestor-of-origin/$base_from_pr"
+  fi
+fi
 git status --porcelain
 ```
 
