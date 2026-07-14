@@ -70,8 +70,6 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 
 **Step 1: Load context**
 
-The workflow below is self-contained. Read `${SKILL_DIR}/references/evidence-model.md` only when an evidence-chain edge case needs additional examples.
-
 Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
