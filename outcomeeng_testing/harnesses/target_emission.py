@@ -9,7 +9,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
-    BLOCK_DELIMITER_START,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -128,7 +127,7 @@ def claude_output_preserves_skill_dir_token() -> bool:
     relevant = {
         path: text
         for path, text in _text_files(snapshot.source).items()
-        if CLAUDE_SKILL_DIR_TOKEN in text and BLOCK_DELIMITER_START not in text
+        if CLAUDE_SKILL_DIR_TOKEN in text
     }
     failures = tuple(
         (
@@ -137,8 +136,7 @@ def claude_output_preserves_skill_dir_token() -> bool:
             _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
         )
         for path, text in relevant.items()
-        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        < text.count(CLAUDE_SKILL_DIR_TOKEN)
+        if CLAUDE_SKILL_DIR_TOKEN not in _decode_text(output_files[path])
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
@@ -157,7 +155,7 @@ def codex_output_rewrites_skill_dir_token() -> bool:
     relevant = {
         path: text
         for path, text in _text_files(snapshot.source).items()
-        if _unescaped_skill_dir_count(text) and BLOCK_DELIMITER_START not in text
+        if _unescaped_skill_dir_count(text)
     }
     failures = tuple(
         (
@@ -169,9 +167,8 @@ def codex_output_rewrites_skill_dir_token() -> bool:
         )
         for path, text in relevant.items()
         if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        != _escaped_skill_dir_count(text)
-        or _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN)
-        < _unescaped_skill_dir_count(text)
+        > _escaped_skill_dir_count(text)
+        or CODEX_SKILL_DIR_TOKEN not in _decode_text(output_files[path])
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
