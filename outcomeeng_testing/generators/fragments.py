@@ -44,6 +44,8 @@ _BODY_ALPHABET = (
 
 _MAX_LINE_LENGTH = 80
 _MAX_LINES = 12
+_MIN_INCLUDE_CHAIN_DEPTH = 1
+_MAX_INCLUDE_CHAIN_DEPTH = 8
 
 # Delimiter sequences whose presence is the interesting edge for expand_include:
 # the reader must reproduce them, not interpret them. Built from source-owned
@@ -98,4 +100,12 @@ def inert_fragment_bodies() -> SearchStrategy[str]:
                 and VARIABLE_DELIMITER_START not in body
             )
         )
+    )
+
+
+def include_chain_depths() -> SearchStrategy[int]:
+    """Depths that search beyond fixed one- and two-level include examples."""
+    return st.integers(
+        min_value=_MIN_INCLUDE_CHAIN_DEPTH,
+        max_value=_MAX_INCLUDE_CHAIN_DEPTH,
     )

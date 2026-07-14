@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Callable, Final
+
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
@@ -18,6 +22,7 @@ from outcomeeng.distribution.build import (
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     CyclicIncludeError,
+    Directive,
     DirectiveSyntaxError,
     IncludeDirective,
     IncludeResolutionError,
@@ -42,12 +47,133 @@ from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
 )
+from outcomeeng_testing.generators.directives import directives
+from outcomeeng_testing.generators.fragments import (
+    fragment_bodies,
+    include_chain_depths,
+    inert_fragment_bodies,
+)
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
+
+SOURCE_PROPERTY_EXAMPLES: Final = 20
+SOURCE_PROPERTY_REPLAY: Final = (
+    "just test spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/"
+)
 
 
 def implementation_is_ready() -> bool:
     return IMPLEMENTED
+
+
+def directive_roundtrip_property_holds() -> bool:
+    _run_replayable_property(_directive_roundtrip_property)
+    return True
+
+
+def include_body_property_holds() -> bool:
+    _run_replayable_property(_include_body_property)
+    return True
+
+
+def rendered_include_property_holds() -> bool:
+    _run_replayable_property(_rendered_include_property)
+    return True
+
+
+def recursive_include_property_holds() -> bool:
+    _run_replayable_property(_recursive_include_property)
+    return True
+
+
+@settings(
+    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    deadline=None,
+    derandomize=True,
+    database=None,
+)
+@given(directive=directives())
+def _directive_roundtrip_property(directive: Directive) -> None:
+    assert parse_directives(format_directive(directive)) == (directive,)
+
+
+@settings(
+    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    deadline=None,
+    derandomize=True,
+    database=None,
+)
+@given(case=st.sampled_from(source_scenarios()), body=fragment_bodies())
+def _include_body_property(case: SourceScenario, body: str) -> None:
+    with TemporaryDirectory() as temporary_directory:
+        builder = SrcTreeBuilder(Path(temporary_directory))
+        builder.add_shared_topic(case.scope, case.inner_topic, body)
+        directive = IncludeDirective(_fragment_path(case, case.inner_topic))
+        assert expand_include(directive, shared_root=builder.shared_root) == body
+
+
+@settings(
+    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    deadline=None,
+    derandomize=True,
+    database=None,
+)
+@given(
+    case=st.sampled_from(source_scenarios()),
+    prefix=inert_fragment_bodies(),
+    body=inert_fragment_bodies(),
+    suffix=inert_fragment_bodies(),
+)
+def _rendered_include_property(
+    case: SourceScenario,
+    prefix: str,
+    body: str,
+    suffix: str,
+) -> None:
+    with TemporaryDirectory() as temporary_directory:
+        builder = SrcTreeBuilder(Path(temporary_directory))
+        builder.add_shared_topic(case.scope, case.inner_topic, body)
+        directive = _include_text(case, case.inner_topic)
+        template = "\n".join((prefix, directive, suffix))
+        expected = "\n".join((prefix, body, suffix))
+        assert render_text(template, shared_root=builder.shared_root) == expected
+
+
+@settings(
+    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    deadline=None,
+    derandomize=True,
+    database=None,
+)
+@given(
+    case=st.sampled_from(source_scenarios()),
+    depth=include_chain_depths(),
+)
+def _recursive_include_property(case: SourceScenario, depth: int) -> None:
+    with TemporaryDirectory() as temporary_directory:
+        builder = SrcTreeBuilder(Path(temporary_directory))
+        topics = [f"{case.outer_topic}-{index}" for index in range(depth)]
+        for index, topic in enumerate(topics):
+            body = (
+                case.fragment_body
+                if index == depth - 1
+                else _include_text(case, topics[index + 1])
+            )
+            builder.add_shared_topic(case.scope, topic, body)
+        rendered = render_text(
+            _include_text(case, topics[0]),
+            shared_root=builder.shared_root,
+        )
+        assert rendered == case.fragment_body
+
+
+def _run_replayable_property(property_run: Callable[[], None]) -> None:
+    try:
+        property_run()
+    except AssertionError as error:
+        raise AssertionError(
+            f"deterministic property failure; replay with `{SOURCE_PROPERTY_REPLAY}`"
+        ) from error
 
 
 def standard_jinja_block_has_no_directives() -> bool:
