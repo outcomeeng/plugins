@@ -184,6 +184,30 @@ def dist_diff_surfaces_match_contract() -> bool:
         step.argv for step in VALIDATION_STEPS if step.label == DIST_DIFF_STEP_LABEL
     }
     command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
+    return _dist_diff_surface_contract_holds(dist_diff_argvs, command)
+
+
+def dist_diff_surface_violations_are_rejected() -> bool:
+    command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
+    gate_without_reporter = {DIST_DIFF_ARGV[:-1]}
+    hook_without_reporter = command.replace(
+        DIST_DIFF_MODULE_NAME,
+        DIST_DIR_NAME,
+        1,
+    )
+    return not _dist_diff_surface_contract_holds(
+        gate_without_reporter,
+        command,
+    ) and not _dist_diff_surface_contract_holds(
+        {DIST_DIFF_ARGV},
+        hook_without_reporter,
+    )
+
+
+def _dist_diff_surface_contract_holds(
+    dist_diff_argvs: set[tuple[str, ...]],
+    command: str,
+) -> bool:
     return (
         dist_diff_argvs == {DIST_DIFF_ARGV}
         and DIST_DIFF_MODULE_NAME in DIST_DIFF_ARGV
@@ -195,11 +219,26 @@ def dist_diff_surfaces_match_contract() -> bool:
 
 def justfile_matches_build_contract() -> bool:
     justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
-    return (
-        just_recipe_names(justfile).count(BUILD_RECIPE_NAME) == 1
-        and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
-        and _build_emits_every_source_scenario_to_each_target()
+    return _justfile_contract_holds(justfile) and (
+        _build_emits_every_source_scenario_to_each_target()
     )
+
+
+def justfile_recipe_violation_is_rejected() -> bool:
+    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
+    violating_command = " ".join(BUILD_COMMAND_ARGV[:-1])
+    violating_justfile = justfile.replace(
+        " ".join(BUILD_COMMAND_ARGV),
+        violating_command,
+        1,
+    )
+    return not _justfile_contract_holds(violating_justfile)
+
+
+def _justfile_contract_holds(justfile: str) -> bool:
+    return just_recipe_names(justfile).count(
+        BUILD_RECIPE_NAME
+    ) == 1 and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
 
 
 def lefthook_matches_build_contract() -> bool:

@@ -66,6 +66,27 @@ def canonical_dist_files_trace_to_source_ancestors() -> bool:
         )
 
 
+def orphaned_dist_artifact_is_rejected() -> bool:
+    """Return whether snapshot validation rejects an unbuilt dist artifact."""
+    _require_build_implementation()
+    with TemporaryDirectory() as temporary_directory:
+        generated_dist_root = Path(temporary_directory) / DIST_DIR_NAME
+        build(CANONICAL_SOURCE_ROOT, generated_dist_root)
+        generated_snapshot = snapshot_files(generated_dist_root)
+        orphaned_snapshot = (
+            *generated_snapshot,
+            (str(Path(DIST_DIR_NAME, SKILL_FILENAME)), b""),
+        )
+        try:
+            _require_same_snapshot(
+                actual=generated_snapshot,
+                expected=orphaned_snapshot,
+            )
+        except AssertionError:
+            return True
+        return False
+
+
 def canonical_build_is_deterministic() -> bool:
     """Run the generated determinism property and return its result."""
     _require_build_implementation()
