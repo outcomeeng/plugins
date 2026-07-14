@@ -5,6 +5,7 @@ plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
   "src/plugins/spec-tree/skills/audit-tests/SKILL.md",
+  "dist/claude/spec-tree/skills/audit-tests/SKILL.md",
 ]
 smoke_cases = [
   "rejects-harness-owned-protocol",
