@@ -11,9 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from outcomeeng.distribution.build import SKILL_FILENAME
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
 )

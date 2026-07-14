@@ -12,12 +12,9 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
-    MARKDOWN_FILE_SUFFIX,
     IMPLEMENTED,
-    PLUGIN_SUBDIRS,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
-    SKILL_FILENAME,
     IncludeDirective,
     build,
     format_directive,
@@ -25,7 +22,10 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    PLUGIN_SUBDIRS,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
 )

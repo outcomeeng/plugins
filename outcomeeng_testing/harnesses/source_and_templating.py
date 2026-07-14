@@ -12,19 +12,15 @@ from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import (
-    AGENTS_SUBDIR_NAME,
-    MARKDOWN_FILE_SUFFIX,
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
     CLAUDE_SKILL_DIR_TOKEN,
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
-    REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
-    SKILL_FILENAME,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     CyclicIncludeError,
@@ -47,9 +43,13 @@ from outcomeeng.distribution.build import (
     runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
     BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    REFERENCES_SUBDIR_NAME,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
 )

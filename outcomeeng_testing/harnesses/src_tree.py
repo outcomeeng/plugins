@@ -2,8 +2,8 @@
 
 SrcTreeBuilder writes plugins and shared topics to a given root, validating
 inputs against the canonical kebab-case naming rules. Layout constants come
-from outcomeeng.distribution.build so the harness stays aligned with the
-production module's contract.
+from outcomeeng.distribution.contracts so the harness stays aligned with the
+production contract.
 """
 
 from __future__ import annotations
@@ -15,16 +15,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Iterator, Mapping
 
-from outcomeeng.distribution.build import (
+from outcomeeng.distribution.build import SHARED_DIR_NAME, SHARED_FRAGMENT_FILENAME
+from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
     MARKDOWN_FILE_SUFFIX,
+    PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
-    SHARED_DIR_NAME,
-    SHARED_FRAGMENT_FILENAME,
     SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
 )
-from outcomeeng.distribution.contracts import PLUGINS_DIR_NAME, SKILLS_SUBDIR_NAME
 
 SRC_DIR_NAME = "src"
 
@@ -47,8 +47,8 @@ def _validate_reference_filename(filename: str) -> None:
     if "/" in filename or "\\" in filename:
         msg = f"reference filename {filename!r} must not contain path separators"
         raise ValueError(msg)
-    if not filename.endswith(".md"):
-        msg = f"reference filename {filename!r} must end in .md"
+    if not filename.endswith(MARKDOWN_FILE_SUFFIX):
+        msg = f"reference filename {filename!r} must end in {MARKDOWN_FILE_SUFFIX}"
         raise ValueError(msg)
 
 

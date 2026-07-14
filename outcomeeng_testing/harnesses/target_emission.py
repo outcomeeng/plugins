@@ -9,7 +9,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
-    MARKDOWN_FILE_SUFFIX,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -20,10 +19,7 @@ from outcomeeng.distribution.build import (
     EXECUTION_TIME_INJECTION_START,
     IGNORED_SOURCE_DIRECTORY_NAMES,
     IGNORED_SOURCE_FILE_SUFFIXES,
-    PLUGIN_SUBDIRS,
-    REFERENCES_SUBDIR_NAME,
     SHARED_FRAGMENT_FILENAME,
-    SKILL_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     IncludeDirective,
     build,
@@ -38,7 +34,11 @@ from outcomeeng.distribution.build import (
 )
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    PLUGIN_SUBDIRS,
+    REFERENCES_SUBDIR_NAME,
+    SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     TEXT_FILE_SUFFIXES,
     Target,
@@ -56,7 +56,6 @@ from outcomeeng_testing.harnesses.distribution import (
     REPOSITORY_ROOT,
     snapshot_files,
 )
-from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 type PathSnapshot = tuple[tuple[Path, bytes], ...]

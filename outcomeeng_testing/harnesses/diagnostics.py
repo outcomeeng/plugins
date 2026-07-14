@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.build import SKILL_FILENAME, build, source_plugin_name
+from outcomeeng.distribution.build import build, source_plugin_name
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
     PLUGINS_DIR_NAME,
+    SKILL_FILENAME,
     SOURCE_ROOT_NAME,
     Target,
 )
