@@ -2,8 +2,7 @@
 
 Each mapping asserts a total input->output correspondence over a finite, source-owned domain:
 test extension to language, enabled language to rendered block, ``--check`` state to report
-word, shared-region state to report word, initial topology to bootstrap outcome, and span
-ratio to the wrap decision. The domains come from the generator's own constants and the
+word, shared-region state to report word, and initial topology to bootstrap outcome. The domains come from the generator's own constants and the
 harness's topology fixtures; the test file owns no boundary values.
 """
 
@@ -144,22 +143,3 @@ def test_topology_maps_to_bootstrap_outcome(
     # the router block is always first, whatever the topology
     assert claude.startswith(MODULE.ROUTER_MARKER_PREFIX)
     assert agents.startswith(MODULE.ROUTER_MARKER_PREFIX)
-
-
-def test_span_ratio_maps_to_wrap_decision() -> None:
-    identical = harness.ROOT_SHARED_BODY
-    _, ratio_identical = MODULE.biggest_identical_span(identical, identical)
-    assert ratio_identical > MODULE.BOOTSTRAP_SHARED_THRESHOLD
-    wrapped_a, wrapped_b = MODULE.bootstrap_wrap(identical, identical)
-    assert MODULE.parse_shared_regions(wrapped_a)
-    assert MODULE.parse_shared_regions(wrapped_b)
-
-    _, ratio_divergent = MODULE.biggest_identical_span(
-        harness.ROOT_CLAUDE_BODY, harness.ROOT_AGENTS_BODY
-    )
-    assert ratio_divergent <= MODULE.BOOTSTRAP_SHARED_THRESHOLD
-    no_wrap_a, no_wrap_b = MODULE.bootstrap_wrap(
-        harness.ROOT_CLAUDE_BODY, harness.ROOT_AGENTS_BODY
-    )
-    assert not MODULE.parse_shared_regions(no_wrap_a)
-    assert not MODULE.parse_shared_regions(no_wrap_b)

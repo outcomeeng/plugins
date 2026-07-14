@@ -19,13 +19,12 @@ documents as strings; no filesystem is involved.
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import pathlib
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
-import sys
 from types import ModuleType
 from typing import Final, cast
 
@@ -34,18 +33,7 @@ import pytest
 from outcomeeng.distribution import instruction_block as dist
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
-# Coupled to the update-instruction-block skill directory name; a rename there must update
-# this path or load_instruction_block_module raises RuntimeError at import time.
-INSTRUCTION_BLOCK_MODULE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "update-instruction-block"
-    / "scripts"
-    / "instruction_block.py"
-)
+FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 CANONICAL_TEMPLATE_PATH = (
     REPO_ROOT
     / "src"
@@ -56,98 +44,108 @@ CANONICAL_TEMPLATE_PATH = (
     / "templates"
     / "instruction-block.md"
 )
-INSTRUCTION_CLAUDE: Final = "CLAUDE.md"
-INSTRUCTION_AGENTS: Final = "AGENTS.md"
-ROOT_CLAUDE_BODY: Final = "# Claude Root\n\nClaude repository instructions.\n"
-ROOT_AGENTS_BODY: Final = "# Agents Root\n\nCodex repository instructions.\n"
-ROOT_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
+
+
+def _fixture_text(name: str) -> str:
+    """Read one inert whole-document instruction-block fixture."""
+    return FIXTURES_DIR.joinpath(name).read_text(encoding="utf-8")
+
+
+_SOURCE_MODULE = dist.load_instruction_block_module()
+TEMPLATE_HARNESSES = tuple(_SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES)
+HARNESS_CLAUDE, HARNESS_CODEX = TEMPLATE_HARNESSES
+INSTRUCTION_CLAUDE = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CLAUDE]
+INSTRUCTION_AGENTS = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CODEX]
+ROOT_CLAUDE_BODY: Final = _fixture_text("root-claude.md")
+ROOT_AGENTS_BODY: Final = _fixture_text("root-agents.md")
+ROOT_SHARED_BODY: Final = _fixture_text("root-shared.md")
 
 # Invented shared-region body payloads the harness owns, for shared-region preservation and
 # recency-reconcile tests. Their byte-identity (or, for the ALT, their divergence) across the two
 # root files is what the tests assert; the strings carry no domain vocabulary.
-SHARED_REGION_NAME: Final = "root"
-SHARED_REGION_BODY: Final = "Build: `product build --all`"
-SHARED_REGION_BODY_ALT: Final = "Build: `product build --changed`"
+SHARED_REGION_NAME: Final = _SOURCE_MODULE.BOOTSTRAP_SHARED_REGION_NAME
+SHARED_REGION_BODY: Final = _SOURCE_MODULE.parse_shared_regions(
+    _fixture_text("shared-region-primary.md")
+)[SHARED_REGION_NAME]
+SHARED_REGION_BODY_ALT: Final = _SOURCE_MODULE.parse_shared_regions(
+    _fixture_text("shared-region-alternate.md")
+)[SHARED_REGION_NAME]
 
 # Two near-identical root-file bodies for the bootstrap line-boundary guard: more than 80%
 # identical but diverging mid-line on a harness-specific word, so the longest contiguous common
 # span ends mid-line. The bootstrap must snap to line boundaries rather than split the divergent
 # line across the shared-region fence.
-_NEAR_IDENTICAL_COMMON: Final = (
-    "\n".join(
-        f"Common line {index} with plenty of words to be substantial here."
-        for index in range(30)
-    )
-    + "\n"
-)
-ROOT_NEAR_IDENTICAL_CLAUDE: Final = (
-    _NEAR_IDENTICAL_COMMON + "Shared opening words then CLAUDE specific tail here.\n"
-)
-ROOT_NEAR_IDENTICAL_CODEX: Final = (
-    _NEAR_IDENTICAL_COMMON + "Shared opening words then CODEX specific tail here.\n"
-)
+ROOT_NEAR_IDENTICAL_CLAUDE: Final = _fixture_text("near-identical-claude.md")
+ROOT_NEAR_IDENTICAL_CODEX: Final = _fixture_text("near-identical-codex.md")
 
 # A pair for the bootstrap span-maximality guard: a whole-line-identical block plus a longer
 # near-duplicate single line diverging mid-line. The byte-level-longest match is that long line,
 # which snaps away to nothing at a line boundary — so the biggest whole-line span is the block
 # elsewhere, and the wrap must find it rather than under-detect from the single longest byte match.
-_STRADDLING_BLOCK: Final = (
-    "\n".join(
-        f"Common whole line number {index} shared across both files."
-        for index in range(6)
-    )
-    + "\n"
-)
-# The long prefix and the diverging tail form ONE line (no newline between them), so the
-# byte-longest match is that line's shared prefix — which straddles the line and snaps away.
-_STRADDLING_LONG_PREFIX: Final = "x" * 480
-ROOT_STRADDLING_CLAUDE: Final = (
-    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "AAAAA claude-specific tail here.\n"
-)
-ROOT_STRADDLING_CODEX: Final = (
-    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "BBBBB codex-specific tail here.\n"
-)
+ROOT_STRADDLING_CLAUDE: Final = _fixture_text("straddling-claude.md")
+ROOT_STRADDLING_CODEX: Final = _fixture_text("straddling-codex.md")
 
 # A pair whose shared content starts at a line boundary in one file but mid-line in the other: the
 # second file carries a harness-specific prefix on the otherwise-shared first line. The bootstrap
 # must snap the span to line boundaries in BOTH files, never splitting the prefixed line.
-_MIDLINE_COMMON: Final = "".join(
-    f"identical line {index} here with plenty of content to dominate.\n"
-    for index in range(20)
-)
-ROOT_MIDLINE_CLAUDE: Final = "shared prose here\n" + _MIDLINE_COMMON
-ROOT_MIDLINE_CODEX: Final = "harness-prefix shared prose here\n" + _MIDLINE_COMMON
+ROOT_MIDLINE_CLAUDE: Final = _fixture_text("midline-claude.md")
+ROOT_MIDLINE_CODEX: Final = _fixture_text("midline-codex.md")
 
 # The retired session-result tokens the shipped instruction block must never teach. No
 # production module owns a removed token, so the regression guard declares the forbidden
 # strings here and asserts they are absent from the real rendered output.
-SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
-SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+SESSION_ARCHIVE_RESULT_INSTRUCTION, SESSION_RESULT_FRONTMATTER_FIELD = (
+    dist.FORBIDDEN_ROUTER_TOKENS
+)
 
 # Invented scenario payload owned by the harness.
-LANG_PRIMARY = "python"
-LANG_SECONDARY = "typescript"
-TEMPLATE_LANGUAGES = (LANG_PRIMARY, LANG_SECONDARY)
-BASE_SECTION = "Test Naming"
-NEW_SECTION = "Process Hygiene"
+TEMPLATE_LANGUAGES = tuple(dict.fromkeys(_SOURCE_MODULE.LANGUAGE_BY_EXTENSION.values()))
+LANG_PRIMARY, LANG_SECONDARY, *_ = TEMPLATE_LANGUAGES
+_BASE_TEMPLATE = _fixture_text("template-base.md")
+_EXTENDED_TEMPLATE = _fixture_text("template-extended.md")
+_BASE_HEADINGS = tuple(
+    line.removeprefix("## ")
+    for line in _BASE_TEMPLATE.splitlines()
+    if line.startswith("## ")
+)
+_EXTENDED_HEADINGS = tuple(
+    line.removeprefix("## ")
+    for line in _EXTENDED_TEMPLATE.splitlines()
+    if line.startswith("## ")
+)
+BASE_SECTION = _BASE_HEADINGS[0]
+NEW_SECTION = next(
+    heading for heading in _EXTENDED_HEADINGS if heading not in _BASE_HEADINGS
+)
 # Invented scenario version payload owned by the harness: NEW_VERSION is the installed (current)
 # template version, OLD_VERSION a version numerically below it. The values carry no domain
 # meaning; the dotted-numeric ordering NEW_VERSION > OLD_VERSION is what the staleness and
 # upgrade scenarios rely on.
-OLD_VERSION: Final = "0.17.0"
-NEW_VERSION: Final = "0.18.0"
+_CURRENT_TEMPLATE_VERSION = _SOURCE_MODULE.parse_template_version(_BASE_TEMPLATE)
+if _CURRENT_TEMPLATE_VERSION is None:
+    raise RuntimeError(
+        "instruction-block base template fixture has no template version"
+    )
+NEW_VERSION: Final[str] = _CURRENT_TEMPLATE_VERSION
+_VERSION_PARTS = [int(part) for part in NEW_VERSION.split(".")]
+_PREVIOUS_PART = next(
+    index for index in range(len(_VERSION_PARTS) - 1, -1, -1) if _VERSION_PARTS[index]
+)
+_VERSION_PARTS[_PREVIOUS_PART] -= 1
+for _index in range(_PREVIOUS_PART + 1, len(_VERSION_PARTS)):
+    _VERSION_PARTS[_index] = 0
+OLD_VERSION: Final = ".".join(str(part) for part in _VERSION_PARTS)
 # A brace-delimited illustration token the render must pass through unchanged.
-ILLUSTRATION_TOKEN = "{product-slug}"
-BUILD_MACRO_CAPABILITY = "ask_user"
-BUILD_MACRO_HARNESS = "codex"
+ILLUSTRATION_TOKEN = next(
+    token
+    for token in re.findall(r"\{[^{}\n]+\}", _BASE_TEMPLATE)
+    if token not in dist.UNRESOLVED_BUILD_TEMPLATE_TOKENS
+)
 
 # Harness payload: the template carries a per-harness block for each agent harness,
 # rendered only into that harness's instruction file. The marker syntax mirrors the module's
 # ``<!-- harness:NAME -->`` conditional-block contract (parsed by ``_filter_harness``); a
 # synthetic template that drifts from it fails to render.
-HARNESS_CLAUDE = "claude"
-HARNESS_CODEX = "codex"
-TEMPLATE_HARNESSES = (HARNESS_CLAUDE, HARNESS_CODEX)
 
 
 @dataclass(frozen=True)
@@ -240,26 +238,13 @@ def harness_line(harness: str) -> str:
 
 
 def render_build_macro() -> str:
-    """Build an unresolved macro-shaped token owned by the render harness."""
-    return f"\n{{{{! tool('{BUILD_MACRO_CAPABILITY}', '{BUILD_MACRO_HARNESS}') !}}}}\n"
+    """Return a source-owned unresolved build delimiter as template content."""
+    return f"\n{dist.UNRESOLVED_BUILD_TEMPLATE_TOKENS[0]}\n"
 
 
 def load_instruction_block_module() -> ModuleType:
-    """Load the ``instruction_block`` module via importlib and cache it."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
-    return module
+    """Return the distribution module's loaded instruction-block implementation."""
+    return cast(ModuleType, dist.load_instruction_block_module())
 
 
 def read_canonical_template() -> str:
@@ -273,48 +258,14 @@ def _language_heading(language: str) -> str:
 
 
 def build_template(version: str, *, extra_section: bool = False) -> str:
-    """Build a synthetic template at ``version`` with a block per template language.
-
-    With ``extra_section`` the template also carries ``NEW_SECTION`` — a section a
-    newer template introduces, absent from an older one.
-    """
-    module = load_instruction_block_module()
-    delimiter = module.FRONTMATTER_DELIMITER
-    frontmatter = (
-        f"{delimiter}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{delimiter}\n"
+    """Read a whole-template fixture and replace only its source-owned version value."""
+    template = _EXTENDED_TEMPLATE if extra_section else _BASE_TEMPLATE
+    current = load_instruction_block_module().parse_template_version(template)
+    if current is None:
+        raise RuntimeError("instruction-block template fixture has no template version")
+    return template.replace(
+        f'template_version: "{current}"', f'template_version: "{version}"', 1
     )
-    parts = [
-        "",
-        "# Spec Tree Instructions",
-        "",
-        f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
-        "",
-        f"## {BASE_SECTION}",
-        "",
-    ]
-    for language in TEMPLATE_LANGUAGES:
-        parts += [
-            f"<!-- lang:{language} -->",
-            "",
-            _language_heading(language),
-            f"{language} naming rules",
-            "",
-            f"<!-- /lang:{language} -->",
-        ]
-    for harness in TEMPLATE_HARNESSES:
-        parts += [
-            f"<!-- harness:{harness} -->",
-            "",
-            harness_line(harness),
-            "",
-            f"<!-- /harness:{harness} -->",
-        ]
-    if extra_section:
-        parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
-    return frontmatter + "\n".join(parts) + "\n"
 
 
 def write_spx_tree_with_tests(
@@ -460,17 +411,17 @@ def assert_justfile_binds_instruction_recipes() -> None:
     justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
     build_body = justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
     check_body = justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
-    assert f"outcomeeng.distribution.instruction_block {dist.WRITE_FLAG}" in build_body
-    assert "outcomeeng.distribution.instruction_block" in check_body
+    assert f"{dist.MODULE_INVOCATION} {dist.WRITE_FLAG}" in build_body
+    assert dist.MODULE_INVOCATION in check_body
     assert dist.WRITE_FLAG not in check_body
 
 
 def assert_lefthook_regenerates_through_build_instructions() -> None:
     """Assert pre-commit regeneration uses the repository recipe."""
-    lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
-    assert "run: just build-instructions" in lefthook
-    assert "--template src/plugins" not in lefthook
-    assert "--repo-root ." not in lefthook
+    lefthook = dist.REPO_ROOT.joinpath(dist.LEFTHOOK_PATH).read_text(encoding="utf-8")
+    assert dist.PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND in lefthook
+    assert dist.LEGACY_DIRECT_TEMPLATE_ARGUMENT not in lefthook
+    assert dist.LEGACY_DIRECT_REPO_ROOT_ARGUMENT not in lefthook
 
 
 def assert_drift_gate_reports_missing_root_instruction_file() -> None:
@@ -611,29 +562,29 @@ def assert_regenerate_overwrites_router_drift() -> None:
 
 def assert_refresh_workflow_regenerates_and_opens_pr() -> None:
     """Assert refresh workflow dispatch regenerates before opening a drift PR."""
-    workflow = dist.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
-    assert "workflow_dispatch:" in workflow
-    assert "just build-instructions" in workflow_run_block(
-        "Regenerate instruction blocks"
+    workflow = dist.REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
+        encoding="utf-8"
     )
-    assert "git status --porcelain" in workflow_step_block(
-        "Open instruction-block refresh pull request"
+    assert dist.WORKFLOW_DISPATCH_TRIGGER in workflow
+    assert dist.WORKFLOW_BUILD_INSTRUCTIONS_COMMAND in workflow_run_block(
+        dist.WORKFLOW_REGENERATE_STEP
+    )
+    assert dist.WORKFLOW_DRIFT_COMMAND in workflow_step_block(
+        dist.WORKFLOW_OPEN_PR_STEP
     )
 
 
 def assert_refresh_workflow_checks_out_main() -> None:
     """Assert refresh automation starts from the default branch."""
-    assert "main" in workflow_step_block("Checkout")
+    assert dist.DEFAULT_BRANCH in workflow_step_block(dist.WORKFLOW_CHECKOUT_STEP)
 
 
 def assert_refresh_workflow_verifies_just_download() -> None:
     """Assert refresh automation verifies its pinned just download."""
-    install = workflow_run_block("Install just")
-    just_sha256 = workflow_env_value("JUST_SHA256")
+    install = workflow_run_block(dist.WORKFLOW_INSTALL_JUST_STEP)
+    just_sha256 = workflow_env_value(dist.WORKFLOW_JUST_CHECKSUM_ENV)
     assert len(just_sha256) == 64
-    assert "$JUST_SHA256" in install
+    assert dist.WORKFLOW_JUST_CHECKSUM_REFERENCE in install
     assert "mktemp -d" in install
     assert "trap " in install
     assert "rm -rf" in install
@@ -644,11 +595,11 @@ def assert_refresh_workflow_verifies_just_download() -> None:
 
 def assert_refresh_workflow_installs_dprint() -> None:
     """Assert refresh automation installs and verifies its pinned formatter."""
-    install = workflow_run_block("Install dprint")
-    dprint_version = workflow_env_value("DPRINT_VERSION")
+    install = workflow_run_block(dist.WORKFLOW_INSTALL_DPRINT_STEP)
+    dprint_version = workflow_env_value(dist.WORKFLOW_DPRINT_VERSION_ENV)
     assert dprint_version
-    assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install
-    assert "dprint --version" in install
+    assert dist.WORKFLOW_DPRINT_INSTALL_COMMAND in install
+    assert dist.WORKFLOW_DPRINT_VERSION_COMMAND in install
 
 
 def assert_render_preserves_brace_token() -> None:
@@ -851,9 +802,9 @@ def workflow_run_block(step_name: str) -> str:
     of the named step. Workflow parsing is shared setup, so it lives in the harness rather than a
     test body.
     """
-    workflow = REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
+    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
+        encoding="utf-8"
+    )
     lines = workflow.splitlines()
     step_line = f"      - name: {step_name}"
     start = lines.index(step_line)
@@ -873,9 +824,9 @@ def workflow_run_block(step_name: str) -> str:
 
 def workflow_step_block(step_name: str) -> str:
     """Return the full YAML block of one refresh-workflow step, for step assertions."""
-    workflow = REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
+    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
+        encoding="utf-8"
+    )
     lines = workflow.splitlines()
     step_line = f"      - name: {step_name}"
     start = lines.index(step_line)
@@ -889,9 +840,9 @@ def workflow_step_block(step_name: str) -> str:
 
 def workflow_env_value(name: str) -> str:
     """Return the value of one refresh-workflow ``env`` entry, for env assertions."""
-    workflow = REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-instruction-blocks.yml"
-    ).read_text(encoding="utf-8")
+    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
+        encoding="utf-8"
+    )
     prefix = f"      {name}: "
     for line in workflow.splitlines():
         if line.startswith(prefix):
@@ -958,7 +909,7 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
         [
             "/bin/bash",
             "-c",
-            workflow_run_block("Open instruction-block refresh pull request"),
+            workflow_run_block(dist.WORKFLOW_OPEN_PR_STEP),
         ],
         cwd=repo_root,
         capture_output=True,

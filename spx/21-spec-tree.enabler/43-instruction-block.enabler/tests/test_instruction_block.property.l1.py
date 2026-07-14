@@ -131,3 +131,15 @@ def test_bootstrap_wraps_at_most_one_shared_region(
     wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
     assert len(module.parse_shared_regions(wrapped_a)) <= 1
     assert len(module.parse_shared_regions(wrapped_b)) <= 1
+
+
+@given(content_a=_FREE_CONTENT, content_b=_FREE_CONTENT)
+def test_biggest_span_ratio_determines_wrap_decision(
+    content_a: str, content_b: str
+) -> None:
+    module = load_instruction_block_module()
+    span, ratio = module.biggest_identical_span(content_a, content_b)
+    wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
+    should_wrap = ratio > module.BOOTSTRAP_SHARED_THRESHOLD and bool(span.strip())
+    assert bool(module.parse_shared_regions(wrapped_a)) is should_wrap
+    assert bool(module.parse_shared_regions(wrapped_b)) is should_wrap

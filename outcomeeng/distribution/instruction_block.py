@@ -42,10 +42,36 @@ SHARED_DRIFT_REMEDIATION: Final = (
     "git-more-recent side, then commit the reconciled root CLAUDE.md and AGENTS.md."
 )
 UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
+FORBIDDEN_ROUTER_TOKENS: Final = (
+    "Before archiving a claimed session",
+    "`result`",
+)
 BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
 WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
+MODULE_INVOCATION: Final = "outcomeeng.distribution.instruction_block"
+LEFTHOOK_PATH: Final = Path("lefthook.yml")
+REFRESH_WORKFLOW_PATH: Final = Path(".github/workflows/refresh-instruction-blocks.yml")
+PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
+LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
+LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
+WORKFLOW_DISPATCH_TRIGGER: Final = "workflow_dispatch:"
+WORKFLOW_REGENERATE_STEP: Final = "Regenerate instruction blocks"
+WORKFLOW_OPEN_PR_STEP: Final = "Open instruction-block refresh pull request"
+WORKFLOW_CHECKOUT_STEP: Final = "Checkout"
+WORKFLOW_INSTALL_JUST_STEP: Final = "Install just"
+WORKFLOW_INSTALL_DPRINT_STEP: Final = "Install dprint"
+WORKFLOW_JUST_CHECKSUM_ENV: Final = "JUST_SHA256"
+WORKFLOW_DPRINT_VERSION_ENV: Final = "DPRINT_VERSION"
+WORKFLOW_BUILD_INSTRUCTIONS_COMMAND: Final = "just build-instructions"
+WORKFLOW_DRIFT_COMMAND: Final = "git status --porcelain"
+DEFAULT_BRANCH: Final = "main"
+WORKFLOW_JUST_CHECKSUM_REFERENCE: Final = f"${WORKFLOW_JUST_CHECKSUM_ENV}"
+WORKFLOW_DPRINT_INSTALL_COMMAND: Final = (
+    f'bun add -g "dprint@${{{WORKFLOW_DPRINT_VERSION_ENV}}}"'
+)
+WORKFLOW_DPRINT_VERSION_COMMAND: Final = "dprint --version"
 FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
 FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
@@ -78,6 +104,8 @@ class InstructionBlockModule(Protocol):
     """Subset of the shipped instruction-block generator reused by the product gate."""
 
     AGENT_HARNESS_INSTRUCTION_FILENAMES: dict[str, str]
+    BOOTSTRAP_SHARED_REGION_NAME: str
+    LANGUAGE_BY_EXTENSION: dict[str, str]
     OBSOLETE_SPX_INSTRUCTION_FILENAMES: tuple[str, ...]
 
     def parse_template_version(self, text: str) -> str | None: ...
@@ -95,6 +123,8 @@ class InstructionBlockModule(Protocol):
     def write_root_instruction_files(
         self, repo_root: Path, blocks_by_harness: Mapping[str, str]
     ) -> None: ...
+
+    def parse_shared_regions(self, text: str) -> dict[str, str]: ...
 
     def remove_obsolete_spx_instruction_files(self, repo_root: Path) -> None: ...
 
@@ -246,6 +276,12 @@ def validate_foundation_access_policy(
             details = ", ".join(missing)
             raise FoundationAccessPolicyError(
                 f"{harness} router foundation policy is incomplete: {details}"
+            )
+        forbidden = [token for token in FORBIDDEN_ROUTER_TOKENS if token in document]
+        if forbidden:
+            details = ", ".join(repr(token) for token in forbidden)
+            raise FoundationAccessPolicyError(
+                f"{harness} router contains forbidden session-result tokens: {details}"
             )
 
 
