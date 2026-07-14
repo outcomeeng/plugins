@@ -8,6 +8,11 @@ from outcomeeng_testing.harnesses.bump import (
     changed_plugin_aggregation_is_union_of_per_path_results,
     changed_plugins_match_spec_oracle_over_arbitrary_diff_paths,
 )
+from outcomeeng_testing.harnesses.bump_mapping import segment_increment_property_holds
+
+
+def test_segment_increment_property_holds() -> None:
+    assert segment_increment_property_holds()
 
 
 def test_any_path_under_a_recognized_distribution_root_extracts_that_plugin() -> None:

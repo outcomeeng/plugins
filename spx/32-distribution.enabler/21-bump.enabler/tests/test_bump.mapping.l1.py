@@ -7,12 +7,7 @@ from outcomeeng_testing.harnesses.bump_mapping import (
     auto_segment_never_returns_major,
     auto_segment_returns_minor_when_any_change_is_minor_triggering,
     auto_segment_returns_patch_when_no_change_triggers_minor,
-    segment_increment_matches_mapping,
 )
-
-
-def test_segment_increment_matches_mapping() -> None:
-    assert segment_increment_matches_mapping()
 
 
 def test_auto_segment_classifies_each_status_and_path_pattern() -> None:

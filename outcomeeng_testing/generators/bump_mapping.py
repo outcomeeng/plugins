@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from hypothesis import strategies as st
+from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.distribution.bump import (
     ChangedPath,
@@ -22,24 +23,6 @@ from outcomeeng.distribution.contracts import (
     SKILLS_SUBDIR_NAME,
 )
 from outcomeeng_testing.generators.bump import distribution_relpath
-
-SEGMENT_DISPATCH: dict[Segment, Callable[[Version], Version]] = {
-    Segment.PATCH: Version.bump_patch,
-    Segment.MINOR: Version.bump_minor,
-    Segment.MAJOR: Version.bump_major,
-}
-
-SEGMENT_MAPPING_CASES: tuple[tuple[Segment, int, int, int, Version], ...] = (
-    (Segment.PATCH, 0, 4, 1, Version(major=0, minor=4, patch=2)),
-    (Segment.PATCH, 1, 2, 9, Version(major=1, minor=2, patch=10)),
-    (Segment.PATCH, 0, 0, 0, Version(major=0, minor=0, patch=1)),
-    (Segment.MINOR, 0, 4, 1, Version(major=0, minor=5, patch=0)),
-    (Segment.MINOR, 1, 2, 9, Version(major=1, minor=3, patch=0)),
-    (Segment.MINOR, 0, 0, 5, Version(major=0, minor=1, patch=0)),
-    (Segment.MAJOR, 0, 4, 1, Version(major=1, minor=0, patch=0)),
-    (Segment.MAJOR, 1, 2, 9, Version(major=2, minor=0, patch=0)),
-    (Segment.MAJOR, 0, 0, 0, Version(major=1, minor=0, patch=0)),
-)
 
 AUTO_SEGMENT_MAPPING_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
     (
@@ -187,6 +170,17 @@ AUTO_SEGMENT_MAPPING_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
         Segment.PATCH,
     ),
 )
+
+
+def versions() -> SearchStrategy[Version]:
+    """Generate the full non-negative semantic-version component domain."""
+    component = st.integers(min_value=0)
+    return st.builds(Version, major=component, minor=component, patch=component)
+
+
+def segments() -> SearchStrategy[Segment]:
+    """Generate every source-owned bump segment."""
+    return st.sampled_from(tuple(Segment))
 
 
 def mixed_minor_triggering_changes() -> tuple[ChangedPath, ...]:

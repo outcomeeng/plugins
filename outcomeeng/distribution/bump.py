@@ -142,6 +142,11 @@ _SEGMENT_DISPATCH: dict[Segment, Callable[[Version], Version]] = {
 }
 
 
+def bump_version(version: Version, segment: Segment) -> Version:
+    """Return ``version`` incremented according to the selected segment."""
+    return _SEGMENT_DISPATCH[segment](version)
+
+
 @dataclass(frozen=True)
 class ManifestRecord:
     """Working-tree state of one manifest a plugin owns."""
@@ -346,7 +351,7 @@ def bump(
         else:
             if not plugin_versions_agree:
                 out_of_lockstep_plugins.add(plugin)
-            segment_target = _SEGMENT_DISPATCH[resolved](max(base_ref_versions))
+            segment_target = bump_version(max(base_ref_versions), resolved)
             plugin_target = max(segment_target, max(working_tree_versions))
             plugin_targets[plugin] = (plugin_target, resolved)
             unbumped_plugins.append(plugin)
