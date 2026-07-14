@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import string
 from pathlib import Path
+from typing import Any
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
 from outcomeeng_evals.ci_execution import CiRunSettings
 from outcomeeng_evals.ci_plan import EvalPlanItem
+from outcomeeng_evals.case import (
+    CASE_ID_FIELD,
+    CASE_INPUT_FIELD,
+    EXPECTED_VERDICT_FIELD,
+    MAX_EXPECTED_LIST_LENGTH,
+    MUST_CONTAIN_FIELD,
+)
 from outcomeeng_evals.definition import (
     OWNED_PATH_ALPHABET,
     OWNED_PATH_RECURSIVE_SUFFIX,
@@ -96,3 +104,22 @@ def ci_run_settings() -> SearchStrategy[CiRunSettings]:
         ).map(str),
         timeout_seconds=st.integers(min_value=1, max_value=3600).map(str),
     )
+
+
+def expected_list_boundary_record(*, over_limit: bool) -> dict[str, Any]:
+    """Build the exact and first-invalid expectation-list boundary records."""
+
+    length = MAX_EXPECTED_LIST_LENGTH + int(over_limit)
+    return {
+        CASE_ID_FIELD: f"expected-list-{length}",
+        CASE_INPUT_FIELD: {},
+        EXPECTED_VERDICT_FIELD: {
+            MUST_CONTAIN_FIELD: [
+                {
+                    "findings": [
+                        {"rule": f"generated-rule-{index}"} for index in range(length)
+                    ]
+                }
+            ]
+        },
+    }

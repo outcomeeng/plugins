@@ -22,3 +22,11 @@ Audit checklist:
 - Implement any required adaptation in the build renderer and regenerate committed runtime output.
 
 Required handling: run the audit as a plugin-build/runtime-parameterization follow-up before editing the build. Gate any implementation with the focused runtime-parameterization tests, `just build-skills`, `just check-skills`, `just docs-check`, and the repository's merge lifecycle. Surfaced by the argument-syntax review during `feat/guide-filename-runtime-token` (2026-06-26).
+
+## 3. Claude verifier subagents can inherit the globally configured Advisor model
+
+Claude Code 2.1.207 enables its server-side Advisor tool when user settings carry `advisorModel`. A local A/B startup probe confirmed that inherited `"advisorModel": "fable"` enables `claude-fable-5`, while the command-level override `--settings '{"advisorModel":""}'` suppresses Advisor initialization. An eval trial showed the consequence: a Sonnet verifier consulted Fable, adding $1.137 of uncached model cost and exhausting the run budget after total spend reached $1.554. Fable also consumes subscription quota at a higher rate, so verifier agents must never inherit it implicitly.
+
+The eval harness controls its own Claude subprocess and disables Advisor at `outcomeeng_evals.runner.ClaudeCliRunner`. Native Claude verifier subagents launched through the built-in `Agent` tool bypass that adapter. Their agent frontmatter has no documented per-agent `advisorModel` field, so prompt guidance and tool allowlists do not prove suppression of the server-side Advisor tool.
+
+Revisit condition: before claiming cost-bounded verifier-agent execution, identify and test a supported Claude Code control that disables Advisor for every native verifier subagent while preserving the parent conversation's chosen advisor configuration. Prefer an enforceable per-agent runtime field. If Claude Code exposes no such field, introduce one shared verifier-launch policy or project-level override and prove through startup/debug evidence that every verifier agent runs without Advisor initialization. Keep this concern distinct from model selection: each verifier's declared `model: sonnet` does not disable its Advisor tool.

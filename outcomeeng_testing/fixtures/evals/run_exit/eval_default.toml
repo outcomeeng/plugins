@@ -1,0 +1,5 @@
+title = "Default run exit contract"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+trials = 1
+model = "sonnet"

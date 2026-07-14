@@ -1,0 +1,4 @@
+{"id":"exit-0","input":{"index":0},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"exit-1","input":{"index":1},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"exit-2","input":{"index":2},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}
+{"id":"exit-3","input":{"index":3},"expected_verdict":{"must_contain":[{"status":"rejected"}]}}

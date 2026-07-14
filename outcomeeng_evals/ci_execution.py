@@ -8,13 +8,17 @@ from dataclasses import dataclass
 from typing import Final, Literal
 
 from outcomeeng_evals.ci_plan import EvalPlanItem
+from outcomeeng_evals.settings import (
+    DEFAULT_MAX_BUDGET_USD_TEXT,
+    DEFAULT_TIMEOUT_SECONDS_TEXT,
+)
 
 UV_RUN_EVALS_ARGV_PREFIX: Final = ("uv", "run", "outcomeeng-evals", "run")
 PLUGIN_DIR_FLAG: Final = "--plugin-dir"
 CASE_ID_FLAG: Final = "--case-id"
 DEFAULT_CI_WORKERS: Final = "1"
-DEFAULT_CI_MAX_BUDGET_USD: Final = "0.50"
-DEFAULT_CI_TIMEOUT_SECONDS: Final = "120"
+DEFAULT_CI_MAX_BUDGET_USD: Final = DEFAULT_MAX_BUDGET_USD_TEXT
+DEFAULT_CI_TIMEOUT_SECONDS: Final = DEFAULT_TIMEOUT_SECONDS_TEXT
 EXIT_SUCCESS: Final = 0
 EXIT_FAILURE: Final = 1
 CiRunSettingName = Literal["workers", "max_budget_usd", "timeout_seconds"]

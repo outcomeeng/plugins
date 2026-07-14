@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import yaml  # type: ignore[import-untyped]
 from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 
@@ -28,6 +29,10 @@ from outcomeeng_evals.ci_triggers import (
 )
 from outcomeeng_evals.cli import EXIT_SUCCESS, main
 from outcomeeng_evals.definition import CiPolicy
+from outcomeeng_evals.settings import (
+    DEFAULT_MAX_BUDGET_USD_TEXT,
+    DEFAULT_TIMEOUT_SECONDS_TEXT,
+)
 from outcomeeng_testing.generators.ci_triggers import probe_paths, trigger_pattern_sets
 
 MINIMIZATION_PROPERTY_SEED = 20260709
@@ -40,6 +45,8 @@ CI_TRIGGERS_PROPERTY_TEST_PATH = (
 
 _EVAL_DIR_GLOB_SUFFIX = "/**"
 _WORKFLOW_INDENT = " " * 6
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_EVAL_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "spec-tree-evals.yml"
 
 # Probe fixtures: arbitrary representatives of a suite slug, a path an eval
 # owns, and a path no eval owns. Named once so a reader sees which literal
@@ -101,17 +108,18 @@ def eval_trigger_repo(
         yield EvalTriggerRepo(repo_root=base, root=root, workflow=workflow)
 
 
-def assert_ci_policy_controls_trigger_contribution(policy: CiPolicy) -> None:
+def assert_ci_policy_controls_trigger_contribution() -> None:
     """Assert a suite's CI policy decides whether it contributes trigger paths."""
 
-    owned = ("src/plugins/example/**", "spx/example.md")
-    with eval_trigger_repo({_PROBE_SUITE: (policy, owned)}) as repo:
-        derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
-        contributes = policy is not CiPolicy.MANUAL
+    for policy in CiPolicy:
+        owned = ("src/plugins/example/**", "spx/example.md")
+        with eval_trigger_repo({_PROBE_SUITE: (policy, owned)}) as repo:
+            derived = ci_trigger_paths(repo.root, repo_root=repo.repo_root)
+            contributes = policy is not CiPolicy.MANUAL
 
-        for owned_path in owned:
-            assert (owned_path in derived) is contributes
-        assert (repo.eval_dir_glob(_PROBE_SUITE) in derived) is contributes
+            for owned_path in owned:
+                assert (owned_path in derived) is contributes
+            assert (repo.eval_dir_glob(_PROBE_SUITE) in derived) is contributes
 
 
 def assert_universal_paths_always_contribute() -> None:
@@ -122,6 +130,38 @@ def assert_universal_paths_always_contribute() -> None:
 
     for universal in UNIVERSAL_OWNED_PATHS:
         assert universal in derived
+
+
+def assert_eval_workflow_uses_global_budget_default() -> None:
+    """Assert the workflow's dispatch and runtime defaults match Python."""
+
+    workflow = yaml.load(
+        _EVAL_WORKFLOW.read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    dispatch_default = workflow["on"]["workflow_dispatch"]["inputs"]["max_budget_usd"][
+        "default"
+    ]
+    runtime_default = workflow["jobs"]["evals"]["env"]["MAX_BUDGET_USD"]
+    dispatch_timeout = workflow["on"]["workflow_dispatch"]["inputs"]["timeout_seconds"][
+        "default"
+    ]
+    runtime_timeout = workflow["jobs"]["evals"]["env"]["TIMEOUT_SECONDS"]
+    expected_runtime_default = (
+        "${{ github.event.inputs.max_budget_usd || '"
+        f"{DEFAULT_MAX_BUDGET_USD_TEXT}"
+        "' }}"
+    )
+    expected_runtime_timeout = (
+        "${{ github.event.inputs.timeout_seconds || '"
+        f"{DEFAULT_TIMEOUT_SECONDS_TEXT}"
+        "' }}"
+    )
+
+    assert dispatch_default == DEFAULT_MAX_BUDGET_USD_TEXT
+    assert runtime_default == expected_runtime_default
+    assert dispatch_timeout == DEFAULT_TIMEOUT_SECONDS_TEXT
+    assert runtime_timeout == expected_runtime_timeout
 
 
 def _invoke_cli(repo: EvalTriggerRepo, *, check: bool) -> Result:

@@ -25,11 +25,32 @@ import json
 import os
 import subprocess
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
 from outcomeeng_evals.definition import DEFAULT_MODEL
+from outcomeeng_evals.settings import (
+    ADVISOR_MODEL_SETTING,
+    DEFAULT_MAX_BUDGET_USD,
+    DEFAULT_TIMEOUT_SECONDS,
+    DISABLED_ADVISOR_MODEL,
+)
+
+ANTHROPIC_API_KEY_ENV = "ANTHROPIC_API_KEY"
+CLAUDE_CODE_OAUTH_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
+CLAUDECODE_ENV = "CLAUDECODE"
+DEFAULT_CLAUDE_BINARY = "claude"
+BARE_FLAG = "--bare"
+PRINT_FLAG = "--print"
+OUTPUT_FORMAT_FLAG = "--output-format"
+JSON_OUTPUT_FORMAT = "json"
+NO_SESSION_PERSISTENCE_FLAG = "--no-session-persistence"
+SETTINGS_FLAG = "--settings"
+MODEL_FLAG = "--model"
+PLUGIN_DIR_FLAG = "--plugin-dir"
+MAX_BUDGET_FLAG = "--max-budget-usd"
 
 
 @dataclass(frozen=True)
@@ -66,45 +87,97 @@ class ModelRunner(Protocol):
 
 
 @dataclass(frozen=True)
+class ModelProcessInvocation:
+    """Complete input to one automated model subprocess."""
+
+    argv: tuple[str, ...]
+    prompt: str
+    timeout_seconds: float
+    environment: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class ModelProcessResult:
+    """Normalized output from one automated model subprocess."""
+
+    returncode: int
+    stdout: str
+    stderr: str
+    duration_ms: float
+
+
+class ModelProcessLauncher(Protocol):
+    """Execute one bounded automated model subprocess."""
+
+    def __call__(self, invocation: ModelProcessInvocation) -> ModelProcessResult: ...
+
+
+def launch_model_process(invocation: ModelProcessInvocation) -> ModelProcessResult:
+    """Execute the repository's single automated model-process boundary."""
+
+    start = time.perf_counter()
+    completed = subprocess.run(
+        invocation.argv,
+        input=invocation.prompt,
+        capture_output=True,
+        text=True,
+        timeout=invocation.timeout_seconds,
+        check=False,
+        env=invocation.environment,
+    )
+    return ModelProcessResult(
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+        duration_ms=(time.perf_counter() - start) * 1000.0,
+    )
+
+
+@dataclass(frozen=True)
 class ClaudeCliRunner:
     """Spawn ``claude`` in non-interactive print mode and return the response."""
 
     plugin_dir: Path
     model: str = DEFAULT_MODEL
-    binary: str = "claude"
-    max_budget_usd: float | None = 0.50
-    timeout_seconds: float = 120.0
+    binary: str = DEFAULT_CLAUDE_BINARY
+    max_budget_usd: float | None = DEFAULT_MAX_BUDGET_USD
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     bare: bool | None = None
+    environment: Mapping[str, str] | None = None
+    process_launcher: ModelProcessLauncher = launch_model_process
 
     def run(self, prompt: str) -> RunResult:
+        environment = _subprocess_env(self.environment)
         argv = [self.binary]
-        if self._effective_bare():
-            argv.append("--bare")
+        if self._effective_bare(environment):
+            argv.append(BARE_FLAG)
         argv.extend(
             [
-                "--print",
-                "--output-format",
-                "json",
-                "--no-session-persistence",
-                "--model",
+                PRINT_FLAG,
+                OUTPUT_FORMAT_FLAG,
+                JSON_OUTPUT_FORMAT,
+                NO_SESSION_PERSISTENCE_FLAG,
+                SETTINGS_FLAG,
+                json.dumps(
+                    {ADVISOR_MODEL_SETTING: DISABLED_ADVISOR_MODEL},
+                    separators=(",", ":"),
+                ),
+                MODEL_FLAG,
                 self.model,
-                "--plugin-dir",
+                PLUGIN_DIR_FLAG,
                 str(self.plugin_dir),
             ]
         )
         if self.max_budget_usd is not None:
-            argv.extend(["--max-budget-usd", f"{self.max_budget_usd:.4f}"])
-        start = time.perf_counter()
-        completed = subprocess.run(
-            argv,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=self.timeout_seconds,
-            check=False,
-            env=_subprocess_env(),
+            argv.extend([MAX_BUDGET_FLAG, f"{self.max_budget_usd:.4f}"])
+        completed = self.process_launcher(
+            ModelProcessInvocation(
+                argv=tuple(argv),
+                prompt=prompt,
+                timeout_seconds=self.timeout_seconds,
+                environment=environment,
+            )
         )
-        wall_clock_ms = (time.perf_counter() - start) * 1000.0
         if completed.returncode != 0:
             raise RuntimeError(
                 "claude exited "
@@ -114,10 +187,10 @@ class ClaudeCliRunner:
         envelope = json.loads(completed.stdout)
         return RunResult(
             text=_assistant_text(envelope),
-            metadata=_metadata_from_envelope(envelope, wall_clock_ms),
+            metadata=_metadata_from_envelope(envelope, completed.duration_ms),
         )
 
-    def _effective_bare(self) -> bool:
+    def _effective_bare(self, environment: Mapping[str, str]) -> bool:
         """Return True iff ``--bare`` should be added to the argv.
 
         ``bare=True`` or ``bare=False`` is an explicit caller override for
@@ -129,10 +202,10 @@ class ClaudeCliRunner:
         """
         if self.bare is not None:
             return self.bare
-        return bool(os.environ.get("ANTHROPIC_API_KEY"))
+        return bool(environment.get(ANTHROPIC_API_KEY_ENV))
 
 
-def _subprocess_env() -> dict[str, str]:
+def _subprocess_env(environment: Mapping[str, str] | None = None) -> dict[str, str]:
     """Return a copy of the parent env with the Claude Code nesting guard removed.
 
     The full parent environment is passed through deliberately: ``claude``
@@ -142,8 +215,8 @@ def _subprocess_env() -> dict[str, str]:
     call take the interactive-guard path instead of the print-mode subprocess
     contract.
     """
-    env = dict(os.environ)
-    env.pop("CLAUDECODE", None)
+    env = dict(os.environ if environment is None else environment)
+    env.pop(CLAUDECODE_ENV, None)
     return env
 
 

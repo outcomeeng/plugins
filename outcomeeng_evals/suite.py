@@ -16,6 +16,7 @@ from outcomeeng_evals.runner import ModelRunner, RunMetadata
 
 
 PromptBuilder = Callable[[Case], str]
+TIMEOUT_ERROR_PREFIX = "[timeout] "
 
 
 @dataclass(frozen=True)
@@ -222,7 +223,7 @@ def _error_outcome(*, case: Case, error: BaseException) -> CaseOutcome:
     distinguish a slow-runner failure from a substantive grading failure
     at a glance — same trial schema, recognizable reason prefix.
     """
-    tag = "[timeout] " if isinstance(error, subprocess.TimeoutExpired) else ""
+    tag = TIMEOUT_ERROR_PREFIX if isinstance(error, subprocess.TimeoutExpired) else ""
     error_text = f"{tag}{type(error).__name__}: {error}"
     failing_trial = TrialResult(
         case_id=case.id,

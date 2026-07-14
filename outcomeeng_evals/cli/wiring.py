@@ -13,6 +13,7 @@ from pathlib import Path
 
 from outcomeeng_evals.definition import DEFAULT_MODEL
 from outcomeeng_evals.runner import ClaudeCliRunner
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 
 
 CLAUDE_BIN_ENV = "CLAUDE_BIN"
@@ -23,8 +24,8 @@ def build_claude_runner(
     *,
     plugin_dir: Path,
     model: str = DEFAULT_MODEL,
-    max_budget_usd: float | None = 0.50,
-    timeout_seconds: float = 120.0,
+    max_budget_usd: float | None = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> ClaudeCliRunner:
     """Build a ``ClaudeCliRunner`` with the binary from the environment."""
     return ClaudeCliRunner(

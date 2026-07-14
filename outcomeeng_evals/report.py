@@ -17,13 +17,21 @@ from typing import Any
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.definition import DEFAULT_MODEL
 from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import SuiteResult, TrialResult
 
 
 # Integer-as-string schema version for the JSON results document and the
-# history.jsonl rows. Bumped on incompatible changes; the committed
-# baseline history rows carry the same value.
+# history.jsonl rows. Additive fields retain the version; incompatible removals
+# or interpretation changes bump it and require a consumer migration.
 JSON_SCHEMA_VERSION = "1"
+JSON_REPORT_SUFFIX = ".json"
+EMBEDDED_RESULTS_SCRIPT_ID = "eval-results"
+EMBEDDED_RESULTS_SCRIPT_TYPE = "application/json"
+EMBEDDED_RESULTS_SCRIPT_OPEN = (
+    f'<script id="{EMBEDDED_RESULTS_SCRIPT_ID}" type="{EMBEDDED_RESULTS_SCRIPT_TYPE}">'
+)
+EMBEDDED_RESULTS_SCRIPT_CLOSE = "</script>"
 
 
 def serialize_result(
@@ -31,6 +39,8 @@ def serialize_result(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Serialize a ``SuiteResult`` to a JSON-stable plain dict."""
     case_count = len(result.outcomes)
@@ -39,6 +49,8 @@ def serialize_result(
         "schema_version": JSON_SCHEMA_VERSION,
         "title": title,
         "model": model,
+        "max_budget_usd": max_budget_usd,
+        "timeout_seconds": timeout_seconds,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "suite": {
             "passed": result.passed,
@@ -200,10 +212,21 @@ def write_json_report(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:
     """Write only the JSON results document to ``output_path``."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    _dump_json(serialize_result(result, title, model=model), output_path)
+    _dump_json(
+        serialize_result(
+            result,
+            title,
+            model=model,
+            max_budget_usd=max_budget_usd,
+            timeout_seconds=timeout_seconds,
+        ),
+        output_path,
+    )
     return output_path
 
 
@@ -213,6 +236,8 @@ def write_run_reports(
     title: str,
     *,
     model: str = DEFAULT_MODEL,
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> Path:
     """Write a run's reports: the JSON results document and the HTML viewer.
 
@@ -224,8 +249,14 @@ def write_run_reports(
     path.
     """
     html_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = serialize_result(result, title, model=model)
-    _dump_json(payload, html_path.with_suffix(".json"))
+    payload = serialize_result(
+        result,
+        title,
+        model=model,
+        max_budget_usd=max_budget_usd,
+        timeout_seconds=timeout_seconds,
+    )
+    _dump_json(payload, html_path.with_suffix(JSON_REPORT_SUFFIX))
     html_path.write_text(_render_html_shell(payload), encoding="utf-8")
     return html_path
 
@@ -252,7 +283,7 @@ def _render_html_shell(payload: dict[str, Any]) -> str:
 </head>
 <body>
 <div id="root"></div>
-<script id="eval-results" type="application/json">{embedded}</script>
+{EMBEDDED_RESULTS_SCRIPT_OPEN}{embedded}{EMBEDDED_RESULTS_SCRIPT_CLOSE}
 <script>{_VIEWER_JS}</script>
 </body>
 </html>

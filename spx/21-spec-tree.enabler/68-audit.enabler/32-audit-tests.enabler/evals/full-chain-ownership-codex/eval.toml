@@ -1,0 +1,21 @@
+title = "test-audit-full-chain-ownership-codex"
+cases = "../full-chain-ownership/cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/codex/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
+  "dist/codex/spec-tree/skills/audit-tests/SKILL.md",
+]
+smoke_cases = [
+  "rejects-harness-owned-protocol",
+  "approves-source-owned-protocol",
+  "rejects-unread-import",
+  "rejects-rust-generator-owned-protocol",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/codex/spec-tree/skills/audit-tests/SKILL.md"
+template = "prompt.template.md"

@@ -18,21 +18,40 @@ from outcomeeng_evals.cli import (
     EXIT_SUCCESS,
     main,
 )
+from outcomeeng_evals.cli.commands.history import HISTORY_PASS_VERDICT
 from outcomeeng_evals.cli.commands.run import (
     MAX_WORKERS,
     MIN_WORKERS,
     RUNNER_FACTORY_KEY,
     _FORMAT_SUFFIX,
+    _history_row,
     _runner_factory_from_context,
 )
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
+from outcomeeng_evals.history import (
+    HISTORY_CASES_PASSED_FIELD,
+    HISTORY_CASES_TOTAL_FIELD,
+    HISTORY_GIT_SHA_FIELD,
+    HISTORY_MAX_BUDGET_USD_FIELD,
+    HISTORY_MODEL_FIELD,
+    HISTORY_PASSED_FIELD,
+    HISTORY_PASS_RATE_FIELD,
+    HISTORY_SCHEMA_VERSION_FIELD,
+    HISTORY_TIMEOUT_SECONDS_FIELD,
+    HISTORY_TIMESTAMP_FIELD,
+    HISTORY_TRANSCRIPT_FIELD,
+)
+from outcomeeng_evals.report import JSON_SCHEMA_VERSION
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.testing.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings as _assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
+    load_history_rows_fixture,
     make_eval_dir,
+    make_suite_result,
 )
 from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
+from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 
 PLAN_PLUGIN_DIR: Final = "dist/claude/spec-tree"
 PLAN_OWNED_PATH_PATTERN: Final = "src/plugins/spec-tree/skills/manage-pr/**"
@@ -64,6 +83,13 @@ RUN_CASE_GAMMA: Final = (
 )
 RUN_DEFAULT_MODEL: Final = "claude-sonnet-4-5"
 RUN_OVERRIDE_MODEL: Final = "sonnet"
+HISTORY_VERSION_1_COMPATIBILITY_FIXTURE: Final = (
+    Path(__file__).parents[2]
+    / "outcomeeng_testing/fixtures/evals/history_version_1_compatibility.jsonl"
+)
+HISTORY_ROWS_FIXTURE: Final = (
+    Path(__file__).parents[2] / "outcomeeng_testing/fixtures/evals/history_rows.json"
+)
 
 
 @dataclass(frozen=True)
@@ -75,6 +101,8 @@ class RunCliHarness:
     runner: CliRunner
     recorder: RecordingRunner
     models: list[str] = field(default_factory=list)
+    max_budgets_usd: list[float] = field(default_factory=list)
+    timeouts_seconds: list[int] = field(default_factory=list)
 
     @property
     def runner_context(self) -> dict[str, object]:
@@ -85,8 +113,10 @@ class RunCliHarness:
             max_budget_usd: float,
             timeout_seconds: int,
         ) -> ModelRunner:
-            del plugin_dir, max_budget_usd, timeout_seconds
+            del plugin_dir
             self.models.append(model)
+            self.max_budgets_usd.append(max_budget_usd)
+            self.timeouts_seconds.append(timeout_seconds)
             return self.recorder
 
         return {RUNNER_FACTORY_KEY: runner_factory}
@@ -208,24 +238,56 @@ def assert_discover_subcommand_succeeds_on_empty_tree() -> None:
         assert result.exit_code == EXIT_SUCCESS
 
 
-def assert_history_subcommand_reads_history_file() -> None:
-    """Assert history reads and renders a history JSONL file."""
+def assert_history_subcommand_reads_version_1_compatible_rows() -> None:
+    """Assert history renders version-1 rows before and after additive fields."""
 
     with TemporaryDirectory() as tmp:
         eval_dir = Path(tmp) / "evals" / "rule"
         eval_dir.mkdir(parents=True)
-        history_text = (
-            '{"timestamp":"2026-05-11T15:48:00Z","schema_version":"1","git_sha":"abc",'
-            '"passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,'
-            '"total_cost_usd":1.04,"total_duration_ms":18960,"transcript":"runs/x.json"}\n'
-        )
         history_path = eval_dir / "history.jsonl"
-        history_path.write_text(history_text, encoding="utf-8")
+        history_path.write_bytes(HISTORY_VERSION_1_COMPATIBILITY_FIXTURE.read_bytes())
 
         result = CliRunner().invoke(main, ["history", str(history_path)])
 
         assert result.exit_code == EXIT_SUCCESS
-        assert "1.0" in result.output or "100" in result.output
+        with HISTORY_VERSION_1_COMPATIBILITY_FIXTURE.open(
+            encoding="utf-8"
+        ) as fixture_file:
+            rows = tuple(json.loads(line) for line in fixture_file if line.strip())
+        assert all(
+            row[HISTORY_SCHEMA_VERSION_FIELD] == JSON_SCHEMA_VERSION for row in rows
+        )
+        assert result.output.splitlines() == [
+            _expected_history_summary(row) for row in rows
+        ]
+
+        source_row = load_history_rows_fixture(HISTORY_ROWS_FIXTURE)[0]
+        current_row = _history_row(
+            timestamp=source_row[HISTORY_TIMESTAMP_FIELD],
+            result=make_suite_result(),
+            model=source_row[HISTORY_MODEL_FIELD],
+            max_budget_usd=source_row[HISTORY_MAX_BUDGET_USD_FIELD],
+            timeout_seconds=source_row[HISTORY_TIMEOUT_SECONDS_FIELD],
+            transcript_relative=source_row[HISTORY_TRANSCRIPT_FIELD],
+        )
+        assert current_row[HISTORY_SCHEMA_VERSION_FIELD] == JSON_SCHEMA_VERSION
+        assert HISTORY_MAX_BUDGET_USD_FIELD in current_row
+        assert HISTORY_TIMEOUT_SECONDS_FIELD in current_row
+        assert current_row[HISTORY_MODEL_FIELD] == source_row[HISTORY_MODEL_FIELD]
+
+
+def _expected_history_summary(row: dict[str, object]) -> str:
+    """Build the independent expected CLI summary for one fixture row."""
+    assert row[HISTORY_PASSED_FIELD] is True
+    pass_rate = row[HISTORY_PASS_RATE_FIELD]
+    assert isinstance(pass_rate, float)
+    return (
+        f"{row[HISTORY_TIMESTAMP_FIELD]}  {HISTORY_PASS_VERDICT}  "
+        f"pass_rate={pass_rate:.1%}  "
+        f"cases={row[HISTORY_CASES_PASSED_FIELD]}/"
+        f"{row[HISTORY_CASES_TOTAL_FIELD]}  "
+        f"git={row[HISTORY_GIT_SHA_FIELD]}"
+    )
 
 
 def assert_history_subcommand_handles_missing_file() -> None:
@@ -378,7 +440,7 @@ def assert_run_command_model_option_overrides_eval_definition_model() -> None:
 
 
 def assert_run_command_records_selected_model_in_artifacts() -> None:
-    """Assert run artifacts record the selected model."""
+    """Assert run artifacts record the selected model and budget."""
 
     with TemporaryDirectory() as tmp:
         harness = build_run_cli_harness(
@@ -387,9 +449,19 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
             model=RUN_DEFAULT_MODEL,
         )
 
+        configured_budget = DEFAULT_MAX_BUDGET_USD * 2
+        configured_timeout = DEFAULT_TIMEOUT_SECONDS * 2
         result = harness.runner.invoke(
             main,
-            _run_argv(harness, "--model", RUN_OVERRIDE_MODEL),
+            _run_argv(
+                harness,
+                "--model",
+                RUN_OVERRIDE_MODEL,
+                "--max-budget-usd",
+                str(configured_budget),
+                "--timeout-seconds",
+                str(configured_timeout),
+            ),
             obj=harness.runner_context,
         )
 
@@ -399,10 +471,15 @@ def assert_run_command_records_selected_model_in_artifacts() -> None:
         history_row = json.loads(
             (harness.eval_toml.parent / "history.jsonl").read_text(encoding="utf-8")
         )
-        assert json.loads(result_json.read_text(encoding="utf-8"))["model"] == (
-            RUN_OVERRIDE_MODEL
-        )
+        result_payload = json.loads(result_json.read_text(encoding="utf-8"))
+        assert result_payload["model"] == RUN_OVERRIDE_MODEL
+        assert result_payload["max_budget_usd"] == configured_budget
+        assert result_payload["timeout_seconds"] == configured_timeout
         assert history_row["model"] == RUN_OVERRIDE_MODEL
+        assert history_row["max_budget_usd"] == configured_budget
+        assert history_row["timeout_seconds"] == configured_timeout
+        assert harness.max_budgets_usd == [configured_budget]
+        assert harness.timeouts_seconds == [configured_timeout]
 
 
 def assert_run_command_rejects_inherit_model_option() -> None:

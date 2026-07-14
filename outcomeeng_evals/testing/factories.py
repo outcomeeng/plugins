@@ -15,7 +15,7 @@ from string import printable
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, cast
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.ci_execution import (
@@ -47,10 +47,12 @@ from outcomeeng_evals.definition import (
     load_definition,
 )
 from outcomeeng_evals.grader import GradeResult
-from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.history import HistoryRow
+from outcomeeng_evals.runner import ModelProcessResult, RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 from outcomeeng_evals.testing.fakes import (
     RecordingCommandRunner,
+    RecordingModelProcessLauncher,
     RecordingUvExecutable,
     make_recording_uv_executable,
 )
@@ -121,6 +123,227 @@ class CiMetadataDefinitionCase:
     owned_paths: tuple[str, ...]
     smoke_case_ids: tuple[str, ...]
     ci_policy: CiPolicy
+
+
+@dataclass(frozen=True)
+class ModelAuthCase:
+    """One fixture-provided model-process authentication case."""
+
+    name: str
+    environment: dict[str, str]
+    bare_override: bool | None
+    expected_bare: bool
+
+
+@dataclass(frozen=True)
+class ModelProcessFixture:
+    """A captured model-process envelope and its independent expectations."""
+
+    prompt: str
+    explicit_model: str
+    envelope: dict[str, Any]
+    expected_text: str
+    expected_metadata: RunMetadata
+    auth_cases: tuple[ModelAuthCase, ...]
+
+
+@dataclass(frozen=True)
+class ReportFixture:
+    """A complete inert suite payload used by report serialization evidence."""
+
+    title: str
+    model: str
+    configured_max_budget_usd: float
+    configured_timeout_seconds: int
+    case: Case
+    trial: dict[str, Any]
+    threshold: float
+    failing_reason: str
+    expected_report: dict[str, Any]
+    expected_without_metadata: dict[str, Any]
+    expected_cache_only: dict[str, Any]
+    stability: dict[str, tuple[tuple[bool, ...], ...]]
+
+
+def load_model_process_fixture(path: Path) -> ModelProcessFixture:
+    """Decode one inert model-process contract fixture."""
+
+    with path.open(encoding="utf-8") as fixture_file:
+        payload = json.load(fixture_file)
+    expected = payload["expected"]
+    return ModelProcessFixture(
+        prompt=payload["prompt"],
+        explicit_model=payload["explicit_model"],
+        envelope=payload["envelope"],
+        expected_text=expected["text"],
+        expected_metadata=RunMetadata(
+            duration_ms=expected["duration_ms"],
+            total_cost_usd=expected["total_cost_usd"],
+            input_tokens=expected["input_tokens"],
+            output_tokens=expected["output_tokens"],
+            cache_read_input_tokens=expected["cache_read_input_tokens"],
+            cache_creation_input_tokens=expected["cache_creation_input_tokens"],
+            num_turns=expected["num_turns"],
+            stop_reason=expected["stop_reason"],
+        ),
+        auth_cases=tuple(
+            ModelAuthCase(
+                name=case["name"],
+                environment=case["environment"],
+                bare_override=case["bare_override"],
+                expected_bare=case["expected_bare"],
+            )
+            for case in payload["auth_cases"]
+        ),
+    )
+
+
+def load_history_rows_fixture(path: Path) -> tuple[HistoryRow, ...]:
+    """Decode complete inert history rows for append-writer evidence."""
+
+    with path.open(encoding="utf-8") as fixture_file:
+        payload = json.load(fixture_file)
+    if not isinstance(payload, list) or not all(
+        isinstance(row, dict) for row in payload
+    ):
+        raise ValueError("history-row fixture must be a JSON array of objects")
+    return tuple(cast(HistoryRow, row) for row in payload)
+
+
+def load_report_fixture(path: Path) -> ReportFixture:
+    """Decode one complete inert report-suite payload."""
+
+    with path.open(encoding="utf-8") as fixture_file:
+        payload = json.load(fixture_file)
+    case_payload = payload["case"]
+    return ReportFixture(
+        title=payload["title"],
+        model=payload["model"],
+        configured_max_budget_usd=payload["configured_max_budget_usd"],
+        configured_timeout_seconds=payload["configured_timeout_seconds"],
+        case=Case(
+            id=case_payload["id"],
+            input=case_payload["input"],
+            must_contain=tuple(case_payload["must_contain"]),
+            must_not_contain=tuple(case_payload["must_not_contain"]),
+        ),
+        trial=payload["trial"],
+        threshold=payload["threshold"],
+        failing_reason=payload["failing_reason"],
+        expected_report=payload["expected_report"],
+        expected_without_metadata=payload["expected_without_metadata"],
+        expected_cache_only=payload["expected_cache_only"],
+        stability={
+            name: tuple(tuple(pattern) for pattern in patterns)
+            for name, patterns in payload["stability"].items()
+        },
+    )
+
+
+def make_report_suite_result(
+    fixture: ReportFixture,
+    *,
+    passed: bool = True,
+) -> SuiteResult:
+    """Construct a suite result from a complete inert report fixture."""
+
+    trial = fixture.trial
+    metadata = trial["metadata"]
+    trial_result = TrialResult(
+        case_id=fixture.case.id,
+        trial_index=trial["trial_index"],
+        prompt=trial["prompt"],
+        response=trial["response"],
+        verdict=trial["verdict"],
+        grade=GradeResult(
+            passed=passed,
+            reasons=() if passed else (fixture.failing_reason,),
+        ),
+        metadata=RunMetadata(**metadata),
+    )
+    return SuiteResult(
+        outcomes=(
+            CaseOutcome(case=fixture.case, trials=(trial_result,), passed=passed),
+        ),
+        pass_rate=float(passed),
+        threshold=fixture.threshold,
+        passed=passed,
+    )
+
+
+def make_metadata_free_report_suite_result(fixture: ReportFixture) -> SuiteResult:
+    """Construct the fixture suite with an explicitly absent metadata payload."""
+
+    trial = make_trial_result(case_id=fixture.case.id, metadata=RunMetadata())
+    return make_suite_result(
+        outcomes=(make_case_outcome(case=fixture.case, trials=(trial,)),),
+        threshold=fixture.threshold,
+    )
+
+
+def make_cache_only_report_suite_result(fixture: ReportFixture) -> SuiteResult:
+    """Construct the fixture suite with only cache-read observability present."""
+
+    cache_read = fixture.trial["metadata"]["cache_read_input_tokens"]
+    trial = make_trial_result(
+        case_id=fixture.case.id,
+        metadata=RunMetadata(cache_read_input_tokens=cache_read),
+    )
+    return make_suite_result(
+        outcomes=(make_case_outcome(case=fixture.case, trials=(trial,)),),
+        threshold=fixture.threshold,
+    )
+
+
+def make_stability_suite_result(
+    fixture: ReportFixture,
+    patterns: tuple[tuple[bool, ...], ...],
+) -> SuiteResult:
+    """Construct per-case trial outcomes from fixture-owned pass patterns."""
+
+    outcomes = []
+    for case_index, pattern in enumerate(patterns):
+        trials = tuple(
+            make_trial_result(
+                case_id=f"{fixture.case.id}-{case_index}",
+                trial_index=trial_index,
+                passed=passed,
+            )
+            for trial_index, passed in enumerate(pattern)
+        )
+        pass_count = sum(pattern)
+        outcomes.append(
+            make_case_outcome(
+                case=fixture.case,
+                trials=trials,
+                passed=pass_count > len(pattern) / 2,
+            )
+        )
+    passed_count = sum(outcome.passed for outcome in outcomes)
+    pass_rate = passed_count / len(outcomes)
+    return make_suite_result(
+        outcomes=tuple(outcomes),
+        pass_rate=pass_rate,
+        threshold=fixture.threshold,
+        passed=pass_rate >= fixture.threshold,
+    )
+
+
+def make_recording_model_process_launcher(
+    fixture: ModelProcessFixture,
+    *,
+    returncode: int = os.EX_OK,
+) -> RecordingModelProcessLauncher:
+    """Return a recording boundary that replays an inert CLI envelope."""
+
+    return RecordingModelProcessLauncher(
+        result=ModelProcessResult(
+            returncode=returncode,
+            stdout=json.dumps(fixture.envelope) if returncode == os.EX_OK else "",
+            stderr="" if returncode == os.EX_OK else "model process failed",
+            duration_ms=fixture.expected_metadata.duration_ms or 0.0,
+        )
+    )
 
 
 def make_case(
@@ -518,6 +741,10 @@ def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
 
     for character in magic:
         assert OWNED_PATH_ALPHABET.fullmatch(character) is None
+        _assert_definition_raises(
+            lines=(f'owned_paths = ["src{character}nested"]',),
+            match="owned_paths",
+        )
 
 
 def assert_definition_accepts_trials_at_cap() -> None:

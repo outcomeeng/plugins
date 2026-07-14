@@ -59,6 +59,7 @@ on:
       - "dist/claude/spec-tree/skills/audit-adr/**"
       - "dist/claude/spec-tree/skills/audit-pdr/**"
       - "dist/claude/spec-tree/skills/audit-specs/**"
+      - "dist/claude/spec-tree/skills/audit-tests/SKILL.md"
       - "dist/claude/spec-tree/skills/handoff/**"
       - "dist/claude/spec-tree/skills/merge/**"
       - "dist/claude/spec-tree/skills/merging-standards/**"
@@ -66,6 +67,7 @@ on:
       - "dist/claude/spec-tree/skills/understand/**"
       - "dist/claude/typescript/skills/test-typescript/**"
       - "dist/claude/typescript/skills/typescript-test-standards/**"
+      - "dist/codex/spec-tree/skills/audit-tests/SKILL.md"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
       - "outcomeeng_testing/generators/**"
@@ -82,6 +84,7 @@ on:
       - "spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md"
       - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md"
       - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/**"
+      - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/evals/local-completion-boundary/**"
@@ -95,6 +98,7 @@ on:
       - "src/plugins/spec-tree/skills/audit-adr/**"
       - "src/plugins/spec-tree/skills/audit-pdr/**"
       - "src/plugins/spec-tree/skills/audit-specs/**"
+      - "src/plugins/spec-tree/skills/audit-tests/SKILL.md"
       - "src/plugins/spec-tree/skills/handoff/**"
       - "src/plugins/spec-tree/skills/merge/**"
       - "src/plugins/spec-tree/skills/merging-standards/**"
@@ -116,6 +120,7 @@ on:
       - "dist/claude/spec-tree/skills/audit-adr/**"
       - "dist/claude/spec-tree/skills/audit-pdr/**"
       - "dist/claude/spec-tree/skills/audit-specs/**"
+      - "dist/claude/spec-tree/skills/audit-tests/SKILL.md"
       - "dist/claude/spec-tree/skills/handoff/**"
       - "dist/claude/spec-tree/skills/merge/**"
       - "dist/claude/spec-tree/skills/merging-standards/**"
@@ -123,6 +128,7 @@ on:
       - "dist/claude/spec-tree/skills/understand/**"
       - "dist/claude/typescript/skills/test-typescript/**"
       - "dist/claude/typescript/skills/typescript-test-standards/**"
+      - "dist/codex/spec-tree/skills/audit-tests/SKILL.md"
       - "outcomeeng_evals/**"
       - "outcomeeng_testing/evals/**"
       - "outcomeeng_testing/generators/**"
@@ -139,6 +145,7 @@ on:
       - "spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md"
       - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md"
       - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/**"
+      - "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/evals/local-completion-boundary/**"
@@ -152,6 +159,7 @@ on:
       - "src/plugins/spec-tree/skills/audit-adr/**"
       - "src/plugins/spec-tree/skills/audit-pdr/**"
       - "src/plugins/spec-tree/skills/audit-specs/**"
+      - "src/plugins/spec-tree/skills/audit-tests/SKILL.md"
       - "src/plugins/spec-tree/skills/handoff/**"
       - "src/plugins/spec-tree/skills/merge/**"
       - "src/plugins/spec-tree/skills/merging-standards/**"
@@ -180,11 +188,11 @@ on:
       max_budget_usd:
         description: "Per-invocation budget passed to the Claude CLI."
         type: string
-        default: "0.50"
+        default: "0.75"
       timeout_seconds:
         description: "Per-invocation timeout for the Claude subprocess."
         type: string
-        default: "120"
+        default: "180"
 
 # Deny-all default; each job grants exactly what it needs.
 permissions: {}
@@ -269,8 +277,8 @@ jobs:
       EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx' }}
       PLUGIN_DIR: ${{ github.event.inputs.plugin_dir || 'dist/claude/spec-tree' }}
       WORKERS: ${{ github.event.inputs.workers || '1' }}
-      MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.50' }}
-      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '120' }}
+      MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.75' }}
+      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '180' }}
       # Pinned tool versions. Renovate advances these via the customManager
       # regex in renovate.json (the inline `# renovate:` annotations name the
       # datasource and package for each).

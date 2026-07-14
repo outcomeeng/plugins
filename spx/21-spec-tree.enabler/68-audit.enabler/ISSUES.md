@@ -2,7 +2,7 @@
 
 Known follow-ups for the audit node. Coordination note; not spec truth.
 
-## Generic auditor has no workflow-YAML audit surface
+## Implementation audit has incomplete mixed-changeset coverage
 
 During PR 420 local verification, the `auditor` agent rejected audit setup when
 the full changeset scope included `.github/workflows/spec-tree-evals.yml`:
@@ -23,8 +23,28 @@ Checked facts:
 
 Revisit condition: when the audit-family surface work in `PLAN.md` resumes,
 decide whether workflow YAML receives a dedicated YAML audit skill or routes to a
-workflow-specific audit surface, then make `auditor` report that coverage
-without requiring callers to split YAML out of an otherwise valid changeset.
+workflow-specific audit surface, then make `implementation-auditor` report that
+coverage without requiring callers to split YAML out of an otherwise valid
+changeset.
+
+Run `2026-07-14_05-33-54-020-a9a65f44705b` exposed the broader terminal
+behavior after the typed `implementation-auditor` became available. Its Python
+code, test, and architecture units were audited with zero findings, while one
+required `unsupported` unit collected the remaining workflow, generated,
+fixture, eval, spec, and skill files. SPX sealed the run as `rejected` with an
+authoritative finding count of zero. A gating implementation audit therefore
+depends on how orchestration classifies supported language and artifact
+partitions and distinguishes files outside implementation-audit ownership from
+missing required implementation coverage.
+
+Run `2026-07-14_06-34-22-620-431040668f95` later audited the same branch's
+Python code, test, and architecture partitions, recorded no unsupported unit,
+and sealed as `approved` with zero findings. The different coverage projections
+show that mixed-changeset partitioning is not reproducible across verifier runs.
+That run's terminal projection reported `sealed: true`, while the event
+projection returned in the same verifier result reported `sealed: false` and
+omitted the terminal event. The verifier output contract needs one
+post-completion projection whose seal and event prefix agree.
 
 ## SPX audit verification contract follow-ups
 

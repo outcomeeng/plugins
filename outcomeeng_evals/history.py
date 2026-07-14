@@ -9,10 +9,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TypedDict
+from typing import Final, TypedDict
 
 
-HISTORY_FILENAME = "history.jsonl"
+HISTORY_FILENAME: Final = "history.jsonl"
+HISTORY_TIMESTAMP_FIELD: Final = "timestamp"
+HISTORY_SCHEMA_VERSION_FIELD: Final = "schema_version"
+HISTORY_GIT_SHA_FIELD: Final = "git_sha"
+HISTORY_MODEL_FIELD: Final = "model"
+HISTORY_MAX_BUDGET_USD_FIELD: Final = "max_budget_usd"
+HISTORY_TIMEOUT_SECONDS_FIELD: Final = "timeout_seconds"
+HISTORY_PASSED_FIELD: Final = "passed"
+HISTORY_PASS_RATE_FIELD: Final = "pass_rate"
+HISTORY_CASES_TOTAL_FIELD: Final = "cases_total"
+HISTORY_CASES_PASSED_FIELD: Final = "cases_passed"
+HISTORY_TRANSCRIPT_FIELD: Final = "transcript"
 
 
 class HistoryRow(TypedDict):
@@ -29,6 +40,8 @@ class HistoryRow(TypedDict):
     schema_version: str
     git_sha: str
     model: str
+    max_budget_usd: float
+    timeout_seconds: int
     passed: bool
     pass_rate: float
     cases_total: int
@@ -45,6 +58,12 @@ class HistoryRow(TypedDict):
 # Field list with ``HistoryRow`` as the single source of truth — consumed
 # by tests that introspect which keys a row must carry.
 HISTORY_ROW_FIELDS: tuple[str, ...] = tuple(HistoryRow.__annotations__)
+HISTORY_TOKEN_FIELDS: tuple[str, ...] = (
+    "total_input_tokens",
+    "total_output_tokens",
+    "total_cache_read_input_tokens",
+    "total_cache_creation_input_tokens",
+)
 
 
 def append_history_row(history_path: Path, row: HistoryRow) -> None:

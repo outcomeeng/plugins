@@ -7,7 +7,7 @@ from outcomeeng_evals.testing.cli import (
     assert_discover_subcommand_lists_eval_toml_files,
     assert_discover_subcommand_succeeds_on_empty_tree,
     assert_history_subcommand_handles_missing_file,
-    assert_history_subcommand_reads_history_file,
+    assert_history_subcommand_reads_version_1_compatible_rows,
     assert_main_group_exposes_documented_subcommands,
     assert_plan_full_mode_excludes_manual_evals,
     assert_plan_selects_full_suite_for_absolute_eval_definition_change,
@@ -69,8 +69,8 @@ def test_discover_subcommand_succeeds_on_empty_tree() -> None:
     assert_discover_subcommand_succeeds_on_empty_tree()
 
 
-def test_history_subcommand_reads_history_file() -> None:
-    assert_history_subcommand_reads_history_file()
+def test_history_subcommand_reads_version_1_compatible_rows() -> None:
+    assert_history_subcommand_reads_version_1_compatible_rows()
 
 
 def test_history_subcommand_handles_missing_file() -> None:

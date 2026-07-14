@@ -16,6 +16,11 @@ from typing import Any
 # — a clear error beats a slow run. Real expectations are a handful of
 # fields; 50 is far past anything legitimate.
 MAX_EXPECTED_LIST_LENGTH = 50
+CASE_ID_FIELD = "id"
+CASE_INPUT_FIELD = "input"
+EXPECTED_VERDICT_FIELD = "expected_verdict"
+MUST_CONTAIN_FIELD = "must_contain"
+MUST_NOT_CONTAIN_FIELD = "must_not_contain"
 
 
 @dataclass(frozen=True)
@@ -63,10 +68,10 @@ def _iter_records(path: Path) -> Iterator[tuple[int, dict[str, Any]]]:
 
 
 def _record_to_case(record: dict[str, Any]) -> Case:
-    expected = record.get("expected_verdict", {})
-    must_contain = tuple(expected.get("must_contain", []))
-    must_not_contain = tuple(expected.get("must_not_contain", []))
-    case_id = record["id"]
+    expected = record.get(EXPECTED_VERDICT_FIELD, {})
+    must_contain = tuple(expected.get(MUST_CONTAIN_FIELD, []))
+    must_not_contain = tuple(expected.get(MUST_NOT_CONTAIN_FIELD, []))
+    case_id = record[CASE_ID_FIELD]
     if not isinstance(case_id, str) or not case_id:
         msg = f"case 'id' must be a non-empty string, got {case_id!r}"
         raise ValueError(msg)
@@ -76,7 +81,7 @@ def _record_to_case(record: dict[str, Any]) -> Case:
         _reject_oversized_lists(entry, field="must_not_contain", case_id=case_id)
     return Case(
         id=case_id,
-        input=record["input"],
+        input=record[CASE_INPUT_FIELD],
         must_contain=must_contain,
         must_not_contain=must_not_contain,
     )

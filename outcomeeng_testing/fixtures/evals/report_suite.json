@@ -1,0 +1,82 @@
+{
+  "title": "fixture-eval",
+  "model": "claude-sonnet-4-5",
+  "configured_max_budget_usd": 1.5,
+  "configured_timeout_seconds": 360,
+  "case": {
+    "id": "fixture-case",
+    "input": { "path": "fixture.ts", "content": "const value = 1;" },
+    "must_contain": [{ "findings": [{ "rule": "fixture-rule" }] }],
+    "must_not_contain": []
+  },
+  "trial": {
+    "trial_index": 0,
+    "prompt": "Audit the fixture implementation.",
+    "response": "{\"status\":\"rejected\",\"findings\":[{\"rule\":\"fixture-rule\",\"present\":true}]}",
+    "verdict": {
+      "status": "rejected",
+      "findings": [{ "rule": "fixture-rule", "present": true }]
+    },
+    "metadata": {
+      "duration_ms": 2608.0,
+      "total_cost_usd": 0.22,
+      "input_tokens": 5,
+      "output_tokens": 6,
+      "cache_read_input_tokens": 18240,
+      "cache_creation_input_tokens": 33830,
+      "num_turns": 1,
+      "stop_reason": "end_turn"
+    }
+  },
+  "threshold": 0.85,
+  "failing_reason": "fixture says </script> in the reason text",
+  "expected_report": {
+    "schema_version": "1",
+    "suite": {
+      "passed": true,
+      "pass_rate": 1.0,
+      "threshold": 0.85,
+      "cases_total": 1,
+      "cases_passed": 1
+    },
+    "cost_summary": {
+      "trials_total": 1,
+      "trials_with_metadata": 1,
+      "total_cost_usd": 0.22,
+      "total_duration_ms": 2608.0,
+      "total_input_tokens": 5,
+      "total_output_tokens": 6,
+      "total_cache_read_input_tokens": 18240,
+      "total_cache_creation_input_tokens": 33830
+    }
+  },
+  "expected_without_metadata": {
+    "trials_total": 1,
+    "trials_with_metadata": 0,
+    "total_cost_usd": null,
+    "total_duration_ms": null,
+    "total_input_tokens": null,
+    "total_output_tokens": null,
+    "total_cache_read_input_tokens": null,
+    "total_cache_creation_input_tokens": null
+  },
+  "expected_cache_only": {
+    "trials_total": 1,
+    "trials_with_metadata": 1,
+    "total_cost_usd": null,
+    "total_duration_ms": null,
+    "total_input_tokens": null,
+    "total_output_tokens": null,
+    "total_cache_read_input_tokens": 18240,
+    "total_cache_creation_input_tokens": null
+  },
+  "stability": {
+    "single_trial": [[true], [true], [false]],
+    "multiple_trials": [
+      [true, true, true, true],
+      [true, true, false, false]
+    ],
+    "single_case": [[true]],
+    "half_passed": [[true, true, false, false]]
+  }
+}

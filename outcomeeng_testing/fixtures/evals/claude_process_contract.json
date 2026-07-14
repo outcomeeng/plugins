@@ -1,0 +1,72 @@
+{
+  "prompt": "Audit the supplied implementation and return the structured verdict.",
+  "explicit_model": "claude-sonnet-4-5",
+  "envelope": {
+    "type": "result",
+    "is_error": false,
+    "duration_ms": 2608,
+    "duration_api_ms": 2601,
+    "num_turns": 1,
+    "result": "hi",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.2207325,
+    "usage": {
+      "input_tokens": 5,
+      "cache_creation_input_tokens": 33830,
+      "cache_read_input_tokens": 18240,
+      "output_tokens": 6
+    }
+  },
+  "expected": {
+    "text": "hi",
+    "duration_ms": 2608,
+    "total_cost_usd": 0.2207325,
+    "input_tokens": 5,
+    "output_tokens": 6,
+    "cache_read_input_tokens": 18240,
+    "cache_creation_input_tokens": 33830,
+    "num_turns": 1,
+    "stop_reason": "end_turn"
+  },
+  "auth_cases": [
+    {
+      "name": "api-key",
+      "environment": { "ANTHROPIC_API_KEY": "fixture-api-key" },
+      "bare_override": null,
+      "expected_bare": true
+    },
+    {
+      "name": "oauth-only",
+      "environment": { "CLAUDE_CODE_OAUTH_TOKEN": "fixture-oauth-token" },
+      "bare_override": null,
+      "expected_bare": false
+    },
+    {
+      "name": "empty-api-key",
+      "environment": {
+        "ANTHROPIC_API_KEY": "",
+        "CLAUDE_CODE_OAUTH_TOKEN": "fixture-oauth-token"
+      },
+      "bare_override": null,
+      "expected_bare": false
+    },
+    {
+      "name": "no-auth",
+      "environment": {},
+      "bare_override": null,
+      "expected_bare": false
+    },
+    {
+      "name": "forced-bare",
+      "environment": {},
+      "bare_override": true,
+      "expected_bare": true
+    },
+    {
+      "name": "forced-non-bare",
+      "environment": { "ANTHROPIC_API_KEY": "fixture-api-key" },
+      "bare_override": false,
+      "expected_bare": false
+    }
+  ]
+}
