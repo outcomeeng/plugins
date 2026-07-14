@@ -1,0 +1,250 @@
+"""Behavior probes for build-orchestration evidence."""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+from outcomeeng.distribution.build import (
+    FORMATTER_COMMAND_NAME,
+    FORMATTER_CONFIG_PATH,
+    FORMATTER_FILE_GLOB,
+    BuildError,
+    _format_dist,
+)
+from outcomeeng.distribution.contracts import (
+    BUILD_COMMAND_ARGV,
+    DIST_DIFF_ARGV,
+    DIST_DIFF_MODULE_NAME,
+    ORCHESTRATION_VALIDATION_ARGV,
+)
+from outcomeeng.distribution.dist_diff import (
+    DRIFT_REBUILD_NOTE,
+    EXPECTED_PRECOMMIT_NOTE,
+    dist_drift_report,
+    main,
+)
+from outcomeeng.distribution.orchestration import (
+    BUILD_RECIPE_NAME,
+    CLAUDE_MARKETPLACE_PATH,
+    CLAUDE_RUNTIME_ROOT,
+    CODEX_MARKETPLACE_PATH,
+    CODEX_RUNTIME_ROOT,
+    JUSTFILE_PATH,
+    LEFTHOOK_BUILD_COMMAND,
+    LEFTHOOK_PATH,
+    check_build_orchestration,
+    claude_marketplace_plugin_root,
+    claude_marketplace_plugin_sources,
+    codex_marketplace_plugin_sources,
+    just_recipe_commands,
+    just_recipe_names,
+    lefthook_build_command,
+    load_json_document,
+    load_lefthook_config,
+    path_is_under_runtime_root,
+)
+from outcomeeng.validation._steps import VALIDATION_STEPS
+from outcomeeng.validation.build_orchestration import (
+    main as validate_build_orchestration,
+)
+from outcomeeng_testing.harnesses.dist_drift import dist_drift_repo
+
+REPOSITORY_ROOT = Path(".")
+FORMATTER_FAILURE_DIAGNOSTIC = "formatter failed"
+FORMATTER_TEST_PATH = "/usr/local/bin/dprint"
+RAW_DIFF_HUNK_MARKER = "@@"
+RAW_DIFF_LINE_PREFIXES = ("+", "-")
+DIST_DIFF_STEP_LABEL = "dist-diff"
+RAW_GIT_DIFF_COMMAND = "git diff --exit-code"
+RAW_DIFF_SUBCOMMAND = "diff"
+INVALID_PATH_SEGMENT = "develop"
+INVALID_PATH_SUFFIX = "-extra"
+
+
+def dist_drift_with_source_edit_matches_contract() -> bool:
+    with dist_drift_repo() as repo:
+        repo.drift_dist()
+        repo.edit_src()
+        report = dist_drift_report(cwd=repo.root)
+        return (
+            report is not None
+            and repo.dist_path.as_posix() in report
+            and EXPECTED_PRECOMMIT_NOTE in report
+            and DRIFT_REBUILD_NOTE not in report
+            and not _carries_unified_diff(report)
+            and main(cwd=repo.root) == 1
+        )
+
+
+def dist_drift_without_source_edit_matches_contract() -> bool:
+    with dist_drift_repo() as repo:
+        repo.drift_dist()
+        report = dist_drift_report(cwd=repo.root)
+        return (
+            report is not None
+            and repo.dist_path.as_posix() in report
+            and DRIFT_REBUILD_NOTE in report
+            and EXPECTED_PRECOMMIT_NOTE not in report
+            and not _carries_unified_diff(report)
+            and main(cwd=repo.root) == 1
+        )
+
+
+def clean_dist_matches_contract() -> bool:
+    with dist_drift_repo() as repo:
+        return dist_drift_report(cwd=repo.root) is None and main(cwd=repo.root) == 0
+
+
+def missing_formatter_matches_contract() -> bool:
+    runner_calls: list[tuple[tuple[str, ...], Path]] = []
+
+    def unavailable_formatter(command_name: str) -> str | None:
+        if command_name != FORMATTER_COMMAND_NAME:
+            raise AssertionError(command_name)
+        return None
+
+    def recording_runner(
+        command: tuple[str, ...], cwd: Path
+    ) -> subprocess.CompletedProcess[str]:
+        runner_calls.append((command, cwd))
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    try:
+        _format_dist(
+            REPOSITORY_ROOT,
+            formatter_probe=unavailable_formatter,
+            runner=recording_runner,
+        )
+    except BuildError as error:
+        return FORMATTER_COMMAND_NAME in str(error) and not runner_calls
+    return False
+
+
+def failing_formatter_matches_contract() -> bool:
+    runner_calls: list[tuple[tuple[str, ...], Path]] = []
+
+    def formatter_probe(command_name: str) -> str | None:
+        if command_name != FORMATTER_COMMAND_NAME:
+            raise AssertionError(command_name)
+        return FORMATTER_TEST_PATH
+
+    def failing_runner(
+        command: tuple[str, ...], cwd: Path
+    ) -> subprocess.CompletedProcess[str]:
+        runner_calls.append((command, cwd))
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            stdout="",
+            stderr=FORMATTER_FAILURE_DIAGNOSTIC,
+        )
+
+    try:
+        _format_dist(
+            REPOSITORY_ROOT,
+            formatter_probe=formatter_probe,
+            runner=failing_runner,
+        )
+    except BuildError as error:
+        expected_command = (
+            FORMATTER_TEST_PATH,
+            "fmt",
+            "--config",
+            str(FORMATTER_CONFIG_PATH),
+            "--allow-no-files",
+            FORMATTER_FILE_GLOB,
+        )
+        return FORMATTER_FAILURE_DIAGNOSTIC in str(error) and runner_calls == [
+            (expected_command, REPOSITORY_ROOT)
+        ]
+    return False
+
+
+def repository_build_orchestration_matches_contract() -> bool:
+    return not check_build_orchestration(REPOSITORY_ROOT)
+
+
+def quality_gate_matches_build_orchestration_contract() -> bool:
+    return (
+        ORCHESTRATION_VALIDATION_ARGV in {step.argv for step in VALIDATION_STEPS}
+        and validate_build_orchestration([str(REPOSITORY_ROOT)]) == 0
+    )
+
+
+def dist_diff_surfaces_match_contract() -> bool:
+    dist_diff_argvs = {
+        step.argv for step in VALIDATION_STEPS if step.label == DIST_DIFF_STEP_LABEL
+    }
+    command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
+    return (
+        dist_diff_argvs == {DIST_DIFF_ARGV}
+        and DIST_DIFF_MODULE_NAME in DIST_DIFF_ARGV
+        and RAW_DIFF_SUBCOMMAND not in DIST_DIFF_ARGV
+        and DIST_DIFF_MODULE_NAME in command
+        and RAW_GIT_DIFF_COMMAND not in command
+    )
+
+
+def justfile_matches_build_contract() -> bool:
+    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
+    return just_recipe_names(justfile).count(
+        BUILD_RECIPE_NAME
+    ) == 1 and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
+
+
+def lefthook_matches_build_contract() -> bool:
+    return (
+        lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
+        == LEFTHOOK_BUILD_COMMAND
+    )
+
+
+def claude_marketplace_matches_runtime_contract() -> bool:
+    data = load_json_document(CLAUDE_MARKETPLACE_PATH)
+    sources = claude_marketplace_plugin_sources(data)
+    return (
+        claude_marketplace_plugin_root(data) == CLAUDE_RUNTIME_ROOT
+        and bool(sources)
+        and all(
+            path_is_under_runtime_root(source, CLAUDE_RUNTIME_ROOT)
+            for source in sources
+        )
+        and _rejects_runtime_prefix_collision(CLAUDE_RUNTIME_ROOT)
+        and _rejects_runtime_parent_escape(
+            runtime_root=CLAUDE_RUNTIME_ROOT,
+            sibling_root=CODEX_RUNTIME_ROOT,
+        )
+    )
+
+
+def codex_marketplace_matches_runtime_contract() -> bool:
+    data = load_json_document(CODEX_MARKETPLACE_PATH)
+    sources = codex_marketplace_plugin_sources(data)
+    return (
+        bool(sources)
+        and all(
+            path_is_under_runtime_root(source, CODEX_RUNTIME_ROOT) for source in sources
+        )
+        and _rejects_runtime_prefix_collision(CODEX_RUNTIME_ROOT)
+        and _rejects_runtime_parent_escape(
+            runtime_root=CODEX_RUNTIME_ROOT,
+            sibling_root=CLAUDE_RUNTIME_ROOT,
+        )
+    )
+
+
+def _carries_unified_diff(report: str) -> bool:
+    return RAW_DIFF_HUNK_MARKER in report or any(
+        line.startswith(RAW_DIFF_LINE_PREFIXES) for line in report.splitlines()
+    )
+
+
+def _rejects_runtime_prefix_collision(runtime_root: str) -> bool:
+    candidate = f"{runtime_root}{INVALID_PATH_SUFFIX}/{INVALID_PATH_SEGMENT}"
+    return not path_is_under_runtime_root(candidate, runtime_root)
+
+
+def _rejects_runtime_parent_escape(*, runtime_root: str, sibling_root: str) -> bool:
+    candidate = f"{runtime_root}/../{sibling_root}/{INVALID_PATH_SEGMENT}"
+    return not path_is_under_runtime_root(candidate, runtime_root)
