@@ -66,9 +66,7 @@ SPX_CONFIG_PATH: Final = "spx.config.yaml"
 # than recopying the path.
 CHECK_WORKFLOW_PATH: Final = ".github/workflows/check.yml"
 PYPROJECT_PATH: Final = "pyproject.toml"
-INSTRUCTION_BLOCK_SOURCE_PATH: Final = (
-    "src/plugins/spec-tree/skills/understand/templates/instruction-block.md"
-)
+INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -146,8 +144,8 @@ INSTRUCTION_BLOCK_PATTERNS: Final = (
     "CLAUDE.md",
     INSTRUCTION_BLOCK_SOURCE_PATH,
     "src/plugins/spec-tree/skills/update-instruction-block/**",
-    "dist/claude/spec-tree/skills/understand/templates/instruction-block.md",
-    "dist/codex/spec-tree/skills/understand/templates/instruction-block.md",
+    "dist/claude/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
+    "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
     "outcomeeng/distribution/instruction_block.py",
 )
 

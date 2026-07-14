@@ -45,7 +45,7 @@ CANONICAL_TEMPLATE_PATH = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "understand"
+    / "update-instruction-block"
     / "templates"
     / "instruction-block.md"
 )
@@ -1050,12 +1050,16 @@ def assert_extension_maps_to_language() -> None:
 
 
 def assert_detected_language_set_is_mapped_extensions() -> None:
-    """Assert detection and normalization agree over the source-owned extension map."""
+    """Assert tree detection maps every source-owned extension from real test paths."""
     module = load_instruction_block_module()
     extensions = tuple(module.LANGUAGE_BY_EXTENSION)
-    assert module.detect_languages(extensions) == module.normalize_languages(
-        module.LANGUAGE_BY_EXTENSION.values()
-    )
+    with _temporary_root() as directory:
+        spx_dir = write_spx_tree_with_tests(
+            pathlib.Path(directory).resolve() / "spx", extensions
+        )
+        assert module.detect_languages_from_tree(spx_dir) == module.normalize_languages(
+            module.LANGUAGE_BY_EXTENSION.values()
+        )
 
 
 def assert_language_block_appears_iff_enabled() -> None:
@@ -1208,9 +1212,36 @@ def assert_topology_maps_to_bootstrap_outcome() -> None:
             repo = tmp_path / "repo"
             seeds = materialize_root_instruction_topology(repo, topology_factory())
             template = write_template(tmp_path, NEW_VERSION)
+            blocks = {
+                HARNESS_CLAUDE: module.render(
+                    build_template(NEW_VERSION),
+                    (LANG_PRIMARY,),
+                    NEW_VERSION,
+                    HARNESS_CLAUDE,
+                ),
+                HARNESS_CODEX: module.render(
+                    build_template(NEW_VERSION),
+                    (LANG_PRIMARY,),
+                    NEW_VERSION,
+                    HARNESS_CODEX,
+                ),
+            }
+            expected_documents = module.build_root_instruction_documents(
+                {
+                    HARNESS_CLAUDE: seeds[INSTRUCTION_CLAUDE],
+                    HARNESS_CODEX: seeds[INSTRUCTION_AGENTS],
+                },
+                blocks,
+            )
             run_generator_write_primary(repo, template)
             claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
             agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+            assert claude == expected_documents[HARNESS_CLAUDE]
+            assert agents == expected_documents[HARNESS_CODEX]
+            assert (repo / INSTRUCTION_CLAUDE).is_file()
+            assert (repo / INSTRUCTION_AGENTS).is_file()
+            assert not (repo / INSTRUCTION_CLAUDE).is_symlink()
+            assert not (repo / INSTRUCTION_AGENTS).is_symlink()
             shared_span, shared_ratio = module.biggest_identical_span(
                 seeds[INSTRUCTION_CLAUDE], seeds[INSTRUCTION_AGENTS]
             )

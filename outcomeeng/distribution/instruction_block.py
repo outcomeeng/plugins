@@ -32,7 +32,7 @@ _GENERATOR: Final = (
     / "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "spec-tree/skills/understand/templates/instruction-block.md"
+    "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."

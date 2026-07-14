@@ -65,6 +65,13 @@ def _case_write_preserves_shared_region_and_independent_prose(
 
     harness.run_generator_write_primary(repo, _template(tmp_path))
     result = claude.read_text(encoding="utf-8")
+    expected_router = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    assert result.startswith(expected_router)
     assert independent_prose in result
     assert (
         MODULE.parse_shared_regions(result)[harness.SHARED_REGION_NAME]
@@ -354,11 +361,11 @@ def _case_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> No
     assert not (repo / harness.INSTRUCTION_CLAUDE).is_symlink()
     assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
     for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
-        assert (
-            (repo / name)
-            .read_text(encoding="utf-8")
-            .startswith(MODULE.ROUTER_MARKER_PREFIX)
-        )
+        document = (repo / name).read_text(encoding="utf-8")
+        assert document.startswith(MODULE.ROUTER_MARKER_PREFIX)
+        assert MODULE.parse_shared_regions(document)[
+            harness.SHARED_REGION_NAME
+        ] == harness.ROOT_SHARED_BODY.strip("\n")
 
 
 def _case_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:

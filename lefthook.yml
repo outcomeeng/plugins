@@ -19,7 +19,7 @@ pre-commit:
       stage_fixed: true
       priority: 20
     regenerate-instruction-blocks:
-      glob: "{src/plugins/spec-tree/skills/understand/templates/instruction-block.md,src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py,spx/**/tests/*}"
+      glob: "{src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md,src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py,spx/**/tests/*}"
       run: just build-instructions
       stage_fixed: true
       priority: 25

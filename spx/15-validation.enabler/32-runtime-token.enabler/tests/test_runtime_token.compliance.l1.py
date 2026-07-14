@@ -113,7 +113,7 @@ def test_enforced_by_default_only_ignored_files_exempt(tmp_path: Path) -> None:
             "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
             "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
             "src/plugins/spec-tree/agents/instruction-block-updater.md",
-            "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
+            "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
             "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
             "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
         }
@@ -145,7 +145,7 @@ def test_real_tree_scan_passes() -> None:
             "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
             "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
             "src/plugins/spec-tree/agents/instruction-block-updater.md",
-            "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
+            "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
             "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
             "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
         }
