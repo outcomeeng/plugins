@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from outcomeeng_testing.evals.link_integrity import (
+from outcomeeng.validation.link_integrity import (
     BrokenEvalLink,
     BrokenTestLink,
     validate_eval_links,

@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
-from outcomeeng_testing.evals.link_integrity import (
+from outcomeeng.validation.link_integrity import (
     BrokenEvalLink,
     BrokenTestLink,
     EvalLink,
