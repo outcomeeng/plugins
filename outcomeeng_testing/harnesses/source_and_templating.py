@@ -41,6 +41,7 @@ from outcomeeng.distribution.build import (
     format_directive,
     make_jinja_environment,
     parse_directives,
+    plan_emissions,
     render_text,
     resolve_runtime_token,
     runtime_token_resolver_cases,
@@ -265,6 +266,10 @@ def missing_fragment_raises() -> bool:
     return all(_missing_fragment_raises(case) for case in source_scenarios())
 
 
+def missing_fragment_planning_raises() -> bool:
+    return all(_missing_fragment_planning_raises(case) for case in source_scenarios())
+
+
 def nested_include_expands() -> bool:
     return all(_nested_include_expands(case) for case in source_scenarios())
 
@@ -377,6 +382,23 @@ def _missing_fragment_raises(case: SourceScenario) -> bool:
                 format_directive(IncludeDirective(missing)),
                 shared_root=builder.shared_root,
             )
+        except IncludeResolutionError:
+            return True
+        return False
+
+
+def _missing_fragment_planning_raises(case: SourceScenario) -> bool:
+    with TemporaryDirectory() as tmp:
+        builder = SrcTreeBuilder(Path(tmp))
+        missing = _fragment_path(case, case.cycle_topic)
+        builder.add_plugin(
+            case.plugin,
+            skills={
+                case.skill: format_directive(IncludeDirective(missing)),
+            },
+        )
+        try:
+            plan_emissions(builder.src_root)
         except IncludeResolutionError:
             return True
         return False

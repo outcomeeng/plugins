@@ -22,6 +22,7 @@ from outcomeeng.distribution.build import (
     IGNORED_SOURCE_DIRECTORY_NAMES,
     IGNORED_SOURCE_FILE_SUFFIXES,
     PLUGIN_SUBDIRS,
+    REFERENCES_SUBDIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
@@ -108,6 +109,17 @@ def target_trees_mirror_source_structure() -> bool:
         and source_directories <= _parent_directories(snapshot.target(target))
         for target in Target
     )
+
+
+def repeated_include_emits_shared_source_once() -> bool:
+    failures = tuple(
+        failure
+        for case in source_scenarios()
+        for failure in _repeated_include_failures(case)
+    )
+    if failures:
+        raise AssertionError(f"repeated include emission mismatch: {failures}")
+    return True
 
 
 def claude_output_preserves_skill_dir_token() -> bool:
@@ -376,6 +388,44 @@ def _synthetic_inventory_is_complete() -> bool:
             == {path for path, _content in snapshot.target(target)}
             for target in Target
         )
+    )
+
+
+def _repeated_include_failures(case: SourceScenario) -> tuple[str, ...]:
+    reference_filename = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    directive = format_directive(
+        IncludeDirective(f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}")
+    )
+    with TemporaryDirectory() as temporary_directory:
+        builder = SrcTreeBuilder(Path(temporary_directory))
+        builder.add_shared_topic(
+            case.scope,
+            case.inner_topic,
+            case.fragment_body,
+            references={reference_filename: case.fragment_body},
+        )
+        builder.add_plugin(
+            case.plugin,
+            skills={case.skill: "\n".join((directive, directive))},
+        )
+        reference_source = (
+            builder.shared_root
+            / case.scope
+            / case.inner_topic
+            / REFERENCES_SUBDIR_NAME
+            / reference_filename
+        ).resolve()
+        plan = plan_emissions(builder.src_root)
+    counts = {
+        target: sum(
+            emission.source == reference_source for emission in plan.for_target(target)
+        )
+        for target in Target
+    }
+    return tuple(
+        f"{case.skill_ref}:{target.value}:{count}"
+        for target, count in counts.items()
+        if count != 1
     )
 
 
