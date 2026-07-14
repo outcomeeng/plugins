@@ -3,7 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
-allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*derive_changeset_scope.py*)
+allowed-tools: Read, Glob, Grep, Skill{!% if target == 'claude' %!}, Bash(python3:*derive_changeset_scope.py*){!% endif %!}
 ---
 
 <objective>

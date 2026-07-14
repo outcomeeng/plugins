@@ -2,7 +2,7 @@
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
 argument-hint: "<full-spx-node-path>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*)
+allowed-tools: Read, Glob, Grep, Skill{!% if target == 'claude' %!}, Bash(python3:*){!% endif %!}
 ---
 
 <objective>
