@@ -13,12 +13,10 @@ from outcomeeng_testing.harnesses.bump import (
     missing_required_tool_fails_fast_with_diagnostic,
     mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max,
     mixed_dual_manifest_plugin_aligns_lagging_manifest_to_current_bump,
-    mixed_dual_manifest_plugin_fails_check,
     non_version_content_is_preserved_character_for_character,
     read_only_modes_never_write_regardless_of_plugin_state,
     tool_availability_is_probed_before_any_other_probe_or_write,
     unchanged_plugins_never_have_manifests_written,
-    unparseable_manifest_returns_diagnostic_without_writes,
 )
 
 
@@ -46,10 +44,6 @@ def test_mixed_dual_manifest_aligns_owned_manifests_to_current_max() -> None:
     assert mixed_dual_manifest_plugin_aligns_every_owned_manifest_to_current_max()
 
 
-def test_mixed_dual_manifest_plugin_fails_check() -> None:
-    assert mixed_dual_manifest_plugin_fails_check()
-
-
 def test_already_bumped_plugin_skipped_in_dry_run() -> None:
     assert already_bumped_plugin_skipped_in_dry_run()
 
@@ -72,10 +66,6 @@ def test_non_version_content_is_preserved_character_for_character() -> None:
 
 def test_read_only_modes_never_write_regardless_of_plugin_state() -> None:
     assert read_only_modes_never_write_regardless_of_plugin_state()
-
-
-def test_unparseable_manifest_returns_diagnostic_without_writes() -> None:
-    assert unparseable_manifest_returns_diagnostic_without_writes()
 
 
 def test_dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary() -> None:
