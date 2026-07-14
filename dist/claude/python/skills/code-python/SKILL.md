@@ -70,7 +70,7 @@ Understand:
 
 **Step 2 — Write implementation (GREEN).** Write minimal code that makes tests pass.
 
-When entering from a specified-node handoff, remove its relative `spx/EXCLUDE` entry before writing implementation. After the normal tests, lint, and type gates pass, return to `/apply` Step 6 for the real committed test-evidence audit before implementation audit.
+When entering from a specified-node handoff, remove its relative `spx/EXCLUDE` entry before writing implementation. After the normal tests, format, lint, and type gates pass, return to `/apply`'s committed test-evidence audit stage before implementation audit.
 
 **Code standards (per `/python-standards`):**
 
@@ -113,6 +113,9 @@ python3 -m mypy .
 # Linting
 python3 -m ruff check .
 
+# Formatting
+python3 -m ruff format --check .
+
 # Tests one more time
 python3 -m pytest $node_path/tests/ -v
 ```
@@ -140,6 +143,8 @@ All must pass before declaring complete.
 | Missing `-> None`        | Add return type                                  |
 | Security issues          | Fix the vulnerability (don't suppress)           |
 
+When a finding is unsupported by the governing source, standards, or committed evidence, record the exact counter-evidence for the next `implementation-auditor` run. Counter-evidence does not complete FIX mode; only a fresh approving projection does.
+
 **Step 3 — Verify fixes.**
 
 Follow the active runtime approval flow for every repository wrapper or direct fallback shell call.
@@ -153,6 +158,9 @@ python3 -m mypy .
 
 # Linting
 python3 -m ruff check .
+
+# Formatting
+python3 -m ruff format --check .
 ```
 
 **Step 4 — Report what was fixed.**
@@ -169,7 +177,7 @@ python3 -m ruff check .
 
 ### Verification
 
-All tests pass. Types and lint clean. Ready for re-review.
+All tests pass. Types, lint, and formatting are clean. Ready for a fresh implementation audit.
 ```
 
 </fix_mode_workflow>
@@ -247,8 +255,9 @@ def get_user(user_id: int) -> User | None:
 - Tests: ✓ Pass
 - Types: ✓ Pass
 - Lint: ✓ Pass
+- Format: ✓ Pass
 
-Ready for review.
+Ready for implementation audit.
 ```
 
 **FIX mode output:**
@@ -264,7 +273,7 @@ Ready for review.
 
 ### Verification
 
-All checks pass. Ready for re-review.
+All checks pass. Ready for a fresh implementation audit.
 ```
 
 </output_format>
@@ -286,6 +295,7 @@ Implementation is ready for review when:
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
 - [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
-- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
+- [ ] FIX mode addresses every supplied reviewer finding with a code change or records exact counter-evidence for the next `implementation-auditor` run
+- [ ] Post-fix verification passes and FIX mode completes only after a fresh `implementation-auditor` projection approves the repaired committed subject
 
 </success_criteria>

@@ -42,7 +42,9 @@ Resolve `$node_path` from the optional argument. When it is empty, use the targe
 
 Before writing or repairing Rust evidence, require the generic `/test` `<evidence_design_gate>` result for every assertion. Stop when any clause lacks an exercised path, assertion-relevant observable, independent oracle, or passing-while-false mutation, or when a subpart trigger has an incomplete evidence-chain inventory.
 
-Read the canonical rendered root guide at `AGENTS.md`, then `spx/local/rust.md` and `spx/local/rust-tests.md` when present, for repository-specific Rust validation requirements. Run the direct Cargo commands below at the closest package or workspace scope that satisfies those requirements, and record that scope. Follow the active runtime's approval flow for the exact repository wrapper command; never infer approval from shell patterns in skill metadata.
+Read the canonical rendered root guide at `AGENTS.md`, then repository docs, the Justfile, Makefile, package scripts, and `spx/local/rust.md` or `spx/local/rust-tests.md` when present. Resolve the canonical focused test, format, lint, compile, and optional coverage commands in that order of authority. Run each resolved command at the closest package or workspace scope it supports and record the exact command and scope. Follow the active runtime's approval flow for every wrapper or direct fallback command; never infer approval from shell patterns in skill metadata.
+
+Use direct Cargo commands only when the repository declares no wrapper for that gate:
 
 ```bash
 cargo test --all-targets --all-features
@@ -52,14 +54,14 @@ cargo check --all-targets --all-features
 cargo llvm-cov --workspace --all-features
 ```
 
-Run `cargo llvm-cov` only when the repository requires a deterministic coverage gate and declares no wrapper; otherwise omit it or use the repository-declared coverage command.
+Run `cargo llvm-cov` only when the repository requires a deterministic coverage gate and declares no wrapper; otherwise use the repository-declared coverage command or record that no deterministic coverage gate is declared.
 
 After writing or repairing tests:
 
-1. Run the repository-canonical focused Rust test command for `$node_path/tests/` and record its exit status.
+1. Run the resolved repository-canonical focused Rust test command for `$node_path/tests/` and record its exit status. Use the direct Cargo test fallback only when no wrapper exists.
 2. In Write mode, PASS only when the test fails for the expected assertion mismatch, or when the source-contract gate established before the run that the owning production module or item is absent and the focused failure contains only that missing owner. Syntax, harness, workspace, manifest, configuration, and unrelated compilation failures are FAIL.
 3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
-4. Run the repository-canonical Rust formatting, lint, and type/compile commands for the changed scope. Formatting MUST exit zero. Lint and compile commands MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct compiler consequence of the same missing production module or item; actual lint diagnostics and unrelated compiler diagnostics are FAIL.
+4. Run the resolved repository-canonical Rust formatting, lint, and type/compile commands for the changed scope, using their direct Cargo fallbacks only where no wrapper exists. Formatting MUST exit zero. Lint and compile commands MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct compiler consequence of the same missing production module or item; actual lint diagnostics and unrelated compiler diagnostics are FAIL.
 5. When the repository requires a deterministic coverage gate, run its declared coverage command, falling back to `cargo llvm-cov --workspace --all-features` only when no wrapper exists. Exit zero is PASS; any nonzero result is FAIL. On the declared specified-node path, record coverage as not applicable until implementation exists.
 6. When the declared production owner is absent, proceed only to specified-node reporting: record the relative exclusion, exact missing owner, focused RED diagnostics, coverage as not applicable, and `test-evidence audit: deferred until implementation exists`. Do not dispatch an auditor.
 7. When the production owner exists, proceed to evidence audit only after the matrix gate, focused test gate, formatting gate, lint gate, compile gate, and applicable coverage gate all pass under their normal all-green rules.

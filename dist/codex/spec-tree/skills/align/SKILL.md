@@ -164,14 +164,16 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Invoke `/understand align` as a composed skill capability, even when a standard foundation marker is already live.
 2. **Load rules**: Require the live foundation marker and `align` materials receipt, then use every named reference and template loaded by that invocation. A missing receipt is a blocked conformance check, never permission to guess or skip a rule.
-3. **Scope**: Use the user-specified path, or default to `spx/` in the product root. For a branch changeset request, invoke `/scope-changeset`, run `python3 "${SKILL_DIR}/scripts/derive_changeset_scope.py" .`, and use the returned `changed_files` before checking downstream alignment.
-4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
+3. **Scope**: Materialize one subject list and one report-scope token according to the requested mode:
+   - **Path mode**: Use the user-specified path, or `spx/` in the product root. Set the report-scope token to that path and glob `{path}/**/*.md` for candidate subjects.
+   - **Branch-changeset mode**: Invoke `/scope-changeset`, run `python3 "${SKILL_DIR}/scripts/derive_changeset_scope.py" .`, and read `base_ref` plus the complete `changed_files` array. Set the report-scope token to `origin/{base_ref}...HEAD`. Keep the complete array for downstream-alignment analysis; derive conformance candidates only from its existing `.md` paths under `spx/`. Do not glob a changeset token or replace the returned array with a caller-supplied subset.
+4. **Discover**: Before classification, remove every candidate whose basename is `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, or `ISSUES.md`; whose path is inside a `tests/` directory; or whose path is inside `spx/local/`. The remaining paths are the complete conformance subject list for the selected mode.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
    - If classified: run structural, language, and placement checks
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
 7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or first-affected-node `PLAN.md` grounding.
-8. **Report**: Emit findings grouped by file path per `<report_format>`.
+8. **Report**: Emit findings grouped by file path per `<report_format>`, substituting the mode-specific report-scope token for `{scope}`.
 9. **Summary**: End with counts.
 
 </workflow>

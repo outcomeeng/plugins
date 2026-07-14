@@ -27,6 +27,8 @@ This audit MUST remain read-only. ALWAYS produce only a verdict over test eviden
 
 <prerequisites>
 
+{!% require_skill 'spec-tree:audit-tests' %!}
+
 {!% require_skill 'rust:rust-standards' %!}
 
 {!% require_skill 'rust:rust-test-standards' %!}

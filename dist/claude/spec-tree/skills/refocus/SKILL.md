@@ -40,14 +40,14 @@ Review what has been produced so far:
 - Ad hoc commands or tool calls run: note any useful information but do not continue in this mode.
 - Ad hoc scripts or debug code written: delete them.
 - Implementation written without tests: keep the code but do not commit it.
-- Tests written without loading context: the tests may be wrong — verify after Step 3 of `/apply`.
+- Tests written without loading context: the tests may be wrong — restart `/apply` at its context and evidence-design stages before accepting them.
 
 </process>
 
 <success_criteria>
 
 - Ad hoc commands stopped.
-- The `/apply` skill is invoked and proper flow started from Step 1.
+- The `/apply` skill is invoked and its context-loading stage starts the governed flow.
 - No further ad hoc commands executed, whether they require permission or not is immaterial.
 - No throwaway scripts or debug code written.
 
