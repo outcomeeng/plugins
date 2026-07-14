@@ -57,5 +57,5 @@ def test_frontmatter_strip_is_idempotent() -> None:
     assert frontmatter_strip_is_idempotent()
 
 
-def test_outputs_do_not_contain_execution_time_cat_injection() -> None:
+def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
     assert outputs_exclude_execution_time_injection()

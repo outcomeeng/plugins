@@ -28,12 +28,13 @@ from outcomeeng.distribution.build import (
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     IncludeDirective,
     build,
-    contains_execution_time_skill_dir_injection,
+    contains_execution_time_skill_content_injection,
     format_directive,
     frontmatter_field_names,
     plan_emissions,
     render_planned_emission_text,
     rewrite_paths_for_target,
+    skill_dir_path_references,
     strip_frontmatter_fields,
 )
 from outcomeeng.distribution.contracts import (
@@ -129,26 +130,31 @@ def claude_output_preserves_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.claude)
     rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
-    relevant = {
-        path: text
+    expected = {
+        path: _skill_dir_reference_counter(text, CLAUDE_SKILL_DIR_TOKEN)
         for path, text in rendered_sources.items()
-        if CLAUDE_SKILL_DIR_TOKEN in text
     }
     failures = tuple(
         (
             path,
-            text.count(CLAUDE_SKILL_DIR_TOKEN),
-            _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
+            references,
+            _skill_dir_reference_counter(
+                _decode_text(output_files[path]),
+                CLAUDE_SKILL_DIR_TOKEN,
+            ),
         )
-        for path, text in relevant.items()
-        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        != text.count(CLAUDE_SKILL_DIR_TOKEN)
+        for path, references in expected.items()
+        if _skill_dir_reference_counter(
+            _decode_text(output_files[path]),
+            CLAUDE_SKILL_DIR_TOKEN,
+        )
+        != references
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
         and _synthetic_fan_out_translation_holds()
     )
-    if not relevant or failures or not synthetic:
+    if not any(expected.values()) or failures or not synthetic:
         raise AssertionError(
             f"Claude skill-directory preservation mismatch: {failures=}, {synthetic=}"
         )
@@ -159,30 +165,54 @@ def codex_output_rewrites_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.codex)
     rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
-    relevant = {
-        path: text
+    expected = {
+        path: (
+            _escaped_skill_dir_references(text),
+            _translated_codex_references(_unescaped_skill_dir_references(text)),
+        )
         for path, text in rendered_sources.items()
-        if _unescaped_skill_dir_count(text)
     }
     failures = tuple(
         (
             path,
-            _escaped_skill_dir_count(text),
-            _unescaped_skill_dir_count(text),
-            _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
-            _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN),
+            expected_claude,
+            expected_codex,
+            _skill_dir_reference_counter(
+                _decode_text(output_files[path]),
+                CLAUDE_SKILL_DIR_TOKEN,
+            ),
+            _skill_dir_reference_counter(
+                _decode_text(output_files[path]),
+                CODEX_SKILL_DIR_TOKEN,
+            ),
         )
-        for path, text in relevant.items()
-        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        != _escaped_skill_dir_count(text)
-        or _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN)
-        != _unescaped_skill_dir_count(text)
+        for path, (expected_claude, expected_codex) in expected.items()
+        if (
+            _skill_dir_reference_counter(
+                _decode_text(output_files[path]),
+                CLAUDE_SKILL_DIR_TOKEN,
+            )
+            != expected_claude
+            or _skill_dir_reference_counter(
+                _decode_text(output_files[path]),
+                CODEX_SKILL_DIR_TOKEN,
+            )
+            != expected_codex
+            or _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+            != _escaped_skill_dir_token_count(rendered_sources[path])
+        )
     )
     synthetic = (
         _synthetic_skill_dir_translation_holds()
         and _synthetic_fan_out_translation_holds()
     )
-    if not relevant or failures or not synthetic:
+    if (
+        not any(
+            expected_codex for _expected_claude, expected_codex in expected.values()
+        )
+        or failures
+        or not synthetic
+    ):
         raise AssertionError(
             f"Codex skill-directory rewrite mismatch: {failures=}, {synthetic=}"
         )
@@ -193,21 +223,35 @@ def skill_dir_escape_preserves_authoring_guidance() -> bool:
     snapshot = _canonical_emission_snapshot()
     claude_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
     codex_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
+    claude_expected = {
+        path: _escaped_skill_dir_references(text)
+        for path, text in claude_sources.items()
+    }
+    codex_expected = {
+        path: _escaped_skill_dir_references(text)
+        for path, text in codex_sources.items()
+    }
     relevant_paths = {
         path
-        for sources in (claude_sources, codex_sources)
-        for path, text in sources.items()
-        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in text
+        for expected in (claude_expected, codex_expected)
+        for path, references in expected.items()
+        if references
     }
     claude_outputs = dict(snapshot.claude)
     codex_outputs = dict(snapshot.codex)
     return (
         bool(relevant_paths)
         and all(
-            _decode_text(claude_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-            == claude_sources[path].count(CLAUDE_SKILL_DIR_TOKEN)
-            and _decode_text(codex_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-            == _escaped_skill_dir_count(codex_sources[path])
+            claude_expected[path]
+            <= _skill_dir_reference_counter(
+                _decode_text(claude_outputs[path]),
+                CLAUDE_SKILL_DIR_TOKEN,
+            )
+            and codex_expected[path]
+            == _skill_dir_reference_counter(
+                _decode_text(codex_outputs[path]),
+                CLAUDE_SKILL_DIR_TOKEN,
+            )
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
             not in _decode_text(claude_outputs[path])
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
@@ -274,12 +318,12 @@ def outputs_exclude_execution_time_injection() -> bool:
     return (
         _execution_time_injection_detector_covers_generated_commands()
         and all(
-            not contains_execution_time_skill_dir_injection(text)
+            not contains_execution_time_skill_content_injection(text)
             for target in Target
             for text in _text_files(snapshot.target(target)).values()
         )
         and all(
-            not contains_execution_time_skill_dir_injection(text)
+            not contains_execution_time_skill_content_injection(text)
             for target in Target
             for text in _text_files(
                 _synthetic_emission_snapshot().target(target)
@@ -290,15 +334,22 @@ def outputs_exclude_execution_time_injection() -> bool:
 
 def _execution_time_injection_detector_covers_generated_commands() -> bool:
     return all(
-        contains_execution_time_skill_dir_injection(
-            f"{EXECUTION_TIME_INJECTION_START}{case.inner_topic} "
-            f"{skill_dir_token}/{case.outer_topic}{EXECUTION_TIME_INJECTION_END}"
+        contains_execution_time_skill_content_injection(
+            f"{EXECUTION_TIME_INJECTION_START}{command}{EXECUTION_TIME_INJECTION_END}"
         )
-        and not contains_execution_time_skill_dir_injection(
-            f"{skill_dir_token}/{case.outer_topic}"
-        )
+        and not contains_execution_time_skill_content_injection(command)
         for case in source_scenarios()
-        for skill_dir_token in (CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
+        for command in _execution_time_commands(case)
+    )
+
+
+def _execution_time_commands(case: SourceScenario) -> tuple[str, ...]:
+    return (
+        f"{case.inner_topic} ../{case.skill}/{SKILL_FILENAME}",
+        *(
+            f"{case.inner_topic} {skill_dir_token}/../{case.skill}/{SKILL_FILENAME}"
+            for skill_dir_token in (CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
+        ),
     )
 
 
@@ -485,12 +536,21 @@ def _synthetic_skill_dir_translation_holds() -> bool:
         if CLAUDE_SKILL_DIR_TOKEN in text
     }
     return bool(relevant) and all(
-        _decode_text(claude_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        == text.count(CLAUDE_SKILL_DIR_TOKEN)
-        and _decode_text(codex_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-        == _escaped_skill_dir_count(text)
-        and _decode_text(codex_outputs[path]).count(CODEX_SKILL_DIR_TOKEN)
-        == _unescaped_skill_dir_count(text)
+        _skill_dir_reference_counter(
+            _decode_text(claude_outputs[path]),
+            CLAUDE_SKILL_DIR_TOKEN,
+        )
+        == _skill_dir_reference_counter(text, CLAUDE_SKILL_DIR_TOKEN)
+        and _skill_dir_reference_counter(
+            _decode_text(codex_outputs[path]),
+            CLAUDE_SKILL_DIR_TOKEN,
+        )
+        == _escaped_skill_dir_references(text)
+        and _skill_dir_reference_counter(
+            _decode_text(codex_outputs[path]),
+            CODEX_SKILL_DIR_TOKEN,
+        )
+        == _translated_codex_references(_unescaped_skill_dir_references(text))
         and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(claude_outputs[path])
         and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(codex_outputs[path])
         for path, text in relevant.items()
@@ -499,6 +559,9 @@ def _synthetic_skill_dir_translation_holds() -> bool:
 
 def _synthetic_fan_out_translation_holds() -> bool:
     snapshot = _synthetic_emission_snapshot()
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    expected_claude = Counter((_claude_reference(case),))
+    expected_codex = _translated_codex_references(expected_claude)
     fan_out_paths = {
         emission.relative_path
         for emission in snapshot.plan.for_target(Target.CLAUDE)
@@ -507,10 +570,18 @@ def _synthetic_fan_out_translation_holds() -> bool:
     claude_outputs = dict(snapshot.claude)
     codex_outputs = dict(snapshot.codex)
     return bool(fan_out_paths) and all(
-        CLAUDE_SKILL_DIR_TOKEN in (claude_body := _decode_text(claude_outputs[path]))
-        and CLAUDE_SKILL_DIR_TOKEN
-        not in (codex_body := _decode_text(codex_outputs[path]))
-        and CODEX_SKILL_DIR_TOKEN in codex_body
+        _skill_dir_reference_counter(
+            (claude_body := _decode_text(claude_outputs[path])),
+            CLAUDE_SKILL_DIR_TOKEN,
+        )
+        == expected_claude
+        and _skill_dir_reference_counter(
+            (codex_body := _decode_text(codex_outputs[path])),
+            CLAUDE_SKILL_DIR_TOKEN,
+        )
+        == Counter()
+        and _skill_dir_reference_counter(codex_body, CODEX_SKILL_DIR_TOKEN)
+        == expected_codex
         and _frontmatter_translation_holds(claude_body, codex_body)
         for path in fan_out_paths
     )
@@ -551,19 +622,42 @@ def _canonical_rendered_emissions(
     }
 
 
-def _unescaped_skill_dir_count(text: str) -> int:
-    return sum(
-        line.count(CLAUDE_SKILL_DIR_TOKEN)
+def _skill_dir_reference_counter(text: str, token: str) -> Counter[str]:
+    return Counter(skill_dir_path_references(text, token))
+
+
+def _unescaped_skill_dir_references(text: str) -> Counter[str]:
+    return Counter(
+        reference
         for line in text.splitlines()
         if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in line
+        for reference in skill_dir_path_references(line, CLAUDE_SKILL_DIR_TOKEN)
     )
 
 
-def _escaped_skill_dir_count(text: str) -> int:
+def _escaped_skill_dir_references(text: str) -> Counter[str]:
+    return Counter(
+        reference
+        for line in text.splitlines()
+        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in line
+        for reference in skill_dir_path_references(line, CLAUDE_SKILL_DIR_TOKEN)
+    )
+
+
+def _escaped_skill_dir_token_count(text: str) -> int:
     return sum(
         line.count(CLAUDE_SKILL_DIR_TOKEN)
         for line in text.splitlines()
         if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in line
+    )
+
+
+def _translated_codex_references(references: Counter[str]) -> Counter[str]:
+    return Counter(
+        {
+            reference.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN, 1): count
+            for reference, count in references.items()
+        }
     )
 
 
