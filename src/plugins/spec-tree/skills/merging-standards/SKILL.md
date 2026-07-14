@@ -318,43 +318,7 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 </authority_gates>
 
 <merge_cleanup>
-Once `MERGE_READINESS` authorizes the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. Cleanup of the changeset's branch is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER detaches, cleans, or deletes a branch in a worktree a live agent holds; if the merged branch is checked out in such a worktree, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
-
-Immediately before the merge command, run every overlay-declared preflight check per `<overlay_safety_checks>`. Immediately after the detach command, run every overlay-declared post-cleanup check before local or remote branch deletion. These checks are part of the sequence for every overlay-selected merge flag, not optional prose around the default commands.
-
-```bash
-base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
-branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-gh pr merge <pr-number> --rebase --delete-branch=false
-git fetch origin "$base_from_pr"
-git switch --detach "origin/$base_from_pr"   # step this worktree off the merged branch onto the new base tip
-# Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
-remote_branch_status=0
-git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
-case "$remote_branch_status" in
-  0) git push origin --delete "$branch_from_pr" ;;
-  2) ;;
-  *) exit "$remote_branch_status" ;;
-esac
-held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
-if [ -n "$held_worktree" ]; then
-  echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
-elif git show-ref --verify --quiet "refs/heads/$branch_from_pr"; then
-  local_branch_sha=$(git rev-parse "refs/heads/$branch_from_pr")
-  if git merge-base --is-ancestor "$local_branch_sha" "origin/$base_from_pr"; then
-    git branch -d "$branch_from_pr"
-  else
-    echo "Local branch kept: branch=$branch_from_pr tip=$local_branch_sha reason=not-ancestor-of-origin/$base_from_pr"
-  fi
-fi
-git status --porcelain
-```
-
-Order matters: run preflight, merge while the branch is still checked out — `gh pr merge` fails with "could not determine current branch" from a detached HEAD even with an explicit PR number — detach this worktree, run post-cleanup checks, then delete the local and remote branches unless the host already auto-deleted the remote branch.
-
-**Why the default passes `--delete-branch=false` explicitly.** `gh pr merge --delete-branch` — or the bare flag where a `gh` version or config defaults it on — run from the worktree on the branch being merged, makes `gh` switch that worktree to the base branch as part of deleting the local branch. In a multi-worktree checkout where the base (for example `main`) is checked out in another worktree, that switch fails with `fatal: '<base>' is already used by worktree at <path>` — the merge completes on the host, but the local branch is left undeleted and the flow ends in an error state. Omitting the flag is not enough: this methodology ships to consumer environments whose `gh` default for the omitted flag is unknowable, so the default states `--delete-branch=false` explicitly, guaranteeing `gh` never attempts that switch regardless of environment. Deliberate deletion stays in the worktree-safe manual sequence above, which behaves identically in single- and multi-worktree checkouts and tolerates a host that already auto-deleted the remote branch. A project that is always single-worktree MAY opt the overlay into inline `gh pr merge --rebase --delete-branch` per `<repo_local_overlay>`.
-
-The merge flag follows the overlay when it declares one (`--merge` or `--squash`); `--rebase` is the universal default flag. The deletion steps after the merge are independent of which merge flag runs.
+Read `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md` immediately before the merge mutation. It defines the merge command, overlay checks, worktree transition, and remote and local branch cleanup sequence.
 
 </merge_cleanup>
 
@@ -475,6 +439,16 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`, including the exact trigger condition and required follow-up for each token.
 </action_tokens>
 <self_reference>No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.</self_reference>
+
+<failure_modes>
+
+**Failure 1: Required gone-upstream tracking for local cleanup.** Upstream configuration is optional metadata, so merged local branches without it accumulated. Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry.
+
+**Failure 2: Force-deleted the local branch before proving safety.** The branch could contain commits absent from the base. Follow `references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
+
+**Failure 3: Let `gh pr merge` clean up the branch.** Host or CLI behavior can switch onto a base held by another worktree and fail after merging. Pass `--delete-branch=false`, then run the explicit cleanup sequence.
+
+</failure_modes>
 
 <success_criteria>
 The flows that consume this vocabulary satisfy their contracts when, at minimum:
