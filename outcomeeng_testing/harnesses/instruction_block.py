@@ -25,7 +25,9 @@ import re
 import subprocess
 import tempfile
 from collections.abc import Callable
+from contextlib import redirect_stdout
 from dataclasses import dataclass
+from io import StringIO
 from types import ModuleType
 from typing import Final, cast
 
@@ -62,6 +64,7 @@ INSTRUCTION_AGENTS = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_
 ROOT_CLAUDE_BODY: Final = _fixture_text("root-claude.md")
 ROOT_AGENTS_BODY: Final = _fixture_text("root-agents.md")
 ROOT_SHARED_BODY: Final = _fixture_text("root-shared.md")
+ROOT_RETIRED_MANAGED_BODY: Final = _fixture_text("retired-managed.md")
 
 # Invented shared-region body payloads the harness owns, for shared-region preservation and
 # recency-reconcile tests. Their byte-identity (or, for the ALT, their divergence) across the two
@@ -179,6 +182,39 @@ def root_instruction_topology_separate() -> RootInstructionTopology:
         files={
             INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
             INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_identical() -> RootInstructionTopology:
+    """Return two identical regular root instruction files without a managed block."""
+    return RootInstructionTopology(
+        files={
+            INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
+            INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_retired_managed() -> RootInstructionTopology:
+    """Return two identical root files carrying a retired managed block."""
+    return RootInstructionTopology(
+        files={
+            INSTRUCTION_CLAUDE: ROOT_RETIRED_MANAGED_BODY,
+            INSTRUCTION_AGENTS: ROOT_RETIRED_MANAGED_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_above_shared_threshold() -> RootInstructionTopology:
+    """Return differing files whose biggest identical span exceeds the source threshold."""
+    return RootInstructionTopology(
+        files={
+            INSTRUCTION_CLAUDE: ROOT_NEAR_IDENTICAL_CLAUDE,
+            INSTRUCTION_AGENTS: ROOT_NEAR_IDENTICAL_CODEX,
         },
         symlinks={},
     )
@@ -361,6 +397,34 @@ def run_generator_write_primary(
         template_path,
         languages=LANG_PRIMARY,
     )
+
+
+def run_generator_check(
+    module: ModuleType,
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str,
+) -> str:
+    """Run the generator CLI's ``--check`` and return its status report."""
+    output = StringIO()
+    with redirect_stdout(output):
+        exit_code = cast(
+            int,
+            module.main(
+                [
+                    "--template",
+                    str(template_path),
+                    "--repo-root",
+                    str(repo_root),
+                    "--languages",
+                    languages,
+                    "--check",
+                ]
+            ),
+        )
+    assert exit_code == 0
+    return output.getvalue().strip()
 
 
 def copy_shipped_dist_templates(repo_root: pathlib.Path) -> None:
@@ -1008,7 +1072,7 @@ def assert_language_block_appears_iff_enabled() -> None:
 
 
 def assert_check_maps_router_state_to_report() -> None:
-    """Assert current, absent, and stale router states map to their reports."""
+    """Assert every declared router state maps to its check report."""
     module = load_instruction_block_module()
     with _temporary_root() as directory:
         tmp_path = pathlib.Path(directory).resolve()
@@ -1018,15 +1082,15 @@ def assert_check_maps_router_state_to_report() -> None:
         run_generator_write_primary(repo, template)
         claude = repo / INSTRUCTION_CLAUDE
 
-        def check() -> str:
+        def check(languages: tuple[str, ...]) -> str:
             return cast(
                 str,
-                module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo),
+                module.instruction_status(claude, NEW_VERSION, languages, repo),
             )
 
-        assert check() == "current"
+        assert check((LANG_PRIMARY,)) == "current"
         claude.unlink()
-        assert check() == "absent"
+        assert check((LANG_PRIMARY,)) == "absent"
         stale_block = module.render(
             build_template(OLD_VERSION),
             (LANG_PRIMARY,),
@@ -1036,19 +1100,45 @@ def assert_check_maps_router_state_to_report() -> None:
         claude.write_text(
             module.prepend_router_block(stale_block, ""), encoding="utf-8"
         )
-        assert check() == "stale"
+        assert check((LANG_PRIMARY,)) == "stale"
+        run_generator_write_primary(repo, template)
+        assert check((LANG_SECONDARY,)) == "stale"
 
 
 def assert_check_maps_shared_region_state_to_report() -> None:
-    """Assert identical, divergent, and one-sided regions map to drift reports."""
+    """Assert the CLI promotes shared-region drift into its stale report."""
     module = load_instruction_block_module()
     with _temporary_root() as directory:
-        repo = pathlib.Path(directory).resolve() / "repo"
+        tmp_path = pathlib.Path(directory).resolve()
+        repo = tmp_path / "repo"
         repo.mkdir()
+        template = write_template(tmp_path, NEW_VERSION)
         write_both_root_files_with_shared_region(
             module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
         )
+        current_status = cast(
+            str,
+            module.instruction_status(
+                repo / INSTRUCTION_CLAUDE,
+                NEW_VERSION,
+                (LANG_PRIMARY,),
+                repo,
+            ),
+        )
+        stale_status = cast(
+            str,
+            module.instruction_status(
+                repo / INSTRUCTION_CLAUDE,
+                NEW_VERSION,
+                (LANG_SECONDARY,),
+                repo,
+            ),
+        )
         assert module.shared_region_drift(repo) == ()
+        assert (
+            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
+            == current_status
+        )
 
         write_both_root_files_with_shared_region(
             module,
@@ -1059,6 +1149,28 @@ def assert_check_maps_shared_region_state_to_report() -> None:
             agents_region=SHARED_REGION_BODY_ALT,
         )
         assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+        assert (
+            module.instruction_status(
+                repo / INSTRUCTION_CLAUDE,
+                NEW_VERSION,
+                (LANG_PRIMARY,),
+                repo,
+            )
+            == current_status
+        )
+        assert (
+            module.instruction_status(
+                repo / INSTRUCTION_AGENTS,
+                NEW_VERSION,
+                (LANG_PRIMARY,),
+                repo,
+            )
+            == current_status
+        )
+        assert (
+            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
+            == stale_status
+        )
 
         codex_block = module.render(
             build_template(NEW_VERSION),
@@ -1071,18 +1183,25 @@ def assert_check_maps_shared_region_state_to_report() -> None:
             encoding="utf-8",
         )
         assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+        assert (
+            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
+            == stale_status
+        )
 
 
 def assert_topology_maps_to_bootstrap_outcome() -> None:
     """Assert every harness topology maps to its shared-region bootstrap outcome."""
     module = load_instruction_block_module()
-    topology_factories = (
-        root_instruction_topology_only_claude,
-        root_instruction_topology_only_agents,
-        root_instruction_topology_separate,
-        root_instruction_topology_symlinked,
+    topology_cases = (
+        (root_instruction_topology_only_claude, True),
+        (root_instruction_topology_only_agents, True),
+        (root_instruction_topology_symlinked, True),
+        (root_instruction_topology_identical, True),
+        (root_instruction_topology_retired_managed, True),
+        (root_instruction_topology_above_shared_threshold, True),
+        (root_instruction_topology_separate, False),
     )
-    for topology_factory in topology_factories:
+    for topology_factory, expected_shared in topology_cases:
         with _temporary_root() as directory:
             tmp_path = pathlib.Path(directory).resolve()
             repo = tmp_path / "repo"
@@ -1091,12 +1210,24 @@ def assert_topology_maps_to_bootstrap_outcome() -> None:
             run_generator_write_primary(repo, template)
             claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
             agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
-            seeds_identical = seeds[INSTRUCTION_CLAUDE] == seeds[INSTRUCTION_AGENTS]
-            assert bool(module.parse_shared_regions(claude)) == seeds_identical
-            if seeds_identical:
+            shared_span, shared_ratio = module.biggest_identical_span(
+                seeds[INSTRUCTION_CLAUDE], seeds[INSTRUCTION_AGENTS]
+            )
+            if seeds[INSTRUCTION_CLAUDE] != seeds[INSTRUCTION_AGENTS]:
+                assert expected_shared == (
+                    bool(shared_span)
+                    and shared_ratio > module.BOOTSTRAP_SHARED_THRESHOLD
+                )
+            assert bool(module.parse_shared_regions(claude)) == expected_shared
+            if expected_shared:
                 assert set(module.parse_shared_regions(claude)) == set(
                     module.parse_shared_regions(agents)
                 )
+            for open_marker, close_marker in module.LEGACY_MANAGED_BLOCK_MARKERS:
+                assert open_marker not in claude
+                assert close_marker not in claude
+                assert open_marker not in agents
+                assert close_marker not in agents
             assert claude.startswith(module.ROUTER_MARKER_PREFIX)
             assert agents.startswith(module.ROUTER_MARKER_PREFIX)
 
