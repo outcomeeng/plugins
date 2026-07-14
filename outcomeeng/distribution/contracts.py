@@ -8,12 +8,28 @@ from typing import Final
 TEXT_FILE_SUFFIXES: Final = frozenset(
     {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
 )
+BUILD_BLOCK_DELIMITER_START: Final = "{!%"
+BUILD_BLOCK_DELIMITER_END: Final = "%!}"
+BUILD_VARIABLE_DELIMITER_START: Final = "{{!"
+BUILD_VARIABLE_DELIMITER_END: Final = "!}}"
+BUILD_COMMENT_DELIMITER_START: Final = "{!#"
+BUILD_COMMENT_DELIMITER_END: Final = "#!}"
+BUILD_TARGET_VARIABLE: Final = "target"
+SPX_FLOOR_VARIABLE: Final = "spx_floor"
+PLUGIN_NAME_VARIABLE: Final = "plugin_name"
 DIST_DIR_NAME: Final = "dist"
+PLUGINS_DIR_NAME: Final = "plugins"
+SKILLS_SUBDIR_NAME: Final = "skills"
 REQUIRE_SKILL_GUIDANCE_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
     "unavailable, report the missing skill and continue with the closest "
     "available workflow."
 )
+
+
+def build_variable_token(variable: str) -> str:
+    """Return the authored-source token for one build render variable."""
+    return f"{BUILD_VARIABLE_DELIMITER_START} {variable} {BUILD_VARIABLE_DELIMITER_END}"
 
 
 class Target(StrEnum):
