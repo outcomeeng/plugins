@@ -566,6 +566,161 @@ def write_both_root_files_with_shared_region(
         )
 
 
+def assert_extension_to_language_mapping() -> None:
+    """Assert every source-owned test extension maps with or without a leading dot."""
+    module = load_instruction_block_module()
+    for extension, language in sorted(module.LANGUAGE_BY_EXTENSION.items()):
+        assert module.language_for_extension(extension) == language
+        assert module.language_for_extension(f".{extension}") == language
+
+
+def assert_detected_language_set_mapping() -> None:
+    """Assert extension detection yields the normalized source-owned language set."""
+    module = load_instruction_block_module()
+    assert module.detect_languages(
+        tuple(module.LANGUAGE_BY_EXTENSION)
+    ) == module.normalize_languages(module.LANGUAGE_BY_EXTENSION.values())
+
+
+def assert_language_block_filter_mapping() -> None:
+    """Assert each template language block appears exactly when enabled."""
+    module = load_instruction_block_module()
+    template = build_template(NEW_VERSION)
+    for language in TEMPLATE_LANGUAGES:
+        heading = _language_heading(language)
+        enabled = module.render(template, (language,), NEW_VERSION, HARNESS_CLAUDE)
+        disabled = module.render(
+            template,
+            tuple(name for name in TEMPLATE_LANGUAGES if name != language),
+            NEW_VERSION,
+            HARNESS_CLAUDE,
+        )
+        assert heading in enabled
+        assert heading not in disabled
+
+
+def assert_router_status_mapping() -> None:
+    """Assert current, absent, and behind-version router states map to reports."""
+    module = load_instruction_block_module()
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        repo = root / "repo"
+        repo.mkdir()
+        template = write_template(root, NEW_VERSION)
+        run_generator_write_primary(repo, template)
+        claude = repo / INSTRUCTION_CLAUDE
+
+        assert (
+            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
+            == "current"
+        )
+
+        claude.unlink()
+        assert (
+            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
+            == "absent"
+        )
+
+        stale_block = module.render(
+            build_template(OLD_VERSION),
+            (LANG_PRIMARY,),
+            OLD_VERSION,
+            HARNESS_CLAUDE,
+        )
+        claude.write_text(
+            module.prepend_router_block(stale_block, ""), encoding="utf-8"
+        )
+        assert (
+            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
+            == "stale"
+        )
+
+
+def assert_shared_region_status_mapping() -> None:
+    """Assert identical, diverged, and one-sided shared regions map to drift reports."""
+    module = load_instruction_block_module()
+    with TemporaryDirectory() as directory:
+        repo = pathlib.Path(directory).resolve() / "repo"
+        repo.mkdir()
+
+        write_both_root_files_with_shared_region(
+            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
+        )
+        assert module.shared_region_drift(repo) == ()
+
+        write_both_root_files_with_shared_region(
+            module,
+            repo,
+            languages=(LANG_PRIMARY,),
+            version=NEW_VERSION,
+            claude_region=SHARED_REGION_BODY,
+            agents_region=SHARED_REGION_BODY_ALT,
+        )
+        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+
+        codex_block = module.render(
+            build_template(NEW_VERSION),
+            (LANG_PRIMARY,),
+            NEW_VERSION,
+            HARNESS_CODEX,
+        )
+        (repo / INSTRUCTION_AGENTS).write_text(
+            module.prepend_router_block(codex_block, ROOT_AGENTS_BODY),
+            encoding="utf-8",
+        )
+        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+
+
+def assert_bootstrap_topology_mapping() -> None:
+    """Assert every source-owned initial topology maps to its bootstrap outcome."""
+    module = load_instruction_block_module()
+    for topology in (
+        root_instruction_topology_only_claude(),
+        root_instruction_topology_only_agents(),
+        root_instruction_topology_separate(),
+        root_instruction_topology_claude_symlink(),
+        root_instruction_topology_agents_symlink(),
+    ):
+        with TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            repo = root / "repo"
+            seeds = materialize_root_instruction_topology(repo, topology)
+            template = write_template(root, NEW_VERSION)
+            run_generator_write_primary(repo, template)
+
+            claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+            agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+            seeds_identical = seeds[INSTRUCTION_CLAUDE] == seeds[INSTRUCTION_AGENTS]
+
+            assert bool(module.parse_shared_regions(claude)) == seeds_identical
+            if seeds_identical:
+                assert set(module.parse_shared_regions(claude)) == set(
+                    module.parse_shared_regions(agents)
+                )
+            assert claude.startswith(module.ROUTER_MARKER_PREFIX)
+            assert agents.startswith(module.ROUTER_MARKER_PREFIX)
+
+
+def assert_span_ratio_wrap_mapping() -> None:
+    """Assert span ratios above and below the threshold map to wrapping decisions."""
+    module = load_instruction_block_module()
+    _, ratio_identical = module.biggest_identical_span(
+        ROOT_SHARED_BODY, ROOT_SHARED_BODY
+    )
+    assert ratio_identical > module.BOOTSTRAP_SHARED_THRESHOLD
+    wrapped_a, wrapped_b = module.bootstrap_wrap(ROOT_SHARED_BODY, ROOT_SHARED_BODY)
+    assert module.parse_shared_regions(wrapped_a)
+    assert module.parse_shared_regions(wrapped_b)
+
+    _, ratio_divergent = module.biggest_identical_span(
+        ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY
+    )
+    assert ratio_divergent <= module.BOOTSTRAP_SHARED_THRESHOLD
+    no_wrap_a, no_wrap_b = module.bootstrap_wrap(ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY)
+    assert not module.parse_shared_regions(no_wrap_a)
+    assert not module.parse_shared_regions(no_wrap_b)
+
+
 def git_command(
     repo_root: pathlib.Path, *args: str
 ) -> subprocess.CompletedProcess[str]:
