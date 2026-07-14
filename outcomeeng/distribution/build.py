@@ -121,6 +121,13 @@ PLUGIN_SUBDIRS: Final = frozenset(
         CODEX_PLUGIN_SUBDIR_NAME,
     }
 )
+INCLUDE_SITE_SUBDIRS: Final = frozenset(
+    {
+        SKILLS_SUBDIR_NAME,
+        COMMANDS_SUBDIR_NAME,
+        AGENTS_SUBDIR_NAME,
+    }
+)
 
 SKILL_FILENAME: Final = "SKILL.md"
 COMMAND_FILE_SUFFIX: Final = ".md"
@@ -1230,7 +1237,8 @@ def _planned_fan_out_emissions(
     shared_root: Path,
 ) -> tuple[PlannedEmission, ...]:
     if (
-        SKILLS_SUBDIR_NAME not in relative_path.parts
+        len(relative_path.parts) < 2
+        or relative_path.parts[1] not in INCLUDE_SITE_SUBDIRS
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
     ):
         return ()

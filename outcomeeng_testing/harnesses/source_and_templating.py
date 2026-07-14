@@ -700,6 +700,7 @@ def _shared_topic_reference_travels(case: SourceScenario) -> bool:
         (inner_reference_name, outer_reference_name),
         case.fragment_body,
     )
+    include_body = _include_text(case, case.outer_topic)
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         builder = SrcTreeBuilder(root)
@@ -718,22 +719,28 @@ def _shared_topic_reference_travels(case: SourceScenario) -> bool:
         builder.add_plugin(
             case.plugin,
             skills={
-                case.skill: (
-                    f"{_skill_body(case)}\n{_include_text(case, case.outer_topic)}"
-                )
+                case.skill: f"{_skill_body(case)}\n{include_body}",
             },
+            commands={case.inner_topic: include_body},
+            agents={case.outer_topic: include_body},
         )
         build(builder.src_root, root / DIST_DIR_NAME)
         reader = DistTreeReader(root)
-        relative_reference = (
-            Path(case.plugin) / SKILLS_SUBDIR_NAME / case.skill / REFERENCES_SUBDIR_NAME
+        relative_reference_roots = (
+            Path(case.plugin)
+            / SKILLS_SUBDIR_NAME
+            / case.skill
+            / REFERENCES_SUBDIR_NAME,
+            Path(case.plugin) / COMMANDS_SUBDIR_NAME / REFERENCES_SUBDIR_NAME,
+            Path(case.plugin) / AGENTS_SUBDIR_NAME / REFERENCES_SUBDIR_NAME,
         )
         return all(
             (
-                reader.target_root(target) / relative_reference / reference_name
+                reader.target_root(target) / relative_reference_root / reference_name
             ).read_text(encoding="utf-8")
             == reference_body
             for target in Target
+            for relative_reference_root in relative_reference_roots
             for reference_name, reference_body in reference_bodies.items()
         )
 
