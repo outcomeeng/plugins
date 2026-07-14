@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.build import build
+from outcomeeng.distribution.build import IMPLEMENTED, build
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
     PLUGINS_DIR_NAME,
@@ -20,6 +20,7 @@ CANONICAL_SOURCE_ROOT = REPO_ROOT / SOURCE_ROOT_NAME
 
 def canonical_dist_files_trace_to_source_ancestors() -> bool:
     """Return whether every canonical build output traces to source."""
+    _require_build_implementation()
     with TemporaryDirectory() as temporary_directory:
         output_root = Path(temporary_directory)
         build(CANONICAL_SOURCE_ROOT, output_root / DIST_DIR_NAME)
@@ -33,6 +34,7 @@ def canonical_dist_files_trace_to_source_ancestors() -> bool:
 
 def canonical_build_is_deterministic() -> bool:
     """Return whether independent canonical builds are byte-identical."""
+    _require_build_implementation()
     with (
         TemporaryDirectory() as first_directory,
         TemporaryDirectory() as second_directory,
@@ -46,6 +48,7 @@ def canonical_build_is_deterministic() -> bool:
 
 def canonical_build_is_idempotent() -> bool:
     """Return whether a repeated canonical build leaves output unchanged."""
+    _require_build_implementation()
     with TemporaryDirectory() as temporary_directory:
         dist_root = Path(temporary_directory) / DIST_DIR_NAME
         build(CANONICAL_SOURCE_ROOT, dist_root)
@@ -62,3 +65,8 @@ def _snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
             if path.is_file()
         )
     )
+
+
+def _require_build_implementation() -> None:
+    if not IMPLEMENTED:
+        raise AssertionError("the distribution build implementation is unavailable")
