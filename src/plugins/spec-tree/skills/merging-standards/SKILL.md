@@ -442,11 +442,20 @@ Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge l
 
 <failure_modes>
 
-**Failure 1: Required gone-upstream tracking for local cleanup.** Upstream configuration is optional metadata, so merged local branches without it accumulated. Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry.
+**Failure 1: Claude required gone-upstream tracking for local cleanup.**
+What happened: Claude retained a safely merged local branch because it had no upstream configuration.
+Why it failed: Upstream configuration is optional metadata and does not establish branch safety.
+How to avoid: Apply `<branch_state_closeout>` using remote-ref absence, worktree occupancy, and ancestry.
 
-**Failure 2: Force-deleted the local branch before proving safety.** The branch could contain commits absent from the base. Follow `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
+**Failure 2: Claude force-deleted the local branch before proving safety.**
+What happened: Claude deleted the branch without proving its commits were present on the base.
+Why it failed: The branch could contain commits absent from the base.
+How to avoid: Follow `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
 
-**Failure 3: Let `gh pr merge` clean up the branch.** Host or CLI behavior can switch onto a base held by another worktree and fail after merging. Pass `--delete-branch=false`, then run the explicit cleanup sequence.
+**Failure 3: Claude let `gh pr merge` clean up the branch.**
+What happened: Claude delegated local cleanup to the host CLI.
+Why it failed: Host or CLI behavior can switch onto a base held by another worktree and fail after merging.
+How to avoid: Pass `--delete-branch=false`, then run the explicit cleanup sequence.
 
 </failure_modes>
 
