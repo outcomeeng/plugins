@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     require_skill_emits_identically_across_targets,
     require_skill_expands_to_neutral_guidance,
     require_skill_renders_inline,
+    shared_topic_references_travel_with_fragment,
     shared_topic_without_fragment_is_rejected,
     skill_dir_escape_survives_jinja_pass,
     standard_jinja_syntax_passes_through,
@@ -30,6 +31,10 @@ def test_build_accepts_ordinary_files_under_plugin_root() -> None:
 
 def test_build_rejects_shared_topic_without_fragment() -> None:
     assert shared_topic_without_fragment_is_rejected()
+
+
+def test_shared_topic_references_travel_with_fragment() -> None:
+    assert shared_topic_references_travel_with_fragment()
 
 
 def test_jinja_environment_uses_custom_delimiters() -> None:

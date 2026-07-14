@@ -10,12 +10,18 @@ from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import (
+    AGENTS_SUBDIR_NAME,
+    AGENT_FILE_SUFFIX,
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
     CLAUDE_SKILL_DIR_TOKEN,
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
+    COMMANDS_SUBDIR_NAME,
+    COMMAND_FILE_SUFFIX,
     IMPLEMENTED,
+    REFERENCES_SUBDIR_NAME,
+    SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     SKILL_FILENAME,
@@ -38,6 +44,8 @@ from outcomeeng.distribution.build import (
     render_text,
 )
 from outcomeeng.distribution.contracts import (
+    BUILD_TARGET_VARIABLE,
+    DIST_DIR_NAME,
     PLUGINS_DIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     SKILLS_SUBDIR_NAME,
@@ -214,11 +222,11 @@ def _recursive_include_property(case: SourceScenario, depth: int) -> None:
 
 
 def standard_jinja_block_has_no_directives() -> bool:
-    return parse_directives("Code: {% if user %} ... {% endif %}") == ()
+    return all(_standard_jinja_block_passes(case) for case in source_scenarios())
 
 
 def standard_jinja_variable_has_no_directives() -> bool:
-    return parse_directives("Variable: {{ user.name }}") == ()
+    return all(_standard_jinja_variable_passes(case) for case in source_scenarios())
 
 
 def unknown_directive_raises() -> bool:
@@ -234,11 +242,7 @@ def missing_directive_argument_raises() -> bool:
 
 
 def custom_jinja_control_has_no_directives() -> bool:
-    text = (
-        f"{BLOCK_DELIMITER_START} if target == 'codex' {BLOCK_DELIMITER_END}"
-        f"body{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
-    )
-    return parse_directives(text) == ()
+    return all(_bare_conditional_renders(case) for case in source_scenarios())
 
 
 def missing_fragment_raises() -> bool:
@@ -260,17 +264,14 @@ def cyclic_includes_raise() -> bool:
 def bound_target_variable_renders_each_target() -> bool:
     template = f"target is {VARIABLE_DELIMITER_START} target {VARIABLE_DELIMITER_END}"
     return all(
-        render_text(template, variables={"target": target.value})
+        render_text(template, variables={BUILD_TARGET_VARIABLE: target.value})
         == f"target is {target.value}"
         for target in Target
     )
 
 
 def well_formed_source_tree_builds() -> bool:
-    repository_root = Path(__file__).parents[2]
-    with TemporaryDirectory() as tmp:
-        build(repository_root / "src", Path(tmp) / "dist")
-    return True
+    return all(_well_formed_source_tree_builds(case) for case in source_scenarios())
 
 
 def ordinary_plugin_root_file_is_accepted() -> bool:
@@ -279,6 +280,10 @@ def ordinary_plugin_root_file_is_accepted() -> bool:
 
 def shared_topic_without_fragment_is_rejected() -> bool:
     return all(_fragment_required(case) for case in source_scenarios())
+
+
+def shared_topic_references_travel_with_fragment() -> bool:
+    return all(_shared_topic_reference_travels(case) for case in source_scenarios())
 
 
 def jinja_environment_uses_custom_delimiters() -> bool:
@@ -295,7 +300,10 @@ def jinja_environment_uses_custom_delimiters() -> bool:
 
 
 def standard_jinja_syntax_passes_through() -> bool:
-    return all(_standard_jinja_passes(case) for case in source_scenarios())
+    return (
+        standard_jinja_block_has_no_directives()
+        and standard_jinja_variable_has_no_directives()
+    )
 
 
 def require_skill_expands_to_neutral_guidance() -> bool:
@@ -397,6 +405,36 @@ def _ordinary_file_is_emitted(case: SourceScenario) -> bool:
         )
 
 
+def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        builder = SrcTreeBuilder(root)
+        builder.add_shared_topic(case.scope, case.inner_topic, case.fragment_body)
+        builder.add_plugin(
+            case.plugin,
+            skills={case.skill: _skill_body(case)},
+            commands={case.inner_topic: case.fragment_body},
+            agents={case.outer_topic: case.fragment_body},
+        )
+        plugin_root = builder.src_root / PLUGINS_DIR_NAME / case.plugin
+        required_files = (
+            plugin_root / SKILLS_SUBDIR_NAME / case.skill / SKILL_FILENAME,
+            plugin_root
+            / COMMANDS_SUBDIR_NAME
+            / f"{case.inner_topic}{COMMAND_FILE_SUFFIX}",
+            plugin_root / AGENTS_SUBDIR_NAME / f"{case.outer_topic}{AGENT_FILE_SUFFIX}",
+            builder.src_root
+            / SHARED_DIR_NAME
+            / case.scope
+            / case.inner_topic
+            / SHARED_FRAGMENT_FILENAME,
+        )
+        if not all(path.is_file() for path in required_files):
+            return False
+        build(builder.src_root, root / DIST_DIR_NAME)
+        return True
+
+
 def _fragment_required(case: SourceScenario) -> bool:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -414,11 +452,24 @@ def _fragment_required(case: SourceScenario) -> bool:
         return False
 
 
-def _standard_jinja_passes(case: SourceScenario) -> bool:
-    text = f"{{% if {case.skill} %}}{case.fragment_body}{{{{ {case.skill} }}}}{{% endif %}}"
+def _standard_jinja_block_passes(case: SourceScenario) -> bool:
+    text = f"{{% if {case.skill} %}}{case.fragment_body}{{% endif %}}"
     with TemporaryDirectory() as tmp:
         builder = _source_tree(Path(tmp), case)
-        return render_text(text, shared_root=builder.shared_root) == text
+        return (
+            parse_directives(text) == ()
+            and render_text(text, shared_root=builder.shared_root) == text
+        )
+
+
+def _standard_jinja_variable_passes(case: SourceScenario) -> bool:
+    text = f"{{{{ {case.skill} }}}}"
+    with TemporaryDirectory() as tmp:
+        builder = _source_tree(Path(tmp), case)
+        return (
+            parse_directives(text) == ()
+            and render_text(text, shared_root=builder.shared_root) == text
+        )
 
 
 def _require_expands_neutrally(case: SourceScenario) -> bool:
@@ -439,7 +490,7 @@ def _require_renders_inline(case: SourceScenario) -> bool:
 
 def _bare_conditional_renders(case: SourceScenario) -> bool:
     template = (
-        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
+        f"{BLOCK_DELIMITER_START} if {BUILD_TARGET_VARIABLE} == '{Target.CLAUDE.value}' "
         f"{BLOCK_DELIMITER_END}{case.branch_payloads[Target.CLAUDE]}"
         f"{BLOCK_DELIMITER_START} else {BLOCK_DELIMITER_END}"
         f"{case.branch_payloads[Target.CODEX]}"
@@ -451,12 +502,14 @@ def _bare_conditional_renders(case: SourceScenario) -> bool:
             target: render_text(
                 template,
                 shared_root=builder.shared_root,
-                variables={"target": target.value},
+                variables={BUILD_TARGET_VARIABLE: target.value},
             )
             for target in Target
         }
-        return rendered == case.branch_payloads and all(
-            BLOCK_DELIMITER_START not in body for body in rendered.values()
+        return (
+            parse_directives(template) == ()
+            and rendered == case.branch_payloads
+            and all(BLOCK_DELIMITER_START not in body for body in rendered.values())
         )
 
 
@@ -464,7 +517,7 @@ def _skill_dir_escape_survives(case: SourceScenario) -> bool:
     escaped = f"Write `{CLAUDE_SKILL_DIR_TOKEN}/{case.skill}.md` {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}"
     body = (
         f"---\nname: {case.skill}\n---\n\n"
-        f"{BLOCK_DELIMITER_START} if target == '{Target.CLAUDE.value}' "
+        f"{BLOCK_DELIMITER_START} if {BUILD_TARGET_VARIABLE} == '{Target.CLAUDE.value}' "
         f"{BLOCK_DELIMITER_END}"
         f"{case.fragment_body}{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}\n"
         f"{escaped}\n"
@@ -532,6 +585,44 @@ def _include_uses_contract(case: SourceScenario) -> bool:
         return (
             render_text(format_directive(include), shared_root=builder.shared_root)
             == case.fragment_body
+        )
+
+
+def _shared_topic_reference_travels(case: SourceScenario) -> bool:
+    reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    reference_body = case.fragment_body
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        builder = SrcTreeBuilder(root)
+        builder.add_shared_topic(
+            case.scope,
+            case.inner_topic,
+            case.fragment_body,
+            references={reference_name: reference_body},
+        )
+        builder.add_plugin(
+            case.plugin,
+            skills={
+                case.skill: (
+                    f"{_skill_body(case)}\n{_include_text(case, case.inner_topic)}"
+                )
+            },
+        )
+        build(builder.src_root, root / DIST_DIR_NAME)
+        reader = DistTreeReader(root)
+        relative_reference = (
+            Path(case.plugin)
+            / SKILLS_SUBDIR_NAME
+            / case.skill
+            / REFERENCES_SUBDIR_NAME
+            / reference_name
+        )
+        return all(
+            (reader.target_root(target) / relative_reference).read_text(
+                encoding="utf-8"
+            )
+            == reference_body
+            for target in Target
         )
 
 
