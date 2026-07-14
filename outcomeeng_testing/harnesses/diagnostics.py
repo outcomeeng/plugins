@@ -94,6 +94,15 @@ def rendered_diagnose_manifests_match_their_owners() -> bool:
         )
 
 
+def canonical_shipped_diagnose_manifests_match_contract() -> bool:
+    """Return whether every committed target carries the canonical contract."""
+    expected = shipped_diagnose_manifest_contract(
+        plugin_name=authored_diagnose_plugin_name(),
+        spx_floor=REQUIRED_SPX_VERSION,
+    )
+    return all(read_shipped_diagnose_manifest(target) == expected for target in Target)
+
+
 def read_shipped_diagnose_manifest(target: Target) -> DiagnoseManifest:
     """Return the shipped diagnose manifest for one distribution target."""
     manifest_path = (
