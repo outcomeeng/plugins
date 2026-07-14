@@ -1,7 +1,21 @@
-Shared prose here.
-Identical instruction line one.
-Identical instruction line two.
-Identical instruction line three.
-Identical instruction line four.
-Identical instruction line five.
-Identical instruction line six.
+shared prose here
+identical line 0 here with plenty of content to dominate.
+identical line 1 here with plenty of content to dominate.
+identical line 2 here with plenty of content to dominate.
+identical line 3 here with plenty of content to dominate.
+identical line 4 here with plenty of content to dominate.
+identical line 5 here with plenty of content to dominate.
+identical line 6 here with plenty of content to dominate.
+identical line 7 here with plenty of content to dominate.
+identical line 8 here with plenty of content to dominate.
+identical line 9 here with plenty of content to dominate.
+identical line 10 here with plenty of content to dominate.
+identical line 11 here with plenty of content to dominate.
+identical line 12 here with plenty of content to dominate.
+identical line 13 here with plenty of content to dominate.
+identical line 14 here with plenty of content to dominate.
+identical line 15 here with plenty of content to dominate.
+identical line 16 here with plenty of content to dominate.
+identical line 17 here with plenty of content to dominate.
+identical line 18 here with plenty of content to dominate.
+identical line 19 here with plenty of content to dominate.

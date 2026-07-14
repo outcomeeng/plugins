@@ -22,6 +22,8 @@ import json
 import os
 import pathlib
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 import sys
 from tempfile import TemporaryDirectory
@@ -66,61 +68,12 @@ TOPOLOGY_SEPARATE: Final = "separate.json"
 TOPOLOGY_CLAUDE_SYMLINK: Final = "claude-symlink.json"
 TOPOLOGY_AGENTS_SYMLINK: Final = "agents-symlink.json"
 
-# Invented shared-region body payloads the harness owns, for shared-region preservation and
-# recency-reconcile tests. Their byte-identity (or, for the ALT, their divergence) across the two
-# root files is what the tests assert; the strings carry no domain vocabulary.
 SHARED_REGION_NAME: Final = "root"
-SHARED_REGION_BODY: Final = "Build: `product build --all`"
-SHARED_REGION_BODY_ALT: Final = "Build: `product build --changed`"
-
-# Two near-identical root-file bodies for the bootstrap line-boundary guard: more than 80%
-# identical but diverging mid-line on a harness-specific word, so the longest contiguous common
-# span ends mid-line. The bootstrap must snap to line boundaries rather than split the divergent
-# line across the shared-region fence.
-_NEAR_IDENTICAL_COMMON: Final = (
-    "\n".join(
-        f"Common line {index} with plenty of words to be substantial here."
-        for index in range(30)
-    )
-    + "\n"
-)
-ROOT_NEAR_IDENTICAL_CLAUDE: Final = (
-    _NEAR_IDENTICAL_COMMON + "Shared opening words then CLAUDE specific tail here.\n"
-)
-ROOT_NEAR_IDENTICAL_CODEX: Final = (
-    _NEAR_IDENTICAL_COMMON + "Shared opening words then CODEX specific tail here.\n"
-)
-
-# A pair for the bootstrap span-maximality guard: a whole-line-identical block plus a longer
-# near-duplicate single line diverging mid-line. The byte-level-longest match is that long line,
-# which snaps away to nothing at a line boundary — so the biggest whole-line span is the block
-# elsewhere, and the wrap must find it rather than under-detect from the single longest byte match.
-_STRADDLING_BLOCK: Final = (
-    "\n".join(
-        f"Common whole line number {index} shared across both files."
-        for index in range(6)
-    )
-    + "\n"
-)
-# The long prefix and the diverging tail form ONE line (no newline between them), so the
-# byte-longest match is that line's shared prefix — which straddles the line and snaps away.
-_STRADDLING_LONG_PREFIX: Final = "x" * 480
-ROOT_STRADDLING_CLAUDE: Final = (
-    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "AAAAA claude-specific tail here.\n"
-)
-ROOT_STRADDLING_CODEX: Final = (
-    _STRADDLING_BLOCK + _STRADDLING_LONG_PREFIX + "BBBBB codex-specific tail here.\n"
-)
-
-# A pair whose shared content starts at a line boundary in one file but mid-line in the other: the
-# second file carries a harness-specific prefix on the otherwise-shared first line. The bootstrap
-# must snap the span to line boundaries in BOTH files, never splitting the prefixed line.
-_MIDLINE_COMMON: Final = "".join(
-    f"identical line {index} here with plenty of content to dominate.\n"
-    for index in range(20)
-)
-ROOT_MIDLINE_CLAUDE: Final = "shared prose here\n" + _MIDLINE_COMMON
-ROOT_MIDLINE_CODEX: Final = "harness-prefix shared prose here\n" + _MIDLINE_COMMON
+ROOT_CONTENT_CASE_ABOVE_THRESHOLD: Final = "above-threshold"
+ROOT_CONTENT_CASE_BELOW_THRESHOLD: Final = "below-threshold"
+ROOT_CONTENT_CASE_IDENTICAL: Final = "identical"
+ROOT_CONTENT_CASE_MIDLINE_BOUNDARY: Final = "midline-boundary"
+ROOT_CONTENT_CASE_STRADDLING: Final = "straddling"
 
 # The retired session-result tokens the shipped instruction block must never teach. No
 # production module owns a removed token, so the regression guard declares the forbidden
@@ -226,6 +179,11 @@ def root_content_pairs() -> tuple[RootContentPair, ...]:
     )
 
 
+def root_content_pair(name: str) -> RootContentPair:
+    """Load one named root-content fixture pair."""
+    return next(pair for pair in root_content_pairs() if pair.name == name)
+
+
 ROOT_CLAUDE_BODY: Final = root_instruction_topology_only_claude().files[
     INSTRUCTION_CLAUDE
 ]
@@ -235,6 +193,31 @@ ROOT_AGENTS_BODY: Final = root_instruction_topology_only_agents().files[
 ROOT_SHARED_BODY: Final = root_instruction_topology_claude_symlink().files[
     INSTRUCTION_AGENTS
 ]
+SHARED_REGION_BODY: Final = root_content_pair(ROOT_CONTENT_CASE_IDENTICAL).claude.strip(
+    "\n"
+)
+SHARED_REGION_BODY_ALT: Final = root_content_pair(
+    ROOT_CONTENT_CASE_BELOW_THRESHOLD
+).claude.strip("\n")
+ROOT_NEAR_IDENTICAL_CLAUDE: Final = root_content_pair(
+    ROOT_CONTENT_CASE_ABOVE_THRESHOLD
+).claude
+ROOT_NEAR_IDENTICAL_CODEX: Final = root_content_pair(
+    ROOT_CONTENT_CASE_ABOVE_THRESHOLD
+).agents
+ROOT_STRADDLING_CLAUDE: Final = root_content_pair(ROOT_CONTENT_CASE_STRADDLING).claude
+ROOT_STRADDLING_CODEX: Final = root_content_pair(ROOT_CONTENT_CASE_STRADDLING).agents
+ROOT_MIDLINE_CLAUDE: Final = root_content_pair(
+    ROOT_CONTENT_CASE_MIDLINE_BOUNDARY
+).claude
+ROOT_MIDLINE_CODEX: Final = root_content_pair(ROOT_CONTENT_CASE_MIDLINE_BOUNDARY).agents
+
+
+@contextmanager
+def temporary_instruction_root() -> Iterator[pathlib.Path]:
+    """Yield an isolated instruction-file root and remove it on exit."""
+    with TemporaryDirectory() as directory:
+        yield pathlib.Path(directory)
 
 
 def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
@@ -278,82 +261,6 @@ def materialize_root_instruction_topology(
     for name, body in seeds.items():
         _replace_path_with_text(root / name, body)
     return seeds
-
-
-def _assert_root_instruction_topology_mapping(
-    topology: RootInstructionTopology, expected: dict[str, str]
-) -> None:
-    """Materialize one topology and assert its source-owned seed mapping."""
-    with TemporaryDirectory() as directory:
-        assert (
-            materialize_root_instruction_topology(pathlib.Path(directory), topology)
-            == expected
-        )
-
-
-def assert_only_claude_topology_maps_to_both_harnesses() -> None:
-    """Assert a lone Claude instruction file seeds both harness paths."""
-    topology = root_instruction_topology_only_claude()
-    body = topology.files[INSTRUCTION_CLAUDE]
-    _assert_root_instruction_topology_mapping(
-        topology,
-        {INSTRUCTION_CLAUDE: body, INSTRUCTION_AGENTS: body},
-    )
-
-
-def assert_only_agents_topology_maps_to_both_harnesses() -> None:
-    """Assert a lone Agents instruction file seeds both harness paths."""
-    topology = root_instruction_topology_only_agents()
-    body = topology.files[INSTRUCTION_AGENTS]
-    _assert_root_instruction_topology_mapping(
-        topology,
-        {INSTRUCTION_CLAUDE: body, INSTRUCTION_AGENTS: body},
-    )
-
-
-def assert_separate_topology_maps_each_harness_body() -> None:
-    """Assert separate instruction files retain their matching bodies."""
-    topology = root_instruction_topology_separate()
-    _assert_root_instruction_topology_mapping(
-        topology,
-        dict(topology.files),
-    )
-
-
-def assert_symlinked_topology_maps_shared_body() -> None:
-    """Assert either symlink direction seeds both harness paths from the target."""
-    for topology in (
-        root_instruction_topology_claude_symlink(),
-        root_instruction_topology_agents_symlink(),
-    ):
-        body = next(iter(topology.files.values()))
-        _assert_root_instruction_topology_mapping(
-            topology,
-            {INSTRUCTION_CLAUDE: body, INSTRUCTION_AGENTS: body},
-        )
-
-
-def assert_symlinked_topology_materializes_regular_files() -> None:
-    """Assert both symlink directions preserve bodies in regular files."""
-    for topology in (
-        root_instruction_topology_claude_symlink(),
-        root_instruction_topology_agents_symlink(),
-    ):
-        body = next(iter(topology.files.values()))
-        with TemporaryDirectory() as directory:
-            root = pathlib.Path(directory)
-            materialized = materialize_root_instruction_topology(root, topology)
-            claude_path = root / INSTRUCTION_CLAUDE
-            agents_path = root / INSTRUCTION_AGENTS
-
-            assert claude_path.is_file()
-            assert agents_path.is_file()
-            assert not claude_path.is_symlink()
-            assert not agents_path.is_symlink()
-            assert claude_path.read_text(encoding="utf-8") == body
-            assert agents_path.read_text(encoding="utf-8") == body
-            assert materialized[INSTRUCTION_CLAUDE] == body
-            assert materialized[INSTRUCTION_AGENTS] == body
 
 
 def harness_line(harness: str) -> str:
@@ -675,17 +582,17 @@ def assert_router_status_mapping() -> None:
 
         assert (
             module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            == "current"
+            is module.InstructionStatus.CURRENT
         )
         assert (
             module.instruction_status(claude, NEW_VERSION, (LANG_SECONDARY,), repo)
-            == "stale"
+            is module.InstructionStatus.STALE
         )
 
         claude.unlink()
         assert (
             module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            == "absent"
+            is module.InstructionStatus.ABSENT
         )
 
         stale_block = module.render(
@@ -699,7 +606,7 @@ def assert_router_status_mapping() -> None:
         )
         assert (
             module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            == "stale"
+            is module.InstructionStatus.STALE
         )
 
 
@@ -810,7 +717,10 @@ def assert_bootstrap_topology_mapping() -> None:
         },
         blocks,
     )
-    expected_shared_body = _NEAR_IDENTICAL_COMMON.strip("\n")
+    expected_shared_body = _biggest_identical_whole_line_span(
+        ROOT_NEAR_IDENTICAL_CLAUDE,
+        ROOT_NEAR_IDENTICAL_CODEX,
+    ).strip("\n")
     for document in above_threshold_documents.values():
         assert module.parse_shared_regions(document) == {
             module.BOOTSTRAP_SHARED_REGION_NAME: expected_shared_body
