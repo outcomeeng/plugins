@@ -10,7 +10,6 @@ CAN persist declarations without duplicating template, placement, voice, referen
 
 - ALWAYS: `/author` is hidden from operator autocomplete while remaining model-invocable by parent workflows ([audit])
 - ALWAYS: `/author` accepts a decision-ready artifact packet containing the operation, artifact type, full target path, loaded context target, settled content, and any structure decision that governs placement ([audit])
-- ALWAYS: before creating an artifact, `/author` invokes `/contextualize` on the canonical full parent address — `spx/` for a top-level artifact or the full `spx/...` node path for a nested artifact — so the loaded context target and collision checks use one unambiguous address form ([audit])
 - ALWAYS: `/author` reads the appropriate foundation template before writing and validates artifact structure, atemporal voice, full-path references, content placement, and node-type constraints after writing ([audit])
 - ALWAYS: outcome-node writes preserve the three-part output, outcome, and impact hypothesis ([audit])
 - ALWAYS: create operations require a collision-free path and index already settled by loaded context or `/decompose`; update operations require an existing full artifact path ([audit])
