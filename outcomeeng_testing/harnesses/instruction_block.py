@@ -5,16 +5,14 @@ Exposes:
 - An importlib loader for ``instruction_block.py``. The module ships under a
   generated plugin skill directory and is not importable by package
   name; tests load it through ``importlib`` instead.
-- ``build_template``. Constructs a synthetic instruction-block.md-shaped template with a
-  brace-delimited illustration token, a language-conditional block per language in
-  ``TEMPLATE_LANGUAGES``, and (optionally) a section that exists only in a newer
-  template — for exercising new-section propagation on update. The lang-block
-  marker syntax mirrors the module's ``<!-- lang:NAME -->`` conditional-block contract
-  (parsed by ``_filter_languages``); a synthetic template that drifts from it fails to
-  render, which is the intended input-fixture coupling.
+- ``build_template``. Constructs a synthetic instruction-block.md-shaped template for
+  focused render scenarios. Canonical language-block mapping evidence reads the real
+  template instead, so the governed domain follows every language the template defines.
+- Root-instruction topology and root-content-pair fixture loaders. These read inert
+  whole-payload fixtures and materialize temporary repositories for filesystem behavior.
 
-The render and parse functions take document strings, so the harness builds
-documents as strings; no filesystem is involved.
+The render and parse functions take document strings. Filesystem-facing scenarios use
+fixture files and temporary directories owned and cleaned up by this harness.
 """
 
 from __future__ import annotations
@@ -58,6 +56,9 @@ INSTRUCTION_CLAUDE: Final = "CLAUDE.md"
 INSTRUCTION_AGENTS: Final = "AGENTS.md"
 ROOT_TOPOLOGY_FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "instruction_block"
+)
+ROOT_CONTENT_PAIR_FIXTURES_DIR: Final = (
+    ROOT_TOPOLOGY_FIXTURES_DIR / "root-content-pairs"
 )
 TOPOLOGY_ONLY_CLAUDE: Final = "only-claude.json"
 TOPOLOGY_ONLY_AGENTS: Final = "only-agents.json"
@@ -167,6 +168,15 @@ class RootInstructionTopology:
     symlinks: dict[str, str]
 
 
+@dataclass(frozen=True)
+class RootContentPair:
+    """Two inert root-instruction payloads used to exercise span and wrap mapping."""
+
+    name: str
+    claude: str
+    agents: str
+
+
 def _load_root_instruction_topology(fixture_name: str) -> RootInstructionTopology:
     """Load one inert whole-topology fixture from disk."""
     payload = json.loads(
@@ -201,6 +211,19 @@ def root_instruction_topology_claude_symlink() -> RootInstructionTopology:
 def root_instruction_topology_agents_symlink() -> RootInstructionTopology:
     """Return a root topology whose Agents instruction path is a symlink."""
     return _load_root_instruction_topology(TOPOLOGY_AGENTS_SYMLINK)
+
+
+def root_content_pairs() -> tuple[RootContentPair, ...]:
+    """Load the complete inert root-content-pair fixture corpus."""
+    return tuple(
+        RootContentPair(
+            name=case_dir.name,
+            claude=(case_dir / INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
+            agents=(case_dir / INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
+        )
+        for case_dir in sorted(ROOT_CONTENT_PAIR_FIXTURES_DIR.iterdir())
+        if case_dir.is_dir()
+    )
 
 
 ROOT_CLAUDE_BODY: Final = root_instruction_topology_only_claude().files[
@@ -380,6 +403,38 @@ def extract_markdown_section(document: str, heading: str) -> str:
             end = index
             break
     return "\n".join(lines[start:end])
+
+
+def canonical_template_language_blocks() -> dict[str, tuple[str, ...]]:
+    """Return every language block body defined by the canonical template."""
+    blocks: dict[str, list[str]] = {}
+    active_language: str | None = None
+    active_lines: list[str] = []
+    for line in read_canonical_template().splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped.startswith("<!-- lang:") and stripped.endswith(" -->"):
+            if active_language is not None:
+                raise RuntimeError(
+                    f"Nested language block before closing {active_language}"
+                )
+            active_language = stripped.removeprefix("<!-- lang:").removesuffix(" -->")
+            active_lines = []
+            continue
+        if (
+            active_language is not None
+            and stripped == f"<!-- /lang:{active_language} -->"
+        ):
+            blocks.setdefault(active_language, []).append("".join(active_lines).strip())
+            active_language = None
+            active_lines = []
+            continue
+        if active_language is not None:
+            active_lines.append(line)
+    if active_language is not None:
+        raise RuntimeError(f"Unclosed language block: {active_language}")
+    if not blocks:
+        raise RuntimeError("Canonical template defines no language blocks")
+    return {language: tuple(bodies) for language, bodies in blocks.items()}
 
 
 def _language_heading(language: str) -> str:
@@ -590,20 +645,21 @@ def assert_detected_language_set_mapping() -> None:
 
 
 def assert_language_block_filter_mapping() -> None:
-    """Assert each template language block appears exactly when enabled."""
+    """Assert every canonical template language block appears exactly when enabled."""
     module = load_instruction_block_module()
-    template = build_template(NEW_VERSION)
-    for language in TEMPLATE_LANGUAGES:
-        heading = _language_heading(language)
+    template = read_canonical_template()
+    blocks = canonical_template_language_blocks()
+    for language, bodies in blocks.items():
         enabled = module.render(template, (language,), NEW_VERSION, HARNESS_CLAUDE)
         disabled = module.render(
             template,
-            tuple(name for name in TEMPLATE_LANGUAGES if name != language),
+            tuple(name for name in blocks if name != language),
             NEW_VERSION,
             HARNESS_CLAUDE,
         )
-        assert heading in enabled
-        assert heading not in disabled
+        for body in bodies:
+            assert body in enabled
+            assert body not in disabled
 
 
 def assert_router_status_mapping() -> None:
@@ -771,38 +827,53 @@ def assert_bootstrap_topology_mapping() -> None:
 
 
 def assert_span_ratio_wrap_mapping() -> None:
-    """Assert exact maximal spans and ratios map to wrapping decisions."""
+    """Assert fixture-corpus spans and ratios map to wrapping decisions."""
     module = load_instruction_block_module()
-    span_identical, ratio_identical = module.biggest_identical_span(
-        ROOT_SHARED_BODY, ROOT_SHARED_BODY
-    )
-    assert span_identical == ROOT_SHARED_BODY
-    assert ratio_identical == 1.0
-    assert ratio_identical > module.BOOTSTRAP_SHARED_THRESHOLD
-    wrapped_a, wrapped_b = module.bootstrap_wrap(ROOT_SHARED_BODY, ROOT_SHARED_BODY)
-    assert module.parse_shared_regions(wrapped_a)
-    assert module.parse_shared_regions(wrapped_b)
+    wrap_decisions: set[bool] = set()
+    for pair in root_content_pairs():
+        expected_span = _biggest_identical_whole_line_span(pair.claude, pair.agents)
+        span, ratio = module.biggest_identical_span(pair.claude, pair.agents)
+        expected_ratio = len(expected_span) / max(len(pair.claude), len(pair.agents))
+        should_wrap = bool(expected_span.strip()) and (
+            expected_ratio > module.BOOTSTRAP_SHARED_THRESHOLD
+        )
+        wrapped_claude, wrapped_agents = module.bootstrap_wrap(pair.claude, pair.agents)
+        claude_regions = module.parse_shared_regions(wrapped_claude)
+        agents_regions = module.parse_shared_regions(wrapped_agents)
 
-    span_maximal, ratio_maximal = module.biggest_identical_span(
-        ROOT_STRADDLING_CLAUDE, ROOT_STRADDLING_CODEX
-    )
-    assert span_maximal == _STRADDLING_BLOCK
-    assert ratio_maximal == len(_STRADDLING_BLOCK) / max(
-        len(ROOT_STRADDLING_CLAUDE), len(ROOT_STRADDLING_CODEX)
-    )
+        assert span == expected_span, pair.name
+        assert ratio == expected_ratio, pair.name
+        assert bool(claude_regions) is should_wrap, pair.name
+        assert bool(agents_regions) is should_wrap, pair.name
+        if should_wrap:
+            assert claude_regions == agents_regions
+            assert next(iter(claude_regions.values())) == expected_span.strip("\n")
+        else:
+            assert wrapped_claude == pair.claude
+            assert wrapped_agents == pair.agents
+        wrap_decisions.add(should_wrap)
 
-    span_divergent, ratio_divergent = module.biggest_identical_span(
-        ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY
-    )
-    assert span_divergent in ROOT_CLAUDE_BODY
-    assert span_divergent in ROOT_AGENTS_BODY
-    assert ratio_divergent == len(span_divergent) / max(
-        len(ROOT_CLAUDE_BODY), len(ROOT_AGENTS_BODY)
-    )
-    assert ratio_divergent <= module.BOOTSTRAP_SHARED_THRESHOLD
-    no_wrap_a, no_wrap_b = module.bootstrap_wrap(ROOT_CLAUDE_BODY, ROOT_AGENTS_BODY)
-    assert not module.parse_shared_regions(no_wrap_a)
-    assert not module.parse_shared_regions(no_wrap_b)
+    assert wrap_decisions == {False, True}
+
+
+def _biggest_identical_whole_line_span(text_a: str, text_b: str) -> str:
+    """Return the longest common contiguous whole-line span by exhaustive comparison."""
+    lines_a = text_a.splitlines(keepends=True)
+    lines_b = text_b.splitlines(keepends=True)
+    best = ""
+    for start_a in range(len(lines_a)):
+        for start_b in range(len(lines_b)):
+            offset = 0
+            while (
+                start_a + offset < len(lines_a)
+                and start_b + offset < len(lines_b)
+                and lines_a[start_a + offset] == lines_b[start_b + offset]
+            ):
+                offset += 1
+                candidate = "".join(lines_a[start_a : start_a + offset])
+                if len(candidate) > len(best):
+                    best = candidate
+    return best
 
 
 def git_command(
