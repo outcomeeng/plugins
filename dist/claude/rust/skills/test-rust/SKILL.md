@@ -61,7 +61,8 @@ After writing or repairing tests:
 3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
 4. Run the repository-canonical Rust formatting, lint, and type/compile commands for the changed scope. Formatting MUST exit zero. Lint and compile commands MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct compiler consequence of the same missing production module or item; actual lint diagnostics and unrelated compiler diagnostics are FAIL.
 5. When the repository requires a deterministic coverage gate, run its declared coverage command, falling back to `cargo llvm-cov --workspace --all-features` only when no wrapper exists. Exit zero is PASS; any nonzero result is FAIL. On the declared specified-node path, record coverage as not applicable until implementation exists.
-6. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, formatting gate, lint gate, compile gate, and applicable coverage gate all pass.
+6. When the declared production owner is absent, proceed only to specified-node reporting: record the relative exclusion, exact missing owner, focused RED diagnostics, coverage as not applicable, and `test-evidence audit: deferred until implementation exists`. Do not dispatch an auditor.
+7. When the production owner exists, proceed to evidence audit only after the matrix gate, focused test gate, formatting gate, lint gate, compile gate, and applicable coverage gate all pass under their normal all-green rules.
 
 </verification_gates>
 
@@ -88,6 +89,12 @@ After writing or repairing tests:
 
 </fix_workflow>
 
+<reporting>
+
+Report the node path, Rust evidence files, source contracts, `<package>-testing` artifacts, exact verification commands and outcomes, and every remaining rejection. For a specified node, also report the relative `spx/EXCLUDE` entry, exact missing owner, focused RED diagnostics, coverage as not applicable, and `test-evidence audit: deferred until implementation exists`.
+
+</reporting>
+
 <reference_guides>
 All Rust test examples are owned by `/rust-test-standards`:
 
@@ -110,6 +117,7 @@ Rust test evidence is sound when:
 - In Write mode, the resolved test command fails only for the expected missing implementation or assertion mismatch; in Fix mode, it reaches the RED or passing state required by the active TDD phase.
 - The resolved formatting command exits zero; lint and compile commands exit zero except on the declared specified-node path where every diagnostic is the direct compiler consequence of the same missing production module or item; the report records every exact command and exit status.
 - The repository-declared coverage command exits zero when coverage is required; when no coverage gate is declared or the node is on the declared specified-node path, the report records that coverage is not applicable.
+- A specified-node run ends with an explicit reporting-only audit deferral; evidence audit begins only after implementation exists, the exclusion is removed, and all normal deterministic gates pass.
 - Every merged Rust audit finding and same-class instance maps to a completed repair before redispatch.
 
 </success_criteria>

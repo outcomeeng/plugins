@@ -15,9 +15,9 @@ property evidence:
 - The coupling-taxonomy property verifies category membership and count without
   proving that the real producer emits the required distinct audit responses.
 
-The affected evidence files and harness are unchanged from `origin/main`. The
-operator chose to defer their redesign so the adversarial test-evidence contract
-can proceed without expanding this changeset or modifying eval artifacts.
+The operator assigned eval removal to another changeset and directed this
+changeset to make no eval-artifact edits. The deterministic evidence redesign
+therefore remains recorded here until its revisit condition is met.
 
 Governing workflow: `spec-tree:test`, `python:test-python`,
 `python:python-test-standards`, and `python:audit-python-tests`.

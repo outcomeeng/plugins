@@ -40,9 +40,15 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Before dispatch, the caller satisfies `/rust-test-standards` `<specified_node_verification>` or brings formatting, linting, tests, compilation, and applicable coverage to passing on the changeset; CI re-runs the repository gates. Spend the whole audit reading the evidence chain.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Before dispatch, the caller brings formatting, linting, tests, compilation, and applicable coverage to passing on the changeset; CI re-runs the repository gates. `/rust-test-standards` `<specified_node_verification>` is an authoring-only RED checkpoint whose audit is deferred until implementation exists. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
+
+<audit_eligibility>
+
+Apply `/audit-tests` `<audit_eligibility>` before Rust structural or assertion checks. When the declared production module or owned item is absent, return the generic `specified-node-audit-ineligible` REJECT finding. Do not approve from RED diagnostics, test-file shape, or `<package>-testing` structure; the caller implements the owner, removes the exclusion, passes normal deterministic verification, and redispatches.
+
+</audit_eligibility>
 
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
@@ -239,6 +245,7 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 The Rust test verdict is sound when:
 
 - Every in-scope assertion was judged on every Gate 1 step — challenge, scope, evidence-method, controlled implementations, oracle independence, harness-chain tracing, the four properties (coupling, falsifiability, alignment, coverage by reading), and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals). Gate 2 was judged when Gate 1 passed; when Gate 1 failed, Gate 2 was omitted as non-applicable.
+- Every audited assertion had an inspectable production owner; a dispatched specified-node RED checkpoint rejected at the generic eligibility gate.
 - The verdict uses the base `/audit-tests` JSON rows and states `overall` as `APPROVED` or `REJECTED`, with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).

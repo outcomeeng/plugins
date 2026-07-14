@@ -390,7 +390,8 @@ A specified node is the one narrow exception to all-green Rust compile-bearing g
 - `cargo clippy`, `cargo check`, and repository equivalents may exit nonzero only when every diagnostic is the direct compiler consequence of that same missing production module or item. Actual lint diagnostics and unrelated compiler diagnostics fail the gate.
 - Deterministic coverage is not applicable until the implementation exists; record that state instead of running a coverage command that can only repeat the missing-item failure.
 - Record the exact missing owner and diagnostics, and add the node path relative to `spx/` to `spx/EXCLUDE`.
-- Once implementation exists, the exception ends and the normal passing lint, compile, and applicable coverage gates apply.
+- Treat this as an authoring-only RED checkpoint. Report the test-evidence audit as deferred; never dispatch an auditor over an absent production owner and never interpret the checkpoint as evidence approval.
+- Once implementation begins, remove the exclusion. After implementation exists, the exception ends, the normal passing test, formatting, lint, compile, and applicable coverage gates apply, and test evidence must pass its audit against the complete production chain.
 
 </specified_node_verification>
 

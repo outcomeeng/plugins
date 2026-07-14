@@ -262,7 +262,8 @@ A specified node is the one narrow exception to an all-green Python type gate. A
 - Ruff or the repository's canonical lint command MUST exit zero over the changed scope.
 - Mypy or the repository's canonical type command may exit nonzero only when every diagnostic is the direct consequence of that same missing production module or owned symbol. Any unrelated type diagnostic fails the gate.
 - Record the exact missing owner and diagnostics, and add the node path relative to `spx/` to `spx/EXCLUDE`.
-- Once implementation exists, the exception ends and the normal passing type gate applies.
+- Treat this as an authoring-only RED checkpoint. Report the test-evidence audit as deferred; never dispatch an auditor over an absent production owner and never interpret the checkpoint as evidence approval.
+- Once implementation begins, remove the exclusion. After implementation exists, the exception ends, the normal passing test, lint, and type gates apply, and test evidence must pass its audit against the complete production chain.
 
 </specified_node_verification>
 
@@ -310,6 +311,6 @@ Python test guidance follows this standard when:
 - `conftest.py` is limited to marker and hook registration; evidence files use zero-parameter harness entrypoints instead of fixture parameters
 - Property assertions use meaningful Hypothesis properties
 - Required credentialed evidence fails loudly when selected credentials are absent
-- Specified-node verification accepts only the declared missing-owner import or type diagnostics while lint remains green
+- Specified-node verification accepts only the declared missing-owner import or type diagnostics while lint remains green, records audit deferral, and ends before the real post-implementation evidence audit
 
 </success_criteria>

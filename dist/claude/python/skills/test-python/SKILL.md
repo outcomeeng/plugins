@@ -48,7 +48,8 @@ After writing or repairing tests:
 2. In Write mode, PASS only when the test fails for the expected assertion mismatch, or when `<source_contract_gate>` established before the run that the owning production module is absent and the focused failure contains only that missing module or owned-symbol import. Collection, syntax, harness, configuration, discovery, and unrelated import failures are FAIL.
 3. In Fix mode, PASS only when every repaired assertion's clause matrix remains complete and the focused test reaches the RED or passing state required by the active TDD phase.
 4. Run the repository-canonical lint and type commands for the changed scope. Lint MUST exit zero. Type checking MUST exit zero except on the declared specified-node path, where every diagnostic must be the direct consequence of the same missing production module or owned symbol; any unrelated diagnostic is FAIL.
-5. Proceed to reporting or evidence audit only when the matrix gate, focused test gate, lint gate, and type gate all pass.
+5. When the declared production owner is absent, proceed only to specified-node reporting: record the relative exclusion, exact missing owner, focused RED diagnostics, and `test-evidence audit: deferred until implementation exists`. Do not dispatch an auditor.
+6. When the production owner exists, proceed to evidence audit only after the matrix gate, focused test gate, lint gate, and type gate all pass under their normal all-green rules.
 
 </verification_gates>
 
@@ -118,6 +119,7 @@ Report the evidence created or repaired with:
 - Source contracts added or consumed
 - Harnesses, generators, inert fixture files, and `conftest.py` shims touched
 - Verification commands and outcomes
+- Specified-node state when applicable: relative `spx/EXCLUDE` entry, exact missing owner, focused RED diagnostics, and deferred test-evidence audit
 - Remaining rejection, if an audit gate still fails
 
 </reporting>
@@ -154,5 +156,6 @@ Python test work satisfies this skill when:
 - `conftest.py` contains marker or hook registration only
 - No framework mock replaces the behavior under test
 - The matrix gate and focused test gate pass; lint exits zero; type checking exits zero except on the declared specified-node path where its only diagnostics are the same missing production module or owned symbol
+- A specified-node run ends with an explicit reporting-only audit deferral; evidence audit begins only after implementation exists and all normal deterministic gates pass
 
 </success_criteria>

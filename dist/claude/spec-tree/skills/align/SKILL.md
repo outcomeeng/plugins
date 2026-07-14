@@ -3,7 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
-allowed-tools: Read, Glob, Grep, Skill
+allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*derive_changeset_scope.py*)
 ---
 
 <objective>
@@ -19,7 +19,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **ALIGN MATERIALS REQUIRED** — Invoke `/understand align` on every run, even when a generic `<SPEC_TREE_FOUNDATION>` marker is live. Continue only with both the foundation marker and the matching materials receipt.
-6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — For every branch-changeset check, invoke `/scope-changeset`, resolve the base through `detect_base_ref(repo)`, and derive the complete changed-file set through `branch_scope(base, repo=repo)`. Never accept a caller-supplied subset as the completeness boundary and never hand-roll base-ref or git-diff derivation.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — For every branch-changeset check, invoke `/scope-changeset`, then run the bundled `derive_changeset_scope.py` adapter. The adapter loads the owning skill's canonical `detect_base_ref` and `branch_scope` functions and returns the complete changed-file set. Never accept a caller-supplied subset as the completeness boundary and never hand-roll base-ref or git-diff derivation.
 
 </principles>
 
@@ -141,7 +141,13 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, invoke `/scope-changeset` and derive the complete changed-file set through `detect_base_ref(repo)` followed by `branch_scope(base, repo=repo)`.
+Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, invoke `/scope-changeset`, then execute:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/derive_changeset_scope.py" .
+```
+
+Read `base_ref` and `changed_files` from the successful JSON object. A nonzero result blocks the changeset check with the adapter's structured error and remediation; never replace it with a caller-supplied subset.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -158,7 +164,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Invoke `/understand align` as a composed skill capability, even when a standard foundation marker is already live.
 2. **Load rules**: Require the live foundation marker and `align` materials receipt, then use every named reference and template loaded by that invocation. A missing receipt is a blocked conformance check, never permission to guess or skip a rule.
-3. **Scope**: Use the user-specified path, or default to `spx/` in the product root. For a branch changeset request, invoke `/scope-changeset`, resolve the base through `detect_base_ref(repo)`, and derive the complete changed-file set through `branch_scope(base, repo=repo)` before checking downstream alignment.
+3. **Scope**: Use the user-specified path, or default to `spx/` in the product root. For a branch changeset request, invoke `/scope-changeset`, run `python3 "${CLAUDE_SKILL_DIR}/scripts/derive_changeset_scope.py" .`, and use the returned `changed_files` before checking downstream alignment.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
@@ -219,6 +225,7 @@ The alignment report is sound when:
 - Every in-scope Spec Tree artifact appears either as a classified subject with factual non-conformances or in the checked-file count with no findings.
 - Every finding names the file, violated conformance dimension, and governing foundation rule or template.
 - Downstream-alignment findings identify the changed higher-level declaration and the absent first-lower-spec or `PLAN.md` grounding.
+- Branch-changeset checks derive `base_ref` and `changed_files` through the bundled adapter to the canonical `/scope-changeset` primitives.
 - The report contains no remediation advice, severity, prioritization, or unsupported inference.
 - File and finding counts reconcile with the report body.
 

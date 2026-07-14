@@ -14,6 +14,14 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 </dispatch_gate>
 
+<audit_eligibility>
+
+A test-evidence audit requires an inspectable assertion-relevant production path. A specified-node authoring checkpoint whose declared production owner does not exist is RED design state, not an approvable audit subject. The caller records the exact missing owner, focused RED diagnostics, and relative `spx/EXCLUDE` entry, then defers dispatch until implementation exists and the normal deterministic gates pass.
+
+If this audit is dispatched while the declared production owner is absent, add a `specified-node-audit-ineligible` REJECT finding to `gate-1-assertion` with `audit-eligibility` as the evidence property. Name the missing owner and require the caller to implement it, remove the exclusion, pass deterministic verification, create a committed checkpoint, and redispatch. Never convert an uninspectable production path into approval through test shape, harness structure, or specified-node diagnostics.
+
+</audit_eligibility>
+
 <objective>
 
 A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
@@ -96,7 +104,9 @@ For each remaining assertion carrying a `[test]` link, extract:
 
 **Step 2b: Source testability**
 
-For each mapped `[test]` assertion, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add one `untestable_source` REJECT finding to `gate-1-assertion`. Target the production source file, use `source-testability` as the evidence property, name the absent production contract, and require production refactoring that exposes the asserted behavior. Skip coupling, falsifiability, alignment, and coverage for that assertion because those checks cannot apply until the source exposes the behavior. Continue declaration and provenance screening so independent ownership defects remain visible.
+For each mapped `[test]` assertion, apply `<audit_eligibility>` first. When the declared production owner is absent, emit the eligibility finding and skip every remaining assertion-evidence check; there is no production chain to inspect or provenance to classify yet.
+
+When the production owner exists, read the production source it governs and identify the assertion-relevant behavior. When no observable function, constructor, schema, protocol, emitted artifact, side-effect boundary, or typed collaborator exposes that behavior, add one `untestable_source` REJECT finding to `gate-1-assertion`. Target the production source file, use `source-testability` as the evidence property, name the absent production contract, and require production refactoring that exposes the asserted behavior. Skip coupling, falsifiability, alignment, and coverage for that assertion because those checks cannot apply until the source exposes the behavior. Continue declaration and provenance screening so independent ownership defects remain visible.
 
 </step>
 
@@ -251,7 +261,7 @@ Read every detected language partition from the caller's audit request. Invoke `
 
 **Step 4: Issue verdict**
 
-Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECTED.**
+Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has an eligibility or property failure: **REJECTED.** Approval is forbidden while any declared production owner is absent.
 
 </step>
 
@@ -379,6 +389,7 @@ The verdict is sound when:
 - Every source-testable assertion's tests were judged on all four evidence properties — coupling, falsifiability, alignment, and coverage; every untestable assertion instead carries one source-targeted `untestable_source` finding and skips those four inapplicable checks. When a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
 - Every linked test file was screened for test-owned declarations before coupling, including property-test seed and replay ownership.
 - Every transitive evidence artifact is inventoried, every case and expected value has a named source, every container key and protocol token has a named owner, and every required language partition has a completed receipt.
+- Every audited assertion has an inspectable production owner; a specified-node RED checkpoint is deferred by the authoring workflow and rejects as `specified-node-audit-ineligible` if dispatched.
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, and every assertion either evaluated through the four evidence properties or rejected at the source-testability gate.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
 - Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.

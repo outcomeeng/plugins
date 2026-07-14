@@ -18,8 +18,8 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 1. Load methodology (Step 1 — once per session)
 2. Load work item context (Step 2 — every node)
 3. Architect -> audit until APPROVED (Steps 3–4)
-4. Test -> audit until APPROVED (Steps 5–6)
-5. Implement -> audit until the rendered projection reports `terminalStatus: approved` (Steps 7–8)
+4. Test -> audit until APPROVED, except a specified-node RED checkpoint records exclusion and defers audit until implementation exists (Steps 5–6)
+5. Implement -> return to the deferred test audit when applicable -> audit until the rendered projection reports `terminalStatus: approved` (Steps 7–8)
 6. Evidence-auditor gates for touched `[test]` and `[eval]` evidence, then whole-changeset review when the change reaches beyond the target node (Step 9)
 7. Run the terminal full deterministic gate when the repository requires it, only after all agentic gates converge
 8. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
@@ -196,6 +196,10 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 <step number="6" name="Test audit" gate="true">
 
+Before dispatch, determine whether the asserted production owner exists. When it does not exist and the language testing skill's specified-node gate passed, record the exact missing owner, focused RED diagnostics, and relative `spx/EXCLUDE` entry as the Step 6 handoff. Mark `test-evidence audit: deferred until implementation exists`; do not dispatch an auditor over the uninspectable chain. This is authoring progress only: it is not approval, does not satisfy an evidence-auditor gate, and cannot authorize Step 8.
+
+When the production owner exists, specified-node deferral is unavailable. Remove any stale exclusion, pass the normal deterministic test and language gates, create the committed checkpoint, and run the audit fan-out below.
+
 Derive every affected spec node and its changed linked test files from the committed audit scope chosen in `<scope_detection>`. Dispatch one `test-evidence-auditor` per affected node, passing the same committed scope, that node's assertion text or spec path plus assertion headings, the complete changed linked-test inventory for that node, and the named `audit-{lang}-tests` skill for every affected language partition. Each auditor composes every partition's language concern inside its isolated context, merges every returned finding, and records a complete language-coverage receipt; aggregate approval is forbidden when a node, changed linked test, or language partition is absent or incomplete.
 
 When the scope is cross-node (see `<scope_detection>`), the fan-out covers every affected node in the **whole changeset**. Each auditor retains a single-node verdict schema while the Step 6 aggregate gate rejects when any per-node verdict rejects or any affected node lacks a verdict.
@@ -212,7 +216,9 @@ If a stabilized redispatch remains `REJECTED` with concrete findings, treat each
 
 Invoke the coding skill for every affected language partition.
 
-Write implementation code. All tests from Step 5 must pass.
+When Step 6 recorded a specified-node handoff, remove its relative `spx/EXCLUDE` entry before implementation. Write implementation code, bring every normal deterministic test and language gate to passing, create a new checkpoint, then return to Step 6 and obtain the real test-evidence approval before proceeding to Step 8.
+
+Without a specified-node handoff, write implementation code. All tests from Step 5 must pass.
 
 </step>
 
@@ -271,7 +277,8 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 Steps 4, 6, and 8 are blocking audit gates. Steps 4 and 6 emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token and rendered projection whose `terminalStatus` is authoritative; an exact blocked command is a blocked result. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a retry-loop gate, but a hard precondition for declaring the flow complete.
 
 - Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
-- Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
+- Before starting Step 7: require either an `APPROVED` Step 6 verdict or a complete specified-node handoff containing the relative exclusion, exact missing owner, focused RED diagnostics, and explicit audit deferral. No other state authorizes implementation.
+- Before starting Step 8: require an `APPROVED` Step 6 verdict produced after implementation and normal deterministic verification. A specified-node handoff never satisfies this check.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
 - Before invoking `/merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
@@ -309,6 +316,7 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 The implemented changeset is sound when:
 
 - Every affected assertion has a complete clause-evidence matrix and source-coupled tests whose evidence type matches the assertion.
+- Every specified-node audit deferral was consumed by implementation, its exclusion removed, and its test evidence approved against the now-inspectable production chain.
 - Architecture, test evidence, and implementation audits approve the exact committed scope, with every required artifact-type evidence audit approving the same head.
 - Cross-node changes have a converged whole-changeset review with no unresolved valid finding.
 - The repository's declared focused and terminal deterministic verification commands pass against the final committed head, with no source or generated change afterward.

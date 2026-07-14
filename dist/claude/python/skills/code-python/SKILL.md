@@ -39,11 +39,11 @@ Python implementation code that makes its node's existing tests pass.
 Before invoking this skill:
 
 1. **Tests must exist** - Written by `/test-python`
-2. **Tests must be reviewed** - The dispatched `test-evidence-auditor` verdict is `APPROVED`, including the Python concern composed through `/audit-tests`
+2. **Test authoring must be accepted** - Either the dispatched `test-evidence-auditor` verdict is `APPROVED`, including the Python concern composed through `/audit-tests`, or `/test-python` produced a complete specified-node handoff containing the relative `spx/EXCLUDE` entry, exact missing owner, focused RED diagnostics, and explicit audit deferral
 3. **Spec must be loaded** - Context from `/contextualize`
 4. **Standards are pre-loaded above**
 
-If tests don't exist or aren't approved, go back to earlier steps.
+If tests do not exist or neither accepted state is present, go back to earlier steps. A specified-node handoff authorizes only implementation of its declared owner; it does not approve the test evidence.
 
 Resolve `$node_path` from the optional argument. When it is empty, use the target node from the live `<SPEC_TREE_CONTEXT>` marker. Stop before reading or editing implementation when neither source provides a governing node path.
 </prerequisites>
@@ -69,6 +69,8 @@ Understand:
 - What the tests import (where implementation should live)
 
 **Step 2 — Write implementation (GREEN).** Write minimal code that makes tests pass.
+
+When entering from a specified-node handoff, remove its relative `spx/EXCLUDE` entry before writing implementation. After the normal tests, lint, and type gates pass, return to `/apply` Step 6 for the real committed test-evidence audit before implementation audit.
 
 **Code standards (per `/python-standards`):**
 
@@ -280,6 +282,7 @@ All checks pass. Ready for re-review.
 Implementation is ready for review when:
 
 - [ ] The product's resolved Python test command for the governed node or changeset passes
+- [ ] Any specified-node handoff is consumed: its exclusion is removed and the flow returns to the test-evidence audit after GREEN
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
 - [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository

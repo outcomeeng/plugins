@@ -54,8 +54,12 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 </audit_scope>
 
 <no_deterministic_verification>
-This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. Before dispatch, the caller satisfies `/python-test-standards` `<specified_node_verification>` or brings tests, lint, and type checking to passing on the changeset; CI re-runs the repository gates. Spend the whole audit on reading the evidence chain; deterministic verification is a caller-owned precondition, not a step this audit re-pays.
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. Before dispatch, the caller brings tests, lint, and type checking to passing on the changeset; CI re-runs the repository gates. `/python-test-standards` `<specified_node_verification>` is an authoring-only RED checkpoint whose audit is deferred until implementation exists. Spend the whole audit on reading the evidence chain; deterministic verification is a caller-owned precondition, not a step this audit re-pays.
 </no_deterministic_verification>
+
+<audit_eligibility>
+Apply `/audit-tests` `<audit_eligibility>` before Python-specific checks. When the declared production module or owned symbol is absent, return the generic `specified-node-audit-ineligible` REJECT finding. Do not approve from RED diagnostics, test-file shape, or harness structure; the caller implements the owner, removes the exclusion, passes normal deterministic verification, and redispatches.
+</audit_eligibility>
 
 <test_file_declarations>
 Apply the base `/audit-tests` declaration screen before coupling. Any Python assignment, annotated assignment, named expression, loop binding, context-manager binding, exception binding, pattern binding, pytest fixture parameter, or property-generated parameter in an executed test file is a `test_owned_declaration` finding. Local functions are findings when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary. Name the right owner for the value or configuration: production source contract, `<package>_testing.harnesses.*`, `<package>_testing.generators.*`, inert fixture data, or eval case data.
@@ -336,6 +340,7 @@ How to avoid: Name the missing source-contract module and governing spec-tree no
 The Python test verdict is sound when:
 
 - Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- Every audited assertion had an inspectable production owner; a dispatched specified-node RED checkpoint rejected at the generic eligibility gate.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
 - The same test node yields the same verdict regardless of run order (reproducible).

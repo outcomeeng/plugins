@@ -16,10 +16,18 @@ colliding untracked file), not a content conflict to resolve — so the reported
 outcome is imprecise, and the ADR's "untracked files do not block a rebase"
 holds only for the non-colliding case.
 
-Scope: narrow edge case, no regression — before the `dirty_tree` change this
-same case also surfaced `conflict`. Resolving it needs a new detection step
-(parse the rebase's pre-flight refusal, or pre-check the base diff against
-untracked paths) distinct from the tracked-file dirty check, plus an ADR/spec
-refinement of the untracked-file claim. Tracked rather than fixed in the
-introducing change because it is a separable detection mechanism, not a bounded
-edit to the current diff.
+Resolving it needs a new detection step (parse the rebase's pre-flight refusal,
+or pre-check the base diff against untracked paths) distinct from the
+tracked-file dirty check, plus an ADR/spec refinement of the untracked-file
+claim.
+
+## Readiness-preservation evidence uses a noncanonical filename token
+
+The readiness-preservation scenarios link
+`tests/test_sync_base.preservation.l1.py`. `preservation` is outside the
+canonical evidence vocabulary: scenario, mapping, conformance, property, and
+compliance.
+
+Reclassify the assertions through `/test`, rename the linked evidence file to
+the selected canonical token, and rerun the node's deterministic and
+test-evidence gates.

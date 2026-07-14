@@ -156,7 +156,7 @@ For each assertion needing a new test:
 
 Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript`.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node path relative to `spx/` to `spx/EXCLUDE`; never write the leading `spx/` segment into an entry. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node path relative to `spx/` to `spx/EXCLUDE`; never write the leading `spx/` segment into an entry. Record the exact missing production owner and the focused RED diagnostics. The `spx` CLI skips excluded nodes when running `spx test passing`. Report the test-evidence audit as deferred because the assertion-relevant production path is not inspectable. Remove the entry when implementation begins, bring the normal deterministic gates to passing, and dispatch the test-evidence audit only then. Use `/understand`'s excluded-node guidance for the convention.
 
 </step>
 
@@ -182,6 +182,8 @@ Report which assertions have tests, which do not, and which are stale:
 | 1 | {text}    | Scenario | l1    | {file}    | Covered |
 | 2 | {text}    | Property | l1    | —         | Missing |
 ```
+
+For a specified node, also report the relative `spx/EXCLUDE` entry, exact missing production owner, RED diagnostics, and `test-evidence audit: deferred until implementation exists`.
 
 </step>
 
@@ -222,5 +224,6 @@ Testing output is sound when:
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
+- A specified-node report records its exclusion, missing owner, RED diagnostics, and deferred audit; no test-evidence audit is dispatched until implementation makes the full chain inspectable.
 
 </success_criteria>
