@@ -17,6 +17,7 @@ import pathlib
 import tempfile
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -313,8 +314,11 @@ def _case_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> N
     claude = repo / harness.INSTRUCTION_CLAUDE
 
     def check() -> str:
-        return MODULE.instruction_status(
-            claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
+        return cast(
+            str,
+            MODULE.instruction_status(
+                claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
+            ),
         )
 
     # router first -> current
