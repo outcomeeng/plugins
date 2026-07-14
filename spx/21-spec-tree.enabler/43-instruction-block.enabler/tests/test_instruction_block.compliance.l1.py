@@ -90,6 +90,14 @@ def test_rendered_router_omits_retired_session_tokens() -> None:
     harness.assert_rendered_router_omits_retired_session_tokens()
 
 
+def test_foundation_policy_guard_rejects_missing_requirement() -> None:
+    harness.assert_foundation_policy_guard_rejects_missing_requirement()
+
+
+def test_foundation_policy_guard_rejects_forbidden_router_token() -> None:
+    harness.assert_foundation_policy_guard_rejects_forbidden_router_token()
+
+
 def test_unresolved_build_macro_is_rejected() -> None:
     harness.assert_unresolved_build_macro_is_rejected()
 

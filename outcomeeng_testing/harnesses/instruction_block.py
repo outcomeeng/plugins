@@ -790,6 +790,37 @@ def assert_rendered_router_omits_retired_session_tokens() -> None:
         dist.validate_foundation_access_policy({agent_harness: independent_prose})
 
 
+def assert_foundation_policy_guard_rejects_missing_requirement() -> None:
+    """Assert every required foundation-policy phrase is enforced inside the router."""
+    agent_harness, document = next(
+        iter(render_shipped_dist_with_generation_entrypoint().items())
+    )
+    required_text = dist.FOUNDATION_POLICY_REQUIREMENTS[0][1]
+    router = dist.managed_router_block(document)
+    assert required_text in router
+    invalid_document = document.replace(router, router.replace(required_text, "", 1), 1)
+    with pytest.raises(dist.FoundationAccessPolicyError, match="policy is incomplete"):
+        dist.validate_foundation_access_policy({agent_harness: invalid_document})
+
+
+def assert_foundation_policy_guard_rejects_forbidden_router_token() -> None:
+    """Assert retired session-result vocabulary is rejected inside the router body."""
+    agent_harness, document = next(
+        iter(render_shipped_dist_with_generation_entrypoint().items())
+    )
+    module = load_instruction_block_module()
+    forbidden_text = dist.FORBIDDEN_ROUTER_TOKENS[0]
+    invalid_document = document.replace(
+        module.ROUTER_BLOCK_END,
+        f"{forbidden_text}\n\n{module.ROUTER_BLOCK_END}",
+        1,
+    )
+    with pytest.raises(
+        dist.FoundationAccessPolicyError, match="forbidden session-result"
+    ):
+        dist.validate_foundation_access_policy({agent_harness: invalid_document})
+
+
 def assert_unresolved_build_macro_is_rejected() -> None:
     """Assert production rendering rejects an unresolved build macro."""
     module = load_instruction_block_module()
