@@ -6,6 +6,10 @@ CAN operate with complete, verified context before any work begins
 
 ## Assertions
 
+### Properties
+
+- Produces the same context manifest for the same tree contents and target ([audit])
+
 ### Compliance
 
 - ALWAYS: bring a behind-base branch current through sync-base (`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md`) before reading product or spec context, so loaded context reflects current product truth rather than a stale branch ([audit])
@@ -16,7 +20,6 @@ CAN operate with complete, verified context before any work begins
 - ALWAYS: abort with the missing file path and remediation guidance when a required ancestor spec is absent ([audit])
 - ALWAYS: when the canonical product-root target `spx/` is contextualized against a tree with one product spec and no node directories, emit the product-root context manifest with `bootstrap=true`; a missing node target aborts, and new-node authoring contextualizes the existing parent ([audit])
 - ALWAYS: read lower-index sibling specs as target constraints and list same-index or higher-index siblings without reading them as constraints ([audit])
-- ALWAYS: produce the same context manifest for the same tree contents and target ([audit])
 - ALWAYS: read every ADR/PDR in the target read-set — do not filter by title relevance ([audit])
 - ALWAYS: include full-path methodology-governance ADR/PDR citations from loaded specs and decisions in the target read-set, so specs outside the methodology subtree can depend on governance decisions that are not structural ancestors ([audit])
 - ALWAYS: list target spec test links and co-located test files without reading test file bodies — test-body inspection belongs to `/test`, `/audit-tests`, and `/apply` ([audit])
