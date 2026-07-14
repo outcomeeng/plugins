@@ -44,13 +44,13 @@ from outcomeeng_evals.history import (
 )
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION
 from outcomeeng_evals.runner import ModelRunner
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings as _assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
     load_history_rows_fixture,
     make_eval_dir,
     make_suite_result,
 )
-from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
+from outcomeeng_testing.evals.fakes import RecordingRunner, StubModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 
 PLAN_PLUGIN_DIR: Final = "dist/claude/spec-tree"

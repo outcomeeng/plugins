@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     assert_definition_accepts_owned_path_shapes_ci_matches_identically,
     assert_definition_accepts_trials_at_cap,
     assert_definition_applies_default_model_when_omitted,

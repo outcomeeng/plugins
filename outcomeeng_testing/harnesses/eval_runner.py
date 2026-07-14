@@ -25,12 +25,12 @@ from outcomeeng_evals.runner import (
     _subprocess_env,
 )
 from outcomeeng_evals.settings import ADVISOR_MODEL_SETTING, DISABLED_ADVISOR_MODEL
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     ModelProcessFixture,
     load_model_process_fixture,
     make_recording_model_process_launcher,
 )
-from outcomeeng_evals.testing.fakes import (
+from outcomeeng_testing.evals.fakes import (
     RecordingModelProcessLauncher,
     StubModelRunner,
 )

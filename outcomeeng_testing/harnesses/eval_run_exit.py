@@ -22,7 +22,7 @@ from outcomeeng_evals.cli.commands.run import (
 )
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
-from outcomeeng_evals.testing.fakes import StubModelRunner
+from outcomeeng_testing.evals.fakes import StubModelRunner
 
 _FIXTURE_ROOT = Path(__file__).parents[1] / "fixtures/evals/run_exit"
 NON_DEFAULT_MAX_BUDGET_USD = DEFAULT_MAX_BUDGET_USD * 2
