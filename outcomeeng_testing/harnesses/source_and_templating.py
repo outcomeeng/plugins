@@ -324,6 +324,21 @@ def require_skill_neutrality_oracle_rejects_runtime_specific_guidance() -> bool:
     )
 
 
+def require_skill_locality_oracle_rejects_inlined_content() -> bool:
+    return all(
+        not _require_guidance_keeps_sister_content_local(
+            "\n".join(
+                (
+                    expand_require_skill(RequireSkillDirective(case.skill_ref)),
+                    _skill_body(case),
+                )
+            ),
+            sister_content=_skill_body(case),
+        )
+        for case in source_scenarios()
+    )
+
+
 def require_skill_renders_inline() -> bool:
     return all(_require_renders_inline(case) for case in source_scenarios())
 
@@ -518,6 +533,14 @@ def _require_guidance_is_neutral(
     return skill_ref in guidance and all(name not in prose for name in runtime_names)
 
 
+def _require_guidance_keeps_sister_content_local(
+    guidance: str,
+    *,
+    sister_content: str,
+) -> bool:
+    return sister_content not in guidance
+
+
 def _require_renders_inline(case: SourceScenario) -> bool:
     directive = format_directive(RequireSkillDirective(case.skill_ref))
     with TemporaryDirectory() as tmp:
@@ -577,17 +600,22 @@ def _skill_dir_escape_survives(case: SourceScenario) -> bool:
 
 def _require_emits_identically(case: SourceScenario) -> bool:
     directive = format_directive(RequireSkillDirective(case.skill_ref))
-    body = f"---\nname: {case.skill}\n---\n\n{case.fragment_body}{directive}\n"
+    caller_skill = case.outer_topic
+    sister_content = _skill_body(case)
+    caller_body = f"---\nname: {caller_skill}\n---\n\n{directive}\n"
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, skills={case.skill: body})
+        builder.add_plugin(
+            case.plugin,
+            skills={caller_skill: caller_body, case.skill: sister_content},
+        )
         source = (
             builder.src_root
             / PLUGINS_DIR_NAME
             / case.plugin
             / SKILLS_SUBDIR_NAME
-            / case.skill
+            / caller_skill
             / SKILL_FILENAME
         )
         emitted = {}
@@ -604,13 +632,20 @@ def _require_emits_identically(case: SourceScenario) -> bool:
                 / target.value
                 / case.plugin
                 / SKILLS_SUBDIR_NAME
-                / case.skill
+                / caller_skill
                 / SKILL_FILENAME
             ).read_text(encoding="utf-8")
         return (
             emitted[Target.CLAUDE] == emitted[Target.CODEX]
             and case.skill_ref in emitted[Target.CLAUDE]
             and directive not in emitted[Target.CLAUDE]
+            and all(
+                _require_guidance_keeps_sister_content_local(
+                    body,
+                    sister_content=sister_content,
+                )
+                for body in emitted.values()
+            )
         )
 
 
