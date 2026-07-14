@@ -16,13 +16,16 @@ from __future__ import annotations
 import inspect
 import pathlib
 from tempfile import TemporaryDirectory
+from typing import cast
 
 import pytest
 
 from outcomeeng.distribution import instruction_block as dist
+from outcomeeng.distribution.contracts import DIST_DIR_NAME
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
+DIST_MODULE = cast(dist.InstructionBlockModule, MODULE)
 
 
 def _template(tmp_path: pathlib.Path) -> pathlib.Path:
@@ -58,7 +61,7 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
     expected: dict[str, str] = {}
     for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
         path = dist.dist_template_path(agent_harness)
-        assert dist.DIST_DIR_NAME in path.parts
+        assert DIST_DIR_NAME in path.parts
         assert agent_harness in path.parts
         # write a distinct synthetic per-harness dist template, then load it through the production
         # loader the build recipes call — asserting per-harness template content, not just path shape
@@ -67,7 +70,7 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
         dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
         dist_path.parent.mkdir(parents=True, exist_ok=True)
         dist_path.write_text(template, encoding="utf-8")
-    assert dist.load_harness_templates(MODULE, repo_root=tmp_path) == expected
+    assert dist.load_harness_templates(DIST_MODULE, repo_root=tmp_path) == expected
 
 
 def test_justfile_binds_build_and_check_recipes() -> None:
@@ -113,7 +116,7 @@ def test_drift_gate_reports_a_missing_root_instruction_file(
     )
     (repo / harness.INSTRUCTION_CLAUDE).unlink()
 
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=DIST_MODULE)
     assert harness.INSTRUCTION_CLAUDE in drift
 
 
@@ -127,7 +130,7 @@ def test_drift_gate_marks_untracked_root_file_intent_to_add(
     harness.write_both_root_files_with_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=DIST_MODULE)
     # --intent-to-add registers each never-committed root file as drift
     assert harness.INSTRUCTION_CLAUDE in drift
     assert harness.INSTRUCTION_AGENTS in drift
@@ -143,7 +146,7 @@ def test_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> N
     harness.git_commit_at(
         repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
     )
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=DIST_MODULE)
     # committed root files do not drift, and a never-tracked obsolete spx/ file is not reported
     assert drift == []
     assert "spx/CLAUDE.md" not in drift
@@ -350,7 +353,7 @@ def test_unresolved_build_macro_is_rejected() -> None:
     harness_templates[harness.HARNESS_CODEX] += harness.render_build_macro()
     with pytest.raises(dist.UnresolvedInstructionTemplateError):
         dist.render_instruction_blocks_from_harness_templates(
-            MODULE, harness_templates, (harness.LANG_PRIMARY,)
+            DIST_MODULE, harness_templates, (harness.LANG_PRIMARY,)
         )
 
 

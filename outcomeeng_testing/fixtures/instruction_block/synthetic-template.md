@@ -12,12 +12,14 @@ The root spec is `{product-slug}.product.md`.
 <!-- lang:python -->
 
 ### Python
+
 python naming rules
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
 ### Typescript
+
 typescript naming rules
 
 <!-- /lang:typescript -->
