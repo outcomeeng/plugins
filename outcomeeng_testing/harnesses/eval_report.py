@@ -8,6 +8,7 @@ from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import cast
 
 import pytest
 
@@ -244,7 +245,10 @@ def _embedded_payload(path: Path) -> dict[str, object]:
     parser = _EmbeddedResultsParser()
     with path.open(encoding="utf-8") as html_file:
         parser.feed(html_file.read())
-    return json.loads("".join(parser.payload_parts))
+    payload: object = json.loads("".join(parser.payload_parts))
+    assert isinstance(payload, dict)
+    assert all(isinstance(key, str) for key in payload)
+    return cast(dict[str, object], payload)
 
 
 def _fixture() -> ReportFixture:
