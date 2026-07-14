@@ -8,6 +8,8 @@ from types import ModuleType
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
+_LANGUAGE_TOKEN_CHARACTERS = string.ascii_letters + string.digits + "-_"
+
 
 def versions() -> SearchStrategy[tuple[int, int, int]]:
     """Generate bounded dotted-numeric version triples."""
@@ -51,7 +53,7 @@ def shared_document(module: ModuleType, name: str, body: str) -> str:
 def unsupported_language_tokens(
     supported_languages: tuple[str, ...],
 ) -> SearchStrategy[str]:
-    """Generate single lowercase CLI tokens outside the template-declared language set."""
-    return st.text(alphabet=string.ascii_lowercase, min_size=1).filter(
+    """Generate one CLI language token outside the template-declared language set."""
+    return st.text(alphabet=_LANGUAGE_TOKEN_CHARACTERS, min_size=1).filter(
         lambda token: token not in supported_languages
     )

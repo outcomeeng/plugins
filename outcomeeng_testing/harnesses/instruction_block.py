@@ -452,8 +452,7 @@ def run_generator_write(
                 str(template_path),
                 "--repo-root",
                 str(repo_root),
-                "--languages",
-                languages,
+                f"--languages={languages}",
                 "--write",
             ]
         ),

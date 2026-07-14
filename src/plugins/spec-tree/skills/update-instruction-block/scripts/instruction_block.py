@@ -259,7 +259,12 @@ def _parse_languages(value: str | None) -> tuple[str, ...]:
     """Parse a ``languages`` value (``[a, b]``, ``a, b``, or ``a,b``) into a tuple."""
     if not value:
         return ()
-    inner = value.strip().removeprefix("[").removesuffix("]")
+    stripped = value.strip()
+    inner = (
+        stripped[1:-1]
+        if stripped.startswith("[") and stripped.endswith("]")
+        else stripped
+    )
     return normalize_languages(
         item.strip() for item in inner.split(",") if item.strip()
     )
