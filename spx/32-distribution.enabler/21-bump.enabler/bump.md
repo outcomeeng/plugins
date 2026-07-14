@@ -33,9 +33,12 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under th
 - `--segment patch` increments the third semver component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.mapping.l1.py))
 - Auto-detection maps each `(file-status, path-pattern)` pair to a segment within any recognized distribution-surface root: an `A`/`C`/`D`/`R` change to `skills/{slug}/SKILL.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
 
-### Compliance
+### Properties
 
 - ALWAYS: changes are detected only under `src/plugins/{name}/**`, `dist/claude/{name}/**`, or `dist/codex/{name}/**` — any file change inside one of those prefixes counts as a distribution-surface change for plugin `{name}`, and no path outside those prefixes triggers any bump ([test](tests/test_bump.property.l1.py))
+
+### Compliance
+
 - ALWAYS: every manifest a changed plugin owns is written in the same bump pass — when both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` exist, both receive the same new version in one bump invocation ([test](tests/test_bump.compliance.l1.py))
 - ALWAYS: check availability of `git` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_bump.compliance.l1.py))
 - NEVER: bump a plugin whose working-tree version is already ahead of its `base_ref` version — the branch already carries a valid bump for that plugin (re-bumping during PR review is the failure `spx/local/commit-changes.md` prohibits); outside CHECK mode, that plugin is skipped with a diagnostic while every other changed-but-unbumped plugin is still bumped — or, under `--dry-run`, reported — in the same pass ([test](tests/test_bump.compliance.l1.py))
