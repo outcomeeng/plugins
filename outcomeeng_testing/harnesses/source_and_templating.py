@@ -51,6 +51,7 @@ from outcomeeng.distribution.contracts import (
     REFERENCES_SUBDIR_NAME,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
     Target,
 )
 from outcomeeng_testing.generators.source_and_templating import (
@@ -61,7 +62,6 @@ from outcomeeng_testing.generators.source_and_templating import (
 from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
 from outcomeeng_testing.generators.fragments import (
     fragment_bodies,
-    include_chain_depths,
     inert_fragment_bodies,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
@@ -236,24 +236,25 @@ def _rendered_include_property(
 )
 @given(
     case=st.sampled_from(source_scenarios()),
-    depth=include_chain_depths(),
+    body=inert_fragment_bodies(),
 )
-def _recursive_include_property(case: SourceScenario, depth: int) -> None:
+def _recursive_include_property(case: SourceScenario, body: str) -> None:
     with TemporaryDirectory() as temporary_directory:
         builder = SrcTreeBuilder(Path(temporary_directory))
-        topics = [f"{case.outer_topic}-{index}" for index in range(depth)]
-        for index, topic in enumerate(topics):
-            body = (
-                case.fragment_body
-                if index == depth - 1
-                else _include_text(case, topics[index + 1])
-            )
-            builder.add_shared_topic(case.scope, topic, body)
-        rendered = render_text(
-            _include_text(case, topics[0]),
+        builder.add_shared_topic(case.scope, case.inner_topic, body)
+        base_template = _include_text(case, case.inner_topic)
+        base_rendered = render_text(base_template, shared_root=builder.shared_root)
+        builder.add_shared_topic(
+            case.scope,
+            case.outer_topic,
+            base_template,
+        )
+        extended_rendered = render_text(
+            _include_text(case, case.outer_topic),
             shared_root=builder.shared_root,
         )
-        assert rendered == case.fragment_body
+        assert base_rendered == body
+        assert extended_rendered == base_rendered
 
 
 def unknown_directive_raises() -> bool:
@@ -322,6 +323,18 @@ def bound_target_variable_renders_each_target() -> bool:
 
 def well_formed_source_tree_builds() -> bool:
     return all(_well_formed_source_tree_builds(case) for case in source_scenarios())
+
+
+def malformed_source_tree_is_rejected() -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        source_root = root / SOURCE_ROOT_NAME
+        source_root.mkdir()
+        try:
+            plan_emissions(source_root)
+        except SourceFormatError as error:
+            return str(source_root / PLUGINS_DIR_NAME) in str(error)
+        return False
 
 
 def ordinary_plugin_root_file_is_accepted() -> bool:

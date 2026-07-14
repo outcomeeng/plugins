@@ -5,6 +5,7 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     implementation_is_ready,
     include_uses_fragment_file_contract,
     jinja_environment_uses_custom_delimiters,
+    malformed_source_tree_is_rejected,
     ordinary_plugin_root_file_is_accepted,
     require_skill_emits_identically_across_targets,
     require_skill_expands_to_neutral_guidance,
@@ -25,6 +26,10 @@ def test_module_is_implemented() -> None:
 
 def test_build_accepts_well_formed_src_tree() -> None:
     assert well_formed_source_tree_builds()
+
+
+def test_build_rejects_malformed_src_tree() -> None:
+    assert malformed_source_tree_is_rejected()
 
 
 def test_build_accepts_ordinary_files_under_plugin_root() -> None:

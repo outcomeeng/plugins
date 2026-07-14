@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+from ast import literal_eval
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -376,7 +377,7 @@ _DIRECTIVE_RE: Final = re.compile(
 )
 _DIRECTIVE_BODY_RE: Final = re.compile(
     r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s+"
-    r"(?P<quote>['\"])(?P<argument>.*?)(?P=quote)$",
+    r"(?P<argument>.+)$",
     re.DOTALL,
 )
 
@@ -477,16 +478,14 @@ def parse_directives(text: str) -> tuple[Directive, ...]:
     """
     directives: list[Directive] = []
     for match in _DIRECTIVE_RE.finditer(text):
-        body = " ".join(match.group(1).split())
-        body_match = _DIRECTIVE_BODY_RE.match(body)
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            continue
+        body_match = _DIRECTIVE_BODY_RE.fullmatch(body)
         if body_match is None:
-            if _is_jinja_control_block(body):
-                # A Jinja block statement (`{!% if target == 'codex' %!}`,
-                # `{!% endif %!}`) — not a directive to collect; Jinja evaluates it.
-                continue
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
-        argument = body_match.group("argument")
+        argument = _directive_argument(body_match.group("argument"), match.group(0))
         if name == "include":
             directives.append(IncludeDirective(path=argument))
         elif name == "require_skill":
@@ -504,11 +503,13 @@ def format_directive(directive: Directive) -> str:
     """
     if isinstance(directive, IncludeDirective):
         return (
-            f"{BLOCK_DELIMITER_START} include '{directive.path}' {BLOCK_DELIMITER_END}"
+            f"{BLOCK_DELIMITER_START} include "
+            f"{_directive_literal(directive.path)} {BLOCK_DELIMITER_END}"
         )
     if isinstance(directive, RequireSkillDirective):
         return (
-            f"{BLOCK_DELIMITER_START} require_skill '{directive.skill_ref}' "
+            f"{BLOCK_DELIMITER_START} require_skill "
+            f"{_directive_literal(directive.skill_ref)} "
             f"{BLOCK_DELIMITER_END}"
         )
     raise DirectiveSyntaxError(f"unsupported directive: {directive!r}")
@@ -944,16 +945,14 @@ def _render_directives(
     include_stack: tuple[Path, ...],
 ) -> str:
     def replace(match: re.Match[str]) -> str:
-        body = " ".join(match.group(1).split())
-        body_match = _DIRECTIVE_BODY_RE.match(body)
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            return match.group(0)
+        body_match = _DIRECTIVE_BODY_RE.fullmatch(body)
         if body_match is None:
-            if _is_jinja_control_block(body):
-                # A Jinja block statement sharing the block delimiter — leave it
-                # for Jinja to evaluate during render.
-                return match.group(0)
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
-        argument = body_match.group("argument")
+        argument = _directive_argument(body_match.group("argument"), match.group(0))
         if name == "require_skill":
             return expand_require_skill(RequireSkillDirective(skill_ref=argument))
         if name != "include":
@@ -972,6 +971,20 @@ def _render_directives(
         )
 
     return _DIRECTIVE_RE.sub(replace, template)
+
+
+def _directive_argument(argument_literal: str, source: str) -> str:
+    try:
+        argument = literal_eval(argument_literal)
+    except (SyntaxError, ValueError) as error:
+        raise DirectiveSyntaxError(f"invalid directive: {source!r}") from error
+    if not isinstance(argument, str):
+        raise DirectiveSyntaxError(f"invalid directive: {source!r}")
+    return argument
+
+
+def _directive_literal(argument: str) -> str:
+    return repr(argument).replace("%", r"\x25")
 
 
 def _resolve_under_root(root: Path, relative_path: str) -> Path:
