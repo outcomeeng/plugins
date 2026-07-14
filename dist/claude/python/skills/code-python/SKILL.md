@@ -5,7 +5,8 @@ description: >-
   NEVER write or fix Python implementation without this skill.
 argument-hint: "[node-path]"
 arguments: node_path
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff:*), Bash(python3 -m mypy:*)
+allowed-tools: >-
+  Read Write Edit Glob Grep Skill Bash(python3 -m pytest:*) Bash(python3 -m ruff:*) Bash(python3 -m mypy:*)
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -290,12 +291,11 @@ All checks pass. Ready for a fresh implementation audit.
 
 Implementation is ready for review when:
 
-- [ ] The product's resolved Python test command for the governed node or changeset passes
+- [ ] The product's resolved Python test command for the governed node passes
 - [ ] Any specified-node handoff is consumed: its exclusion is removed and the flow returns to the test-evidence audit after GREEN
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
-- [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or records exact counter-evidence for the next `implementation-auditor` run
-- [ ] Post-fix verification passes and FIX mode completes only after a fresh `implementation-auditor` projection approves the repaired committed subject
+- [ ] Post-fix verification passes and FIX mode completes only after a fresh `implementation-auditor` projection approves the repaired committed subject against `/python-standards` and the loaded `spx/local/python.md` overlay
 
 </success_criteria>

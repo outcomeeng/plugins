@@ -3,7 +3,8 @@ name: refocus
 description: >-
   ALWAYS invoke this skill when running ad hoc commands, writing debug scripts, or writing code without a spec.
   NEVER run ad hoc commands or write throwaway scripts without invoking this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash
+allowed-tools: >-
+  Read Glob Grep Write Edit
 ---
 
 <objective>
@@ -21,13 +22,13 @@ Claude left the path of the spec-tree `/apply` flow. One or more of these happen
 
 **Why it matters:**
 
-Those ad hoc commands take the same effort as writing a proper test. But they require user permission (this is how the user noticed the ad hoc work) and block progress toward the goal.
+Those ad hoc commands produce ephemeral observations instead of durable evidence and interrupt progress toward the governed implementation.
 
 A proper test written with the `/test-{language}` skill would serve Claude and other agents again in the future. The debugging or exploration just done without following `/apply` will need to be reworked from scratch when the spec changes — a monumental waste of effort.
 
 </diagnosis>
 
-<process>
+<workflow>
 
 **Step 1 — Stop the ad hoc work**
 
@@ -42,7 +43,7 @@ Review what has been produced so far:
 - Implementation written without tests: keep the code but do not commit it.
 - Tests written without loading context: the tests may be wrong — restart `/apply` at its context and evidence-design stages before accepting them.
 
-</process>
+</workflow>
 
 <success_criteria>
 
