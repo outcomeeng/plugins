@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[--agent] [full-spx-node-path]"
-allowed-tools: Read, Skill, Agent, request_user_input
+allowed-tools: Read, Skill, multi_agent_v1.spawn_agent, request_user_input
 ---
 
 <objective>
@@ -30,7 +30,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
-- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional canonical full `spx/...` node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not run final evidence-auditor gates, review the whole changeset, or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 8a when evidence changed, Step 9 when the change is cross-node, and Step 10 over the resulting changeset.
+- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`multi_agent_v1.spawn_agent` with `agent_type: "applier"`) on the optional canonical full `spx/...` node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not run final evidence-auditor gates, review the whole changeset, or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 8a when evidence changed, Step 9 when the change is cross-node, and Step 10 over the resulting changeset.
 - `$ARGUMENTS` containing a canonical full `spx/...` node path without `--agent` → the work queue is that single node.
 - Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never pass a bare `spx/EXCLUDE` entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
