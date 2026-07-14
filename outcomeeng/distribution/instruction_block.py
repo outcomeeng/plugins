@@ -249,13 +249,13 @@ def validate_foundation_access_policy(
             )
 
 
-def regenerate_instruction_blocks() -> None:
+def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
-    spx_dir = REPO_ROOT / "spx"
-    templates = load_harness_templates(module)
+    spx_dir = repo_root / "spx"
+    templates = load_harness_templates(module, repo_root=repo_root)
     paths = {
-        harness: dist_template_path(harness)
+        harness: dist_template_path(harness, repo_root=repo_root)
         for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
     }
     rendered = render_instruction_blocks_from_harness_templates(
@@ -265,8 +265,8 @@ def regenerate_instruction_blocks() -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
-    module.write_root_instruction_files(REPO_ROOT, rendered)
-    module.remove_obsolete_spx_instruction_files(REPO_ROOT)
+    module.write_root_instruction_files(repo_root, rendered)
+    module.remove_obsolete_spx_instruction_files(repo_root)
 
 
 def intent_to_add_paths(

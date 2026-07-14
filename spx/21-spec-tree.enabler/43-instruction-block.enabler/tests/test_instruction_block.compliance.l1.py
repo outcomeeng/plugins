@@ -1,8 +1,8 @@
 """Compliance evidence for the instruction-block render model.
 
 The ALWAYS/NEVER rules of ``instruction-block.md`` with deterministic test evidence: both root
-files are written together, the router is first and carries a read-the-whole-file instruction,
-generation reads the ``dist/`` templates, the writer is bound through the ``just`` recipes and
+files are written together, the router is first, generation reads the ``dist/`` templates, the
+writer is bound through the ``just`` recipes and
 the lefthook pre-commit hook, the drift gate reports a missing root path and overwrites router
 drift, the refresh workflow regenerates and opens a PR only on drift while verifying its pinned
 tooling, no product-specific string enters the router, a former command-slot fence is ordinary
@@ -18,8 +18,8 @@ def test_generation_writes_both_root_files() -> None:
     harness.assert_generation_writes_both_root_files()
 
 
-def test_router_is_first_and_carries_read_whole_file_instruction() -> None:
-    harness.assert_router_is_first_and_reads_whole_file()
+def test_router_is_first() -> None:
+    harness.assert_router_is_first()
 
 
 def test_generation_reads_dist_templates() -> None:

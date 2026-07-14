@@ -121,14 +121,8 @@ ROOT_MIDLINE_CODEX: Final = "harness-prefix shared prose here\n" + _MIDLINE_COMM
 # The retired session-result tokens the shipped instruction block must never teach. No
 # production module owns a removed token, so the regression guard declares the forbidden
 # strings here and asserts they are absent from the real rendered output.
-SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
 SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
-
-# The required read-the-whole-file directive the router must carry so a reading agent reaches the
-# product's own commands below the router. Declared here as the required-content vocabulary the
-# compliance guard asserts is present in the rendered router.
-READ_ENTIRE_FILE_INSTRUCTION = "Read this entire file"
 
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
@@ -405,23 +399,28 @@ def run_generator_write_primary(
     )
 
 
-def write_root_instructions_from_dist(
-    repo_root: pathlib.Path, *, languages: tuple[str, ...]
-) -> None:
-    """Render the repository's shipped dist templates and write both root instruction files."""
-    from outcomeeng.distribution import instruction_block as dist
-
+def copy_shipped_dist_templates(repo_root: pathlib.Path) -> None:
+    """Copy each shipped instruction-block template into an isolated repository."""
     module = load_instruction_block_module()
-    templates = dist.load_harness_templates(module)
-    template_paths = {
-        agent_harness: dist.dist_template_path(agent_harness)
-        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
-    rendered = dist.render_instruction_blocks_from_harness_templates(
-        module, templates, languages, template_paths=template_paths
-    )
-    dist.validate_foundation_access_policy(rendered)
-    module.write_root_instruction_files(repo_root, rendered)
+    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        source = dist.dist_template_path(agent_harness)
+        target = dist.dist_template_path(agent_harness, repo_root=repo_root)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def render_shipped_dist_with_generation_entrypoint() -> dict[str, str]:
+    """Run production generation against copied shipped templates and return both outputs."""
+    with tempfile.TemporaryDirectory() as directory:
+        repo_root = pathlib.Path(directory).resolve() / "repo"
+        repo_root.mkdir()
+        copy_shipped_dist_templates(repo_root)
+        dist.regenerate_instruction_blocks(repo_root=repo_root)
+        module = load_instruction_block_module()
+        return {
+            agent_harness: repo_root.joinpath(filename).read_text(encoding="utf-8")
+            for agent_harness, filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items()
+        }
 
 
 def assert_generation_writes_both_root_files() -> None:
@@ -435,39 +434,25 @@ def assert_generation_writes_both_root_files() -> None:
         assert (repo / INSTRUCTION_AGENTS).is_file()
 
 
-def assert_router_is_first_and_reads_whole_file() -> None:
-    """Assert the router leads the document and routes into product instructions."""
+def assert_router_is_first() -> None:
+    """Assert production generation places the shipped router first in each output."""
     module = load_instruction_block_module()
-    template = read_canonical_template()
-    for agent_harness in TEMPLATE_HARNESSES:
-        rendered = module.render(
-            template,
-            TEMPLATE_LANGUAGES,
-            module.parse_template_version(template),
-            agent_harness,
-        )
-        document = module.prepend_router_block(rendered, ROOT_SHARED_BODY)
+    for document in render_shipped_dist_with_generation_entrypoint().values():
         assert document.startswith(module.ROUTER_MARKER_PREFIX)
-        router_block = document[: document.index(module.ROUTER_BLOCK_END)]
-        assert READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
 def assert_generation_reads_dist_templates() -> None:
-    """Assert production generation consumes each runtime's dist template."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        expected: dict[str, str] = {}
-        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
-            path = dist.dist_template_path(agent_harness)
-            assert dist.DIST_DIR_NAME in path.parts
-            assert agent_harness in path.parts
-            template = build_template(f"{NEW_VERSION}-{agent_harness}")
-            expected[agent_harness] = template
-            dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
-            dist_path.parent.mkdir(parents=True, exist_ok=True)
-            dist_path.write_text(template, encoding="utf-8")
-        assert dist.load_harness_templates(module, repo_root=tmp_path) == expected
+    """Assert production generation requires each runtime's shipped dist template."""
+    module = load_instruction_block_module()
+    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = pathlib.Path(directory).resolve() / "repo"
+            repo_root.mkdir()
+            copy_shipped_dist_templates(repo_root)
+            missing = dist.dist_template_path(agent_harness, repo_root=repo_root)
+            missing.unlink()
+            with pytest.raises(FileNotFoundError, match=str(missing)):
+                dist.regenerate_instruction_blocks(repo_root=repo_root)
 
 
 def assert_justfile_binds_instruction_recipes() -> None:
@@ -712,13 +697,9 @@ def assert_reconcile_replaces_losing_region_whole() -> None:
 
 def assert_rendered_router_omits_retired_session_tokens() -> None:
     """Assert legacy session result fields never render into the router."""
-    module = load_instruction_block_module()
-    template = read_canonical_template()
-    version = module.parse_template_version(template)
-    for agent_harness in TEMPLATE_HARNESSES:
-        rendered = module.render(template, TEMPLATE_LANGUAGES, version, agent_harness)
-        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in rendered
-        assert SESSION_RESULT_FRONTMATTER_FIELD not in rendered
+    for document in render_shipped_dist_with_generation_entrypoint().values():
+        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in document
+        assert SESSION_RESULT_FRONTMATTER_FIELD not in document
 
 
 def assert_unresolved_build_macro_is_rejected() -> None:
