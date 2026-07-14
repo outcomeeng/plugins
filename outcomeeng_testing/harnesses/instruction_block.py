@@ -30,6 +30,10 @@ import sys
 from types import ModuleType
 from typing import Final, cast
 
+import pytest
+
+from outcomeeng.distribution import instruction_block as dist
+
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-instruction-block skill directory name; a rename there must update
 # this path or load_instruction_block_module raises RuntimeError at import time.
@@ -431,8 +435,6 @@ def write_root_instructions_from_dist(
 
 def assert_generated_foundation_access_policy() -> None:
     """Exercise generated routers against the independent spec-derived policy contract."""
-    from outcomeeng.distribution import instruction_block as dist
-
     module = load_instruction_block_module()
     with tempfile.TemporaryDirectory() as directory:
         repo_root = pathlib.Path(directory).resolve()
@@ -449,12 +451,6 @@ def assert_generated_foundation_access_policy() -> None:
 
     target_harness = next(iter(documents))
     for requirement, required_text in foundation_access_policy_contract():
-        for agent_harness, document in documents.items():
-            if required_text not in document:
-                raise AssertionError(
-                    f"generated {agent_harness} router omitted contract requirement "
-                    f"{requirement!r}"
-                )
         broken = dict(documents)
         broken[target_harness] = broken[target_harness].replace(required_text, "", 1)
         try:
@@ -495,6 +491,325 @@ def foundation_access_policy_contract() -> tuple[tuple[str, str], ...]:
             )
         parsed.append((name, text))
     return tuple(parsed)
+
+
+def assert_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
+    """Assert one generation writes both runtime root instruction files."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    run_generator_write_primary(repo, write_current_template(tmp_path))
+    assert (repo / INSTRUCTION_CLAUDE).is_file()
+    assert (repo / INSTRUCTION_AGENTS).is_file()
+
+
+def assert_router_is_first_and_reads_whole_file(agent_harness: str) -> None:
+    """Assert the router leads the document and routes into product instructions."""
+    module = load_instruction_block_module()
+    template = read_canonical_template()
+    rendered = module.render(
+        template,
+        TEMPLATE_LANGUAGES,
+        module.parse_template_version(template),
+        agent_harness,
+    )
+    document = module.prepend_router_block(rendered, ROOT_SHARED_BODY)
+    assert document.startswith(module.ROUTER_MARKER_PREFIX)
+    router_block = document[: document.index(module.ROUTER_BLOCK_END)]
+    assert READ_ENTIRE_FILE_INSTRUCTION in router_block
+
+
+def assert_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
+    """Assert production generation consumes each runtime's dist template."""
+    module = load_instruction_block_module()
+    expected: dict[str, str] = {}
+    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        path = dist.dist_template_path(agent_harness)
+        assert dist.DIST_DIR_NAME in path.parts
+        assert agent_harness in path.parts
+        template = build_template(f"{NEW_VERSION}-{agent_harness}")
+        expected[agent_harness] = template
+        dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
+        dist_path.parent.mkdir(parents=True, exist_ok=True)
+        dist_path.write_text(template, encoding="utf-8")
+    assert dist.load_harness_templates(module, repo_root=tmp_path) == expected
+
+
+def assert_justfile_binds_instruction_recipes() -> None:
+    """Assert repository recipes bind generation and drift checking."""
+    justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
+    build_body = justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
+    check_body = justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
+    assert f"outcomeeng.distribution.instruction_block {dist.WRITE_FLAG}" in build_body
+    assert "outcomeeng.distribution.instruction_block" in check_body
+    assert dist.WRITE_FLAG not in check_body
+
+
+def assert_lefthook_regenerates_through_build_instructions() -> None:
+    """Assert pre-commit regeneration uses the repository recipe."""
+    lefthook = dist.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
+    assert "run: just build-instructions" in lefthook
+    assert "--template src/plugins" not in lefthook
+    assert "--repo-root ." not in lefthook
+
+
+def assert_drift_gate_reports_missing_root_instruction_file(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Assert a deleted generated root file registers as drift."""
+    module = load_instruction_block_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_identity(repo)
+    write_both_root_files_with_shared_region(
+        module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
+    )
+    git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
+    (repo / INSTRUCTION_CLAUDE).unlink()
+
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+    assert INSTRUCTION_CLAUDE in drift
+
+
+def assert_drift_gate_marks_untracked_root_files(tmp_path: pathlib.Path) -> None:
+    """Assert never-committed root files register as intent-to-add drift."""
+    module = load_instruction_block_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_identity(repo)
+    write_both_root_files_with_shared_region(
+        module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
+    )
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+    assert INSTRUCTION_CLAUDE in drift
+    assert INSTRUCTION_AGENTS in drift
+
+
+def assert_drift_gate_skips_missing_obsolete_spx_file(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Assert absent untracked legacy instruction paths do not create drift."""
+    module = load_instruction_block_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_identity(repo)
+    write_both_root_files_with_shared_region(
+        module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
+    )
+    git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+    assert drift == []
+    assert "spx/CLAUDE.md" not in drift
+    assert "spx/AGENTS.md" not in drift
+
+
+def assert_refresh_pr_step_exits_cleanly_without_drift(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Assert refresh automation leaves GitHub untouched when output is current."""
+    gh_log = tmp_path / "gh.log"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_identity(repo)
+    git_command(repo, "config", "commit.gpgsign", "false")
+    (repo / INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
+    (repo / INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
+    git_command(repo, "add", ".")
+    git_command(repo, "commit", "-m", "seed instruction files")
+
+    output = run_refresh_pr_step(repo, gh_log)
+    assert output == "Root instruction blocks are current.\n"
+    assert not gh_log.exists()
+
+
+def assert_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> None:
+    """Assert refresh automation commits retired nested instruction deletions."""
+    remote = tmp_path / "remote.git"
+    repo = tmp_path / "repo"
+    gh_log = tmp_path / "gh.log"
+    git_command(tmp_path, "init", "--bare", str(remote))
+    git_command(tmp_path, "clone", str(remote), str(repo))
+    git_command(repo, "config", "user.name", "Test User")
+    git_command(repo, "config", "user.email", "test@example.com")
+    git_command(repo, "config", "commit.gpgsign", "false")
+    spx_dir = repo / "spx"
+    spx_dir.mkdir()
+    for path in (
+        repo / INSTRUCTION_CLAUDE,
+        repo / INSTRUCTION_AGENTS,
+        spx_dir / INSTRUCTION_CLAUDE,
+        spx_dir / INSTRUCTION_AGENTS,
+    ):
+        path.write_text(f"{path.name}\n", encoding="utf-8")
+    git_command(repo, "add", ".")
+    git_command(repo, "commit", "-m", "seed instruction files")
+    git_command(repo, "branch", "-M", "main")
+    git_command(repo, "push", "-u", "origin", "main")
+
+    (repo / INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
+    (repo / INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
+    (spx_dir / INSTRUCTION_CLAUDE).unlink()
+    (spx_dir / INSTRUCTION_AGENTS).unlink()
+    run_refresh_pr_step(repo, gh_log)
+
+    committed = git_command(
+        repo,
+        "show",
+        "--name-status",
+        "--format=%s",
+        "automation/refresh-instruction-blocks",
+    ).stdout
+    assert "Refresh root instruction blocks" in committed
+    assert f"M\t{INSTRUCTION_CLAUDE}" in committed
+    assert f"M\t{INSTRUCTION_AGENTS}" in committed
+    assert f"D\tspx/{INSTRUCTION_CLAUDE}" in committed
+    assert f"D\tspx/{INSTRUCTION_AGENTS}" in committed
+    gh_calls = gh_log.read_text(encoding="utf-8")
+    assert "pr list" in gh_calls
+    assert "pr create" in gh_calls
+
+
+def assert_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
+    """Assert regeneration overwrites a stale router version."""
+    module = load_instruction_block_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = write_current_template(tmp_path)
+    run_generator_write_primary(repo, template)
+    claude = repo / INSTRUCTION_CLAUDE
+    claude.write_text(
+        claude.read_text(encoding="utf-8").replace(f"v{NEW_VERSION}", "v0.0.1"),
+        encoding="utf-8",
+    )
+    run_generator_write_primary(repo, template)
+    assert module.parse_instruction_version(claude.read_text(encoding="utf-8")) == (
+        NEW_VERSION
+    )
+
+
+def assert_refresh_workflow_regenerates_and_opens_pr() -> None:
+    """Assert refresh workflow dispatch regenerates before opening a drift PR."""
+    workflow = dist.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "just build-instructions" in workflow_run_block(
+        "Regenerate instruction blocks"
+    )
+    assert "git status --porcelain" in workflow_step_block(
+        "Open instruction-block refresh pull request"
+    )
+
+
+def assert_refresh_workflow_checks_out_main() -> None:
+    """Assert refresh automation starts from the default branch."""
+    assert "main" in workflow_step_block("Checkout")
+
+
+def assert_refresh_workflow_verifies_just_download() -> None:
+    """Assert refresh automation verifies its pinned just download."""
+    install = workflow_run_block("Install just")
+    just_sha256 = workflow_env_value("JUST_SHA256")
+    assert len(just_sha256) == 64
+    assert "$JUST_SHA256" in install
+    assert "mktemp -d" in install
+    assert "trap " in install
+    assert "rm -rf" in install
+    assert install.index("sha256sum -c") < install.index("install -m 0755")
+    assert "-o just.tar.gz" not in install
+    assert "tar -xzf just.tar.gz" not in install
+
+
+def assert_refresh_workflow_installs_dprint() -> None:
+    """Assert refresh automation installs and verifies its pinned formatter."""
+    install = workflow_run_block("Install dprint")
+    dprint_version = workflow_env_value("DPRINT_VERSION")
+    assert dprint_version
+    assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install
+    assert "dprint --version" in install
+
+
+def assert_render_preserves_brace_token() -> None:
+    """Assert rendering preserves ordinary brace-delimited illustrations."""
+    module = load_instruction_block_module()
+    rendered = module.render(
+        build_template(NEW_VERSION),
+        (LANG_PRIMARY,),
+        NEW_VERSION,
+        HARNESS_CLAUDE,
+    )
+    assert ILLUSTRATION_TOKEN in rendered
+
+
+def assert_former_command_slot_fence_is_ordinary_content(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Assert retired command-slot fences remain unmanaged root content."""
+    module = load_instruction_block_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    slot_fence = (
+        "<!-- SPEC-TREE:author -->\n\nproduct author command\n\n"
+        "<!-- /SPEC-TREE:author -->\n"
+    )
+    for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
+        (repo / name).write_text(slot_fence, encoding="utf-8")
+    run_generator_write_primary(repo, write_current_template(tmp_path))
+    result = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+    assert "product author command" in result
+    assert set(module.parse_shared_regions(result)) == {SHARED_REGION_NAME}
+
+
+def assert_reconcile_replaces_losing_region_whole() -> None:
+    """Assert shared-region reconciliation takes one complete side."""
+    module = load_instruction_block_module()
+    open_marker = module.shared_open_marker(SHARED_REGION_NAME)
+    close_marker = module.shared_close_marker(SHARED_REGION_NAME)
+    doc_a = f"{open_marker}\n\n{SHARED_REGION_BODY}\n\n{close_marker}\n"
+    doc_b = f"{open_marker}\n\n{SHARED_REGION_BODY_ALT}\n\n{close_marker}\n"
+    _, new_b = module.reconcile_shared_regions(doc_a, doc_b, "a")
+    reconciled = module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
+    assert reconciled == SHARED_REGION_BODY
+    assert SHARED_REGION_BODY_ALT not in reconciled
+
+
+def assert_rendered_router_omits_retired_session_tokens() -> None:
+    """Assert legacy session result fields never render into the router."""
+    module = load_instruction_block_module()
+    template = read_canonical_template()
+    version = module.parse_template_version(template)
+    for agent_harness in TEMPLATE_HARNESSES:
+        rendered = module.render(template, TEMPLATE_LANGUAGES, version, agent_harness)
+        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in rendered
+        assert SESSION_RESULT_FRONTMATTER_FIELD not in rendered
+
+
+def assert_unresolved_build_macro_is_rejected() -> None:
+    """Assert production rendering rejects an unresolved build macro."""
+    module = load_instruction_block_module()
+    harness_templates = {
+        agent_harness: build_template(NEW_VERSION)
+        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    harness_templates[HARNESS_CODEX] += render_build_macro()
+    with pytest.raises(dist.UnresolvedInstructionTemplateError):
+        dist.render_instruction_blocks_from_harness_templates(
+            module, harness_templates, (LANG_PRIMARY,)
+        )
+
+
+def assert_obsolete_spx_instruction_files_are_removed(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Assert generation removes retired nested instruction files."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    spx_dir = repo / "spx"
+    spx_dir.mkdir()
+    for name in INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS:
+        (spx_dir / name).write_text("retired spx instruction file\n", encoding="utf-8")
+    run_generator_write_primary(repo, write_current_template(tmp_path))
+    assert not (spx_dir / INSTRUCTION_CLAUDE).exists()
+    assert not (spx_dir / INSTRUCTION_AGENTS).exists()
 
 
 def root_document_with_shared_region(
