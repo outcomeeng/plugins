@@ -9,12 +9,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
+    BLOCK_DELIMITER_START,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
     COMMAND_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
+    DISABLE_MODEL_INVOCATION_FIELD,
     EmissionAction,
     EXECUTION_TIME_INJECTION_TOKEN,
     IGNORED_SOURCE_DIRECTORY_NAMES,
@@ -28,7 +30,6 @@ from outcomeeng.distribution.build import (
     format_directive,
     frontmatter_field_names,
     plan_emissions,
-    render_source_text,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
 )
@@ -39,7 +40,10 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES,
     Target,
 )
-from outcomeeng.validation.skill_frontmatter import PORTABLE_CAPABILITY_FIELDS
+from outcomeeng.validation.skill_frontmatter import (
+    ALLOWED_TOOLS_FIELD,
+    ARGUMENT_HINT_FIELD,
+)
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
@@ -97,11 +101,11 @@ def every_source_file_emits_to_each_target() -> bool:
 
 def target_trees_mirror_source_structure() -> bool:
     snapshot = _canonical_emission_snapshot()
-    return bool(snapshot.source) and all(
-        _parent_directories(snapshot.target(target))
-        == _parent_directories(
-            tuple((path, b"") for path in _planned_paths(snapshot.plan, target))
-        )
+    source_paths = {path for path, _content in snapshot.source}
+    source_directories = _parent_directories(snapshot.source)
+    return bool(source_paths) and all(
+        source_paths <= {path for path, _content in snapshot.target(target)}
+        and source_directories <= _parent_directories(snapshot.target(target))
         for target in Target
     )
 
@@ -110,17 +114,9 @@ def claude_output_preserves_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.claude)
     relevant = {
-        path.relative_to(CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME): rendered
-        for path in snapshot.plan.plugin_sources
-        if path.suffix in TEXT_FILE_SUFFIXES
-        and CLAUDE_SKILL_DIR_TOKEN
-        in (
-            rendered := render_source_text(
-                path,
-                target=Target.CLAUDE,
-                src_root=CANONICAL_SOURCE_ROOT,
-            )
-        )
+        path: text
+        for path, text in _text_files(snapshot.source).items()
+        if CLAUDE_SKILL_DIR_TOKEN in text and BLOCK_DELIMITER_START not in text
     }
     failures = tuple(
         (
@@ -144,16 +140,9 @@ def codex_output_rewrites_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.codex)
     relevant = {
-        path.relative_to(CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME): rendered
-        for path in snapshot.plan.plugin_sources
-        if path.suffix in TEXT_FILE_SUFFIXES
-        and _unescaped_skill_dir_count(
-            rendered := render_source_text(
-                path,
-                target=Target.CODEX,
-                src_root=CANONICAL_SOURCE_ROOT,
-            )
-        )
+        path: text
+        for path, text in _text_files(snapshot.source).items()
+        if _unescaped_skill_dir_count(text) and BLOCK_DELIMITER_START not in text
     }
     failures = tuple(
         (
@@ -217,7 +206,7 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
         skill_sources,
         claude_outputs=dict(snapshot.claude),
         codex_outputs=dict(snapshot.codex),
-        required_portable_fields=PORTABLE_CAPABILITY_FIELDS,
+        required_portable_fields=frozenset((ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)),
         required_claude_only_fields=frozenset(),
     )
     synthetic = _synthetic_emission_snapshot()
@@ -232,8 +221,8 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
         synthetic_skill_sources,
         claude_outputs=dict(synthetic.claude),
         codex_outputs=dict(synthetic.codex),
-        required_portable_fields=PORTABLE_CAPABILITY_FIELDS,
-        required_claude_only_fields=frozenset(CLAUDE_ONLY_FRONTMATTER_FIELDS),
+        required_portable_fields=frozenset((ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)),
+        required_claude_only_fields=frozenset((DISABLE_MODEL_INVOCATION_FIELD,)),
     )
 
 
@@ -457,14 +446,14 @@ def _frontmatter_contract_holds(
     required_portable_fields: frozenset[str],
     required_claude_only_fields: frozenset[str],
 ) -> bool:
-    portable_coverage = {field: False for field in PORTABLE_CAPABILITY_FIELDS}
-    claude_only_coverage = {field: False for field in CLAUDE_ONLY_FRONTMATTER_FIELDS}
+    portable_coverage = {field: False for field in required_portable_fields}
+    claude_only_coverage = {field: False for field in required_claude_only_fields}
     for path in sources:
         claude_output = _decode_text(claude_outputs[path])
         codex_output = _decode_text(codex_outputs[path])
         claude_fields = frontmatter_field_names(claude_output)
         codex_fields = frontmatter_field_names(codex_output)
-        for field in PORTABLE_CAPABILITY_FIELDS:
+        for field in required_portable_fields:
             if field not in claude_fields:
                 continue
             portable_coverage[field] = True
@@ -473,7 +462,7 @@ def _frontmatter_contract_holds(
                     f"portable field {field!r} missing for {path}: "
                     f"{claude_fields=}, {codex_fields=}"
                 )
-        for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
+        for field in required_claude_only_fields:
             if field not in claude_fields:
                 continue
             claude_only_coverage[field] = True
@@ -547,11 +536,10 @@ def _claude_reference(case: SourceScenario) -> str:
 
 
 def _frontmatter_source(case: SourceScenario) -> str:
-    claude_fields = "\n".join(
-        f"{field}: true" for field in CLAUDE_ONLY_FRONTMATTER_FIELDS
-    )
+    claude_fields = f"{DISABLE_MODEL_INVOCATION_FIELD}: true"
     portable_fields = "\n".join(
-        f"{field}: {case.outer_topic}" for field in PORTABLE_CAPABILITY_FIELDS
+        f"{field}: {case.outer_topic}"
+        for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
     )
     return f"---\n{claude_fields}\n{portable_fields}\n---\n{case.fragment_body}"
 
@@ -559,10 +547,10 @@ def _frontmatter_source(case: SourceScenario) -> str:
 def _frontmatter_translation_holds(claude_body: str, codex_body: str) -> bool:
     claude_fields = frontmatter_field_names(claude_body)
     codex_fields = frontmatter_field_names(codex_body)
-    return all(
-        field in claude_fields and field not in codex_fields
-        for field in CLAUDE_ONLY_FRONTMATTER_FIELDS
+    return (
+        DISABLE_MODEL_INVOCATION_FIELD in claude_fields
+        and DISABLE_MODEL_INVOCATION_FIELD not in codex_fields
     ) and all(
         field in claude_fields and field in codex_fields
-        for field in PORTABLE_CAPABILITY_FIELDS
+        for field in (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
     )
