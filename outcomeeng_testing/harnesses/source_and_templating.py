@@ -42,6 +42,8 @@ from outcomeeng.distribution.build import (
     format_directive,
     make_jinja_environment,
     parse_directives,
+    plan_emissions,
+    plugin_source_files,
     render_text,
     resolve_runtime_token,
     runtime_token_resolver_cases,
@@ -465,12 +467,15 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
             agents={case.outer_topic: case.fragment_body},
         )
         plugin_root = builder.src_root / PLUGINS_DIR_NAME / case.plugin
-        required_files = (
+        authored_plugin_files = (
             plugin_root / SKILLS_SUBDIR_NAME / case.skill / SKILL_FILENAME,
             plugin_root
             / COMMANDS_SUBDIR_NAME
             / f"{case.inner_topic}{COMMAND_FILE_SUFFIX}",
             plugin_root / AGENTS_SUBDIR_NAME / f"{case.outer_topic}{AGENT_FILE_SUFFIX}",
+        )
+        required_files = (
+            *authored_plugin_files,
             builder.src_root
             / SHARED_DIR_NAME
             / case.scope
@@ -479,8 +484,26 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
         )
         if not all(path.is_file() for path in required_files):
             return False
+        source_inventory = frozenset(plugin_source_files(builder.src_root))
+        if not frozenset(authored_plugin_files) <= source_inventory:
+            return False
+        plan = plan_emissions(builder.src_root)
+        planned_plugin_emissions = tuple(
+            emission
+            for emission in plan.emissions
+            if emission.source in authored_plugin_files
+        )
+        if not all(
+            any(emission.source == source for emission in planned_plugin_emissions)
+            for source in authored_plugin_files
+        ):
+            return False
         build(builder.src_root, root / DIST_DIR_NAME)
-        return True
+        reader = DistTreeReader(root)
+        return all(
+            emission.relative_path in reader.list_all_files(emission.target)
+            for emission in planned_plugin_emissions
+        )
 
 
 def _fragment_required(case: SourceScenario) -> bool:
