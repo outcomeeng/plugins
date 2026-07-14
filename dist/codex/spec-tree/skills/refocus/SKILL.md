@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when running ad hoc commands, writing debug scripts, or writing code without a spec.
   NEVER run ad hoc commands or write throwaway scripts without invoking this skill.
 allowed-tools: >-
-  Read Glob Grep Write Edit
+  Read Glob Grep Write Edit Skill
 ---
 
 <objective>
@@ -47,9 +47,9 @@ Review what has been produced so far:
 
 <success_criteria>
 
-- Ad hoc commands stopped.
-- The `/apply` skill is invoked and its context-loading stage starts the governed flow.
-- No further ad hoc commands executed, whether they require permission or not is immaterial.
-- No throwaway scripts or debug code written.
+- The `/apply` skill is active for the governed node and its context-loading stage has produced target context.
+- Every ad hoc script or debug file identified during assessment is absent.
+- Any retained implementation is recorded as `/apply` input and remains uncommitted.
+- Tests authored without target context are recorded for restart at `/apply`'s context and evidence-design stages.
 
 </success_criteria>
