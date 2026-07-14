@@ -20,13 +20,12 @@ from outcomeeng.distribution.build import (
     AGENT_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
     COMMAND_FILE_SUFFIX,
-    PLUGINS_DIR_NAME,
     REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
-    SKILLS_SUBDIR_NAME,
     SKILL_FILENAME,
 )
+from outcomeeng.distribution.contracts import PLUGINS_DIR_NAME, SKILLS_SUBDIR_NAME
 
 SRC_DIR_NAME = "src"
 

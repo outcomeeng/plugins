@@ -137,7 +137,7 @@ def diagnose_check_variable(check: DiagnoseCheck) -> str:
 
 def diagnose_manifest_render_variables() -> dict[str, object]:
     """Return source-owned values rendered into every diagnose manifest."""
-    variables = {
+    variables: dict[str, object] = {
         DIAGNOSE_MARKETPLACE_NAME_VARIABLE: DIAGNOSE_MARKETPLACE.name,
         DIAGNOSE_MARKETPLACE_SOURCE_VARIABLE: DIAGNOSE_MARKETPLACE.source,
     }

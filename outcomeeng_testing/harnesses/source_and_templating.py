@@ -12,11 +12,9 @@ from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
-    PLUGINS_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     SKILL_FILENAME,
-    SKILLS_SUBDIR_NAME,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     CyclicIncludeError,
@@ -34,7 +32,12 @@ from outcomeeng.distribution.build import (
     parse_directives,
     render_text,
 )
-from outcomeeng.distribution.contracts import REQUIRE_SKILL_GUIDANCE_TEMPLATE, Target
+from outcomeeng.distribution.contracts import (
+    PLUGINS_DIR_NAME,
+    REQUIRE_SKILL_GUIDANCE_TEMPLATE,
+    SKILLS_SUBDIR_NAME,
+    Target,
+)
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
