@@ -29,11 +29,7 @@ Before asking the operator to continue, build a no-surprises proposal. The opera
 
 The proposal does not need to enumerate every eventual file. It must name the known surfaces and evidence categories clearly enough that approval does not hide foreseeable work. After the operator approves continuation, avoid surprises: if a new required skill, evidence surface, external dependency, ownership conflict, or verification class appears that was not represented in the proposal, stop at the next safe checkpoint and present the delta before continuing.
 
-**Step 3: Present the session's first action**
-
-This step comes BEFORE loading node context. Present the `next_step` frontmatter value as the handoff's recommended first action. Treat it as context, not as a substitute for the required `/contextualize` step below; the resuming context still chooses skills from loaded methodology and current repository state.
-
-**Step 4: Check out the work branch**
+**Step 3: Check out the work branch**
 
 Read the `git_ref` field from the session frontmatter. When it names a feature branch on origin — a branch name such as `work/…`, not the default branch and not a bare commit SHA — fetch and check that branch out **before** loading node context. The spec-tree state the session points at lives on that branch, and `/handoff`'s persistence precondition guarantees it exists on origin:
 
@@ -50,7 +46,7 @@ Then check it out per the checkout kind:
 
 When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this checkout step. Do not treat the current checkout as authoritative product truth yet: a detached worktree parked at a bare SHA, or a stale default-branch checkout, can sit behind `origin/<default>`.
 
-**Step 4b: Bring the checkout current — sync before presenting**
+**Step 4: Bring the checkout current — sync before presenting**
 
 Before inspecting anchored nodes, presenting any session detail, or touching coordination notes, bring the checkout current for **every** `git_ref` kind — feature branch, default branch, or commit SHA — by invoking `/sync-base`. A session file records claims that were true at handoff time; reading or presenting them against a stale checkout is the exact failure this step prevents (a base that advanced over an anchored node makes the recorded snapshot silently wrong). Do not defer the sync to `/contextualize` (Step 8) — the reconciliation and presentation below must read current product truth, never the parked commit. `/sync-base` advances a clean behind-base detached checkout to the base tip and rebases a behind-base branch; act on its result as `/sync-base` documents.
 
@@ -78,6 +74,14 @@ Glob: "{full-spx-node-path}/ISSUES.md"
 ```
 
 If found, list their paths. Do not read `PLAN.md` or `ISSUES.md` content in this step. `/contextualize` reads node-local coordination notes after product context and ancestry are loaded; acting on note content before then violates the spec-tree context guarantee.
+
+**Step 5b: Present the session's first action**
+
+After checkout synchronization and claim reconciliation, present the `next_step`
+frontmatter value as the handoff's recommended first action. This comes before
+loading node context or starting continuation work. Treat it as context, not as
+a substitute for the required `/contextualize` step below; the resuming context
+still chooses skills from loaded methodology and current repository state.
 
 **Step 6: Present persisted artifacts**
 
@@ -216,10 +220,10 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 <success_criteria>
 
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading
-- [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 4)
-- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 4)
-- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind (Step 4b)
+- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work (Step 5b)
+- [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 3)
+- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 3)
+- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind (Step 4)
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, and per-claim verdicts (`Confirmed` / `Discrepancy` / `Unverifiable`) presented in place of the recorded snapshot, before the checkpoint (Step 5)
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
