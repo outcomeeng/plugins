@@ -22,7 +22,7 @@ It resolves the base ref and `origin/<base>` through the shared changeset-scope 
 | `status`          | exit | meaning                                                                                                                                              | how Claude acts                                                                                                                                                             |
 | ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `already_current` | 0    | the branch is not behind the base                                                                                                                    | proceed                                                                                                                                                                     |
-| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                          | proceed; re-run only the verification and review the base movement invalidated — `<readiness_preservation>` scopes which                                                    |
+| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                          | proceed; use `<readiness_preservation>` to identify which verification and review evidence the base movement invalidated                                                    |
 | `conflict`        | 3    | the rebase stopped with active conflict state; the result's `conflict` object names the conflicted paths, git facts, git conflict text, and options  | reconcile per `<conflict_reconciliation>`; stop for the operator only after deterministic evidence cannot decide product intent, leaving the rebase active                  |
 | `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched               | resolve autonomously per `<dirty_tree_resolution>` — commit the changes to the right branch and re-run; never stash, never surface it as a conflict, never ask the operator |
 | `git_failure`     | 1    | a diverged detached HEAD carrying its own commits, an unresolved base, or a failed fetch — a clean behind-base detached HEAD is advanced, not failed | report `detail`; do not rebase                                                                                                                                              |
@@ -37,7 +37,7 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 A `dirty_tree` outcome means uncommitted tracked changes block the rebase — almost always a file Claude created earlier this session, not a content conflict. A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote is the canonical case. A dirty tree is never a reason to stop and ask the operator, and never a reason to stash — stash is forbidden, and committing is what clears the tree. Resolve it in place:
 
-1. **Recognize the changes as Claude's.** Changes Claude made this session are Claude's to commit. (Operator work-in-progress Claude did not author is the one exception — see the read-only caller note below — and is still never a merge-conflict question to the operator.)
+1. **Recognize the changes as Claude's.** Changes Claude made this session are Claude's to commit. (Operator work-in-progress Claude did not author is the one exception — see the context-loading caller note below — and is still never a merge-conflict question to the operator.)
 2. **Classify the change against the session's objective, then commit it through `/commit-changes`:**
    - **Related to the objective** → commit to the session's change branch. When the worktree is detached or sitting on the default branch, create the change branch from the current commit first — never commit the objective onto the default branch.
    - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the imperfection ledger that the branch is pending `/merge`. At session end `/merge` routes a coordination-note-only changeset to the default branch on origin through its direct-push transport, exactly as the merge guidance prescribes for such a changeset.
@@ -147,6 +147,24 @@ A product-intent conflict is the only thing on the other side. Name it precisely
 
 </invalid_operator_escalations>
 
+<testing>
+
+Run `just test spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/tests` after changing the synchronizer or this workflow contract. The real-git test matrix covers:
+
+| Input                                                | Expected result                                                                     |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| attached branch at the fetched base tip              | exit 0; `status=already_current`; non-null `preservation`                           |
+| attached branch behind the fetched base              | exit 0; `status=rebased`; branch commit preserved; non-null `preservation`          |
+| attached branch with a tracked edit                  | exit 4; `status=dirty_tree`; HEAD and working tree unchanged; no `conflict`         |
+| attached branch with conflicting commits             | exit 3; `status=conflict`; active rebase state and structured `conflict`            |
+| clean detached HEAD behind the fetched base          | exit 0; `status=rebased`; HEAD advanced to `origin/<base>`; non-null `preservation` |
+| detached HEAD carrying a commit absent from the base | exit 1; `status=git_failure`; HEAD unchanged                                        |
+| missing `origin` during fetch                        | exit 1; `status=git_failure`; actionable `detail`                                   |
+
+Every fixture uses an invocation-unique temporary directory owned and removed by pytest's `tmp_path` fixture.
+
+</testing>
+
 <failure_modes>
 
 **Failure 1: Bare Bash bypassed command containment.**
@@ -169,11 +187,11 @@ How to avoid: state the attached-branch rebase and detached-head advance as sepa
 
 <success_criteria>
 
-- A behind-base branch ends rebased onto `origin/<base>` with its own commits preserved, or stopped at an active rebase conflict with structured conflict details and operator options.
-- A behind-base branch with uncommitted tracked changes ends reported as `dirty_tree` with the working tree untouched and no conflict details, leaving the caller to commit and re-run.
-- A `dirty_tree` from Claude's own session changes ends committed to the correct branch — objective work to the change branch, an unrelated coordination note to its own branch pending `/merge` — and re-synced, never stashed and never surfaced to the operator.
-- No `git reset` synchronizes a branch, no commit or stash clears a dirty tree from inside sync-base, and no automatic `git rebase --abort` erases conflict evidence at operator handoff.
-- A clean rebase completes with no operator prompt.
-- A clean outcome carries a `preservation` proof of git facts only — full OIDs, base delta, branch paths, overlap, patch identity — naming no lane and never satisfying a merge gate.
+- Exit 0 carries `status=already_current` or `status=rebased`, `conflict=null`, and a non-null `preservation` object; after `rebased`, HEAD equals the fetched base tip with attached-branch commits preserved or a clean ancestor detached HEAD advanced.
+- Exit 4 carries `status=dirty_tree` and `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
+- Exit 3 carries `status=conflict`, a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
+- Exit 1 carries `status=git_failure` and a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
+- Every clean outcome's `preservation` object carries `schema_version`, full old/new base and head OIDs, base and branch path sets, overlap, and patch-identity booleans; it carries no project lane name.
+- Git state and command output show no synchronization through `git reset`, no commit or stash created by sync-base, and no automatic `git rebase --abort` at conflict handoff.
 
 </success_criteria>
