@@ -35,13 +35,13 @@ index; never manufacture a filesystem path into another skill.
 
 Ask or infer from context:
 
-| Artifact         | When to create                        | Template                                    |
-| ---------------- | ------------------------------------- | ------------------------------------------- |
-| **Product spec** | Bootstrapping a new tree              | `templates/product/product-name.product.md` |
-| **ADR**          | Architecture decision needs recording | `templates/decisions/decision-name.adr.md`  |
-| **PDR**          | Product decision needs recording      | `templates/decisions/decision-name.pdr.md`  |
-| **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
-| **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
+| Artifact         | When to create                        | `/understand` template index |
+| ---------------- | ------------------------------------- | ---------------------------- |
+| **Product spec** | Bootstrapping a new tree              | Product template             |
+| **ADR**          | Architecture decision needs recording | ADR template                 |
+| **PDR**          | Product decision needs recording      | PDR template                 |
+| **Enabler node** | Shared infrastructure for 2+ siblings | Enabler template             |
+| **Outcome node** | User-facing behavior with hypothesis  | Outcome template             |
 
 If unclear which type, apply the node-type decision table loaded by `/understand`:
 
