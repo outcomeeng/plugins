@@ -309,8 +309,9 @@ Foundation skills emit XML markers into the conversation when loaded. All declar
 
 ## Template ownership
 
-`understand` owns the foundation references, examples, and templates. Other skills name the
-owning template capability rather than manufacturing a cross-skill filesystem token:
+`understand` owns the foundation references, examples, and artifact templates.
+`update-instruction-block` owns the instruction-block template it renders. Other skills name
+the owning template capability rather than manufacturing a cross-skill filesystem token:
 
 ```text
 understand/
@@ -331,7 +332,6 @@ understand/
 │   ├── verification-kinds.md
 │   └── what-goes-where.md
 └── templates/
-    ├── instruction-block.md
     ├── product/
     │   └── product-name.product.md
     ├── decisions/
@@ -340,6 +340,10 @@ understand/
     └── nodes/
         ├── enabler-name.md
         └── outcome-name.md
+
+update-instruction-block/
+└── templates/
+    └── instruction-block.md
 ```
 
 Action skills request the owning capability by template identity, for example: "Use
