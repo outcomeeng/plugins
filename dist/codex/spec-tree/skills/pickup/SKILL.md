@@ -1,8 +1,8 @@
 ---
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
-argument-hint: "[session-id | --list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${SKILL_DIR}/scripts/verify_session_claims.py":*), request_user_input, Glob, Skill
+argument-hint: "[--list] [--auto-continue]"
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3:*verify_session_claims.py*), request_user_input, Glob, Skill
 ---
 
 <objective>
@@ -11,7 +11,7 @@ A claimed handoff session — loaded, reconciled against current repository stat
 
 <constraints>
 
-- Pickup opens session responsibility and NEVER archives, deletes, or closes a session. Keep a claimed session in `doing` until a later `/handoff` accounts for it, except when the operator explicitly directs the quick-exit return-to-queue action defined in `<claimed_sessions>`; only that instruction permits `spx session release <id>`.
+- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -27,14 +27,14 @@ Three rules govern a conversation's claimed-session set:
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
-   - Explicitly direct `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
+   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
 
    Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
 
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, delete, or manually move any session. It MUST NOT release a claimed session unless the operator explicitly directs the quick-exit return-to-queue action. After the post-context checkpoint, leave the claimed session in `doing` unless the operator explicitly invokes a closure workflow or that quick exit.
+- The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
@@ -86,21 +86,7 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
 </session_management>
 
 <claim>
-**If `$ARGUMENTS` contains a session ID:**
-
-1. Normalize a trailing `.md` suffix away so the canonical ID remains `YYYY-MM-DD_HH-MM-SS`.
-2. Resolve that exact session through structured output without presenting or processing its content before the foundation loads:
-   ```bash
-   spx session show --json <session-id>
-   ```
-3. Claim that exact session:
-   ```bash
-   spx session pickup <session-id>
-   ```
-
-This direct-ID branch takes precedence over `--list` and automatic selection. Preserve `--auto-continue` for the post-context checkpoint; it does not change which session is claimed.
-
-**Otherwise, if `$ARGUMENTS` contains `--list`:**
+**If `$ARGUMENTS` contains `--list`:**
 
 1. Get all todo sessions:
    ```bash
@@ -108,23 +94,21 @@ This direct-ID branch takes precedence over `--list` and automatic selection. Pr
    ```
 2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
 3. Present options with `request_user_input`:
-
    ```json
    {
      "questions": [
        {
-         "id": "handoff",
          "question": "Which handoff would you like to load?",
          "header": "Handoff",
+         "multiSelect": false,
          "options": [
-           { "label": "2026-03-29_14-22-00 (Recommended)", "description": "High priority on work/session-frontmatter. Goal: roll out structured session metadata. Next: update dependent skills." },
-           { "label": "2026-03-28_09-15-00", "description": "Medium priority on the main checkout. Goal: complete auth assertions. Next: review the outcome spec." }
+           { "label": "2026-03-29 14:22 [high] work/session-frontmatter", "description": "Goal: roll out structured session metadata. Next: update dependent skills." },
+           { "label": "2026-03-28 09:15 [medium] main checkout", "description": "Goal: complete auth assertions. Next: review the outcome spec." }
          ]
        }
      ]
    }
    ```
-
 4. Claim the chosen session:
    ```bash
    spx session pickup <selected-session-id>
@@ -236,10 +220,10 @@ A successful pickup:
 - [ ] Session claimed via `spx session pickup`
 - [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
 - [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] Claimed session remains in `doing` after pickup unless the operator explicitly directs the quick-exit return-to-queue action — pickup never archives or otherwise moves a session, and release is limited to that instruction
+- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
+- [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint

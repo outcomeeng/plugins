@@ -209,13 +209,13 @@ Foundation skills load once per conversation. They emit conversation markers so 
 
 Action skills do the work. Before starting, they check conversation history for foundation markers and invoke missing foundations.
 
-| Skill       | Use case | Scope                                                                | Status      |
-| ----------- | -------- | -------------------------------------------------------------------- | ----------- |
-| `bootstrap` | 2        | Interview user, scaffold new spec tree                               | Implemented |
-| `author`    | 3        | Write a product/ADR/PDR/enabler/outcome from a decision-ready packet | Implemented |
-| `decompose` | 4        | Systematically decompose higher-level nodes to lower levels          | Implemented |
-| `refactor`  | 5        | Structural moves, re-scoping, factoring shared enablers              | Implemented |
-| `align`     | 6        | Clarify, augment, align, deconflict while preserving truth           | Implemented |
+| Skill       | Use case | Scope                                                           | Status      |
+| ----------- | -------- | --------------------------------------------------------------- | ----------- |
+| `bootstrap` | 2        | Interview user, scaffold new spec tree                          | Implemented |
+| `author`    | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
+| `decompose` | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
+| `refactor`  | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
+| `align`     | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
 
 ### Spec
 
@@ -258,8 +258,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
   - Validates artifact existence along the path
   - Returns context manifest or abort with remediation
   - Bootstrap mode: returns empty manifest with `bootstrap=true` when creating into an empty tree (no abort)
-- **Operator-facing action skills** (`decompose`, `refactor`, `align`) do not duplicate foundation content. They reference `understand` for templates and methodology.
-- **`author`** is a hidden artifact-writing protocol. It accepts a decision-ready packet from a parent workflow, uses the template and example indexes loaded by `understand`, writes one settled artifact, and returns changed paths plus validation results. It performs no interview, placement decision, evidence classification, alignment, or delivery.
+- **Action skills** (`author`, `decompose`, `refactor`, `align`) do not duplicate foundation content. They reference `understand` for templates and methodology.
 
 ### Spec
 
@@ -332,11 +331,11 @@ ${UNDERSTAND_DIR}/
         └── outcome-name.md
 ```
 
-Action skills invoke `understand` and select templates through its loaded template and example indexes. They never manufacture a cross-skill filesystem path.
+Action skills reference templates with: `Read: ${UNDERSTAND_DIR}/templates/nodes/outcome-name.md`
 
 ## Conversational flow contract
 
-Operator-facing declare action skills follow this interaction contract. The hidden `author` protocol begins from a complete decision-ready packet and returns to its caller after writing and validation.
+Declare action skills follow this interaction contract:
 
 1. **Intake** -- Ask for target path/scope and intended operation.
 2. **Foundation gate** -- Check for `<SPEC_TREE_FOUNDATION>` marker; invoke `understand` if absent.
@@ -380,12 +379,12 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 #### `author`
 
-1. Validate a decision-ready packet containing operation, artifact type, canonical target path, context target, settled content, and the governing structure decision.
-2. Load `understand`, select the artifact type's owned template and example, and load the packet's context target through `contextualize`.
-3. Confirm create-path collision freedom or update-path identity without choosing placement, index, or artifact type.
-4. Validate the settled content against the selected template, atemporal voice, full-path references, evidence links, placement, and node-type constraints.
-5. Write only the packet's artifact and validate the persisted bytes.
-6. Return changed paths and per-check validation results to the calling workflow without interview, alignment, or delivery work.
+1. Detect empty tree → invoke `bootstrap` if no product spec exists.
+2. Intake node type (enabler or outcome), intended location, and path.
+3. Clarify user intent and unresolved product decisions.
+4. Draft artifact using templates from `understand` and Spec Tree rules.
+5. Validate atemporal voice, consistency, and testability (assertions link to test files for outcomes).
+6. Return draft, open decisions, and recommended next steps (decomposition or test creation).
 
 #### `decompose`
 
