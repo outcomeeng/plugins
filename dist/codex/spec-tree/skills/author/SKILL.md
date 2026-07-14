@@ -64,7 +64,15 @@ For `update`:
 
 <step number="2" name="Load foundation and context">
 
-Require a live `<SPEC_TREE_FOUNDATION>` marker. Invoke `/understand` when it is absent, then read the canonical foundation template and filled example for `artifact_type`.
+Require a live `<SPEC_TREE_FOUNDATION>` marker. Invoke `/understand` when it is absent. `/understand` owns the portable template and example indexes; use the loaded foundation to select both sources for `artifact_type`:
+
+- `product` -> product template and product example.
+- `adr` -> ADR template and ADR example.
+- `pdr` -> PDR template and PDR example.
+- `enabler` -> enabler template and enabler example.
+- `outcome` -> outcome template and outcome example.
+
+Return an unsupported-artifact result when the loaded `/understand` index lacks either source. NEVER manufacture a cross-skill filesystem path or substitute a repository-local template.
 
 Require a live `<SPEC_TREE_CONTEXT target="{context_target}">` marker. Invoke `/contextualize {context_target}` when it is absent or targets another address.
 
@@ -83,7 +91,7 @@ Validate `content` before writing:
 - Enabler and outcome nesting follows the foundation node-type rules.
 - Every assertion carries a caller-supplied `[test]`, `[eval]`, or `[audit]` evidence link; `/author` makes no evidence classification.
 - An outcome contains the three-part output, outcome, and impact hypothesis.
-- ADR/PDR verification sections and tags match the canonical decision template.
+- ADR/PDR verification sections and tags match the canonical decision template selected in Step 2.
 
 Return every failed check to the caller without writing a partial artifact.
 
