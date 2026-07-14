@@ -1012,6 +1012,22 @@ def render_source_text(
     )
 
 
+def render_planned_emission_text(
+    emission: PlannedEmission,
+    *,
+    src_root: Path,
+) -> str:
+    """Render one planned text emission before target-specific translation."""
+    return render_text(
+        emission.source.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            emission.target,
+            plugin_name=emission.relative_path.parts[0],
+        ),
+    )
+
+
 def _translate_rendered_text(rendered: str, *, target: _Target) -> str:
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
@@ -1033,14 +1049,7 @@ def _emit_planned_fan_out(
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(emission.source, destination)
         return
-    rendered = render_text(
-        emission.source.read_text(encoding="utf-8"),
-        shared_root=src_root / SHARED_DIR_NAME,
-        variables=_render_variables(
-            emission.target,
-            plugin_name=emission.relative_path.parts[0],
-        ),
-    )
+    rendered = render_planned_emission_text(emission, src_root=src_root)
     translated = _translate_rendered_text(rendered, target=emission.target)
     _write_text(destination, translated)
     shutil.copymode(emission.source, destination)
