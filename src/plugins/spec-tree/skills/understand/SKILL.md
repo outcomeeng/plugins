@@ -14,7 +14,7 @@ allowed-tools: Read, Glob, Grep
 
 <objective>
 
-The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds.
+The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds, plus a complete materials receipt when a named composition profile is requested.
 
 </objective>
 
@@ -41,15 +41,20 @@ Resolve `$profile` before entering the workflow:
 
 - Empty: load the standard foundation.
 - `align`: load the standard foundation plus the conformance references and structural templates owned by this skill, then emit the `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` receipt below.
+- `author`: load the standard foundation plus the content taxonomy, exclusion rules, structural templates, and filled examples needed to author a Spec Tree artifact.
+- `bootstrap`: load the standard foundation plus the product-domain classifier and product template needed to scaffold a tree.
+- `decompose`: load the standard foundation plus the content taxonomy, product-domain classifier, and node templates needed to compose children and assign indices.
+- `refactor`: load the standard foundation plus the content taxonomy needed to move or re-scope nodes.
+- `instruction-block`: load the standard foundation, locate and read the canonical instruction-block template, and return its resolved path for the consuming workflow.
 - Any other value: STOP and report the unsupported profile.
 
-The `align` profile is the deterministic cross-skill lookup mechanism for `/align`. The caller invokes `/understand align` as a composed skill capability and consumes the loaded content and receipt; it never manufactures a filesystem path into this skill's bundle.
+Each non-empty profile is the deterministic cross-skill lookup mechanism for its consuming workflow. The caller invokes `/understand <profile>` as a composed skill capability and consumes the loaded content and receipt; it never manufactures a filesystem path into this skill's bundle.
 
 </composition_profiles>
 
 <workflow>
 
-1. Resolve `$profile` through `<composition_profiles>`, then check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present and `$profile` is empty, the foundation is already loaded — skip ahead and read directly whichever `${CLAUDE_SKILL_DIR}/references/` or `${CLAUDE_SKILL_DIR}/templates/` file this invocation needs. The `align` profile never takes this fast path because it must return a fresh materials receipt to its caller.
+1. Resolve `$profile` through `<composition_profiles>`, then check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present and `$profile` is empty, the foundation is already loaded — skip ahead and read directly whichever `${CLAUDE_SKILL_DIR}/references/` or `${CLAUDE_SKILL_DIR}/templates/` file this invocation needs. A non-empty profile never takes this fast path because it must return a fresh materials receipt to its caller.
    A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
    After every compaction, treat the marker as absent until this workflow emits it again.
    Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
@@ -90,7 +95,16 @@ The `align` profile is the deterministic cross-skill lookup mechanism for `/alig
    - `${CLAUDE_SKILL_DIR}/examples/` — concrete filled specs (read to see what a completed spec looks like)
 
    Locate the five exact template paths with `Glob`, and enumerate examples with `Glob: "${CLAUDE_SKILL_DIR}/examples/*.md"`.
-   When `$profile` is `align`, also read `${CLAUDE_SKILL_DIR}/references/what-goes-where.md` and all five listed templates in full. Steps 2 and 6 then guarantee that `durable-map.md`, `node-types.md`, `what-goes-where.md`, and every structural template are present in the caller's conversation.
+   For a non-empty profile, read its additional materials in full:
+
+   | Profile             | Additional materials                                                                                                                             |
+   | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `align`             | `references/what-goes-where.md` and all five structural templates                                                                                |
+   | `author`            | `references/what-goes-where.md`, `references/excluded-nodes.md`, all five structural templates, and every file under `examples/`                 |
+   | `bootstrap`         | `references/product-domain-shapes.md` and `templates/product/product-name.product.md`                                                            |
+   | `decompose`         | `references/what-goes-where.md`, `references/product-domain-shapes.md`, `templates/nodes/enabler-name.md`, and `templates/nodes/outcome-name.md` |
+   | `refactor`          | `references/what-goes-where.md`                                                                                                                  |
+   | `instruction-block` | `templates/instruction-block.md`; locate it with `Glob`, read it in full, and retain the resolved absolute path returned by the tool             |
 7. Read the product's root routing guide once, if present — `Read: {{! file('root_guide') !}}`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
 8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
@@ -106,12 +120,47 @@ Examples available in: ${CLAUDE_SKILL_DIR}/examples/
 </SPEC_TREE_FOUNDATION>
 ```
 
-9. When `$profile` is `align`, emit this additional receipt only after every named material has been read in full:
+9. When `$profile` is non-empty, emit the matching receipt only after every named material has been read in full:
 
 ```text
 <SPEC_TREE_FOUNDATION_MATERIALS profile="align">
 Conformance references loaded by /understand: durable-map, what-goes-where, node-types
 Structural templates loaded by /understand: adr, pdr, product, enabler, outcome
+</SPEC_TREE_FOUNDATION_MATERIALS>
+```
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="author">
+Authoring references loaded by /understand: durable-map, node-types, assertion-types, what-goes-where, excluded-nodes
+Structural templates loaded by /understand: adr, pdr, product, enabler, outcome
+Filled examples loaded by /understand: every bundled example
+</SPEC_TREE_FOUNDATION_MATERIALS>
+```
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="bootstrap">
+Bootstrap references loaded by /understand: product-domain-shapes
+Structural templates loaded by /understand: product
+</SPEC_TREE_FOUNDATION_MATERIALS>
+```
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="decompose">
+Decomposition references loaded by /understand: node-types, ordering-rules, what-goes-where, product-domain-shapes
+Structural templates loaded by /understand: enabler, outcome
+</SPEC_TREE_FOUNDATION_MATERIALS>
+```
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="refactor">
+Refactoring references loaded by /understand: node-types, what-goes-where
+</SPEC_TREE_FOUNDATION_MATERIALS>
+```
+
+```text
+<SPEC_TREE_FOUNDATION_MATERIALS profile="instruction-block">
+Canonical template loaded by /understand: instruction-block
+Template path: <resolved-absolute-template-path>
 </SPEC_TREE_FOUNDATION_MATERIALS>
 ```
 
@@ -133,7 +182,8 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 
 - The conversation contains one live `<SPEC_TREE_FOUNDATION>` marker whose loaded set covers the six foundation references.
 - Every bundled operational reference, template, and example resolves from `${CLAUDE_SKILL_DIR}`; repo-local overlays are enumerated separately from `spx/local/`.
-- An `align` profile invocation additionally reads all eight conformance materials in full and emits `<SPEC_TREE_FOUNDATION_MATERIALS profile="align">` only after that complete read.
+- Every non-empty profile reads its declared materials in full and emits only its matching `<SPEC_TREE_FOUNDATION_MATERIALS profile="...">` receipt after that complete read.
+- The `instruction-block` receipt reports the resolved absolute path returned while locating the canonical template; consuming skills never derive that path from their own skill directory.
 - The marker's local lifecycle route, default-branch completion boundary, and routing-guide state match the repository observed during this session.
 - A marker retained by the Step 1 fast path satisfies the same invariants without a duplicate reload; a freshly emitted marker appears only after every declared resource was located.
 - Any contradiction among the loaded foundation references is visible to the operator rather than hidden behind the marker.

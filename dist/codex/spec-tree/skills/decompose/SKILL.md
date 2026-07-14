@@ -13,7 +13,7 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Invoke `/understand decompose` on every run. Continue only when it returns both a live `<SPEC_TREE_FOUNDATION>` marker and a `<SPEC_TREE_FOUNDATION_MATERIALS profile="decompose">` receipt covering the decomposition references and both node templates.
 
 Accept exactly one target:
 
@@ -22,15 +22,7 @@ Accept exactly one target:
 
 If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
-Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
-
-- `${SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
-- `${SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `${SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
-- `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
+The profile reloads `node-types`, `ordering-rules`, `what-goes-where`, and `product-domain-shapes` every run, plus the enabler and outcome templates. A generic foundation marker never substitutes for this fresh receipt. Invoke `/interview` for questioning methodology when the clarity gate finds incomplete or ambiguous composition input.
 
 </quick_start>
 
@@ -243,7 +235,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the enabler or outcome template loaded by `/understand decompose`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.

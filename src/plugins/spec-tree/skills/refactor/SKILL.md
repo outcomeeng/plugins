@@ -12,13 +12,9 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 
 <quick_start>
 
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
+**PREREQUISITE**: Invoke `/understand refactor` on every run. Continue only when it returns both a live `<SPEC_TREE_FOUNDATION>` marker and a `<SPEC_TREE_FOUNDATION_MATERIALS profile="refactor">` receipt covering node types and the content taxonomy.
 
-References and workflows:
-
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — content taxonomy (what belongs where)
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler vs outcome
-- `/decompose` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
+Apply the loaded node-types and what-goes-where references. Invoke `/decompose` for structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment.
 
 </quick_start>
 
@@ -182,7 +178,7 @@ After applying any operation:
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement under the taxonomy loaded by `/understand refactor`
 
 </step>
 

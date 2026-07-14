@@ -155,7 +155,7 @@ If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standar
 Tested inputs and expected outputs:
 
 - Direct thread node ID: `--host ghe.example.com PRRT_thread0002` resolves that thread by calling `gh api graphql --silent` with `id=PRRT_thread0002`.
-- Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
+- Review-comment discovery: `--host ghe.example.com --repo <owner>/<repo> --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
 - Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
 - Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
 - Malformed resolver CLI inputs: generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.

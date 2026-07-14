@@ -6,6 +6,7 @@ description: >-
   session, or when troubleshooting a missing session identity, worktree claim,
   or unreachable spx CLI. NEVER guess why session state is missing without
   running these checks first.
+allowed-tools: Read, Bash(spx diagnose:*)
 ---
 
 <objective>
@@ -18,16 +19,18 @@ non-healthy verdict.
 
 <workflow>
 
-1. Run `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`.
-2. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
+1. Read `${CLAUDE_SKILL_DIR}/manifest.json` so the diagnostic contract and
+   declared `spx` version floor are available for startup-failure remediation.
+2. Run `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`.
+3. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
    version strings, paths, verdict names, and status values are identity values;
    report them verbatim.
-3. Relay the `spx diagnose` report without reclassifying any check and without
+4. Relay the `spx diagnose` report without reclassifying any check and without
    recomputing the overall verdict.
-4. When the report's overall verdict is non-healthy, add remediation judgment
+5. When the report's overall verdict is non-healthy, add remediation judgment
    grounded only in the report's per-check verdicts, readings, and remediation
    fields.
-5. When the command cannot start, the `diagnose` subcommand is missing, the
+6. When the command cannot start, the `diagnose` subcommand is missing, the
    manifest is rejected, or the exit code is nonzero before a report is emitted,
    report stdout, stderr, and the exit code verbatim, then direct the user to
    install or update `@outcomeeng/spx` to the floor declared in the manifest.
@@ -60,6 +63,8 @@ the installed plugin asks `spx diagnose` to evaluate.
 
 - `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`
   ran, or its startup failure was reported verbatim.
+- The bundled manifest was read before execution, so startup remediation uses
+  its declared `spx` version floor.
 - The deterministic report was relayed without rewriting check verdicts,
   readings, or the overall verdict.
 - Every non-healthy verdict in the report received remediation judgment grounded
