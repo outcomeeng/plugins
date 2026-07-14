@@ -1,7 +1,7 @@
 # Reference Portability Validation
 
 PROVIDES a validator that flags a reference in plugin content under `src/plugins/` pointing into this marketplace's own files — which a consumer checkout does not hold — while passing references to the consumer's own spec tree or to the plugin's own files
-SO THAT the marketplace quality gate and skill, agent, and command authors
+SO THAT the marketplace quality gate and skill and agent authors
 CAN keep shipped plugin content resolvable in a consumer repository that holds this marketplace's plugins but none of its internal directories
 
 ## Assertions

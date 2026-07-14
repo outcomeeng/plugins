@@ -19,6 +19,7 @@ CAN locate sources predictably and express shared-content includes uniformly.
 
 - ALWAYS: `src/` contains `src/plugins/<plugin>/{skills,agents}/` mirroring the authored plugin structure and `src/_shared/<scope>/<topic>/` holding canonical shared content — a single source tree houses all authored plugin material ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: source-tree validation applies the plugin-subdirectory allowlist only to directories, so ordinary files under `src/plugins/<plugin>/` do not fail the build ([test](tests/test_source_and_templating.compliance.l1.py))
+- NEVER: source-tree validation accepts a plugin subdirectory outside the source-owned plugin-subdirectory allowlist ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: shared content directories under `src/_shared/<scope>/<topic>/` contain a `fragment.md` body file and any reference subtrees that travel with it into an including skill — fragments are the unit of inclusion ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: the Jinja2 environment uses custom delimiters `{!% %!}` and `{{! !}}` for template parsing — collision-free with skill content that literally contains standard Jinja2 syntax ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: `{!% require_skill 'plugin:skill' %!}` expands to identical coding-agent-neutral invocation text in both targets — full sister-skill content stays in its own skill ([test](tests/test_source_and_templating.compliance.l1.py))
