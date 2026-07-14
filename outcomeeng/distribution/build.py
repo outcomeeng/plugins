@@ -18,6 +18,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
@@ -165,6 +166,50 @@ IGNORED_SOURCE_DIRECTORY_NAMES: Final = frozenset({"__pycache__"})
 IGNORED_SOURCE_FILE_SUFFIXES: Final = (".pyc",)
 FormatterProbe = Callable[[str], str | None]
 FormatterRunner = Callable[[tuple[str, ...], Path], subprocess.CompletedProcess[str]]
+
+
+class EmissionAction(StrEnum):
+    """How one source file reaches a generated target tree."""
+
+    RENDER = "render"
+    COPY = "copy"
+    FAN_OUT = "fan-out"
+
+
+@dataclass(frozen=True)
+class PlannedEmission:
+    """One source-owned output in one generated target tree."""
+
+    source: Path
+    target: _Target
+    relative_path: Path
+    action: EmissionAction
+
+
+@dataclass(frozen=True)
+class BuildPlan:
+    """Complete source and output inventory for one build."""
+
+    plugin_sources: tuple[Path, ...]
+    emissions: tuple[PlannedEmission, ...]
+
+    def for_target(self, target: _Target) -> tuple[PlannedEmission, ...]:
+        """Return the planned outputs for ``target``."""
+        return tuple(
+            emission for emission in self.emissions if emission.target is target
+        )
+
+    def collisions(self) -> dict[tuple[_Target, Path], tuple[Path, ...]]:
+        """Return output coordinates with more than one producing source."""
+        producers: dict[tuple[_Target, Path], list[Path]] = {}
+        for emission in self.emissions:
+            coordinate = (emission.target, emission.relative_path)
+            producers.setdefault(coordinate, []).append(emission.source)
+        return {
+            coordinate: tuple(paths)
+            for coordinate, paths in producers.items()
+            if len(paths) > 1
+        }
 
 
 @dataclass(frozen=True)
@@ -684,6 +729,23 @@ def strip_frontmatter_fields(
     return suffix.lstrip("\r\n")
 
 
+def frontmatter_field_names(text: str) -> frozenset[str]:
+    """Return top-level field names from the opening YAML frontmatter fence."""
+    if not text.startswith("---\n"):
+        return frozenset()
+    closing_index = text.find("\n---", len("---\n"))
+    if closing_index == -1:
+        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
+    fence_end = closing_index + len("\n---")
+    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
+        raise FrontmatterError("frontmatter closing fence is malformed")
+    return frozenset(
+        key
+        for line in text[len("---\n") : closing_index].splitlines()
+        if (key := _frontmatter_key(line)) is not None
+    )
+
+
 # ---------------------------------------------------------------------------
 # Stage 5: Build orchestration
 # ---------------------------------------------------------------------------
@@ -702,16 +764,13 @@ def emit_skill(
     target-specific translation, and writes the result to the corresponding
     location under dist_root.
     """
-    src_relative = _relative_plugin_path(src_path)
+    src_root = shared_root.parent
+    src_relative = plugin_relative_path(src_path, src_root=src_root)
     destination = dist_root / target.value / src_relative
-    raw_text = src_path.read_text(encoding="utf-8")
-    rendered = render_text(
-        raw_text,
-        shared_root=shared_root,
-        variables=_render_variables(
-            target,
-            plugin_name=source_plugin_name(src_path),
-        ),
+    rendered = render_source_text(
+        src_path,
+        target=target,
+        src_root=src_root,
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
@@ -721,12 +780,6 @@ def emit_skill(
         )
     _write_text(destination, translated)
     shutil.copymode(src_path, destination)
-    _fan_out_shared_references(
-        src_path,
-        destination,
-        shared_root=shared_root,
-        raw_source=raw_text,
-    )
 
 
 def build(src_root: Path, dist_root: Path) -> None:
@@ -740,9 +793,8 @@ def build(src_root: Path, dist_root: Path) -> None:
 
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
-    _validate_source_tree(src_root)
+    plan = plan_emissions(src_root)
     shared_root = src_root / SHARED_DIR_NAME
-    plugins_root = src_root / PLUGINS_DIR_NAME
 
     for target in _Target:
         target_root = dist_root / target.value
@@ -750,28 +802,35 @@ def build(src_root: Path, dist_root: Path) -> None:
             shutil.rmtree(target_root)
         target_root.mkdir(parents=True, exist_ok=True)
 
-    for source_file in _iter_plugin_files(plugins_root):
-        for target in _Target:
-            if _is_rendered_text(source_file):
-                if (
-                    SKILLS_SUBDIR_NAME in source_file.parts
-                    and source_file.name == SKILL_FILENAME
-                ):
-                    emit_skill(
-                        source_file,
-                        target=target,
-                        dist_root=dist_root,
-                        shared_root=shared_root,
-                    )
-                    continue
-                _emit_rendered_file(
-                    source_file,
-                    target=target,
+    for emission in plan.emissions:
+        if emission.action is EmissionAction.FAN_OUT:
+            _copy_planned_fan_out(emission, dist_root=dist_root)
+            continue
+        if emission.action is EmissionAction.RENDER:
+            if (
+                SKILLS_SUBDIR_NAME in emission.relative_path.parts
+                and emission.source.name == SKILL_FILENAME
+            ):
+                emit_skill(
+                    emission.source,
+                    target=emission.target,
                     dist_root=dist_root,
                     shared_root=shared_root,
                 )
                 continue
-            _copy_unrendered_file(source_file, target=target, dist_root=dist_root)
+            _emit_rendered_file(
+                emission.source,
+                target=emission.target,
+                dist_root=dist_root,
+                src_root=src_root,
+            )
+            continue
+        _copy_unrendered_file(
+            emission.source,
+            target=emission.target,
+            dist_root=dist_root,
+            src_root=src_root,
+        )
 
     _format_dist(dist_root)
 
@@ -782,7 +841,9 @@ def main(argv: list[str] | None = None) -> int:
         prog="outcomeeng.distribution.build",
         description="Build src/ plugin sources into dist/claude and dist/codex.",
     )
-    parser.add_argument("src_root", type=Path, nargs="?", default=Path("src"))
+    parser.add_argument(
+        "src_root", type=Path, nargs="?", default=Path(SOURCE_ROOT_NAME)
+    )
     parser.add_argument("dist_root", type=Path, nargs="?", default=Path("dist"))
     args = parser.parse_args(argv)
     try:
@@ -913,24 +974,20 @@ def _is_continuation_line(line: str) -> bool:
     return bool(line.startswith((" ", "\t")) or not line.strip())
 
 
-def _relative_plugin_path(path: Path) -> Path:
-    parts = path.parts
-    source_plugins = tuple(
-        index + 1
-        for index, part in enumerate(parts[:-1])
-        if part == SOURCE_ROOT_NAME and parts[index + 1] == PLUGINS_DIR_NAME
-    )
-    if not source_plugins:
+def plugin_relative_path(path: Path, *, src_root: Path) -> Path:
+    """Return ``path`` relative to the source ``plugins/`` directory."""
+    plugins_root = src_root / PLUGINS_DIR_NAME
+    try:
+        return path.relative_to(plugins_root)
+    except ValueError as exc:
         raise SourceFormatError(
-            f"{path} is not under a {SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/ directory"
-        )
-    plugins_index = source_plugins[-1]
-    return Path(*parts[plugins_index + 1 :])
+            f"{path} is not under source plugins directory {plugins_root}"
+        ) from exc
 
 
-def source_plugin_name(path: Path) -> str:
+def source_plugin_name(path: Path, *, src_root: Path) -> str:
     """Return the source plugin directory that owns ``path``."""
-    relative_path = _relative_plugin_path(path)
+    relative_path = plugin_relative_path(path, src_root=src_root)
     if len(relative_path.parts) < 2:
         raise SourceFormatError(f"{path} has no owning plugin directory")
     return relative_path.parts[0]
@@ -945,17 +1002,15 @@ def _emit_rendered_file(
     *,
     target: _Target,
     dist_root: Path,
-    shared_root: Path,
+    src_root: Path,
 ) -> None:
-    destination = dist_root / target.value / _relative_plugin_path(source_file)
-    raw_text = source_file.read_text(encoding="utf-8")
-    rendered = render_text(
-        raw_text,
-        shared_root=shared_root,
-        variables=_render_variables(
-            target,
-            plugin_name=source_plugin_name(source_file),
-        ),
+    destination = (
+        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
+    )
+    rendered = render_source_text(
+        source_file,
+        target=target,
+        src_root=src_root,
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
@@ -965,20 +1020,39 @@ def _emit_rendered_file(
         )
     _write_text(destination, translated)
     shutil.copymode(source_file, destination)
-    _fan_out_shared_references(
-        source_file,
-        destination,
-        shared_root=shared_root,
-        raw_source=raw_text,
-    )
 
 
 def _copy_unrendered_file(
-    source_file: Path, *, target: _Target, dist_root: Path
+    source_file: Path, *, target: _Target, dist_root: Path, src_root: Path
 ) -> None:
-    destination = dist_root / target.value / _relative_plugin_path(source_file)
+    destination = (
+        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
+    )
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_file, destination)
+
+
+def render_source_text(
+    source_file: Path,
+    *,
+    target: _Target,
+    src_root: Path,
+) -> str:
+    """Render one authored text file before target-specific translation."""
+    return render_text(
+        source_file.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            target,
+            plugin_name=source_plugin_name(source_file, src_root=src_root),
+        ),
+    )
+
+
+def _copy_planned_fan_out(emission: PlannedEmission, *, dist_root: Path) -> None:
+    destination = dist_root / emission.target.value / emission.relative_path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(emission.source, destination)
 
 
 def _run_formatter(
@@ -1024,22 +1098,99 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _iter_plugin_files(plugins_root: Path) -> tuple[Path, ...]:
-    roots = (
-        plugin_root / subdir
-        for plugin_root in plugins_root.iterdir()
-        if plugin_root.is_dir()
-        for subdir in sorted(PLUGIN_SUBDIRS)
-    )
+def plugin_source_files(src_root: Path) -> tuple[Path, ...]:
+    """Return every authored plugin source file the build emits."""
+    plugins_root = src_root / PLUGINS_DIR_NAME
     return tuple(
         sorted(
             path
-            for root in roots
-            if root.is_dir()
-            for path in root.rglob("*")
-            if path.is_file() and _is_authored_source_file(path)
+            for path in plugins_root.rglob("*")
+            if path.is_file()
+            and _is_authored_source_file(path.relative_to(plugins_root))
         )
     )
+
+
+def plan_emissions(src_root: Path) -> BuildPlan:
+    """Return the complete collision-free output plan for ``src_root``."""
+    _validate_source_tree(src_root)
+    shared_root = src_root / SHARED_DIR_NAME
+    plugin_sources = plugin_source_files(src_root)
+    emissions: list[PlannedEmission] = []
+    for source_file in plugin_sources:
+        relative_path = plugin_relative_path(source_file, src_root=src_root)
+        action = (
+            EmissionAction.RENDER
+            if _is_rendered_text(source_file)
+            else EmissionAction.COPY
+        )
+        for target in _Target:
+            emissions.append(
+                PlannedEmission(
+                    source=source_file,
+                    target=target,
+                    relative_path=relative_path,
+                    action=action,
+                )
+            )
+            emissions.extend(
+                _planned_fan_out_emissions(
+                    source_file,
+                    target=target,
+                    relative_path=relative_path,
+                    shared_root=shared_root,
+                )
+            )
+    plan = BuildPlan(plugin_sources=plugin_sources, emissions=tuple(emissions))
+    collisions = plan.collisions()
+    if collisions:
+        details = ", ".join(
+            f"{target.value}/{path}: {', '.join(map(str, sources))}"
+            for (target, path), sources in sorted(
+                collisions.items(), key=lambda item: (item[0][0].value, item[0][1])
+            )
+        )
+        raise SourceFormatError(f"multiple sources emit the same output: {details}")
+    return plan
+
+
+def _planned_fan_out_emissions(
+    source_file: Path,
+    *,
+    target: _Target,
+    relative_path: Path,
+    shared_root: Path,
+) -> tuple[PlannedEmission, ...]:
+    if (
+        SKILLS_SUBDIR_NAME not in relative_path.parts
+        or source_file.suffix not in _TEXT_FILE_SUFFIXES
+    ):
+        return ()
+    result: list[PlannedEmission] = []
+    for directive in parse_directives(source_file.read_text(encoding="utf-8")):
+        if not isinstance(directive, IncludeDirective):
+            continue
+        topic_root = _resolve_under_root(shared_root, directive.path).parent
+        for child in sorted(topic_root.iterdir()):
+            if child.name == SHARED_FRAGMENT_FILENAME:
+                continue
+            child_files = (
+                tuple(sorted(path for path in child.rglob("*") if path.is_file()))
+                if child.is_dir()
+                else (child,)
+            )
+            for child_file in child_files:
+                result.append(
+                    PlannedEmission(
+                        source=child_file,
+                        target=target,
+                        relative_path=(
+                            relative_path.parent / child_file.relative_to(topic_root)
+                        ),
+                        action=EmissionAction.FAN_OUT,
+                    )
+                )
+    return tuple(result)
 
 
 def _is_authored_source_file(path: Path) -> bool:
@@ -1081,32 +1232,6 @@ def _validate_source_tree(src_root: Path) -> None:
                         f"skill directory missing {SKILL_FILENAME}: "
                         f"{skill_root.relative_to(src_root)}"
                     )
-
-
-def _fan_out_shared_references(
-    source_file: Path,
-    destination: Path,
-    *,
-    shared_root: Path,
-    raw_source: str,
-) -> None:
-    if SKILLS_SUBDIR_NAME not in source_file.parts:
-        return
-    for directive in parse_directives(raw_source):
-        if not isinstance(directive, IncludeDirective):
-            continue
-        include_path = _resolve_under_root(shared_root, directive.path)
-        topic_root = include_path.parent
-        for child in sorted(topic_root.iterdir()):
-            if child.name == SHARED_FRAGMENT_FILENAME:
-                continue
-            if child.is_dir():
-                target_child = destination.parent / child.name
-                if target_child.exists():
-                    shutil.rmtree(target_child)
-                shutil.copytree(child, target_child)
-            elif child.is_file():
-                shutil.copy2(child, destination.parent / child.name)
 
 
 if __name__ == "__main__":

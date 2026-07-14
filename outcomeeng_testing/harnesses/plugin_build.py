@@ -4,41 +4,50 @@ from __future__ import annotations
 
 import subprocess
 from difflib import unified_diff
+from os import utime
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Final
+from typing import Final
 
-from hypothesis import given, settings
+from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
     IMPLEMENTED,
+    COMMAND_FILE_SUFFIX,
+    PLUGIN_SUBDIRS,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_FILENAME,
     IncludeDirective,
     build,
+    format_directive,
     parse_directives,
 )
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
     PLUGINS_DIR_NAME,
     SKILLS_SUBDIR_NAME,
-    SOURCE_ROOT_NAME,
     Target,
 )
 from outcomeeng_testing.generators.plugin_build import (
     PluginBuildSource,
     plugin_build_sources,
 )
-from outcomeeng_testing.harnesses.src_tree import src_tree
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.harnesses.distribution import (
+    CANONICAL_SOURCE_ROOT,
+    REPOSITORY_ROOT,
+    snapshot_files,
+)
+from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder, src_tree
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-CANONICAL_SOURCE_ROOT = REPO_ROOT / SOURCE_ROOT_NAME
-COMMITTED_DIST_ROOT = REPO_ROOT / DIST_DIR_NAME
 PLUGIN_BUILD_PROPERTY_EXAMPLES: Final = 8
-PLUGIN_BUILD_PROPERTY_REPLAY: Final = (
+PLUGIN_BUILD_PROPERTY_SEED: Final = 20260714
+PLUGIN_BUILD_PROPERTY_REPLAY_PATH: Final = (
     "just test spx/18-plugin-build.enabler/tests/test_plugin_build.property.l1.py"
 )
+FIRST_SOURCE_MTIME_NS: Final = 1_000_000_000
+SECOND_SOURCE_MTIME_NS: Final = 2_000_000_000
 
 
 def canonical_dist_files_trace_to_source_ancestors() -> bool:
@@ -48,7 +57,7 @@ def canonical_dist_files_trace_to_source_ancestors() -> bool:
         generated_dist_root = Path(temporary_directory) / DIST_DIR_NAME
         build(CANONICAL_SOURCE_ROOT, generated_dist_root)
         _require_same_snapshot(
-            actual=_snapshot(generated_dist_root),
+            actual=snapshot_files(generated_dist_root),
             expected=_committed_dist_snapshot(),
         )
         return all(
@@ -60,75 +69,66 @@ def canonical_dist_files_trace_to_source_ancestors() -> bool:
 def canonical_build_is_deterministic() -> bool:
     """Run the generated determinism property and return its result."""
     _require_build_implementation()
-    _run_replayable_property(_generated_build_is_deterministic)
+    run_replayable_property(
+        _generated_build_is_deterministic,
+        seed_value=PLUGIN_BUILD_PROPERTY_SEED,
+        replay_path=PLUGIN_BUILD_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
 def canonical_build_is_idempotent() -> bool:
     """Run the generated idempotence property and return its result."""
     _require_build_implementation()
-    _run_replayable_property(_generated_build_is_idempotent)
+    run_replayable_property(
+        _generated_build_is_idempotent,
+        seed_value=PLUGIN_BUILD_PROPERTY_SEED,
+        replay_path=PLUGIN_BUILD_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
+@seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
     max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(source=plugin_build_sources())
 def _generated_build_is_deterministic(source: PluginBuildSource) -> None:
     with src_tree() as first_builder, src_tree() as second_builder:
-        first_builder.add_plugin(
-            source.plugin,
-            skills={source.skill: source.body},
-        )
-        second_builder.add_plugin(
-            source.plugin,
-            skills={source.skill: source.body},
-        )
+        _materialize_source(first_builder, source)
+        _materialize_source(second_builder, source)
+        _set_source_mtime(first_builder.src_root, FIRST_SOURCE_MTIME_NS)
+        _set_source_mtime(second_builder.src_root, SECOND_SOURCE_MTIME_NS)
         first_dist = first_builder.root / DIST_DIR_NAME
         second_dist = second_builder.root / DIST_DIR_NAME
         build(first_builder.src_root, first_dist)
         build(second_builder.src_root, second_dist)
-        assert _snapshot(first_dist) == _snapshot(second_dist)
+        assert snapshot_files(first_dist) == snapshot_files(second_dist)
 
 
+@seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
     max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(source=plugin_build_sources())
 def _generated_build_is_idempotent(source: PluginBuildSource) -> None:
     with src_tree() as builder:
-        builder.add_plugin(
-            source.plugin,
-            skills={source.skill: source.body},
-        )
+        _materialize_source(builder, source)
         dist_root = builder.root / DIST_DIR_NAME
         build(builder.src_root, dist_root)
-        first_snapshot = _snapshot(dist_root)
+        first_snapshot = snapshot_files(dist_root)
         build(builder.src_root, dist_root)
-        assert _snapshot(dist_root) == first_snapshot
-
-
-def _snapshot(root: Path) -> tuple[tuple[str, bytes], ...]:
-    return tuple(
-        sorted(
-            (str(path.relative_to(root)), path.read_bytes())
-            for path in root.rglob("*")
-            if path.is_file()
-        )
-    )
+        assert snapshot_files(dist_root) == first_snapshot
 
 
 def _committed_dist_snapshot() -> tuple[tuple[str, bytes], ...]:
     result = subprocess.run(
         ["git", "ls-files", "--", DIST_DIR_NAME],
-        cwd=REPO_ROOT,
+        cwd=REPOSITORY_ROOT,
         check=True,
         capture_output=True,
         text=True,
@@ -136,7 +136,7 @@ def _committed_dist_snapshot() -> tuple[tuple[str, bytes], ...]:
     return tuple(
         (
             str(Path(path).relative_to(DIST_DIR_NAME)),
-            (REPO_ROOT / path).read_bytes(),
+            (REPOSITORY_ROOT / path).read_bytes(),
         )
         for path in result.stdout.splitlines()
     )
@@ -178,14 +178,38 @@ def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:
     return None
 
 
-def _run_replayable_property(property_run: Callable[[], None]) -> None:
-    try:
-        property_run()
-    except AssertionError as error:
-        raise AssertionError(
-            "deterministic property failure; replay with "
-            f"`{PLUGIN_BUILD_PROPERTY_REPLAY}`"
-        ) from error
+def _materialize_source(builder: SrcTreeBuilder, source: PluginBuildSource) -> None:
+    for plugin_source in source.plugins:
+        case = plugin_source.scenario
+        reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+        builder.add_shared_topic(
+            case.scope,
+            case.inner_topic,
+            plugin_source.body,
+            references={reference_name: plugin_source.body},
+        )
+        directive = format_directive(
+            IncludeDirective(
+                f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}"
+            )
+        )
+        artifacts = {
+            Path(subdir, case.cycle_topic): plugin_source.opaque_body
+            for subdir in PLUGIN_SUBDIRS
+        }
+        builder.add_plugin(
+            case.plugin,
+            skills={case.skill: f"{directive}\n{plugin_source.body}"},
+            commands={case.outer_topic: plugin_source.body},
+            agents={case.cycle_topic: plugin_source.body},
+            artifacts=artifacts,
+        )
+
+
+def _set_source_mtime(root: Path, mtime_ns: int) -> None:
+    for path in root.rglob("*"):
+        if path.is_file():
+            utime(path, ns=(mtime_ns, mtime_ns))
 
 
 def _require_same_snapshot(

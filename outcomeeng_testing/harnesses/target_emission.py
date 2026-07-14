@@ -1,59 +1,240 @@
-"""Resource lifecycle and observations for target-emission evidence."""
+"""Full-tree observations for target-emission evidence."""
 
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
+    BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
     COMMAND_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
+    EmissionAction,
     EXECUTION_TIME_INJECTION_TOKEN,
-    REFERENCES_SUBDIR_NAME,
+    IGNORED_SOURCE_DIRECTORY_NAMES,
+    IGNORED_SOURCE_FILE_SUFFIXES,
+    PLUGIN_SUBDIRS,
     SHARED_FRAGMENT_FILENAME,
     SKILL_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
+    IncludeDirective,
     build,
     format_directive,
+    frontmatter_field_names,
+    plan_emissions,
+    render_source_text,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
-    IncludeDirective,
 )
-from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    PLUGINS_DIR_NAME,
+    SKILLS_SUBDIR_NAME,
+    TEXT_FILE_SUFFIXES,
+    Target,
+)
 from outcomeeng.validation.skill_frontmatter import PORTABLE_CAPABILITY_FIELDS
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
 )
+from outcomeeng_testing.harnesses.distribution import (
+    CANONICAL_SOURCE_ROOT,
+    snapshot_files,
+)
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
+type PathSnapshot = tuple[tuple[Path, bytes], ...]
+
+
+@dataclass(frozen=True)
+class TargetEmissionSnapshot:
+    """Canonical source files and the outputs emitted from them."""
+
+    source: PathSnapshot
+    claude: PathSnapshot
+    codex: PathSnapshot
+    plan: BuildPlan
+
+    def target(self, target: Target) -> PathSnapshot:
+        return self.claude if target is Target.CLAUDE else self.codex
+
 
 def every_source_file_emits_to_each_target() -> bool:
-    return all(_source_files_emit(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    expected = tuple(path for path, _content in snapshot.source)
+    direct_outputs = {
+        target: Counter(
+            emission.relative_path
+            for emission in snapshot.plan.for_target(target)
+            if emission.action is not EmissionAction.FAN_OUT
+        )
+        for target in Target
+    }
+    return (
+        bool(expected)
+        and tuple(
+            path.relative_to(CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME)
+            for path in snapshot.plan.plugin_sources
+        )
+        == expected
+        and all(
+            direct_outputs[target] == Counter({path: 1 for path in expected})
+            and _planned_paths(snapshot.plan, target)
+            == {path for path, _content in snapshot.target(target)}
+            for target in Target
+        )
+        and _synthetic_inventory_is_complete()
+    )
 
 
 def target_trees_mirror_source_structure() -> bool:
-    return all(_target_trees_mirror(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    return bool(snapshot.source) and all(
+        _parent_directories(snapshot.target(target))
+        == _parent_directories(
+            tuple((path, b"") for path in _planned_paths(snapshot.plan, target))
+        )
+        for target in Target
+    )
 
 
 def claude_output_preserves_skill_dir_token() -> bool:
-    return all(_claude_preserves_token(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    output_files = dict(snapshot.claude)
+    relevant = {
+        path.relative_to(CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME): rendered
+        for path in snapshot.plan.plugin_sources
+        if path.suffix in TEXT_FILE_SUFFIXES
+        and CLAUDE_SKILL_DIR_TOKEN
+        in (
+            rendered := render_source_text(
+                path,
+                target=Target.CLAUDE,
+                src_root=CANONICAL_SOURCE_ROOT,
+            )
+        )
+    }
+    failures = tuple(
+        (
+            path,
+            text.count(CLAUDE_SKILL_DIR_TOKEN),
+            _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
+        )
+        for path, text in relevant.items()
+        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+        < text.count(CLAUDE_SKILL_DIR_TOKEN)
+    )
+    synthetic = _synthetic_skill_dir_translation_holds()
+    if not relevant or failures or not synthetic:
+        raise AssertionError(
+            f"Claude skill-directory preservation mismatch: {failures=}, {synthetic=}"
+        )
+    return True
 
 
 def codex_output_rewrites_skill_dir_token() -> bool:
-    return all(_codex_rewrites_token(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    output_files = dict(snapshot.codex)
+    relevant = {
+        path.relative_to(CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME): rendered
+        for path in snapshot.plan.plugin_sources
+        if path.suffix in TEXT_FILE_SUFFIXES
+        and _unescaped_skill_dir_count(
+            rendered := render_source_text(
+                path,
+                target=Target.CODEX,
+                src_root=CANONICAL_SOURCE_ROOT,
+            )
+        )
+    }
+    failures = tuple(
+        (
+            path,
+            _escaped_skill_dir_count(text),
+            _unescaped_skill_dir_count(text),
+            _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN),
+            _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN),
+        )
+        for path, text in relevant.items()
+        if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+        != _escaped_skill_dir_count(text)
+        or _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN)
+        < _unescaped_skill_dir_count(text)
+    )
+    synthetic = _synthetic_skill_dir_translation_holds()
+    if not relevant or failures or not synthetic:
+        raise AssertionError(
+            f"Codex skill-directory rewrite mismatch: {failures=}, {synthetic=}"
+        )
+    return True
 
 
 def skill_dir_escape_preserves_authoring_guidance() -> bool:
-    return all(_escape_preserves_token(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    source_files = _text_files(snapshot.source)
+    relevant = {
+        path: text
+        for path, text in source_files.items()
+        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in text
+    }
+    claude_outputs = dict(snapshot.claude)
+    codex_outputs = dict(snapshot.codex)
+    return (
+        bool(relevant)
+        and all(
+            _decode_text(claude_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+            >= _escaped_skill_dir_count(text) + _unescaped_skill_dir_count(text)
+            and _decode_text(codex_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+            == _escaped_skill_dir_count(text)
+            and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
+            not in _decode_text(claude_outputs[path])
+            and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
+            not in _decode_text(codex_outputs[path])
+            for path, text in relevant.items()
+        )
+        and _synthetic_skill_dir_translation_holds()
+    )
 
 
 def codex_skill_frontmatter_strips_claude_fields() -> bool:
-    return all(_skill_frontmatter_translates(case) for case in source_scenarios())
+    snapshot = _canonical_emission_snapshot()
+    skill_sources = {
+        path: text
+        for path, text in _text_files(snapshot.source).items()
+        if len(path.parts) > 2
+        and path.parts[1] == SKILLS_SUBDIR_NAME
+        and path.name == SKILL_FILENAME
+    }
+    canonical_holds = _frontmatter_contract_holds(
+        skill_sources,
+        claude_outputs=dict(snapshot.claude),
+        codex_outputs=dict(snapshot.codex),
+        required_portable_fields=PORTABLE_CAPABILITY_FIELDS,
+        required_claude_only_fields=frozenset(),
+    )
+    synthetic = _synthetic_emission_snapshot()
+    synthetic_skill_sources = {
+        path: text
+        for path, text in _text_files(synthetic.source).items()
+        if len(path.parts) > 2
+        and path.parts[1] == SKILLS_SUBDIR_NAME
+        and path.name == SKILL_FILENAME
+    }
+    return canonical_holds and _frontmatter_contract_holds(
+        synthetic_skill_sources,
+        claude_outputs=dict(synthetic.claude),
+        codex_outputs=dict(synthetic.codex),
+        required_portable_fields=PORTABLE_CAPABILITY_FIELDS,
+        required_claude_only_fields=frozenset(CLAUDE_ONLY_FRONTMATTER_FIELDS),
+    )
 
 
 def codex_command_frontmatter_strips_claude_fields() -> bool:
@@ -69,84 +250,254 @@ def frontmatter_strip_is_idempotent() -> bool:
 
 
 def outputs_exclude_execution_time_injection() -> bool:
-    return all(_outputs_exclude_injection(case) for case in source_scenarios())
+    token = EXECUTION_TIME_INJECTION_TOKEN.encode()
+    snapshot = _canonical_emission_snapshot()
+    return all(
+        token not in content
+        for target in Target
+        for _path, content in snapshot.target(target)
+    ) and all(
+        token not in content
+        for target in Target
+        for _path, content in _synthetic_emission_snapshot().target(target)
+    )
 
 
-def _source_files_emit(case: SourceScenario) -> bool:
+@cache
+def _canonical_emission_snapshot() -> TargetEmissionSnapshot:
+    source = _authored_plugin_snapshot(CANONICAL_SOURCE_ROOT)
+    plan = plan_emissions(CANONICAL_SOURCE_ROOT)
     with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
+        dist_root = Path(temporary_directory) / DIST_DIR_NAME
+        build(CANONICAL_SOURCE_ROOT, dist_root)
+        outputs = {
+            target: tuple(
+                (Path(path), content)
+                for path, content in snapshot_files(dist_root / target.value)
+            )
+            for target in Target
+        }
+    return TargetEmissionSnapshot(
+        source=source,
+        claude=outputs[Target.CLAUDE],
+        codex=outputs[Target.CODEX],
+        plan=plan,
+    )
+
+
+def _authored_plugin_snapshot(src_root: Path) -> PathSnapshot:
+    plugins_root = src_root / PLUGINS_DIR_NAME
+    return tuple(
+        sorted(
+            (path.relative_to(plugins_root), path.read_bytes())
+            for path in plugins_root.rglob("*")
+            if path.is_file()
+            and not IGNORED_SOURCE_DIRECTORY_NAMES.intersection(
+                path.relative_to(plugins_root).parts
+            )
+            and path.relative_to(plugins_root).suffix
+            not in IGNORED_SOURCE_FILE_SUFFIXES
+        )
+    )
+
+
+def _planned_paths(plan: BuildPlan, target: Target) -> set[Path]:
+    return {emission.relative_path for emission in plan.for_target(target)}
+
+
+@cache
+def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
+    case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    source_body = "\n".join(
+        (
+            _frontmatter_source(case),
+            _claude_reference(case),
+            f"{_claude_reference(case)} {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}",
+            format_directive(
+                IncludeDirective(
+                    f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}"
+                )
+            ),
+        )
+    )
+    artifact_filename = f"{case.cycle_topic}{COMMAND_FILE_SUFFIX}"
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
         builder = SrcTreeBuilder(root)
+        builder.add_shared_topic(
+            case.scope,
+            case.inner_topic,
+            case.fragment_body,
+            references={f"{case.outer_topic}{COMMAND_FILE_SUFFIX}": case.fragment_body},
+        )
         builder.add_plugin(
             case.plugin,
-            skills={case.skill: case.fragment_body},
-            commands={case.outer_topic: case.fragment_body},
+            skills={case.skill: source_body},
+            commands={case.inner_topic: source_body},
+            agents={case.outer_topic: source_body},
+            artifacts={
+                Path(artifact_filename): source_body.encode(),
+                **{
+                    Path(subdir, artifact_filename): source_body.encode()
+                    for subdir in PLUGIN_SUBDIRS
+                },
+            },
         )
-        build(builder.src_root, root / DIST_DIR_NAME)
-        reader = DistTreeReader(root)
-        expected_skill = Path(
-            case.plugin,
-            SKILLS_SUBDIR_NAME,
-            case.skill,
-            SKILL_FILENAME,
-        )
-        expected_command = Path(
-            case.plugin,
-            COMMANDS_SUBDIR_NAME,
-            f"{case.outer_topic}{COMMAND_FILE_SUFFIX}",
-        )
-        return all(
-            expected_skill in reader.list_all_files(target)
-            and expected_command in reader.list_all_files(target)
+        plan = plan_emissions(builder.src_root)
+        source = _authored_plugin_snapshot(builder.src_root)
+        dist_root = root / DIST_DIR_NAME
+        build(builder.src_root, dist_root)
+        outputs = {
+            target: tuple(
+                (Path(path), content)
+                for path, content in snapshot_files(dist_root / target.value)
+            )
             for target in Target
-        )
-
-
-def _target_trees_mirror(case: SourceScenario) -> bool:
-    with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
-        builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, skills={case.skill: case.fragment_body})
-        build(builder.src_root, root / DIST_DIR_NAME)
-        reader = DistTreeReader(root)
-        return all(
-            reader.list_plugins(target) == (case.plugin,)
-            and reader.list_skills(case.plugin, target=target) == (case.skill,)
-            for target in Target
-        )
-
-
-def _claude_preserves_token(case: SourceScenario) -> bool:
-    reference = _claude_reference(case)
-    body = _built_skill_body(case, reference, target=Target.CLAUDE)
-    return reference in body
-
-
-def _codex_rewrites_token(case: SourceScenario) -> bool:
-    claude_reference = _claude_reference(case)
-    codex_reference = claude_reference.replace(
-        CLAUDE_SKILL_DIR_TOKEN,
-        CODEX_SKILL_DIR_TOKEN,
+        }
+    return TargetEmissionSnapshot(
+        source=source,
+        claude=outputs[Target.CLAUDE],
+        codex=outputs[Target.CODEX],
+        plan=plan,
     )
-    body = _built_skill_body(case, claude_reference, target=Target.CODEX)
-    return CLAUDE_SKILL_DIR_TOKEN not in body and codex_reference in body
 
 
-def _escape_preserves_token(case: SourceScenario) -> bool:
-    reference = _claude_reference(case)
-    source = f"{reference} {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}"
-    return all(
-        reference in _built_skill_body(case, source, target=target)
-        and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
-        not in _built_skill_body(case, source, target=target)
+def _synthetic_inventory_is_complete() -> bool:
+    snapshot = _synthetic_emission_snapshot()
+    source_paths = tuple(path for path, _content in snapshot.source)
+    covered_subdirs = {path.parts[1] for path in source_paths if len(path.parts) > 2}
+    direct_outputs = {
+        target: Counter(
+            emission.relative_path
+            for emission in snapshot.plan.for_target(target)
+            if emission.action is not EmissionAction.FAN_OUT
+        )
         for target in Target
+    }
+    return (
+        covered_subdirs == PLUGIN_SUBDIRS
+        and any(len(path.parts) == 2 for path in source_paths)
+        and any(
+            emission.action is EmissionAction.FAN_OUT
+            for emission in snapshot.plan.emissions
+        )
+        and all(
+            direct_outputs[target] == Counter({path: 1 for path in source_paths})
+            and _planned_paths(snapshot.plan, target)
+            == {path for path, _content in snapshot.target(target)}
+            for target in Target
+        )
     )
 
 
-def _skill_frontmatter_translates(case: SourceScenario) -> bool:
-    source = _frontmatter_source(case)
-    claude_body = _built_skill_body(case, source, target=Target.CLAUDE)
-    codex_body = _built_skill_body(case, source, target=Target.CODEX)
-    return _frontmatter_translation_holds(claude_body, codex_body)
+def _synthetic_skill_dir_translation_holds() -> bool:
+    snapshot = _synthetic_emission_snapshot()
+    claude_outputs = dict(snapshot.claude)
+    codex_outputs = dict(snapshot.codex)
+    relevant = {
+        path: text
+        for path, text in _text_files(snapshot.source).items()
+        if CLAUDE_SKILL_DIR_TOKEN in text
+    }
+    return bool(relevant) and all(
+        _decode_text(claude_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+        == text.count(CLAUDE_SKILL_DIR_TOKEN)
+        and _decode_text(codex_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
+        == _escaped_skill_dir_count(text)
+        and _decode_text(codex_outputs[path]).count(CODEX_SKILL_DIR_TOKEN)
+        == _unescaped_skill_dir_count(text)
+        and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(claude_outputs[path])
+        and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(codex_outputs[path])
+        for path, text in relevant.items()
+    )
+
+
+def _parent_directories(snapshot: PathSnapshot) -> set[Path]:
+    return {
+        parent
+        for path, _content in snapshot
+        for parent in path.parents
+        if parent != Path()
+    }
+
+
+def _text_files(snapshot: PathSnapshot) -> dict[Path, str]:
+    return {
+        path: _decode_text(content)
+        for path, content in snapshot
+        if path.suffix in TEXT_FILE_SUFFIXES
+    }
+
+
+def _decode_text(content: bytes) -> str:
+    return content.decode("utf-8")
+
+
+def _unescaped_skill_dir_count(text: str) -> int:
+    return sum(
+        line.count(CLAUDE_SKILL_DIR_TOKEN)
+        for line in text.splitlines()
+        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in line
+    )
+
+
+def _escaped_skill_dir_count(text: str) -> int:
+    return sum(
+        line.count(CLAUDE_SKILL_DIR_TOKEN)
+        for line in text.splitlines()
+        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in line
+    )
+
+
+def _frontmatter_contract_holds(
+    sources: dict[Path, str],
+    *,
+    claude_outputs: dict[Path, bytes],
+    codex_outputs: dict[Path, bytes],
+    required_portable_fields: frozenset[str],
+    required_claude_only_fields: frozenset[str],
+) -> bool:
+    portable_coverage = {field: False for field in PORTABLE_CAPABILITY_FIELDS}
+    claude_only_coverage = {field: False for field in CLAUDE_ONLY_FRONTMATTER_FIELDS}
+    for path in sources:
+        claude_output = _decode_text(claude_outputs[path])
+        codex_output = _decode_text(codex_outputs[path])
+        claude_fields = frontmatter_field_names(claude_output)
+        codex_fields = frontmatter_field_names(codex_output)
+        for field in PORTABLE_CAPABILITY_FIELDS:
+            if field not in claude_fields:
+                continue
+            portable_coverage[field] = True
+            if field not in codex_fields:
+                raise AssertionError(
+                    f"portable field {field!r} missing for {path}: "
+                    f"{claude_fields=}, {codex_fields=}"
+                )
+        for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
+            if field not in claude_fields:
+                continue
+            claude_only_coverage[field] = True
+            if field in codex_fields:
+                raise AssertionError(
+                    f"Claude-only field {field!r} translated incorrectly for {path}: "
+                    f"{claude_fields=}, {codex_fields=}"
+                )
+    missing_portable = {
+        field
+        for field in required_portable_fields
+        if not portable_coverage.get(field, False)
+    }
+    missing_claude_only = {
+        field
+        for field in required_claude_only_fields
+        if not claude_only_coverage.get(field, False)
+    }
+    if missing_portable or missing_claude_only:
+        raise AssertionError(
+            "frontmatter coverage incomplete: "
+            f"{missing_portable=}, {missing_claude_only=}"
+        )
+    return True
 
 
 def _command_frontmatter_translates(case: SourceScenario) -> bool:
@@ -163,7 +514,8 @@ def _command_frontmatter_translates(case: SourceScenario) -> bool:
 
 
 def _path_rewrite_is_idempotent(case: SourceScenario) -> bool:
-    once = rewrite_paths_for_target(_claude_reference(case), target=Target.CODEX)
+    reference = _claude_reference(case)
+    once = rewrite_paths_for_target(reference, target=Target.CODEX)
     return rewrite_paths_for_target(once, target=Target.CODEX) == once
 
 
@@ -173,61 +525,6 @@ def _frontmatter_strip_is_idempotent(case: SourceScenario) -> bool:
         fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
     )
     return strip_frontmatter_fields(once, fields=CLAUDE_ONLY_FRONTMATTER_FIELDS) == once
-
-
-def _outputs_exclude_injection(case: SourceScenario) -> bool:
-    reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
-    directive = format_directive(
-        IncludeDirective(f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}")
-    )
-    with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
-        builder = SrcTreeBuilder(root)
-        builder.add_shared_topic(
-            case.scope,
-            case.inner_topic,
-            case.fragment_body,
-            references={reference_name: case.fragment_body},
-        )
-        builder.add_plugin(case.plugin, skills={case.skill: directive})
-        build(builder.src_root, root / DIST_DIR_NAME)
-        reader = DistTreeReader(root)
-        return all(
-            all(
-                EXECUTION_TIME_INJECTION_TOKEN
-                not in (reader.target_root(target) / relative_path).read_text(
-                    encoding="utf-8"
-                )
-                for relative_path in reader.list_all_files(target)
-            )
-            and (
-                reader.target_root(target)
-                / case.plugin
-                / SKILLS_SUBDIR_NAME
-                / case.skill
-                / REFERENCES_SUBDIR_NAME
-                / reference_name
-            ).is_file()
-            for target in Target
-        )
-
-
-def _built_skill_body(
-    case: SourceScenario,
-    source: str,
-    *,
-    target: Target,
-) -> str:
-    with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
-        builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, skills={case.skill: source})
-        build(builder.src_root, root / DIST_DIR_NAME)
-        return DistTreeReader(root).read_skill_body(
-            case.plugin,
-            case.skill,
-            target=target,
-        )
 
 
 def _command_body(
@@ -246,7 +543,7 @@ def _command_body(
 
 
 def _claude_reference(case: SourceScenario) -> str:
-    return f"{CLAUDE_SKILL_DIR_TOKEN}/{REFERENCES_SUBDIR_NAME}/{case.outer_topic}.md"
+    return f"{CLAUDE_SKILL_DIR_TOKEN}/{case.outer_topic}{COMMAND_FILE_SUFFIX}"
 
 
 def _frontmatter_source(case: SourceScenario) -> str:
@@ -260,10 +557,12 @@ def _frontmatter_source(case: SourceScenario) -> str:
 
 
 def _frontmatter_translation_holds(claude_body: str, codex_body: str) -> bool:
+    claude_fields = frontmatter_field_names(claude_body)
+    codex_fields = frontmatter_field_names(codex_body)
     return all(
-        f"{field}:" in claude_body and f"{field}:" not in codex_body
+        field in claude_fields and field not in codex_fields
         for field in CLAUDE_ONLY_FRONTMATTER_FIELDS
     ) and all(
-        f"{field}:" in claude_body and f"{field}:" in codex_body
+        field in claude_fields and field in codex_fields
         for field in PORTABLE_CAPABILITY_FIELDS
     )
