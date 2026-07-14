@@ -24,9 +24,8 @@ from outcomeeng.distribution.contracts import (
     REFERENCES_SUBDIR_NAME,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
 )
-
-SRC_DIR_NAME = "src"
 
 # Kebab-case: starts with letter, contains lowercase letters/digits/hyphens,
 # does not start or end with hyphen, no consecutive hyphens.
@@ -73,7 +72,7 @@ def write_agent_source(
     write_agent_tree(root, plugin_name, {agent_name: content})
     return (
         root
-        / SRC_DIR_NAME
+        / SOURCE_ROOT_NAME
         / PLUGINS_DIR_NAME
         / plugin_name
         / AGENTS_SUBDIR_NAME
@@ -94,7 +93,7 @@ class SrcTreeBuilder:
 
     @property
     def src_root(self) -> Path:
-        return self.root / SRC_DIR_NAME
+        return self.root / SOURCE_ROOT_NAME
 
     @property
     def shared_root(self) -> Path:
