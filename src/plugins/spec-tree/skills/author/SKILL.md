@@ -371,16 +371,13 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 <success_criteria>
 
-Authoring is complete when:
+An authored artifact is sound when:
 
-- [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
-- [ ] Context loaded for placement (or bootstrap mode for empty tree)
-- [ ] Index and placement determined using ordering rules
-- [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
-- [ ] Content gathered from user (operator-owned gaps only)
-- [ ] Template read and filled with atemporal voice
-- [ ] Validation checklist passes
-- [ ] Files created in correct location
-- [ ] Next steps recommended
+- [ ] Its artifact type and structure match the applicable canonical template
+- [ ] Its full path and index are canonical, collision-free, and consistent with the loaded ordering constraints
+- [ ] Its declarations use atemporal voice, full-path Spec Tree references, and the required node or decision shape
+- [ ] Existing evidence links are valid and unresolved evidence needs are explicitly handed to `/test`; authoring invents neither verification types nor assertion types
+- [ ] Every directly affected lower declaration is aligned, with remaining downstream work recorded at the first affected node when needed
+- [ ] Every reported changed artifact exists at its canonical path and passes the repository's declared validation
 
 </success_criteria>

@@ -2,6 +2,7 @@
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
 argument-hint: "<spx-root-or-full-node-path>"
+arguments: target
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
@@ -62,7 +63,7 @@ Before reading any product or spec content, invoke `/sync-base` so the loaded co
 
 If the invocation supplies no target path, ABORT: "A canonical target is required. Invoke `/contextualize spx/` for the product root or `/contextualize spx/{path-to-node}` for a node."
 
-Before the first filesystem lookup, accept either the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{enabler|outcome}`. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: {target-path}. Supply `spx/` or one canonical full `spx/...` node path."
+Before the first filesystem lookup, accept `$target` only when it is the exact product-root target `spx/` or a repository-relative node target beginning with `spx/` whose non-empty segments after `spx/` each match `{index}-{slug}.{enabler|outcome}`. Reject absolute paths, empty targets, repeated separators, `.` or `..` segments, trailing separators on node targets, and malformed node segments. Otherwise ABORT: "Invalid target path: $target. Supply `spx/` or one canonical full `spx/...` node path."
 
 Set `product_root_target=true` only for the exact target `spx/`. Every other accepted target is a node target.
 
@@ -71,7 +72,7 @@ Set `product_root_target=true` only for the exact target `spx/`. Every other acc
 Glob: "spx/*.product.md"
 
 # Verify a node target exists; product-root mode already addresses spx/
-Glob: "{target-path}/*.md"  (node targets only)
+Glob: "$target/*.md"  (node targets only)
 ```
 
 If the product file is missing, ABORT: "No product file found in spx/. Create one with `/author` first."
@@ -189,21 +190,21 @@ For a node target, load the target context below.
 
 ```bash
 # Read target spec
-Read: {target-path}/{slug}.md
+Read: $target/{slug}.md
 
 # Read target ADRs and PDRs
-Glob: "{target-path}/*-*.adr.md"
-Glob: "{target-path}/*-*.pdr.md"
+Glob: "$target/*-*.adr.md"
+Glob: "$target/*-*.pdr.md"
 
 # Enumerate children (if any)
-Glob: "{target-path}/*-*.{enabler,outcome}/"
+Glob: "$target/*-*.{enabler,outcome}/"
 
 # Check for tests directory
-Glob: "{target-path}/tests/*"
+Glob: "$target/tests/*"
 
 # Check for coordination notes
-Glob: "{target-path}/PLAN.md"
-Glob: "{target-path}/ISSUES.md"
+Glob: "$target/PLAN.md"
+Glob: "$target/ISSUES.md"
 ```
 
 **If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
@@ -240,7 +241,7 @@ Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 <SPEC_TREE_CONTEXT target="{full-target-path}">
 
 Product: {product-name}
-Target: {target-path} ({enabler|outcome|product root})
+Target: $target ({enabler|outcome|product root})
 
 Documents loaded:
   Product spec: {product-file}
