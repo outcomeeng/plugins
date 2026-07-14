@@ -67,15 +67,26 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
         assert agent_harness in path.parts
         # write a distinct synthetic per-harness dist template, then load it through the production
         # loader the build recipes call — asserting per-harness template content, not just path shape
-        template = harness.build_template(f"{harness.NEW_VERSION}-{agent_harness}")
+        template = (
+            harness.build_template(harness.NEW_VERSION)
+            + f"\nDIST TEMPLATE SOURCE: {agent_harness}\n"
+        )
         expected[agent_harness] = template
         dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
         dist_path.parent.mkdir(parents=True, exist_ok=True)
         dist_path.write_text(template, encoding="utf-8")
-    assert (
-        dist.load_harness_templates(_distribution_module(), repo_root=tmp_path)
-        == expected
+    loaded = dist.load_harness_templates(_distribution_module(), repo_root=tmp_path)
+    assert loaded == expected
+    rendered = dist.render_instruction_blocks_from_harness_templates(
+        _distribution_module(), loaded, harness.TEMPLATE_LANGUAGES
     )
+    for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        assert f"DIST TEMPLATE SOURCE: {agent_harness}" in rendered[agent_harness]
+        assert all(
+            f"DIST TEMPLATE SOURCE: {other}" not in rendered[agent_harness]
+            for other in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
+            if other != agent_harness
+        )
 
 
 def test_justfile_binds_build_and_check_recipes() -> None:
@@ -240,10 +251,17 @@ def test_refresh_workflow_regenerates_and_opens_pr() -> None:
     ).read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow
     regenerate = harness.workflow_run_block("Regenerate instruction blocks")
+    assert "just build-skills" in regenerate
     assert "just build-instructions" in regenerate
+    assert regenerate.index("just build-skills") < regenerate.index(
+        "just build-instructions"
+    )
     pr_step = harness.workflow_step_block("Open instruction-block refresh pull request")
     # opens or updates the PR only when git reports drift
     assert "git status --porcelain" in pr_step
+    assert workflow.index(
+        "      - name: Regenerate instruction blocks"
+    ) < workflow.index("      - name: Open instruction-block refresh pull request")
 
 
 def test_refresh_workflow_checks_out_main() -> None:
@@ -275,6 +293,12 @@ def test_refresh_workflow_installs_dprint() -> None:
     # the pinned version is installed via bun and then verified
     assert 'bun add -g "dprint@${DPRINT_VERSION}"' in install
     assert "dprint --version" in install
+    workflow = dist.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-instruction-blocks.yml"
+    ).read_text(encoding="utf-8")
+    assert workflow.index("      - name: Install dprint") < workflow.index(
+        "      - name: Regenerate instruction blocks"
+    )
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:

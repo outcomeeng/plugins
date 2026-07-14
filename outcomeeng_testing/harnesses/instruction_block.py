@@ -281,6 +281,68 @@ def materialize_root_instruction_topology(
     return seeds
 
 
+def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
+    """Check symlink normalization and source-body preservation in one owned workspace."""
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        materialized = materialize_root_instruction_topology(
+            root, root_instruction_topology_symlinked()
+        )
+        claude_path = root / INSTRUCTION_CLAUDE
+        agents_path = root / INSTRUCTION_AGENTS
+        return (
+            claude_path.is_file()
+            and agents_path.is_file()
+            and not claude_path.is_symlink()
+            and not agents_path.is_symlink()
+            and claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+            and agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+            and materialized[INSTRUCTION_CLAUDE] == ROOT_SHARED_BODY
+            and materialized[INSTRUCTION_AGENTS] == ROOT_SHARED_BODY
+        )
+
+
+def root_instruction_topology_seed_mapping_is_valid() -> bool:
+    """Check every source-owned root topology against its expected harness seed bodies."""
+    cases = (
+        (
+            root_instruction_topology_only_claude(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+                INSTRUCTION_AGENTS: ROOT_CLAUDE_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_only_agents(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_AGENTS_BODY,
+                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_separate(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_symlinked(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
+                INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
+            },
+        ),
+    )
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        return all(
+            materialize_root_instruction_topology(root / str(index), topology)
+            == expected
+            for index, (topology, expected) in enumerate(cases)
+        )
+
+
 def harness_line(harness: str) -> str:
     """Read the harness-specific body from the inert whole-template fixture."""
     open_marker = f"<!-- harness:{harness} -->"
