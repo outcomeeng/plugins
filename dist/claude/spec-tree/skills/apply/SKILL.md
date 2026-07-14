@@ -3,7 +3,7 @@ name: apply
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
-argument-hint: "[--agent] [node-path]"
+argument-hint: "[--agent] [full-spx-node-path]"
 allowed-tools: Read, Skill, Agent, AskUserQuestion
 ---
 
@@ -30,15 +30,15 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
-- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the optional node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
-- `$ARGUMENTS` containing a node path without `--agent` → the work queue is that single node.
-- Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+- `$ARGUMENTS` beginning with `--agent` → dispatch the typed `applier` agent through the current runtime's subagent tool, passing the optional canonical full `spx/...` node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not review the whole changeset or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- `$ARGUMENTS` containing a canonical full `spx/...` node path without `--agent` → the work queue is that single node.
+- Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never pass a bare `spx/EXCLUDE` entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
 When the work is described as a plan or proposal rather than a specific node or queue, invoke `/slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
-1. If it is listed in `spx/EXCLUDE`, remove its line first — the `spx` CLI then includes its tests in `spx test passing`.
+1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
 2. Run Steps 1–9 on the node.
 3. Confirm the final gate subject is committed and the worktree is clean.
 4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
@@ -54,9 +54,10 @@ Before starting Step 3, determine the product language:
 - `tsconfig.json` exists -> **TypeScript**
 - `pyproject.toml` or `setup.py` exists -> **Python**
 - `Cargo.toml` or `rust-toolchain.toml` exists -> **Rust**
-- Multiple language markers exist -> check the spec node for language indicators, or ask the user
+- Multiple supported language markers exist -> inspect the loaded spec node for a single applicable language; when ambiguity remains, ask the operator and stop before Step 3 until one language is selected
+- No supported marker exists, or the selected language has no installed architecture, test, and code skills -> stop before Step 3 and report the exact marker state plus the missing language-plugin capability
 
-Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
+Proceed to Step 3 only after exactly one supported language and its required skill surface resolve. Use that language for ALL Steps 3–8. Do not switch mid-flow.
 
 </language_detection>
 
@@ -114,20 +115,20 @@ Before dispatching an applicable evidence auditor, apply `<verification_checkpoi
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                              | Python                      | Rust                      |
-| ---- | ------------------------ | ------------------------------------------------------- | --------------------------- | ------------------------- |
-| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                              | same                        | same                      |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                        | same                      |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                        | same                      |
-| 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")` | `Skill("architect-rust")` |
-| 4    | Architecture audit       | `adr-auditor` agent                                     | same                        | same                      |
-| 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`      | `Skill("test-rust")`      |
-| 6    | Test audit               | `test-evidence-auditor` agent                           | same                        | same                      |
-| 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`      | `Skill("code-rust")`      |
-| 8    | Implementation audit     | `implementation-auditor` agent                          | same                        | same                      |
-| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents | same                        | same                      |
-| 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                        | same                      |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                        | same                      |
+| Step | Purpose                  | TypeScript                                                       | Python                      | Rust                      |
+| ---- | ------------------------ | ---------------------------------------------------------------- | --------------------------- | ------------------------- |
+| 0 §  | Select the slice         | `Skill("spec-tree:slice")`                                       | same                        | same                      |
+| 1    | Load methodology         | `Skill("spec-tree:understand")`                                  | same                        | same                      |
+| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{full-spx-node-path}")` | same                        | same                      |
+| 3    | Architect                | `Skill("architect-typescript")`                                  | `Skill("architect-python")` | `Skill("architect-rust")` |
+| 4    | Architecture audit       | `adr-auditor` agent                                              | same                        | same                      |
+| 5    | Write tests              | `Skill("test-typescript")`                                       | `Skill("test-python")`      | `Skill("test-rust")`      |
+| 6    | Test audit               | `test-evidence-auditor` agent                                    | same                        | same                      |
+| 7    | Implement                | `Skill("code-typescript")`                                       | `Skill("code-python")`      | `Skill("code-rust")`      |
+| 8    | Implementation audit     | `implementation-auditor` agent                                   | same                        | same                      |
+| 8a   | Evidence-auditor gates   | `test-evidence-auditor`, `eval-evidence-auditor` agents          | same                        | same                      |
+| 9    | Whole-changeset review † | `changes-reviewer` agent                                         | same                        | same                      |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                       | same                        | same                      |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
@@ -151,7 +152,7 @@ This loads the spec-tree methodology — node types, assertion formats, durable 
 
 <step number="2" name="Load work item context" frequency="every node">
 
-Invoke `/contextualize` with the node path.
+Invoke `/contextualize` with the canonical full `spx/...` node path from the work queue.
 
 Load the full context hierarchy for the specific node — parent chain, sibling nodes, applicable decisions, assertions.
 

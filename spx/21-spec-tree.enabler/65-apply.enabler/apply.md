@@ -10,8 +10,8 @@ The assertions below govern the lifecycle as a whole — how the work queue is f
 
 ### Compliance
 
-- ALWAYS: `--agent [node-path]` dispatches non-audit authoring and implementation work to the `applier` agent; the main conversation runs no duplicate per-node authoring steps and owns every auditor-agent dispatch from the applier's handoff reports ([audit])
-- ALWAYS: with a node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the node paths listed in `spx/EXCLUDE` ([audit])
+- ALWAYS: `--agent [full-spx-node-path]` dispatches non-audit authoring and implementation work to the `applier` agent; the main conversation runs no duplicate per-node authoring steps and owns every auditor-agent dispatch from the applier's handoff reports ([audit])
+- ALWAYS: with a canonical full `spx/...` node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the paths stored relative to `spx/` in `spx/EXCLUDE` after converting each one to its canonical full `spx/...` address ([audit])
 - ALWAYS: a multi-node work queue runs in ascending numeric-index order, removing each node from `spx/EXCLUDE` before its flow and preserving each deterministic-passing gate subject in a local checkpoint commit, and a node whose flow cannot converge stops the queue with the remaining nodes left in `spx/EXCLUDE` ([audit])
 - ALWAYS: every persisted audit or review gate binds to an exact committed head after deterministic verification passes; a rejected finding is repaired in a new local checkpoint before the gate reruns, while an audit over modified or untracked files is advisory and never satisfies a gate ([audit])
 - ALWAYS: when the repository requires the full deterministic gate, run `just check-full` only after every applicable evidence audit, implementation audit, and whole-changeset review has converged, and run no agentic verification after it; any change after the full gate invalidates it and requires the agentic gates to converge again before a new full-gate run ([audit])

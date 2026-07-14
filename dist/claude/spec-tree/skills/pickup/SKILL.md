@@ -1,8 +1,8 @@
 ---
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
-argument-hint: "[--list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
+argument-hint: "[session-id | --list] [--auto-continue]"
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py":*), AskUserQuestion, Glob, Skill
 ---
 
 <objective>
@@ -93,26 +93,21 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    spx session todo --json
    ```
 2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
-3. Present options with `AskUserQuestion`:
-   ```json
-   {
-     "questions": [
-       {
-         "question": "Which handoff would you like to load?",
-         "header": "Handoff",
-         "multiSelect": false,
-         "options": [
-           { "label": "2026-03-29 14:22 [high] work/session-frontmatter", "description": "Goal: roll out structured session metadata. Next: update dependent skills." },
-           { "label": "2026-03-28 09:15 [medium] main checkout", "description": "Goal: complete auth assertions. Next: review the outcome spec." }
-         ]
-       }
-     ]
-   }
-   ```
+3. Present one single-select question with `AskUserQuestion`:
+   - Stable question id when the runtime schema exposes one: `handoff`
+   - Header: `Handoff`
+   - Question: `Which handoff would you like to load?`
+   - Options: 2-3 mutually exclusive sessions, each labeled with its full session id, priority, and branch context and described by its goal and next step
 4. Claim the chosen session:
    ```bash
    spx session pickup <selected-session-id>
    ```
+
+**If `$ARGUMENTS` contains a session id:** Strip an optional trailing `.md` suffix and claim that exact session:
+
+```bash
+spx session pickup <session-id>
+```
 
 **Otherwise (default):** Claim the highest priority (or oldest if tied) session:
 
@@ -223,7 +218,7 @@ A successful pickup:
 - [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading
+- [ ] Session `next_step` presented only after `/sync-base` and claim reconciliation, and before node context or continuation work
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
