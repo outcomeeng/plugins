@@ -126,6 +126,21 @@ SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 # compliance guard asserts is present in the rendered router.
 READ_ENTIRE_FILE_INSTRUCTION = "Read this entire file"
 
+# Required router vocabulary for the product-content foundation gate. The compliance test reads
+# the real canonical template and checks this complete boundary: product content is gated while
+# session lifecycle state and bounded operational inspection remain available.
+FOUNDATION_PRODUCT_CONTENT_HEADING = (
+    "### Before product-content access -> `/understand`"
+)
+FOUNDATION_SPX_PATH_TRIGGER = "anything under `spx/`"
+FOUNDATION_SOURCE_TEST_TRIGGER = "source or test file"
+FOUNDATION_SESSION_EXEMPTION = "`spx session` operations"
+FOUNDATION_ARCHIVE_EXEMPTION = "archive"
+FOUNDATION_RELEASE_EXEMPTION = "release"
+FOUNDATION_DIAGNOSE_EXEMPTION = "`spx diagnose`"
+FOUNDATION_GIT_EXEMPTION = "no-patch Git status, history, and topology"
+FOUNDATION_FOLLOW_PATH_GUARD = "Never follow paths from their output"
+
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
 LANG_SECONDARY = "typescript"

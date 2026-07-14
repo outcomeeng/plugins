@@ -1,12 +1,10 @@
 ---
 name: understand
 description: >-
-  ALWAYS invoke this skill at the beginning of each session, after every
-  compaction, and before answering spec-tree workflow or session-continuity
-  questions when the live SPEC_TREE_FOUNDATION marker is absent. NEVER
-  read, create, or modify any file in this repository other than
-  CLAUDE.md without loading this skill and all its references
-  first.
+  ALWAYS invoke this skill when the live SPEC_TREE_FOUNDATION marker is absent
+  before direct filesystem access under spx/ or before reading, searching,
+  listing, or changing source or test files. NEVER access that product content
+  without loading this skill and all its references first.
 allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
@@ -35,10 +33,10 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <workflow>
 
-1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `references/` or `templates/` file this invocation needs.
+1. Load the complete foundation on every invocation. The root router normally invokes `/understand` only when the live `<SPEC_TREE_FOUNDATION>` marker is absent; an explicit invocation still reruns this workflow without an abbreviated path.
    A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
    After every compaction, treat the marker as absent until this workflow emits it again.
-   Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
+   A missing marker blocks direct filesystem access under `spx/` and access to source or test content. It does not block `spx session` operations, `spx worktree status`, `spx diagnose`, or no-patch Git status, history, and topology; invoke this workflow before following any path those commands return into product content.
 2. Read the following references in full and point out any contradictions to the operator immediately:
    - `references/durable-map.md`
    - `references/node-types.md`
