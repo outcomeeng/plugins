@@ -222,7 +222,7 @@ def assert_prompt_renderer_reports_fixture_placeholder_drift() -> None:
     assert unknown_rendered == _fixture_path("prompt_unknown_rendered.md").read_text(
         encoding="utf-8"
     )
-    assert known_rendered == _fixture_path("prompt_known_rendered.md").read_text(
+    assert known_rendered == _fixture_path("prompt_known_rendered.txt").read_text(
         encoding="utf-8"
     )
     assert unknown_stderr.getvalue()
