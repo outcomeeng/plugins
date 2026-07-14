@@ -277,6 +277,9 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
         codex_outputs=dict(snapshot.codex),
         required_portable_fields=frozenset((ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)),
         required_claude_only_fields=frozenset(),
+    ) and _frontmatter_fields_are_absent(
+        _text_files(snapshot.codex),
+        forbidden_fields=frozenset(CLAUDE_ONLY_FRONTMATTER_FIELDS),
     )
     synthetic = _synthetic_emission_snapshot()
     synthetic_skill_sources = {
@@ -736,6 +739,21 @@ def _record_claude_only_field_coverage(
 
 def _missing_frontmatter_fields(coverage: dict[str, bool]) -> frozenset[str]:
     return frozenset(field for field, covered in coverage.items() if not covered)
+
+
+def _frontmatter_fields_are_absent(
+    outputs: dict[Path, str],
+    *,
+    forbidden_fields: frozenset[str],
+) -> bool:
+    failures = tuple(
+        (path, forbidden_fields & fields)
+        for path, text in outputs.items()
+        if forbidden_fields & (fields := frontmatter_field_names(text))
+    )
+    if failures:
+        raise AssertionError(f"forbidden frontmatter fields emitted: {failures=}")
+    return True
 
 
 def _command_frontmatter_translates(case: SourceScenario) -> bool:
