@@ -19,8 +19,6 @@ from outcomeeng.distribution.build import (
     CLAUDE_SKILL_DIR_TOKEN,
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
-    COMMANDS_SUBDIR_NAME,
-    COMMAND_FILE_SUFFIX,
     IMPLEMENTED,
     REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
@@ -473,15 +471,11 @@ def _well_formed_source_tree_builds(case: SourceScenario) -> bool:
         builder.add_plugin(
             case.plugin,
             skills={case.skill: _skill_body(case)},
-            commands={case.inner_topic: case.fragment_body},
             agents={case.outer_topic: case.fragment_body},
         )
         plugin_root = builder.src_root / PLUGINS_DIR_NAME / case.plugin
         authored_plugin_files = (
             plugin_root / SKILLS_SUBDIR_NAME / case.skill / SKILL_FILENAME,
-            plugin_root
-            / COMMANDS_SUBDIR_NAME
-            / f"{case.inner_topic}{COMMAND_FILE_SUFFIX}",
             plugin_root / AGENTS_SUBDIR_NAME / f"{case.outer_topic}{AGENT_FILE_SUFFIX}",
         )
         required_files = (
@@ -694,8 +688,8 @@ def _include_uses_contract(case: SourceScenario) -> bool:
 
 
 def _shared_topic_reference_travels(case: SourceScenario) -> bool:
-    inner_reference_name = f"{case.inner_topic}{COMMAND_FILE_SUFFIX}"
-    outer_reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    inner_reference_name = f"{case.inner_topic}{AGENT_FILE_SUFFIX}"
+    outer_reference_name = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
     reference_bodies = dict.fromkeys(
         (inner_reference_name, outer_reference_name),
         case.fragment_body,
@@ -721,8 +715,6 @@ def _shared_topic_reference_travels(case: SourceScenario) -> bool:
             skills={
                 case.skill: f"{_skill_body(case)}\n{include_body}",
             },
-            commands={case.inner_topic: include_body},
-            agents={case.outer_topic: include_body},
         )
         build(builder.src_root, root / DIST_DIR_NAME)
         reader = DistTreeReader(root)
@@ -731,8 +723,6 @@ def _shared_topic_reference_travels(case: SourceScenario) -> bool:
             / SKILLS_SUBDIR_NAME
             / case.skill
             / REFERENCES_SUBDIR_NAME,
-            Path(case.plugin) / COMMANDS_SUBDIR_NAME / REFERENCES_SUBDIR_NAME,
-            Path(case.plugin) / AGENTS_SUBDIR_NAME / REFERENCES_SUBDIR_NAME,
         )
         return all(
             (

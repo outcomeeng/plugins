@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.target_emission import (
     claude_output_preserves_skill_dir_token,
-    codex_command_frontmatter_strips_claude_fields,
     codex_output_rewrites_skill_dir_token,
     codex_skill_frontmatter_strips_claude_fields,
     every_source_file_emits_to_each_target,
@@ -43,10 +42,6 @@ def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
 
 def test_codex_skill_frontmatter_strips_claude_only_fields() -> None:
     assert codex_skill_frontmatter_strips_claude_fields()
-
-
-def test_codex_command_frontmatter_strips_claude_only_fields() -> None:
-    assert codex_command_frontmatter_strips_claude_fields()
 
 
 def test_path_rewrite_is_idempotent() -> None:

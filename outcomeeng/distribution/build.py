@@ -103,7 +103,6 @@ IMPLEMENTED: Final = True
 
 SHARED_DIR_NAME: Final = "_shared"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
-COMMANDS_SUBDIR_NAME: Final = "commands"
 AGENTS_SUBDIR_NAME: Final = "agents"
 SCRIPTS_SUBDIR_NAME: Final = "scripts"
 HOOKS_SUBDIR_NAME: Final = "hooks"
@@ -113,7 +112,6 @@ REFERENCES_SUBDIR_NAME: Final = "references"
 PLUGIN_SUBDIRS: Final = frozenset(
     {
         SKILLS_SUBDIR_NAME,
-        COMMANDS_SUBDIR_NAME,
         AGENTS_SUBDIR_NAME,
         SCRIPTS_SUBDIR_NAME,
         HOOKS_SUBDIR_NAME,
@@ -121,16 +119,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
         CODEX_PLUGIN_SUBDIR_NAME,
     }
 )
-INCLUDE_SITE_SUBDIRS: Final = frozenset(
-    {
-        SKILLS_SUBDIR_NAME,
-        COMMANDS_SUBDIR_NAME,
-        AGENTS_SUBDIR_NAME,
-    }
-)
-
 SKILL_FILENAME: Final = "SKILL.md"
-COMMAND_FILE_SUFFIX: Final = ".md"
 AGENT_FILE_SUFFIX: Final = ".md"
 
 
@@ -690,7 +679,12 @@ def execution_time_injection_commands(text: str) -> tuple[str, ...]:
 def contains_execution_time_skill_content_injection(text: str) -> bool:
     """Return whether dynamic context can inline a skill definition."""
     return any(
-        SKILL_FILENAME in command for command in execution_time_injection_commands(text)
+        SKILL_FILENAME in command
+        or (
+            "../" in command
+            and ("*" in command or f"/{REFERENCES_SUBDIR_NAME}/" in command)
+        )
+        for command in execution_time_injection_commands(text)
     )
 
 
@@ -1237,8 +1231,7 @@ def _planned_fan_out_emissions(
     shared_root: Path,
 ) -> tuple[PlannedEmission, ...]:
     if (
-        len(relative_path.parts) < 2
-        or relative_path.parts[1] not in INCLUDE_SITE_SUBDIRS
+        SKILLS_SUBDIR_NAME not in relative_path.parts
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
     ):
         return ()

@@ -9,12 +9,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
+    AGENT_FILE_SUFFIX,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
     CODEX_SKILL_DIR_TOKEN,
-    COMMAND_FILE_SUFFIX,
-    COMMANDS_SUBDIR_NAME,
     DISABLE_MODEL_INVOCATION_FIELD,
     EmissionAction,
     EXECUTION_TIME_INJECTION_END,
@@ -304,10 +303,6 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
     )
 
 
-def codex_command_frontmatter_strips_claude_fields() -> bool:
-    return all(_command_frontmatter_translates(case) for case in source_scenarios())
-
-
 def path_rewrite_is_idempotent() -> bool:
     return all(_path_rewrite_is_idempotent(case) for case in source_scenarios())
 
@@ -347,11 +342,18 @@ def _execution_time_injection_detector_covers_generated_commands() -> bool:
 
 
 def _execution_time_commands(case: SourceScenario) -> tuple[str, ...]:
+    reference_name = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
+    sibling_paths = (
+        f"../{case.skill}/{SKILL_FILENAME}",
+        f"../{case.skill}/*",
+        f"../{case.skill}/{REFERENCES_SUBDIR_NAME}/{reference_name}",
+    )
     return (
-        f"{case.inner_topic} ../{case.skill}/{SKILL_FILENAME}",
+        *(f"{case.inner_topic} {path}" for path in sibling_paths),
         *(
-            f"{case.inner_topic} {skill_dir_token}/../{case.skill}/{SKILL_FILENAME}"
+            f"{case.inner_topic} {skill_dir_token}/{path}"
             for skill_dir_token in (CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
+            for path in sibling_paths
         ),
     )
 
@@ -421,7 +423,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             ),
         )
     )
-    artifact_filename = f"{case.cycle_topic}{COMMAND_FILE_SUFFIX}"
+    artifact_filename = f"{case.cycle_topic}{AGENT_FILE_SUFFIX}"
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory) / min(IGNORED_SOURCE_DIRECTORY_NAMES)
         builder = SrcTreeBuilder(root)
@@ -429,12 +431,11 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             case.scope,
             case.inner_topic,
             case.fragment_body,
-            references={f"{case.outer_topic}{COMMAND_FILE_SUFFIX}": fan_out_body},
+            references={f"{case.outer_topic}{AGENT_FILE_SUFFIX}": fan_out_body},
         )
         builder.add_plugin(
             case.plugin,
             skills={case.skill: source_body},
-            commands={case.inner_topic: source_body},
             agents={case.outer_topic: source_body},
             artifacts={
                 Path(artifact_filename): source_body.encode(),
@@ -492,7 +493,7 @@ def _synthetic_inventory_is_complete() -> bool:
 
 
 def _repeated_include_failures(case: SourceScenario) -> tuple[str, ...]:
-    reference_filename = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    reference_filename = f"{case.outer_topic}{AGENT_FILE_SUFFIX}"
     directive = format_directive(
         IncludeDirective(f"{case.scope}/{case.inner_topic}/{SHARED_FRAGMENT_FILENAME}")
     )
@@ -756,19 +757,6 @@ def _frontmatter_fields_are_absent(
     return True
 
 
-def _command_frontmatter_translates(case: SourceScenario) -> bool:
-    source = _frontmatter_source(case)
-    with TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
-        builder = SrcTreeBuilder(root)
-        builder.add_plugin(case.plugin, commands={case.outer_topic: source})
-        build(builder.src_root, root / DIST_DIR_NAME)
-        reader = DistTreeReader(root)
-        claude_body = _command_body(reader, case, target=Target.CLAUDE)
-        codex_body = _command_body(reader, case, target=Target.CODEX)
-        return _frontmatter_translation_holds(claude_body, codex_body)
-
-
 def _path_rewrite_is_idempotent(case: SourceScenario) -> bool:
     reference = _claude_reference(case)
     once = rewrite_paths_for_target(reference, target=Target.CODEX)
@@ -783,23 +771,8 @@ def _frontmatter_strip_is_idempotent(case: SourceScenario) -> bool:
     return strip_frontmatter_fields(once, fields=CLAUDE_ONLY_FRONTMATTER_FIELDS) == once
 
 
-def _command_body(
-    reader: DistTreeReader,
-    case: SourceScenario,
-    *,
-    target: Target,
-) -> str:
-    path = (
-        reader.target_root(target)
-        / case.plugin
-        / COMMANDS_SUBDIR_NAME
-        / f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
-    )
-    return path.read_text(encoding="utf-8")
-
-
 def _claude_reference(case: SourceScenario) -> str:
-    return f"{CLAUDE_SKILL_DIR_TOKEN}/{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    return f"{CLAUDE_SKILL_DIR_TOKEN}/{case.outer_topic}{AGENT_FILE_SUFFIX}"
 
 
 def _frontmatter_source(case: SourceScenario) -> str:

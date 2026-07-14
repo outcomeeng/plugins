@@ -18,8 +18,6 @@ from typing import Iterator, Mapping
 from outcomeeng.distribution.build import (
     AGENTS_SUBDIR_NAME,
     AGENT_FILE_SUFFIX,
-    COMMANDS_SUBDIR_NAME,
-    COMMAND_FILE_SUFFIX,
     PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
@@ -108,7 +106,6 @@ class SrcTreeBuilder:
         name: str,
         *,
         skills: Mapping[str, str] | None = None,
-        commands: Mapping[str, str] | None = None,
         agents: Mapping[str, str] | None = None,
         artifacts: Mapping[Path, bytes] | None = None,
     ) -> SrcTreeBuilder:
@@ -116,8 +113,6 @@ class SrcTreeBuilder:
 
         skills: skill-directory-name -> SKILL.md body content.
                 Each entry creates src/plugins/<name>/skills/<skill>/SKILL.md.
-        commands: command-name -> markdown body.
-                  Each entry creates src/plugins/<name>/commands/<command>.md.
         agents: agent-name -> markdown body.
                 Each entry creates src/plugins/<name>/agents/<agent>.md.
         artifacts: plugin-relative path -> opaque bytes. A nested path must begin
@@ -132,7 +127,6 @@ class SrcTreeBuilder:
         plugin_root.mkdir(parents=True, exist_ok=True)
 
         _write_skills(plugin_root, skills)
-        _write_commands(plugin_root, commands)
         _write_agents(plugin_root, agents)
         _write_artifacts(plugin_root, artifacts)
 
@@ -183,19 +177,6 @@ def _write_skills(plugin_root: Path, skills: Mapping[str, str] | None) -> None:
         skill_dir = skills_root / skill_name
         skill_dir.mkdir(exist_ok=True)
         (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
-
-
-def _write_commands(plugin_root: Path, commands: Mapping[str, str] | None) -> None:
-    if not commands:
-        return
-    for command_name in commands:
-        _validate_name(command_name, kind="command")
-    commands_root = plugin_root / COMMANDS_SUBDIR_NAME
-    commands_root.mkdir(exist_ok=True)
-    for command_name, content in commands.items():
-        (commands_root / f"{command_name}{COMMAND_FILE_SUFFIX}").write_text(
-            content, encoding="utf-8"
-        )
 
 
 def _write_agents(plugin_root: Path, agents: Mapping[str, str] | None) -> None:
