@@ -338,8 +338,8 @@ def test_rendered_router_omits_retired_session_tokens() -> None:
         rendered = MODULE.render(
             template, harness.TEMPLATE_LANGUAGES, version, agent_harness
         )
-        assert harness.SESSION_ARCHIVE_RESULT_INSTRUCTION not in rendered
-        assert harness.SESSION_RESULT_FRONTMATTER_FIELD not in rendered
+        for forbidden_line in harness.retired_session_result_lines():
+            assert forbidden_line not in rendered
 
 
 def test_unresolved_build_macro_is_rejected() -> None:

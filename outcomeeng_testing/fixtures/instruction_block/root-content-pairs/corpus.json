@@ -1,0 +1,7 @@
+{
+  "shared": "identical",
+  "alternate_shared": "below-threshold",
+  "near_identical": "above-threshold",
+  "straddling": "straddling",
+  "midline_boundary": "midline-boundary"
+}

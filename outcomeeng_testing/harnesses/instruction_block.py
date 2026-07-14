@@ -2,9 +2,8 @@
 
 Exposes:
 
-- An importlib loader for ``instruction_block.py``. The module ships under a
-  generated plugin skill directory and is not importable by package
-  name; tests load it through ``importlib`` instead.
+- Access to the shipped ``instruction_block.py`` module through the production
+  distribution loader, which owns its importlib path and cache contract.
 - ``build_template``. Constructs a synthetic instruction-block.md-shaped template for
   focused render scenarios. Canonical language-block mapping evidence reads the real
   template instead, so the governed domain follows every language the template defines.
@@ -17,7 +16,6 @@ fixture files and temporary directories owned and cleaned up by this harness.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import os
@@ -25,32 +23,21 @@ import pathlib
 import re
 import shlex
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
-import sys
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, cast
 
 from hypothesis import given
 from hypothesis import strategies as st
+from hypothesis import settings
 
+from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators import instruction_block as generators
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
-# Coupled to the update-instruction-block skill directory name; a rename there must update
-# this path or load_instruction_block_module raises RuntimeError at import time.
-INSTRUCTION_BLOCK_MODULE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "update-instruction-block"
-    / "scripts"
-    / "instruction_block.py"
-)
 CANONICAL_TEMPLATE_PATH = (
     REPO_ROOT
     / "src"
@@ -62,13 +49,19 @@ CANONICAL_TEMPLATE_PATH = (
     / "instruction-block.md"
 )
 
-INSTRUCTION_CLAUDE: Final = "CLAUDE.md"
-INSTRUCTION_AGENTS: Final = "AGENTS.md"
+SOURCE_MODULE: Final = cast(ModuleType, distribution.load_instruction_block_module())
+INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS = tuple(
+    SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES.values()
+)
 ROOT_TOPOLOGY_FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "instruction_block"
 )
 ROOT_CONTENT_PAIR_FIXTURES_DIR: Final = (
     ROOT_TOPOLOGY_FIXTURES_DIR / "root-content-pairs"
+)
+ROOT_CONTENT_CORPUS_FIXTURE: Final = ROOT_CONTENT_PAIR_FIXTURES_DIR / "corpus.json"
+RETIRED_SESSION_RESULT_FIXTURE: Final = (
+    ROOT_TOPOLOGY_FIXTURES_DIR / "retired-session-result.md"
 )
 TOPOLOGY_ONLY_CLAUDE: Final = "only-claude.json"
 TOPOLOGY_ONLY_AGENTS: Final = "only-agents.json"
@@ -80,19 +73,12 @@ SYNTHETIC_TEMPLATE_WITH_EXTRA_SECTION: Final = (
     "synthetic-template-with-extra-section.md"
 )
 
-SHARED_REGION_NAME: Final = "root"
-ROOT_CONTENT_CASE_ABOVE_THRESHOLD: Final = "above-threshold"
-ROOT_CONTENT_CASE_BELOW_THRESHOLD: Final = "below-threshold"
-ROOT_CONTENT_CASE_IDENTICAL: Final = "identical"
-ROOT_CONTENT_CASE_MIDLINE_BOUNDARY: Final = "midline-boundary"
-ROOT_CONTENT_CASE_STRADDLING: Final = "straddling"
-
-# The retired session-result tokens the shipped instruction block must never teach. No
-# production module owns a removed token, so the regression guard declares the forbidden
-# strings here and asserts they are absent from the real rendered output.
-SESSION_MANAGEMENT_HEADING = "## Session Management"
-SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
-SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+SHARED_REGION_NAME: Final = cast(str, SOURCE_MODULE.BOOTSTRAP_SHARED_REGION_NAME)
+PROPERTY_EXAMPLES: Final = 100
+PROPERTY_SETTINGS: Final = settings(
+    max_examples=PROPERTY_EXAMPLES,
+    print_blob=True,
+)
 
 BUILD_MACRO_CAPABILITY = "ask_user"
 BUILD_MACRO_HARNESS = "codex"
@@ -113,6 +99,17 @@ class RootContentPair:
     name: str
     claude: str
     agents: str
+
+
+@dataclass(frozen=True)
+class RootContentCorpus:
+    """Fixture-owned semantic roles for the bootstrap content-pair corpus."""
+
+    shared: RootContentPair
+    alternate_shared: RootContentPair
+    near_identical: RootContentPair
+    straddling: RootContentPair
+    midline_boundary: RootContentPair
 
 
 @dataclass(frozen=True)
@@ -315,6 +312,34 @@ def root_content_pair(name: str) -> RootContentPair:
     return next(pair for pair in root_content_pairs() if pair.name == name)
 
 
+def root_content_corpus() -> RootContentCorpus:
+    """Load fixture-owned semantic roles for the bootstrap content corpus."""
+    roles = cast(
+        Mapping[str, str],
+        json.loads(ROOT_CONTENT_CORPUS_FIXTURE.read_text(encoding="utf-8")),
+    )
+    pairs = {pair.name: pair for pair in root_content_pairs()}
+    return RootContentCorpus(
+        shared=pairs[roles["shared"]],
+        alternate_shared=pairs[roles["alternate_shared"]],
+        near_identical=pairs[roles["near_identical"]],
+        straddling=pairs[roles["straddling"]],
+        midline_boundary=pairs[roles["midline_boundary"]],
+    )
+
+
+def retired_session_result_lines() -> tuple[str, ...]:
+    """Read the rule-owned violating lines retired from the instruction block."""
+    return tuple(
+        line
+        for line in RETIRED_SESSION_RESULT_FIXTURE.read_text(
+            encoding="utf-8"
+        ).splitlines()
+        if line and not line.startswith("#")
+    )
+
+
+ROOT_CONTENT_CORPUS: Final = root_content_corpus()
 ROOT_CLAUDE_BODY: Final = root_instruction_topology_only_claude().files[
     INSTRUCTION_CLAUDE
 ]
@@ -324,24 +349,14 @@ ROOT_AGENTS_BODY: Final = root_instruction_topology_only_agents().files[
 ROOT_SHARED_BODY: Final = root_instruction_topology_claude_symlink().files[
     INSTRUCTION_AGENTS
 ]
-SHARED_REGION_BODY: Final = root_content_pair(ROOT_CONTENT_CASE_IDENTICAL).claude.strip(
-    "\n"
-)
-SHARED_REGION_BODY_ALT: Final = root_content_pair(
-    ROOT_CONTENT_CASE_BELOW_THRESHOLD
-).claude.strip("\n")
-ROOT_NEAR_IDENTICAL_CLAUDE: Final = root_content_pair(
-    ROOT_CONTENT_CASE_ABOVE_THRESHOLD
-).claude
-ROOT_NEAR_IDENTICAL_CODEX: Final = root_content_pair(
-    ROOT_CONTENT_CASE_ABOVE_THRESHOLD
-).agents
-ROOT_STRADDLING_CLAUDE: Final = root_content_pair(ROOT_CONTENT_CASE_STRADDLING).claude
-ROOT_STRADDLING_CODEX: Final = root_content_pair(ROOT_CONTENT_CASE_STRADDLING).agents
-ROOT_MIDLINE_CLAUDE: Final = root_content_pair(
-    ROOT_CONTENT_CASE_MIDLINE_BOUNDARY
-).claude
-ROOT_MIDLINE_CODEX: Final = root_content_pair(ROOT_CONTENT_CASE_MIDLINE_BOUNDARY).agents
+SHARED_REGION_BODY: Final = ROOT_CONTENT_CORPUS.shared.claude.strip("\n")
+SHARED_REGION_BODY_ALT: Final = ROOT_CONTENT_CORPUS.alternate_shared.claude.strip("\n")
+ROOT_NEAR_IDENTICAL_CLAUDE: Final = ROOT_CONTENT_CORPUS.near_identical.claude
+ROOT_NEAR_IDENTICAL_CODEX: Final = ROOT_CONTENT_CORPUS.near_identical.agents
+ROOT_STRADDLING_CLAUDE: Final = ROOT_CONTENT_CORPUS.straddling.claude
+ROOT_STRADDLING_CODEX: Final = ROOT_CONTENT_CORPUS.straddling.agents
+ROOT_MIDLINE_CLAUDE: Final = ROOT_CONTENT_CORPUS.midline_boundary.claude
+ROOT_MIDLINE_CODEX: Final = ROOT_CONTENT_CORPUS.midline_boundary.agents
 
 
 @contextmanager
@@ -494,21 +509,8 @@ def render_build_macro() -> str:
 
 
 def load_instruction_block_module() -> ModuleType:
-    """Load the ``instruction_block`` module via importlib and cache it."""
-    cached = sys.modules.get("instruction_block")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["instruction_block"] = module
-    spec.loader.exec_module(module)
-    return module
+    """Return the generator loaded through the production distribution contract."""
+    return SOURCE_MODULE
 
 
 def _version_string(parts: tuple[int, int, int]) -> str:
@@ -528,6 +530,7 @@ def instruction_block_properties_hold() -> bool:
     """Exercise every generated invariant declared by instruction-block property evidence."""
     module = load_instruction_block_module()
 
+    @PROPERTY_SETTINGS
     @given(
         agent_harness=st.sampled_from(TEMPLATE_HARNESSES),
         installed=generators.version_parts(),
@@ -545,6 +548,7 @@ def instruction_block_properties_hold() -> bool:
         )
         assert module.parse_template_version(rendered) == installed_text
 
+    @PROPERTY_SETTINGS
     @given(installed=generators.version_parts())
     def managed_surfaces_end_with_one_newline(
         installed: tuple[int, int, int],
@@ -568,6 +572,7 @@ def instruction_block_properties_hold() -> bool:
             assert document.endswith("\n")
             assert not document.endswith("\n\n")
 
+    @PROPERTY_SETTINGS
     @given(
         left=generators.version_parts(),
         right=generators.version_parts(),
@@ -580,6 +585,7 @@ def instruction_block_properties_hold() -> bool:
             left < right
         )
 
+    @PROPERTY_SETTINGS
     @given(
         body_a=generators.shared_region_bodies(),
         body_b=generators.shared_region_bodies(),
@@ -598,6 +604,7 @@ def instruction_block_properties_hold() -> bool:
                 == module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
             )
 
+    @PROPERTY_SETTINGS
     @given(body=generators.shared_region_bodies())
     def identical_region_reconcile_is_idempotent(body: str) -> None:
         document_a = _shared_document(module, SHARED_REGION_NAME, body)
@@ -609,6 +616,7 @@ def instruction_block_properties_hold() -> bool:
                 winner,
             ) == (document_a, document_b)
 
+    @PROPERTY_SETTINGS
     @given(
         content_a=generators.free_instruction_content(),
         content_b=generators.free_instruction_content(),
