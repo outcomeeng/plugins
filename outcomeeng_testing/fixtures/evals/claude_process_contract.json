@@ -31,13 +31,13 @@
   "auth_cases": [
     {
       "name": "api-key",
-      "environment": {"ANTHROPIC_API_KEY": "fixture-api-key"},
+      "environment": { "ANTHROPIC_API_KEY": "fixture-api-key" },
       "bare_override": null,
       "expected_bare": true
     },
     {
       "name": "oauth-only",
-      "environment": {"CLAUDE_CODE_OAUTH_TOKEN": "fixture-oauth-token"},
+      "environment": { "CLAUDE_CODE_OAUTH_TOKEN": "fixture-oauth-token" },
       "bare_override": null,
       "expected_bare": false
     },
@@ -64,7 +64,7 @@
     },
     {
       "name": "forced-non-bare",
-      "environment": {"ANTHROPIC_API_KEY": "fixture-api-key"},
+      "environment": { "ANTHROPIC_API_KEY": "fixture-api-key" },
       "bare_override": false,
       "expected_bare": false
     }

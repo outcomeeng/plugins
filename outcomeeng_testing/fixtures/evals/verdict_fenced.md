@@ -1,3 +1,3 @@
 ```json
-{"status":"rejected","findings":[{"rule":"fixture-rule","present":true}]}
+{ "status": "rejected", "findings": [{ "rule": "fixture-rule", "present": true }] }
 ```

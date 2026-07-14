@@ -1,3 +1,3 @@
 case={input_json} payload={
-  "snippet": "const value = 1;"
+"snippet": "const value = 1;"
 }

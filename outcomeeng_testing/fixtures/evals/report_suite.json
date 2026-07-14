@@ -5,8 +5,8 @@
   "configured_timeout_seconds": 360,
   "case": {
     "id": "fixture-case",
-    "input": {"path": "fixture.ts", "content": "const value = 1;"},
-    "must_contain": [{"findings": [{"rule": "fixture-rule"}]}],
+    "input": { "path": "fixture.ts", "content": "const value = 1;" },
+    "must_contain": [{ "findings": [{ "rule": "fixture-rule" }] }],
     "must_not_contain": []
   },
   "trial": {
@@ -15,7 +15,7 @@
     "response": "{\"status\":\"rejected\",\"findings\":[{\"rule\":\"fixture-rule\",\"present\":true}]}",
     "verdict": {
       "status": "rejected",
-      "findings": [{"rule": "fixture-rule", "present": true}]
+      "findings": [{ "rule": "fixture-rule", "present": true }]
     },
     "metadata": {
       "duration_ms": 2608.0,
