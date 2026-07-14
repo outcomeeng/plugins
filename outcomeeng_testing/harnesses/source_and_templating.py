@@ -42,12 +42,13 @@ from outcomeeng.distribution.build import (
     make_jinja_environment,
     parse_directives,
     render_text,
+    resolve_runtime_token,
+    runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
     PLUGINS_DIR_NAME,
-    REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     SKILLS_SUBDIR_NAME,
     Target,
 )
@@ -310,6 +311,19 @@ def require_skill_expands_to_neutral_guidance() -> bool:
     return all(_require_expands_neutrally(case) for case in source_scenarios())
 
 
+def require_skill_neutrality_oracle_rejects_runtime_specific_guidance() -> bool:
+    runtime_names = _runtime_specific_names()
+    return all(
+        not _require_guidance_is_neutral(
+            " ".join((case.skill_ref, runtime_name)),
+            skill_ref=case.skill_ref,
+            runtime_names=runtime_names,
+        )
+        for case in source_scenarios()
+        for runtime_name in runtime_names
+    )
+
+
 def require_skill_renders_inline() -> bool:
     return all(_require_renders_inline(case) for case in source_scenarios())
 
@@ -474,10 +488,34 @@ def _standard_jinja_variable_passes(case: SourceScenario) -> bool:
 
 def _require_expands_neutrally(case: SourceScenario) -> bool:
     rendered = expand_require_skill(RequireSkillDirective(case.skill_ref))
-    return (
-        rendered == REQUIRE_SKILL_GUIDANCE_TEMPLATE.format(skill_ref=case.skill_ref)
-        and case.skill_ref in rendered
+    return _require_guidance_is_neutral(
+        rendered,
+        skill_ref=case.skill_ref,
+        runtime_names=_runtime_specific_names(),
     )
+
+
+def _runtime_specific_names() -> tuple[str, ...]:
+    return tuple(
+        {
+            resolve_runtime_token(
+                coordinate.kind,
+                coordinate.capability,
+                coordinate.runtime,
+            )
+            for coordinate in runtime_token_resolver_cases()
+        }
+    )
+
+
+def _require_guidance_is_neutral(
+    guidance: str,
+    *,
+    skill_ref: str,
+    runtime_names: tuple[str, ...],
+) -> bool:
+    prose = guidance.replace(skill_ref, "")
+    return skill_ref in guidance and all(name not in prose for name in runtime_names)
 
 
 def _require_renders_inline(case: SourceScenario) -> bool:
