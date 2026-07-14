@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
     FORMATTER_COMMAND_NAME,
@@ -11,12 +12,15 @@ from outcomeeng.distribution.build import (
     FORMATTER_FILE_GLOB,
     BuildError,
     _format_dist,
+    build,
 )
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
+    DIST_DIR_NAME,
     DIST_DIFF_ARGV,
     DIST_DIFF_MODULE_NAME,
     ORCHESTRATION_VALIDATION_ARGV,
+    Target,
 )
 from outcomeeng.distribution.dist_diff import (
     DRIFT_REBUILD_NOTE,
@@ -49,6 +53,9 @@ from outcomeeng.validation.build_orchestration import (
     main as validate_build_orchestration,
 )
 from outcomeeng_testing.harnesses.dist_drift import dist_drift_repo
+from outcomeeng_testing.generators.source_and_templating import source_scenarios
+from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 REPOSITORY_ROOT = Path(".")
 FORMATTER_FAILURE_DIAGNOSTIC = "formatter failed"
@@ -188,16 +195,22 @@ def dist_diff_surfaces_match_contract() -> bool:
 
 def justfile_matches_build_contract() -> bool:
     justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
-    return just_recipe_names(justfile).count(
-        BUILD_RECIPE_NAME
-    ) == 1 and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
+    return (
+        just_recipe_names(justfile).count(BUILD_RECIPE_NAME) == 1
+        and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
+        and _build_emits_every_source_scenario_to_each_target()
+    )
 
 
 def lefthook_matches_build_contract() -> bool:
-    return (
+    if (
         lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
-        == LEFTHOOK_BUILD_COMMAND
-    )
+        != LEFTHOOK_BUILD_COMMAND
+    ):
+        return False
+    with dist_drift_repo() as repo:
+        repo.drift_dist()
+        return main(cwd=repo.root) != 0
 
 
 def claude_marketplace_matches_runtime_contract() -> bool:
@@ -248,3 +261,26 @@ def _rejects_runtime_prefix_collision(runtime_root: str) -> bool:
 def _rejects_runtime_parent_escape(*, runtime_root: str, sibling_root: str) -> bool:
     candidate = f"{runtime_root}/../{sibling_root}/{INVALID_PATH_SEGMENT}"
     return not path_is_under_runtime_root(candidate, runtime_root)
+
+
+def _build_emits_every_source_scenario_to_each_target() -> bool:
+    scenarios = source_scenarios()
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        builder = SrcTreeBuilder(root)
+        for scenario in scenarios:
+            builder.add_plugin(
+                scenario.plugin,
+                skills={scenario.skill: scenario.fragment_body},
+            )
+        build(builder.src_root, root / DIST_DIR_NAME)
+        reader = DistTreeReader(root)
+        return all(
+            reader.is_skill_present(
+                scenario.plugin,
+                scenario.skill,
+                target=target,
+            )
+            for scenario in scenarios
+            for target in Target
+        )

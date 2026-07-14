@@ -128,6 +128,7 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = ("disable-model-invocation",)
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
+EXECUTION_TIME_INJECTION_TOKEN: Final = "!`cat"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
 # the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
