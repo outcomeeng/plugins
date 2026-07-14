@@ -48,7 +48,7 @@ from outcomeeng.distribution.orchestration import (
     load_lefthook_config,
     path_is_under_runtime_root,
 )
-from outcomeeng.validation._steps import VALIDATION_STEPS
+from outcomeeng.validation._steps import DIST_DIFF_STEP_LABEL, VALIDATION_STEPS
 from outcomeeng.validation.build_orchestration import (
     main as validate_build_orchestration,
 )
@@ -62,7 +62,6 @@ FORMATTER_FAILURE_DIAGNOSTIC = "formatter failed"
 FORMATTER_TEST_PATH = "/usr/local/bin/dprint"
 RAW_DIFF_HUNK_MARKER = "@@"
 RAW_DIFF_LINE_PREFIXES = ("+", "-")
-DIST_DIFF_STEP_LABEL = "dist-diff"
 RAW_GIT_DIFF_COMMAND = "git diff --exit-code"
 RAW_DIFF_SUBCOMMAND = "diff"
 INVALID_PATH_SEGMENT = "develop"
@@ -180,7 +179,7 @@ def quality_gate_matches_build_orchestration_contract() -> bool:
 
 
 def dist_diff_surfaces_match_contract() -> bool:
-    dist_diff_argvs = {
+    dist_diff_argvs: set[tuple[str, ...]] = {
         step.argv for step in VALIDATION_STEPS if step.label == DIST_DIFF_STEP_LABEL
     }
     command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
@@ -189,7 +188,7 @@ def dist_diff_surfaces_match_contract() -> bool:
 
 def dist_diff_surface_violations_are_rejected() -> bool:
     command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
-    gate_without_reporter = {DIST_DIFF_ARGV[:-1]}
+    gate_without_reporter: set[tuple[str, ...]] = {DIST_DIFF_ARGV[:-1]}
     hook_without_reporter = command.replace(
         DIST_DIFF_MODULE_NAME,
         DIST_DIR_NAME,

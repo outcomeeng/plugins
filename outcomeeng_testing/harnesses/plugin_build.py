@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from difflib import unified_diff
 from os import utime
@@ -12,10 +13,12 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
+    FORMATTER_COMMAND_NAME,
     IMPLEMENTED,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     IncludeDirective,
+    FormatterProbe,
     build,
     format_directive,
     parse_directives,
@@ -124,8 +127,16 @@ def _generated_build_is_deterministic(source: PluginBuildSource) -> None:
         _set_source_mtime(second_builder.src_root, SECOND_SOURCE_MTIME_NS)
         first_dist = first_builder.root / DIST_DIR_NAME
         second_dist = second_builder.root / DIST_DIR_NAME
-        build(first_builder.src_root, first_dist)
-        build(second_builder.src_root, second_dist)
+        build(
+            first_builder.src_root,
+            first_dist,
+            formatter_probe=_formatter_probe(first_builder.root),
+        )
+        build(
+            second_builder.src_root,
+            second_dist,
+            formatter_probe=_formatter_probe(second_builder.root),
+        )
         assert snapshot_files(first_dist) == snapshot_files(second_dist)
 
 
@@ -161,6 +172,23 @@ def _committed_dist_snapshot() -> tuple[tuple[str, bytes], ...]:
         )
         for path in result.stdout.splitlines()
     )
+
+
+def _formatter_probe(host_root: Path) -> FormatterProbe:
+    formatter = shutil.which(FORMATTER_COMMAND_NAME)
+    if formatter is None:
+        raise AssertionError(f"{FORMATTER_COMMAND_NAME} is unavailable")
+    host_bin = host_root / "bin"
+    host_bin.mkdir()
+    formatter_alias = host_bin / FORMATTER_COMMAND_NAME
+    formatter_alias.symlink_to(formatter)
+
+    def probe(command_name: str) -> str | None:
+        if command_name != FORMATTER_COMMAND_NAME:
+            raise AssertionError(command_name)
+        return str(formatter_alias)
+
+    return probe
 
 
 def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:

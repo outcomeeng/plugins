@@ -792,14 +792,21 @@ def emit_skill(
     shutil.copymode(src_path, destination)
 
 
-def build(src_root: Path, dist_root: Path) -> None:
+def build(
+    src_root: Path,
+    dist_root: Path,
+    *,
+    formatter_probe: FormatterProbe = shutil.which,
+    formatter_runner: FormatterRunner | None = None,
+) -> None:
     """End-to-end build: src/ -> dist/claude/ and dist/codex/.
 
     Validates src_root's tree shape, then iterates every plugin source file
-    and emits both target outputs. The build is deterministic and
-    idempotent — the same src_root always produces byte-identical outputs,
-    and re-running the build over a previously-emitted dist_root produces
-    no changes.
+    and emits both target outputs. Formatter discovery and execution remain
+    injectable so callers can verify host-specific boundaries. The build is
+    deterministic and idempotent — the same src_root always produces
+    byte-identical outputs, and re-running the build over a previously-emitted
+    dist_root produces no changes.
 
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
@@ -846,7 +853,11 @@ def build(src_root: Path, dist_root: Path) -> None:
             src_root=src_root,
         )
 
-    _format_dist(dist_root)
+    _format_dist(
+        dist_root,
+        formatter_probe=formatter_probe,
+        runner=_run_formatter if formatter_runner is None else formatter_runner,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
