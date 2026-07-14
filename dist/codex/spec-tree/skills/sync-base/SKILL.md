@@ -149,7 +149,7 @@ A product-intent conflict is the only thing on the other side. Name it precisely
 
 <testing>
 
-Run `just test spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/tests` after changing the synchronizer or this workflow contract. The real-git test matrix covers:
+The bundled synchronizer is covered before release by this real-git test matrix:
 
 | Input                                                | Expected result                                                                     |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -187,7 +187,9 @@ How to avoid: state the attached-branch rebase and detached-head advance as sepa
 
 <success_criteria>
 
-- Exit 0 carries `status=already_current` or `status=rebased`, `conflict=null`, and a non-null `preservation` object; after `rebased`, HEAD equals the fetched base tip with attached-branch commits preserved or a clean ancestor detached HEAD advanced.
+- Exit 0 carries `status=already_current` or `status=rebased`, `conflict=null`, and a non-null `preservation` object.
+- After an attached-branch `rebased` outcome, `git merge-base --is-ancestor origin/<base> HEAD` succeeds and the branch's commits remain reachable from HEAD.
+- After a detached-head `rebased` outcome, HEAD equals the full OID of the fetched `origin/<base>` tip.
 - Exit 4 carries `status=dirty_tree` and `conflict=null`; HEAD, index, and tracked working-tree content match their pre-invocation state.
 - Exit 3 carries `status=conflict`, a non-null `conflict` object with paths, git facts, conflict text, and operator options, and an active rebase state remains available for inspection.
 - Exit 1 carries `status=git_failure` and a non-empty `detail`; a diverged detached HEAD remains at its original full OID.
