@@ -26,8 +26,11 @@ from outcomeeng.validation.runtime_tokens import (
 )
 from outcomeeng_testing.generators.runtime_tokens import (
     RuntimeNameCase,
+    empty_enforcement_registry,
+    inverted_enforcement_registry_probe,
     lint_enforced_runtime_names,
     review_only_runtime_names,
+    runtime_conditional_cases,
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
@@ -58,7 +61,7 @@ def raw_token_report_matches_contract() -> bool:
 
 
 def token_expression_matches_contract() -> bool:
-    """Exercise a source-owned runtime token through the command boundary."""
+    """Exercise token and conditional expressions through the command boundary."""
     for case in lint_enforced_runtime_names():
         with TemporaryDirectory() as temporary_directory:
             path = Path(temporary_directory) / SKILL_FILENAME
@@ -71,37 +74,37 @@ def token_expression_matches_contract() -> bool:
                 exit_code = main([str(path)])
             if exit_code != 0 or output.getvalue() != "" or scan_file(path) != []:
                 return False
+    for conditional_case in runtime_conditional_cases():
+        for source in conditional_case.matching_sources:
+            if not _source_passes(source):
+                return False
+        for source in conditional_case.mismatching_sources:
+            if _source_passes(source):
+                return False
     return True
 
 
 def ignored_file_matches_contract() -> bool:
-    """Exercise one controlled ignore entry through scan and command layers."""
+    """Exercise every production ignore entry through scan and command layers."""
     for case in lint_enforced_runtime_names():
-        with TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory).resolve()
-            path = (
-                root
-                / SOURCE_ROOT_NAME
-                / PLUGINS_DIR_NAME
-                / case.capability
-                / SKILL_FILENAME
-            )
-            path.parent.mkdir(parents=True)
-            path.write_text(_raw_fixture(case)[0], encoding="utf-8")
-            relative = path.relative_to(root).as_posix()
-            ignore = frozenset({relative})
-            output = StringIO()
-            with redirect_stdout(output):
-                exit_code = main([str(path)], ignore=ignore, repo_root=root)
-            if not (
-                is_ignored(path, ignore=ignore, repo_root=root)
-                and scan_file(path, ignore=ignore, repo_root=root) == []
-                and scan_paths([path], ignore=ignore, repo_root=root) == []
-                and exit_code == 0
-                and output.getvalue() == ""
-                and bool(scan_file(path, ignore=frozenset(), repo_root=root))
-            ):
-                return False
+        for relative in RUNTIME_TOKEN_IGNORE:
+            with TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory).resolve()
+                path = root / relative
+                path.parent.mkdir(parents=True)
+                path.write_text(_raw_fixture(case)[0], encoding="utf-8")
+                output = StringIO()
+                with redirect_stdout(output):
+                    exit_code = main([str(path)], repo_root=root)
+                if not (
+                    is_ignored(path, repo_root=root)
+                    and scan_file(path, repo_root=root) == []
+                    and scan_paths([path], repo_root=root) == []
+                    and exit_code == 0
+                    and output.getvalue() == ""
+                    and bool(scan_file(path, ignore=frozenset(), repo_root=root))
+                ):
+                    return False
     return True
 
 
@@ -136,9 +139,29 @@ def every_enforced_registry_name_is_rejected() -> bool:
 
 
 def forbidden_names_derive_from_enforced_registry_kinds() -> bool:
-    """Compare the derived names with the registry's independently flattened set."""
-    expected = frozenset(case.name for case in lint_enforced_runtime_names())
-    return frozenset(forbidden_names()) == expected
+    """Exercise controlled registry enforcement through every scanner layer."""
+    probe = inverted_enforcement_registry_probe()
+    empty_registry = empty_enforcement_registry()
+    with TemporaryDirectory() as temporary_directory:
+        path = Path(temporary_directory) / SKILL_FILENAME
+        path.write_text(
+            "\n".join((*probe.enforced_names, *probe.excluded_names)),
+            encoding="utf-8",
+        )
+        violations = scan_file(path, registry=probe.registry)
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = main([str(path)], registry=probe.registry)
+        return (
+            frozenset(forbidden_names(registry=probe.registry))
+            == frozenset(probe.enforced_names)
+            and {violation.token for violation in violations}
+            == set(probe.enforced_names)
+            and exit_code != 0
+            and all(name in output.getvalue() for name in probe.enforced_names)
+            and scan_file(path, registry=empty_registry) == []
+            and main([str(path)], registry=empty_registry) == 0
+        )
 
 
 def review_only_names_are_excluded() -> bool:
@@ -178,3 +201,13 @@ def authored_tree_default_enforcement_matches_contract() -> bool:
 def _raw_fixture(case: RuntimeNameCase) -> tuple[str, int]:
     prefix_lines = (f"# {case.capability}", "")
     return "\n".join((*prefix_lines, case.name, "")), len(prefix_lines) + 1
+
+
+def _source_passes(source: str) -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        path = Path(temporary_directory) / SKILL_FILENAME
+        path.write_text(source, encoding="utf-8")
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = main([str(path)])
+        return exit_code == 0 and output.getvalue() == "" and scan_file(path) == []

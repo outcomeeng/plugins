@@ -157,6 +157,43 @@ RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
 }
 
 
+def format_target_branches(
+    branches: tuple[tuple[Target, str], ...],
+    *,
+    fallback: str | None = None,
+) -> str:
+    """Return one authored per-target conditional over ``branches``."""
+    if not branches:
+        msg = "at least one target branch is required"
+        raise ValueError(msg)
+
+    lines: list[str] = []
+    for index, (target, body) in enumerate(branches):
+        keyword = "if" if index == 0 else "elif"
+        lines.extend(
+            (
+                f"{BUILD_BLOCK_DELIMITER_START} {keyword} "
+                f"{BUILD_TARGET_VARIABLE} == {target.value!r} "
+                f"{BUILD_BLOCK_DELIMITER_END}",
+                body,
+            )
+        )
+    if fallback is not None:
+        lines.extend(
+            (
+                f"{BUILD_BLOCK_DELIMITER_START} else {BUILD_BLOCK_DELIMITER_END}",
+                fallback,
+            )
+        )
+    lines.append(f"{BUILD_BLOCK_DELIMITER_START} endif {BUILD_BLOCK_DELIMITER_END}")
+    return "\n".join(lines)
+
+
+def format_target_conditional(target: Target, body: str) -> str:
+    """Return an authored conditional whose body belongs to one target."""
+    return format_target_branches(((target, body),))
+
+
 SOURCE_ROOT_NAME: Final = "src"
 CLAUDE_DIST_RELATIVE: Final = Path(DIST_DIR_NAME) / Target.CLAUDE.value
 DISTRIBUTION_WORKFLOW_RELATIVE: Final = (
