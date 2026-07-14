@@ -27,32 +27,51 @@ ALIGNMENT_SCOPE_MODULE_PATH = (
     / "scripts"
     / "derive_changeset_scope.py"
 )
+ALIGNMENT_SCOPE_MODULE_NAME = "outcomeeng_testing_alignment_scope_adapter"
+
+
+def _module_origin(module: ModuleType) -> pathlib.Path | None:
+    origin = getattr(module, "__file__", None)
+    return pathlib.Path(origin).resolve() if origin is not None else None
 
 
 def _load_alignment_scope_module() -> ModuleType:
-    cached = sys.modules.get("derive_changeset_scope")
-    if cached is not None:
+    cached = sys.modules.get(ALIGNMENT_SCOPE_MODULE_NAME)
+    if cached is not None and _module_origin(cached) == ALIGNMENT_SCOPE_MODULE_PATH:
         return cached
     spec = importlib.util.spec_from_file_location(
-        "derive_changeset_scope", ALIGNMENT_SCOPE_MODULE_PATH
+        ALIGNMENT_SCOPE_MODULE_NAME, ALIGNMENT_SCOPE_MODULE_PATH
     )
     if spec is None or spec.loader is None:
         raise RuntimeError(
             f"Cannot load alignment scope adapter from {ALIGNMENT_SCOPE_MODULE_PATH}"
         )
     module = importlib.util.module_from_spec(spec)
-    sys.modules["derive_changeset_scope"] = module
+    sys.modules[ALIGNMENT_SCOPE_MODULE_NAME] = module
     spec.loader.exec_module(module)
     return module
 
 
 def assert_alignment_uses_canonical_changeset_scope() -> None:
     """Prove the executable adapter returns the canonical branch scope."""
+    previous = sys.modules.get(ALIGNMENT_SCOPE_MODULE_NAME)
+    foreign = sys.modules[__name__]
+    sys.modules[ALIGNMENT_SCOPE_MODULE_NAME] = foreign
+    try:
+        adapter = _load_alignment_scope_module()
+    finally:
+        if previous is None:
+            sys.modules.pop(ALIGNMENT_SCOPE_MODULE_NAME, None)
+        else:
+            sys.modules[ALIGNMENT_SCOPE_MODULE_NAME] = previous
+
+    assert adapter is not foreign
+    assert _module_origin(adapter) == ALIGNMENT_SCOPE_MODULE_PATH
+
     with TemporaryDirectory() as tmp:
         repo = pathlib.Path(tmp) / "repo"
         repo.mkdir()
         handle = build_stale_local_base_repo(repo)
-        adapter = _load_alignment_scope_module()
         canonical = load_changeset_scope_module()
 
         completed = subprocess.run(
