@@ -20,8 +20,6 @@ import pytest
 from outcomeeng.distribution import instruction_block as dist
 from outcomeeng_testing.harnesses import instruction_block as harness
 
-MODULE = harness.load_instruction_block_module()
-
 
 def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
@@ -35,51 +33,28 @@ def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
 def test_router_is_first_and_carries_read_whole_file_instruction(
     agent_harness: str,
 ) -> None:
+    module = harness.load_instruction_block_module()
     template = harness.read_canonical_template()
-    rendered = MODULE.render(
+    rendered = module.render(
         template,
         harness.TEMPLATE_LANGUAGES,
-        MODULE.parse_template_version(template),
+        module.parse_template_version(template),
         agent_harness,
     )
-    document = MODULE.prepend_router_block(rendered, harness.ROOT_SHARED_BODY)
-    assert document.startswith(MODULE.ROUTER_MARKER_PREFIX)
-    router_block = document[: document.index(MODULE.ROUTER_BLOCK_END)]
+    document = module.prepend_router_block(rendered, harness.ROOT_SHARED_BODY)
+    assert document.startswith(module.ROUTER_MARKER_PREFIX)
+    router_block = document[: document.index(module.ROUTER_BLOCK_END)]
     assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
-def test_router_gates_product_content_and_exempts_operational_state(
-    tmp_path: pathlib.Path,
-) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    harness.write_root_instructions_from_dist(
-        repo, languages=(harness.LANG_PRIMARY,)
-    )
-
-    for instruction_name in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
-        document = (repo / instruction_name).read_text(encoding="utf-8")
-        section = harness.extract_markdown_section(
-            document, harness.FOUNDATION_PRODUCT_CONTENT_HEADING
-        )
-        for required_text in (
-            harness.FOUNDATION_SPX_PATH_TRIGGER,
-            harness.FOUNDATION_SOURCE_TEST_TRIGGER,
-            harness.FOUNDATION_SESSION_EXEMPTION,
-            harness.FOUNDATION_INSPECTION_EXEMPTION,
-            harness.FOUNDATION_ARCHIVE_EXEMPTION,
-            harness.FOUNDATION_RELEASE_EXEMPTION,
-            harness.FOUNDATION_WORKTREE_EXEMPTION,
-            harness.FOUNDATION_DIAGNOSE_EXEMPTION,
-            harness.FOUNDATION_GIT_EXEMPTION,
-            harness.FOUNDATION_FOLLOW_PATH_GUARD,
-        ):
-            assert required_text in section
+def test_router_gates_product_content_and_exempts_operational_state() -> None:
+    harness.assert_generated_foundation_access_policy()
 
 
 def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
+    module = harness.load_instruction_block_module()
     expected: dict[str, str] = {}
-    for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
         path = dist.dist_template_path(agent_harness)
         assert dist.DIST_DIR_NAME in path.parts
         assert agent_harness in path.parts
@@ -90,7 +65,7 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
         dist_path = dist.dist_template_path(agent_harness, repo_root=tmp_path)
         dist_path.parent.mkdir(parents=True, exist_ok=True)
         dist_path.write_text(template, encoding="utf-8")
-    assert dist.load_harness_templates(MODULE, repo_root=tmp_path) == expected
+    assert dist.load_harness_templates(module, repo_root=tmp_path) == expected
 
 
 def test_justfile_binds_build_and_check_recipes() -> None:
@@ -114,48 +89,51 @@ def test_lefthook_regenerates_through_build_instructions() -> None:
 def test_drift_gate_reports_a_missing_root_instruction_file(
     tmp_path: pathlib.Path,
 ) -> None:
+    module = harness.load_instruction_block_module()
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.init_git_identity(repo)
     harness.write_both_root_files_with_shared_region(
-        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+        module, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
     harness.git_commit_at(
         repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
     )
     (repo / harness.INSTRUCTION_CLAUDE).unlink()
 
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
     assert harness.INSTRUCTION_CLAUDE in drift
 
 
 def test_drift_gate_marks_untracked_root_file_intent_to_add(
     tmp_path: pathlib.Path,
 ) -> None:
+    module = harness.load_instruction_block_module()
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.init_git_identity(repo)
     # both root files written but never committed — a plain git diff would miss them
     harness.write_both_root_files_with_shared_region(
-        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+        module, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
     # --intent-to-add registers each never-committed root file as drift
     assert harness.INSTRUCTION_CLAUDE in drift
     assert harness.INSTRUCTION_AGENTS in drift
 
 
 def test_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> None:
+    module = harness.load_instruction_block_module()
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.init_git_identity(repo)
     harness.write_both_root_files_with_shared_region(
-        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+        module, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
     harness.git_commit_at(
         repo, 1000, harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS
     )
-    drift = dist.drifting_instruction_files(repo_root=repo, module=MODULE)
+    drift = dist.drifting_instruction_files(repo_root=repo, module=module)
     # committed root files do not drift, and a never-tracked obsolete spx/ file is not reported
     assert drift == []
     assert "spx/CLAUDE.md" not in drift
@@ -227,6 +205,7 @@ def test_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> No
 
 
 def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
+    module = harness.load_instruction_block_module()
     repo = tmp_path / "repo"
     repo.mkdir()
     template = harness.write_current_template(tmp_path)
@@ -238,7 +217,7 @@ def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
     )
     harness.run_generator_write_primary(repo, template)
     assert (
-        MODULE.parse_instruction_version(claude.read_text(encoding="utf-8"))
+        module.parse_instruction_version(claude.read_text(encoding="utf-8"))
         == harness.NEW_VERSION
     )
 
@@ -287,7 +266,8 @@ def test_refresh_workflow_installs_dprint() -> None:
 
 
 def test_render_passes_brace_token_through_unchanged() -> None:
-    rendered = MODULE.render(
+    module = harness.load_instruction_block_module()
+    rendered = module.render(
         harness.build_template(harness.NEW_VERSION),
         (harness.LANG_PRIMARY,),
         harness.NEW_VERSION,
@@ -299,6 +279,7 @@ def test_render_passes_brace_token_through_unchanged() -> None:
 def test_former_command_slot_fence_is_ordinary_content(
     tmp_path: pathlib.Path,
 ) -> None:
+    module = harness.load_instruction_block_module()
     repo = tmp_path / "repo"
     repo.mkdir()
     slot_fence = (
@@ -312,25 +293,27 @@ def test_former_command_slot_fence_is_ordinary_content(
     result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     # the former slot text survives as ordinary content, and no slot name is a managed region
     assert "product author command" in result
-    assert set(MODULE.parse_shared_regions(result)) == {harness.SHARED_REGION_NAME}
+    assert set(module.parse_shared_regions(result)) == {harness.SHARED_REGION_NAME}
 
 
 def test_reconcile_replaces_the_losing_region_whole() -> None:
-    open_marker = MODULE.shared_open_marker(harness.SHARED_REGION_NAME)
-    close_marker = MODULE.shared_close_marker(harness.SHARED_REGION_NAME)
+    module = harness.load_instruction_block_module()
+    open_marker = module.shared_open_marker(harness.SHARED_REGION_NAME)
+    close_marker = module.shared_close_marker(harness.SHARED_REGION_NAME)
     doc_a = f"{open_marker}\n\n{harness.SHARED_REGION_BODY}\n\n{close_marker}\n"
     doc_b = f"{open_marker}\n\n{harness.SHARED_REGION_BODY_ALT}\n\n{close_marker}\n"
-    _, new_b = MODULE.reconcile_shared_regions(doc_a, doc_b, "a")
-    reconciled = MODULE.parse_shared_regions(new_b)[harness.SHARED_REGION_NAME]
+    _, new_b = module.reconcile_shared_regions(doc_a, doc_b, "a")
+    reconciled = module.parse_shared_regions(new_b)[harness.SHARED_REGION_NAME]
     assert reconciled == harness.SHARED_REGION_BODY
     assert harness.SHARED_REGION_BODY_ALT not in reconciled
 
 
 def test_rendered_router_omits_retired_session_tokens() -> None:
+    module = harness.load_instruction_block_module()
     template = harness.read_canonical_template()
-    version = MODULE.parse_template_version(template)
+    version = module.parse_template_version(template)
     for agent_harness in harness.TEMPLATE_HARNESSES:
-        rendered = MODULE.render(
+        rendered = module.render(
             template, harness.TEMPLATE_LANGUAGES, version, agent_harness
         )
         assert harness.SESSION_ARCHIVE_RESULT_INSTRUCTION not in rendered
@@ -338,17 +321,18 @@ def test_rendered_router_omits_retired_session_tokens() -> None:
 
 
 def test_unresolved_build_macro_is_rejected() -> None:
+    module = harness.load_instruction_block_module()
     # exercise the production pipeline function the build recipes call, not just the primitive: one
     # harness's dist template still carries an unresolved build macro, and the guard must propagate
     # through render_instruction_blocks_from_harness_templates
     harness_templates = {
         agent_harness: harness.build_template(harness.NEW_VERSION)
-        for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES
+        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
     }
     harness_templates[harness.HARNESS_CODEX] += harness.render_build_macro()
     with pytest.raises(dist.UnresolvedInstructionTemplateError):
         dist.render_instruction_blocks_from_harness_templates(
-            MODULE, harness_templates, (harness.LANG_PRIMARY,)
+            module, harness_templates, (harness.LANG_PRIMARY,)
         )
 
 

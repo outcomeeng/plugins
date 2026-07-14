@@ -46,6 +46,20 @@ BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
 WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
+FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
+FOUNDATION_POLICY_REQUIREMENTS: Final = (
+    ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
+    ("spx path trigger", "anything under `spx/`"),
+    ("source and test trigger", "source or test file"),
+    ("session exemption", "`spx session` operations"),
+    ("session inspection exemption", "inspection"),
+    ("session archive exemption", "archive"),
+    ("session release exemption", "release"),
+    ("worktree-status exemption", "`spx worktree status`"),
+    ("diagnose exemption", "`spx diagnose`"),
+    ("no-patch Git exemption", "no-patch Git status, history, and topology"),
+    ("product-path follow guard", "Never follow paths from their output"),
+)
 
 
 class InstructionBlockRenderError(RuntimeError):
@@ -54,6 +68,10 @@ class InstructionBlockRenderError(RuntimeError):
 
 class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
     """Raised when a rendered harness template still contains build macros."""
+
+
+class FoundationAccessPolicyError(InstructionBlockRenderError):
+    """Raised when a rendered router omits part of its foundation access policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -197,6 +215,40 @@ def render_instruction_blocks_from_harness_templates(
     }
 
 
+def _markdown_section(document: str, heading: str) -> str:
+    """Return the exact Markdown section beginning at ``heading``."""
+    lines = document.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as exc:
+        raise FoundationAccessPolicyError(f"missing router section: {heading}") from exc
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index, line in enumerate(lines[start + 1 :], start=start + 1):
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+def validate_foundation_access_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a rendered harness router that weakens the product-content gate."""
+    for harness, document in blocks_by_harness.items():
+        section = _markdown_section(document, FOUNDATION_POLICY_HEADING)
+        missing = [
+            name
+            for name, required_text in FOUNDATION_POLICY_REQUIREMENTS
+            if required_text not in section
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise FoundationAccessPolicyError(
+                f"{harness} router foundation policy is incomplete: {details}"
+            )
+
+
 def regenerate_instruction_blocks() -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -212,6 +264,7 @@ def regenerate_instruction_blocks() -> None:
         module.detect_languages_from_tree(spx_dir),
         template_paths=paths,
     )
+    validate_foundation_access_policy(rendered)
     module.write_root_instruction_files(REPO_ROOT, rendered)
     module.remove_obsolete_spx_instruction_files(REPO_ROOT)
 

@@ -23,6 +23,7 @@ import importlib.util
 import os
 import pathlib
 import subprocess
+import tempfile
 from dataclasses import dataclass
 import sys
 from types import ModuleType
@@ -125,23 +126,6 @@ SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 # product's own commands below the router. Declared here as the required-content vocabulary the
 # compliance guard asserts is present in the rendered router.
 READ_ENTIRE_FILE_INSTRUCTION = "Read this entire file"
-
-# Required router vocabulary for the product-content foundation gate. The compliance test renders
-# the shipped dist templates through the production writer and checks this complete boundary in
-# both generated root files.
-FOUNDATION_PRODUCT_CONTENT_HEADING = (
-    "### Before product-content access -> `/understand`"
-)
-FOUNDATION_SPX_PATH_TRIGGER = "anything under `spx/`"
-FOUNDATION_SOURCE_TEST_TRIGGER = "source or test file"
-FOUNDATION_SESSION_EXEMPTION = "`spx session` operations"
-FOUNDATION_INSPECTION_EXEMPTION = "inspection"
-FOUNDATION_ARCHIVE_EXEMPTION = "archive"
-FOUNDATION_RELEASE_EXEMPTION = "release"
-FOUNDATION_WORKTREE_EXEMPTION = "`spx worktree status`"
-FOUNDATION_DIAGNOSE_EXEMPTION = "`spx diagnose`"
-FOUNDATION_GIT_EXEMPTION = "no-patch Git status, history, and topology"
-FOUNDATION_FOLLOW_PATH_GUARD = "Never follow paths from their output"
 
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
@@ -284,22 +268,6 @@ def load_instruction_block_module() -> ModuleType:
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
-
-
-def extract_markdown_section(document: str, heading: str) -> str:
-    """Return a markdown section by exact heading line, including the heading."""
-    lines = document.splitlines()
-    try:
-        start = lines.index(heading)
-    except ValueError as exc:
-        raise RuntimeError(f"Heading not found: {heading}") from exc
-    heading_level = len(heading) - len(heading.lstrip("#"))
-    end = len(lines)
-    for index, line in enumerate(lines[start + 1 :], start=start + 1):
-        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
-            end = index
-            break
-    return "\n".join(lines[start:end])
 
 
 def _language_heading(language: str) -> str:
@@ -449,7 +417,43 @@ def write_root_instructions_from_dist(
     rendered = dist.render_instruction_blocks_from_harness_templates(
         module, templates, languages, template_paths=template_paths
     )
+    dist.validate_foundation_access_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
+
+
+def assert_generated_foundation_access_policy() -> None:
+    """Exercise the production writer and every source-owned foundation-policy guard."""
+    from outcomeeng.distribution import instruction_block as dist
+
+    module = load_instruction_block_module()
+    with tempfile.TemporaryDirectory() as directory:
+        repo_root = pathlib.Path(directory).resolve()
+        write_root_instructions_from_dist(repo_root, languages=(LANG_PRIMARY,))
+        documents = {
+            agent_harness: repo_root.joinpath(instruction_name).read_text(
+                encoding="utf-8"
+            )
+            for agent_harness, instruction_name in (
+                module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items()
+            )
+        }
+    dist.validate_foundation_access_policy(documents)
+
+    target_harness = next(iter(documents))
+    for requirement, required_text in dist.FOUNDATION_POLICY_REQUIREMENTS:
+        broken = dict(documents)
+        if required_text not in broken[target_harness]:
+            raise AssertionError(
+                f"generated router omitted source requirement {requirement!r}"
+            )
+        broken[target_harness] = broken[target_harness].replace(required_text, "", 1)
+        try:
+            dist.validate_foundation_access_policy(broken)
+        except dist.FoundationAccessPolicyError:
+            continue
+        raise AssertionError(
+            f"foundation policy validator accepted missing requirement {requirement!r}"
+        )
 
 
 def root_document_with_shared_region(

@@ -6,7 +6,7 @@ All skills in this document belong to the `spec-tree` plugin. Skill names have n
 
 ## Design principles
 
-Three methodology steps drive all work. Audit gates operate within each step. See `plugins/spec-tree/skills/understand/references/durable-map.md` for the authoritative reference.
+Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/references/durable-map.md`](../../src/plugins/spec-tree/skills/understand/references/durable-map.md) for the authoritative reference.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
@@ -16,7 +16,7 @@ Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not d
 
 Within these steps:
 
-- Foundation skills load once per conversation using marker pattern (no persistent state).
+- Foundation skills load once per live marker; compaction expires the marker and requires a reload.
 - `understand` is the single shared library: methodology, structure, templates.
 - `contextualize` handles deterministic context injection from tree structure.
 - Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
@@ -198,7 +198,7 @@ Skills for building and maintaining the durable map — specs, decisions, assert
 
 #### Foundation layer
 
-Foundation skills load once per conversation. They emit conversation markers so other skills can detect whether foundation context is present.
+Foundation skills emit live conversation markers so other skills can detect whether foundation context is present. Every compaction expires those markers and requires the foundation and active node context to load again.
 
 | Skill           | Owns                                                                                              | Marker                             | Status      |
 | --------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- |
@@ -279,7 +279,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
 - **`apply`** orchestrates the full declare → spec → apply flow:
   - Spans all three steps because Claude skips declaring prerequisites without guardrails
   - Delegates to language-specific plugins (Python or TypeScript) for architecture, testing, and implementation
-  - Three review gates that loop until approved — no exceptions
+  - Runs every applicable evidence audit, implementation audit, and changeset review to convergence
 - **`commit-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
@@ -289,7 +289,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
   - Reads local lifecycle routing from `spx/local/merging.md` via `understand`
   - Invokes the implementation, commit, opening, managing, merge, and closure skills
 - **`open-pr`** and **`manage-pr`** own internal PR lifecycle protocols:
-  - `open-pr` evaluates `REVIEW_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
+  - `open-pr` evaluates `VERIFICATION_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
   - `manage-pr` inspects reviews/checks, drives follow-up pushes, evaluates merge gates, merges, and runs post-merge cleanup
 
 ## Marker-based state detection
@@ -466,7 +466,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 3. Present the lifecycle proposal through the runtime's structured-question tool before mutation.
 4. Invoke implementation skills when the requested work is not yet in the tree.
 5. Invoke `commit-changes`, then the internal `open-pr` and `manage-pr` protocols unless the local lifecycle overlay declares a different route.
-6. Invoke `handoff --no-session` after merge unless the route stops earlier.
+6. Invoke `handoff` after merge unless the route stops earlier; the handoff skill decides whether any continuation needs a session file.
 
 #### `open-pr`
 
@@ -474,7 +474,7 @@ Internal protocol loaded by `manage-github-pr`.
 
 1. Load `merging-standards`, `commit-changes`, and `task-tracking-standards`.
 2. Establish branch hygiene and topology.
-3. Establish `REVIEW_READINESS` through deterministic verification and local review convergence.
+3. Establish `VERIFICATION_READINESS` through deterministic verification and local review convergence.
 4. Push with explicit destination ref.
 5. Open the PR ready and schedule the first heartbeat.
 
@@ -484,6 +484,6 @@ Internal protocol loaded by `manage-github-pr`.
 
 1. Identify the open PR and inspect review, check, comment, and base-drift state.
 2. Classify and act on review findings by validity and phase.
-3. Re-establish `REVIEW_READINESS` before every follow-up push.
+3. Re-establish `VERIFICATION_READINESS` before every follow-up push.
 4. Refresh the heartbeat.
-5. Evaluate `MERGE_READINESS` and `PRODUCTION_READINESS`, merge when both hold, and run post-merge cleanup.
+5. Evaluate `MERGE_READINESS`, merge when it holds, then evaluate `DEPLOYMENT_READINESS` and `RELEASE_READINESS` before their declared post-merge actions and cleanup.
