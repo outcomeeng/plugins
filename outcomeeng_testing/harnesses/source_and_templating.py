@@ -684,8 +684,12 @@ def _include_uses_contract(case: SourceScenario) -> bool:
 
 
 def _shared_topic_reference_travels(case: SourceScenario) -> bool:
-    reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
-    reference_body = case.fragment_body
+    inner_reference_name = f"{case.inner_topic}{COMMAND_FILE_SUFFIX}"
+    outer_reference_name = f"{case.outer_topic}{COMMAND_FILE_SUFFIX}"
+    reference_bodies = dict.fromkeys(
+        (inner_reference_name, outer_reference_name),
+        case.fragment_body,
+    )
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
         builder = SrcTreeBuilder(root)
@@ -693,31 +697,34 @@ def _shared_topic_reference_travels(case: SourceScenario) -> bool:
             case.scope,
             case.inner_topic,
             case.fragment_body,
-            references={reference_name: reference_body},
+            references={inner_reference_name: reference_bodies[inner_reference_name]},
+        )
+        builder.add_shared_topic(
+            case.scope,
+            case.outer_topic,
+            _include_text(case, case.inner_topic),
+            references={outer_reference_name: reference_bodies[outer_reference_name]},
         )
         builder.add_plugin(
             case.plugin,
             skills={
                 case.skill: (
-                    f"{_skill_body(case)}\n{_include_text(case, case.inner_topic)}"
+                    f"{_skill_body(case)}\n{_include_text(case, case.outer_topic)}"
                 )
             },
         )
         build(builder.src_root, root / DIST_DIR_NAME)
         reader = DistTreeReader(root)
         relative_reference = (
-            Path(case.plugin)
-            / SKILLS_SUBDIR_NAME
-            / case.skill
-            / REFERENCES_SUBDIR_NAME
-            / reference_name
+            Path(case.plugin) / SKILLS_SUBDIR_NAME / case.skill / REFERENCES_SUBDIR_NAME
         )
         return all(
-            (reader.target_root(target) / relative_reference).read_text(
-                encoding="utf-8"
-            )
+            (
+                reader.target_root(target) / relative_reference / reference_name
+            ).read_text(encoding="utf-8")
             == reference_body
             for target in Target
+            for reference_name, reference_body in reference_bodies.items()
         )
 
 
