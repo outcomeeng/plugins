@@ -24,13 +24,16 @@ import pathlib
 import re
 import subprocess
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Final, cast
 
 import pytest
+from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as dist
+from outcomeeng_testing.generators import instruction_block as generators
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
@@ -918,3 +921,372 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
     )
     assert result.returncode == 0, result.stderr
     return result.stdout
+
+
+INSTRUCTION_BLOCK_PROPERTY_SEED: Final = 43054
+INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 100
+INSTRUCTION_BLOCK_PROPERTY_TEST_PATH: Final = (
+    "spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
+    "test_instruction_block.property.l1.py::"
+)
+
+
+def _temporary_root() -> tempfile.TemporaryDirectory[str]:
+    """Return an isolated root whose lifecycle is owned by the harness."""
+    return tempfile.TemporaryDirectory()
+
+
+def assert_extension_maps_to_language() -> None:
+    """Assert every source-owned extension maps with or without a leading dot."""
+    module = load_instruction_block_module()
+    for extension, language in sorted(module.LANGUAGE_BY_EXTENSION.items()):
+        assert module.language_for_extension(extension) == language
+        assert module.language_for_extension(f".{extension}") == language
+
+
+def assert_detected_language_set_is_mapped_extensions() -> None:
+    """Assert detection and normalization agree over the source-owned extension map."""
+    module = load_instruction_block_module()
+    extensions = tuple(module.LANGUAGE_BY_EXTENSION)
+    assert module.detect_languages(extensions) == module.normalize_languages(
+        module.LANGUAGE_BY_EXTENSION.values()
+    )
+
+
+def assert_language_block_appears_iff_enabled() -> None:
+    """Assert language blocks follow their enabled-language membership."""
+    module = load_instruction_block_module()
+    template = build_template(NEW_VERSION)
+    for language in TEMPLATE_LANGUAGES:
+        heading = f"### {language.capitalize()}"
+        enabled = module.render(template, (language,), NEW_VERSION, HARNESS_CLAUDE)
+        others = tuple(name for name in TEMPLATE_LANGUAGES if name != language)
+        disabled = module.render(template, others, NEW_VERSION, HARNESS_CLAUDE)
+        assert heading in enabled
+        assert heading not in disabled
+
+
+def assert_check_maps_router_state_to_report() -> None:
+    """Assert current, absent, and stale router states map to their reports."""
+    module = load_instruction_block_module()
+    with _temporary_root() as directory:
+        tmp_path = pathlib.Path(directory).resolve()
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        template = write_template(tmp_path, NEW_VERSION)
+        run_generator_write_primary(repo, template)
+        claude = repo / INSTRUCTION_CLAUDE
+
+        def check() -> str:
+            return cast(
+                str,
+                module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo),
+            )
+
+        assert check() == "current"
+        claude.unlink()
+        assert check() == "absent"
+        stale_block = module.render(
+            build_template(OLD_VERSION),
+            (LANG_PRIMARY,),
+            OLD_VERSION,
+            HARNESS_CLAUDE,
+        )
+        claude.write_text(
+            module.prepend_router_block(stale_block, ""), encoding="utf-8"
+        )
+        assert check() == "stale"
+
+
+def assert_check_maps_shared_region_state_to_report() -> None:
+    """Assert identical, divergent, and one-sided regions map to drift reports."""
+    module = load_instruction_block_module()
+    with _temporary_root() as directory:
+        repo = pathlib.Path(directory).resolve() / "repo"
+        repo.mkdir()
+        write_both_root_files_with_shared_region(
+            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
+        )
+        assert module.shared_region_drift(repo) == ()
+
+        write_both_root_files_with_shared_region(
+            module,
+            repo,
+            languages=(LANG_PRIMARY,),
+            version=NEW_VERSION,
+            claude_region=SHARED_REGION_BODY,
+            agents_region=SHARED_REGION_BODY_ALT,
+        )
+        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+
+        codex_block = module.render(
+            build_template(NEW_VERSION),
+            (LANG_PRIMARY,),
+            NEW_VERSION,
+            HARNESS_CODEX,
+        )
+        (repo / INSTRUCTION_AGENTS).write_text(
+            module.prepend_router_block(codex_block, ROOT_AGENTS_BODY),
+            encoding="utf-8",
+        )
+        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+
+
+def assert_topology_maps_to_bootstrap_outcome() -> None:
+    """Assert every harness topology maps to its shared-region bootstrap outcome."""
+    module = load_instruction_block_module()
+    topology_factories = (
+        root_instruction_topology_only_claude,
+        root_instruction_topology_only_agents,
+        root_instruction_topology_separate,
+        root_instruction_topology_symlinked,
+    )
+    for topology_factory in topology_factories:
+        with _temporary_root() as directory:
+            tmp_path = pathlib.Path(directory).resolve()
+            repo = tmp_path / "repo"
+            seeds = materialize_root_instruction_topology(repo, topology_factory())
+            template = write_template(tmp_path, NEW_VERSION)
+            run_generator_write_primary(repo, template)
+            claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
+            agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
+            seeds_identical = seeds[INSTRUCTION_CLAUDE] == seeds[INSTRUCTION_AGENTS]
+            assert bool(module.parse_shared_regions(claude)) == seeds_identical
+            if seeds_identical:
+                assert set(module.parse_shared_regions(claude)) == set(
+                    module.parse_shared_regions(agents)
+                )
+            assert claude.startswith(module.ROUTER_MARKER_PREFIX)
+            assert agents.startswith(module.ROUTER_MARKER_PREFIX)
+
+
+def assert_root_instruction_topology_maps_to_harness_seed_bodies() -> None:
+    """Assert each root topology resolves to the harness-owned whole-body seeds."""
+    cases = (
+        (
+            root_instruction_topology_only_claude(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+                INSTRUCTION_AGENTS: ROOT_CLAUDE_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_only_agents(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_AGENTS_BODY,
+                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_separate(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
+                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+            },
+        ),
+        (
+            root_instruction_topology_symlinked(),
+            {
+                INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
+                INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
+            },
+        ),
+    )
+    for topology, expected in cases:
+        with _temporary_root() as directory:
+            root = pathlib.Path(directory).resolve()
+            assert materialize_root_instruction_topology(root, topology) == expected
+
+
+def assert_symlinked_harness_files_materialize_as_regular_files() -> None:
+    """Assert symlinked root instructions become harness-specific regular files."""
+    with _temporary_root() as directory:
+        root = pathlib.Path(directory).resolve()
+        materialized = materialize_root_instruction_topology(
+            root, root_instruction_topology_symlinked()
+        )
+        claude_path = root / INSTRUCTION_CLAUDE
+        agents_path = root / INSTRUCTION_AGENTS
+        assert claude_path.is_file()
+        assert agents_path.is_file()
+        assert not claude_path.is_symlink()
+        assert not agents_path.is_symlink()
+        assert claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+        assert agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+        assert materialized[INSTRUCTION_CLAUDE] == ROOT_SHARED_BODY
+        assert materialized[INSTRUCTION_AGENTS] == ROOT_SHARED_BODY
+
+
+def _run_instruction_block_property(
+    configured: Callable[[], None], *, replay_test_name: str
+) -> None:
+    """Run one configured property and attach deterministic replay diagnostics."""
+    try:
+        configured()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {INSTRUCTION_BLOCK_PROPERTY_SEED}")
+        error.add_note(
+            f"Replay path: {INSTRUCTION_BLOCK_PROPERTY_TEST_PATH}{replay_test_name}"
+        )
+        raise
+
+
+def _configured_property(test: Callable[..., None]) -> Callable[[], None]:
+    """Apply the common instruction-block property run configuration."""
+    return cast(
+        Callable[[], None],
+        seed(INSTRUCTION_BLOCK_PROPERTY_SEED)(
+            settings(max_examples=INSTRUCTION_BLOCK_PROPERTY_EXAMPLES, deadline=None)(
+                test
+            )
+        ),
+    )
+
+
+def assert_render_output_version_equals_installed() -> None:
+    """Assert rendered harness surfaces record the generated installed version."""
+
+    @given(installed=generators.versions())
+    def assertion(installed: tuple[int, int, int]) -> None:
+        module = load_instruction_block_module()
+        installed_str = generators.to_version(installed)
+        for agent_harness in TEMPLATE_HARNESSES:
+            rendered = module.render(
+                build_template("0.0.0"),
+                TEMPLATE_LANGUAGES,
+                installed_str,
+                agent_harness,
+            )
+            assert module.parse_template_version(rendered) == installed_str
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_render_output_version_equals_installed",
+    )
+
+
+def assert_managed_surface_ends_with_single_newline() -> None:
+    """Assert generated managed surfaces have exactly one trailing newline."""
+
+    @given(installed=generators.versions())
+    def assertion(installed: tuple[int, int, int]) -> None:
+        module = load_instruction_block_module()
+        installed_str = generators.to_version(installed)
+        blocks = {
+            agent_harness: module.render(
+                build_template("0.0.0"),
+                TEMPLATE_LANGUAGES,
+                installed_str,
+                agent_harness,
+            )
+            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+        seeds = {
+            agent_harness: ROOT_SHARED_BODY
+            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+        documents = module.build_root_instruction_documents(seeds, blocks)
+        for document in documents.values():
+            assert document.endswith("\n")
+            assert not document.endswith("\n\n")
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_managed_surface_ends_with_single_newline",
+    )
+
+
+def assert_is_stale_matches_numeric_version_order() -> None:
+    """Assert source staleness ordering matches generated numeric tuples."""
+
+    @given(left=generators.versions(), right=generators.versions())
+    def assertion(left: tuple[int, int, int], right: tuple[int, int, int]) -> None:
+        module = load_instruction_block_module()
+        assert module.is_stale(
+            generators.to_version(left), generators.to_version(right)
+        ) is (left < right)
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_is_stale_matches_numeric_version_order",
+    )
+
+
+def assert_reconcile_makes_shared_region_identical() -> None:
+    """Assert reconcile yields byte-identical generated shared-region bodies."""
+
+    @given(body_a=generators.region_bodies(), body_b=generators.region_bodies())
+    def assertion(body_a: str, body_b: str) -> None:
+        module = load_instruction_block_module()
+        doc_a = generators.shared_document(module, SHARED_REGION_NAME, body_a)
+        doc_b = generators.shared_document(module, SHARED_REGION_NAME, body_b)
+        for winner in ("a", "b"):
+            new_a, new_b = module.reconcile_shared_regions(doc_a, doc_b, winner)
+            region_a = module.parse_shared_regions(new_a)[SHARED_REGION_NAME]
+            region_b = module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
+            assert region_a == region_b
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_reconcile_makes_shared_region_identical",
+    )
+
+
+def assert_reconcile_identical_region_is_idempotent() -> None:
+    """Assert reconcile preserves already-identical generated regions."""
+
+    @given(body=generators.region_bodies())
+    def assertion(body: str) -> None:
+        module = load_instruction_block_module()
+        doc_a = generators.shared_document(module, SHARED_REGION_NAME, body)
+        doc_b = generators.shared_document(module, SHARED_REGION_NAME, body)
+        for winner in ("a", "b", None):
+            assert module.reconcile_shared_regions(doc_a, doc_b, winner) == (
+                doc_a,
+                doc_b,
+            )
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_reconcile_identical_region_is_idempotent",
+    )
+
+
+def assert_bootstrap_wraps_at_most_one_shared_region() -> None:
+    """Assert bootstrap never creates more than one generated shared region."""
+
+    @given(
+        content_a=generators.free_instruction_content(),
+        content_b=generators.free_instruction_content(),
+    )
+    def assertion(content_a: str, content_b: str) -> None:
+        module = load_instruction_block_module()
+        wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
+        assert len(module.parse_shared_regions(wrapped_a)) <= 1
+        assert len(module.parse_shared_regions(wrapped_b)) <= 1
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_bootstrap_wraps_at_most_one_shared_region",
+    )
+
+
+def assert_biggest_span_ratio_determines_wrap_decision() -> None:
+    """Assert bootstrap wrapping follows the source-computed biggest-span ratio."""
+
+    @given(
+        content_a=generators.free_instruction_content(),
+        content_b=generators.free_instruction_content(),
+    )
+    def assertion(content_a: str, content_b: str) -> None:
+        module = load_instruction_block_module()
+        span, ratio = module.biggest_identical_span(content_a, content_b)
+        wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
+        should_wrap = ratio > module.BOOTSTRAP_SHARED_THRESHOLD and bool(span.strip())
+        assert bool(module.parse_shared_regions(wrapped_a)) is should_wrap
+        assert bool(module.parse_shared_regions(wrapped_b)) is should_wrap
+
+    _run_instruction_block_property(
+        _configured_property(assertion),
+        replay_test_name="test_biggest_span_ratio_determines_wrap_decision",
+    )
