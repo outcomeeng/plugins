@@ -23,14 +23,10 @@ from outcomeeng_testing.harnesses import instruction_block as harness
 MODULE = harness.load_instruction_block_module()
 
 
-def _template(tmp_path: pathlib.Path) -> pathlib.Path:
-    return harness.write_template(tmp_path, harness.NEW_VERSION)
-
-
 def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, harness.write_current_template(tmp_path))
     assert (repo / harness.INSTRUCTION_CLAUDE).is_file()
     assert (repo / harness.INSTRUCTION_AGENTS).is_file()
 
@@ -70,8 +66,10 @@ def test_router_gates_product_content_and_exempts_operational_state(
             harness.FOUNDATION_SPX_PATH_TRIGGER,
             harness.FOUNDATION_SOURCE_TEST_TRIGGER,
             harness.FOUNDATION_SESSION_EXEMPTION,
+            harness.FOUNDATION_INSPECTION_EXEMPTION,
             harness.FOUNDATION_ARCHIVE_EXEMPTION,
             harness.FOUNDATION_RELEASE_EXEMPTION,
+            harness.FOUNDATION_WORKTREE_EXEMPTION,
             harness.FOUNDATION_DIAGNOSE_EXEMPTION,
             harness.FOUNDATION_GIT_EXEMPTION,
             harness.FOUNDATION_FOLLOW_PATH_GUARD,
@@ -231,7 +229,7 @@ def test_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> No
 def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
-    template = _template(tmp_path)
+    template = harness.write_current_template(tmp_path)
     harness.run_generator_write_primary(repo, template)
     claude = repo / harness.INSTRUCTION_CLAUDE
     claude.write_text(
@@ -310,7 +308,7 @@ def test_former_command_slot_fence_is_ordinary_content(
     for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
         (repo / name).write_text(slot_fence, encoding="utf-8")
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, harness.write_current_template(tmp_path))
     result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     # the former slot text survives as ordinary content, and no slot name is a managed region
     assert "product author command" in result
@@ -362,6 +360,6 @@ def test_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> N
     for name in harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS:
         (spx_dir / name).write_text("retired spx instruction file\n", encoding="utf-8")
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    harness.run_generator_write_primary(repo, harness.write_current_template(tmp_path))
     assert not (spx_dir / harness.INSTRUCTION_CLAUDE).exists()
     assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()

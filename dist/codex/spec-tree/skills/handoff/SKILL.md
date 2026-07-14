@@ -2,15 +2,12 @@
 name: handoff
 description: ALWAYS invoke to close active spec-tree work or a merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains or for an explicit direct `spx session archive` or `spx session release` request against identified sessions. NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-allowed-tools: Read, Edit, Write, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), Bash(git ls-files:*), Bash(grep:*), Bash(just marketplace-source-root:*), Bash(pwd), request_user_input, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), Bash(git ls-files:*), Bash(grep:*), Bash(pwd), request_user_input, Glob, Grep, Skill
 ---
 
 <context>
 **Working Directory:**
 !`pwd`
-
-**Git Status:**
-!`git status --short || echo "Not in a git repo"`
 
 **Current Branch:**
 !`git branch --show-current || echo "Not in a git repo"`
@@ -136,7 +133,7 @@ Read these bundled references before executing the workflows:
 
 </required_reading>
 
-<workflows>
+<workflows_index>
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed.
 
 1. `${SKILL_DIR}/workflows/01-anchor-to-nodes.md` — identify every node worked on this session
@@ -144,7 +141,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 3. `${SKILL_DIR}/workflows/03-propose.md` — present persistence proposal to user for approval
 4. `${SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit each thread's canonical continuation session file
 
-</workflows>
+</workflows_index>
 
 <failure_modes>
 

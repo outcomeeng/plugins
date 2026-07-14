@@ -135,8 +135,10 @@ FOUNDATION_PRODUCT_CONTENT_HEADING = (
 FOUNDATION_SPX_PATH_TRIGGER = "anything under `spx/`"
 FOUNDATION_SOURCE_TEST_TRIGGER = "source or test file"
 FOUNDATION_SESSION_EXEMPTION = "`spx session` operations"
+FOUNDATION_INSPECTION_EXEMPTION = "inspection"
 FOUNDATION_ARCHIVE_EXEMPTION = "archive"
 FOUNDATION_RELEASE_EXEMPTION = "release"
+FOUNDATION_WORKTREE_EXEMPTION = "`spx worktree status`"
 FOUNDATION_DIAGNOSE_EXEMPTION = "`spx diagnose`"
 FOUNDATION_GIT_EXEMPTION = "no-patch Git status, history, and topology"
 FOUNDATION_FOLLOW_PATH_GUARD = "Never follow paths from their output"
@@ -380,6 +382,11 @@ def write_template(
         build_template(version, extra_section=extra_section), encoding="utf-8"
     )
     return path
+
+
+def write_current_template(directory: pathlib.Path) -> pathlib.Path:
+    """Write the harness's current synthetic template into ``directory``."""
+    return write_template(directory, NEW_VERSION)
 
 
 def run_generator_write(
