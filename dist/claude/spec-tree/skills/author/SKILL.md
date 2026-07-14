@@ -14,6 +14,8 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Return an assertion whose evidence link is unresolved to the calling workflow for `/test` classification before writing the artifact. Never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
+When invoked directly without a decision-ready artifact packet, treat the direct invocation as the calling workflow only for routing. Stop before drafting, invoke `/test` to classify every unresolved assertion, and resume authoring only after `/test` returns the caller-supplied evidence links. Direct invocation never makes `/author` the authority for verification-type or assertion-type selection.
+
 </stop_triggers>
 
 <quick_start>
@@ -30,6 +32,8 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 - Filled product, decision, enabler, and outcome examples
 
 Read the appropriate foundation template and example through `/understand` before drafting.
+
+Authoring requires a decision-ready artifact packet. If a direct invocation does not supply one, gather the artifact content through this workflow but route every unresolved assertion through `/test` before Step 5; do not draft or write until the returned packet carries all evidence links.
 
 </quick_start>
 
