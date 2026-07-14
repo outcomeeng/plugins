@@ -22,6 +22,8 @@ import io
 import json
 import os
 import pathlib
+import re
+import shlex
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager, redirect_stdout
@@ -73,6 +75,10 @@ TOPOLOGY_ONLY_AGENTS: Final = "only-agents.json"
 TOPOLOGY_SEPARATE: Final = "separate.json"
 TOPOLOGY_CLAUDE_SYMLINK: Final = "claude-symlink.json"
 TOPOLOGY_AGENTS_SYMLINK: Final = "agents-symlink.json"
+SYNTHETIC_TEMPLATE: Final = "synthetic-template.md"
+SYNTHETIC_TEMPLATE_WITH_EXTRA_SECTION: Final = (
+    "synthetic-template-with-extra-section.md"
+)
 
 SHARED_REGION_NAME: Final = "root"
 ROOT_CONTENT_CASE_ABOVE_THRESHOLD: Final = "above-threshold"
@@ -88,35 +94,8 @@ SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
 SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 
-# The required read-the-whole-file directive the router must carry so a reading agent reaches the
-# product's own commands below the router. Declared here as the required-content vocabulary the
-# compliance guard asserts is present in the rendered router.
-READ_ENTIRE_FILE_INSTRUCTION = "Read this entire file"
-
-# Invented scenario payload owned by the harness.
-LANG_PRIMARY = "python"
-LANG_SECONDARY = "typescript"
-TEMPLATE_LANGUAGES = (LANG_PRIMARY, LANG_SECONDARY)
-BASE_SECTION = "Test Naming"
-NEW_SECTION = "Process Hygiene"
-# Invented scenario version payload owned by the harness: NEW_VERSION is the installed (current)
-# template version, OLD_VERSION a version numerically below it. The values carry no domain
-# meaning; the dotted-numeric ordering NEW_VERSION > OLD_VERSION is what the staleness and
-# upgrade scenarios rely on.
-OLD_VERSION: Final = "0.17.0"
-NEW_VERSION: Final = "0.18.0"
-# A brace-delimited illustration token the render must pass through unchanged.
-ILLUSTRATION_TOKEN = "{product-slug}"
 BUILD_MACRO_CAPABILITY = "ask_user"
 BUILD_MACRO_HARNESS = "codex"
-
-# Harness payload: the template carries a per-harness block for each agent harness,
-# rendered only into that harness's instruction file. The marker syntax mirrors the module's
-# ``<!-- harness:NAME -->`` conditional-block contract (parsed by ``_filter_harness``); a
-# synthetic template that drifts from it fails to render.
-HARNESS_CLAUDE = "claude"
-HARNESS_CODEX = "codex"
-TEMPLATE_HARNESSES = (HARNESS_CLAUDE, HARNESS_CODEX)
 
 
 @dataclass(frozen=True)
@@ -145,14 +124,6 @@ class RootInstructionBodies:
 
 
 @dataclass(frozen=True)
-class RootInstructionMappingObservation:
-    """Materialized and fixture-derived bodies for one topology mapping."""
-
-    actual: RootInstructionBodies
-    expected: RootInstructionBodies
-
-
-@dataclass(frozen=True)
 class InstructionFileState:
     """Observable filesystem state for one instruction-file path."""
 
@@ -178,14 +149,6 @@ class MaterializedRootInstructionState:
 
 
 @dataclass(frozen=True)
-class SymlinkMaterializationObservation:
-    """Materialized and fixture-derived states for one symlink topology."""
-
-    actual: MaterializedRootInstructionState
-    expected: MaterializedRootInstructionState
-
-
-@dataclass(frozen=True)
 class CliCheckMappingObservation:
     """Observed and expected CLI ``--check`` outcomes for a finite state mapping."""
 
@@ -197,6 +160,105 @@ REGULAR_INSTRUCTION_FILE_STATE: Final = InstructionFileState(
     is_file=True,
     is_symlink=False,
 )
+
+
+def _template_fixture_text(name: str) -> str:
+    """Read one inert whole-template fixture."""
+    return (ROOT_TOPOLOGY_FIXTURES_DIR / name).read_text(encoding="utf-8")
+
+
+def _conditional_block_bodies(document: str, kind: str) -> dict[str, str]:
+    """Extract complete conditional-block bodies from a template document."""
+    blocks: dict[str, str] = {}
+    active_name: str | None = None
+    active_lines: list[str] = []
+    for line in document.splitlines(keepends=True):
+        stripped = line.strip()
+        prefix = f"<!-- {kind}:"
+        if stripped.startswith(prefix) and stripped.endswith(" -->"):
+            if active_name is not None:
+                raise RuntimeError(f"Nested {kind} block before closing {active_name}")
+            active_name = stripped.removeprefix(prefix).removesuffix(" -->")
+            active_lines = []
+            continue
+        if active_name is not None and stripped == f"<!-- /{kind}:{active_name} -->":
+            blocks[active_name] = "".join(active_lines).strip()
+            active_name = None
+            active_lines = []
+            continue
+        if active_name is not None:
+            active_lines.append(line)
+    if active_name is not None:
+        raise RuntimeError(f"Unclosed {kind} block: {active_name}")
+    if not blocks:
+        raise RuntimeError(f"Template fixture defines no {kind} blocks")
+    return blocks
+
+
+def _template_version(document: str) -> str:
+    """Read the dotted version from a complete template fixture."""
+    match = re.search(r'^template_version:\s*"(?P<version>[0-9.]+)"$', document, re.M)
+    if match is None:
+        raise RuntimeError("Template fixture has no dotted template version")
+    return match.group("version")
+
+
+def _previous_dotted_version(version: str) -> str:
+    """Return an adjacent lower dotted version for stale-version scenarios."""
+    parts = [int(part) for part in version.split(".")]
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] > 0:
+            parts[index] -= 1
+            return ".".join(str(part) for part in parts)
+    raise RuntimeError("Template fixture version has no lower dotted version")
+
+
+def _added_h2_heading(base: str, extended: str) -> str:
+    """Return the one H2 heading introduced by the extended template fixture."""
+    base_headings = {line for line in base.splitlines() if line.startswith("## ")}
+    additions = [
+        line.removeprefix("## ")
+        for line in extended.splitlines()
+        if line.startswith("## ") and line not in base_headings
+    ]
+    if len(additions) != 1:
+        raise RuntimeError("Extended template fixture must introduce exactly one H2")
+    return additions[0]
+
+
+def _illustration_token(document: str) -> str:
+    """Return the brace-delimited illustration carried by the template fixture."""
+    match = re.search(r"`(?P<token>\{[^{}]+\})\.product\.md`", document)
+    if match is None:
+        raise RuntimeError("Template fixture has no product illustration token")
+    return match.group("token")
+
+
+_SYNTHETIC_TEMPLATE_TEXT: Final = _template_fixture_text(SYNTHETIC_TEMPLATE)
+_EXTENDED_SYNTHETIC_TEMPLATE_TEXT: Final = _template_fixture_text(
+    SYNTHETIC_TEMPLATE_WITH_EXTRA_SECTION
+)
+NEW_VERSION: Final = _template_version(_SYNTHETIC_TEMPLATE_TEXT)
+OLD_VERSION: Final = _previous_dotted_version(NEW_VERSION)
+TEMPLATE_LANGUAGES: Final = tuple(
+    _conditional_block_bodies(_SYNTHETIC_TEMPLATE_TEXT, "lang")
+)
+if len(TEMPLATE_LANGUAGES) < 2:
+    raise RuntimeError("Synthetic template fixture must define two language blocks")
+LANG_PRIMARY: Final = TEMPLATE_LANGUAGES[0]
+LANG_SECONDARY: Final = TEMPLATE_LANGUAGES[1]
+TEMPLATE_HARNESSES: Final = tuple(
+    _conditional_block_bodies(_SYNTHETIC_TEMPLATE_TEXT, "harness")
+)
+if len(TEMPLATE_HARNESSES) < 2:
+    raise RuntimeError("Synthetic template fixture must define two harness blocks")
+HARNESS_CLAUDE: Final = TEMPLATE_HARNESSES[0]
+HARNESS_CODEX: Final = TEMPLATE_HARNESSES[1]
+NEW_SECTION: Final = _added_h2_heading(
+    _SYNTHETIC_TEMPLATE_TEXT,
+    _EXTENDED_SYNTHETIC_TEMPLATE_TEXT,
+)
+ILLUSTRATION_TOKEN: Final = _illustration_token(_SYNTHETIC_TEMPLATE_TEXT)
 
 
 def _load_root_instruction_topology(fixture_name: str) -> RootInstructionTopology:
@@ -340,72 +402,50 @@ def _root_instruction_bodies(values: dict[str, str]) -> RootInstructionBodies:
     )
 
 
-def _shared_root_instruction_bodies(body: str) -> RootInstructionBodies:
-    """Return the expected two-path projection for one shared source body."""
-    return RootInstructionBodies(claude=body, agents=body)
-
-
 def _observe_root_instruction_mapping(
     topology: RootInstructionTopology,
-    expected: RootInstructionBodies,
-) -> RootInstructionMappingObservation:
+) -> RootInstructionBodies:
     """Materialize one topology while the harness owns its temporary root."""
     with temporary_instruction_root() as root:
         actual = _root_instruction_bodies(
             materialize_root_instruction_topology(root, topology)
         )
-    return RootInstructionMappingObservation(actual=actual, expected=expected)
+    return actual
 
 
-def observe_only_claude_topology_mapping() -> RootInstructionMappingObservation:
-    """Observe the only-Claude topology against its fixture-derived mapping."""
+def observe_only_claude_topology_mapping() -> RootInstructionBodies:
+    """Observe materialized bodies for the only-Claude topology."""
     topology = root_instruction_topology_only_claude()
-    return _observe_root_instruction_mapping(
-        topology,
-        _shared_root_instruction_bodies(topology.files[INSTRUCTION_CLAUDE]),
-    )
+    return _observe_root_instruction_mapping(topology)
 
 
-def observe_only_agents_topology_mapping() -> RootInstructionMappingObservation:
-    """Observe the only-Agents topology against its fixture-derived mapping."""
+def observe_only_agents_topology_mapping() -> RootInstructionBodies:
+    """Observe materialized bodies for the only-Agents topology."""
     topology = root_instruction_topology_only_agents()
-    return _observe_root_instruction_mapping(
-        topology,
-        _shared_root_instruction_bodies(topology.files[INSTRUCTION_AGENTS]),
-    )
+    return _observe_root_instruction_mapping(topology)
 
 
-def observe_separate_topology_mapping() -> RootInstructionMappingObservation:
-    """Observe separate instruction files against their fixture-owned bodies."""
+def observe_separate_topology_mapping() -> RootInstructionBodies:
+    """Observe materialized bodies for separate instruction files."""
     topology = root_instruction_topology_separate()
-    return _observe_root_instruction_mapping(
-        topology,
-        _root_instruction_bodies(topology.files),
-    )
+    return _observe_root_instruction_mapping(topology)
 
 
-def observe_claude_symlink_topology_mapping() -> RootInstructionMappingObservation:
-    """Observe the Claude-symlink topology against its shared fixture body."""
+def observe_claude_symlink_topology_mapping() -> RootInstructionBodies:
+    """Observe materialized bodies for the Claude-symlink topology."""
     topology = root_instruction_topology_claude_symlink()
-    return _observe_root_instruction_mapping(
-        topology,
-        _shared_root_instruction_bodies(topology.files[INSTRUCTION_AGENTS]),
-    )
+    return _observe_root_instruction_mapping(topology)
 
 
-def observe_agents_symlink_topology_mapping() -> RootInstructionMappingObservation:
-    """Observe the Agents-symlink topology against its shared fixture body."""
+def observe_agents_symlink_topology_mapping() -> RootInstructionBodies:
+    """Observe materialized bodies for the Agents-symlink topology."""
     topology = root_instruction_topology_agents_symlink()
-    return _observe_root_instruction_mapping(
-        topology,
-        _shared_root_instruction_bodies(topology.files[INSTRUCTION_CLAUDE]),
-    )
+    return _observe_root_instruction_mapping(topology)
 
 
 def _observe_symlink_materialization(
     topology: RootInstructionTopology,
-    source_body: str,
-) -> SymlinkMaterializationObservation:
+) -> MaterializedRootInstructionState:
     """Observe symlink normalization while owning all filesystem lifecycle state."""
     with temporary_instruction_root() as root:
         materialized = materialize_root_instruction_topology(root, topology)
@@ -428,41 +468,24 @@ def _observe_symlink_materialization(
             ),
             mapping=_root_instruction_bodies(materialized),
         )
-    expected_bodies = _shared_root_instruction_bodies(source_body)
-    return SymlinkMaterializationObservation(
-        actual=actual,
-        expected=MaterializedRootInstructionState(
-            paths=RootInstructionFileStates(
-                claude=REGULAR_INSTRUCTION_FILE_STATE,
-                agents=REGULAR_INSTRUCTION_FILE_STATE,
-            ),
-            files=expected_bodies,
-            mapping=expected_bodies,
-        ),
-    )
+    return actual
 
 
-def observe_claude_symlink_materialization() -> SymlinkMaterializationObservation:
+def observe_claude_symlink_materialization() -> MaterializedRootInstructionState:
     """Observe normalization when the Claude instruction path is a symlink."""
     topology = root_instruction_topology_claude_symlink()
-    return _observe_symlink_materialization(
-        topology,
-        topology.files[INSTRUCTION_AGENTS],
-    )
+    return _observe_symlink_materialization(topology)
 
 
-def observe_agents_symlink_materialization() -> SymlinkMaterializationObservation:
+def observe_agents_symlink_materialization() -> MaterializedRootInstructionState:
     """Observe normalization when the Agents instruction path is a symlink."""
     topology = root_instruction_topology_agents_symlink()
-    return _observe_symlink_materialization(
-        topology,
-        topology.files[INSTRUCTION_CLAUDE],
-    )
+    return _observe_symlink_materialization(topology)
 
 
 def harness_line(harness: str) -> str:
-    """The body the harness emits inside a harness block — what render keeps or drops."""
-    return f"{harness.upper()} runs the audit as a subagent."
+    """Return the fixture-owned body of one synthetic harness block."""
+    return _conditional_block_bodies(_SYNTHETIC_TEMPLATE_TEXT, "harness")[harness]
 
 
 def render_build_macro() -> str:
@@ -612,6 +635,20 @@ def read_canonical_template() -> str:
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
+def canonical_read_entire_file_directive() -> str:
+    """Return the canonical router paragraph that directs whole-file reading."""
+    _, heading_and_body = read_canonical_template().split(
+        "# Spec Tree Instructions\n", maxsplit=1
+    )
+    preamble, _ = heading_and_body.split("\n---\n", maxsplit=1)
+    paragraphs = tuple(
+        paragraph.strip() for paragraph in preamble.split("\n\n") if paragraph.strip()
+    )
+    if not paragraphs:
+        raise RuntimeError("Canonical template has no router preamble")
+    return paragraphs[-1]
+
+
 def extract_markdown_section(document: str, heading: str) -> str:
     """Return a markdown section by exact heading line, including the heading."""
     lines = document.splitlines()
@@ -660,54 +697,17 @@ def canonical_template_language_blocks() -> dict[str, tuple[str, ...]]:
     return {language: tuple(bodies) for language, bodies in blocks.items()}
 
 
-def _language_heading(language: str) -> str:
-    """The H3 heading the harness emits inside a language block — what render keeps or drops."""
-    return f"### {language.capitalize()}"
-
-
 def build_template(version: str, *, extra_section: bool = False) -> str:
-    """Build a synthetic template at ``version`` with a block per template language.
-
-    With ``extra_section`` the template also carries ``NEW_SECTION`` — a section a
-    newer template introduces, absent from an older one.
-    """
-    module = load_instruction_block_module()
-    delimiter = module.FRONTMATTER_DELIMITER
-    frontmatter = (
-        f"{delimiter}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{delimiter}\n"
+    """Return a whole-template fixture rewritten to the requested dotted version."""
+    template = (
+        _EXTENDED_SYNTHETIC_TEMPLATE_TEXT if extra_section else _SYNTHETIC_TEMPLATE_TEXT
     )
-    parts = [
-        "",
-        "# Spec Tree Instructions",
-        "",
-        f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
-        "",
-        f"## {BASE_SECTION}",
-        "",
-    ]
-    for language in TEMPLATE_LANGUAGES:
-        parts += [
-            f"<!-- lang:{language} -->",
-            "",
-            _language_heading(language),
-            f"{language} naming rules",
-            "",
-            f"<!-- /lang:{language} -->",
-        ]
-    for harness in TEMPLATE_HARNESSES:
-        parts += [
-            f"<!-- harness:{harness} -->",
-            "",
-            harness_line(harness),
-            "",
-            f"<!-- /harness:{harness} -->",
-        ]
-    if extra_section:
-        parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
-    return frontmatter + "\n".join(parts) + "\n"
+    current_version = _template_version(template)
+    return template.replace(
+        f'template_version: "{current_version}"',
+        f'template_version: "{version}"',
+        1,
+    )
 
 
 def write_spx_tree_with_tests(
@@ -1240,6 +1240,31 @@ def workflow_step_block(step_name: str) -> str:
     return "\n".join(block) + "\n"
 
 
+def workflow_shell_lines(step_name: str) -> tuple[str, ...]:
+    """Return executable shell lines from one workflow run block in source order."""
+    return tuple(
+        line.strip()
+        for line in workflow_run_block(step_name).splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
+
+
+def workflow_if_block(step_name: str, condition: str) -> tuple[str, ...]:
+    """Return the complete shell ``if`` block for an exact workflow condition."""
+    lines = workflow_shell_lines(step_name)
+    opener = f"if {condition}; then"
+    start = lines.index(opener)
+    depth = 0
+    for index, line in enumerate(lines[start:], start=start):
+        if line.startswith("if ") and line.endswith("; then"):
+            depth += 1
+        elif line == "fi":
+            depth -= 1
+            if depth == 0:
+                return lines[start : index + 1]
+    raise AssertionError(f"workflow if block is unclosed: {condition}")
+
+
 def workflow_env_value(name: str) -> str:
     """Return the value of one refresh-workflow ``env`` entry, for env assertions."""
     workflow = REPO_ROOT.joinpath(
@@ -1267,6 +1292,16 @@ def justfile_recipe_body(justfile: str, recipe: str) -> str:
             break
         body.append(line)
     return "\n".join(body)
+
+
+def justfile_recipe_argv(justfile: str, recipe: str) -> tuple[tuple[str, ...], ...]:
+    """Parse executable commands from one exact Justfile recipe body."""
+    commands = tuple(
+        line.strip()
+        for line in justfile_recipe_body(justfile, recipe).splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
+    return tuple(tuple(shlex.split(command)) for command in commands)
 
 
 def write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:

@@ -51,7 +51,7 @@ def test_router_is_first_and_carries_read_whole_file_instruction(
     document = MODULE.prepend_router_block(rendered, harness.ROOT_SHARED_BODY)
     assert document.startswith(MODULE.ROUTER_MARKER_PREFIX)
     router_block = document[: document.index(MODULE.ROUTER_BLOCK_END)]
-    assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
+    assert harness.canonical_read_entire_file_directive() in router_block
 
 
 def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
@@ -72,11 +72,22 @@ def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
 
 def test_justfile_binds_build_and_check_recipes() -> None:
     justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
-    build_body = harness.justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
-    check_body = harness.justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
-    assert f"outcomeeng.distribution.instruction_block {dist.WRITE_FLAG}" in build_body
-    assert "outcomeeng.distribution.instruction_block" in check_body
-    assert dist.WRITE_FLAG not in check_body
+    build_commands = harness.justfile_recipe_argv(
+        justfile, dist.BUILD_INSTRUCTIONS_RECIPE
+    )
+    check_commands = harness.justfile_recipe_argv(
+        justfile, dist.INSTRUCTIONS_CHECK_RECIPE
+    )
+    assert len(build_commands) == 1
+    assert len(check_commands) == 1
+    build_module_flag = build_commands[0].index("-m")
+    check_module_flag = check_commands[0].index("-m")
+    assert build_commands[0][build_module_flag:] == (
+        "-m",
+        dist.__name__,
+        dist.WRITE_FLAG,
+    )
+    assert check_commands[0][check_module_flag:] == ("-m", dist.__name__)
 
 
 def test_lefthook_regenerates_through_build_instructions() -> None:
@@ -225,11 +236,25 @@ def test_refresh_workflow_regenerates_and_opens_pr() -> None:
         ".github", "workflows", "refresh-instruction-blocks.yml"
     ).read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow
-    regenerate = harness.workflow_run_block("Regenerate instruction blocks")
-    assert "just build-instructions" in regenerate
-    pr_step = harness.workflow_step_block("Open instruction-block refresh pull request")
-    # opens or updates the PR only when git reports drift
-    assert "git status --porcelain" in pr_step
+    regenerate = harness.workflow_shell_lines("Regenerate instruction blocks")
+    build_skills = regenerate.index("just build-skills")
+    build_instructions = regenerate.index(f"just {dist.BUILD_INSTRUCTIONS_RECIPE}")
+    assert regenerate[0] == "set -euo pipefail"
+    assert build_skills < build_instructions
+
+    step_name = "Open instruction-block refresh pull request"
+    pr_step = harness.workflow_shell_lines(step_name)
+    drift_condition = '[ -z "$(git status --porcelain)" ]'
+    drift_guard = harness.workflow_if_block(step_name, drift_condition)
+    assert "exit 0" in drift_guard
+    guard_end = pr_step.index("fi")
+    first_mutation = min(
+        index
+        for index, line in enumerate(pr_step)
+        if line.startswith(("branch=", "git config ", "git checkout ", "git add "))
+    )
+    assert guard_end < first_mutation
+    assert pr_step.index("gh pr list \\") < pr_step.index("gh pr create \\")
 
 
 def test_refresh_workflow_checks_out_main() -> None:
