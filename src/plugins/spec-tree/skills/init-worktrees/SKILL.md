@@ -2,7 +2,7 @@
 name: init-worktrees
 description: >-
   ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while pushing every local ref to the remote and carrying a prior checkout's gitignored state across. NEVER run git clone --bare plus git worktree add to build the pool outside this skill.
-allowed-tools: Read{!% if target == 'claude' %!}, Bash(git:*), Bash(python3:*), Bash(just:*), Bash(pnpm:*){!% endif %!}, {{! tool('ask_user') !}}
+allowed-tools: Read{!% if target == 'claude' %!}, Bash(git -C:* remote get-url origin), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py":*){!% endif %!}, {{! tool('ask_user') !}}
 ---
 
 <objective>
