@@ -11,7 +11,7 @@ A claimed handoff session — loaded, reconciled against current repository stat
 
 <constraints>
 
-- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
+- Pickup opens session responsibility and NEVER archives, deletes, or closes a session. Keep a claimed session in `doing` until a later `/handoff` accounts for it, except when the operator explicitly directs the quick-exit return-to-queue action defined in `<claimed_sessions>`; only that instruction permits `spx session release <id>`.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 - Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed product surface, skill path, evidence infrastructure, verification plan, inspection references, and remaining-work expectation.
 - If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
@@ -27,14 +27,14 @@ Three rules govern a conversation's claimed-session set:
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
-   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
+   - Explicitly direct `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
 
    Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
 
 **Consequences of the three rules:**
 
 - Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
-- The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
+- The pickup workflow MUST NOT archive, delete, or manually move any session. It MUST NOT release a claimed session unless the operator explicitly directs the quick-exit return-to-queue action. After the post-context checkpoint, leave the claimed session in `doing` unless the operator explicitly invokes a closure workflow or that quick exit.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
 - Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
@@ -220,7 +220,7 @@ A successful pickup:
 - [ ] Session claimed via `spx session pickup`
 - [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
 - [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
-- [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
+- [ ] Claimed session remains in `doing` after pickup unless the operator explicitly directs the quick-exit return-to-queue action — pickup never archives or otherwise moves a session, and release is limited to that instruction
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
 - [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading

@@ -195,12 +195,12 @@ After emitting the checkpoint marker, report the result and the current session 
 
 - Continue work under the claimed session(s).
 - Invoke `/handoff` if the user asks to close or hand off.
-- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. If the user explicitly wants a claimed session returned to the shared queue, run `spx session release <id>` to move it from `doing/` back to `todo/`.
+- Invoke `/handoff --no-session` if the user asks to close without creating a handoff. It archives the claimed sessions; it does NOT put the claimed session back in the todo queue. Run `spx session release <id>` only after the operator explicitly directs the quick-exit return-to-queue action for a wrongly claimed session; this moves it from `doing/` back to `todo/` and removes it from the conversation's claimed-session set.
 
 **Invalid next steps:**
 
 - `spx session archive` — pickup never archives.
-- `spx session release` as a substitute for the close workflow — skips claimed-session accounting, reflection, and archival; use `/handoff --no-session` for proper closure.
+- `spx session release` without the operator's explicit quick-exit return-to-queue instruction, or as a substitute for the close workflow — skips claimed-session accounting, reflection, and archival; use `/handoff --no-session` for proper closure.
 - Creating a replacement handoff to justify closing the claimed session — no new session is permission to close an existing one.
 
 NEVER invoke `/apply`, author ADRs/tests/code, or edit files before this checkpoint completes.
@@ -226,7 +226,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
-- [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
+- [ ] Claimed session remains in `doing` after the checkpoint unless the operator explicitly directs the quick-exit return-to-queue action — pickup never archives, and release is limited to that instruction
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging

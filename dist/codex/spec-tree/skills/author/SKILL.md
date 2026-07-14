@@ -163,7 +163,7 @@ Read the appropriate foundation template through `/understand`. Fill it using th
 **Assertion rules** (from the assertion-types foundation loaded by `/understand`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- Each assertion must link to evidence: a repository-relative `[test]` path supplied under the active language-specific `/test-*` naming contract for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
@@ -218,7 +218,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 2. Write the spec file
 3. Create the `tests/` directory
 4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Apply `/understand`'s excluded-nodes operational reference.
-5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
+5. If the spec's assertions forward-reference test files that do not exist yet, use paths supplied under the active language-specific `/test-*` naming contract. The EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**
 
