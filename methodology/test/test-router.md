@@ -36,7 +36,7 @@ Answer these questions before writing the test:
 2. If this test passes, what does that prove about the real system?
 3. What concrete failure would reach production without this test?
 
-Use the evidence mode that matches the evidence:
+Use the assertion type that matches the assertion's quantifier and evidence:
 
 - `scenario` for user-visible or workflow-visible behavior
 - `mapping` for deterministic input-output or request-action transforms

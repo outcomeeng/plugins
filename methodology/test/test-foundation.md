@@ -6,7 +6,7 @@
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
 - Test doubles are exceptions, not defaults. The seven exception cases in `test-router.md` are the only legitimate reasons to avoid the real dependency.
 - Route every assertion through all five stages. Do not skip ahead.
-- Name tests by subject, evidence mode, execution level, and optional runner.
+- Name tests by subject, assertion type, execution level, and optional runner.
 
 ## Why tests exist
 
@@ -39,7 +39,7 @@ Agents often skip the evidence question. They see code and decide to test the sh
 
 Do not collapse evidence, execution pain, and tool choice into one label.
 
-- **Evidence mode** describes what kind of evidence the test provides.
+- **Assertion type** describes what kind of claim the test proves.
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
@@ -50,7 +50,7 @@ Examples:
 
 The runner does not define the level, and the level does not define the runner.
 
-## Evidence modes
+## Assertion types
 
 Use evidence terms that describe what the test proves:
 
@@ -80,7 +80,7 @@ Assume a product default runner unless the file name says otherwise.
 
 - Omit the runner token when the default runner is used.
 - Add an explicit runner token for non-default runners.
-- Keep runner choice orthogonal to the evidence mode and the execution level.
+- Keep runner choice orthogonal to the assertion type and the execution level.
 
 ## Four-part progression
 
