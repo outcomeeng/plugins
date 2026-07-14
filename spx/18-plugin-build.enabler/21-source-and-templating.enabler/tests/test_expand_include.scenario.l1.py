@@ -2,6 +2,7 @@
 
 from outcomeeng_testing.harnesses.source_and_templating import (
     implementation_is_ready,
+    missing_fragment_planning_raises,
     missing_fragment_raises,
 )
 
@@ -12,3 +13,7 @@ def test_module_is_implemented() -> None:
 
 def test_missing_fragment_raises_include_resolution_error() -> None:
     assert missing_fragment_raises()
+
+
+def test_missing_fragment_planning_raises_include_resolution_error() -> None:
+    assert missing_fragment_planning_raises()

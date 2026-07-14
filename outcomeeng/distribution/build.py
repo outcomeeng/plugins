@@ -178,12 +178,12 @@ class BuildPlan:
 
     def collisions(self) -> dict[tuple[_Target, Path], tuple[Path, ...]]:
         """Return output coordinates with more than one producing source."""
-        producers: dict[tuple[_Target, Path], list[Path]] = {}
+        producers: dict[tuple[_Target, Path], set[Path]] = {}
         for emission in self.emissions:
             coordinate = (emission.target, emission.relative_path)
-            producers.setdefault(coordinate, []).append(emission.source)
+            producers.setdefault(coordinate, set()).add(emission.source)
         return {
-            coordinate: tuple(paths)
+            coordinate: tuple(sorted(paths))
             for coordinate, paths in producers.items()
             if len(paths) > 1
         }
@@ -1120,6 +1120,7 @@ def _planned_fan_out_emissions(
     for directive in parse_directives(source_file.read_text(encoding="utf-8")):
         if not isinstance(directive, IncludeDirective):
             continue
+        expand_include(directive, shared_root=shared_root)
         topic_root = _resolve_under_root(shared_root, directive.path).parent
         for child in sorted(topic_root.iterdir()):
             if child.name == SHARED_FRAGMENT_FILENAME:
@@ -1140,7 +1141,7 @@ def _planned_fan_out_emissions(
                         action=EmissionAction.FAN_OUT,
                     )
                 )
-    return tuple(result)
+    return tuple(dict.fromkeys(result))
 
 
 def _is_authored_source_file(path: Path) -> bool:

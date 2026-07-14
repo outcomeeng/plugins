@@ -11,6 +11,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     frontmatter_strip_is_idempotent,
     outputs_exclude_execution_time_injection,
     path_rewrite_is_idempotent,
+    repeated_include_emits_shared_source_once,
     skill_dir_escape_preserves_authoring_guidance,
     target_trees_mirror_source_structure,
 )
@@ -22,6 +23,10 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
 
 def test_target_trees_mirror_source_structure() -> None:
     assert target_trees_mirror_source_structure()
+
+
+def test_repeated_include_emits_shared_source_once_per_target() -> None:
+    assert repeated_include_emits_shared_source_once()
 
 
 def test_claude_output_preserves_skill_dir_token() -> None:
