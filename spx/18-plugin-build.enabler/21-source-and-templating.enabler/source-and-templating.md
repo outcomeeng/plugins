@@ -22,7 +22,7 @@ CAN locate sources predictably and express shared-content includes uniformly.
 - ALWAYS: shared content directories under `src/_shared/<scope>/<topic>/` contain a `fragment.md` body file and any reference subtrees that travel with it — fragments are the unit of inclusion ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: the Jinja2 environment uses custom delimiters `{!% %!}` and `{{! !}}` for template parsing — collision-free with skill content that literally contains standard Jinja2 syntax ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: `{!% require_skill 'plugin:skill' %!}` expands to identical coding-agent-neutral invocation text in both targets — full sister-skill content stays in its own skill ([test](tests/test_source_and_templating.compliance.l1.py))
-- NEVER: standard Jinja2 delimiters `{% %}` or `{{ }}` in source content trigger template parsing — content teaching templating syntax passes through unchanged ([test](tests/test_parse_directives.scenario.l1.py))
+- NEVER: standard Jinja2 delimiters `{% %}` or `{{ }}` in source content trigger template parsing — content teaching templating syntax passes through unchanged ([test](tests/test_parse_directives.property.l1.py))
 - ALWAYS: a per-runtime conditional block carrying no variable token still renders per target — the render pass evaluates a surviving `{!% if %!}` control block rather than shipping it verbatim ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: the skill-directory rewrite escape directive survives the render pass intact even when the body triggers Jinja — the escape shares Jinja's comment syntax but reaches per-target path rewriting unstripped ([test](tests/test_source_and_templating.compliance.l1.py))
 
