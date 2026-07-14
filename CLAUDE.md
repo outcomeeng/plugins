@@ -94,6 +94,8 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 **Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the role-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate. The configured type binds the child to its agent definition, so Claude Code needs no separate identity-preflight turn.
 
+**Inspect every successful `changes-reviewer` result through the sealed journal.** Invoke the `spec-tree:project-run-journal` skill and use its `render_review_run.py <run-token>` helper. The helper calls `spx journal render --type review --run <run-token>`, resolves a not-found current-scope miss through `spx journal list --type review --sealed sealed --limit 200`, re-renders with the listed branch slug when exactly one sealed run matches the token, reads the sealed event prefix, and prints the review status, full head/base identity, scope coverage, and finding counts. Treat this as journal inspection; the sealed prefix remains the only review result.
+
 **Configured verifier and reviewer role-task contracts.** Supply only the fields named for the role:
 
 - `changes-reviewer`: the raw scope token — `HEAD`, `origin/<base>...HEAD`, a branch, or a PR reference. Its final message MUST be the raw sealed review-journal run token.
@@ -102,7 +104,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 - `eval-evidence-auditor`: repository path, governing node, `[eval]` assertions, all eval artifacts, producer artifacts, and the task to audit real-producer evidence. Its final message MUST be the audit-eval-evidence JSON verdict with overall `PASS`, `FAIL`, or `UNKNOWN` and no prose outside the JSON object.
 - `spec-auditor`: repository path, full node path, and the task to audit assertion quality, evidence tags, atemporal voice, decision alignment, and structure. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with full paths, governing rules, and required fixes.
 - `adr-auditor` or `pdr-auditor`: repository path, full decision path, governing node, committed audit scope, and the role's decision-audit task; ADR tasks also carry the language-scope classification. The final message MUST follow that auditor's structured verdict contract without a competing prose envelope.
-- `skill-auditor` or `subagent-auditor`: repository path, changed skill-content or subagent paths, governing nodes when known, deterministic verification state, and the matching authoring-standards audit task. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with paths, lines, governing rules, and required fixes.
+- `skill-auditor` or `subagent-auditor`, when that configured role is installed: repository path, changed skill-content or subagent paths, governing nodes when known, deterministic verification state, and the matching authoring-standards audit task. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with paths, lines, governing rules, and required fixes.
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
