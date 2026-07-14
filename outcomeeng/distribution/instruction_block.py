@@ -107,6 +107,8 @@ class InstructionBlockModule(Protocol):
     BOOTSTRAP_SHARED_REGION_NAME: str
     LANGUAGE_BY_EXTENSION: dict[str, str]
     OBSOLETE_SPX_INSTRUCTION_FILENAMES: tuple[str, ...]
+    ROUTER_BLOCK_END: str
+    ROUTER_MARKER_PREFIX: str
 
     def parse_template_version(self, text: str) -> str | None: ...
 
@@ -261,12 +263,25 @@ def _markdown_section(document: str, heading: str) -> str:
     return "\n".join(lines[start:end])
 
 
+def managed_router_block(document: str) -> str:
+    """Extract the managed router block from a complete root instruction document."""
+    module = load_instruction_block_module()
+    start = document.find(module.ROUTER_MARKER_PREFIX)
+    if start < 0:
+        raise FoundationAccessPolicyError("missing router opening marker")
+    end = document.find(module.ROUTER_BLOCK_END, start)
+    if end < 0:
+        raise FoundationAccessPolicyError("missing router closing marker")
+    return document[start : end + len(module.ROUTER_BLOCK_END)]
+
+
 def validate_foundation_access_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
     """Reject a rendered harness router that weakens the product-content gate."""
     for harness, document in blocks_by_harness.items():
-        section = _markdown_section(document, FOUNDATION_POLICY_HEADING)
+        router = managed_router_block(document)
+        section = _markdown_section(router, FOUNDATION_POLICY_HEADING)
         missing = [
             name
             for name, required_text in FOUNDATION_POLICY_REQUIREMENTS
@@ -277,7 +292,7 @@ def validate_foundation_access_policy(
             raise FoundationAccessPolicyError(
                 f"{harness} router foundation policy is incomplete: {details}"
             )
-        forbidden = [token for token in FORBIDDEN_ROUTER_TOKENS if token in document]
+        forbidden = [token for token in FORBIDDEN_ROUTER_TOKENS if token in router]
         if forbidden:
             details = ", ".join(repr(token) for token in forbidden)
             raise FoundationAccessPolicyError(

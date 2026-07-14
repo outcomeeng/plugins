@@ -396,17 +396,35 @@ def assert_router_is_first() -> None:
 
 
 def assert_generation_reads_dist_templates() -> None:
-    """Assert production generation requires each runtime's shipped dist template."""
+    """Assert production generation consumes each runtime's shipped dist content."""
     module = load_instruction_block_module()
-    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = pathlib.Path(directory).resolve() / "repo"
-            repo_root.mkdir()
-            copy_shipped_dist_templates(repo_root)
-            missing = dist.dist_template_path(agent_harness, repo_root=repo_root)
-            missing.unlink()
-            with pytest.raises(FileNotFoundError, match=str(missing)):
-                dist.regenerate_instruction_blocks(repo_root=repo_root)
+    with tempfile.TemporaryDirectory() as directory:
+        repo_root = pathlib.Path(directory).resolve() / "repo"
+        repo_root.mkdir()
+        copy_shipped_dist_templates(repo_root)
+        probes: dict[str, str] = {}
+        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+            path = dist.dist_template_path(agent_harness, repo_root=repo_root)
+            probe = f"<!-- dist-template-source:{agent_harness} -->"
+            probes[agent_harness] = probe
+            path.write_text(
+                path.read_text(encoding="utf-8").rstrip() + f"\n\n{probe}\n",
+                encoding="utf-8",
+            )
+
+        dist.regenerate_instruction_blocks(repo_root=repo_root)
+        for (
+            agent_harness,
+            filename,
+        ) in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
+            document = repo_root.joinpath(filename).read_text(encoding="utf-8")
+            router = dist.managed_router_block(document)
+            assert probes[agent_harness] in router
+            assert all(
+                probe not in router
+                for other_harness, probe in probes.items()
+                if other_harness != agent_harness
+            )
 
 
 def assert_justfile_binds_instruction_recipes() -> None:
@@ -651,9 +669,22 @@ def assert_reconcile_replaces_losing_region_whole() -> None:
 
 def assert_rendered_router_omits_retired_session_tokens() -> None:
     """Assert legacy session result fields never render into the router."""
-    for document in render_shipped_dist_with_generation_entrypoint().values():
-        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in document
-        assert SESSION_RESULT_FRONTMATTER_FIELD not in document
+    for (
+        agent_harness,
+        document,
+    ) in render_shipped_dist_with_generation_entrypoint().items():
+        router = dist.managed_router_block(document)
+        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in router
+        assert SESSION_RESULT_FRONTMATTER_FIELD not in router
+        independent_prose = (
+            document
+            + "\n"
+            + SESSION_ARCHIVE_RESULT_INSTRUCTION
+            + "\n"
+            + SESSION_RESULT_FRONTMATTER_FIELD
+            + "\n"
+        )
+        dist.validate_foundation_access_policy({agent_harness: independent_prose})
 
 
 def assert_unresolved_build_macro_is_rejected() -> None:
