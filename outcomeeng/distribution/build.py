@@ -135,8 +135,11 @@ SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ES
 
 FORMATTER_COMMAND_NAME: Final = "dprint"
 FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
+FORMATTER_CONFIG_PATH: Final = Path(__file__).resolve().parents[2] / "dprint.jsonc"
+IGNORED_SOURCE_DIRECTORY_NAMES: Final = frozenset({"__pycache__"})
+IGNORED_SOURCE_FILE_SUFFIXES: Final = (".pyc",)
 FormatterProbe = Callable[[str], str | None]
-FormatterRunner = Callable[[tuple[str, ...]], subprocess.CompletedProcess[str]]
+FormatterRunner = Callable[[tuple[str, ...], Path], subprocess.CompletedProcess[str]]
 
 
 @dataclass(frozen=True)
@@ -926,9 +929,13 @@ def _copy_unrendered_file(
     shutil.copy2(source_file, destination)
 
 
-def _run_formatter(command: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+def _run_formatter(
+    command: tuple[str, ...],
+    cwd: Path,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
+        cwd=cwd,
         check=False,
         capture_output=True,
         text=True,
@@ -946,8 +953,15 @@ def _format_dist(
         raise BuildError(
             f"{FORMATTER_COMMAND_NAME} is required to format generated dist output"
         )
-    file_pattern = str(dist_root / FORMATTER_FILE_GLOB)
-    result = runner((formatter, "fmt", "--allow-no-files", file_pattern))
+    command = (
+        formatter,
+        "fmt",
+        "--config",
+        str(FORMATTER_CONFIG_PATH),
+        "--allow-no-files",
+        FORMATTER_FILE_GLOB,
+    )
+    result = runner(command, dist_root)
     if result.returncode != 0:
         details = (result.stderr or result.stdout).strip()
         raise BuildError(f"dprint failed while formatting dist: {details}")
@@ -971,8 +985,15 @@ def _iter_plugin_files(plugins_root: Path) -> tuple[Path, ...]:
             for root in roots
             if root.is_dir()
             for path in root.rglob("*")
-            if path.is_file()
+            if path.is_file() and _is_authored_source_file(path)
         )
+    )
+
+
+def _is_authored_source_file(path: Path) -> bool:
+    return not (
+        IGNORED_SOURCE_DIRECTORY_NAMES.intersection(path.parts)
+        or path.suffix in IGNORED_SOURCE_FILE_SUFFIXES
     )
 
 
