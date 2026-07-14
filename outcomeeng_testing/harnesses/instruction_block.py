@@ -126,9 +126,9 @@ SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 # compliance guard asserts is present in the rendered router.
 READ_ENTIRE_FILE_INSTRUCTION = "Read this entire file"
 
-# Required router vocabulary for the product-content foundation gate. The compliance test reads
-# the real canonical template and checks this complete boundary: product content is gated while
-# session lifecycle state and bounded operational inspection remain available.
+# Required router vocabulary for the product-content foundation gate. The compliance test renders
+# the shipped dist templates through the production writer and checks this complete boundary in
+# both generated root files.
 FOUNDATION_PRODUCT_CONTENT_HEADING = (
     "### Before product-content access -> `/understand`"
 )
@@ -425,6 +425,24 @@ def run_generator_write_primary(
         template_path,
         languages=LANG_PRIMARY,
     )
+
+
+def write_root_instructions_from_dist(
+    repo_root: pathlib.Path, *, languages: tuple[str, ...]
+) -> None:
+    """Render the repository's shipped dist templates and write both root instruction files."""
+    from outcomeeng.distribution import instruction_block as dist
+
+    module = load_instruction_block_module()
+    templates = dist.load_harness_templates(module)
+    template_paths = {
+        agent_harness: dist.dist_template_path(agent_harness)
+        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+    }
+    rendered = dist.render_instruction_blocks_from_harness_templates(
+        module, templates, languages, template_paths=template_paths
+    )
+    module.write_root_instruction_files(repo_root, rendered)
 
 
 def root_document_with_shared_region(

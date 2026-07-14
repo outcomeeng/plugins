@@ -52,22 +52,31 @@ def test_router_is_first_and_carries_read_whole_file_instruction(
     assert harness.READ_ENTIRE_FILE_INSTRUCTION in router_block
 
 
-def test_router_gates_product_content_and_exempts_operational_state() -> None:
-    template = harness.read_canonical_template()
-    section = harness.extract_markdown_section(
-        template, harness.FOUNDATION_PRODUCT_CONTENT_HEADING
+def test_router_gates_product_content_and_exempts_operational_state(
+    tmp_path: pathlib.Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    harness.write_root_instructions_from_dist(
+        repo, languages=(harness.LANG_PRIMARY,)
     )
-    for required_text in (
-        harness.FOUNDATION_SPX_PATH_TRIGGER,
-        harness.FOUNDATION_SOURCE_TEST_TRIGGER,
-        harness.FOUNDATION_SESSION_EXEMPTION,
-        harness.FOUNDATION_ARCHIVE_EXEMPTION,
-        harness.FOUNDATION_RELEASE_EXEMPTION,
-        harness.FOUNDATION_DIAGNOSE_EXEMPTION,
-        harness.FOUNDATION_GIT_EXEMPTION,
-        harness.FOUNDATION_FOLLOW_PATH_GUARD,
-    ):
-        assert required_text in section
+
+    for instruction_name in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES.values():
+        document = (repo / instruction_name).read_text(encoding="utf-8")
+        section = harness.extract_markdown_section(
+            document, harness.FOUNDATION_PRODUCT_CONTENT_HEADING
+        )
+        for required_text in (
+            harness.FOUNDATION_SPX_PATH_TRIGGER,
+            harness.FOUNDATION_SOURCE_TEST_TRIGGER,
+            harness.FOUNDATION_SESSION_EXEMPTION,
+            harness.FOUNDATION_ARCHIVE_EXEMPTION,
+            harness.FOUNDATION_RELEASE_EXEMPTION,
+            harness.FOUNDATION_DIAGNOSE_EXEMPTION,
+            harness.FOUNDATION_GIT_EXEMPTION,
+            harness.FOUNDATION_FOLLOW_PATH_GUARD,
+        ):
+            assert required_text in section
 
 
 def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
