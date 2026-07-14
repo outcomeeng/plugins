@@ -25,6 +25,7 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng.distribution.dist_diff import (
     DRIFT_REBUILD_NOTE,
     EXPECTED_PRECOMMIT_NOTE,
+    EXPECTED_PRECOMMIT_REMEDIATION,
     dist_drift_report,
     main,
 )
@@ -77,6 +78,7 @@ def dist_drift_with_source_edit_matches_contract() -> bool:
             report is not None
             and repo.dist_path.as_posix() in report
             and EXPECTED_PRECOMMIT_NOTE in report
+            and EXPECTED_PRECOMMIT_REMEDIATION in report
             and DRIFT_REBUILD_NOTE not in report
             and not _carries_unified_diff(report)
             and main(cwd=repo.root) == 1
