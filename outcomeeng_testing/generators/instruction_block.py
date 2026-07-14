@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import string
 from types import ModuleType
 
 from hypothesis import strategies as st
@@ -44,4 +45,13 @@ def shared_document(module: ModuleType, name: str, body: str) -> str:
     return (
         f"{module.shared_open_marker(name)}\n\n{body}\n\n"
         f"{module.shared_close_marker(name)}\n"
+    )
+
+
+def unsupported_language_tokens(
+    supported_languages: tuple[str, ...],
+) -> SearchStrategy[str]:
+    """Generate single lowercase CLI tokens outside the template-declared language set."""
+    return st.text(alphabet=string.ascii_lowercase, min_size=1).filter(
+        lambda token: token not in supported_languages
     )

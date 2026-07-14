@@ -12,22 +12,26 @@ Exposes:
   marker syntax mirrors the module's ``<!-- lang:NAME -->`` conditional-block contract
   (parsed by ``_filter_languages``); a synthetic template that drifts from it fails to
   render, which is the intended input-fixture coupling.
-- ``canonical_router_spacing_is_valid``. Renders the canonical template for every harness and
-  checks the marker-to-body separator without placing setup or iteration policy in a test file.
+- ``canonical_router_spacing_is_valid_for_all_mappings``. Renders the canonical template for
+  every source-owned harness and every subset of its declared languages, then checks the
+  marker-to-body separator without placing setup or iteration policy in a test file.
+- ``unsupported_language_overrides_are_rejected``. Searches unsupported language tokens with
+  replayable property-run settings derived from the canonical template's declared languages.
 
-The render and parse functions take document strings, so the harness builds
-documents as strings; no filesystem is involved.
+Pure render and parse checks use document strings. CLI-edge checks materialize
+only invocation-owned temporary repositories and clean them on exit.
 """
 
 from __future__ import annotations
 
+import itertools
 import os
 import pathlib
 import re
 import subprocess
 import tempfile
 from collections.abc import Callable
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from io import StringIO
 from types import ModuleType
@@ -156,6 +160,8 @@ ILLUSTRATION_TOKEN = next(
 # rendered only into that harness's instruction file. The marker syntax mirrors the module's
 # ``<!-- harness:NAME -->`` conditional-block contract (parsed by ``_filter_harness``); a
 # synthetic template that drifts from it fails to render.
+LANGUAGE_OVERRIDE_PROPERTY_SEED = 20260714
+LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES = 50
 
 
 @dataclass(frozen=True)
@@ -305,25 +311,73 @@ def read_canonical_template() -> str:
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
-def canonical_router_spacing_is_valid() -> bool:
-    """Return whether every canonical harness render has one blank line before its body."""
+def template_declared_languages(template: str) -> tuple[str, ...]:
+    """Return the finite language domain declared by canonical template opening markers."""
+    module = load_instruction_block_module()
+    return cast(tuple[str, ...], module.template_languages(template))
+
+
+def _language_subsets(languages: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
+    """Return every subset of a finite template-declared language domain."""
+    return tuple(
+        subset
+        for size in range(len(languages) + 1)
+        for subset in itertools.combinations(languages, size)
+    )
+
+
+def canonical_router_spacing_is_valid_for_all_mappings() -> bool:
+    """Check canonical spacing for every source harness and declared-language subset."""
     module = load_instruction_block_module()
     template = read_canonical_template()
+    languages = template_declared_languages(template)
     version = module.parse_template_version(template)
-    marker = module.router_marker(version, TEMPLATE_LANGUAGES)
-    separator = f"{marker}\n\n"
+    if version is None:
+        raise RuntimeError("canonical instruction-block template has no version")
 
-    for agent_harness in TEMPLATE_HARNESSES:
-        rendered = module.render(
-            template,
-            TEMPLATE_LANGUAGES,
-            version,
-            agent_harness,
-        )
-        body = rendered.removeprefix(separator)
-        if body == rendered or body.startswith("\n"):
-            return False
+    for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
+        for enabled_languages in _language_subsets(languages):
+            marker = module.router_marker(version, enabled_languages)
+            separator = f"{marker}\n\n"
+            rendered = module.render(
+                template,
+                enabled_languages,
+                version,
+                agent_harness,
+            )
+            body = rendered.removeprefix(separator)
+            if body == rendered or body.startswith("\n"):
+                return False
     return True
+
+
+def unsupported_language_overrides_are_rejected() -> bool:
+    """Check generated unsupported tokens against the canonical template language contract."""
+    module = load_instruction_block_module()
+    supported_languages = template_declared_languages(read_canonical_template())
+
+    @seed(LANGUAGE_OVERRIDE_PROPERTY_SEED)
+    @settings(max_examples=LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES, deadline=None)
+    @given(token=generators.unsupported_language_tokens(supported_languages))
+    def assertion(token: str) -> None:
+        stderr = StringIO()
+        with tempfile.TemporaryDirectory() as directory, redirect_stderr(stderr):
+            result = run_generator_write(
+                module,
+                pathlib.Path(directory),
+                CANONICAL_TEMPLATE_PATH,
+                languages=token,
+            )
+
+        message = stderr.getvalue()
+        assert result == 2
+        assert token in message
+        assert all(language in message for language in supported_languages)
+
+    assertion()
+    return True
+
+
 def _language_heading(language: str) -> str:
     """The H3 heading the harness emits inside a language block — what render keeps or drops."""
     return f"### {language.capitalize()}"

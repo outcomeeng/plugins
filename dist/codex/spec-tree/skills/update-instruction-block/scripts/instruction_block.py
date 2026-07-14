@@ -26,6 +26,10 @@ git, environment, or subprocess access. The CLI edge reads the template, globs t
 extensions, replaces symlinked root instruction files with regular files, removes obsolete
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
+
+Tested with the render, write, check, and reconcile CLI paths, including dirty files, recency
+ties, one-sided and malformed shared regions, symlink and path validation, and language-override
+errors.
 """
 
 from __future__ import annotations
@@ -370,6 +374,16 @@ def _with_trailing_newline(block: list[str]) -> list[str]:
 def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     """Keep each ``lang:NAME`` block whose NAME is enabled; drop the rest, markers and all."""
     return _filter_conditional_blocks(body, "lang", set(languages))
+
+
+def template_languages(template_text: str) -> tuple[str, ...]:
+    """Return the languages declared by opening ``lang:NAME`` template markers."""
+    _, body = _split_frontmatter(template_text)
+    return normalize_languages(
+        name
+        for line in body.splitlines()
+        if (name := _conditional_marker(line, "lang", closing=False)) is not None
+    )
 
 
 def _filter_harness(body: str, harness: str) -> str:
@@ -1235,6 +1249,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
+        allowed_languages = template_languages(template_text)
+        allowed_language_set = set(allowed_languages)
+        unsupported_languages = tuple(
+            language for language in languages if language not in allowed_language_set
+        )
+        if unsupported_languages:
+            print(
+                "error: unsupported --languages token(s): "
+                f"{', '.join(unsupported_languages)}; allowed languages: "
+                f"{', '.join(allowed_languages)}",
+                file=sys.stderr,
+            )
+            return 2
     elif repo_root is not None:
         try:
             languages = detect_languages_from_tree(_spx_dir(repo_root))
