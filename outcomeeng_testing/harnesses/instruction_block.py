@@ -532,7 +532,9 @@ def assert_drift_gate_reports_missing_root_instruction_file() -> None:
         )
         git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
         (repo / INSTRUCTION_CLAUDE).unlink()
-        drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+        drift = dist.drifting_instruction_files(
+            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
+        )
         assert INSTRUCTION_CLAUDE in drift
 
 
@@ -547,7 +549,9 @@ def assert_drift_gate_marks_untracked_root_files() -> None:
         write_both_root_files_with_shared_region(
             module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
         )
-        drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+        drift = dist.drifting_instruction_files(
+            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
+        )
         assert INSTRUCTION_CLAUDE in drift
         assert INSTRUCTION_AGENTS in drift
 
@@ -564,7 +568,9 @@ def assert_drift_gate_skips_missing_obsolete_spx_file() -> None:
             module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
         )
         git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
-        drift = dist.drifting_instruction_files(repo_root=repo, module=module)
+        drift = dist.drifting_instruction_files(
+            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
+        )
         assert drift == []
         assert "spx/CLAUDE.md" not in drift
         assert "spx/AGENTS.md" not in drift
@@ -771,7 +777,9 @@ def assert_unresolved_build_macro_is_rejected() -> None:
     harness_templates[HARNESS_CODEX] += render_build_macro()
     with pytest.raises(dist.UnresolvedInstructionTemplateError):
         dist.render_instruction_blocks_from_harness_templates(
-            module, harness_templates, (LANG_PRIMARY,)
+            cast(dist.InstructionBlockModule, module),
+            harness_templates,
+            (LANG_PRIMARY,),
         )
 
 
