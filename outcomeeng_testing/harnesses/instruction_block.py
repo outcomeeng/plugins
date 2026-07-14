@@ -12,6 +12,8 @@ Exposes:
   marker syntax mirrors the module's ``<!-- lang:NAME -->`` conditional-block contract
   (parsed by ``_filter_languages``); a synthetic template that drifts from it fails to
   render, which is the intended input-fixture coupling.
+- ``canonical_router_spacing_is_valid``. Renders the canonical template for every harness and
+  checks the marker-to-body separator without placing setup or iteration policy in a test file.
 
 The render and parse functions take document strings, so the harness builds
 documents as strings; no filesystem is involved.
@@ -303,6 +305,25 @@ def read_canonical_template() -> str:
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
+def canonical_router_spacing_is_valid() -> bool:
+    """Return whether every canonical harness render has one blank line before its body."""
+    module = load_instruction_block_module()
+    template = read_canonical_template()
+    version = module.parse_template_version(template)
+    marker = module.router_marker(version, TEMPLATE_LANGUAGES)
+    separator = f"{marker}\n\n"
+
+    for agent_harness in TEMPLATE_HARNESSES:
+        rendered = module.render(
+            template,
+            TEMPLATE_LANGUAGES,
+            version,
+            agent_harness,
+        )
+        body = rendered.removeprefix(separator)
+        if body == rendered or body.startswith("\n"):
+            return False
+    return True
 def _language_heading(language: str) -> str:
     """The H3 heading the harness emits inside a language block — what render keeps or drops."""
     return f"### {language.capitalize()}"

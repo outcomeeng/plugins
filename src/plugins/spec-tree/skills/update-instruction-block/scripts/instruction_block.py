@@ -54,6 +54,7 @@ DEFAULT_TEMPLATE_SOURCE = "spec-tree"
 ROUTER_MARKER_PREFIX = "<!-- SPEC-TREE v"
 ROUTER_BLOCK_END = "<!-- /SPEC-TREE -->"
 ROUTER_LANGS_KEY = "langs:"
+ROUTER_BODY_SEPARATOR = "\n\n"
 # Anchored to a full fence line (``re.MULTILINE``) so an inline marker example in product prose
 # never opens the block: the shipped instruction block teaches the literal marker, so a consumer
 # may quote it in prose, and an unanchored match would replace from that quote through the real
@@ -414,9 +415,13 @@ def render(
     body = _filter_languages(template_body, languages)
     body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
+    body = body.lstrip("\n")
 
     marker = router_marker(installed_version, languages)
-    rendered = f"{marker}\n{body.rstrip()}\n\n{ROUTER_BLOCK_END}"
+    rendered = (
+        f"{marker}{ROUTER_BODY_SEPARATOR}{body.rstrip()}"
+        f"{ROUTER_BODY_SEPARATOR}{ROUTER_BLOCK_END}"
+    )
     return rendered.rstrip("\n") + "\n"
 
 
