@@ -140,7 +140,10 @@ def claude_output_preserves_skill_dir_token() -> bool:
         if _decode_text(output_files[path]).count(CLAUDE_SKILL_DIR_TOKEN)
         < text.count(CLAUDE_SKILL_DIR_TOKEN)
     )
-    synthetic = _synthetic_skill_dir_translation_holds()
+    synthetic = (
+        _synthetic_skill_dir_translation_holds()
+        and _synthetic_fan_out_translation_holds()
+    )
     if not relevant or failures or not synthetic:
         raise AssertionError(
             f"Claude skill-directory preservation mismatch: {failures=}, {synthetic=}"
@@ -170,7 +173,10 @@ def codex_output_rewrites_skill_dir_token() -> bool:
         or _decode_text(output_files[path]).count(CODEX_SKILL_DIR_TOKEN)
         < _unescaped_skill_dir_count(text)
     )
-    synthetic = _synthetic_skill_dir_translation_holds()
+    synthetic = (
+        _synthetic_skill_dir_translation_holds()
+        and _synthetic_fan_out_translation_holds()
+    )
     if not relevant or failures or not synthetic:
         raise AssertionError(
             f"Codex skill-directory rewrite mismatch: {failures=}, {synthetic=}"
@@ -229,12 +235,18 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
         and path.parts[1] == SKILLS_SUBDIR_NAME
         and path.name == SKILL_FILENAME
     }
-    return canonical_holds and _frontmatter_contract_holds(
-        synthetic_skill_sources,
-        claude_outputs=dict(synthetic.claude),
-        codex_outputs=dict(synthetic.codex),
-        required_portable_fields=frozenset((ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)),
-        required_claude_only_fields=frozenset((DISABLE_MODEL_INVOCATION_FIELD,)),
+    return (
+        canonical_holds
+        and _frontmatter_contract_holds(
+            synthetic_skill_sources,
+            claude_outputs=dict(synthetic.claude),
+            codex_outputs=dict(synthetic.codex),
+            required_portable_fields=frozenset(
+                (ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD)
+            ),
+            required_claude_only_fields=frozenset((DISABLE_MODEL_INVOCATION_FIELD,)),
+        )
+        and _synthetic_fan_out_translation_holds()
     )
 
 
@@ -309,6 +321,7 @@ def _planned_paths(plan: BuildPlan, target: Target) -> set[Path]:
 @cache
 def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
     case = min(source_scenarios(), key=lambda scenario: scenario.skill_ref)
+    fan_out_body = "\n".join((_frontmatter_source(case), _claude_reference(case)))
     source_body = "\n".join(
         (
             _frontmatter_source(case),
@@ -329,7 +342,7 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
             case.scope,
             case.inner_topic,
             case.fragment_body,
-            references={f"{case.outer_topic}{COMMAND_FILE_SUFFIX}": case.fragment_body},
+            references={f"{case.outer_topic}{COMMAND_FILE_SUFFIX}": fan_out_body},
         )
         builder.add_plugin(
             case.plugin,
@@ -448,6 +461,25 @@ def _synthetic_skill_dir_translation_holds() -> bool:
         and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(claude_outputs[path])
         and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in _decode_text(codex_outputs[path])
         for path, text in relevant.items()
+    )
+
+
+def _synthetic_fan_out_translation_holds() -> bool:
+    snapshot = _synthetic_emission_snapshot()
+    fan_out_paths = {
+        emission.relative_path
+        for emission in snapshot.plan.for_target(Target.CLAUDE)
+        if emission.action is EmissionAction.FAN_OUT
+    }
+    claude_outputs = dict(snapshot.claude)
+    codex_outputs = dict(snapshot.codex)
+    return bool(fan_out_paths) and all(
+        CLAUDE_SKILL_DIR_TOKEN in (claude_body := _decode_text(claude_outputs[path]))
+        and CLAUDE_SKILL_DIR_TOKEN
+        not in (codex_body := _decode_text(codex_outputs[path]))
+        and CODEX_SKILL_DIR_TOKEN in codex_body
+        and _frontmatter_translation_holds(claude_body, codex_body)
+        for path in fan_out_paths
     )
 
 

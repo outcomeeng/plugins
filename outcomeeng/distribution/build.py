@@ -734,12 +734,7 @@ def emit_skill(
         target=target,
         src_root=src_root,
     )
-    translated = rewrite_paths_for_target(rendered, target=target)
-    if target is _Target.CODEX:
-        translated = strip_frontmatter_fields(
-            translated,
-            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
-        )
+    translated = _translate_rendered_text(rendered, target=target)
     _write_text(destination, translated)
     shutil.copymode(src_path, destination)
 
@@ -766,7 +761,11 @@ def build(src_root: Path, dist_root: Path) -> None:
 
     for emission in plan.emissions:
         if emission.action is EmissionAction.FAN_OUT:
-            _copy_planned_fan_out(emission, dist_root=dist_root)
+            _emit_planned_fan_out(
+                emission,
+                dist_root=dist_root,
+                src_root=src_root,
+            )
             continue
         if emission.action is EmissionAction.RENDER:
             if (
@@ -962,12 +961,7 @@ def _emit_rendered_file(
         target=target,
         src_root=src_root,
     )
-    translated = rewrite_paths_for_target(rendered, target=target)
-    if target is _Target.CODEX:
-        translated = strip_frontmatter_fields(
-            translated,
-            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
-        )
+    translated = _translate_rendered_text(rendered, target=target)
     _write_text(destination, translated)
     shutil.copymode(source_file, destination)
 
@@ -999,10 +993,38 @@ def render_source_text(
     )
 
 
-def _copy_planned_fan_out(emission: PlannedEmission, *, dist_root: Path) -> None:
+def _translate_rendered_text(rendered: str, *, target: _Target) -> str:
+    translated = rewrite_paths_for_target(rendered, target=target)
+    if target is _Target.CODEX:
+        return strip_frontmatter_fields(
+            translated,
+            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
+        )
+    return translated
+
+
+def _emit_planned_fan_out(
+    emission: PlannedEmission,
+    *,
+    dist_root: Path,
+    src_root: Path,
+) -> None:
     destination = dist_root / emission.target.value / emission.relative_path
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(emission.source, destination)
+    if not _is_rendered_text(emission.source):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(emission.source, destination)
+        return
+    rendered = render_text(
+        emission.source.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            emission.target,
+            plugin_name=emission.relative_path.parts[0],
+        ),
+    )
+    translated = _translate_rendered_text(rendered, target=emission.target)
+    _write_text(destination, translated)
+    shutil.copymode(emission.source, destination)
 
 
 def _run_formatter(
