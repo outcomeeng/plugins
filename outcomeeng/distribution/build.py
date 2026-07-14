@@ -36,6 +36,15 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    BUILD_BLOCK_DELIMITER_END,
+    BUILD_BLOCK_DELIMITER_START,
+    BUILD_COMMENT_DELIMITER_END,
+    BUILD_COMMENT_DELIMITER_START,
+    BUILD_TARGET_VARIABLE,
+    BUILD_VARIABLE_DELIMITER_END,
+    BUILD_VARIABLE_DELIMITER_START,
+    PLUGIN_NAME_VARIABLE,
+    PLUGINS_DIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -61,8 +70,14 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_TOOL_KIND,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+    SPX_FLOOR_VARIABLE,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
+)
+from outcomeeng.distribution.diagnose_manifest import (
+    diagnose_manifest_render_variables,
 )
 from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 
@@ -85,10 +100,8 @@ IMPLEMENTED: Final = True
 # Source tree layout
 # ---------------------------------------------------------------------------
 
-PLUGINS_DIR_NAME: Final = "plugins"
 SHARED_DIR_NAME: Final = "_shared"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
-SKILLS_SUBDIR_NAME: Final = "skills"
 COMMANDS_SUBDIR_NAME: Final = "commands"
 AGENTS_SUBDIR_NAME: Final = "agents"
 SCRIPTS_SUBDIR_NAME: Final = "scripts"
@@ -117,12 +130,12 @@ AGENT_FILE_SUFFIX: Final = ".md"
 # Template delimiters (custom Jinja2)
 # ---------------------------------------------------------------------------
 
-BLOCK_DELIMITER_START: Final = "{!%"
-BLOCK_DELIMITER_END: Final = "%!}"
-VARIABLE_DELIMITER_START: Final = "{{!"
-VARIABLE_DELIMITER_END: Final = "!}}"
-COMMENT_DELIMITER_START: Final = "{!#"
-COMMENT_DELIMITER_END: Final = "#!}"
+BLOCK_DELIMITER_START: Final = BUILD_BLOCK_DELIMITER_START
+BLOCK_DELIMITER_END: Final = BUILD_BLOCK_DELIMITER_END
+VARIABLE_DELIMITER_START: Final = BUILD_VARIABLE_DELIMITER_START
+VARIABLE_DELIMITER_END: Final = BUILD_VARIABLE_DELIMITER_END
+COMMENT_DELIMITER_START: Final = BUILD_COMMENT_DELIMITER_START
+COMMENT_DELIMITER_END: Final = BUILD_COMMENT_DELIMITER_END
 
 
 # ---------------------------------------------------------------------------
@@ -503,7 +516,11 @@ def expand_require_skill(directive: RequireSkillDirective) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _render_variables(target: _Target) -> dict[str, object]:
+def _render_variables(
+    target: _Target,
+    *,
+    plugin_name: str | None = None,
+) -> dict[str, object]:
     """Return the Jinja render variables for a build target.
 
     Carries the build target name and the spx version floor. The floor is
@@ -511,7 +528,14 @@ def _render_variables(target: _Target) -> dict[str, object]:
     ``outcomeeng.validation.spx_version`` so the value the build renders into
     shipped content cannot drift from the floor the product enforces.
     """
-    return {"target": target.value, "spx_floor": REQUIRED_SPX_VERSION}
+    variables = {
+        BUILD_TARGET_VARIABLE: target.value,
+        SPX_FLOOR_VARIABLE: REQUIRED_SPX_VERSION,
+        **diagnose_manifest_render_variables(),
+    }
+    if plugin_name is not None:
+        variables[PLUGIN_NAME_VARIABLE] = plugin_name
+    return variables
 
 
 def render_text(
@@ -680,7 +704,10 @@ def emit_skill(
     rendered = render_text(
         raw_text,
         shared_root=shared_root,
-        variables=_render_variables(target),
+        variables=_render_variables(
+            target,
+            plugin_name=source_plugin_name(src_path),
+        ),
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
@@ -884,13 +911,25 @@ def _is_continuation_line(line: str) -> bool:
 
 def _relative_plugin_path(path: Path) -> Path:
     parts = path.parts
-    try:
-        plugins_index = parts.index(PLUGINS_DIR_NAME)
-    except ValueError as exc:
+    source_plugins = tuple(
+        index + 1
+        for index, part in enumerate(parts[:-1])
+        if part == SOURCE_ROOT_NAME and parts[index + 1] == PLUGINS_DIR_NAME
+    )
+    if not source_plugins:
         raise SourceFormatError(
-            f"{path} is not under a {PLUGINS_DIR_NAME}/ directory"
-        ) from exc
+            f"{path} is not under a {SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/ directory"
+        )
+    plugins_index = source_plugins[-1]
     return Path(*parts[plugins_index + 1 :])
+
+
+def source_plugin_name(path: Path) -> str:
+    """Return the source plugin directory that owns ``path``."""
+    relative_path = _relative_plugin_path(path)
+    if len(relative_path.parts) < 2:
+        raise SourceFormatError(f"{path} has no owning plugin directory")
+    return relative_path.parts[0]
 
 
 def _is_rendered_text(path: Path) -> bool:
@@ -909,7 +948,10 @@ def _emit_rendered_file(
     rendered = render_text(
         raw_text,
         shared_root=shared_root,
-        variables=_render_variables(target),
+        variables=_render_variables(
+            target,
+            plugin_name=source_plugin_name(source_file),
+        ),
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
