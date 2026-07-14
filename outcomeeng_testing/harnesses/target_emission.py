@@ -32,7 +32,7 @@ from outcomeeng.distribution.build import (
     format_directive,
     frontmatter_field_names,
     plan_emissions,
-    render_source_text,
+    render_planned_emission_text,
     rewrite_paths_for_target,
     strip_frontmatter_fields,
 )
@@ -128,10 +128,7 @@ def repeated_include_emits_shared_source_once() -> bool:
 def claude_output_preserves_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.claude)
-    rendered_sources = {
-        path: _rendered_canonical_source(path, target=Target.CLAUDE)
-        for path in _text_files(snapshot.source)
-    }
+    rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
     relevant = {
         path: text
         for path, text in rendered_sources.items()
@@ -161,10 +158,7 @@ def claude_output_preserves_skill_dir_token() -> bool:
 def codex_output_rewrites_skill_dir_token() -> bool:
     snapshot = _canonical_emission_snapshot()
     output_files = dict(snapshot.codex)
-    rendered_sources = {
-        path: _rendered_canonical_source(path, target=Target.CODEX)
-        for path in _text_files(snapshot.source)
-    }
+    rendered_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
     relevant = {
         path: text
         for path, text in rendered_sources.items()
@@ -197,26 +191,28 @@ def codex_output_rewrites_skill_dir_token() -> bool:
 
 def skill_dir_escape_preserves_authoring_guidance() -> bool:
     snapshot = _canonical_emission_snapshot()
-    source_files = _text_files(snapshot.source)
-    relevant = {
-        path: text
-        for path, text in source_files.items()
+    claude_sources = _canonical_rendered_emissions(snapshot.plan, Target.CLAUDE)
+    codex_sources = _canonical_rendered_emissions(snapshot.plan, Target.CODEX)
+    relevant_paths = {
+        path
+        for sources in (claude_sources, codex_sources)
+        for path, text in sources.items()
         if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE in text
     }
     claude_outputs = dict(snapshot.claude)
     codex_outputs = dict(snapshot.codex)
     return (
-        bool(relevant)
+        bool(relevant_paths)
         and all(
             _decode_text(claude_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-            >= _escaped_skill_dir_count(text) + _unescaped_skill_dir_count(text)
+            == claude_sources[path].count(CLAUDE_SKILL_DIR_TOKEN)
             and _decode_text(codex_outputs[path]).count(CLAUDE_SKILL_DIR_TOKEN)
-            == _escaped_skill_dir_count(text)
+            == _escaped_skill_dir_count(codex_sources[path])
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
             not in _decode_text(claude_outputs[path])
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
             not in _decode_text(codex_outputs[path])
-            for path, text in relevant.items()
+            for path in relevant_paths
         )
         and _synthetic_skill_dir_translation_holds()
     )
@@ -541,12 +537,18 @@ def _decode_text(content: bytes) -> str:
     return content.decode("utf-8")
 
 
-def _rendered_canonical_source(path: Path, *, target: Target) -> str:
-    return render_source_text(
-        CANONICAL_SOURCE_ROOT / PLUGINS_DIR_NAME / path,
-        target=target,
-        src_root=CANONICAL_SOURCE_ROOT,
-    )
+def _canonical_rendered_emissions(
+    plan: BuildPlan,
+    target: Target,
+) -> dict[Path, str]:
+    return {
+        emission.relative_path: render_planned_emission_text(
+            emission,
+            src_root=CANONICAL_SOURCE_ROOT,
+        )
+        for emission in plan.for_target(target)
+        if emission.source.suffix in TEXT_FILE_SUFFIXES
+    }
 
 
 def _unescaped_skill_dir_count(text: str) -> int:
