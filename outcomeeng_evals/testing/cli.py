@@ -24,6 +24,7 @@ from outcomeeng_evals.cli.commands.run import (
     MIN_WORKERS,
     RUNNER_FACTORY_KEY,
     _FORMAT_SUFFIX,
+    _history_row,
     _runner_factory_from_context,
 )
 from outcomeeng_evals.cli.wiring import build_claude_runner
@@ -32,16 +33,22 @@ from outcomeeng_evals.history import (
     HISTORY_CASES_PASSED_FIELD,
     HISTORY_CASES_TOTAL_FIELD,
     HISTORY_GIT_SHA_FIELD,
+    HISTORY_MAX_BUDGET_USD_FIELD,
+    HISTORY_MODEL_FIELD,
     HISTORY_PASSED_FIELD,
     HISTORY_PASS_RATE_FIELD,
     HISTORY_SCHEMA_VERSION_FIELD,
+    HISTORY_TIMEOUT_SECONDS_FIELD,
     HISTORY_TIMESTAMP_FIELD,
+    HISTORY_TRANSCRIPT_FIELD,
 )
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.testing.factories import (
     assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings as _assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings,
+    load_history_rows_fixture,
     make_eval_dir,
+    make_suite_result,
 )
 from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
@@ -79,6 +86,9 @@ RUN_OVERRIDE_MODEL: Final = "sonnet"
 HISTORY_VERSION_1_COMPATIBILITY_FIXTURE: Final = (
     Path(__file__).parents[2]
     / "outcomeeng_testing/fixtures/evals/history_version_1_compatibility.jsonl"
+)
+HISTORY_ROWS_FIXTURE: Final = (
+    Path(__file__).parents[2] / "outcomeeng_testing/fixtures/evals/history_rows.json"
 )
 
 
@@ -250,6 +260,20 @@ def assert_history_subcommand_reads_version_1_compatible_rows() -> None:
         assert result.output.splitlines() == [
             _expected_history_summary(row) for row in rows
         ]
+
+        source_row = load_history_rows_fixture(HISTORY_ROWS_FIXTURE)[0]
+        current_row = _history_row(
+            timestamp=source_row[HISTORY_TIMESTAMP_FIELD],
+            result=make_suite_result(),
+            model=source_row[HISTORY_MODEL_FIELD],
+            max_budget_usd=source_row[HISTORY_MAX_BUDGET_USD_FIELD],
+            timeout_seconds=source_row[HISTORY_TIMEOUT_SECONDS_FIELD],
+            transcript_relative=source_row[HISTORY_TRANSCRIPT_FIELD],
+        )
+        assert current_row[HISTORY_SCHEMA_VERSION_FIELD] == JSON_SCHEMA_VERSION
+        assert HISTORY_MAX_BUDGET_USD_FIELD in current_row
+        assert HISTORY_TIMEOUT_SECONDS_FIELD in current_row
+        assert current_row[HISTORY_MODEL_FIELD] == source_row[HISTORY_MODEL_FIELD]
 
 
 def _expected_history_summary(row: dict[str, object]) -> str:

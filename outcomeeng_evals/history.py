@@ -9,18 +9,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TypedDict
+from typing import Final, TypedDict
 
 
-HISTORY_FILENAME = "history.jsonl"
-HISTORY_TIMESTAMP_FIELD = "timestamp"
-HISTORY_SCHEMA_VERSION_FIELD = "schema_version"
-HISTORY_GIT_SHA_FIELD = "git_sha"
-HISTORY_PASSED_FIELD = "passed"
-HISTORY_PASS_RATE_FIELD = "pass_rate"
-HISTORY_CASES_TOTAL_FIELD = "cases_total"
-HISTORY_CASES_PASSED_FIELD = "cases_passed"
-HISTORY_TRANSCRIPT_FIELD = "transcript"
+HISTORY_FILENAME: Final = "history.jsonl"
+HISTORY_TIMESTAMP_FIELD: Final = "timestamp"
+HISTORY_SCHEMA_VERSION_FIELD: Final = "schema_version"
+HISTORY_GIT_SHA_FIELD: Final = "git_sha"
+HISTORY_MODEL_FIELD: Final = "model"
+HISTORY_MAX_BUDGET_USD_FIELD: Final = "max_budget_usd"
+HISTORY_TIMEOUT_SECONDS_FIELD: Final = "timeout_seconds"
+HISTORY_PASSED_FIELD: Final = "passed"
+HISTORY_PASS_RATE_FIELD: Final = "pass_rate"
+HISTORY_CASES_TOTAL_FIELD: Final = "cases_total"
+HISTORY_CASES_PASSED_FIELD: Final = "cases_passed"
+HISTORY_TRANSCRIPT_FIELD: Final = "transcript"
 
 
 class HistoryRow(TypedDict):
