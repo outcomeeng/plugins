@@ -53,6 +53,7 @@ from outcomeeng_testing.generators.source_and_templating import (
 )
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
+    REPOSITORY_ROOT,
     snapshot_files,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
@@ -104,11 +105,11 @@ def every_source_file_emits_to_each_target() -> bool:
 
 def target_trees_mirror_source_structure() -> bool:
     snapshot = _canonical_emission_snapshot()
-    source_paths = {path for path, _content in snapshot.source}
-    source_directories = _parent_directories(snapshot.source)
-    return bool(source_paths) and all(
-        source_paths <= {path for path, _content in snapshot.target(target)}
-        and source_directories <= _parent_directories(snapshot.target(target))
+    return bool(snapshot.source) and all(
+        _planned_paths(snapshot.plan, target)
+        == {path for path, _content in snapshot.target(target)}
+        and _planned_directories(snapshot.plan, target)
+        == _parent_directories(snapshot.target(target))
         for target in Target
     )
 
@@ -309,16 +310,14 @@ def _execution_time_injection_detector_covers_generated_commands() -> bool:
 def _canonical_emission_snapshot() -> TargetEmissionSnapshot:
     source = _authored_plugin_snapshot(CANONICAL_SOURCE_ROOT)
     plan = plan_emissions(CANONICAL_SOURCE_ROOT)
-    with TemporaryDirectory() as temporary_directory:
-        dist_root = Path(temporary_directory) / DIST_DIR_NAME
-        build(CANONICAL_SOURCE_ROOT, dist_root)
-        outputs = {
-            target: tuple(
-                (Path(path), content)
-                for path, content in snapshot_files(dist_root / target.value)
-            )
-            for target in Target
-        }
+    dist_root = REPOSITORY_ROOT / DIST_DIR_NAME
+    outputs = {
+        target: tuple(
+            (Path(path), content)
+            for path, content in snapshot_files(dist_root / target.value)
+        )
+        for target in Target
+    }
     return TargetEmissionSnapshot(
         source=source,
         claude=outputs[Target.CLAUDE],
@@ -345,6 +344,15 @@ def _authored_plugin_snapshot(src_root: Path) -> PathSnapshot:
 
 def _planned_paths(plan: BuildPlan, target: Target) -> set[Path]:
     return {emission.relative_path for emission in plan.for_target(target)}
+
+
+def _planned_directories(plan: BuildPlan, target: Target) -> set[Path]:
+    return {
+        parent
+        for path in _planned_paths(plan, target)
+        for parent in path.parents
+        if parent != Path()
+    }
 
 
 @cache
