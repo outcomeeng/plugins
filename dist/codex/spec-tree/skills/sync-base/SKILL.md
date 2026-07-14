@@ -2,11 +2,11 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Bash, Read
+allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
 ---
 
 <objective>
-The current branch brought current with its fetched base by a clean rebase.
+The current checkout brought current with its fetched base while preserving attached-branch commits and detached-head safety.
 </objective>
 
 <workflow>
@@ -17,7 +17,7 @@ Run the synchronizer against the repository working tree (default: the current d
 python3 "${SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
 ```
 
-It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives, fetches the base, and rebases the branch when it is behind. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
+It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives and fetches the base. When an attached branch is behind, it rebases the branch onto the fetched base. When a clean detached HEAD is an ancestor of the fetched base, it advances the worktree with `git switch --detach origin/<base>`; a detached HEAD carrying commits absent from the base fails without moving. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `preservation` on a clean outcome, and `conflict` on an active rebase conflict) and exits:
 
 | `status`          | exit | meaning                                                                                                                                              | how Claude acts                                                                                                                                                             |
 | ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -80,11 +80,12 @@ Stop for the operator only when the remaining conflict is a product-intent confl
 
 <git_command_policy>
 
-Allowed commands:
+Allowed direct commands:
 
 - Read state: `git status`, `git rev-parse`, `git symbolic-ref --short HEAD`, `git merge-base`, `git rev-list`, `git diff --name-only`, `git diff`, `git ls-files -u`, `git show :1:<path>`, `git show :2:<path>`, `git show :3:<path>`.
-- Sync: `git fetch origin <base>`, `git rebase origin/<base>`.
 - Resolve: edit files, run project-declared regeneration commands, `git add <resolved-paths>`, `git rebase --continue`.
+
+The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base. Do not substitute direct sync commands for the script.
 
 Explicitly disallowed:
 
@@ -122,7 +123,7 @@ The proof scopes pre-push local work only. It never satisfies a merge gate: curr
 - No operator decision for a clean rebase — the only operator touch-point is a product-intent conflict that deterministic evidence cannot resolve, or a hard git failure.
 - A dirty tree is a precondition, never a conflict — uncommitted tracked changes yield `dirty_tree`, cleared by committing, never by stashing and never surfaced as a conflict.
 - A dirty tree from Claude's own session changes is Claude's to clear per `<dirty_tree_resolution>` — committed to the right branch and re-synced, never stashed and never escalated to the operator.
-- sync-base only fetches and rebases — it never commits or stashes the working tree.
+- sync-base fetches and advances the current checkout through exactly one topology-appropriate operation: rebase for an attached branch, or `git switch --detach` for an ancestor detached HEAD. It never commits or stashes the working tree.
 - A conflicted rebase remains active at operator handoff — Claude offers `git rebase --abort` as an option and does not run it automatically.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
@@ -145,6 +146,26 @@ A base-sync stop reaches the operator for exactly one reason: a product-intent c
 A product-intent conflict is the only thing on the other side. Name it precisely; resolve everything else.
 
 </invalid_operator_escalations>
+
+<failure_modes>
+
+**Failure 1: Bare Bash bypassed command containment.**
+
+What happened: Claude granted `Bash, Read` even though sync-base invokes one bundled script and a finite set of git inspection and conflict-reconciliation commands.
+
+Why it failed: the broad grant admitted unrelated destructive and network commands without approval, defeating `allowed-tools` as a security boundary.
+
+How to avoid: grant the bundled script invocation and each required git verb explicitly; leave every unrelated command behind normal approval.
+
+**Failure 2: The detached-head advance disappeared from the written contract.**
+
+What happened: Claude described sync-base as fetch-and-rebase only while the synchronizer advanced a clean ancestor detached HEAD with `git switch --detach origin/<base>`.
+
+Why it failed: callers could not reconcile the documented invariant with the script's valid detached-worktree behavior.
+
+How to avoid: state the attached-branch rebase and detached-head advance as separate topology paths everywhere the skill describes base movement.
+
+</failure_modes>
 
 <success_criteria>
 
