@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from outcomeeng.distribution.build import (
+    RUNTIME_TOKEN_REGISTRY,
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.contracts import (
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_TOOL_KIND,
+    Target,
+)
 
 
 @dataclass(frozen=True)
@@ -24,6 +30,38 @@ class SourceScenario:
     cycle_topic: str
     fragment_body: str
     branch_payloads: dict[Target, str]
+
+
+@dataclass(frozen=True)
+class InvalidRuntimeTokenCase:
+    """One generated registry coordinate outside the production domain."""
+
+    kind: str
+    capability: str
+
+
+def invalid_runtime_token_capability(kind: str) -> str:
+    """Generate a capability name outside one live kind registry."""
+    return _name_outside(RUNTIME_TOKEN_REGISTRY[kind].names)
+
+
+def invalid_runtime_token_cases() -> tuple[InvalidRuntimeTokenCase, ...]:
+    """Generate one invalid coordinate for each registry lookup boundary."""
+    return (
+        InvalidRuntimeTokenCase(
+            kind=_name_outside(RUNTIME_TOKEN_REGISTRY),
+            capability=RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+        ),
+        InvalidRuntimeTokenCase(
+            kind=RUNTIME_TOKEN_TOOL_KIND,
+            capability=invalid_runtime_token_capability(RUNTIME_TOKEN_TOOL_KIND),
+        ),
+    )
+
+
+def runtime_token_probe_name(kind: str, capability: str) -> str:
+    """Generate a runtime name outside one live capability registry."""
+    return _name_outside(RUNTIME_TOKEN_REGISTRY[kind].names[capability].values())
 
 
 def source_scenarios() -> tuple[SourceScenario, ...]:
@@ -62,3 +100,11 @@ def source_scenarios() -> tuple[SourceScenario, ...]:
         )
         for coordinate in runtime_token_resolver_cases()
     )
+
+
+def _name_outside(domain: Collection[str]) -> str:
+    names = set(domain)
+    candidate = f"{max(names)}_outside_domain"
+    while candidate in names:
+        candidate = f"{candidate}_outside_domain"
+    return candidate
