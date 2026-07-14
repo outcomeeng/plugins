@@ -4,42 +4,35 @@ from outcomeeng_testing.harnesses import instruction_block as harness
 
 
 def test_only_claude_topology_maps_to_both_harnesses() -> None:
-    topology = harness.root_instruction_topology_only_claude()
-    body = topology.files[harness.INSTRUCTION_CLAUDE]
-    with harness.temporary_instruction_root() as root:
-        assert harness.materialize_root_instruction_topology(root, topology) == {
-            harness.INSTRUCTION_CLAUDE: body,
-            harness.INSTRUCTION_AGENTS: body,
-        }
+    assert (
+        harness.observe_only_claude_topology_mapping().actual
+        == harness.observe_only_claude_topology_mapping().expected
+    )
 
 
 def test_only_agents_topology_maps_to_both_harnesses() -> None:
-    topology = harness.root_instruction_topology_only_agents()
-    body = topology.files[harness.INSTRUCTION_AGENTS]
-    with harness.temporary_instruction_root() as root:
-        assert harness.materialize_root_instruction_topology(root, topology) == {
-            harness.INSTRUCTION_CLAUDE: body,
-            harness.INSTRUCTION_AGENTS: body,
-        }
+    assert (
+        harness.observe_only_agents_topology_mapping().actual
+        == harness.observe_only_agents_topology_mapping().expected
+    )
 
 
 def test_separate_topology_maps_each_harness_body() -> None:
-    topology = harness.root_instruction_topology_separate()
-    with harness.temporary_instruction_root() as root:
-        assert (
-            harness.materialize_root_instruction_topology(root, topology)
-            == topology.files
-        )
+    assert (
+        harness.observe_separate_topology_mapping().actual
+        == harness.observe_separate_topology_mapping().expected
+    )
 
 
-def test_symlinked_topology_maps_shared_body() -> None:
-    for topology in (
-        harness.root_instruction_topology_claude_symlink(),
-        harness.root_instruction_topology_agents_symlink(),
-    ):
-        body = next(iter(topology.files.values()))
-        with harness.temporary_instruction_root() as root:
-            assert harness.materialize_root_instruction_topology(root, topology) == {
-                harness.INSTRUCTION_CLAUDE: body,
-                harness.INSTRUCTION_AGENTS: body,
-            }
+def test_claude_symlinked_topology_maps_shared_body() -> None:
+    assert (
+        harness.observe_claude_symlink_topology_mapping().actual
+        == harness.observe_claude_symlink_topology_mapping().expected
+    )
+
+
+def test_agents_symlinked_topology_maps_shared_body() -> None:
+    assert (
+        harness.observe_agents_symlink_topology_mapping().actual
+        == harness.observe_agents_symlink_topology_mapping().expected
+    )

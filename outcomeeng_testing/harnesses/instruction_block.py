@@ -130,6 +130,61 @@ class RootContentPair:
     agents: str
 
 
+@dataclass(frozen=True)
+class RootInstructionBodies:
+    """Bodies observed at the two root instruction-file paths."""
+
+    claude: str
+    agents: str
+
+
+@dataclass(frozen=True)
+class RootInstructionMappingObservation:
+    """Materialized and fixture-derived bodies for one topology mapping."""
+
+    actual: RootInstructionBodies
+    expected: RootInstructionBodies
+
+
+@dataclass(frozen=True)
+class InstructionFileState:
+    """Observable filesystem state for one instruction-file path."""
+
+    is_file: bool
+    is_symlink: bool
+
+
+@dataclass(frozen=True)
+class RootInstructionFileStates:
+    """Filesystem states observed at both root instruction-file paths."""
+
+    claude: InstructionFileState
+    agents: InstructionFileState
+
+
+@dataclass(frozen=True)
+class MaterializedRootInstructionState:
+    """Observable state after a root instruction topology is materialized."""
+
+    paths: RootInstructionFileStates
+    files: RootInstructionBodies
+    mapping: RootInstructionBodies
+
+
+@dataclass(frozen=True)
+class SymlinkMaterializationObservation:
+    """Materialized and fixture-derived states for one symlink topology."""
+
+    actual: MaterializedRootInstructionState
+    expected: MaterializedRootInstructionState
+
+
+REGULAR_INSTRUCTION_FILE_STATE: Final = InstructionFileState(
+    is_file=True,
+    is_symlink=False,
+)
+
+
 def _load_root_instruction_topology(fixture_name: str) -> RootInstructionTopology:
     """Load one inert whole-topology fixture from disk."""
     payload = json.loads(
@@ -261,6 +316,134 @@ def materialize_root_instruction_topology(
     for name, body in seeds.items():
         _replace_path_with_text(root / name, body)
     return seeds
+
+
+def _root_instruction_bodies(values: dict[str, str]) -> RootInstructionBodies:
+    """Project an instruction-name mapping into an immutable observation record."""
+    return RootInstructionBodies(
+        claude=values[INSTRUCTION_CLAUDE],
+        agents=values[INSTRUCTION_AGENTS],
+    )
+
+
+def _shared_root_instruction_bodies(body: str) -> RootInstructionBodies:
+    """Return the expected two-path projection for one shared source body."""
+    return RootInstructionBodies(claude=body, agents=body)
+
+
+def _observe_root_instruction_mapping(
+    topology: RootInstructionTopology,
+    expected: RootInstructionBodies,
+) -> RootInstructionMappingObservation:
+    """Materialize one topology while the harness owns its temporary root."""
+    with temporary_instruction_root() as root:
+        actual = _root_instruction_bodies(
+            materialize_root_instruction_topology(root, topology)
+        )
+    return RootInstructionMappingObservation(actual=actual, expected=expected)
+
+
+def observe_only_claude_topology_mapping() -> RootInstructionMappingObservation:
+    """Observe the only-Claude topology against its fixture-derived mapping."""
+    topology = root_instruction_topology_only_claude()
+    return _observe_root_instruction_mapping(
+        topology,
+        _shared_root_instruction_bodies(topology.files[INSTRUCTION_CLAUDE]),
+    )
+
+
+def observe_only_agents_topology_mapping() -> RootInstructionMappingObservation:
+    """Observe the only-Agents topology against its fixture-derived mapping."""
+    topology = root_instruction_topology_only_agents()
+    return _observe_root_instruction_mapping(
+        topology,
+        _shared_root_instruction_bodies(topology.files[INSTRUCTION_AGENTS]),
+    )
+
+
+def observe_separate_topology_mapping() -> RootInstructionMappingObservation:
+    """Observe separate instruction files against their fixture-owned bodies."""
+    topology = root_instruction_topology_separate()
+    return _observe_root_instruction_mapping(
+        topology,
+        _root_instruction_bodies(topology.files),
+    )
+
+
+def observe_claude_symlink_topology_mapping() -> RootInstructionMappingObservation:
+    """Observe the Claude-symlink topology against its shared fixture body."""
+    topology = root_instruction_topology_claude_symlink()
+    return _observe_root_instruction_mapping(
+        topology,
+        _shared_root_instruction_bodies(topology.files[INSTRUCTION_AGENTS]),
+    )
+
+
+def observe_agents_symlink_topology_mapping() -> RootInstructionMappingObservation:
+    """Observe the Agents-symlink topology against its shared fixture body."""
+    topology = root_instruction_topology_agents_symlink()
+    return _observe_root_instruction_mapping(
+        topology,
+        _shared_root_instruction_bodies(topology.files[INSTRUCTION_CLAUDE]),
+    )
+
+
+def _observe_symlink_materialization(
+    topology: RootInstructionTopology,
+    source_body: str,
+) -> SymlinkMaterializationObservation:
+    """Observe symlink normalization while owning all filesystem lifecycle state."""
+    with temporary_instruction_root() as root:
+        materialized = materialize_root_instruction_topology(root, topology)
+        claude_path = root / INSTRUCTION_CLAUDE
+        agents_path = root / INSTRUCTION_AGENTS
+        actual = MaterializedRootInstructionState(
+            paths=RootInstructionFileStates(
+                claude=InstructionFileState(
+                    is_file=claude_path.is_file(),
+                    is_symlink=claude_path.is_symlink(),
+                ),
+                agents=InstructionFileState(
+                    is_file=agents_path.is_file(),
+                    is_symlink=agents_path.is_symlink(),
+                ),
+            ),
+            files=RootInstructionBodies(
+                claude=claude_path.read_text(encoding="utf-8"),
+                agents=agents_path.read_text(encoding="utf-8"),
+            ),
+            mapping=_root_instruction_bodies(materialized),
+        )
+    expected_bodies = _shared_root_instruction_bodies(source_body)
+    return SymlinkMaterializationObservation(
+        actual=actual,
+        expected=MaterializedRootInstructionState(
+            paths=RootInstructionFileStates(
+                claude=REGULAR_INSTRUCTION_FILE_STATE,
+                agents=REGULAR_INSTRUCTION_FILE_STATE,
+            ),
+            files=expected_bodies,
+            mapping=expected_bodies,
+        ),
+    )
+
+
+def observe_claude_symlink_materialization() -> SymlinkMaterializationObservation:
+    """Observe normalization when the Claude instruction path is a symlink."""
+    topology = root_instruction_topology_claude_symlink()
+    return _observe_symlink_materialization(
+        topology,
+        topology.files[INSTRUCTION_AGENTS],
+    )
+
+
+def observe_agents_symlink_materialization() -> SymlinkMaterializationObservation:
+    """Observe normalization when the Agents instruction path is a symlink."""
+    topology = root_instruction_topology_agents_symlink()
+    return _observe_symlink_materialization(
+        topology,
+        topology.files[INSTRUCTION_CLAUDE],
+    )
 
 
 def harness_line(harness: str) -> str:
