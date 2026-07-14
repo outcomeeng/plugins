@@ -133,7 +133,7 @@ def recursive_include_property_holds() -> bool:
 
 def property_failure_notes_include_seed_and_replay() -> bool:
     def always_fails() -> None:
-        raise AssertionError
+        raise ValueError
 
     try:
         run_replayable_property(
@@ -141,7 +141,7 @@ def property_failure_notes_include_seed_and_replay() -> bool:
             seed_value=SOURCE_PROPERTY_SEED,
             replay_path=DIRECTIVE_PROPERTY_REPLAY_PATH,
         )
-    except AssertionError as error:
+    except ValueError as error:
         notes = getattr(error, "__notes__", ())
         return (
             f"Hypothesis seed: {SOURCE_PROPERTY_SEED}" in notes

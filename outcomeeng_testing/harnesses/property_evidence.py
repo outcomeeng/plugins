@@ -14,7 +14,7 @@ def run_replayable_property(
     """Run a configured property while preserving its native failure details."""
     try:
         property_run()
-    except AssertionError as error:
+    except Exception as error:
         error.add_note(f"Hypothesis seed: {seed_value}")
         error.add_note(f"Replay path: {replay_path}")
         raise
