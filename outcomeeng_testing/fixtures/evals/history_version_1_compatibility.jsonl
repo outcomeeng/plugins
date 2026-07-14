@@ -1,0 +1,2 @@
+{"timestamp":"2026-05-11T15:48:00Z","schema_version":"1","git_sha":"9999af81234567890abcdef1234567890abcdef1","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4}
+{"timestamp":"2026-07-14T06:54:40Z","schema_version":"1","git_sha":"cf9ac9004cc00a205f771d48ded26315bd80c7ee","model":"sonnet","max_budget_usd":0.75,"timeout_seconds":180,"passed":true,"pass_rate":1.0,"cases_total":5,"cases_passed":5}

@@ -22,8 +22,8 @@ from outcomeeng_evals.suite import SuiteResult, TrialResult
 
 
 # Integer-as-string schema version for the JSON results document and the
-# history.jsonl rows. Bumped on incompatible changes; the committed
-# baseline history rows carry the same value.
+# history.jsonl rows. Additive fields retain the version; incompatible removals
+# or interpretation changes bump it and require a consumer migration.
 JSON_SCHEMA_VERSION = "1"
 JSON_REPORT_SUFFIX = ".json"
 EMBEDDED_RESULTS_SCRIPT_ID = "eval-results"

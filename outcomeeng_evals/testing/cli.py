@@ -65,6 +65,10 @@ RUN_CASE_GAMMA: Final = (
 )
 RUN_DEFAULT_MODEL: Final = "claude-sonnet-4-5"
 RUN_OVERRIDE_MODEL: Final = "sonnet"
+HISTORY_VERSION_1_COMPATIBILITY_FIXTURE: Final = (
+    Path(__file__).parents[2]
+    / "outcomeeng_testing/fixtures/evals/history_version_1_compatibility.jsonl"
+)
 
 
 @dataclass(frozen=True)
@@ -213,24 +217,23 @@ def assert_discover_subcommand_succeeds_on_empty_tree() -> None:
         assert result.exit_code == EXIT_SUCCESS
 
 
-def assert_history_subcommand_reads_history_file() -> None:
-    """Assert history reads and renders a history JSONL file."""
+def assert_history_subcommand_reads_version_1_compatible_rows() -> None:
+    """Assert history accepts version-1 rows before and after additive fields."""
 
     with TemporaryDirectory() as tmp:
         eval_dir = Path(tmp) / "evals" / "rule"
         eval_dir.mkdir(parents=True)
-        history_text = (
-            '{"timestamp":"2026-05-11T15:48:00Z","schema_version":"1","git_sha":"abc",'
-            '"passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,'
-            '"total_cost_usd":1.04,"total_duration_ms":18960,"transcript":"runs/x.json"}\n'
-        )
         history_path = eval_dir / "history.jsonl"
-        history_path.write_text(history_text, encoding="utf-8")
+        history_path.write_bytes(HISTORY_VERSION_1_COMPATIBILITY_FIXTURE.read_bytes())
 
         result = CliRunner().invoke(main, ["history", str(history_path)])
 
         assert result.exit_code == EXIT_SUCCESS
-        assert "1.0" in result.output or "100" in result.output
+        with HISTORY_VERSION_1_COMPATIBILITY_FIXTURE.open(
+            encoding="utf-8"
+        ) as fixture_file:
+            rows = tuple(json.loads(line) for line in fixture_file if line.strip())
+        assert all(row["timestamp"] in result.output for row in rows)
 
 
 def assert_history_subcommand_handles_missing_file() -> None:
