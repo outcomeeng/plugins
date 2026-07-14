@@ -131,6 +131,8 @@ Review these inputs:
 - Branch/worktree ownership from `git branch --list` and `git worktree list` when the session names a feature branch, branch-like `git_ref`, or a live-branch conflict.
 - PR ownership from `gh pr list` or `gh pr view` when the session names a PR, branch, or merged/open PR state.
 
+When an ownership observation required by the session evidence cannot run — the command is unavailable, authentication or access is absent, or the command exits non-zero — record that signal as `Unverifiable`; NEVER interpret the failed observation as evidence that no owner exists. In particular, an unusable `gh pr list` or `gh pr view` leaves PR ownership `Unverifiable`. If the remaining repository evidence does not independently determine ownership, classify the session as `needs_operator_direction`.
+
 Classify the session:
 
 - `actionable_here` — the loaded context and evidence support continuing in this conversation.
