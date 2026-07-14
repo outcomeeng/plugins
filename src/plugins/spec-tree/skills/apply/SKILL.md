@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code, tests, or architecture for a spec-tree node without this skill.
 argument-hint: "[--agent] [full-spx-node-path]"
-allowed-tools: Read, Skill, {!% if target == 'codex' %!}multi_agent_v1.spawn_agent{!% else %!}Agent{!% endif %!}, {{! tool('ask_user') !}}
+allowed-tools: Read, Edit, Skill, {!% if target == 'codex' %!}multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent{!% else %!}Agent{!% endif %!}, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -30,7 +30,7 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
-- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent ({!% if target == 'codex' %!}`multi_agent_v1.spawn_agent` with `agent_type: "applier"`{!% else %!}`Agent` with `subagent_type: spec-tree:applier`{!% endif %!}) on the optional canonical full `spx/...` node path that follows it. Do not run the per-node authoring steps in the main context. The `applier` role does not run final evidence-auditor gates, review the whole changeset, or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 8a when evidence changed, Step 9 when the change is cross-node, and Step 10 over the resulting changeset.
+- `$ARGUMENTS` beginning with `--agent` → launch the `applier` agent ({!% if target == 'codex' %!}`multi_agent_v1.spawn_agent` with `agent_type: "applier"`{!% else %!}`Agent` with `subagent_type: spec-tree:applier`{!% endif %!}) on the optional canonical full `spx/...` node path that follows it. Collect the dispatch through `<agent_result_collection>` before acting on its handoff. Do not run the per-node authoring steps in the main context. The `applier` role does not run final evidence-auditor gates, review the whole changeset, or merge. On return, treat its live-file audit handoffs as advisory work summaries: run focused deterministic verification, apply `<verification_checkpoint>` to commit the stabilized tree, confirm the worktree is clean, and replace each live-file request with the resulting committed `<base>..<head>` scope and no live file list before dispatching the auditor. Then continue with Step 8a when evidence changed, Step 9 when the change is cross-node, and Step 10 over the resulting changeset.
 - `$ARGUMENTS` containing a canonical full `spx/...` node path without `--agent` → the work queue is that single node.
 - Empty `$ARGUMENTS` → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never pass a bare `spx/EXCLUDE` entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
 
@@ -46,6 +46,27 @@ When the queue holds more than one node, order by numeric index prefix (lower fi
 If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
 </invocation_modes>
+
+<agent_result_collection>
+
+Every applier, auditor, and reviewer dispatch follows the runtime's complete result lifecycle before the workflow acts on the result.
+
+{!% if target == 'codex' %!}
+
+1. Store the exact agent ID returned by `multi_agent_v1.spawn_agent`.
+2. Collect the result with `multi_agent_v1.wait_agent`, targeting that ID. Use the repository's declared timeout when present; otherwise use 10 minutes for an individual-artifact auditor and 30 minutes for an applier or whole-changeset reviewer.
+3. Read only the final status for that ID as the dispatch result. A timeout with no final status, an error, a missing agent, or a malformed final message leaves the applicable gate `BLOCKED`; never infer success from a pending handle or notification.
+4. Close the agent with `multi_agent_v1.close_agent` immediately after collecting its final result or deciding that the dispatch is no longer usable. Completed agents never remain open.
+
+When several independent auditors inspect the same committed head, spawn them first, collect them together with one `multi_agent_v1.wait_agent` call, then close each completed agent after reading its final status.
+
+{!% else %!}
+
+The `Agent` call returns the dispatch result directly. Act only on that returned result.
+
+{!% endif %!}
+
+</agent_result_collection>
 
 <language_detection>
 
@@ -106,6 +127,8 @@ Run deterministic verification first. The main conversation brings local validat
 Dispatch `test-evidence-auditor` at Step 8a when the diff creates or modifies any `[test]` assertion, linked test file, or test-infrastructure artifact imported by a linked test. Include the governing node, assertion text or spec path plus assertion headings, and the test files in the dispatch prompt. If the auditor returns `REJECTED`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run deterministic verification, and re-dispatch Step 8a.
 
 Dispatch `eval-evidence-auditor` at Step 8a when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. Include the governing node, assertion text or spec path plus assertion headings, the eval artifacts, and the producer artifacts in the dispatch prompt. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch Step 8a.
+
+Collect every evidence-auditor dispatch through `<agent_result_collection>` before interpreting its verdict.
 
 Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. Step 9, when required, and Step 10 start only after every applicable Step 8a verdict is clean on the exact committed diff it reviews.
 
@@ -176,6 +199,8 @@ Enumerate every ADR Step 3 created or modified. Classify each ADR before dispatc
 
 After applying `<stabilized_diff_rule>` and `<verification_checkpoint>` once, dispatch one `adr-auditor` per enumerated ADR, in parallel against that same committed head. Give each auditor its ADR path, governing node path, exact committed audit scope chosen in `<scope_detection>`, and `Scope classification: language-neutral` or `Scope classification: implementation-language partitions: <comma-separated languages>`. Require only the structured JSON verdict specified by `audit-adr`. Each auditor composes every declared language's `audit-{lang}-architecture` concerns inside its isolated context.
 
+Collect every ADR-auditor dispatch through `<agent_result_collection>` before interpreting the approval set.
+
 When the scope is cross-node (see `<scope_detection>`), point every ADR audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
 
 The gate passes only when every enumerated ADR has an `APPROVED` verdict for the same committed head. If any verdict is absent, malformed, blocked, or `REJECTED`, fix the defect class or blocked command, rerun deterministic verification, create a new verification checkpoint, and re-dispatch every ADR audit so the complete approval set binds to the new head.
@@ -196,6 +221,8 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 Dispatch `test-evidence-auditor` with the governing node, assertion text or spec path plus assertion headings, linked test files, detected language, and the same audit scope chosen in `<scope_detection>`. The auditor composes the detected language's `audit-{lang}-tests` concern inside its isolated context.
 
+Collect the test-evidence-auditor dispatch through `<agent_result_collection>` before interpreting its verdict.
+
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
@@ -215,6 +242,8 @@ Write implementation code. All tests from Step 5 must pass.
 <step number="8" name="Code audit" gate="true">
 
 Dispatch the `implementation-auditor` agent with the repository path, exact committed changeset scope, no live file list, governing node path, detected language, and deterministic verification already run.
+
+Collect the implementation-auditor dispatch through `<agent_result_collection>` before reading its rendered projection.
 
 When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
 
@@ -241,6 +270,8 @@ Skip this step only when the entire diff is confined to the target node's own di
 Before invoking the review, confirm every applicable Step 8a verdict is clean, then apply `<verification_checkpoint>`. The reviewer must see the same committed diff whose touched evidence artifacts passed their artifact-type evidence audits.
 
 Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
+
+Collect the changes-reviewer dispatch through `<agent_result_collection>` before interpreting its review result.
 
 Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding it surfaces, including every in-scope same-class instance found by the same-class sweep, then re-run. **Unaddressed valid finding -> fix the defect class -> re-run this step.** Loop until the review converges.
 
