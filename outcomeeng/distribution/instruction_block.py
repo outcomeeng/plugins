@@ -110,6 +110,8 @@ class InstructionBlockModule(Protocol):
     ROUTER_BLOCK_END: str
     ROUTER_MARKER_PREFIX: str
 
+    def router_block_bounds(self, text: str) -> tuple[int, int] | None: ...
+
     def parse_template_version(self, text: str) -> str | None: ...
 
     def detect_languages_from_tree(self, spx_dir: Path) -> tuple[str, ...]: ...
@@ -266,13 +268,11 @@ def _markdown_section(document: str, heading: str) -> str:
 def managed_router_block(document: str) -> str:
     """Extract the managed router block from a complete root instruction document."""
     module = load_instruction_block_module()
-    start = document.find(module.ROUTER_MARKER_PREFIX)
-    if start < 0:
-        raise FoundationAccessPolicyError("missing router opening marker")
-    end = document.find(module.ROUTER_BLOCK_END, start)
-    if end < 0:
-        raise FoundationAccessPolicyError("missing router closing marker")
-    return document[start : end + len(module.ROUTER_BLOCK_END)]
+    bounds = module.router_block_bounds(document)
+    if bounds is None:
+        raise FoundationAccessPolicyError("missing complete standalone router block")
+    start, end = bounds
+    return document[start:end]
 
 
 def validate_foundation_access_policy(

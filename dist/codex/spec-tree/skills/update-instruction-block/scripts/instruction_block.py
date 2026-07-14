@@ -201,7 +201,7 @@ def _legacy_block_bounds(text: str) -> tuple[int, int] | None:
     return None
 
 
-def _router_block_bounds(text: str) -> tuple[int, int] | None:
+def router_block_bounds(text: str) -> tuple[int, int] | None:
     """Return the current router block's start and end offsets when present.
 
     The closing marker is matched only where it stands alone on its own line, matching the
@@ -227,7 +227,7 @@ def _managed_block_bounds(text: str) -> tuple[int, int] | None:
     The current compressed marker is tried first, then each retired marker pair, so an existing
     block authored under a superseded naming is replaced in place on upgrade.
     """
-    return _router_block_bounds(text) or _legacy_block_bounds(text)
+    return router_block_bounds(text) or _legacy_block_bounds(text)
 
 
 def _managed_block_text(text: str) -> str | None:
@@ -905,7 +905,7 @@ def instruction_status(
         # A retired-marker block is present but not the current compressed marker; a re-render
         # migrates it.
         return InstructionStatus.STALE
-    bounds = _router_block_bounds(text)
+    bounds = router_block_bounds(text)
     if bounds is None or bounds[0] != 0:
         # The router block must be the first content of the file so a reading agent reaches its
         # read-the-whole-file instruction before any product content; a router preceded by prose

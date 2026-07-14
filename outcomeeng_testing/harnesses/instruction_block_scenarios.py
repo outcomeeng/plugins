@@ -21,6 +21,7 @@ from typing import cast
 
 import pytest
 
+from outcomeeng.distribution import instruction_block as dist
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
@@ -432,6 +433,9 @@ def _case_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> 
     result = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     assert "in prose." in result
     assert result.count(MODULE.ROUTER_BLOCK_END) == 1
+    router = dist.managed_router_block(result)
+    assert router.startswith(MODULE.ROUTER_MARKER_PREFIX)
+    assert "in prose." not in router
 
 
 def _case_quoted_router_closing_marker_after_block_is_preserved(
@@ -457,6 +461,7 @@ def _case_quoted_router_closing_marker_after_block_is_preserved(
     # content is not mistaken for the block end, so the note survives and the block is single
     assert "Doc note: the router closes with" in result
     assert result.count(MODULE.ROUTER_MARKER_PREFIX) == 1
+    assert dist.managed_router_block(result) == block
 
 
 def _case_quoted_shared_fence_in_prose_is_not_a_region() -> None:
