@@ -42,6 +42,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Properties
 
+- Every rendered router block contains exactly one blank line between its opening marker and its first body content ([test](tests/test_instruction_block.property.l1.py))
 - After generation, each router block's `template_version` equals the installed template version ([test](tests/test_instruction_block.property.l1.py))
 - Every rendered managed surface ends with exactly one trailing newline ([test](tests/test_instruction_block.property.l1.py))
 - Staleness ordering matches dotted-numeric version order: a product version is stale exactly when it is numerically below the installed template version ([test](tests/test_instruction_block.property.l1.py))
