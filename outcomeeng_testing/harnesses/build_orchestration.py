@@ -8,11 +8,12 @@ from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
     FORMATTER_COMMAND_NAME,
-    FORMATTER_CONFIG_PATH,
-    FORMATTER_FILE_GLOB,
+    FORMATTER_VERSION_OUTPUT,
     BuildError,
     _format_dist,
     build,
+    formatter_format_command,
+    formatter_version_command,
 )
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
@@ -45,8 +46,10 @@ from outcomeeng.distribution.orchestration import (
     just_recipe_commands,
     just_recipe_names,
     lefthook_build_command,
+    lefthook_config_matches_build_contract,
     load_json_document,
     load_lefthook_config,
+    parse_lefthook_config,
     path_is_under_runtime_root,
 )
 from outcomeeng.validation._steps import DIST_DIFF_STEP_LABEL, VALIDATION_STEPS
@@ -60,7 +63,8 @@ from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 REPOSITORY_ROOT = Path(".")
 FORMATTER_FAILURE_DIAGNOSTIC = "formatter failed"
-FORMATTER_TEST_PATH = "/usr/local/bin/dprint"
+FORMATTER_VERSION_FAILURE_DIAGNOSTIC = "formatter version failed"
+FORMATTER_TEST_PATH = f"/usr/local/bin/{FORMATTER_COMMAND_NAME}"
 RAW_DIFF_HUNK_MARKER = "@@"
 RAW_DIFF_LINE_PREFIXES = ("+", "-")
 RAW_GIT_DIFF_COMMAND = "git diff --exit-code"
@@ -141,6 +145,13 @@ def failing_formatter_matches_contract() -> bool:
         command: tuple[str, ...], cwd: Path
     ) -> subprocess.CompletedProcess[str]:
         runner_calls.append((command, cwd))
+        if command == formatter_version_command(FORMATTER_TEST_PATH):
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=FORMATTER_VERSION_OUTPUT,
+                stderr="",
+            )
         return subprocess.CompletedProcess(
             command,
             1,
@@ -155,16 +166,42 @@ def failing_formatter_matches_contract() -> bool:
             runner=failing_runner,
         )
     except BuildError as error:
-        expected_command = (
-            FORMATTER_TEST_PATH,
-            "fmt",
-            "--config",
-            str(FORMATTER_CONFIG_PATH),
-            "--allow-no-files",
-            FORMATTER_FILE_GLOB,
-        )
         return FORMATTER_FAILURE_DIAGNOSTIC in str(error) and runner_calls == [
-            (expected_command, REPOSITORY_ROOT)
+            (formatter_version_command(FORMATTER_TEST_PATH), REPOSITORY_ROOT),
+            (formatter_format_command(FORMATTER_TEST_PATH), REPOSITORY_ROOT),
+        ]
+    return False
+
+
+def failing_formatter_version_probe_matches_contract() -> bool:
+    """Return whether a version-probe failure reaches the build diagnostic."""
+    runner_calls: list[tuple[tuple[str, ...], Path]] = []
+
+    def formatter_probe(command_name: str) -> str | None:
+        if command_name != FORMATTER_COMMAND_NAME:
+            raise AssertionError(command_name)
+        return FORMATTER_TEST_PATH
+
+    def failing_version_runner(
+        command: tuple[str, ...], cwd: Path
+    ) -> subprocess.CompletedProcess[str]:
+        runner_calls.append((command, cwd))
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            stdout="",
+            stderr=FORMATTER_VERSION_FAILURE_DIAGNOSTIC,
+        )
+
+    try:
+        _format_dist(
+            REPOSITORY_ROOT,
+            formatter_probe=formatter_probe,
+            runner=failing_version_runner,
+        )
+    except BuildError as error:
+        return FORMATTER_VERSION_FAILURE_DIAGNOSTIC in str(error) and runner_calls == [
+            (formatter_version_command(FORMATTER_TEST_PATH), REPOSITORY_ROOT)
         ]
     return False
 
@@ -243,10 +280,15 @@ def _justfile_contract_holds(justfile: str) -> bool:
 
 
 def lefthook_matches_build_contract() -> bool:
-    if (
-        lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
-        != LEFTHOOK_BUILD_COMMAND
-    ):
+    config = load_lefthook_config(LEFTHOOK_PATH)
+    if not lefthook_config_matches_build_contract(config):
+        return False
+    violating_text = LEFTHOOK_PATH.read_text(encoding="utf-8").replace(
+        LEFTHOOK_BUILD_COMMAND,
+        " ".join(BUILD_COMMAND_ARGV),
+        1,
+    )
+    if lefthook_config_matches_build_contract(parse_lefthook_config(violating_text)):
         return False
     with dist_drift_repo() as repo:
         repo.drift_dist()

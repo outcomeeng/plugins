@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from hypothesis import strategies as st
 
+from outcomeeng.distribution.build import FORMATTER_VERSION_OUTPUT
 from outcomeeng_testing.generators.fragments import inert_fragment_bodies
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
@@ -32,6 +33,11 @@ class PluginBuildSource:
 PLUGIN_BUILD_MIN_PLUGINS = 2
 PLUGIN_BUILD_MAX_PLUGINS = 3
 PLUGIN_BUILD_MAX_OPAQUE_BYTES = 64
+
+
+def nonmatching_formatter_versions() -> st.SearchStrategy[str]:
+    """Generate formatter version output outside the accepted source contract."""
+    return st.text().filter(lambda output: output.strip() != FORMATTER_VERSION_OUTPUT)
 
 
 @st.composite

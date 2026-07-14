@@ -14,6 +14,7 @@ from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
     FORMATTER_COMMAND_NAME,
+    BuildError,
     IMPLEMENTED,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
@@ -21,6 +22,7 @@ from outcomeeng.distribution.build import (
     FormatterProbe,
     build,
     format_directive,
+    formatter_version_command,
     parse_directives,
 )
 from outcomeeng.distribution.contracts import (
@@ -34,6 +36,7 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.plugin_build import (
     PluginBuildSource,
+    nonmatching_formatter_versions,
     plugin_build_sources,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -51,6 +54,7 @@ PLUGIN_BUILD_PROPERTY_REPLAY_PATH: Final = (
 )
 FIRST_SOURCE_MTIME_NS: Final = 1_000_000_000
 SECOND_SOURCE_MTIME_NS: Final = 2_000_000_000
+FORMATTER_TEST_PATH: Final = f"/usr/local/bin/{FORMATTER_COMMAND_NAME}"
 
 
 def canonical_dist_files_trace_to_source_ancestors() -> bool:
@@ -112,6 +116,17 @@ def canonical_build_is_idempotent() -> bool:
     return True
 
 
+def canonical_build_rejects_formatter_version_drift() -> bool:
+    """Run the generated formatter-version drift property and return its result."""
+    _require_build_implementation()
+    run_replayable_property(
+        _generated_build_rejects_formatter_version_drift,
+        seed_value=PLUGIN_BUILD_PROPERTY_SEED,
+        replay_path=PLUGIN_BUILD_PROPERTY_REPLAY_PATH,
+    )
+    return True
+
+
 @seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
     max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
@@ -155,6 +170,64 @@ def _generated_build_is_idempotent(source: PluginBuildSource) -> None:
         first_snapshot = snapshot_files(dist_root)
         build(builder.src_root, dist_root)
         assert snapshot_files(dist_root) == first_snapshot
+
+
+@seed(PLUGIN_BUILD_PROPERTY_SEED)
+@settings(
+    max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
+    deadline=None,
+    print_blob=True,
+)
+@given(
+    source=plugin_build_sources(),
+    version_output=nonmatching_formatter_versions(),
+)
+def _generated_build_rejects_formatter_version_drift(
+    source: PluginBuildSource,
+    version_output: str,
+) -> None:
+    with src_tree() as builder:
+        _materialize_source(builder, source)
+        dist_root = builder.root / DIST_DIR_NAME
+        for target in Target:
+            existing_path = dist_root / target.value / SKILL_FILENAME
+            existing_path.parent.mkdir(parents=True)
+            existing_path.write_bytes(source.plugins[0].opaque_body)
+        existing_snapshot = snapshot_files(dist_root)
+        runner_calls: list[tuple[tuple[str, ...], Path]] = []
+
+        def formatter_probe(command_name: str) -> str | None:
+            if command_name != FORMATTER_COMMAND_NAME:
+                raise AssertionError(command_name)
+            return FORMATTER_TEST_PATH
+
+        def version_runner(
+            command: tuple[str, ...], cwd: Path
+        ) -> subprocess.CompletedProcess[str]:
+            runner_calls.append((command, cwd))
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=version_output,
+                stderr="",
+            )
+
+        try:
+            build(
+                builder.src_root,
+                dist_root,
+                formatter_probe=formatter_probe,
+                formatter_runner=version_runner,
+            )
+        except BuildError:
+            pass
+        else:
+            raise AssertionError("formatter version drift was accepted")
+
+        assert runner_calls == [
+            (formatter_version_command(FORMATTER_TEST_PATH), builder.src_root)
+        ]
+        assert snapshot_files(dist_root) == existing_snapshot
 
 
 def _committed_dist_snapshot() -> tuple[tuple[str, bytes], ...]:

@@ -82,7 +82,17 @@ def lefthook_build_command(config: dict[str, Any]) -> str:
 def load_lefthook_config(path: Path = LEFTHOOK_PATH) -> dict[str, Any]:
     """Load lefthook YAML as a mapping owned by the build-orchestration contract."""
 
-    return cast("dict[str, Any]", yaml.safe_load(path.read_text(encoding="utf-8")))
+    return parse_lefthook_config(path.read_text(encoding="utf-8"))
+
+
+def parse_lefthook_config(text: str) -> dict[str, Any]:
+    """Parse lefthook YAML through the source-owned artifact boundary."""
+    return cast("dict[str, Any]", yaml.safe_load(text))
+
+
+def lefthook_config_matches_build_contract(config: dict[str, Any]) -> bool:
+    """Return whether pre-commit regenerates and rejects generated-tree drift."""
+    return lefthook_build_command(config) == LEFTHOOK_BUILD_COMMAND
 
 
 def load_json_document(path: Path) -> dict[str, Any]:
@@ -137,7 +147,7 @@ def check_build_orchestration(root: Path) -> list[str]:
         )
 
     lefthook_config = load_lefthook_config(root / LEFTHOOK_PATH)
-    if lefthook_build_command(lefthook_config) != LEFTHOOK_BUILD_COMMAND:
+    if not lefthook_config_matches_build_contract(lefthook_config):
         errors.append(
             f"{LEFTHOOK_PATH}: {BUILD_RECIPE_NAME} must run {LEFTHOOK_BUILD_COMMAND}"
         )

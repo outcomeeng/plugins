@@ -150,6 +150,8 @@ SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
 
 FORMATTER_COMMAND_NAME: Final = "dprint"
+FORMATTER_VERSION: Final = "0.54.0"  # renovate: datasource=npm depName=dprint
+FORMATTER_VERSION_OUTPUT: Final = f"{FORMATTER_COMMAND_NAME} {FORMATTER_VERSION}"
 FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
 FORMATTER_CONFIG_PATH: Final = Path(__file__).resolve().parents[2] / "dprint.jsonc"
 IGNORED_SOURCE_DIRECTORY_NAMES: Final = frozenset({"__pycache__"})
@@ -812,6 +814,12 @@ def build(
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
     plan = plan_emissions(src_root)
+    runner = _run_formatter if formatter_runner is None else formatter_runner
+    formatter = _require_formatter(
+        formatter_probe=formatter_probe,
+        runner=runner,
+        cwd=src_root,
+    )
     shared_root = src_root / SHARED_DIR_NAME
 
     for target in _Target:
@@ -854,10 +862,10 @@ def build(
             src_root=src_root,
         )
 
-    _format_dist(
+    _run_dist_formatter(
         dist_root,
-        formatter_probe=formatter_probe,
-        runner=_run_formatter if formatter_runner is None else formatter_runner,
+        formatter=formatter,
+        runner=runner,
     )
 
 
@@ -1152,12 +1160,64 @@ def _format_dist(
     formatter_probe: FormatterProbe = shutil.which,
     runner: FormatterRunner = _run_formatter,
 ) -> None:
+    formatter = _require_formatter(
+        formatter_probe=formatter_probe,
+        runner=runner,
+        cwd=dist_root,
+    )
+    _run_dist_formatter(dist_root, formatter=formatter, runner=runner)
+
+
+def _require_formatter(
+    *,
+    formatter_probe: FormatterProbe,
+    runner: FormatterRunner,
+    cwd: Path,
+) -> str:
+    """Return the required formatter only when its version contract holds."""
     formatter = formatter_probe(FORMATTER_COMMAND_NAME)
     if formatter is None:
         raise BuildError(
             f"{FORMATTER_COMMAND_NAME} is required to format generated dist output"
         )
-    command = (
+    version_command = formatter_version_command(formatter)
+    version_result = runner(version_command, cwd)
+    if version_result.returncode != 0:
+        details = (version_result.stderr or version_result.stdout).strip()
+        raise BuildError(f"{FORMATTER_COMMAND_NAME} version check failed: {details}")
+    actual_version = version_result.stdout.strip()
+    if actual_version != FORMATTER_VERSION_OUTPUT:
+        raise BuildError(
+            f"{FORMATTER_COMMAND_NAME} {FORMATTER_VERSION} is required; "
+            f"found {actual_version or 'unknown version'}"
+        )
+    return formatter
+
+
+def _run_dist_formatter(
+    dist_root: Path,
+    *,
+    formatter: str,
+    runner: FormatterRunner,
+) -> None:
+    """Format generated output with an already-accepted formatter."""
+    command = formatter_format_command(formatter)
+    result = runner(command, dist_root)
+    if result.returncode != 0:
+        details = (result.stderr or result.stdout).strip()
+        raise BuildError(
+            f"{FORMATTER_COMMAND_NAME} failed while formatting dist: {details}"
+        )
+
+
+def formatter_version_command(formatter: str) -> tuple[str, ...]:
+    """Return the source-owned formatter version probe command."""
+    return (formatter, "--version")
+
+
+def formatter_format_command(formatter: str) -> tuple[str, ...]:
+    """Return the source-owned generated-tree formatting command."""
+    return (
         formatter,
         "fmt",
         "--config",
@@ -1165,10 +1225,6 @@ def _format_dist(
         "--allow-no-files",
         FORMATTER_FILE_GLOB,
     )
-    result = runner(command, dist_root)
-    if result.returncode != 0:
-        details = (result.stderr or result.stdout).strip()
-        raise BuildError(f"dprint failed while formatting dist: {details}")
 
 
 def _write_text(path: Path, text: str) -> None:
