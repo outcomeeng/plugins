@@ -32,7 +32,7 @@ _GENERATOR: Final = (
     / "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "spec-tree/skills/understand/templates/instruction-block.md"
+    "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
@@ -42,10 +42,50 @@ SHARED_DRIFT_REMEDIATION: Final = (
     "git-more-recent side, then commit the reconciled root CLAUDE.md and AGENTS.md."
 )
 UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
+FORBIDDEN_ROUTER_TOKENS: Final = (
+    "Before archiving a claimed session",
+    "`result`",
+)
 BUILD_INSTRUCTIONS_RECIPE: Final = "build-instructions"
 INSTRUCTIONS_CHECK_RECIPE: Final = "instructions-check"
 WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
+MODULE_INVOCATION: Final = "outcomeeng.distribution.instruction_block"
+LEFTHOOK_PATH: Final = Path("lefthook.yml")
+REFRESH_WORKFLOW_PATH: Final = Path(".github/workflows/refresh-instruction-blocks.yml")
+PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
+LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
+LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
+WORKFLOW_DISPATCH_TRIGGER: Final = "workflow_dispatch:"
+WORKFLOW_REGENERATE_STEP: Final = "Regenerate instruction blocks"
+WORKFLOW_OPEN_PR_STEP: Final = "Open instruction-block refresh pull request"
+WORKFLOW_CHECKOUT_STEP: Final = "Checkout"
+WORKFLOW_INSTALL_JUST_STEP: Final = "Install just"
+WORKFLOW_INSTALL_DPRINT_STEP: Final = "Install dprint"
+WORKFLOW_JUST_CHECKSUM_ENV: Final = "JUST_SHA256"
+WORKFLOW_DPRINT_VERSION_ENV: Final = "DPRINT_VERSION"
+WORKFLOW_BUILD_INSTRUCTIONS_COMMAND: Final = "just build-instructions"
+WORKFLOW_DRIFT_COMMAND: Final = "git status --porcelain"
+DEFAULT_BRANCH: Final = "main"
+WORKFLOW_JUST_CHECKSUM_REFERENCE: Final = f"${WORKFLOW_JUST_CHECKSUM_ENV}"
+WORKFLOW_DPRINT_INSTALL_COMMAND: Final = (
+    f'bun add -g "dprint@${{{WORKFLOW_DPRINT_VERSION_ENV}}}"'
+)
+WORKFLOW_DPRINT_VERSION_COMMAND: Final = "dprint --version"
+FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
+FOUNDATION_POLICY_REQUIREMENTS: Final = (
+    ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
+    ("spx path trigger", "anything under `spx/`"),
+    ("source and test trigger", "source or test file"),
+    ("session exemption", "`spx session` operations"),
+    ("session inspection exemption", "inspection"),
+    ("session archive exemption", "archive"),
+    ("session release exemption", "release"),
+    ("worktree-status exemption", "`spx worktree status`"),
+    ("diagnose exemption", "`spx diagnose`"),
+    ("no-patch Git exemption", "no-patch Git status, history, and topology"),
+    ("product-path follow guard", "Never follow paths from their output"),
+)
 
 
 class InstructionBlockRenderError(RuntimeError):
@@ -56,11 +96,21 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
     """Raised when a rendered harness template still contains build macros."""
 
 
+class FoundationAccessPolicyError(InstructionBlockRenderError):
+    """Raised when a rendered router omits part of its foundation access policy."""
+
+
 class InstructionBlockModule(Protocol):
     """Subset of the shipped instruction-block generator reused by the product gate."""
 
     AGENT_HARNESS_INSTRUCTION_FILENAMES: dict[str, str]
+    BOOTSTRAP_SHARED_REGION_NAME: str
+    LANGUAGE_BY_EXTENSION: dict[str, str]
     OBSOLETE_SPX_INSTRUCTION_FILENAMES: tuple[str, ...]
+    ROUTER_BLOCK_END: str
+    ROUTER_MARKER_PREFIX: str
+
+    def router_block_bounds(self, text: str) -> tuple[int, int] | None: ...
 
     def parse_template_version(self, text: str) -> str | None: ...
 
@@ -77,6 +127,8 @@ class InstructionBlockModule(Protocol):
     def write_root_instruction_files(
         self, repo_root: Path, blocks_by_harness: Mapping[str, str]
     ) -> None: ...
+
+    def parse_shared_regions(self, text: str) -> dict[str, str]: ...
 
     def remove_obsolete_spx_instruction_files(self, repo_root: Path) -> None: ...
 
@@ -197,13 +249,64 @@ def render_instruction_blocks_from_harness_templates(
     }
 
 
-def regenerate_instruction_blocks() -> None:
+def _markdown_section(document: str, heading: str) -> str:
+    """Return the exact Markdown section beginning at ``heading``."""
+    lines = document.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as exc:
+        raise FoundationAccessPolicyError(f"missing router section: {heading}") from exc
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index, line in enumerate(lines[start + 1 :], start=start + 1):
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+def managed_router_block(document: str) -> str:
+    """Extract the managed router block from a complete root instruction document."""
+    module = load_instruction_block_module()
+    bounds = module.router_block_bounds(document)
+    if bounds is None:
+        raise FoundationAccessPolicyError("missing complete standalone router block")
+    start, end = bounds
+    return document[start:end]
+
+
+def validate_foundation_access_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a rendered harness router that weakens the product-content gate."""
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        section = _markdown_section(router, FOUNDATION_POLICY_HEADING)
+        missing = [
+            name
+            for name, required_text in FOUNDATION_POLICY_REQUIREMENTS
+            if required_text not in section
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise FoundationAccessPolicyError(
+                f"{harness} router foundation policy is incomplete: {details}"
+            )
+        forbidden = [token for token in FORBIDDEN_ROUTER_TOKENS if token in router]
+        if forbidden:
+            details = ", ".join(repr(token) for token in forbidden)
+            raise FoundationAccessPolicyError(
+                f"{harness} router contains forbidden session-result tokens: {details}"
+            )
+
+
+def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
-    spx_dir = REPO_ROOT / "spx"
-    templates = load_harness_templates(module)
+    spx_dir = repo_root / "spx"
+    templates = load_harness_templates(module, repo_root=repo_root)
     paths = {
-        harness: dist_template_path(harness)
+        harness: dist_template_path(harness, repo_root=repo_root)
         for harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
     }
     rendered = render_instruction_blocks_from_harness_templates(
@@ -212,8 +315,9 @@ def regenerate_instruction_blocks() -> None:
         module.detect_languages_from_tree(spx_dir),
         template_paths=paths,
     )
-    module.write_root_instruction_files(REPO_ROOT, rendered)
-    module.remove_obsolete_spx_instruction_files(REPO_ROOT)
+    validate_foundation_access_policy(rendered)
+    module.write_root_instruction_files(repo_root, rendered)
+    module.remove_obsolete_spx_instruction_files(repo_root)
 
 
 def intent_to_add_paths(

@@ -39,6 +39,7 @@ import sys
 from collections.abc import Iterable
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
@@ -106,6 +107,21 @@ RETIRED_GENERATED_INSTRUCTION_HEADINGS = (
     "# Spec Tree Instructions",
     "# Spec Tree Guide",
     "# spx/ Directory Guide (Spec Tree)",
+)
+
+
+class InstructionStatus(StrEnum):
+    """Status reported for a product's managed instruction surface."""
+
+    ABSENT = "absent"
+    STALE = "stale"
+    CURRENT = "current"
+
+
+INSTRUCTION_STATUS_PRECEDENCE = (
+    InstructionStatus.ABSENT,
+    InstructionStatus.STALE,
+    InstructionStatus.CURRENT,
 )
 
 
@@ -185,7 +201,7 @@ def _legacy_block_bounds(text: str) -> tuple[int, int] | None:
     return None
 
 
-def _router_block_bounds(text: str) -> tuple[int, int] | None:
+def router_block_bounds(text: str) -> tuple[int, int] | None:
     """Return the current router block's start and end offsets when present.
 
     The closing marker is matched only where it stands alone on its own line, matching the
@@ -211,7 +227,7 @@ def _managed_block_bounds(text: str) -> tuple[int, int] | None:
     The current compressed marker is tried first, then each retired marker pair, so an existing
     block authored under a superseded naming is replaced in place on upgrade.
     """
-    return _router_block_bounds(text) or _legacy_block_bounds(text)
+    return router_block_bounds(text) or _legacy_block_bounds(text)
 
 
 def _managed_block_text(text: str) -> str | None:
@@ -873,38 +889,38 @@ def instruction_status(
     installed_version: str,
     languages: tuple[str, ...],
     containment_root: pathlib.Path | None = None,
-) -> str:
+) -> InstructionStatus:
     """CLI-edge helper: return ``absent``, ``stale``, or ``current`` for one instruction file.
 
     The filesystem read lives here at the edge, not in the pure render functions.
     """
     if not instruction_path.is_file():
-        return "absent"
+        return InstructionStatus.ABSENT
     if containment_root is not None:
         _validate_read_target(instruction_path, containment_root)
     text = instruction_path.read_text(encoding="utf-8")
     if _managed_block_text(text) is None:
-        return "stale"
+        return InstructionStatus.STALE
     if _router_marker_match(text) is None:
         # A retired-marker block is present but not the current compressed marker; a re-render
         # migrates it.
-        return "stale"
-    bounds = _router_block_bounds(text)
+        return InstructionStatus.STALE
+    bounds = router_block_bounds(text)
     if bounds is None or bounds[0] != 0:
         # The router block must be the first content of the file so a reading agent reaches its
         # read-the-whole-file instruction before any product content; a router preceded by prose
         # is stale, and a re-render moves it back to the top.
-        return "stale"
+        return InstructionStatus.STALE
     if malformed_shared_regions(text):
         # A shared open fence with no matching close is a malformed region — an ambiguous case for
         # the update skill, surfaced as stale rather than left silently in the instruction surface.
-        return "stale"
+        return InstructionStatus.STALE
     version = parse_instruction_version(text)
     if version is None or is_stale(version, installed_version):
-        return "stale"
+        return InstructionStatus.STALE
     if parse_instruction_languages(text) != normalize_languages(languages):
-        return "stale"
-    return "current"
+        return InstructionStatus.STALE
+    return InstructionStatus.CURRENT
 
 
 def write_root_instruction_files(
@@ -1266,12 +1282,12 @@ def main(argv: list[str] | None = None) -> int:
             if shared_region_drift(repo_root):
                 # A diverged or one-sided shared region is drift the reconcile resolves; report
                 # it as stale so the gate does not pass over it.
-                statuses.add("stale")
+                statuses.add(InstructionStatus.STALE)
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
         # Absent dominates stale dominates current: report the worst across both files.
-        for verdict in ("absent", "stale", "current"):
+        for verdict in INSTRUCTION_STATUS_PRECEDENCE:
             if verdict in statuses:
                 print(verdict)
                 break

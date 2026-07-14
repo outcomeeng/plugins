@@ -1,10 +1,10 @@
-<!-- SPEC-TREE v0.23.0 langs:python -->
+<!-- SPEC-TREE v0.24.0 langs:python -->
 
 # Spec Tree Instructions
 
 These instructions explain WHEN to invoke spec-tree skills for this product. They are a **router** — the skills contain the HOW.
 
-**Read this entire file before you act.** This managed router block is only the first section of the file; the product's own instructions, commands, and conventions follow it below, outside the router. The router is product-neutral by design and does not carry this product's own commands — they live in the file's own content further down. Never act on the router alone; read every section of this file to the end.
+**Read this entire file before acting.** This managed router block is only the first section of the file; the product's own instructions, commands, and conventions follow it below, outside the router. The router is product-neutral by design and does not carry this product's own commands — they live in the file's own content further down. Never act on the router alone; read every section of this file to the end.
 
 ---
 
@@ -23,13 +23,15 @@ Content the product keeps identical across `CLAUDE.md` and `AGENTS.md` sits in a
 
 ## When to Invoke Skills
 
-### Before ANY spec-tree work -> `/understand`
+### Before product-content access -> `/understand`
 
 **BLOCKING REQUIREMENT**
 
-Loads the Spec Tree methodology. Required once per session and again after every individual compaction event.
+Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searching, listing, or changing anything under `spx/` or any source or test file. Invoke `/understand` when the marker is absent. This includes repository-content access through Read, Edit, Write, Glob, Grep, `rg`, `grep`, `find`, `cat`, `sed`, and Git commands that emit file contents or patches.
 
-A live `<SPEC_TREE_FOUNDATION>` marker in the current conversation is the proof that `/understand` is loaded. A compacted summary, a session file, a statement that `/understand` ran, or reading the skill file does not satisfy the requirement. Questions about spec-tree workflows, session continuity, or whether a skill was invoked are spec-tree work and require `/understand` first when the marker is absent.
+`spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology are exempt. Never follow paths from their output into repository content without the marker.
+
+A compacted summary, session file, statement that `/understand` ran, or read of the skill file does not prove the foundation is live. After every compaction, require `/understand` again before the next product-content access.
 
 ### Before working on a specific node -> `/contextualize`
 
@@ -138,6 +140,8 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 Sessions are shared across every worktree. Each session must be handed off via `/handoff` so it can be resumed from any other worktree: the handoff leaves the worktree clean and persists all state on origin. Propose a handoff when the session's goal is met or the work must pause; resume one with `/pickup`. When a claimed session is complete and should leave the active queue, close it through `/handoff` or `/handoff --no-session` so claimed-session accounting archives it. To return a wrongly claimed session to the shared queue instead, run `spx session release <session-id>`.
 
+An explicit request to inspect, archive, or release identified session documents routes directly through the corresponding `spx session` command as operational-state management. Reserve `/handoff` for closing active work through reflection, persistence, continuation disposition, and claimed-session accounting. Direct session operations require `/understand` only before following their output into `spx/`, source, or test content.
+
 <!-- /SPEC-TREE -->
 
 # Outcome Engineering Plugin Marketplace
@@ -210,7 +214,7 @@ Historical plugin implementations are pruned from this repository. The history t
 
 - ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See the plugin catalog in [`README.md`](README.md#plugins) for the available skills.
 - ⚠️ **NEVER write code without invoking a skill first** - See the plugin catalog in [`README.md`](README.md#plugins) for language-specific coding skills.
-- ⚠️ **NEVER read, analyze, or propose changes to product work without invoking `/understand` then `/contextualize` first** - The trigger is *engaging with product state*, not editing one enumerated artifact type. Before you read any file under `spx/`, `src/plugins/`, or `outcomeeng*/` **to analyze, propose, or change product work** — a spec, a decision record, a coordination note (`PLAN.md`/`ISSUES.md`), an authored skill/command/agent/template, or implementation code governed by a node — invoke `/understand` (once per session) to load the methodology foundation, then `/contextualize <full-path>` on each involved node to load its ancestry (product → decisions → ancestors → target) deterministically. Locating the target path with `ls`/`Glob` is fine; `/contextualize` performs the authoritative read. **NEVER form a judgment, proposal, or edit from a bare `Read` before the methodology and the node's ancestry are loaded** — that is exactly what made `spx/ISSUES.md` look like "just a coordination note" instead of spec-tree work. Reading the root agent guide (`AGENTS.md` / `CLAUDE.md`) to learn the rules is the sole exemption — it is the only file readable before `/understand` loads. Concretely, this pair is required before implementing work on an existing node, editing an existing spec file, cleaning or reconciling a `PLAN.md`/`ISSUES.md`, **editing an authored skill, command, agent, or template under `src/plugins/` whose behavior an `spx/` node governs** (a `SKILL.md` body is implementation that an `spx/` `[eval]` or conformance test evaluates — it counts even though no module *imports* the markdown and the file is not under `spx/`; e.g. the `manage-pr` and `review-changes` skills implement `spx/21-spec-tree.enabler/76-merging.enabler/`), or opening a PR whose diff sits inside `spx/` or imports modules tested by `spx/`. **This pair runs BEFORE `instructions:create-skills` or any other authoring-mechanics skill** — editing a skill that implements a node is spec-tree work first and skill-authoring work second; reaching for `create-skills` (or its `skill-standards` router) first is the exact mistake this rule exists to prevent. The "Spec-tree navigation" section below explains how to identify the governing node from a diff, including the inverse path from an authored skill body to its node.
+- ⚠️ **Use the managed router as the sole `/understand` trigger** - The "Before product-content access" section at the top of this file decides when the foundation marker is required and which operational commands are exempt. Once that gate requires `/understand`, invoke `/contextualize <full-path>` before working on each existing governed node; it loads product, decisions, ancestry, target, and lower-index constraints. For edits to a node-governed skill, command, agent, template, test, or implementation, load `/understand`, then `/contextualize`, then the artifact-authoring skill. The "Spec-tree navigation" section below explains inverse mapping from changed files to governing nodes.
 - ⚠️ **ALWAYS use the root managed Spec Tree instruction block before spec-tree work** - The instruction block in this root instruction file is the spec-tree skill router. Read it before working with files under `spx/` or applying spec-tree lifecycle rules from the product-owned root instruction content.
 - ⚠️ **NEVER create a spec-tree artifact without invoking `/author` first** - Before creating a product spec, ADR, PDR, enabler, or outcome, invoke `/author`. The skill carries the templates, the index-assignment procedure, and chains into `/contextualize` on the parent directory so sibling enumeration prevents index collisions. Do not invoke `/contextualize` directly on a not-yet-existing node path — it will abort with "Target path not found"; the bootstrap-mode entry point belongs to `/author`.
 - ⚠️ **ALWAYS read harness guide files in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's active harness guide first if it exists: `CLAUDE.md` in Claude Code, `AGENTS.md` in Codex.

@@ -1,24 +1,9 @@
 ---
 name: handoff
-description: ALWAYS invoke to close a spec-tree session or merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
+description: ALWAYS invoke to close active spec-tree work or a merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains or for an explicit direct `spx session archive` or `spx session release` request against identified sessions. NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-allowed-tools: Read, Edit, Write, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), Bash(git ls-files:*), Bash(grep:*), Bash(just marketplace-source-root:*), Bash(pwd), AskUserQuestion, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(printf:*), Bash(printenv CODEX_THREAD_ID), Bash(printenv CLAUDE_SESSION_ID), Bash(spx diagnose:*), Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff:*), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git fetch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git cherry:*), AskUserQuestion, Glob, Grep, Skill
 ---
-
-<context>
-**Working Directory:**
-!`pwd`
-
-**Git Status:**
-!`git status --short || echo "Not in a git repo"`
-
-**Current Branch:**
-!`git branch --show-current || echo "Not in a git repo"`
-
-**Spec Tree:**
-!`git ls-files spx | grep -E '^spx/[^/]+[.]product[.]md$' || echo 'No spec tree found'`
-
-</context>
 
 <precondition>
 **Handoff is not a voluntary close. Run this skill only when the session is complete** — either the user's stated goal is met with no continuation remaining, or continuation by Claude now is impossible (the user halted the work, the context is exhausted, or an external blocker — operator input, a remote-state change Claude cannot effect — prevents the next action). Completion is a valid reason to run this skill; it then archives the claimed session and decides session-file creation per the rules below. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, a branch with committed changes ahead of its resolved base for default-branch work, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A clean working tree, a merge, a passing gate, or a freshly written coordination note is not a reason to hand off while committed changes remain outside the default branch on origin. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understand`.
@@ -136,7 +121,7 @@ Read these bundled references before executing the workflows:
 
 </required_reading>
 
-<workflows>
+<workflows_index>
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed.
 
 1. `${CLAUDE_SKILL_DIR}/workflows/01-anchor-to-nodes.md` — identify every node worked on this session
@@ -144,7 +129,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 3. `${CLAUDE_SKILL_DIR}/workflows/03-propose.md` — present persistence proposal to user for approval
 4. `${CLAUDE_SKILL_DIR}/workflows/04-execute.md` — create or update coordination notes, commit, then write or omit each thread's canonical continuation session file
 
-</workflows>
+</workflows_index>
 
 <failure_modes>
 

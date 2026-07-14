@@ -1,13 +1,11 @@
 ---
 name: understand
 description: >-
-  ALWAYS invoke this skill at the beginning of each session, after every
-  compaction, and before answering spec-tree workflow or session-continuity
-  questions when the live SPEC_TREE_FOUNDATION marker is absent. NEVER
-  read, create, or modify any file in this repository other than
-  CLAUDE.md without loading this skill and all its references
-  first.
-allowed-tools: Read, Glob, Grep, Bash(python3:*)
+  ALWAYS invoke this skill when the live SPEC_TREE_FOUNDATION marker is absent
+  before direct filesystem access under spx/ or before reading, searching,
+  listing, or changing source or test files. NEVER access that product content
+  without loading this skill and all its references first.
+allowed-tools: Read, Glob, Grep
 ---
 
 <objective>
@@ -35,10 +33,10 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <workflow>
 
-1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `references/` or `templates/` file this invocation needs.
+1. Load the complete foundation on every invocation. The root router normally invokes `/understand` only when the live `<SPEC_TREE_FOUNDATION>` marker is absent; an explicit invocation still reruns this workflow without an abbreviated path.
    A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
    After every compaction, treat the marker as absent until this workflow emits it again.
-   Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
+   A missing marker blocks direct filesystem access under `spx/` and access to source or test content. It does not block `spx session` operations, `spx worktree status`, `spx diagnose`, or no-patch Git status, history, and topology; invoke this workflow before following any path those commands return into product content.
 2. Read the following references in full and point out any contradictions to the operator immediately:
    - `references/durable-map.md`
    - `references/node-types.md`
@@ -46,30 +44,14 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - `references/ordering-rules.md`
    - `references/verification-kinds.md`
    - `references/imperfection-protocol.md`
-3. List each operational reference and `spx/local/` overlay with its path, last-modified time, and line count — evidence each was located this session, not assumed. These load on demand in other skills:
+3. List each operational reference and `spx/local/` overlay by path — evidence each was located this session, not assumed. These load on demand in other skills:
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
    - `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
    - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualize`, `/handoff`)
    - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
 
-   Produce the listing with the `Bash(python3:*)` grant:
-
-   ```bash
-   python3 -c 'import sys, datetime
-   from pathlib import Path
-   for a in sys.argv[1:]:
-       items = sorted(Path(a).glob("*.md")) if Path(a).is_dir() else [Path(a)]
-       for p in items:
-           if not p.exists():
-               continue
-           n = sum(1 for _ in open(p))
-           print(n, "lines", datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat(), p)' \
-     "${CLAUDE_SKILL_DIR}/references/what-goes-where.md" \
-     "${CLAUDE_SKILL_DIR}/references/excluded-nodes.md" \
-     "${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md" \
-     spx/local
-   ```
+   Locate the three named references directly and enumerate `spx/local/*.md` with `Glob`.
 4. Check for local lifecycle routing:
    - Changes destined for the default branch route through `/merge`, the transport dispatcher. It classifies the changeset, selects the merge transport, and delegates to the selected transport's skills, reading `spx/local/merging.md` as an optional overlay when present.
    - If `spx/local/merging.md` exists at the repository root, read it. Its declarations refine transport selection and lifecycle configuration. Its absence is normal and not a blocker — the default lifecycle applies, and merge behavior is never reconstructed from other docs or changed by editing a generated guide.
@@ -84,7 +66,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - Stop before `/merge` only when the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work.
    - A blocker exists only after every independent action that does not require operator input is complete: the applicable edits are made, deterministic verification and required local review or audit gates have run or produced concrete failing evidence, and all work that can be committed without the answer is committed on a local branch.
    - Until no independent work remains, continue doing work that does not depend on the answer or removed blocker. When no independent work remains, report the exact blocker, the evidence, and the next operator decision needed.
-6. List each template and example with its path, last-modified time, and line count — evidence each was located, not assumed — then read in full immediately when authoring:
+6. List each template and example by path — evidence each was located, not assumed — then read in full immediately when authoring:
    - `templates/product/product-name.product.md`
    - `templates/decisions/decision-name.adr.md`
    - `templates/decisions/decision-name.pdr.md`
@@ -92,25 +74,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
    - `templates/nodes/outcome-name.md`
    - `examples/` — concrete filled specs (read to see what a completed spec looks like)
 
-   Produce the listing with the same `Bash(python3:*)` pass:
-
-   ```bash
-   python3 -c 'import sys, datetime
-   from pathlib import Path
-   for a in sys.argv[1:]:
-       items = sorted(Path(a).glob("*.md")) if Path(a).is_dir() else [Path(a)]
-       for p in items:
-           if not p.exists():
-               continue
-           n = sum(1 for _ in open(p))
-           print(n, "lines", datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat(), p)' \
-     "${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md" \
-     "${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md" \
-     "${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md" \
-     "${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md" \
-     "${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md" \
-     "${CLAUDE_SKILL_DIR}/examples"
-   ```
+   Locate the five named templates directly and enumerate `examples/*.md` with `Glob`.
 7. Read the product's root routing guide once, if present — `Read: CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
 8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
@@ -143,7 +107,7 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 <success_criteria>
 
 - [ ] The six references in step 2 are read in full, with any contradictions among them surfaced to the operator
-- [ ] Every operational reference, template, example, and `spx/local/` overlay is listed with its path, last-modified time, and line count — evidence each was located this session, not assumed
+- [ ] Every operational reference, template, example, and `spx/local/` overlay is listed by path — evidence each was located this session, not assumed
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 
 </success_criteria>

@@ -120,7 +120,7 @@ RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
         "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
         "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
         "src/plugins/spec-tree/agents/instruction-block-updater.md",
-        "src/plugins/spec-tree/skills/understand/templates/instruction-block.md",
+        "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
         "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
         "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
     }
