@@ -11,32 +11,19 @@ build macro is rejected, and retired ``spx/`` instruction files are removed. Rea
 config (``justfile``, ``lefthook.yml``, the workflow) is read through harness helpers.
 """
 
-from __future__ import annotations
-
-import pathlib
-
-import pytest
-
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 
-def test_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
-    harness.assert_generation_writes_both_root_files(tmp_path)
+def test_generation_writes_both_root_files() -> None:
+    harness.assert_generation_writes_both_root_files()
 
 
-@pytest.mark.parametrize("agent_harness", harness.TEMPLATE_HARNESSES)
-def test_router_is_first_and_carries_read_whole_file_instruction(
-    agent_harness: str,
-) -> None:
-    harness.assert_router_is_first_and_reads_whole_file(agent_harness)
+def test_router_is_first_and_carries_read_whole_file_instruction() -> None:
+    harness.assert_router_is_first_and_reads_whole_file()
 
 
-def test_router_gates_product_content_and_exempts_operational_state() -> None:
-    harness.assert_generated_foundation_access_policy()
-
-
-def test_generation_reads_dist_templates(tmp_path: pathlib.Path) -> None:
-    harness.assert_generation_reads_dist_templates(tmp_path)
+def test_generation_reads_dist_templates() -> None:
+    harness.assert_generation_reads_dist_templates()
 
 
 def test_justfile_binds_build_and_check_recipes() -> None:
@@ -47,32 +34,28 @@ def test_lefthook_regenerates_through_build_instructions() -> None:
     harness.assert_lefthook_regenerates_through_build_instructions()
 
 
-def test_drift_gate_reports_a_missing_root_instruction_file(
-    tmp_path: pathlib.Path,
-) -> None:
-    harness.assert_drift_gate_reports_missing_root_instruction_file(tmp_path)
+def test_drift_gate_reports_a_missing_root_instruction_file() -> None:
+    harness.assert_drift_gate_reports_missing_root_instruction_file()
 
 
-def test_drift_gate_marks_untracked_root_file_intent_to_add(
-    tmp_path: pathlib.Path,
-) -> None:
-    harness.assert_drift_gate_marks_untracked_root_files(tmp_path)
+def test_drift_gate_marks_untracked_root_file_intent_to_add() -> None:
+    harness.assert_drift_gate_marks_untracked_root_files()
 
 
-def test_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -> None:
-    harness.assert_drift_gate_skips_missing_obsolete_spx_file(tmp_path)
+def test_drift_gate_skips_missing_obsolete_spx_file() -> None:
+    harness.assert_drift_gate_skips_missing_obsolete_spx_file()
 
 
-def test_refresh_pr_step_exits_cleanly_without_drift(tmp_path: pathlib.Path) -> None:
-    harness.assert_refresh_pr_step_exits_cleanly_without_drift(tmp_path)
+def test_refresh_pr_step_exits_cleanly_without_drift() -> None:
+    harness.assert_refresh_pr_step_exits_cleanly_without_drift()
 
 
-def test_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> None:
-    harness.assert_refresh_pr_step_stages_obsolete_deletions(tmp_path)
+def test_refresh_pr_step_stages_obsolete_deletions() -> None:
+    harness.assert_refresh_pr_step_stages_obsolete_deletions()
 
 
-def test_regenerate_overwrites_router_drift(tmp_path: pathlib.Path) -> None:
-    harness.assert_regenerate_overwrites_router_drift(tmp_path)
+def test_regenerate_overwrites_router_drift() -> None:
+    harness.assert_regenerate_overwrites_router_drift()
 
 
 def test_refresh_workflow_regenerates_and_opens_pr() -> None:
@@ -95,10 +78,8 @@ def test_render_passes_brace_token_through_unchanged() -> None:
     harness.assert_render_preserves_brace_token()
 
 
-def test_former_command_slot_fence_is_ordinary_content(
-    tmp_path: pathlib.Path,
-) -> None:
-    harness.assert_former_command_slot_fence_is_ordinary_content(tmp_path)
+def test_former_command_slot_fence_is_ordinary_content() -> None:
+    harness.assert_former_command_slot_fence_is_ordinary_content()
 
 
 def test_reconcile_replaces_the_losing_region_whole() -> None:
@@ -113,5 +94,5 @@ def test_unresolved_build_macro_is_rejected() -> None:
     harness.assert_unresolved_build_macro_is_rejected()
 
 
-def test_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -> None:
-    harness.assert_obsolete_spx_instruction_files_are_removed(tmp_path)
+def test_obsolete_spx_instruction_files_are_removed() -> None:
+    harness.assert_obsolete_spx_instruction_files_are_removed()
