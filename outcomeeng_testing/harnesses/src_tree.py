@@ -131,52 +131,10 @@ class SrcTreeBuilder:
         plugin_root = self.src_root / PLUGINS_DIR_NAME / name
         plugin_root.mkdir(parents=True, exist_ok=True)
 
-        if skills:
-            for skill_name in skills:
-                _validate_name(skill_name, kind="skill")
-            skills_root = plugin_root / SKILLS_SUBDIR_NAME
-            skills_root.mkdir(exist_ok=True)
-            for skill_name, content in skills.items():
-                skill_dir = skills_root / skill_name
-                skill_dir.mkdir(exist_ok=True)
-                (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
-
-        if commands:
-            for command_name in commands:
-                _validate_name(command_name, kind="command")
-            commands_root = plugin_root / COMMANDS_SUBDIR_NAME
-            commands_root.mkdir(exist_ok=True)
-            for command_name, content in commands.items():
-                (commands_root / f"{command_name}{COMMAND_FILE_SUFFIX}").write_text(
-                    content, encoding="utf-8"
-                )
-
-        if agents:
-            for agent_name in agents:
-                _validate_name(agent_name, kind="agent")
-            agents_root = plugin_root / AGENTS_SUBDIR_NAME
-            agents_root.mkdir(exist_ok=True)
-            for agent_name, content in agents.items():
-                (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
-                    content, encoding="utf-8"
-                )
-
-        if artifacts:
-            for relative_path, artifact_content in artifacts.items():
-                if (
-                    relative_path.is_absolute()
-                    or not relative_path.parts
-                    or (
-                        len(relative_path.parts) > 1
-                        and relative_path.parts[0] not in PLUGIN_SUBDIRS
-                    )
-                    or ".." in relative_path.parts
-                ):
-                    msg = f"invalid plugin artifact path {relative_path}"
-                    raise ValueError(msg)
-                artifact_path = plugin_root / relative_path
-                artifact_path.parent.mkdir(parents=True, exist_ok=True)
-                artifact_path.write_bytes(artifact_content)
+        _write_skills(plugin_root, skills)
+        _write_commands(plugin_root, commands)
+        _write_agents(plugin_root, agents)
+        _write_artifacts(plugin_root, artifacts)
 
         return self
 
@@ -212,6 +170,72 @@ class SrcTreeBuilder:
                 (references_root / ref_name).write_text(content, encoding="utf-8")
 
         return self
+
+
+def _write_skills(plugin_root: Path, skills: Mapping[str, str] | None) -> None:
+    if not skills:
+        return
+    for skill_name in skills:
+        _validate_name(skill_name, kind="skill")
+    skills_root = plugin_root / SKILLS_SUBDIR_NAME
+    skills_root.mkdir(exist_ok=True)
+    for skill_name, content in skills.items():
+        skill_dir = skills_root / skill_name
+        skill_dir.mkdir(exist_ok=True)
+        (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
+
+
+def _write_commands(plugin_root: Path, commands: Mapping[str, str] | None) -> None:
+    if not commands:
+        return
+    for command_name in commands:
+        _validate_name(command_name, kind="command")
+    commands_root = plugin_root / COMMANDS_SUBDIR_NAME
+    commands_root.mkdir(exist_ok=True)
+    for command_name, content in commands.items():
+        (commands_root / f"{command_name}{COMMAND_FILE_SUFFIX}").write_text(
+            content, encoding="utf-8"
+        )
+
+
+def _write_agents(plugin_root: Path, agents: Mapping[str, str] | None) -> None:
+    if not agents:
+        return
+    for agent_name in agents:
+        _validate_name(agent_name, kind="agent")
+    agents_root = plugin_root / AGENTS_SUBDIR_NAME
+    agents_root.mkdir(exist_ok=True)
+    for agent_name, content in agents.items():
+        (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
+            content, encoding="utf-8"
+        )
+
+
+def _write_artifacts(
+    plugin_root: Path,
+    artifacts: Mapping[Path, bytes] | None,
+) -> None:
+    if not artifacts:
+        return
+    for relative_path, artifact_content in artifacts.items():
+        _validate_artifact_path(relative_path)
+        artifact_path = plugin_root / relative_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_bytes(artifact_content)
+
+
+def _validate_artifact_path(relative_path: Path) -> None:
+    nested_outside_plugin_subdirs = (
+        len(relative_path.parts) > 1 and relative_path.parts[0] not in PLUGIN_SUBDIRS
+    )
+    if (
+        relative_path.is_absolute()
+        or not relative_path.parts
+        or nested_outside_plugin_subdirs
+        or ".." in relative_path.parts
+    ):
+        msg = f"invalid plugin artifact path {relative_path}"
+        raise ValueError(msg)
 
 
 @contextmanager

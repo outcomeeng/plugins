@@ -91,7 +91,7 @@ def every_source_file_emits_to_each_target() -> bool:
         )
         == expected
         and all(
-            direct_outputs[target] == Counter({path: 1 for path in expected})
+            direct_outputs[target] == Counter(dict.fromkeys(expected, 1))
             and _planned_paths(snapshot.plan, target)
             == {path for path, _content in snapshot.target(target)}
             for target in Target
@@ -383,7 +383,7 @@ def _synthetic_inventory_is_complete() -> bool:
             for emission in snapshot.plan.emissions
         )
         and all(
-            direct_outputs[target] == Counter({path: 1 for path in source_paths})
+            direct_outputs[target] == Counter(dict.fromkeys(source_paths, 1))
             and _planned_paths(snapshot.plan, target)
             == {path for path, _content in snapshot.target(target)}
             for target in Target
@@ -496,47 +496,73 @@ def _frontmatter_contract_holds(
     required_portable_fields: frozenset[str],
     required_claude_only_fields: frozenset[str],
 ) -> bool:
-    portable_coverage = {field: False for field in required_portable_fields}
-    claude_only_coverage = {field: False for field in required_claude_only_fields}
+    portable_coverage = dict.fromkeys(required_portable_fields, False)
+    claude_only_coverage = dict.fromkeys(required_claude_only_fields, False)
     for path in sources:
         claude_output = _decode_text(claude_outputs[path])
         codex_output = _decode_text(codex_outputs[path])
         claude_fields = frontmatter_field_names(claude_output)
         codex_fields = frontmatter_field_names(codex_output)
-        for field in required_portable_fields:
-            if field not in claude_fields:
-                continue
-            portable_coverage[field] = True
-            if field not in codex_fields:
-                raise AssertionError(
-                    f"portable field {field!r} missing for {path}: "
-                    f"{claude_fields=}, {codex_fields=}"
-                )
-        for field in required_claude_only_fields:
-            if field not in claude_fields:
-                continue
-            claude_only_coverage[field] = True
-            if field in codex_fields:
-                raise AssertionError(
-                    f"Claude-only field {field!r} translated incorrectly for {path}: "
-                    f"{claude_fields=}, {codex_fields=}"
-                )
-    missing_portable = {
-        field
-        for field in required_portable_fields
-        if not portable_coverage.get(field, False)
-    }
-    missing_claude_only = {
-        field
-        for field in required_claude_only_fields
-        if not claude_only_coverage.get(field, False)
-    }
+        _record_portable_field_coverage(
+            path,
+            required_fields=required_portable_fields,
+            claude_fields=claude_fields,
+            codex_fields=codex_fields,
+            coverage=portable_coverage,
+        )
+        _record_claude_only_field_coverage(
+            path,
+            required_fields=required_claude_only_fields,
+            claude_fields=claude_fields,
+            codex_fields=codex_fields,
+            coverage=claude_only_coverage,
+        )
+    missing_portable = _missing_frontmatter_fields(portable_coverage)
+    missing_claude_only = _missing_frontmatter_fields(claude_only_coverage)
     if missing_portable or missing_claude_only:
         raise AssertionError(
             "frontmatter coverage incomplete: "
             f"{missing_portable=}, {missing_claude_only=}"
         )
     return True
+
+
+def _record_portable_field_coverage(
+    path: Path,
+    *,
+    required_fields: frozenset[str],
+    claude_fields: frozenset[str],
+    codex_fields: frozenset[str],
+    coverage: dict[str, bool],
+) -> None:
+    for field in required_fields & claude_fields:
+        coverage[field] = True
+        if field not in codex_fields:
+            raise AssertionError(
+                f"portable field {field!r} missing for {path}: "
+                f"{claude_fields=}, {codex_fields=}"
+            )
+
+
+def _record_claude_only_field_coverage(
+    path: Path,
+    *,
+    required_fields: frozenset[str],
+    claude_fields: frozenset[str],
+    codex_fields: frozenset[str],
+    coverage: dict[str, bool],
+) -> None:
+    for field in required_fields & claude_fields:
+        coverage[field] = True
+        if field in codex_fields:
+            raise AssertionError(
+                f"Claude-only field {field!r} translated incorrectly for {path}: "
+                f"{claude_fields=}, {codex_fields=}"
+            )
+
+
+def _missing_frontmatter_fields(coverage: dict[str, bool]) -> frozenset[str]:
+    return frozenset(field for field, covered in coverage.items() if not covered)
 
 
 def _command_frontmatter_translates(case: SourceScenario) -> bool:
