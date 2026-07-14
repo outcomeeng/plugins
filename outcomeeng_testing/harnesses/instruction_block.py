@@ -61,6 +61,7 @@ TEMPLATE_HARNESSES = tuple(_SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES)
 HARNESS_CLAUDE, HARNESS_CODEX = TEMPLATE_HARNESSES
 INSTRUCTION_CLAUDE = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CLAUDE]
 INSTRUCTION_AGENTS = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CODEX]
+GIT_GPGSIGN_CONFIG: Final = "commit.gpgsign"
 ROOT_CLAUDE_BODY: Final = _fixture_text("root-claude.md")
 ROOT_AGENTS_BODY: Final = _fixture_text("root-agents.md")
 ROOT_SHARED_BODY: Final = _fixture_text("root-shared.md")
@@ -429,10 +430,16 @@ def run_generator_check(
 
 def copy_shipped_dist_templates(repo_root: pathlib.Path) -> None:
     """Copy each shipped instruction-block template into an isolated repository."""
-    module = load_instruction_block_module()
-    for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
-        source = dist.dist_template_path(agent_harness)
-        target = dist.dist_template_path(agent_harness, repo_root=repo_root)
+    for source, target in (
+        (
+            dist.dist_template_path(HARNESS_CLAUDE),
+            dist.dist_template_path(HARNESS_CLAUDE, repo_root=repo_root),
+        ),
+        (
+            dist.dist_template_path(HARNESS_CODEX),
+            dist.dist_template_path(HARNESS_CODEX, repo_root=repo_root),
+        ),
+    ):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
@@ -444,10 +451,13 @@ def render_shipped_dist_with_generation_entrypoint() -> dict[str, str]:
         repo_root.mkdir()
         copy_shipped_dist_templates(repo_root)
         dist.regenerate_instruction_blocks(repo_root=repo_root)
-        module = load_instruction_block_module()
         return {
-            agent_harness: repo_root.joinpath(filename).read_text(encoding="utf-8")
-            for agent_harness, filename in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items()
+            HARNESS_CLAUDE: repo_root.joinpath(INSTRUCTION_CLAUDE).read_text(
+                encoding="utf-8"
+            ),
+            HARNESS_CODEX: repo_root.joinpath(INSTRUCTION_AGENTS).read_text(
+                encoding="utf-8"
+            ),
         }
 
 
@@ -471,27 +481,40 @@ def assert_router_is_first() -> None:
 
 def assert_generation_reads_dist_templates() -> None:
     """Assert production generation consumes each runtime's shipped dist content."""
-    module = load_instruction_block_module()
     with tempfile.TemporaryDirectory() as directory:
         repo_root = pathlib.Path(directory).resolve() / "repo"
         repo_root.mkdir()
         copy_shipped_dist_templates(repo_root)
-        probes: dict[str, str] = {}
-        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES:
-            path = dist.dist_template_path(agent_harness, repo_root=repo_root)
-            probe = f"<!-- dist-template-source:{agent_harness} -->"
-            probes[agent_harness] = probe
+        probes = {
+            HARNESS_CLAUDE: f"<!-- dist-template-source:{HARNESS_CLAUDE} -->",
+            HARNESS_CODEX: f"<!-- dist-template-source:{HARNESS_CODEX} -->",
+        }
+        for path, probe in (
+            (
+                dist.dist_template_path(HARNESS_CLAUDE, repo_root=repo_root),
+                probes[HARNESS_CLAUDE],
+            ),
+            (
+                dist.dist_template_path(HARNESS_CODEX, repo_root=repo_root),
+                probes[HARNESS_CODEX],
+            ),
+        ):
             path.write_text(
                 path.read_text(encoding="utf-8").rstrip() + f"\n\n{probe}\n",
                 encoding="utf-8",
             )
 
         dist.regenerate_instruction_blocks(repo_root=repo_root)
-        for (
-            agent_harness,
-            filename,
-        ) in module.AGENT_HARNESS_INSTRUCTION_FILENAMES.items():
-            document = repo_root.joinpath(filename).read_text(encoding="utf-8")
+        for agent_harness, document in (
+            (
+                HARNESS_CLAUDE,
+                repo_root.joinpath(INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
+            ),
+            (
+                HARNESS_CODEX,
+                repo_root.joinpath(INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
+            ),
+        ):
             router = dist.managed_router_block(document)
             assert probes[agent_harness] in router
             assert all(
@@ -584,7 +607,7 @@ def assert_refresh_pr_step_exits_cleanly_without_drift() -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
         init_git_identity(repo)
-        git_command(repo, "config", "commit.gpgsign", "false")
+        git_command(repo, "config", GIT_GPGSIGN_CONFIG, "false")
         (repo / INSTRUCTION_CLAUDE).write_text(ROOT_CLAUDE_BODY, encoding="utf-8")
         (repo / INSTRUCTION_AGENTS).write_text(ROOT_AGENTS_BODY, encoding="utf-8")
         git_command(repo, "add", ".")
@@ -605,7 +628,7 @@ def assert_refresh_pr_step_stages_obsolete_deletions() -> None:
         git_command(tmp_path, "clone", str(remote), str(repo))
         git_command(repo, "config", "user.name", "Test User")
         git_command(repo, "config", "user.email", "test@example.com")
-        git_command(repo, "config", "commit.gpgsign", "false")
+        git_command(repo, "config", GIT_GPGSIGN_CONFIG, "false")
         spx_dir = repo / "spx"
         spx_dir.mkdir()
         for root_dir in (repo, spx_dir):
@@ -775,9 +798,10 @@ def assert_unresolved_build_macro_is_rejected() -> None:
         for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
     }
     harness_templates[HARNESS_CODEX] += render_build_macro()
+    instruction_module = cast(dist.InstructionBlockModule, module)
     with pytest.raises(dist.UnresolvedInstructionTemplateError):
         dist.render_instruction_blocks_from_harness_templates(
-            cast(dist.InstructionBlockModule, module),
+            instruction_module,
             harness_templates,
             (LANG_PRIMARY,),
         )
@@ -880,7 +904,7 @@ def init_git_identity(repo_root: pathlib.Path) -> None:
     git_command(repo_root, "init")
     git_command(repo_root, "config", "user.name", "Test User")
     git_command(repo_root, "config", "user.email", "test@example.com")
-    git_command(repo_root, "config", "commit.gpgsign", "false")
+    git_command(repo_root, "config", GIT_GPGSIGN_CONFIG, "false")
 
 
 def git_commit_at(
@@ -1393,10 +1417,9 @@ def assert_managed_surface_ends_with_single_newline() -> None:
             )
             for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
         }
-        seeds = {
-            agent_harness: ROOT_SHARED_BODY
-            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
-        }
+        seeds = dict.fromkeys(
+            module.AGENT_HARNESS_INSTRUCTION_FILENAMES, ROOT_SHARED_BODY
+        )
         documents = module.build_root_instruction_documents(seeds, blocks)
         for document in documents.values():
             assert document.endswith("\n")
