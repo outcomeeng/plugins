@@ -14,14 +14,14 @@ git switch --detach "origin/$base_from_pr"
 remote_branch_status=0
 git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
 case "$remote_branch_status" in
-  0) git push origin --delete "$branch_from_pr" ;;
+  0) git push origin --delete "$branch_from_pr" || exit $? ;;
   2) ;;
   *) exit "$remote_branch_status" ;;
 esac
 held_worktree=$(git worktree list --porcelain | awk -v branch="refs/heads/$branch_from_pr" '/^worktree /{path=substr($0,10)} $0=="branch " branch{print path; exit}')
 if [ -n "$held_worktree" ]; then
   echo "Local branch kept: path=$held_worktree branch=$branch_from_pr"
-elif git show-ref --verify --quiet "refs/heads/$branch_from_pr"; then
+elif git rev-parse --verify --quiet "refs/heads/$branch_from_pr" >/dev/null; then
   local_branch_sha=$(git rev-parse "refs/heads/$branch_from_pr")
   if git merge-base --is-ancestor "$local_branch_sha" "origin/$base_from_pr"; then
     git branch -d "$branch_from_pr"
