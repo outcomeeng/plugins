@@ -103,6 +103,12 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    spx session pickup <selected-session-id>
    ```
 
+**If `$ARGUMENTS` contains a session id:** Strip an optional trailing `.md` suffix and claim that exact session:
+
+```bash
+spx session pickup <session-id>
+```
+
 **Otherwise (default):** Claim the highest priority (or oldest if tied) session:
 
 ```bash
