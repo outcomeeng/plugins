@@ -93,22 +93,11 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    spx session todo --json
    ```
 2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
-3. Present options with `{{! tool('ask_user') !}}`:
-   ```json
-   {
-     "questions": [
-       {
-         "question": "Which handoff would you like to load?",
-         "header": "Handoff",
-         "multiSelect": false,
-         "options": [
-           { "label": "2026-03-29 14:22 [high] work/session-frontmatter", "description": "Goal: roll out structured session metadata. Next: update dependent skills." },
-           { "label": "2026-03-28 09:15 [medium] main checkout", "description": "Goal: complete auth assertions. Next: review the outcome spec." }
-         ]
-       }
-     ]
-   }
-   ```
+3. Present one single-select question with `{{! tool('ask_user') !}}`:
+   - Stable question id when the runtime schema exposes one: `handoff`
+   - Header: `Handoff`
+   - Question: `Which handoff would you like to load?`
+   - Options: 2-3 mutually exclusive sessions, each labeled with its full session id, priority, and branch context and described by its goal and next step
 4. Claim the chosen session:
    ```bash
    spx session pickup <selected-session-id>
