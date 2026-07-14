@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.source_and_templating import (
     ordinary_plugin_root_file_is_accepted,
     require_skill_emits_identically_across_targets,
     require_skill_expands_to_neutral_guidance,
+    require_skill_locality_oracle_rejects_inlined_content,
     require_skill_neutrality_oracle_rejects_runtime_specific_guidance,
     require_skill_renders_inline,
     shared_topic_references_travel_with_fragment,
@@ -52,6 +53,10 @@ def test_require_skill_expands_to_neutral_guidance() -> None:
 
 def test_neutral_guidance_oracle_rejects_runtime_specific_wording() -> None:
     assert require_skill_neutrality_oracle_rejects_runtime_specific_guidance()
+
+
+def test_require_skill_locality_oracle_rejects_inlined_content() -> None:
+    assert require_skill_locality_oracle_rejects_inlined_content()
 
 
 def test_require_skill_renders_inline() -> None:
