@@ -324,9 +324,19 @@ Use this shape for subagent audits:
 
 <!-- harness:claude -->
 
-**Use each configured verifier or reviewer through its configured subagent type.** Launch the subagent with the role task in its initial turn, collect the final message through the native result surface, and apply the role-specific output contract to that result. The configured type binds the child to its agent definition.
+**Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the role-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate. The configured type binds the child to its agent definition, so Claude Code needs no separate identity-preflight turn.
 
 <!-- /harness:claude -->
+
+**Configured verifier and reviewer role-task contracts.** Supply only the fields named for the role:
+
+- `changes-reviewer`: the raw scope token — `HEAD`, `origin/<base>...HEAD`, a branch, or a PR reference. Its final message MUST be the raw sealed review-journal run token.
+- `implementation-auditor`: repository path, exact committed `<base>..<head>` scope, no live file list for a gating audit, governing node paths, deterministic verification commands and results, and the task to run the implementation audit through `spx verification run`. Its final message MUST carry the raw run token and rendered projection; only `terminalStatus: approved` passes.
+- `test-evidence-auditor`: repository path, governing node, full assertion text or exact spec path plus headings, test-file paths, and the task to audit coupling, falsifiability, alignment, and coverage without weakening the evidence type. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with paths, lines, affected evidence properties, and required fixes.
+- `eval-evidence-auditor`: repository path, governing node, `[eval]` assertions, all eval artifacts, producer artifacts, and the task to audit real-producer evidence. Its final message MUST be the audit-eval-evidence JSON verdict with overall `PASS`, `FAIL`, or `UNKNOWN` and no prose outside the JSON object.
+- `spec-auditor`: repository path, full node path, and the task to audit assertion quality, evidence tags, atemporal voice, decision alignment, and structure. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with full paths, governing rules, and required fixes.
+- `adr-auditor` or `pdr-auditor`: repository path, full decision path, governing node, committed audit scope, and the role's decision-audit task; ADR tasks also carry the language-scope classification. The final message MUST follow that auditor's structured verdict contract without a competing prose envelope.
+- `skill-auditor` or `subagent-auditor`: repository path, changed skill-content or subagent paths, governing nodes when known, deterministic verification state, and the matching authoring-standards audit task. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with paths, lines, governing rules, and required fixes.
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
