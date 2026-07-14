@@ -11,9 +11,13 @@ import yaml  # type: ignore[import-untyped]
 
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV as _BUILD_COMMAND_ARGV,
+    CLAUDE_DIST_RELATIVE as _CLAUDE_DIST_RELATIVE,
     DIST_DIR_NAME as _DIST_DIR_NAME,
     DIST_DIFF_ARGV as _DIST_DIFF_ARGV,
+    DIST_DIFF_MODULE_NAME as _DIST_DIFF_MODULE_NAME,
+    MINIMUM_VERSION_PREFIX as _MINIMUM_VERSION_PREFIX,
     PLUGINS_DIR_NAME as _PLUGINS_DIR_NAME,
+    RECURSIVE_GLOB as _RECURSIVE_GLOB,
     SOURCE_ROOT_NAME as _SOURCE_ROOT_NAME,
     Target as _Target,
 )
@@ -38,6 +42,19 @@ CLAUDE_RUNTIME_ROOT: Final = f"./{CLAUDE_DIST_PLUGINS_DIR.as_posix()}"
 CODEX_RUNTIME_ROOT: Final = f"./{CODEX_DIST_PLUGINS_DIR.as_posix()}"
 LEFTHOOK_BUILD_COMMAND: Final = (
     f"just {BUILD_RECIPE_NAME} && {' '.join(_DIST_DIFF_ARGV)}"
+)
+RAW_GIT_DIFF_COMMAND: Final = "git diff --exit-code"
+RAW_DIFF_SUBCOMMAND: Final = "diff"
+
+DISTRIBUTION_RUNTIME_PATH: Final = (
+    f"{_CLAUDE_DIST_RELATIVE.as_posix()}/{_RECURSIVE_GLOB}"
+)
+DISTRIBUTION_SOURCE_PATH: Final = (
+    f"{_SOURCE_ROOT_NAME}/{_PLUGINS_DIR_NAME}/{_RECURSIVE_GLOB}"
+)
+RETIRED_DISTRIBUTION_SOURCE_PREFIX: Final = f"{_PLUGINS_DIR_NAME}/"
+CODEX_DISTRIBUTION_PATH: Final = (
+    f"{_DIST_DIR_NAME}/{_Target.CODEX.value}/{_RECURSIVE_GLOB}"
 )
 
 
@@ -95,6 +112,47 @@ def lefthook_config_matches_build_contract(config: dict[str, Any]) -> bool:
     return lefthook_build_command(config) == LEFTHOOK_BUILD_COMMAND
 
 
+def dist_diff_surfaces_match_contract(
+    dist_diff_argvs: set[tuple[str, ...]],
+    lefthook_command: str,
+) -> bool:
+    """Return whether gate and hook use the actionable dist-drift reporter."""
+    return (
+        dist_diff_argvs == {_DIST_DIFF_ARGV}
+        and _DIST_DIFF_MODULE_NAME in _DIST_DIFF_ARGV
+        and RAW_DIFF_SUBCOMMAND not in _DIST_DIFF_ARGV
+        and _DIST_DIFF_MODULE_NAME in lefthook_command
+        and RAW_GIT_DIFF_COMMAND not in lefthook_command
+    )
+
+
+def justfile_matches_build_contract(text: str) -> bool:
+    """Return whether the justfile owns one complete build recipe."""
+    return just_recipe_names(text).count(
+        BUILD_RECIPE_NAME
+    ) == 1 and _BUILD_COMMAND_ARGV in just_recipe_commands(text)
+
+
+def distribution_workflow_paths_match_contract(paths: set[str]) -> bool:
+    """Return whether distribution watches canonical source and runtime paths."""
+    return (
+        DISTRIBUTION_RUNTIME_PATH in paths
+        and DISTRIBUTION_SOURCE_PATH in paths
+        and all(
+            not path.startswith(RETIRED_DISTRIBUTION_SOURCE_PREFIX) for path in paths
+        )
+        and CODEX_DISTRIBUTION_PATH not in paths
+    )
+
+
+def distribution_python_version_matches_project(
+    workflow_version: str,
+    requires_python: str,
+) -> bool:
+    """Return whether distribution uses the project's minimum Python version."""
+    return workflow_version == requires_python.removeprefix(_MINIMUM_VERSION_PREFIX)
+
+
 def load_json_document(path: Path) -> dict[str, Any]:
     """Load a JSON document as a mapping owned by the build-orchestration contract."""
 
@@ -137,12 +195,9 @@ def check_build_orchestration(root: Path) -> list[str]:
     errors: list[str] = []
 
     justfile = (root / JUSTFILE_PATH).read_text(encoding="utf-8")
-    recipe_names = just_recipe_names(justfile)
-    if recipe_names.count(BUILD_RECIPE_NAME) != 1:
-        errors.append(f"{JUSTFILE_PATH}: expected one {BUILD_RECIPE_NAME} recipe")
-    if _BUILD_COMMAND_ARGV not in just_recipe_commands(justfile):
+    if not justfile_matches_build_contract(justfile):
         errors.append(
-            f"{JUSTFILE_PATH}: {BUILD_RECIPE_NAME} must run "
+            f"{JUSTFILE_PATH}: expected one {BUILD_RECIPE_NAME} recipe running "
             f"{' '.join(_BUILD_COMMAND_ARGV)}"
         )
 

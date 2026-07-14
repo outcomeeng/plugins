@@ -31,7 +31,6 @@ from outcomeeng.distribution.dist_diff import (
     main,
 )
 from outcomeeng.distribution.orchestration import (
-    BUILD_RECIPE_NAME,
     CLAUDE_MARKETPLACE_PATH,
     CLAUDE_RUNTIME_ROOT,
     CODEX_MARKETPLACE_PATH,
@@ -43,8 +42,8 @@ from outcomeeng.distribution.orchestration import (
     claude_marketplace_plugin_root,
     claude_marketplace_plugin_sources,
     codex_marketplace_plugin_sources,
-    just_recipe_commands,
-    just_recipe_names,
+    dist_diff_surfaces_match_contract as source_dist_diff_surfaces_match_contract,
+    justfile_matches_build_contract as source_justfile_matches_build_contract,
     lefthook_build_command,
     lefthook_config_matches_build_contract,
     load_json_document,
@@ -67,8 +66,6 @@ FORMATTER_VERSION_FAILURE_DIAGNOSTIC = "formatter version failed"
 FORMATTER_TEST_PATH = f"/usr/local/bin/{FORMATTER_COMMAND_NAME}"
 RAW_DIFF_HUNK_MARKER = "@@"
 RAW_DIFF_LINE_PREFIXES = ("+", "-")
-RAW_GIT_DIFF_COMMAND = "git diff --exit-code"
-RAW_DIFF_SUBCOMMAND = "diff"
 INVALID_PATH_SEGMENT = "develop"
 INVALID_PATH_SUFFIX = "-extra"
 
@@ -222,7 +219,7 @@ def dist_diff_surfaces_match_contract() -> bool:
         step.argv for step in VALIDATION_STEPS if step.label == DIST_DIFF_STEP_LABEL
     }
     command = lefthook_build_command(load_lefthook_config(LEFTHOOK_PATH))
-    return _dist_diff_surface_contract_holds(dist_diff_argvs, command)
+    return source_dist_diff_surfaces_match_contract(dist_diff_argvs, command)
 
 
 def dist_diff_surface_violations_are_rejected() -> bool:
@@ -233,31 +230,18 @@ def dist_diff_surface_violations_are_rejected() -> bool:
         DIST_DIR_NAME,
         1,
     )
-    return not _dist_diff_surface_contract_holds(
+    return not source_dist_diff_surfaces_match_contract(
         gate_without_reporter,
         command,
-    ) and not _dist_diff_surface_contract_holds(
+    ) and not source_dist_diff_surfaces_match_contract(
         {DIST_DIFF_ARGV},
         hook_without_reporter,
     )
 
 
-def _dist_diff_surface_contract_holds(
-    dist_diff_argvs: set[tuple[str, ...]],
-    command: str,
-) -> bool:
-    return (
-        dist_diff_argvs == {DIST_DIFF_ARGV}
-        and DIST_DIFF_MODULE_NAME in DIST_DIFF_ARGV
-        and RAW_DIFF_SUBCOMMAND not in DIST_DIFF_ARGV
-        and DIST_DIFF_MODULE_NAME in command
-        and RAW_GIT_DIFF_COMMAND not in command
-    )
-
-
 def justfile_matches_build_contract() -> bool:
     justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
-    return _justfile_contract_holds(justfile) and (
+    return source_justfile_matches_build_contract(justfile) and (
         _build_emits_every_source_scenario_to_each_target()
     )
 
@@ -270,13 +254,7 @@ def justfile_recipe_violation_is_rejected() -> bool:
         violating_command,
         1,
     )
-    return not _justfile_contract_holds(violating_justfile)
-
-
-def _justfile_contract_holds(justfile: str) -> bool:
-    return just_recipe_names(justfile).count(
-        BUILD_RECIPE_NAME
-    ) == 1 and BUILD_COMMAND_ARGV in just_recipe_commands(justfile)
+    return not source_justfile_matches_build_contract(violating_justfile)
 
 
 def lefthook_matches_build_contract() -> bool:

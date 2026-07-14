@@ -18,11 +18,9 @@ from outcomeeng.distribution.contracts import (
     DIRECTIVE_DESCRIPTION_BOUNDARY,
     DIRECTIVE_DESCRIPTION_PREFIX,
     DISTRIBUTION_WORKFLOW_RELATIVE,
-    DIST_DIR_NAME,
     FRONTMATTER_DELIMITER,
     GIT_METADATA_DIR_NAME,
     MINIMUM_VERSION_PREFIX,
-    PLUGINS_DIR_NAME,
     PROJECT_FIELD,
     PROJECT_METADATA_RELATIVE,
     PROJECT_REQUIRES_PYTHON_FIELD,
@@ -51,6 +49,14 @@ from outcomeeng.distribution.distribute import (
     clear_repo_contents,
     collect_skills,
     copy_skill,
+)
+from outcomeeng.distribution.orchestration import (
+    CODEX_DISTRIBUTION_PATH,
+    DISTRIBUTION_RUNTIME_PATH,
+    DISTRIBUTION_SOURCE_PATH,
+    RETIRED_DISTRIBUTION_SOURCE_PREFIX,
+    distribution_python_version_matches_project,
+    distribution_workflow_paths_match_contract,
 )
 from outcomeeng_testing.generators.distribution import (
     DistributionScenario,
@@ -206,47 +212,31 @@ def skill_collection_union_holds() -> bool:
 def distribution_workflow_uses_runtime_and_source_paths() -> bool:
     """Exercise workflow path rules against conforming and violating variants."""
     paths = _push_paths(_workflow())
-    runtime_path = f"{CLAUDE_DIST_RELATIVE}/{RECURSIVE_GLOB}"
-    source_path = f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
-    retired_source_path = f"{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
-    codex_path = f"{DIST_DIR_NAME}/{Target.CODEX.value}/{RECURSIVE_GLOB}"
+    retired_source_path = f"{RETIRED_DISTRIBUTION_SOURCE_PREFIX}{RECURSIVE_GLOB}"
     violating_variants = (
-        paths - {runtime_path},
-        paths - {source_path},
+        paths - {DISTRIBUTION_RUNTIME_PATH},
+        paths - {DISTRIBUTION_SOURCE_PATH},
         paths | {retired_source_path},
-        paths | {codex_path},
+        paths | {CODEX_DISTRIBUTION_PATH},
     )
-    return _distribution_paths_comply(paths) and all(
-        not _distribution_paths_comply(variant) for variant in violating_variants
-    )
-
-
-def _distribution_paths_comply(paths: set[str]) -> bool:
-    runtime_path = f"{CLAUDE_DIST_RELATIVE}/{RECURSIVE_GLOB}"
-    source_path = f"{SOURCE_ROOT_NAME}/{PLUGINS_DIR_NAME}/{RECURSIVE_GLOB}"
-    retired_source_prefix = f"{PLUGINS_DIR_NAME}/"
-    codex_path = f"{DIST_DIR_NAME}/{Target.CODEX.value}/{RECURSIVE_GLOB}"
-    return (
-        runtime_path in paths
-        and source_path in paths
-        and all(not path.startswith(retired_source_prefix) for path in paths)
-        and codex_path not in paths
+    return distribution_workflow_paths_match_contract(paths) and all(
+        not distribution_workflow_paths_match_contract(variant)
+        for variant in violating_variants
     )
 
 
 def distribution_workflow_uses_project_python() -> bool:
     """Exercise Python-version alignment against a source-derived mismatch."""
-    required_version = _requires_python_version()
+    requires_python = _requires_python_specifier()
     workflow_version = _distribution_python_version(_workflow())
-    violating_version = f"{MINIMUM_VERSION_PREFIX}{required_version}"
-    return _python_versions_comply(
+    violating_version = f"{MINIMUM_VERSION_PREFIX}{workflow_version}"
+    return distribution_python_version_matches_project(
         workflow_version,
-        required_version,
-    ) and not _python_versions_comply(violating_version, required_version)
-
-
-def _python_versions_comply(workflow_version: str, required_version: str) -> bool:
-    return workflow_version == required_version
+        requires_python,
+    ) and not distribution_python_version_matches_project(
+        violating_version,
+        requires_python,
+    )
 
 
 @seed(DISTRIBUTION_PROPERTY_SEED)
@@ -338,8 +328,7 @@ def _distribution_python_version(workflow: Workflow) -> str:
     return cast("str", setup[WORKFLOW_PYTHON_VERSION_FIELD])
 
 
-def _requires_python_version() -> str:
+def _requires_python_specifier() -> str:
     metadata = tomllib.loads((REPOSITORY_ROOT / PROJECT_METADATA_RELATIVE).read_text())
     project = cast("dict[str, Any]", metadata[PROJECT_FIELD])
-    requires_python = cast("str", project[PROJECT_REQUIRES_PYTHON_FIELD])
-    return requires_python.removeprefix(MINIMUM_VERSION_PREFIX)
+    return cast("str", project[PROJECT_REQUIRES_PYTHON_FIELD])
