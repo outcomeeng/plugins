@@ -52,6 +52,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
+- ALWAYS: the managed router requires a live `SPEC_TREE_FOUNDATION` marker before direct filesystem access under `spx/` or access to source and test content, while exempting `spx session` operations — including inspection, archive, and release — `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology until their output is followed into product content ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: generation writes the managed surface in both root `CLAUDE.md` and root `AGENTS.md`, never one without the other — each agent reading the same repository gets its own harness router block in the root instruction file it retains across compaction ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: the router block is the first content of each root file, and the rendered router block contains a concrete instruction directing the reading agent to read the entire root instruction file ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: instruction-block generation reads the harness-specific templates from `dist/claude/` and `dist/codex/`, so the update surface consumes the same rendered output this product ships as installed plugin trees ([test](tests/test_instruction_block.compliance.l1.py))
