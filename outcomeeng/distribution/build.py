@@ -885,9 +885,7 @@ def _render_directives(
         if shared_root is None:
             raise IncludeResolutionError("include directive requires shared_root")
         include_path = _resolve_under_root(shared_root, argument)
-        if include_path in include_stack:
-            cycle = " -> ".join(str(path) for path in (*include_stack, include_path))
-            raise CyclicIncludeError(f"cyclic include detected: {cycle}")
+        _assert_include_not_cyclic(include_path, include_stack=include_stack)
         included = expand_include(
             IncludeDirective(path=argument), shared_root=shared_root
         )
@@ -910,6 +908,16 @@ def _resolve_under_root(root: Path, relative_path: str) -> Path:
             f"path {relative_path!r} escapes shared root {root}"
         ) from exc
     return candidate
+
+
+def _assert_include_not_cyclic(
+    include_path: Path,
+    *,
+    include_stack: tuple[Path, ...],
+) -> None:
+    if include_path in include_stack:
+        cycle = " -> ".join(str(path) for path in (*include_stack, include_path))
+        raise CyclicIncludeError(f"cyclic include detected: {cycle}")
 
 
 def _frontmatter_key(line: str) -> str | None:
@@ -1138,11 +1146,7 @@ def _planned_fan_out_emissions(
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
     ):
         return ()
-    directives = (
-        directive
-        for directive in parse_directives(source_file.read_text(encoding="utf-8"))
-        if isinstance(directive, IncludeDirective)
-    )
+    directives = _include_directives(source_file.read_text(encoding="utf-8"))
     return tuple(
         dict.fromkeys(
             emission
@@ -1163,10 +1167,13 @@ def _planned_include_emissions(
     target: _Target,
     relative_path: Path,
     shared_root: Path,
+    include_stack: tuple[Path, ...] = (),
 ) -> tuple[PlannedEmission, ...]:
-    expand_include(directive, shared_root=shared_root)
-    topic_root = _resolve_under_root(shared_root, directive.path).parent
-    return tuple(
+    fragment_path = _resolve_under_root(shared_root, directive.path)
+    _assert_include_not_cyclic(fragment_path, include_stack=include_stack)
+    fragment_body = expand_include(directive, shared_root=shared_root)
+    topic_root = fragment_path.parent
+    topic_emissions = tuple(
         PlannedEmission(
             source=child_file,
             target=target,
@@ -1174,6 +1181,26 @@ def _planned_include_emissions(
             action=EmissionAction.FAN_OUT,
         )
         for child_file in _fan_out_topic_files(topic_root)
+    )
+    nested_emissions = tuple(
+        emission
+        for nested_directive in _include_directives(fragment_body)
+        for emission in _planned_include_emissions(
+            nested_directive,
+            target=target,
+            relative_path=relative_path,
+            shared_root=shared_root,
+            include_stack=(*include_stack, fragment_path),
+        )
+    )
+    return tuple(dict.fromkeys((*topic_emissions, *nested_emissions)))
+
+
+def _include_directives(text: str) -> tuple[IncludeDirective, ...]:
+    return tuple(
+        directive
+        for directive in parse_directives(text)
+        if isinstance(directive, IncludeDirective)
     )
 
 
