@@ -685,9 +685,9 @@ def assert_shared_region_status_mapping() -> None:
 def assert_bootstrap_topology_mapping() -> None:
     """Assert every source-owned initial topology maps to its bootstrap outcome."""
     module = load_instruction_block_module()
-    template = build_template(NEW_VERSION)
+    template_source = build_template(NEW_VERSION)
     blocks = {
-        harness: module.render(template, (LANG_PRIMARY,), NEW_VERSION, harness)
+        harness: module.render(template_source, (LANG_PRIMARY,), NEW_VERSION, harness)
         for harness in TEMPLATE_HARNESSES
     }
     for topology in (
@@ -701,8 +701,8 @@ def assert_bootstrap_topology_mapping() -> None:
             root = pathlib.Path(directory)
             repo = root / "repo"
             seeds = materialize_root_instruction_topology(repo, topology)
-            template = write_template(root, NEW_VERSION)
-            run_generator_write_primary(repo, template)
+            template_path = write_template(root, NEW_VERSION)
+            run_generator_write_primary(repo, template_path)
 
             claude_path = repo / INSTRUCTION_CLAUDE
             agents_path = repo / INSTRUCTION_AGENTS
