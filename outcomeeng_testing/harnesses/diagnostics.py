@@ -50,7 +50,10 @@ def authored_diagnose_manifest_path() -> Path:
 
 def authored_diagnose_plugin_name() -> str:
     """Return the plugin identity derived from manifest ownership."""
-    return source_plugin_name(authored_diagnose_manifest_path())
+    return source_plugin_name(
+        authored_diagnose_manifest_path(),
+        src_root=REPO_ROOT / SOURCE_ROOT_NAME,
+    )
 
 
 def rendered_diagnose_manifests_match_their_owners() -> bool:

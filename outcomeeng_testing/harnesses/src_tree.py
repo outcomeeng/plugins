@@ -20,6 +20,7 @@ from outcomeeng.distribution.build import (
     AGENT_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
     COMMAND_FILE_SUFFIX,
+    PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
@@ -109,6 +110,7 @@ class SrcTreeBuilder:
         skills: Mapping[str, str] | None = None,
         commands: Mapping[str, str] | None = None,
         agents: Mapping[str, str] | None = None,
+        artifacts: Mapping[Path, bytes] | None = None,
     ) -> SrcTreeBuilder:
         """Materialize a plugin at src/plugins/<name>/ with the given components.
 
@@ -118,6 +120,9 @@ class SrcTreeBuilder:
                   Each entry creates src/plugins/<name>/commands/<command>.md.
         agents: agent-name -> markdown body.
                 Each entry creates src/plugins/<name>/agents/<agent>.md.
+        artifacts: plugin-relative path -> opaque bytes. A nested path must begin
+                   with one of the build's source subdirectories; a one-part path
+                   materializes an ordinary file at the plugin root.
 
         Names are validated as kebab-case before any file is written.
         """
@@ -155,6 +160,23 @@ class SrcTreeBuilder:
                 (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
                     content, encoding="utf-8"
                 )
+
+        if artifacts:
+            for relative_path, artifact_content in artifacts.items():
+                if (
+                    relative_path.is_absolute()
+                    or not relative_path.parts
+                    or (
+                        len(relative_path.parts) > 1
+                        and relative_path.parts[0] not in PLUGIN_SUBDIRS
+                    )
+                    or ".." in relative_path.parts
+                ):
+                    msg = f"invalid plugin artifact path {relative_path}"
+                    raise ValueError(msg)
+                artifact_path = plugin_root / relative_path
+                artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                artifact_path.write_bytes(artifact_content)
 
         return self
 

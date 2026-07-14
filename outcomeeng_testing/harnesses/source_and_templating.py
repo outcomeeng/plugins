@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Final
+from typing import Final
 
-from hypothesis import given, settings
+from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng.distribution.build import (
@@ -54,11 +54,22 @@ from outcomeeng_testing.generators.fragments import (
     inert_fragment_bodies,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 SOURCE_PROPERTY_EXAMPLES: Final = 20
-SOURCE_PROPERTY_REPLAY: Final = (
+SOURCE_PROPERTY_SEED: Final = 20260714
+DIRECTIVE_PROPERTY_REPLAY_PATH: Final = (
     "just test spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/"
+    "test_parse_directives.property.l1.py"
+)
+INCLUDE_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/"
+    "test_expand_include.property.l1.py"
+)
+RENDER_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/"
+    "test_render_text.property.l1.py"
 )
 
 
@@ -67,41 +78,76 @@ def implementation_is_ready() -> bool:
 
 
 def directive_roundtrip_property_holds() -> bool:
-    _run_replayable_property(_directive_roundtrip_property)
+    run_replayable_property(
+        _directive_roundtrip_property,
+        seed_value=SOURCE_PROPERTY_SEED,
+        replay_path=DIRECTIVE_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
 def include_body_property_holds() -> bool:
-    _run_replayable_property(_include_body_property)
+    run_replayable_property(
+        _include_body_property,
+        seed_value=SOURCE_PROPERTY_SEED,
+        replay_path=INCLUDE_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
 def rendered_include_property_holds() -> bool:
-    _run_replayable_property(_rendered_include_property)
+    run_replayable_property(
+        _rendered_include_property,
+        seed_value=SOURCE_PROPERTY_SEED,
+        replay_path=RENDER_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
 def recursive_include_property_holds() -> bool:
-    _run_replayable_property(_recursive_include_property)
+    run_replayable_property(
+        _recursive_include_property,
+        seed_value=SOURCE_PROPERTY_SEED,
+        replay_path=RENDER_PROPERTY_REPLAY_PATH,
+    )
     return True
 
 
+def property_failure_notes_include_seed_and_replay() -> bool:
+    def always_fails() -> None:
+        raise AssertionError
+
+    try:
+        run_replayable_property(
+            always_fails,
+            seed_value=SOURCE_PROPERTY_SEED,
+            replay_path=DIRECTIVE_PROPERTY_REPLAY_PATH,
+        )
+    except AssertionError as error:
+        notes = getattr(error, "__notes__", ())
+        return (
+            f"Hypothesis seed: {SOURCE_PROPERTY_SEED}" in notes
+            and f"Replay path: {DIRECTIVE_PROPERTY_REPLAY_PATH}" in notes
+        )
+    return False
+
+
+@seed(SOURCE_PROPERTY_SEED)
 @settings(
     max_examples=SOURCE_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(directive=directives())
 def _directive_roundtrip_property(directive: Directive) -> None:
     assert parse_directives(format_directive(directive)) == (directive,)
 
 
+@seed(SOURCE_PROPERTY_SEED)
 @settings(
     max_examples=SOURCE_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(case=st.sampled_from(source_scenarios()), body=fragment_bodies())
 def _include_body_property(case: SourceScenario, body: str) -> None:
@@ -112,11 +158,11 @@ def _include_body_property(case: SourceScenario, body: str) -> None:
         assert expand_include(directive, shared_root=builder.shared_root) == body
 
 
+@seed(SOURCE_PROPERTY_SEED)
 @settings(
     max_examples=SOURCE_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(
     case=st.sampled_from(source_scenarios()),
@@ -139,11 +185,11 @@ def _rendered_include_property(
         assert render_text(template, shared_root=builder.shared_root) == expected
 
 
+@seed(SOURCE_PROPERTY_SEED)
 @settings(
     max_examples=SOURCE_PROPERTY_EXAMPLES,
     deadline=None,
-    derandomize=True,
-    database=None,
+    print_blob=True,
 )
 @given(
     case=st.sampled_from(source_scenarios()),
@@ -165,15 +211,6 @@ def _recursive_include_property(case: SourceScenario, depth: int) -> None:
             shared_root=builder.shared_root,
         )
         assert rendered == case.fragment_body
-
-
-def _run_replayable_property(property_run: Callable[[], None]) -> None:
-    try:
-        property_run()
-    except AssertionError as error:
-        raise AssertionError(
-            f"deterministic property failure; replay with `{SOURCE_PROPERTY_REPLAY}`"
-        ) from error
 
 
 def standard_jinja_block_has_no_directives() -> bool:
@@ -236,8 +273,8 @@ def well_formed_source_tree_builds() -> bool:
     return True
 
 
-def ordinary_plugin_root_file_is_ignored() -> bool:
-    return all(_ordinary_file_ignored(case) for case in source_scenarios())
+def ordinary_plugin_root_file_is_accepted() -> bool:
+    return all(_ordinary_file_is_emitted(case) for case in source_scenarios())
 
 
 def shared_topic_without_fragment_is_rejected() -> bool:
@@ -344,7 +381,7 @@ def _cyclic_includes_raise(case: SourceScenario) -> bool:
         return False
 
 
-def _ordinary_file_ignored(case: SourceScenario) -> bool:
+def _ordinary_file_is_emitted(case: SourceScenario) -> bool:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         builder = _source_tree(root, case)
@@ -355,7 +392,7 @@ def _ordinary_file_ignored(case: SourceScenario) -> bool:
         build(builder.src_root, root / "dist")
         reader = DistTreeReader(root)
         return all(
-            Path(case.plugin) / filename not in reader.list_all_files(target)
+            Path(case.plugin) / filename in reader.list_all_files(target)
             for target in Target
         )
 

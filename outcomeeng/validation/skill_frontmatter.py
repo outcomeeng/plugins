@@ -29,6 +29,7 @@ type SkillValidator = Callable[[Path], tuple[bool, str]]
 
 PORTABLE_CAPABILITY_FIELDS: frozenset[str] = frozenset(
     {
+        "allowed-tools",
         "argument-hint",
     }
 )
