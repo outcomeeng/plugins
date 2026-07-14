@@ -13,4 +13,3 @@ CAN verify root `CLAUDE.md` and `AGENTS.md` migration behavior across existing c
 ### Mappings
 
 - Root instruction-file topology maps to harness seed bodies: only `CLAUDE.md` present seeds both harness paths from `CLAUDE.md`; only `AGENTS.md` present seeds both harness paths from `AGENTS.md`; separate regular files seed each agent harness from its matching file; a symlinked harness path seeds both paths from the shared target body ([test](tests/test_instruction_block_harness.mapping.l1.py))
-- The canonical instruction-block template maps to a typed Codex spawn step, a same-agent role step, an identity-failure policy ordered before role submission, and Claude-native configured-agent guidance ([test](tests/test_instruction_block_harness.mapping.l1.py))
