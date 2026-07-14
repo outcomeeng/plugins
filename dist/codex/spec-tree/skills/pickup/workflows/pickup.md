@@ -170,7 +170,7 @@ Recommended next action: [specific action]
 
 If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume with the recommended next action.
 
-Otherwise, use `request_user_input` with exactly one question and 2-4 options. The options must come from the loaded context:
+Otherwise, use `request_user_input` with exactly one question and 2-3 options. The options must come from the loaded context:
 
 - Include the recommended next action as the first option, with the proposal's rationale.
 - Include "Pause pickup flow" as an option so the operator can direct another workflow.
