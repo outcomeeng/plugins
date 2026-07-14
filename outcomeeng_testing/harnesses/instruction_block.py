@@ -104,6 +104,7 @@ ROOT_MIDLINE_CODEX: Final = _fixture_text("midline-codex.md")
 SESSION_ARCHIVE_RESULT_INSTRUCTION, SESSION_RESULT_FRONTMATTER_FIELD = (
     dist.FORBIDDEN_ROUTER_TOKENS
 )
+READ_ENTIRE_FILE_INSTRUCTION: Final = "Read this entire file"
 
 # Invented scenario payload owned by the harness.
 TEMPLATE_LANGUAGES = tuple(dict.fromkeys(_SOURCE_MODULE.LANGUAGE_BY_EXTENSION.values()))
@@ -477,6 +478,7 @@ def assert_router_is_first() -> None:
     module = load_instruction_block_module()
     for document in render_shipped_dist_with_generation_entrypoint().values():
         assert document.startswith(module.ROUTER_MARKER_PREFIX)
+        assert READ_ENTIRE_FILE_INSTRUCTION in dist.managed_router_block(document)
 
 
 def assert_generation_reads_dist_templates() -> None:
