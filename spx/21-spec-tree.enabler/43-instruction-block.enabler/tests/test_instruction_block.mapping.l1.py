@@ -118,7 +118,8 @@ def test_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> Non
         harness.root_instruction_topology_only_claude,
         harness.root_instruction_topology_only_agents,
         harness.root_instruction_topology_separate,
-        harness.root_instruction_topology_symlinked,
+        harness.root_instruction_topology_claude_symlink,
+        harness.root_instruction_topology_agents_symlink,
     ],
 )
 def test_topology_maps_to_bootstrap_outcome(

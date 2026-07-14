@@ -1,0 +1,8 @@
+{
+  "files": {
+    "CLAUDE.md": "# Shared Root\n\nShared repository instructions.\n"
+  },
+  "symlinks": {
+    "AGENTS.md": "CLAUDE.md"
+  }
+}

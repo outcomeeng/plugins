@@ -62,7 +62,8 @@ ROOT_TOPOLOGY_FIXTURES_DIR: Final = (
 TOPOLOGY_ONLY_CLAUDE: Final = "only-claude.json"
 TOPOLOGY_ONLY_AGENTS: Final = "only-agents.json"
 TOPOLOGY_SEPARATE: Final = "separate.json"
-TOPOLOGY_SYMLINKED: Final = "symlinked.json"
+TOPOLOGY_CLAUDE_SYMLINK: Final = "claude-symlink.json"
+TOPOLOGY_AGENTS_SYMLINK: Final = "agents-symlink.json"
 
 # Invented shared-region body payloads the harness owns, for shared-region preservation and
 # recency-reconcile tests. Their byte-identity (or, for the ALT, their divergence) across the two
@@ -192,9 +193,14 @@ def root_instruction_topology_separate() -> RootInstructionTopology:
     return _load_root_instruction_topology(TOPOLOGY_SEPARATE)
 
 
-def root_instruction_topology_symlinked() -> RootInstructionTopology:
-    """Return a root topology matching a shared instruction file with a harness symlink."""
-    return _load_root_instruction_topology(TOPOLOGY_SYMLINKED)
+def root_instruction_topology_claude_symlink() -> RootInstructionTopology:
+    """Return a root topology whose Claude instruction path is a symlink."""
+    return _load_root_instruction_topology(TOPOLOGY_CLAUDE_SYMLINK)
+
+
+def root_instruction_topology_agents_symlink() -> RootInstructionTopology:
+    """Return a root topology whose Agents instruction path is a symlink."""
+    return _load_root_instruction_topology(TOPOLOGY_AGENTS_SYMLINK)
 
 
 ROOT_CLAUDE_BODY: Final = root_instruction_topology_only_claude().files[
@@ -203,7 +209,7 @@ ROOT_CLAUDE_BODY: Final = root_instruction_topology_only_claude().files[
 ROOT_AGENTS_BODY: Final = root_instruction_topology_only_agents().files[
     INSTRUCTION_AGENTS
 ]
-ROOT_SHARED_BODY: Final = root_instruction_topology_symlinked().files[
+ROOT_SHARED_BODY: Final = root_instruction_topology_claude_symlink().files[
     INSTRUCTION_AGENTS
 ]
 
@@ -292,33 +298,39 @@ def assert_separate_topology_maps_each_harness_body() -> None:
 
 
 def assert_symlinked_topology_maps_shared_body() -> None:
-    """Assert a symlinked topology seeds both harness paths from the target."""
-    topology = root_instruction_topology_symlinked()
-    body = topology.files[INSTRUCTION_AGENTS]
-    _assert_root_instruction_topology_mapping(
-        topology,
-        {INSTRUCTION_CLAUDE: body, INSTRUCTION_AGENTS: body},
-    )
+    """Assert either symlink direction seeds both harness paths from the target."""
+    for topology in (
+        root_instruction_topology_claude_symlink(),
+        root_instruction_topology_agents_symlink(),
+    ):
+        body = next(iter(topology.files.values()))
+        _assert_root_instruction_topology_mapping(
+            topology,
+            {INSTRUCTION_CLAUDE: body, INSTRUCTION_AGENTS: body},
+        )
 
 
 def assert_symlinked_topology_materializes_regular_files() -> None:
-    """Assert symlink normalization preserves bodies in regular files."""
-    topology = root_instruction_topology_symlinked()
-    body = topology.files[INSTRUCTION_AGENTS]
-    with TemporaryDirectory() as directory:
-        root = pathlib.Path(directory)
-        materialized = materialize_root_instruction_topology(root, topology)
-        claude_path = root / INSTRUCTION_CLAUDE
-        agents_path = root / INSTRUCTION_AGENTS
+    """Assert both symlink directions preserve bodies in regular files."""
+    for topology in (
+        root_instruction_topology_claude_symlink(),
+        root_instruction_topology_agents_symlink(),
+    ):
+        body = next(iter(topology.files.values()))
+        with TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            materialized = materialize_root_instruction_topology(root, topology)
+            claude_path = root / INSTRUCTION_CLAUDE
+            agents_path = root / INSTRUCTION_AGENTS
 
-        assert claude_path.is_file()
-        assert agents_path.is_file()
-        assert not claude_path.is_symlink()
-        assert not agents_path.is_symlink()
-        assert claude_path.read_text(encoding="utf-8") == body
-        assert agents_path.read_text(encoding="utf-8") == body
-        assert materialized[INSTRUCTION_CLAUDE] == body
-        assert materialized[INSTRUCTION_AGENTS] == body
+            assert claude_path.is_file()
+            assert agents_path.is_file()
+            assert not claude_path.is_symlink()
+            assert not agents_path.is_symlink()
+            assert claude_path.read_text(encoding="utf-8") == body
+            assert agents_path.read_text(encoding="utf-8") == body
+            assert materialized[INSTRUCTION_CLAUDE] == body
+            assert materialized[INSTRUCTION_AGENTS] == body
 
 
 def harness_line(harness: str) -> str:
