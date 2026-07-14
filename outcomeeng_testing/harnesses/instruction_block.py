@@ -18,17 +18,23 @@ fixture files and temporary directories owned and cleaned up by this harness.
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import pathlib
 import subprocess
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from dataclasses import dataclass
 import sys
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, cast
+
+from hypothesis import given
+from hypothesis import strategies as st
+
+from outcomeeng_testing.generators import instruction_block as generators
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-instruction-block skill directory name; a rename there must update
@@ -177,6 +183,14 @@ class SymlinkMaterializationObservation:
 
     actual: MaterializedRootInstructionState
     expected: MaterializedRootInstructionState
+
+
+@dataclass(frozen=True)
+class CliCheckMappingObservation:
+    """Observed and expected CLI ``--check`` outcomes for a finite state mapping."""
+
+    actual: tuple[tuple[int, str], ...]
+    expected: tuple[tuple[int, str], ...]
 
 
 REGULAR_INSTRUCTION_FILE_STATE: Final = InstructionFileState(
@@ -474,6 +488,125 @@ def load_instruction_block_module() -> ModuleType:
     return module
 
 
+def _version_string(parts: tuple[int, int, int]) -> str:
+    """Render generated numeric version components as a dotted version."""
+    return ".".join(str(part) for part in parts)
+
+
+def _shared_document(module: ModuleType, name: str, body: str) -> str:
+    """Wrap a generated body in one shared-region fence."""
+    return (
+        f"{module.shared_open_marker(name)}\n\n{body}\n\n"
+        f"{module.shared_close_marker(name)}\n"
+    )
+
+
+def instruction_block_properties_hold() -> bool:
+    """Exercise every generated invariant declared by instruction-block property evidence."""
+    module = load_instruction_block_module()
+
+    @given(
+        agent_harness=st.sampled_from(TEMPLATE_HARNESSES),
+        installed=generators.version_parts(),
+    )
+    def render_version_matches_installed(
+        agent_harness: str,
+        installed: tuple[int, int, int],
+    ) -> None:
+        installed_text = _version_string(installed)
+        rendered = module.render(
+            build_template(_version_string((0, 0, 0))),
+            TEMPLATE_LANGUAGES,
+            installed_text,
+            agent_harness,
+        )
+        assert module.parse_template_version(rendered) == installed_text
+
+    @given(installed=generators.version_parts())
+    def managed_surfaces_end_with_one_newline(
+        installed: tuple[int, int, int],
+    ) -> None:
+        installed_text = _version_string(installed)
+        blocks = {
+            agent_harness: module.render(
+                build_template(_version_string((0, 0, 0))),
+                TEMPLATE_LANGUAGES,
+                installed_text,
+                agent_harness,
+            )
+            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+        seeds = {
+            agent_harness: ROOT_SHARED_BODY
+            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+        documents = module.build_root_instruction_documents(seeds, blocks)
+        for document in documents.values():
+            assert document.endswith("\n")
+            assert not document.endswith("\n\n")
+
+    @given(
+        left=generators.version_parts(),
+        right=generators.version_parts(),
+    )
+    def staleness_matches_numeric_order(
+        left: tuple[int, int, int],
+        right: tuple[int, int, int],
+    ) -> None:
+        assert module.is_stale(_version_string(left), _version_string(right)) is (
+            left < right
+        )
+
+    @given(
+        body_a=generators.shared_region_bodies(),
+        body_b=generators.shared_region_bodies(),
+    )
+    def reconcile_makes_regions_identical(body_a: str, body_b: str) -> None:
+        document_a = _shared_document(module, SHARED_REGION_NAME, body_a)
+        document_b = _shared_document(module, SHARED_REGION_NAME, body_b)
+        for winner in ("a", "b"):
+            new_a, new_b = module.reconcile_shared_regions(
+                document_a,
+                document_b,
+                winner,
+            )
+            assert (
+                module.parse_shared_regions(new_a)[SHARED_REGION_NAME]
+                == module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
+            )
+
+    @given(body=generators.shared_region_bodies())
+    def identical_region_reconcile_is_idempotent(body: str) -> None:
+        document_a = _shared_document(module, SHARED_REGION_NAME, body)
+        document_b = _shared_document(module, SHARED_REGION_NAME, body)
+        for winner in ("a", "b", None):
+            assert module.reconcile_shared_regions(
+                document_a,
+                document_b,
+                winner,
+            ) == (document_a, document_b)
+
+    @given(
+        content_a=generators.free_instruction_content(),
+        content_b=generators.free_instruction_content(),
+    )
+    def bootstrap_wraps_at_most_one_region(
+        content_a: str,
+        content_b: str,
+    ) -> None:
+        wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
+        assert len(module.parse_shared_regions(wrapped_a)) <= 1
+        assert len(module.parse_shared_regions(wrapped_b)) <= 1
+
+    render_version_matches_installed()
+    managed_surfaces_end_with_one_newline()
+    staleness_matches_numeric_order()
+    reconcile_makes_regions_identical()
+    identical_region_reconcile_is_idempotent()
+    bootstrap_wraps_at_most_one_region()
+    return True
+
+
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -752,8 +885,32 @@ def assert_language_block_filter_mapping() -> None:
             assert body not in disabled
 
 
-def assert_router_status_mapping() -> None:
-    """Assert current, absent, and behind-version router states map to reports."""
+def _run_generator_check(
+    module: ModuleType,
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str,
+) -> tuple[int, str]:
+    """Run the generator CLI's ``--check`` branch and capture its status report."""
+    stdout = io.StringIO()
+    with redirect_stdout(stdout):
+        code = module.main(
+            [
+                "--template",
+                str(template_path),
+                "--repo-root",
+                str(repo_root),
+                "--languages",
+                languages,
+                "--check",
+            ]
+        )
+    return cast(int, code), stdout.getvalue().strip()
+
+
+def observe_router_check_mapping() -> CliCheckMappingObservation:
+    """Observe the CLI report for current, stale, and absent router states."""
     module = load_instruction_block_module()
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory)
@@ -763,20 +920,13 @@ def assert_router_status_mapping() -> None:
         run_generator_write_primary(repo, template)
         claude = repo / INSTRUCTION_CLAUDE
 
-        assert (
-            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            is module.InstructionStatus.CURRENT
-        )
-        assert (
-            module.instruction_status(claude, NEW_VERSION, (LANG_SECONDARY,), repo)
-            is module.InstructionStatus.STALE
+        current = _run_generator_check(module, repo, template, languages=LANG_PRIMARY)
+        stale_language = _run_generator_check(
+            module, repo, template, languages=LANG_SECONDARY
         )
 
         claude.unlink()
-        assert (
-            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            is module.InstructionStatus.ABSENT
-        )
+        absent = _run_generator_check(module, repo, template, languages=LANG_PRIMARY)
 
         stale_block = module.render(
             build_template(OLD_VERSION),
@@ -787,23 +937,34 @@ def assert_router_status_mapping() -> None:
         claude.write_text(
             module.prepend_router_block(stale_block, ""), encoding="utf-8"
         )
-        assert (
-            module.instruction_status(claude, NEW_VERSION, (LANG_PRIMARY,), repo)
-            is module.InstructionStatus.STALE
+        stale_version = _run_generator_check(
+            module, repo, template, languages=LANG_PRIMARY
+        )
+
+        return CliCheckMappingObservation(
+            actual=(current, stale_language, absent, stale_version),
+            expected=(
+                (0, module.InstructionStatus.CURRENT.value),
+                (0, module.InstructionStatus.STALE.value),
+                (0, module.InstructionStatus.ABSENT.value),
+                (0, module.InstructionStatus.STALE.value),
+            ),
         )
 
 
-def assert_shared_region_status_mapping() -> None:
-    """Assert identical, diverged, and one-sided shared regions map to drift reports."""
+def observe_shared_region_check_mapping() -> CliCheckMappingObservation:
+    """Observe the CLI report for identical, diverged, and one-sided shared regions."""
     module = load_instruction_block_module()
     with TemporaryDirectory() as directory:
-        repo = pathlib.Path(directory).resolve() / "repo"
+        root = pathlib.Path(directory).resolve()
+        repo = root / "repo"
         repo.mkdir()
+        template = write_template(root, NEW_VERSION)
 
         write_both_root_files_with_shared_region(
             module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
         )
-        assert module.shared_region_drift(repo) == ()
+        current = _run_generator_check(module, repo, template, languages=LANG_PRIMARY)
 
         write_both_root_files_with_shared_region(
             module,
@@ -813,7 +974,9 @@ def assert_shared_region_status_mapping() -> None:
             claude_region=SHARED_REGION_BODY,
             agents_region=SHARED_REGION_BODY_ALT,
         )
-        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+        stale_diverged = _run_generator_check(
+            module, repo, template, languages=LANG_PRIMARY
+        )
 
         codex_block = module.render(
             build_template(NEW_VERSION),
@@ -825,7 +988,18 @@ def assert_shared_region_status_mapping() -> None:
             module.prepend_router_block(codex_block, ROOT_AGENTS_BODY),
             encoding="utf-8",
         )
-        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
+        stale_one_sided = _run_generator_check(
+            module, repo, template, languages=LANG_PRIMARY
+        )
+
+        return CliCheckMappingObservation(
+            actual=(current, stale_diverged, stale_one_sided),
+            expected=(
+                (0, module.InstructionStatus.CURRENT.value),
+                (0, module.InstructionStatus.STALE.value),
+                (0, module.InstructionStatus.STALE.value),
+            ),
+        )
 
 
 def assert_bootstrap_topology_mapping() -> None:

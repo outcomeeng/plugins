@@ -18,11 +18,17 @@ def test_language_block_appears_iff_enabled() -> None:
 
 
 def test_check_maps_router_state_to_report() -> None:
-    harness.assert_router_status_mapping()
+    assert (
+        harness.observe_router_check_mapping().actual
+        == harness.observe_router_check_mapping().expected
+    )
 
 
 def test_check_maps_shared_region_state_to_report() -> None:
-    harness.assert_shared_region_status_mapping()
+    assert (
+        harness.observe_shared_region_check_mapping().actual
+        == harness.observe_shared_region_check_mapping().expected
+    )
 
 
 def test_topology_maps_to_bootstrap_outcome() -> None:
