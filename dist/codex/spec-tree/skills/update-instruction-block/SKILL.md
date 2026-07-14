@@ -3,6 +3,7 @@ name: update-instruction-block
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
 argument-hint: "[repo-root]"
+arguments: repo_root
 allowed-tools: Bash(python3:*instruction_block.py*), Bash(git log:*), Read
 ---
 
@@ -24,7 +25,7 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Repository root: the product's root directory, referred to below as `<repo-root>` — the current working directory unless the operator names a different product root; because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the worktree the operator means to update rather than assuming the marketplace-source checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
+1. **Resolve the paths.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the worktree the operator means to update rather than assuming the marketplace-source checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
 
 2. **Detect status.** Run:
 
@@ -64,6 +65,36 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 5. **Verify, then report.** Re-run the Step 2 `--check` command; it must now print `current` — this closing check confirms the write landed, the router block is at the installed version, and no `shared` region differs between the two files. The root instruction files are git-tracked, so an unexpected change stays recoverable through the product's own version control before commit. Then report the version transition, detected enabled-language list, root instruction files written, any `shared` region reconciled and the side chosen, and whether obsolete `spx/` instruction files were removed.
 
 </workflow>
+
+<examples>
+
+**Stale router regenerated.** Before, `CLAUDE.md` begins with `<!-- SPEC-TREE v0.23.0 langs:python -->` while the installed template version is `0.24.0`; `AGENTS.md` carries the same stale version and both files share `<!-- SPEC-TREE:shared commands -->`. The opening check prints `stale`, reconcile prints no ambiguity, write replaces both router blocks, and the closing check prints:
+
+```text
+current
+```
+
+Afterward, both files begin with `<!-- SPEC-TREE v0.24.0 langs:python -->`, the `commands` region body is unchanged and byte-identical, and independent content remains in its original file.
+
+**Recency tie requires one choice.** Before, the `commands` region differs between `CLAUDE.md` and `AGENTS.md`, and both region-touching commits have the same timestamp. Reconcile exits non-zero with:
+
+```text
+ambiguous (recency tie): commands
+```
+
+After the operator selects `claude`, rerun with `--reconcile --from claude`; both files then carry the complete `CLAUDE.md` region body. Run `--write` and the closing `--check`; no line from the prior `AGENTS.md` region is blended into the result.
+
+</examples>
+
+<failure_modes>
+
+**Claude updated the marketplace-source checkout instead of the assigned worktree.** The root argument was described but never bound, so an explicit product path could be ignored. Bind `<repo-root>` from `$repo_root` and confirm that path before the first check.
+
+**Claude wrote before reconciling.** The write dirtied both root files, then reconcile refused to choose from uncommitted state. Reconcile the committed regions first, then run `--write`.
+
+**Claude kept the instruction-block template under `understand`.** The updater depended on another skill's bundled path, which is unavailable through its own `${SKILL_DIR}`. Keep the template in this skill's `templates/` directory and invoke every script and template through this skill's local token.
+
+</failure_modes>
 
 <constraints>
 - NEVER edit the deterministic parse, filter, render, biggest-identical-span, shared-region, or recency logic here — it lives in `${SKILL_DIR}/scripts/instruction_block.py`, the single home for that logic.
