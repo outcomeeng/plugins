@@ -9,6 +9,7 @@ SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
 IMPLEMENTATION_AUDITOR_AGENT_NAME: Final = "implementation-auditor"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_CLASS: Final = "implementation"
+CONCERN_RESULT_COMPLETED: Final = "completed"
 
 RUN_TOKEN_FIELD: Final = "runToken"
 RUN_SEQUENCE_FIELD: Final = "sequence"
@@ -108,8 +109,17 @@ def implementation_audit_input_payload(request_kind: str) -> dict[str, object]:
 def implementation_audit_scope_payload(
     language: str,
     concern: ImplementationAuditConcern,
+    *,
+    subject_paths: tuple[str, ...],
+    finding_count: int,
 ) -> dict[str, object]:
     """Return one audited implementation coverage unit."""
+    if not subject_paths:
+        raise ValueError("audited implementation scope requires subject paths")
+    if finding_count < 0:
+        raise ValueError(
+            "audited implementation scope requires a nonnegative finding count"
+        )
     return {
         "unitId": implementation_audit_unit_id(language, concern),
         "auditClass": IMPLEMENTATION_AUDIT_CLASS,
@@ -117,6 +127,11 @@ def implementation_audit_scope_payload(
         "subject": f"partition:{language}",
         "coverageRequirement": AuditCoverageRequirement.REQUIRED.value,
         "coverageStatus": AuditCoverageStatus.AUDITED.value,
+        "subjectPaths": list(subject_paths),
+        "concernResult": {
+            "status": CONCERN_RESULT_COMPLETED,
+            "findingCount": finding_count,
+        },
         "priorContext": {
             "changedFilePartition": language,
             "concernPartition": concern.value,

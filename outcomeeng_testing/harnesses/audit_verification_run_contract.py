@@ -24,6 +24,7 @@ from outcomeeng.validation.plugins import (
     retired_language_audit_skill_relative_path,
 )
 from outcomeeng.validation.implementation_audit_contract import (
+    CONCERN_RESULT_COMPLETED,
     LANGUAGE_AUDIT_CONCERNS,
     RUN_FINDING_COUNT_FIELD,
     RUN_SEALED_FIELD,
@@ -74,6 +75,41 @@ def spx_floor_rejects_version_below_verification_run_minimum() -> bool:
     floor = parse_version(VERIFICATION_RUN_MINIMUM_SPX_VERSION)
     lower = ".".join(str(part) for part in (*floor[:-1], floor[-1] - 1))
     return not is_satisfied(lower, VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+
+
+def audited_scope_payload_carries_concern_evidence() -> bool:
+    """Return whether audited scope preserves paths and concern completion."""
+    language = _source_language_plugin_name()
+    if language is None:
+        return False
+    probe = implementation_audit_verification_probe(language)
+    payload = implementation_audit_scope_payload(
+        probe.language,
+        probe.concern,
+        subject_paths=(probe.subject_path,),
+        finding_count=1,
+    )
+    return payload.get("subjectPaths") == [probe.subject_path] and payload.get(
+        "concernResult"
+    ) == {"status": CONCERN_RESULT_COMPLETED, "findingCount": 1}
+
+
+def audited_scope_payload_rejects_empty_subject_paths() -> bool:
+    """Return whether audited scope rejects an empty inspected path set."""
+    language = _source_language_plugin_name()
+    if language is None:
+        return False
+    probe = implementation_audit_verification_probe(language)
+    try:
+        implementation_audit_scope_payload(
+            probe.language,
+            probe.concern,
+            subject_paths=(),
+            finding_count=0,
+        )
+    except ValueError:
+        return True
+    return False
 
 
 def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
@@ -214,7 +250,12 @@ def _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
             repository,
             _evidence_command("scope", scope, run_token, unit_id),
             _with_producer_provenance(
-                implementation_audit_scope_payload(probe.language, probe.concern),
+                implementation_audit_scope_payload(
+                    probe.language,
+                    probe.concern,
+                    subject_paths=(probe.subject_path,),
+                    finding_count=1,
+                ),
                 language=probe.language,
             ),
             spx_command=spx_command,
