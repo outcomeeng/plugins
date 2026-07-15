@@ -18,6 +18,7 @@ from outcomeeng.validation.audit_artifacts import (
     LANGUAGE_CODE_SKILL_TEMPLATE,
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
+    RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
     SPEC_TREE_PLUGIN_NAME,
@@ -49,6 +50,7 @@ from outcomeeng.validation.spx_version import (
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     VERIFICATION_RUN_REQUIRED_COMMANDS,
     is_satisfied,
+    parse_version,
     verification_run_floor_is_satisfied,
 )
 
@@ -84,6 +86,13 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
             for command in VERIFICATION_RUN_REQUIRED_COMMANDS
         )
     )
+
+
+def audit_contract_rejects_below_verification_run_floor() -> bool:
+    """Return whether validation rejects the version before the published floor."""
+    minimum = parse_version(VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+    below_floor = ".".join(str(part) for part in (*minimum[:-1], minimum[-1] - 1))
+    return not verification_run_floor_is_satisfied(below_floor)
 
 
 def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
@@ -206,6 +215,14 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
         return bool(check_wrapper_surface(surface))
 
 
+def audit_contract_rejects_retired_implementation_wrappers() -> bool:
+    """Return whether validation rejects every retired wrapper name."""
+    return all(
+        _retired_implementation_wrapper_is_rejected(filename)
+        for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+    )
+
+
 def audit_contract_rejects_incomplete_language_trio() -> bool:
     """Return whether validation rejects a missing language concern skill."""
     with _valid_surface() as surface:
@@ -276,6 +293,12 @@ def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
         / LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language, concern=concern)
         / SKILL_FILENAME
     )
+
+
+def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
+    with _valid_surface() as surface:
+        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        return bool(check_wrapper_surface(surface))
 
 
 def _source_language() -> str:

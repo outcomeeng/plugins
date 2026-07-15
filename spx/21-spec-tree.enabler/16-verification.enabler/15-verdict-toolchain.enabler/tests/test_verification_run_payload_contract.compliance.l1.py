@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
+    audit_contract_rejects_below_verification_run_floor,
     audit_contract_rejects_extra_runtime_artifact,
     audit_contract_rejects_missing_runtime_skill,
     audit_contract_rejects_retired_artifact_in_other_runtime,
@@ -12,6 +13,10 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
 
 def test_spx_floor_provides_verification_run_lifecycle() -> None:
     assert spx_floor_provides_verification_run_lifecycle()
+
+
+def test_below_verification_run_floor_is_rejected() -> None:
+    assert audit_contract_rejects_below_verification_run_floor()
 
 
 def test_spx_accepts_implementation_audit_payloads() -> None:
