@@ -28,7 +28,9 @@ governs     declares   verifies   complies
 - Tests are executable evidence derived from specs.
 - Code complies with tests.
 
-When layers disagree, the lower layer is in violation. Never weaken a decision to match a spec, a spec to match tests, or tests to match code.
+When layers disagree, the lower layer is in violation.
+
+- NEVER: weaken a decision to match a spec, a spec to match tests, or tests to match code.
 
 Higher-level truth may lead implementation. A coherent product spec, PDR, ADR, or ancestor spec stays authoritative when lower specs, tests, or code have not caught up. Evaluate declaration validity separately from implementation completeness. Current code shape is evidence about code, never authority over higher layers.
 
