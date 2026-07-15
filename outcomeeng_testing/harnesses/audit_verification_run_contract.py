@@ -213,14 +213,9 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
             ),
         )
 
-    scope_sequence = scope_report.get("sequence")
-    finding_sequence = finding_report.get("sequence")
     return (
-        isinstance(scope_sequence, int)
-        and not isinstance(scope_sequence, bool)
-        and isinstance(finding_sequence, int)
-        and not isinstance(finding_sequence, bool)
-        and scope_sequence < finding_sequence
+        scope_report.get("sequence") == 1
+        and finding_report.get("sequence") == 2
         and finish_report.get("terminalStatus") == "rejected"
         and finish_report.get("sealed") is True
         and render_report.get("runToken") == run_token
