@@ -1,11 +1,15 @@
 ---
 name: scope-changeset
-description: ALWAYS invoke this skill when deriving a changeset's base ref, branch slug, branch identity, or merge-base diff scope from git. NEVER re-implement branch-slug or base-ref derivation inside another skill's scripts.
+user-invocable: false
+description: >-
+  Canonical git-derived changeset primitives loaded by verification and lifecycle
+  skills instead of re-implementing branch, base-ref, commit-identity, slug, or
+  diff-scope derivation.
 allowed-tools: Read
 ---
 
 <objective>
-The canonical deterministic git-derived changeset primitives — branch identity, on-disk addressing slug, base-ref resolution, remote-tracking ref form, and merge-base diff scope — derived once for every verification surface to import.
+The canonical deterministic git-derived changeset primitives — branch identity, on-disk addressing slug, base-ref resolution, concrete commit-OID resolution, remote-tracking ref form, and merge-base diff scope.
 </objective>
 
 <api_surface>
@@ -17,6 +21,7 @@ The derivation lives in `${SKILL_DIR}/scripts/changeset_scope.py`, imported by s
 | `branch_slug(name, state_dir)`  | Path-safe, length-bounded, deterministic on-disk slug for a branch name                  |
 | `detect_current_branch(repo)`   | Current branch name; raises `DetachedHeadError` on detached HEAD                         |
 | `detect_base_ref(repo)`         | Bare base-branch name from `origin/HEAD`; raises `BaseRefNotConfiguredError` when absent |
+| `commit_oid(ref, *, repo)`      | Full commit object ID for a ref, rejecting non-commit objects                            |
 | `remote_tracking_ref(base)`     | The remote-tracking ref `origin/<base>` — the single source of the `origin/` composition |
 | `branch_scope(base, *, repo)`   | Files changed on this branch relative to `origin/<base>` (three-dot, merge-base)         |
 | `expand_diff_range(spec, repo)` | Files changed in an arbitrary git diff range                                             |
@@ -31,7 +36,7 @@ Every changeset diff range over a git-derived base is composed against the remot
 
 <success_criteria>
 
-- The base ref, branch slug, branch identity, and diff scope come from `changeset_scope.py` — no consumer re-implements them.
+- The base ref, branch slug, branch identity, concrete commit OID, and diff scope come from `changeset_scope.py` — no consumer re-implements them.
 - Git-derived diff ranges are composed against `origin/<base>` via `remote_tracking_ref`, never a bare local branch ref.
 - The module imports only the Python standard library.
 
