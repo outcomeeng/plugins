@@ -1,0 +1,58 @@
+[
+  {
+    "unitId": "{{UNIT_ID}}",
+    "auditClass": "implementation",
+    "auditKind": "{{CONCERN}}",
+    "subject": "{{SUBJECT}}",
+    "coverageRequirement": "required",
+    "coverageStatus": "audited",
+    "priorContext": {
+      "changedFilePartition": "{{SUBJECT}}",
+      "concernPartition": "{{CONCERN}}",
+      "languagePartition": "{{LANGUAGE}}"
+    },
+    "expectedProducer": {
+      "producerKind": "skill",
+      "agentName": "{{AGENT_NAME}}",
+      "agentOwningPluginName": "{{SPEC_TREE_PLUGIN}}",
+      "skillName": "{{LEAF_SKILL}}",
+      "skillOwningPluginName": "{{LANGUAGE}}",
+      "invocationRole": "leaf-skill"
+    },
+    "recordedByRunDriver": {
+      "producerKind": "agent",
+      "agentName": "{{AGENT_NAME}}",
+      "agentOwningPluginName": "{{SPEC_TREE_PLUGIN}}",
+      "skillName": "{{DRIVER_SKILL}}",
+      "skillOwningPluginName": "{{SPEC_TREE_PLUGIN}}",
+      "invocationRole": "run-driver"
+    },
+    "producerProvenance": {
+      "agentOwningPluginVersion": "{{SPEC_TREE_VERSION}}",
+      "skillOwningPluginVersion": "{{LANGUAGE_VERSION}}"
+    }
+  },
+  {
+    "unitId": "{{UNIT_ID}}",
+    "producerIdentity": {
+      "producerKind": "skill",
+      "agentName": "{{AGENT_NAME}}",
+      "agentOwningPluginName": "{{SPEC_TREE_PLUGIN}}",
+      "skillName": "{{LEAF_SKILL}}",
+      "skillOwningPluginName": "{{LANGUAGE}}",
+      "invocationRole": "leaf-skill"
+    },
+    "producerProvenance": {
+      "agentOwningPluginVersion": "{{SPEC_TREE_VERSION}}",
+      "skillOwningPluginVersion": "{{LANGUAGE_VERSION}}"
+    },
+    "rule": "{{RULE}}",
+    "severity": "blocking",
+    "location": "{{SUBJECT}}",
+    "message": "{{MESSAGE}}",
+    "evidence": {
+      "observed": "{{SUBJECT}}",
+      "expected": "{{SUBJECT}}"
+    }
+  }
+]

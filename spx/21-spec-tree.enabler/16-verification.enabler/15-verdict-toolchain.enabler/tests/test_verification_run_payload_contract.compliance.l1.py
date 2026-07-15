@@ -5,6 +5,7 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     audit_contract_rejects_missing_runtime_skill,
     audit_contract_rejects_retired_artifact_in_other_runtime,
     audit_runtime_trees_exclude_retired_artifacts,
+    spx_verification_run_accepts_implementation_audit_payloads,
     spx_floor_provides_verification_run_lifecycle,
     verification_run_floor_rejects_pre_capability_version,
 )
@@ -16,6 +17,10 @@ def test_spx_floor_provides_verification_run_lifecycle() -> None:
 
 def test_verification_run_floor_rejects_pre_capability_version() -> None:
     assert verification_run_floor_rejects_pre_capability_version()
+
+
+def test_spx_accepts_implementation_audit_payloads() -> None:
+    assert spx_verification_run_accepts_implementation_audit_payloads()
 
 
 def test_audit_runtimes_exclude_retired_artifacts() -> None:
