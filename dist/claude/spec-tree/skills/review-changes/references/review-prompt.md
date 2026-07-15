@@ -78,7 +78,7 @@ When the changeset has no `blocking` or `debt` findings, produce no finding obje
 
 The `rule` field cites the actual rule the finding rests on as a path-style citation into an existing rule in the spec-tree or skill ecosystem. Accepted forms:
 
-- `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT>:<n>` — a spec assertion under the spec tree.
+- `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE|AUDIT>:<n>` — a spec assertion under the spec tree; `AUDIT` remains accepted for legacy specs while current specs use claim-shape headings.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
 - `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule, resolved against the plugin roots available to the current runtime.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention.

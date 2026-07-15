@@ -42,6 +42,13 @@ from enum import StrEnum
 from typing import Any, cast
 
 SCHEMA_VERSION = 4
+SEVERITY_BLOCKING = "blocking"
+SEVERITY_DEBT = "debt"
+CONCERN_CONSISTENCY = "consistency"
+CONCERN_SECURITY = "security"
+CONCERN_PERFORMANCE = "performance"
+CONCERN_EVIDENCE = "evidence"
+CONCERN_ARCHITECTURE = "architecture"
 
 
 class Severity(StrEnum):
@@ -52,8 +59,8 @@ class Severity(StrEnum):
     that consequence. The reviewer judges validity and severity only.
     """
 
-    BLOCKING = "blocking"
-    DEBT = "debt"
+    BLOCKING = SEVERITY_BLOCKING
+    DEBT = SEVERITY_DEBT
 
 
 class Concern(StrEnum):
@@ -70,11 +77,11 @@ class Concern(StrEnum):
     full allowed set surfaced in the error message.
     """
 
-    CONSISTENCY = "consistency"
-    SECURITY = "security"
-    PERFORMANCE = "performance"
-    EVIDENCE = "evidence"
-    ARCHITECTURE = "architecture"
+    CONSISTENCY = CONCERN_CONSISTENCY
+    SECURITY = CONCERN_SECURITY
+    PERFORMANCE = CONCERN_PERFORMANCE
+    EVIDENCE = CONCERN_EVIDENCE
+    ARCHITECTURE = CONCERN_ARCHITECTURE
 
 
 class ReviewResultValidationError(ValueError):
@@ -146,7 +153,7 @@ _REQUIRED_FINDING_KEYS = (
 # the cited assertion/rule slug where the citation carries one.
 _SPEC_ASSERTION_RE = re.compile(
     r"(?P<path>spx/[^\s:]+\.md):"
-    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT):"
+    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE|AUDIT):"
     r"(?P<index>[1-9][0-9]*)"
 )
 _DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
@@ -163,6 +170,7 @@ _SECTION_TITLES = {
     "MAPPING": "Mappings",
     "CONFORMANCE": "Conformance",
     "PROPERTY": "Properties",
+    "COMPLIANCE": "Compliance",
     "AUDIT": "Audit",
 }
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")

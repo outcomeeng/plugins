@@ -3,6 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
+arguments: pr_pointer
 allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*)
 ---
 
@@ -12,7 +13,7 @@ The pull request merged into the base branch on origin, or a terminal action tok
 
 <step name="pr_wait_and_reentry_policy">
 
-`/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
+`/manage-pr` is the re-entry point for an open pull request. `$pr_pointer` carries the optional PR number, PR URL, or branch name. Inspect live GitHub and repository state before acting. When `$pr_pointer` is empty, resolve the PR from the current branch with bare `gh pr view`.
 
 Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION` never store PR state and never authorize a later wait, fix, deploy, release, or closeout without a fresh `/manage-pr` inspection pass. The mutation guard verdict `MERGE_READY:<head-sha>` is also pass-local and never authorizes a later merge without a fresh `/manage-pr` inspection pass for the same inspected head. After compaction or when the foundation is absent, restart from Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior token and guard-verdict authority and return to Step 1 for the PR pointer.
 
@@ -27,7 +28,7 @@ GitHub and the local repository are authoritative for PR state. Conversation mem
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view "$pr_pointer" --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
 ```
@@ -42,10 +43,10 @@ Walk these steps on each management pass. Routine steps — inspect, classify, r
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. Then invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool.
 
-**Step 1 — Identify the PR.** Resolve the PR from the passed pointer before inspecting state. A pointer may be a PR number, PR URL, or branch name. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when no pointer was passed and the current branch is the intended PR branch.
+**Step 1 — Identify the PR.** Resolve the PR from `$pr_pointer` before inspecting state. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$pr_pointer` is empty and the current branch is the intended PR branch.
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view "$pr_pointer" --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 ```
 
@@ -57,7 +58,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 If Step 2 found the branch behind `origin/<base>`, rebase per /merging-standards `<base_sync>` now — independent of whether a review has landed and independent of whether any landed review carries findings. A branch behind base is superseded before it can merge, so rebasing immediately aims CI and reviewers at the head that will actually merge and surfaces a nasty rebase early. An unresolvable conflict stops with `/sync-base`'s structured `conflict` report and active rebase state; a `dirty_tree` outcome is committed through `/commit-changes` then re-synced per `<base_sync>`, never surfaced as a conflict. Otherwise Step 6 re-establishes `VERIFICATION_READINESS` against the rebased tree — scoped by the `/sync-base` `preservation` proof per `<base_sync>`, so an unrelated base movement does not force a full re-run — and pushes it with `--force-with-lease`.
 
-**Step 5 — Drive the queue.** Process every current-head finding by validity and explicit resolution evidence per /merging-standards `<review_classification>`, never by severity. First build one current-head finding ledger from all inspected surfaces and reviewers and classify each item as valid or unbacked. A no-findings review from one reviewer, a clean required check, or an approved audit does not cancel a valid current-head finding from another reviewer or surface. Validate each finding against its cited rule and the governing decisions; drop any the citation does not support. For every valid finding, perform the same-class sweep required by /merging-standards `<review_classification>` across the touched node(s), repair the full defect class, commit via /commit-changes, and re-review the current head. When the repair belongs to a capability too large for this changeset, remove that capability and the finding together before re-review; a coordination note may preserve the removed work but does not resolve a finding. Repeated valid findings in the same lifecycle area after earlier fixes mean the same-class sweep or underlying contract is still incomplete; widen the repair and re-review rather than calling the gate stuck. Apply a waiver only when the operator identifies the exact finding and explicitly accepts its stated consequence. Tracking, general merge authorization, and severity-only authorization leave the queue unresolved.
+**Step 5 — Drive the queue.** Process every current-head finding by validity and explicit resolution evidence per /merging-standards `<review_classification>`, never by severity. First build one current-head finding ledger from all inspected surfaces and reviewers and classify each item as valid or unbacked. A no-findings review from one reviewer, a clean required check, or an approved audit does not cancel a valid current-head finding from another reviewer or surface. Validate each finding against its cited rule and the governing decisions; drop any the citation does not support. Before any same-class sweep, finding repair, or `ISSUES.md`/`PLAN.md` write, derive every touched full `spx/...` node path and invoke `/contextualize` for each node; require the matching live context marker after the latest compaction or base movement. For every valid finding, perform the same-class sweep required by /merging-standards `<review_classification>` across the contextualized touched node(s), repair the full defect class, commit via /commit-changes, and re-review the current head. When the repair belongs to a capability too large for this changeset, remove that capability and the finding together before re-review; a coordination note may preserve the removed work but does not resolve a finding. Repeated valid findings in the same lifecycle area after earlier fixes mean the same-class sweep or underlying contract is still incomplete; widen the repair and re-review rather than calling the gate stuck. Apply a waiver only when the operator identifies the exact finding and explicitly accepts its stated consequence. Tracking, general merge authorization, and severity-only authorization leave the queue unresolved.
 
 **Step 6 — Re-establish `VERIFICATION_READINESS`, then push follow-ups deliberately.** A Step 5 fix or a Step 4 rebase changed the diff, so before any push re-establish all `VERIFICATION_READINESS` predicates **on the exact tree the push would publish**. All predicates must hold *together* on that final tree — they iterate to a joint fixpoint, not a one-time linear pass:
 
