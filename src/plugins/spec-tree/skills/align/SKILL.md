@@ -105,7 +105,7 @@ Common temporal patterns caught by the read-aloud test that may not appear in th
 **Report as findings:**
 
 - Line number, the temporal text, which rule it violates (specific marker or read-aloud test)
-- Reference: `(ref: atemporal_voice)`
+- Reference: `(ref: /understand <truth_hierarchy>)`
 
 **Do NOT report:**
 
@@ -180,13 +180,13 @@ Structural:
 - {finding}
 
 Language:
-- Line {N}: "{text}" — {rule violated} (ref: atemporal_voice)
+- Line {N}: "{text}" — {rule violated} (ref: /understand <truth_hierarchy>)
 
 Placement:
 - {finding} (ref: what-goes-where)
 
 Downstream alignment:
-- {finding} (ref: durable-map decision_to_spec_alignment)
+- {finding} (ref: /understand <truth_hierarchy>)
 
 ---
 
