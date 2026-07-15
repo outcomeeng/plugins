@@ -7,6 +7,7 @@ from outcomeeng_testing.harnesses.merging_policy import (
     assert_delivery_mapping_contract,
     assert_required_check_mapping_contract,
     assert_review_check_mapping_contract,
+    assert_review_finding_disposition_mapping_contract,
 )
 
 
@@ -16,6 +17,10 @@ def test_required_check_status_and_conclusion_mapping() -> None:
 
 def test_review_check_status_and_conclusion_mapping() -> None:
     assert assert_review_check_mapping_contract()
+
+
+def test_review_finding_disposition_mapping() -> None:
+    assert assert_review_finding_disposition_mapping_contract()
 
 
 def test_delivery_phase_mapping() -> None:

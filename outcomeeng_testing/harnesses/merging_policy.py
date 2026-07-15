@@ -40,11 +40,14 @@ from outcomeeng.merging_policy import (
     RequiredCheckKind,
     ReviewCheckAction,
     ReviewCheckStateCategory,
+    ReviewFindingAction,
+    ReviewFindingResolutionEvidence,
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
     decide_release_action,
     decide_review_check,
+    decide_review_finding,
 )
 
 
@@ -309,6 +312,31 @@ def assert_delivery_mapping_contract() -> bool:
     assert release_decision.readiness is DeliveryReadiness.HOLD
     assert release_decision.delivery_action is DeliveryAction.RELEASE
     assert release_decision.blocks_later_phases is False
+
+    return True
+
+
+def assert_review_finding_disposition_mapping_contract() -> bool:
+    """Assert current-head review-finding disposition mapping behavior."""
+
+    for evidence in ReviewFindingResolutionEvidence:
+        decision = decide_review_finding(valid=False, resolution_evidence=evidence)
+        assert decision.required_action is ReviewFindingAction.DROP_UNBACKED
+        assert decision.merge_blocked is False
+
+    decision = decide_review_finding(
+        valid=True,
+        resolution_evidence=ReviewFindingResolutionEvidence.EXACT_FINDING_WAIVER,
+    )
+    assert decision.required_action is ReviewFindingAction.WAIVE_EXACT_FINDING
+    assert decision.merge_blocked is False
+
+    for evidence in ReviewFindingResolutionEvidence:
+        if evidence is ReviewFindingResolutionEvidence.EXACT_FINDING_WAIVER:
+            continue
+        decision = decide_review_finding(valid=True, resolution_evidence=evidence)
+        assert decision.required_action is ReviewFindingAction.FIX_BEFORE_MERGE
+        assert decision.merge_blocked is True
 
     return True
 

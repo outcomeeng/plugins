@@ -106,6 +106,24 @@ class ReviewCheckAction(StrEnum):
     WAIT_FOR_REVIEW = "WAIT_FOR_REVIEW"
 
 
+class ReviewFindingResolutionEvidence(StrEnum):
+    """Evidence offered to resolve one current-head review finding."""
+
+    NONE = "none"
+    TRACKING_RECORD = "tracking_record"
+    GENERAL_MERGE_AUTHORIZATION = "general_merge_authorization"
+    SEVERITY_ONLY_AUTHORIZATION = "severity_only_authorization"
+    EXACT_FINDING_WAIVER = "exact_finding_waiver"
+
+
+class ReviewFindingAction(StrEnum):
+    """Required handling for one current-head review finding."""
+
+    DROP_UNBACKED = "DROP_UNBACKED"
+    FIX_BEFORE_MERGE = "FIX_BEFORE_MERGE"
+    WAIVE_EXACT_FINDING = "WAIVE_EXACT_FINDING"
+
+
 class ReviewCheckStateCategory(StrEnum):
     """Current-head review-kind check state categories."""
 
@@ -184,6 +202,14 @@ class ReviewCheckDecision:
                 f"{self.review_trigger_phrase}"
             )
         return self.required_action.value
+
+
+@dataclass(frozen=True)
+class ReviewFindingDecision:
+    """Decision for current-head review-finding disposition."""
+
+    required_action: ReviewFindingAction
+    merge_blocked: bool
 
 
 CHECK_RUN_NON_TERMINAL_STATUSES = frozenset(
@@ -326,6 +352,28 @@ def decide_review_check(
         )
     return ReviewCheckDecision(
         required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
+    )
+
+
+def decide_review_finding(
+    *,
+    valid: bool,
+    resolution_evidence: ReviewFindingResolutionEvidence,
+) -> ReviewFindingDecision:
+    """Decide whether one current-head review finding remains unresolved."""
+    if not valid:
+        return ReviewFindingDecision(
+            required_action=ReviewFindingAction.DROP_UNBACKED,
+            merge_blocked=False,
+        )
+    if resolution_evidence is ReviewFindingResolutionEvidence.EXACT_FINDING_WAIVER:
+        return ReviewFindingDecision(
+            required_action=ReviewFindingAction.WAIVE_EXACT_FINDING,
+            merge_blocked=False,
+        )
+    return ReviewFindingDecision(
+        required_action=ReviewFindingAction.FIX_BEFORE_MERGE,
+        merge_blocked=True,
     )
 
 
