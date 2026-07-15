@@ -1,4 +1,4 @@
-"""Validate implementation-audit artifacts across plugin surfaces."""
+"""Validate audit artifacts across plugin surfaces."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ SKILLS_DIR_NAME: Final = "skills"
 AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
+AUDIT_SKILL_PREFIX: Final = "audit-"
 IMPLEMENTATION_AUDITOR_FILENAME: Final = "implementation-auditor.md"
 RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
@@ -29,6 +30,13 @@ RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
 LANGUAGE_CODE_SKILL_TEMPLATE: Final = "code-{language}"
 LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
+RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
+    "verdict.py",
+    "aggregate_verdicts.py",
+    "pass_results.py",
+    "journal_emit.py",
+    "audit_orchestrator.py",
+)
 
 
 def check_audit_artifact_contract(root: Path) -> list[str]:
@@ -39,9 +47,24 @@ def check_audit_artifact_contract(root: Path) -> list[str]:
         if not surface.is_dir():
             errors.append(f"{relative_surface}: plugin surface missing")
             continue
-        errors.extend(check_runtime_surface(surface))
+        errors.extend(check_audit_runtime_surface(surface))
         errors.extend(check_wrapper_surface(surface))
         errors.extend(check_language_concern_surface(surface))
+    return errors
+
+
+def check_audit_runtime_surface(surface: Path) -> list[str]:
+    """Return audit-runtime violations for one plugin surface."""
+    errors = check_runtime_surface(surface)
+    implementation_runtime = implementation_audit_runtime_directory(surface)
+    for runtime_dir in audit_skill_runtime_directories(surface):
+        if runtime_dir == implementation_runtime:
+            continue
+        errors.extend(
+            f"{path}: retired audit runtime artifact"
+            for path in runtime_dir.rglob("*")
+            if path.is_file() and path.name in RETIRED_AUDIT_RUNTIME_FILENAMES
+        )
     return errors
 
 
@@ -110,6 +133,20 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
         / SPEC_TREE_PLUGIN_NAME
         / SKILLS_DIR_NAME
         / IMPLEMENTATION_AUDIT_SKILL_NAME
+    )
+
+
+def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
+    """Return spec-tree audit skill runtime directories for ``surface``."""
+    skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
+    if not skills_dir.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            path
+            for path in skills_dir.iterdir()
+            if path.is_dir() and path.name.startswith(AUDIT_SKILL_PREFIX)
+        )
     )
 
 
