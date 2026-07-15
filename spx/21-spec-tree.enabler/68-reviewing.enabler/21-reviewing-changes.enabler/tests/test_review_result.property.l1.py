@@ -1,104 +1,11 @@
-"""Property tests for the ``review_result`` policy module.
-
-Covers this clause in ``../reviewing-changes.md``:
-
-Properties
-- For every ``ReviewResult`` instance, ``from_json_dict(to_json_dict(r)) == r``
-  — serialization is lossless across the generated input space.
-
-Uses Hypothesis to generate variable ``ReviewResult``-shaped dicts and
-exercises the parse/emit round-trip. The reviewer emits findings only —
-there is no ``decision`` field and no consistency invariant — so any
-generated document with conforming findings parses and round-trips.
-"""
+"""Property evidence for lossless review-result serialization."""
 
 from __future__ import annotations
 
-import json
-from typing import Any
-
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    FIXTURE_ADR_RULE_CITATION,
-    FIXTURE_AGENTS_RULE_CITATION,
-    FIXTURE_RULE_CITATION,
-    FIXTURE_SKILL_RULE_CITATION,
-    load_review_result_module,
+    review_result_round_trip_holds,
 )
 
 
-def _concern_values() -> list[str]:
-    review_result = load_review_result_module()
-    return sorted(member.value for member in review_result.Concern)
-
-
-def _severity_values() -> list[str]:
-    review_result = load_review_result_module()
-    return sorted(member.value for member in review_result.Severity)
-
-
-def _finding_strategy() -> st.SearchStrategy[dict[str, Any]]:
-    """Generate finding-shaped dicts spanning the full severity space."""
-    return st.builds(
-        lambda fid, concern, severity, file, line, rule, message, action: {
-            "id": fid,
-            "concern": concern,
-            "severity": severity,
-            "file": file,
-            "line": line,
-            "rule": rule,
-            "message": message,
-            "action": action,
-        },
-        fid=st.from_regex(r"F-[0-9]{3}", fullmatch=True),
-        concern=st.sampled_from(_concern_values()),
-        severity=st.sampled_from(_severity_values()),
-        file=st.from_regex(r"[a-z_]{1,12}\.py", fullmatch=True),
-        line=st.integers(min_value=1, max_value=10_000),
-        rule=st.sampled_from(
-            [
-                FIXTURE_RULE_CITATION,
-                FIXTURE_ADR_RULE_CITATION,
-                FIXTURE_SKILL_RULE_CITATION,
-                FIXTURE_AGENTS_RULE_CITATION,
-            ]
-        ),
-        message=st.text(
-            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs", "Po")),
-            min_size=0,
-            max_size=64,
-        ),
-        action=st.text(
-            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs", "Po")),
-            min_size=0,
-            max_size=64,
-        ),
-    )
-
-
-def _conforming_review_result_dicts() -> st.SearchStrategy[dict[str, Any]]:
-    """Generate conforming review-result dicts — findings only, no summary,
-    acknowledgement, decision, or verdict field."""
-    review_result = load_review_result_module()
-    return st.builds(
-        lambda findings: {
-            "schema_version": review_result.SCHEMA_VERSION,
-            "findings": findings,
-        },
-        findings=st.lists(_finding_strategy(), max_size=4),
-    )
-
-
-class TestRoundTripProperty:
-    """``from_json_dict(to_json_dict(r)) == r`` for every parseable
-    ``ReviewResult`` value."""
-
-    @given(document=_conforming_review_result_dicts())
-    @settings(max_examples=100, deadline=None)
-    def test_round_trip_preserves_equality(self, document: dict[str, Any]) -> None:
-        review_result = load_review_result_module()
-        result = review_result.parse_json(json.dumps(document))
-        round_tripped = review_result.from_json_dict(review_result.to_json_dict(result))
-        assert round_tripped == result
+def test_review_result_serialization_round_trip_is_lossless() -> None:
+    assert review_result_round_trip_holds()

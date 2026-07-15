@@ -20,15 +20,23 @@ import pathlib
 
 import pytest
 
+from outcomeeng_testing.generators.reviewing_changes import (
+    finding_without_required_field,
+    malformed_finding_ids,
+    malformed_rule_citations,
+    unknown_review_concern,
+    unknown_review_severity,
+    valid_rule_citations,
+)
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    FIXTURE_ADR_RULE_CITATION,
-    FIXTURE_AGENTS_RULE_CITATION,
-    FIXTURE_MALFORMED_RULE_CITATION,
-    FIXTURE_RULE_CITATION,
-    FIXTURE_SKILL_RULE_CITATION,
     REPO_ROOT,
     load_review_result_module,
+    malformed_rule_citation,
+    make_finding_dict,
     make_review_result_dict,
+    review_rule_citations,
+    rule_slug_document,
+    runtime_review_skill_path,
 )
 
 
@@ -94,55 +102,30 @@ class TestParseJsonRejection:
 
     def test_unknown_severity_raises_with_value_and_allowed_set(self) -> None:
         review_result = load_review_result_module()
-        bad_finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "blocker",  # not a Severity member
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        unknown_severity = unknown_review_severity()
+        bad_finding = make_finding_dict(severity=unknown_severity)
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
         message = str(excinfo.value)
-        assert "blocker" in message
-        assert "blocking" in message  # part of the allowed set
+        assert unknown_severity in message
+        assert next(iter(review_result.Severity)).value in message
 
     def test_unknown_concern_raises_with_value_and_allowed_set(self) -> None:
         review_result = load_review_result_module()
-        bad_finding = {
-            "id": "F-001",
-            "concern": "marketing",  # not a Concern member
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        unknown_concern = unknown_review_concern()
+        bad_finding = make_finding_dict(concern=unknown_concern)
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
         message = str(excinfo.value)
-        assert "marketing" in message
-        assert "consistency" in message  # part of the allowed set
+        assert unknown_concern in message
+        assert next(iter(review_result.Concern)).value in message
 
-    @pytest.mark.parametrize("finding_id", ["", "1", "F-1", "F-0000", "X-001"])
+    @pytest.mark.parametrize("finding_id", malformed_finding_ids())
     def test_malformed_finding_id_raises(self, finding_id: str) -> None:
         review_result = load_review_result_module()
-        bad_finding = {
-            "id": finding_id,
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        bad_finding = make_finding_dict(id=finding_id)
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
@@ -157,15 +140,7 @@ class TestParseJsonRejection:
 
     def test_missing_action_field_raises(self) -> None:
         review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-        }
+        finding = finding_without_required_field("action")
         document = make_review_result_dict(findings=[finding])
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(json.dumps(document))
@@ -175,29 +150,13 @@ class TestParseJsonRejection:
 class TestRuleCitationValidation:
     """``Finding.rule`` accepts declared citation families and rejects prose."""
 
-    @pytest.mark.parametrize(
-        "rule_citation",
-        (
-            FIXTURE_RULE_CITATION,
-            FIXTURE_ADR_RULE_CITATION,
-            FIXTURE_AGENTS_RULE_CITATION,
-        ),
-    )
+    @pytest.mark.parametrize("rule_citation", valid_rule_citations())
     def test_parse_json_accepts_declared_rule_citation_forms(
         self,
         rule_citation: str,
     ) -> None:
         review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule_citation,
-            "message": "m",
-            "action": "a",
-        }
+        finding = make_finding_dict(rule=rule_citation)
         payload = json.dumps(make_review_result_dict(findings=[finding]))
 
         result = review_result.parse_json(payload)
@@ -206,16 +165,8 @@ class TestRuleCitationValidation:
 
     def test_parse_json_rejects_free_form_rule_text(self) -> None:
         review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_MALFORMED_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        malformed = malformed_rule_citation()
+        finding = make_finding_dict(rule=malformed)
         payload = json.dumps(make_review_result_dict(findings=[finding]))
 
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
@@ -223,7 +174,7 @@ class TestRuleCitationValidation:
 
         message = str(excinfo.value)
         assert "rule" in message
-        assert FIXTURE_MALFORMED_RULE_CITATION in message
+        assert malformed in message
 
 
 class TestRuleCitationForm:
@@ -238,39 +189,10 @@ class TestRuleCitationForm:
     verified mechanically.
     """
 
-    @pytest.mark.parametrize(
-        "rule",
-        [
-            FIXTURE_RULE_CITATION,
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:NEVER:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:2",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:2",
-            "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
-            "spx/15-merging.pdr.md",
-            FIXTURE_SKILL_RULE_CITATION,
-            "plugins/spec-tree/skills/understand/SKILL.md:principles",
-            "CLAUDE.md:critical-rules",
-            FIXTURE_AGENTS_RULE_CITATION,
-        ],
-    )
+    @pytest.mark.parametrize("rule", valid_rule_citations())
     def test_parser_accepts_path_style_rule(self, rule: str) -> None:
         review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule,
-            "message": "m",
-            "action": "a",
-        }
+        finding = make_finding_dict(rule=rule)
         # parse_json should not raise on a conforming rule citation.
         review_result.parse_json(
             json.dumps(make_review_result_dict(findings=[finding]))
@@ -278,14 +200,12 @@ class TestRuleCitationForm:
 
     def test_plugin_skill_rule_can_resolve_absolute_runtime_path(self) -> None:
         review_result = load_review_result_module()
-        skill_path = pathlib.Path(
-            "dist/claude/spec-tree/skills/review-changes/SKILL.md"
-        ).resolve(strict=True)
+        skill_path = runtime_review_skill_path()
 
         review_result._validate_slug(
             skill_path,
-            "api-surface",
-            FIXTURE_SKILL_RULE_CITATION,
+            review_rule_citations()[3].rsplit(":", maxsplit=1)[1],
+            review_rule_citations()[3],
         )
 
     def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
@@ -293,16 +213,7 @@ class TestRuleCitationForm:
     ) -> None:
         review_result = load_review_result_module()
         monkeypatch.chdir(tmp_path)
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_SKILL_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        finding = make_finding_dict(rule=review_rule_citations()[3])
 
         review_result.parse_json(
             json.dumps(make_review_result_dict(findings=[finding]))
@@ -314,21 +225,9 @@ class TestRuleCitationForm:
         review_result = load_review_result_module()
         monkeypatch.chdir(
             REPO_ROOT
-            / "spx"
-            / "21-spec-tree.enabler"
-            / "68-reviewing.enabler"
-            / "21-reviewing-changes.enabler"
+            / pathlib.Path(review_rule_citations()[0].split(":", maxsplit=1)[0]).parent
         )
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_AGENTS_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
+        finding = make_finding_dict(rule=review_rule_citations()[4])
 
         review_result.parse_json(
             json.dumps(make_review_result_dict(findings=[finding]))
@@ -336,85 +235,17 @@ class TestRuleCitationForm:
 
     def test_rule_slug_discovery_rejects_bold_marker_prose(self) -> None:
         review_result = load_review_result_module()
-        document = """# Rules
-
-### Narrative
-
-This paragraph names **ALWAYS** as prose, not as a rule marker.
-
-```text
-### Example Finding
-Reference: <file:line or governing rule>
-```
-
-### Critical Rules
-
-- ⚠️ **NEVER answer** without loading the rule source.
-
-<principles>
-
-ALWAYS: pseudo-XML sections are rule-bearing surfaces.
-
-</principles>
-"""
-
-        slugs = review_result._declared_rule_slugs(document)
+        slugs = review_result._declared_rule_slugs(rule_slug_document())
 
         assert "narrative" not in slugs
         assert "critical-rules" in slugs
         assert "principles" in slugs
         assert "rules" not in slugs
 
-    @pytest.mark.parametrize(
-        "rule",
-        [
-            "",
-            "naming",
-            "fix the typo",
-            "Track under: ISSUES.md",
-            "r",
-            "spec/auth.md:ALWAYS:1",  # wrong prefix (spec/ not spx/)
-            "spx/",
-            "spx/rules.md",
-            "spx/rules.md:ALWAYS",
-            "spx/rules.md:SCENARIO",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:999",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:2",
-            "plugins/foo",
-            "plugins/foo/skills/bar",
-            "plugins/foo/skills/bar/SKILL.md",
-            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:objective",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:review",
-            "plugins/spec-tree/skills/review-changes/SKILL.md:workflow",
-            "AGENTS.md",
-            "AGENTS.md:plugins",
-            "AGENTS.md:two-audiences-two-design-surfaces",
-            "AGENTS.md:documentation",
-            "AGENTS.md:plugin-catalog",
-            "AGENTS.md:why",
-            "AGENTS.md:not-a-real-rule-slug",
-            "CLAUDE.md",
-            "CLAUDE.md:plugins",
-            "CLAUDE.md:never-use",
-            "REVIEW.md",
-            "REVIEW.md:not-a-real-rule-slug",
-            "SKILL.md",
-            "SKILL.md:render-templates-as-data",
-        ],
-    )
+    @pytest.mark.parametrize("rule", malformed_rule_citations())
     def test_parser_rejects_non_citation_rule(self, rule: str) -> None:
         review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": rule,
-            "message": "m",
-            "action": "a",
-        }
+        finding = make_finding_dict(rule=rule)
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(
                 json.dumps(make_review_result_dict(findings=[finding]))

@@ -41,7 +41,8 @@ import os
 import pathlib
 import subprocess
 import sys
-from dataclasses import replace
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
@@ -85,6 +86,22 @@ DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
 MANIFEST_SCHEMA_VERSION = compute_diff.MANIFEST_SCHEMA_VERSION
+
+
+@dataclass(frozen=True)
+class MetadataDeps:
+    """Collaborators used to derive review metadata."""
+
+    resolve_base_ref: Callable[[], str]
+    resolve_head_ref: Callable[[], str]
+    resolve_branch_name: Callable[[], str]
+    resolve_target_kind: Callable[[], object]
+    resolve_pull_request_number: Callable[[object], int | None]
+    review_scope: Callable[..., dict[str, object]]
+    review_scope_from_manifest: Callable[[pathlib.Path], dict[str, object]]
+    branch_slug: Callable[[str], object]
+    commit_oid: Callable[..., object]
+    config_digest: Callable[[], str]
 
 
 def _project_severity(severity: object) -> object:
@@ -311,29 +328,46 @@ def metadata_for_worktree(
     completed_at: str,
     target: str = DEFAULT_TARGET,
     review_manifest_path: pathlib.Path | None = None,
+    deps: MetadataDeps | None = None,
 ) -> dict[str, object]:
+    collaborators = deps or MetadataDeps(
+        resolve_base_ref=_resolve_base_ref,
+        resolve_head_ref=_resolve_head_ref,
+        resolve_branch_name=_resolve_branch_name,
+        resolve_target_kind=_resolve_target_kind,
+        resolve_pull_request_number=_resolve_pull_request_number,
+        review_scope=_review_scope,
+        review_scope_from_manifest=_review_scope_from_manifest,
+        branch_slug=changeset_scope.branch_slug,
+        commit_oid=changeset_scope.commit_oid,
+        config_digest=review_config_digest,
+    )
     repo = pathlib.Path.cwd()
     if review_manifest_path is None:
-        base_ref = _resolve_base_ref()
-        head_ref = _resolve_head_ref()
-        scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
+        base_ref = collaborators.resolve_base_ref()
+        head_ref = collaborators.resolve_head_ref()
+        scope = collaborators.review_scope(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            repo=repo,
+        )
     else:
-        scope = _review_scope_from_manifest(review_manifest_path)
+        scope = collaborators.review_scope_from_manifest(review_manifest_path)
         base_ref = str(scope["baseRef"])
         head_ref = str(scope["headRef"])
-    branch_name = _resolve_branch_name()
-    target_kind = _resolve_target_kind()
-    pull_request_number = _resolve_pull_request_number(target_kind)
+    branch_name = collaborators.resolve_branch_name()
+    target_kind = collaborators.resolve_target_kind()
+    pull_request_number = collaborators.resolve_pull_request_number(target_kind)
     metadata = {
         "target": target,
         jp.RUN_STATE_SCOPE_HASH: _digest(scope, length=12),
         jp.RUN_STATE_BRANCH_NAME: branch_name,
-        jp.RUN_STATE_BRANCH_SLUG: str(changeset_scope.branch_slug(branch_name)),
+        jp.RUN_STATE_BRANCH_SLUG: str(collaborators.branch_slug(branch_name)),
         jp.RUN_STATE_TARGET_KIND: str(target_kind),
-        jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
+        jp.RUN_STATE_HEAD_SHA: str(collaborators.commit_oid(head_ref, repo=repo)),
         jp.RUN_STATE_BASE_REF: base_ref,
-        jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
-        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
+        jp.RUN_STATE_BASE_SHA: str(collaborators.commit_oid(base_ref, repo=repo)),
+        jp.RUN_STATE_CONFIG_DIGEST: collaborators.config_digest(),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
         jp.RUN_STATE_STARTED_AT: started_at,
@@ -404,7 +438,11 @@ def _render() -> int:
     return 0
 
 
-def _emit_metadata(args: argparse.Namespace) -> int:
+def _emit_metadata(
+    args: argparse.Namespace,
+    *,
+    deps: MetadataDeps | None = None,
+) -> int:
     # The run derives its identity at the start, when only the start time is
     # known; the terminal ``run-completed`` event carries the real completion
     # time through its ``--completed-at`` flag, so ``--completed-at`` here
@@ -417,6 +455,7 @@ def _emit_metadata(args: argparse.Namespace) -> int:
             completed_at=completed_at,
             target=args.target,
             review_manifest_path=args.manifest,
+            deps=deps,
         )
     except (
         changeset_scope.BaseRefNotConfiguredError,
@@ -433,7 +472,11 @@ def _emit_metadata(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    metadata_deps: MetadataDeps | None = None,
+) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -499,6 +542,8 @@ def main(argv: list[str] | None = None) -> int:
         "metadata": _emit_metadata,
     }
     handler = handlers.get(args.command)
+    if args.command == "metadata":
+        return _emit_metadata(args, deps=metadata_deps)
     if handler is not None:
         return handler(args)
     return _render()

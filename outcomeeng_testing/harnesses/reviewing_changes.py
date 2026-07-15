@@ -34,16 +34,23 @@ outside ``spx/``.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
+
+from hypothesis import given, seed, settings
+
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 # Two ``parents`` hops land at the repository root: this file lives at
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
@@ -63,23 +70,18 @@ REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
 )
-
-# Fixture rule citation: a real path-style citation that satisfies the
-# parser's rule-form check. Points at this verification skill's own spec so the citation
-# is stable and self-contained — no external rule required.
-FIXTURE_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
-    "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
+REVIEW_NODE_DIR = (
+    REPO_ROOT
+    / "spx"
+    / "21-spec-tree.enabler"
+    / "68-reviewing.enabler"
+    / "21-reviewing-changes.enabler"
 )
-FIXTURE_ADR_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
-    "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
+REVIEW_SPEC_PATH = REVIEW_NODE_DIR / "reviewing-changes.md"
+REVIEW_FIXTURES_DIR = (
+    REPO_ROOT / "outcomeeng_testing" / "fixtures" / "reviewing_changes"
 )
-FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:critical-rules"
-FIXTURE_SKILL_RULE_CITATION = (
-    "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
-)
-FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
+RULE_SLUG_DOCUMENT_FIXTURE = REVIEW_FIXTURES_DIR / "rule_slug_document.md"
 
 
 def load_review_result_module() -> ModuleType:
@@ -109,6 +111,352 @@ def load_review_result_module() -> ModuleType:
     sys.modules["review_result"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def review_rule_citations() -> tuple[str, ...]:
+    """Derive one valid citation from each supported source family."""
+
+    review_result = load_review_result_module()
+    spec_text = REVIEW_SPEC_PATH.read_text(encoding="utf-8")
+    assertion_kind = next(
+        kind for kind in ("ALWAYS", "NEVER") if f"- {kind}:" in spec_text
+    )
+    spec_citation = f"{REVIEW_SPEC_PATH.relative_to(REPO_ROOT)}:{assertion_kind}:1"
+    adr_path = next(iter(sorted(REVIEW_NODE_DIR.glob("*-*.adr.md"))))
+    pdr_path = next(iter(sorted((REPO_ROOT / "spx").glob("*-*.pdr.md"))))
+
+    agents_path = REPO_ROOT / "AGENTS.md"
+    agents_slug = next(
+        iter(
+            sorted(
+                review_result._declared_rule_slugs(
+                    agents_path.read_text(encoding="utf-8"),
+                ),
+            ),
+        ),
+    )
+    skill_slug = next(
+        iter(
+            sorted(
+                review_result._declared_rule_slugs(
+                    SKILL_FILE.read_text(encoding="utf-8"),
+                ),
+            ),
+        ),
+    )
+    claude_path = REPO_ROOT / "CLAUDE.md"
+    claude_slug = next(
+        iter(
+            sorted(
+                review_result._declared_rule_slugs(
+                    claude_path.read_text(encoding="utf-8"),
+                ),
+            ),
+        ),
+    )
+    return (
+        spec_citation,
+        str(adr_path.relative_to(REPO_ROOT)),
+        str(pdr_path.relative_to(REPO_ROOT)),
+        f"plugins/spec-tree/skills/review-changes/SKILL.md:{skill_slug}",
+        f"AGENTS.md:{agents_slug}",
+        f"CLAUDE.md:{claude_slug}",
+    )
+
+
+def malformed_rule_citation() -> str:
+    """Derive a malformed citation from a valid source-owned citation."""
+
+    return f"{review_rule_citations()[0]}:invalid"
+
+
+def runtime_review_skill_path() -> pathlib.Path:
+    """Return the generated runtime skill path used by citation validation."""
+
+    return (
+        REPO_ROOT
+        / "dist"
+        / "claude"
+        / "spec-tree"
+        / "skills"
+        / "review-changes"
+        / "SKILL.md"
+    ).resolve(strict=True)
+
+
+def rule_slug_document() -> str:
+    """Return the inert markdown corpus for rule-slug discovery."""
+
+    return RULE_SLUG_DOCUMENT_FIXTURE.read_text(encoding="utf-8")
+
+
+def review_result_round_trip_holds() -> bool:
+    """Run the configured ReviewResult serialization property."""
+
+    from outcomeeng_testing.generators.reviewing_changes import review_results
+
+    review_result = load_review_result_module()
+    seed_value = review_result.SCHEMA_VERSION
+
+    @seed(seed_value)
+    @settings(max_examples=100, deadline=None)
+    @given(result=review_results())
+    def round_trip(result: Any) -> None:
+        encoded = review_result.to_json_dict(result)
+        assert review_result.from_json_dict(encoded) == result
+
+    run_replayable_property(
+        round_trip,
+        seed_value=seed_value,
+        replay_path=str(REVIEW_RESULT_MODULE_PATH),
+    )
+    return True
+
+
+def review_run_metadata(
+    *,
+    pull_request: bool = False,
+    missing_base_identity: bool = False,
+) -> Any:
+    """Return source-shaped journal metadata for review mapping evidence."""
+
+    from outcomeeng_testing.harnesses.journal_projection import (
+        load_journal_projection_module,
+    )
+
+    projection = load_journal_projection_module()
+    options: dict[str, object] = {}
+    if pull_request:
+        options = {
+            "target_kind": projection.JournalTargetKind.PULL_REQUEST,
+            "pull_request_number": 123,
+        }
+    return projection.RunMetadata(
+        target="working-diff",
+        scope_hash="abc123def456",
+        branch_name="work/example",
+        branch_slug="work__example",
+        head_sha="1" * 40,
+        base_ref="main",
+        base_sha="" if missing_base_identity else "2" * 40,
+        config_digest="cfg-abc123",
+        participants=("review",),
+        scope={"include": ["README.md"]},
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:00Z",
+        output_paths=(),
+        **options,
+    )
+
+
+def review_finding(*, severity: Any, identifier: str) -> Any:
+    """Return one parsed source-contract finding for journal projection."""
+
+    review_result = load_review_result_module()
+    return review_result.parse_finding_json(
+        json.dumps(
+            make_finding_dict(
+                id=identifier,
+                severity=severity,
+                file="README.md",
+                line=1,
+                message=f"{identifier} evidence",
+                action=f"{identifier} action",
+            ),
+        ),
+    )
+
+
+def streamed_review_events(
+    metadata: Any,
+    findings: tuple[Any, ...],
+) -> list[dict[str, Any]]:
+    """Assemble the source event prefix produced by a streaming review."""
+
+    journal_emit = load_journal_emit_module()
+    events = [
+        journal_emit.scope_entered_event(
+            metadata,
+            now=REVIEW_EVENT_TIME,
+            attempt=1,
+        ),
+    ]
+    events.extend(
+        journal_emit.finding_reported_event(
+            finding,
+            now=REVIEW_EVENT_TIME,
+            attempt=1,
+        )
+        for finding in findings
+    )
+    events.append(
+        journal_emit.run_completed_event(
+            metadata,
+            events,
+            completed_at=REVIEW_COMPLETION_TIME,
+            now=REVIEW_EVENT_TIME,
+            attempt=1,
+        ),
+    )
+    return events
+
+
+def review_metadata_wire_json() -> str:
+    """Serialize source-shaped review metadata to the streaming CLI wire."""
+
+    from outcomeeng_testing.harnesses.journal_projection import (
+        load_journal_projection_module,
+    )
+
+    projection = load_journal_projection_module()
+    metadata = review_run_metadata()
+    return json.dumps(
+        {
+            "target": metadata.target,
+            projection.RUN_STATE_SCOPE_HASH: metadata.scope_hash,
+            projection.RUN_STATE_BRANCH_NAME: metadata.branch_name,
+            projection.RUN_STATE_BRANCH_SLUG: metadata.branch_slug,
+            projection.RUN_STATE_TARGET_KIND: str(
+                projection.JournalTargetKind.BRANCH,
+            ),
+            projection.RUN_STATE_HEAD_SHA: metadata.head_sha,
+            projection.RUN_STATE_BASE_REF: metadata.base_ref,
+            projection.RUN_STATE_BASE_SHA: metadata.base_sha,
+            projection.RUN_STATE_CONFIG_DIGEST: metadata.config_digest,
+            projection.RUN_STATE_PARTICIPANTS: list(metadata.participants),
+            projection.RUN_STATE_SCOPE: dict(metadata.scope),
+            projection.RUN_STATE_STARTED_AT: metadata.started_at,
+            projection.RUN_STATE_COMPLETED_AT: metadata.completed_at,
+            projection.RUN_STATE_OUTPUT_PATHS: [],
+        },
+    )
+
+
+def write_review_skill_config(root: pathlib.Path, *, prompt: str) -> None:
+    """Write the standalone review prompt consumed by config digesting."""
+
+    references = root / "references"
+    references.mkdir(parents=True)
+    (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
+
+
+def write_review_manifest(
+    root: pathlib.Path,
+    *,
+    base_ref: str = "origin/main",
+    head_ref: str = "HEAD",
+    files: list[str] | None = None,
+    diff_sha256: str = "a" * 64,
+) -> pathlib.Path:
+    """Write one source-schema review-input manifest."""
+
+    journal_emit = load_journal_emit_module()
+    manifest = {
+        "schema_version": journal_emit.MANIFEST_SCHEMA_VERSION,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "diff_path": "diff.md",
+        "diff_sha256": diff_sha256,
+        "diff_bytes": 1,
+        "sections": [
+            {
+                "title": "Committed diff",
+                "files": files or ["README.md"],
+                "start_line": 1,
+                "line_count": 1,
+                "byte_start": 0,
+                "byte_length": 1,
+            },
+        ],
+    }
+    path = root / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
+@dataclass
+class ReviewMetadataHarness:
+    """Injected collaborators for deterministic review metadata evidence."""
+
+    base_ref: str = "origin/main"
+    head_ref: str = "HEAD"
+    branch_name: str = "work/example"
+    changed_files: list[str] = field(default_factory=lambda: ["README.md"])
+    review_inputs: list[str] = field(
+        default_factory=lambda: ["### Committed diff\n\nREADME change"],
+    )
+    config_digest: str = "cfg-abc123"
+
+    def deps(
+        self,
+        *,
+        source_branch: bool = False,
+        source_target: bool = False,
+        manifest_scope: bool = False,
+        fail_scope: bool = False,
+    ) -> Any:
+        """Return production MetadataDeps configured for one evidence boundary."""
+
+        journal_emit = load_journal_emit_module()
+
+        def review_scope(
+            *,
+            base_ref: str,
+            head_ref: str,
+            repo: pathlib.Path,
+        ) -> dict[str, object]:
+            del repo
+            if fail_scope:
+                raise subprocess.CalledProcessError(
+                    128,
+                    ["git", "diff", f"{base_ref}...{head_ref}"],
+                )
+            review_input = (
+                self.review_inputs.pop(0)
+                if len(self.review_inputs) > 1
+                else self.review_inputs[0]
+            )
+            return {
+                "baseRef": base_ref,
+                "headRef": head_ref,
+                "changedFiles": list(self.changed_files),
+                "reviewInputSha256": hashlib.sha256(
+                    review_input.encode("utf-8"),
+                ).hexdigest(),
+            }
+
+        return journal_emit.MetadataDeps(
+            resolve_base_ref=lambda: self.base_ref,
+            resolve_head_ref=lambda: self.head_ref,
+            resolve_branch_name=(
+                journal_emit._resolve_branch_name
+                if source_branch
+                else lambda: self.branch_name
+            ),
+            resolve_target_kind=(
+                journal_emit._resolve_target_kind
+                if source_target
+                else lambda: journal_emit.jp.JournalTargetKind.BRANCH
+            ),
+            resolve_pull_request_number=(
+                journal_emit._resolve_pull_request_number
+                if source_target
+                else lambda _target: None
+            ),
+            review_scope=review_scope,
+            review_scope_from_manifest=(
+                journal_emit._review_scope_from_manifest
+                if manifest_scope
+                else lambda _path: review_scope(
+                    base_ref=self.base_ref,
+                    head_ref=self.head_ref,
+                    repo=pathlib.Path.cwd(),
+                )
+            ),
+            branch_slug=lambda _branch: "work__example",
+            commit_oid=lambda ref, *, repo: f"{ref}:sha",
+            config_digest=lambda: self.config_digest,
+        )
 
 
 def load_compute_diff_module() -> ModuleType:
@@ -175,6 +523,186 @@ def review_run_journal_env_key(name: str) -> str:
     return value
 
 
+REVIEW_EVENT_TIME = "2026-06-23T00:00:06Z"
+REVIEW_COMPLETION_TIME = "2026-06-23T00:00:05Z"
+REVIEW_ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
+REVIEW_ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
+REVIEW_ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
+REVIEW_ENV_PULL_REQUEST_NUMBER = review_run_journal_env_key(
+    "ENV_PULL_REQUEST_NUMBER",
+)
+
+
+def run_git(*args: str, cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
+    """Run git with isolated identity and signing configuration."""
+
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    }
+    return subprocess.run(  # noqa: S603
+        ["git", *args],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
+def init_review_git_repo(repo: pathlib.Path) -> str:
+    """Create a feature branch carrying one committed review diff."""
+
+    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "initial", cwd=repo)
+    run_git("switch", "-c", "feature/x", cwd=repo)
+    (repo / "README.md").write_text("hello\nworld\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "add world", cwd=repo)
+    return "main"
+
+
+def init_renamed_review_git_repo(repo: pathlib.Path) -> str:
+    """Create a feature branch carrying one committed rename."""
+
+    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    run_git("add", "README.md", cwd=repo)
+    run_git("commit", "-q", "-m", "initial", cwd=repo)
+    run_git("switch", "-c", "feature/x", cwd=repo)
+    run_git("mv", "README.md", "RENAMED.md", cwd=repo)
+    run_git("commit", "-q", "-m", "rename readme", cwd=repo)
+    return "main"
+
+
+def isolated_review_env(cwd: pathlib.Path) -> dict[str, str]:
+    """Return an isolated environment for review git subprocesses."""
+
+    return {
+        **os.environ,
+        "PWD": str(cwd),
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }
+
+
+def stream_review_prefix(
+    env: dict[str, str],
+    metadata_json: str,
+    findings: list[dict[str, object]],
+    *,
+    units: list[str],
+) -> list[dict[str, object]]:
+    """Drive the streaming review chain and return its sealed event prefix."""
+
+    events: list[dict[str, object]] = []
+    scope_entered = run_journal_emit_in_process(
+        "scope-entered",
+        "--now",
+        REVIEW_EVENT_TIME,
+        "--metadata",
+        metadata_json,
+        env=env,
+    )
+    if scope_entered.returncode != 0:
+        raise AssertionError(scope_entered.stderr)
+    events.append(json.loads(scope_entered.stdout))
+    for unit in units:
+        advanced = run_journal_emit_in_process(
+            "scope-advanced",
+            "--now",
+            REVIEW_EVENT_TIME,
+            "--unit",
+            unit,
+            env=env,
+        )
+        if advanced.returncode != 0:
+            raise AssertionError(advanced.stderr)
+        events.append(json.loads(advanced.stdout))
+    for finding in findings:
+        reported = run_journal_emit_in_process(
+            "finding-reported",
+            "--now",
+            REVIEW_EVENT_TIME,
+            stdin=json.dumps(finding),
+            env=env,
+        )
+        if reported.returncode != 0:
+            raise AssertionError(reported.stderr)
+        events.append(json.loads(reported.stdout))
+    completed = run_journal_emit_in_process(
+        "run-completed",
+        "--now",
+        REVIEW_EVENT_TIME,
+        "--completed-at",
+        REVIEW_COMPLETION_TIME,
+        "--metadata",
+        metadata_json,
+        stdin=json.dumps(events),
+        env=env,
+    )
+    if completed.returncode != 0:
+        raise AssertionError(completed.stderr)
+    events.append(json.loads(completed.stdout))
+    return events
+
+
+def set_origin_head(repo: pathlib.Path, branch: str) -> None:
+    """Point the synthetic origin HEAD at an existing local branch."""
+
+    run_git(
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        f"refs/remotes/origin/{branch}",
+        cwd=repo,
+    )
+    revision = run_git("rev-parse", branch, cwd=repo).stdout.strip()
+    run_git("update-ref", f"refs/remotes/origin/{branch}", revision, cwd=repo)
+
+
+def add_secondary_review_branch(
+    repo: pathlib.Path,
+    branch: str,
+    filename: str,
+) -> None:
+    """Create a secondary branch with one distinct committed file."""
+
+    run_git("switch", "main", cwd=repo)
+    run_git("switch", "-c", branch, cwd=repo)
+    (repo / filename).write_text("secondary branch content\n", encoding="utf-8")
+    run_git("add", filename, cwd=repo)
+    run_git("commit", "-q", "-m", f"add {filename} on {branch}", cwd=repo)
+    run_git("switch", "feature/x", cwd=repo)
+
+
+def review_git_repo(tmp_path: pathlib.Path) -> tuple[pathlib.Path, str]:
+    """Create the standard review repository under a pytest temporary path."""
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    return repo, init_review_git_repo(repo)
+
+
+def review_git_repo_with_secondary_head(
+    tmp_path: pathlib.Path,
+) -> tuple[pathlib.Path, str, str]:
+    """Create the standard review repository plus one alternate head."""
+
+    repo, base_ref = review_git_repo(tmp_path)
+    secondary = "feature/y"
+    add_secondary_review_branch(repo, secondary, "SECONDARY.md")
+    return repo, base_ref, secondary
+
+
 def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
     return cast("Callable[[list[str] | None], int]", module.main)
 
@@ -222,6 +750,7 @@ def run_journal_emit_in_process(
     stdin: str | None = None,
     repo: pathlib.Path | None = None,
     env: dict[str, str] | None = None,
+    metadata_deps: Any | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``journal_emit.main`` in-process with CLI-shaped outputs."""
 
@@ -240,7 +769,14 @@ def run_journal_emit_in_process(
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
-            returncode = _module_main(module)(list(args))
+            if metadata_deps is None:
+                returncode = _module_main(module)(list(args))
+            else:
+                entrypoint = cast("Callable[..., int]", module.main)
+                returncode = entrypoint(
+                    list(args),
+                    metadata_deps=metadata_deps,
+                )
     finally:
         os.chdir(old_cwd)
     return subprocess.CompletedProcess(
@@ -396,7 +932,7 @@ def make_review_result_dict(
                 "severity": review_result.Severity.DEBT,
                 "file": "example.py",
                 "line": 10,
-                "rule": FIXTURE_RULE_CITATION,
+                "rule": review_rule_citations()[0],
                 "message": "The identifier is not descriptive.",
                 "action": "Rename the symbol to convey its role.",
             }
@@ -424,7 +960,7 @@ def make_finding_dict(**overrides: Any) -> dict[str, Any]:
         "severity": review_result.Severity.DEBT,
         "file": "example.py",
         "line": 10,
-        "rule": FIXTURE_RULE_CITATION,
+        "rule": review_rule_citations()[0],
         "message": "The identifier is not descriptive.",
         "action": "Rename the symbol to convey its role.",
     }

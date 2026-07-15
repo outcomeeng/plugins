@@ -22,151 +22,35 @@ import hashlib
 import json
 import os
 import pathlib
-import subprocess
 
 import pytest
 
+from outcomeeng_testing.generators.reviewing_changes import review_journal_selectors
 from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
+    REVIEW_ENV_BACKEND,
+    REVIEW_ENV_BRANCH,
+    REVIEW_ENV_PULL_REQUEST_NUMBER,
+    REVIEW_ENV_TARGET_KIND,
     REVIEW_RUN_SCRIPT,
+    init_renamed_review_git_repo,
+    init_review_git_repo,
+    isolated_review_env,
     make_finding_dict,
     make_review_result_dict,
-    review_run_journal_env_key,
+    review_git_repo,
+    review_git_repo_with_secondary_head,
     review_run_journal_env_keys,
+    run_git,
     run_compute_diff_in_process,
     run_journal_emit_in_process,
     run_script,
+    set_origin_head,
+    stream_review_prefix,
     write_fake_spx,
 )
-
-
-def _run_git(*args: str, cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
-    """Run a git command rooted at ``cwd`` with isolated config.
-
-    The git invocation suppresses global config and signing so the
-    test does not inherit operator identity or commit-signing settings.
-    """
-    env = {
-        **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
-        "GIT_AUTHOR_NAME": "test",
-        "GIT_AUTHOR_EMAIL": "test@example.invalid",
-        "GIT_COMMITTER_NAME": "test",
-        "GIT_COMMITTER_EMAIL": "test@example.invalid",
-    }
-    return subprocess.run(  # noqa: S603 — args come from the test, not user input
-        ["git", *args],
-        cwd=cwd,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-
-def _init_repo_with_branch(repo: pathlib.Path) -> str:
-    """Set up a tiny git repo with ``main`` and a feature branch.
-
-    Returns the base ref name (``main``).
-    """
-    _run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
-    _run_git("config", "commit.gpgsign", "false", cwd=repo)
-    (repo / "README.md").write_text("hello\n", encoding="utf-8")
-    _run_git("add", "README.md", cwd=repo)
-    _run_git("commit", "-q", "-m", "initial", cwd=repo)
-    _run_git("switch", "-c", "feature/x", cwd=repo)
-    (repo / "README.md").write_text("hello\nworld\n", encoding="utf-8")
-    _run_git("add", "README.md", cwd=repo)
-    _run_git("commit", "-q", "-m", "add world", cwd=repo)
-    return "main"
-
-
-def _init_repo_with_committed_rename(repo: pathlib.Path) -> str:
-    """Set up a repo whose feature branch renames a tracked file."""
-    _run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
-    _run_git("config", "commit.gpgsign", "false", cwd=repo)
-    (repo / "README.md").write_text("hello\n", encoding="utf-8")
-    _run_git("add", "README.md", cwd=repo)
-    _run_git("commit", "-q", "-m", "initial", cwd=repo)
-    _run_git("switch", "-c", "feature/x", cwd=repo)
-    _run_git("mv", "README.md", "RENAMED.md", cwd=repo)
-    _run_git("commit", "-q", "-m", "rename readme", cwd=repo)
-    return "main"
-
-
-def _make_env(cwd: pathlib.Path) -> dict[str, str]:
-    """Return an env dict for isolated git subprocesses.
-
-    ``compute_diff.py`` runs ``git`` inside ``cwd``; the env wipes git's global
-    configuration so the subprocess does not pick up workstation-level identity.
-    """
-    env = {
-        **os.environ,
-        "PWD": str(cwd),
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
-    }
-    return env
-
-
-NOW = "2026-06-23T00:00:06Z"
-COMPLETED_AT = "2026-06-23T00:00:05Z"
-ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
-ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
-ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
-ENV_PULL_REQUEST_NUMBER = review_run_journal_env_key("ENV_PULL_REQUEST_NUMBER")
-
-
-def _stream_review_prefix(
-    env: dict[str, str],
-    metadata_json: str,
-    findings: list[dict[str, object]],
-    *,
-    units: list[str],
-) -> list[dict[str, object]]:
-    """Drive the streaming review chain and return the sealed event prefix.
-
-    Mirrors what the skill appends live: a scope-entered event, a
-    scope-advanced event per examined file, a finding-reported event per
-    finding (each emitted through the per-finding parse gate), and the
-    terminal run-completed event whose status the adapter derives from the
-    streamed prefix.
-    """
-    events: list[dict[str, object]] = []
-    scope_entered = run_journal_emit_in_process(
-        "scope-entered", "--now", NOW, "--metadata", metadata_json, env=env
-    )
-    assert scope_entered.returncode == 0, scope_entered.stderr
-    events.append(json.loads(scope_entered.stdout))
-    for unit in units:
-        advanced = run_journal_emit_in_process(
-            "scope-advanced", "--now", NOW, "--unit", unit, env=env
-        )
-        assert advanced.returncode == 0, advanced.stderr
-        events.append(json.loads(advanced.stdout))
-    for finding in findings:
-        reported = run_journal_emit_in_process(
-            "finding-reported", "--now", NOW, stdin=json.dumps(finding), env=env
-        )
-        assert reported.returncode == 0, reported.stderr
-        events.append(json.loads(reported.stdout))
-    completed = run_journal_emit_in_process(
-        "run-completed",
-        "--now",
-        NOW,
-        "--completed-at",
-        COMPLETED_AT,
-        "--metadata",
-        metadata_json,
-        stdin=json.dumps(events),
-        env=env,
-    )
-    assert completed.returncode == 0, completed.stderr
-    events.append(json.loads(completed.stdout))
-    return events
 
 
 @pytest.mark.skipif(
@@ -190,11 +74,11 @@ class TestSkillOrchestrationChain:
         # 1. Real git repo with a base branch and a feature branch.
         repo = tmp_path / "repo"
         repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
+        base_ref = init_review_git_repo(repo)
 
         # 2. compute_diff.py reads the explicit base ref, runs git diff against
         #    that base, and emits the diff to stdout.
-        env = _make_env(cwd=repo)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         diff_result = run_compute_diff_in_process(repo=repo, env=env)
         assert diff_result.returncode == 0, diff_result.stderr
@@ -213,7 +97,7 @@ class TestSkillOrchestrationChain:
         #    gate), and the terminal run-completed. The default fixture carries
         #    one debt-severity finding under the architecture concern.
         findings = make_review_result_dict()["findings"]
-        sealed_prefix = _stream_review_prefix(
+        sealed_prefix = stream_review_prefix(
             env, metadata_result.stdout, findings, units=["README.md"]
         )
 
@@ -242,15 +126,15 @@ class TestSkillOrchestrationChain:
         # body to act on.
         repo = tmp_path / "repo"
         repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
-        env = _make_env(cwd=repo)
+        base_ref = init_review_git_repo(repo)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
 
         metadata_result = run_journal_emit_in_process(
             "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
         )
         assert metadata_result.returncode == 0, metadata_result.stderr
-        sealed_prefix = _stream_review_prefix(
+        sealed_prefix = stream_review_prefix(
             env, metadata_result.stdout, [], units=["README.md"]
         )
         prefix_render = run_journal_emit_in_process(
@@ -270,43 +154,19 @@ class TestSkillOrchestrationChain:
 class TestReviewRunnerBoundary:
     """The public runner seals a journal run and returns only the run token."""
 
-    @pytest.mark.parametrize(
-        "journal_selector",
-        [
-            pytest.param({}, id="default-current-branch"),
-            pytest.param(
-                {ENV_BRANCH: "feature/x"},
-                id="explicit-branch-or-range-head",
-            ),
-            pytest.param(
-                {
-                    ENV_BACKEND: "local",
-                    ENV_BRANCH: "feature/x",
-                },
-                id="backend-override",
-            ),
-            pytest.param(
-                {
-                    ENV_BRANCH: "feature/x",
-                    ENV_TARGET_KIND: "pull-request",
-                    ENV_PULL_REQUEST_NUMBER: "384",
-                },
-                id="pull-request",
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("journal_selector", review_journal_selectors())
     def test_runner_preserves_journal_namespace_across_subcommands(
         self, tmp_path: pathlib.Path, journal_selector: dict[str, str]
     ) -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
+        base_ref = init_review_git_repo(repo)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         journal_path = tmp_path / "journal.json"
         write_fake_spx(bin_dir, journal_path)
 
-        env = _make_env(cwd=repo)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
         env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
@@ -377,10 +237,14 @@ class TestReviewRunnerBoundary:
         ]
         assert journal["events"][2]["data"]["id"] == finding["id"]
         expected_namespace = {
-            ENV_BACKEND: journal_selector.get(ENV_BACKEND, ""),
-            ENV_BRANCH: journal_selector.get(ENV_BRANCH, "feature/x"),
-            ENV_TARGET_KIND: journal_selector.get(ENV_TARGET_KIND, "branch"),
-            ENV_PULL_REQUEST_NUMBER: journal_selector.get(ENV_PULL_REQUEST_NUMBER, ""),
+            REVIEW_ENV_BACKEND: journal_selector.get(REVIEW_ENV_BACKEND, ""),
+            REVIEW_ENV_BRANCH: journal_selector.get(REVIEW_ENV_BRANCH, "feature/x"),
+            REVIEW_ENV_TARGET_KIND: journal_selector.get(
+                REVIEW_ENV_TARGET_KIND, "branch"
+            ),
+            REVIEW_ENV_PULL_REQUEST_NUMBER: journal_selector.get(
+                REVIEW_ENV_PULL_REQUEST_NUMBER, ""
+            ),
         }
         assert journal["namespace"] == expected_namespace
         terminal_event = journal["events"][-1]
@@ -396,13 +260,13 @@ class TestReviewRunnerBoundary:
     ) -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
+        base_ref = init_review_git_repo(repo)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         journal_path = tmp_path / "journal.json"
         write_fake_spx(bin_dir, journal_path)
 
-        env = _make_env(cwd=repo)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
         env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
@@ -433,13 +297,13 @@ class TestReviewRunnerBoundary:
     ) -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
-        base_ref = _init_repo_with_committed_rename(repo)
+        base_ref = init_renamed_review_git_repo(repo)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         journal_path = tmp_path / "journal.json"
         write_fake_spx(bin_dir, journal_path)
 
-        env = _make_env(cwd=repo)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
         env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
@@ -495,25 +359,6 @@ class TestReviewRunnerBoundary:
         assert finished.stdout == "run-001\n"
 
 
-def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
-    """Manually set ``refs/remotes/origin/HEAD`` without needing a real remote.
-
-    The synthetic repo has no remote; ``git symbolic-ref`` lets us point
-    ``refs/remotes/origin/HEAD`` directly at a local branch so
-    ``compute_diff``'s strict origin-HEAD derivation has something to find.
-    """
-    _run_git(
-        "symbolic-ref",
-        "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{branch}",
-        cwd=repo,
-    )
-    # The symbolic ref above only exists if the target ref exists too.
-    # Mirror the local branch's tip into the remote-tracking namespace.
-    rev = _run_git("rev-parse", branch, cwd=repo).stdout.strip()
-    _run_git("update-ref", f"refs/remotes/origin/{branch}", rev, cwd=repo)
-
-
 @pytest.mark.skipif(
     not COMPUTE_DIFF_SCRIPT.exists(),
     reason="compute_diff.py is not yet present.",
@@ -521,38 +366,27 @@ def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
 class TestComputeDiffBaseRefDerivation:
     """compute_diff.py resolves base_ref from env -> git, in that order."""
 
-    def _setup_repo(self, tmp_path: pathlib.Path) -> tuple[pathlib.Path, str]:
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
-        return repo, base_ref
-
-    def _run_compute_diff(
-        self, repo: pathlib.Path, env: dict[str, str]
-    ) -> subprocess.CompletedProcess[str]:
-        return run_compute_diff_in_process(repo=repo, env=env)
-
     def test_env_base_ref_works(self, tmp_path: pathlib.Path) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
 
     def test_includes_committed_staged_unstaged_and_untracked_diffs(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
 
         (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
-        _run_git("add", "STAGED.md", cwd=repo)
+        run_git("add", "STAGED.md", cwd=repo)
         (repo / "README.md").write_text("hello\nworld\nunstaged\n", encoding="utf-8")
         (repo / "UNTRACKED.md").write_text("untracked\n", encoding="utf-8")
 
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode == 0, result.stderr
         assert "### Committed diff" in result.stdout
         assert "### Staged diff" in result.stdout
@@ -567,13 +401,13 @@ class TestComputeDiffBaseRefDerivation:
     def test_bundle_dir_writes_random_access_diff_and_manifest(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         bundle_dir = tmp_path / "review-input"
 
         (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
-        _run_git("add", "STAGED.md", cwd=repo)
+        run_git("add", "STAGED.md", cwd=repo)
         (repo / "README.md").write_text("hello\nworld\nunstaged\n", encoding="utf-8")
         (repo / "UNTRACKED.md").write_text("untracked\n", encoding="utf-8")
 
@@ -634,8 +468,8 @@ class TestComputeDiffBaseRefDerivation:
             assert section_text.startswith(f"### {section['title']}")
 
     def test_bundle_dir_rejects_existing_file(self, tmp_path: pathlib.Path) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         bundle_file = tmp_path / "review-input"
         bundle_file.write_text("not a directory\n", encoding="utf-8")
@@ -652,8 +486,8 @@ class TestComputeDiffBaseRefDerivation:
     def test_bundle_dir_rejects_paths_inside_git_worktree(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
 
         result = run_compute_diff_in_process(
@@ -669,45 +503,28 @@ class TestComputeDiffBaseRefDerivation:
     def test_git_origin_head_works_without_changes_or_env(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, base_ref = self._setup_repo(tmp_path)
-        _set_origin_head(repo, base_ref)
-        env = _make_env(cwd=repo)
+        repo, base_ref = review_git_repo(tmp_path)
+        set_origin_head(repo, base_ref)
+        env = isolated_review_env(cwd=repo)
         env.pop("SPX_VERIFY_BASE_REF", None)
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
 
     def test_aborts_when_no_source_yields_base_ref(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, _base_ref = self._setup_repo(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, _base_ref = review_git_repo(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env.pop("SPX_VERIFY_BASE_REF", None)
         # No env; no origin/HEAD symbolic ref.
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode != 0
         # The error must name every source so the operator can pick one.
         for token in ("SPX_VERIFY_BASE_REF", "origin/HEAD"):
             assert token in result.stderr, (
                 f"stderr should name {token!r}; got: {result.stderr!r}"
             )
-
-
-def _add_secondary_branch(repo: pathlib.Path, branch: str, filename: str) -> None:
-    """Create ``branch`` off ``main`` carrying a single distinct file commit.
-
-    The resulting branch differs from ``feature/x`` so a diff against ``main``
-    over the secondary branch surfaces the unique filename rather than the
-    feature/x payload — that is the signal the head_ref tests assert on.
-    Returns to ``feature/x`` so subsequent commands run from the same HEAD
-    the other tests assume.
-    """
-    _run_git("switch", "main", cwd=repo)
-    _run_git("switch", "-c", branch, cwd=repo)
-    (repo / filename).write_text("secondary branch content\n", encoding="utf-8")
-    _run_git("add", filename, cwd=repo)
-    _run_git("commit", "-q", "-m", f"add {filename} on {branch}", cwd=repo)
-    _run_git("switch", "feature/x", cwd=repo)
 
 
 @pytest.mark.skipif(
@@ -725,27 +542,12 @@ class TestComputeDiffHeadRefDerivation:
     not.
     """
 
-    def _setup_repo_with_secondary(
-        self, tmp_path: pathlib.Path
-    ) -> tuple[pathlib.Path, str, str]:
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        base_ref = _init_repo_with_branch(repo)
-        secondary = "feature/y"
-        _add_secondary_branch(repo, secondary, "SECONDARY.md")
-        return repo, base_ref, secondary
-
-    def _run_compute_diff(
-        self, repo: pathlib.Path, env: dict[str, str]
-    ) -> subprocess.CompletedProcess[str]:
-        return run_compute_diff_in_process(repo=repo, env=env)
-
     def test_env_head_ref_selects_alternate_head(self, tmp_path: pathlib.Path) -> None:
-        repo, base_ref, secondary = self._setup_repo_with_secondary(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref, secondary = review_git_repo_with_secondary_head(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env["SPX_VERIFY_HEAD_REF"] = secondary
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode == 0, result.stderr
         # head_ref pointed at the secondary branch — its file appears, not
         # feature/x's README change. This is what distinguishes head_ref
@@ -756,13 +558,13 @@ class TestComputeDiffHeadRefDerivation:
     def test_head_ref_defaults_to_literal_head_when_no_source(
         self, tmp_path: pathlib.Path
     ) -> None:
-        repo, base_ref, _secondary = self._setup_repo_with_secondary(tmp_path)
-        env = _make_env(cwd=repo)
+        repo, base_ref, _secondary = review_git_repo_with_secondary_head(tmp_path)
+        env = isolated_review_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env.pop("SPX_VERIFY_HEAD_REF", None)
         # No SPX_VERIFY_HEAD_REF; HEAD is feature/x, so the diff must surface
         # feature/x's payload, not secondary's SECONDARY.md.
-        result = self._run_compute_diff(repo, env)
+        result = run_compute_diff_in_process(repo=repo, env=env)
         assert result.returncode == 0, result.stderr
         assert "world" in result.stdout
         assert "SECONDARY.md" not in result.stdout
@@ -789,7 +591,7 @@ class TestComputeDiffStaleLocalBase:
         repo = tmp_path / "repo"
         repo.mkdir()
         stale = build_stale_local_base_repo(repo)
-        env = _make_env(cwd=stale.repo)
+        env = isolated_review_env(cwd=stale.repo)
         env.pop("SPX_VERIFY_BASE_REF", None)
 
         result = run_compute_diff_in_process(repo=stale.repo, env=env)
