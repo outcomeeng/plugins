@@ -169,7 +169,13 @@ _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
 _RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
     {
         "api_surface",
+        "assertion_model",
+        "imperfection_protocol",
+        "node_model",
+        "ordering_model",
         "principles",
+        "truth_hierarchy",
+        "verification_model",
     }
 )
 
