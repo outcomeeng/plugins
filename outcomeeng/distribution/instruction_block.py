@@ -46,7 +46,6 @@ SHARED_DRIFT_REMEDIATION: Final = (
     "Reconcile the shared region with `/update-instruction-block`, which takes the "
     "git-more-recent side, then commit the reconciled root CLAUDE.md and AGENTS.md."
 )
-UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
 FORBIDDEN_ROUTER_TOKENS: Final = (
     "Before archiving a claimed session",
     "`result`",
@@ -140,10 +139,13 @@ class InstructionBlockModule(Protocol):
     ROUTER_BLOCK_END: str
     ROUTER_MARKER_PREFIX: str
     TEMPLATE_VERSION_KEY: str
+    UNRESOLVED_BUILD_TEMPLATE_TOKENS: tuple[str, ...]
 
     def router_block_bounds(self, text: str) -> tuple[int, int] | None: ...
 
     def parse_template_version(self, text: str) -> str | None: ...
+
+    def assert_no_unresolved_build_macros(self, template_text: str) -> None: ...
 
     def detect_languages_from_tree(self, spx_dir: Path) -> tuple[str, ...]: ...
 
@@ -235,12 +237,13 @@ def load_harness_templates(
 
 def assert_no_unresolved_build_macros(text: str, *, path: Path | str) -> None:
     """Reject dist templates that still contain build-time macro delimiters."""
-    for token in UNRESOLVED_BUILD_TEMPLATE_TOKENS:
-        if token in text:
-            raise UnresolvedInstructionTemplateError(
-                f"{path} contains unresolved build macro token {token!r}; "
-                "run `just build-skills` before regenerating instruction blocks"
-            )
+    module = load_instruction_block_module()
+    try:
+        module.assert_no_unresolved_build_macros(text)
+    except ValueError as exc:
+        raise UnresolvedInstructionTemplateError(
+            f"{path}: {exc}; run `just build-skills` before regenerating instruction blocks"
+        ) from exc
 
 
 def render_instruction_blocks_from_harness_templates(

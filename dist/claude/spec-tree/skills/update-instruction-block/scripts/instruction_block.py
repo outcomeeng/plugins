@@ -50,6 +50,14 @@ TEMPLATE_VERSION_KEY = "template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+UNRESOLVED_BUILD_TEMPLATE_TOKENS = (
+    "{" + "{!",
+    "!" + "}}",
+    "{" + "!%",
+    "%" + "!}",
+    "{" + "!#",
+    "#" + "!}",
+)
 
 # The router block's compressed marker. The opening marker carries the two fields staleness
 # reads — the dotted template version and the recorded enabled-language list — inline, so no
@@ -132,6 +140,10 @@ INSTRUCTION_STATUS_PRECEDENCE = (
 
 class CliInputError(ValueError):
     """Raised when CLI path input would make instruction-block generation unsafe."""
+
+
+class UnresolvedInstructionTemplateError(ValueError):
+    """Raised when instruction generation receives an authored build template."""
 
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
@@ -415,6 +427,16 @@ def detect_languages(extensions: Iterable[str]) -> tuple[str, ...]:
     return normalize_languages(languages)
 
 
+def assert_no_unresolved_build_macros(template_text: str) -> None:
+    """Reject a template that still contains build-time macro delimiters."""
+    for token in UNRESOLVED_BUILD_TEMPLATE_TOKENS:
+        if token in template_text:
+            raise UnresolvedInstructionTemplateError(
+                f"template contains unresolved build macro token {token!r}; "
+                "pass the rendered, delimiter-free template bundled with the installed plugin"
+            )
+
+
 def render(
     template_text: str,
     languages: tuple[str, ...],
@@ -428,6 +450,7 @@ def render(
     tokens pass through unchanged. The opening marker records the version and language list
     inline, so a later update reads both back from the marker without separate metadata lines.
     """
+    assert_no_unresolved_build_macros(template_text)
     languages = normalize_languages(languages)
     _, template_body = _split_frontmatter(template_text)
 
@@ -1334,10 +1357,14 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --write requires --repo-root", file=sys.stderr)
         return 2
 
-    rendered = {
-        harness: render(template_text, languages, installed, harness)
-        for harness in AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
+    try:
+        rendered = {
+            harness: render(template_text, languages, installed, harness)
+            for harness in AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+    except UnresolvedInstructionTemplateError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if args.write and repo_root is not None:
         try:
