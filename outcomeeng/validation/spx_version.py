@@ -76,7 +76,6 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
 REQUIRED_SPX_VERSION: Final = "0.6.15"
-VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
