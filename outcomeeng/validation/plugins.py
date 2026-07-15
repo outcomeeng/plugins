@@ -38,11 +38,70 @@ from typing import IO, Final
 from outcomeeng.distribution.orchestration import (
     CATALOG_PATHS,
     CLAUDE_DIST_PLUGINS_DIR,
+    CODEX_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
+)
+from outcomeeng.validation.implementation_audit_contract import (
+    IMPLEMENTATION_AUDITOR_AGENT_NAME,
+    LANGUAGE_AUDIT_CONCERNS,
+    SPEC_TREE_PLUGIN_NAME,
 )
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
+
+PLUGIN_SURFACE_ROOTS: Final = (
+    SOURCE_PLUGINS_DIR,
+    CLAUDE_DIST_PLUGINS_DIR,
+    CODEX_DIST_PLUGINS_DIR,
+)
+PLUGIN_AGENTS_DIRNAME: Final = "agents"
+PLUGIN_SKILLS_DIRNAME: Final = "skills"
+SKILL_FILENAME: Final = "SKILL.md"
+IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_AGENT_NAME}.md"
+RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
+    "auditor.md",
+    "audit-orchestrator.md",
+)
+IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH: Final = (
+    Path(SPEC_TREE_PLUGIN_NAME)
+    / PLUGIN_AGENTS_DIRNAME
+    / IMPLEMENTATION_AUDITOR_AGENT_FILENAME
+)
+RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS: Final = tuple(
+    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_AGENTS_DIRNAME / filename
+    for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+)
+IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH: Final = (
+    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_SKILLS_DIRNAME / "audit-implementation"
+)
+RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
+    "verdict.py",
+    "aggregate_verdicts.py",
+    "pass_results.py",
+    "journal_emit.py",
+    "audit_orchestrator.py",
+)
+
+
+def language_code_skill_relative_path(language: str) -> Path:
+    """Return the source-owned relative path for a language code skill."""
+    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"code-{language}" / SKILL_FILENAME
+
+
+def language_audit_skill_relative_path(language: str, concern: str) -> Path:
+    """Return the source-owned relative path for a language audit concern."""
+    return (
+        Path(language)
+        / PLUGIN_SKILLS_DIRNAME
+        / f"audit-{language}-{concern}"
+        / SKILL_FILENAME
+    )
+
+
+def retired_language_audit_skill_relative_path(language: str) -> Path:
+    """Return the source-owned relative path for a retired language audit skill."""
+    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"audit-{language}"
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -159,6 +218,74 @@ def check_manifest_parity(root: Path) -> list[str]:
     return errors
 
 
+def check_implementation_auditor_wrapper(root: Path) -> list[str]:
+    """Report absent or retired implementation-auditor wrapper agents."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        wrapper = root / surface_root / IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH
+        if not wrapper.is_file():
+            errors.append(f"implementation auditor absent: {wrapper.relative_to(root)}")
+        for retired_relative_path in RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS:
+            retired_path = root / surface_root / retired_relative_path
+            if retired_path.exists():
+                errors.append(
+                    f"retired implementation auditor present: "
+                    f"{retired_path.relative_to(root)}"
+                )
+    return errors
+
+
+def check_language_concern_skill_trios(root: Path) -> list[str]:
+    """Report language plugins whose implementation-audit skill trio is incomplete."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        plugins_root = root / surface_root
+        if not plugins_root.is_dir():
+            continue
+        for plugin_dir in plugins_root.iterdir():
+            errors.extend(
+                _language_concern_skill_errors(root, plugins_root, plugin_dir.name)
+            )
+    return errors
+
+
+def _language_concern_skill_errors(
+    root: Path,
+    plugins_root: Path,
+    language: str,
+) -> list[str]:
+    code_skill = plugins_root / language_code_skill_relative_path(language)
+    if not code_skill.is_file():
+        return []
+    errors = [
+        f"language audit concern absent: {skill_path.relative_to(root)}"
+        for concern in LANGUAGE_AUDIT_CONCERNS
+        if not (
+            skill_path := plugins_root
+            / language_audit_skill_relative_path(language, concern)
+        ).is_file()
+    ]
+    retired_skill = plugins_root / retired_language_audit_skill_relative_path(language)
+    if retired_skill.exists():
+        errors.append(
+            f"retired language audit skill present: {retired_skill.relative_to(root)}"
+        )
+    return errors
+
+
+def check_retired_audit_scripts(root: Path) -> list[str]:
+    """Report plugin-side audit scripts whose responsibilities belong to SPX."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        skill_root = root / surface_root / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
+        for retired_name in RETIRED_AUDIT_SCRIPT_FILENAMES:
+            for retired_path in skill_root.rglob(retired_name):
+                errors.append(
+                    f"retired audit script present: {retired_path.relative_to(root)}"
+                )
+    return errors
+
+
 # Wall-clock bound for a single `claude plugin validate` invocation. Tests import this
 # constant rather than restating the value.
 VALIDATE_TIMEOUT_SECONDS: Final = 60.0
@@ -223,6 +350,44 @@ def _read_captures(out: IO[bytes], err: IO[bytes]) -> tuple[str, str]:
     return out.read().decode(errors="replace"), err.read().decode(errors="replace")
 
 
+def _validate_target(
+    target: Path,
+    runner: Callable[..., subprocess.CompletedProcess[str]],
+) -> tuple[Path, subprocess.CompletedProcess[str]]:
+    cmd = ["claude", "plugin", "validate", str(target)]
+    return target, runner(cmd)
+
+
+def _validate_targets(
+    targets: list[Path],
+    runner: Callable[..., subprocess.CompletedProcess[str]],
+) -> list[tuple[Path, str]]:
+    failures: list[tuple[Path, str]] = []
+    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
+        futures = {
+            pool.submit(_validate_target, target, runner): target for target in targets
+        }
+        for future in as_completed(futures):
+            target, result = future.result()
+            if result.returncode != 0:
+                failures.append((target, result.stderr or result.stdout))
+            else:
+                print(result.stdout, end="")
+    return failures
+
+
+def _report_validation_failures(failures: list[tuple[Path, str]]) -> None:
+    for target, output in failures:
+        print(f"error: validation failed for {target}", file=sys.stderr)
+        if output.strip():
+            print(f"  {output.strip()}", file=sys.stderr)
+
+
+def _report_contract_errors(prefix: str, errors: list[str]) -> None:
+    for message in errors:
+        print(f"error: {prefix}: {message}", file=sys.stderr)
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -239,35 +404,27 @@ def main(
         )
         return 1
 
-    failures: list[tuple[Path, str]] = []
-
-    def _validate(target: Path) -> tuple[Path, subprocess.CompletedProcess[str]]:
-        cmd = ["claude", "plugin", "validate", str(target)]
-        return target, runner(cmd)
-
-    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
-        futures = {pool.submit(_validate, t): t for t in targets}
-        for future in as_completed(futures):
-            target, result = future.result()
-            if result.returncode != 0:
-                failures.append((target, result.stderr or result.stdout))
-            else:
-                print(result.stdout, end="")
-
-    for target, output in failures:
-        print(f"error: validation failed for {target}", file=sys.stderr)
-        if output.strip():
-            print(f"  {output.strip()}", file=sys.stderr)
+    failures = _validate_targets(targets, runner)
+    _report_validation_failures(failures)
 
     sync_errors = check_catalog_sync(root)
-    for msg in sync_errors:
-        print(f"error: catalog sync: {msg}", file=sys.stderr)
+    _report_contract_errors("catalog sync", sync_errors)
 
     parity_errors = check_manifest_parity(root)
-    for msg in parity_errors:
-        print(f"error: manifest parity: {msg}", file=sys.stderr)
+    _report_contract_errors("manifest parity", parity_errors)
 
-    return 1 if (failures or sync_errors or parity_errors) else 0
+    audit_contract_errors = (
+        *check_implementation_auditor_wrapper(root),
+        *check_language_concern_skill_trios(root),
+        *check_retired_audit_scripts(root),
+    )
+    _report_contract_errors(
+        "implementation audit contract", list(audit_contract_errors)
+    )
+
+    return (
+        1 if (failures or sync_errors or parity_errors or audit_contract_errors) else 0
+    )
 
 
 if __name__ == "__main__":

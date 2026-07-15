@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.bump import (
     auto_detected_segment_is_minor_for_new_skill_addition,
-    auto_detected_segment_is_patch_for_modification_only_changes,
     check_compares_added_manifest_to_base_source_path,
     check_compares_copied_manifest_to_base_source_path,
     check_fails_when_any_changed_plugin_is_not_yet_bumped,
@@ -13,8 +12,8 @@ from outcomeeng_testing.harnesses.bump import (
     check_passes_when_every_changed_plugin_is_already_bumped,
     dry_run_reports_would_be_new_version_without_writing,
     dual_manifest_plugin_writes_both_with_same_new_version,
-    explicit_segment_patch_overrides_detected_minor_with_warning,
     mixed_dual_manifest_minor_change_uses_current_segment,
+    mixed_dual_manifest_plugin_fails_check,
     new_plugin_without_base_manifest_passes_check,
     no_changed_plugins_exits_zero_without_writing,
     only_changed_plugin_manifests_are_written,
@@ -22,6 +21,7 @@ from outcomeeng_testing.harnesses.bump import (
     real_change_probe_detects_rename_away_from_structural_path,
     real_change_probe_detects_untracked_new_skill_as_added,
     segment_selection_produces_expected_versions,
+    unparseable_manifest_returns_diagnostic_without_writes,
     write_bumps_from_base_when_working_tree_version_is_below_base,
 )
 
@@ -82,16 +82,16 @@ def test_check_fails_when_any_changed_plugin_is_not_yet_bumped() -> None:
     assert check_fails_when_any_changed_plugin_is_not_yet_bumped()
 
 
+def test_mixed_dual_manifest_plugin_fails_check() -> None:
+    assert mixed_dual_manifest_plugin_fails_check()
+
+
+def test_unparseable_manifest_returns_diagnostic_without_writes() -> None:
+    assert unparseable_manifest_returns_diagnostic_without_writes()
+
+
 def test_auto_detected_segment_is_minor_for_new_skill_addition() -> None:
     assert auto_detected_segment_is_minor_for_new_skill_addition()
-
-
-def test_auto_detected_segment_is_patch_for_modification_only_changes() -> None:
-    assert auto_detected_segment_is_patch_for_modification_only_changes()
-
-
-def test_explicit_segment_patch_overrides_detected_minor_with_warning() -> None:
-    assert explicit_segment_patch_overrides_detected_minor_with_warning()
 
 
 def test_real_change_probe_detects_untracked_new_skill_as_added() -> None:

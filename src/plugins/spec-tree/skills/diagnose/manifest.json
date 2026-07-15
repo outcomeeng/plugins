@@ -1,25 +1,15 @@
 {
   "spx_floor": "{{! spx_floor !}}",
   "marketplace": {
-    "name": "outcomeeng",
-    "source": "outcomeeng/plugins"
+    "name": "{{! diagnose_marketplace_name !}}",
+    "source": "{{! diagnose_marketplace_source !}}"
   },
-  "expected_plugins": [
-    "frontend",
-    "hdl",
-    "instructions",
-    "prose",
-    "python",
-    "rust",
-    "spec-tree",
-    "typescript",
-    "work"
-  ],
+  "expected_plugins": ["{{! plugin_name !}}"],
   "checks": [
-    "session-environment",
-    "spx-reachability",
-    "worktree-pool",
-    "session-store",
-    "marketplace-install"
+    "{{! diagnose_check_session_environment !}}",
+    "{{! diagnose_check_spx_reachability !}}",
+    "{{! diagnose_check_worktree_pool !}}",
+    "{{! diagnose_check_session_store !}}",
+    "{{! diagnose_check_marketplace_install !}}"
   ]
 }

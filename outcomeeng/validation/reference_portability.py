@@ -48,6 +48,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, SOURCE_ROOT_NAME, Target
+
+SPX_REFERENCE_ROOT: Final = "spx"
+ILLUSTRATIVE_SPX_ROOT: Final = "55-example"
+INVALID_INDEX_PLACEHOLDER: Final = "NN-"
+RETIRED_SPX_GUIDE_NAMES: Final = ("CLAUDE.md", "AGENTS.md")
+PORTABLE_SPX_FILES: Final = ("EXCLUDE",)
+PORTABLE_SPX_DIRECTORIES: Final = ("local", "sessions")
+MARKETPLACE_PLUGIN_SOURCE_ROOT: Final = f"{SOURCE_ROOT_NAME}/plugins"
+MARKETPLACE_RUNTIME_ROOTS: Final = tuple(
+    f"{DIST_DIR_NAME}/{target.value}" for target in Target
+)
+MARKETPLACE_TOOLCHAIN_ROOTS: Final = ("outcomeeng", "outcomeeng_testing")
+MARKETPLACE_REPOSITORY_SLUGS: Final = ("outcomeeng/plugins", "outcomeeng/spx")
+PLUGIN_LOCAL_ROOT_TOKENS: Final = ("${CLAUDE_SKILL_DIR}", "${CLAUDE_PLUGIN_ROOT}")
+
 # A non-portable reference into this marketplace's own files.  The leading
 # lookbehind anchors each alternative at a path-segment boundary, so a substring
 # inside a longer word (``redistribute``) or a dot-prefixed build directory
@@ -107,15 +123,20 @@ def scan_paths(paths: Iterable[str | Path]) -> list[Violation]:
     return violations
 
 
+def format_violation(violation: Violation) -> str:
+    """Return the stable diagnostic for one non-portable reference."""
+    return (
+        f"{violation.path}:{violation.line}: "
+        f"non-portable reference {violation.reference!r} "
+        f"does not resolve in a consumer checkout"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = argv if argv is not None else sys.argv[1:]
     violations = scan_paths(args)
     for violation in violations:
-        print(
-            f"{violation.path}:{violation.line}: "
-            f"non-portable reference {violation.reference!r} "
-            f"does not resolve in a consumer checkout",
-        )
+        print(format_violation(violation))
     return 1 if violations else 0
 
 

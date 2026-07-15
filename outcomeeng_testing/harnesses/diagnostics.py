@@ -1,111 +1,155 @@
-"""Harness for the diagnostics node tests.
-
-The diagnostics node's conformance test reads the authored and shipped diagnose
-manifest to verify the build rendered the spx version floor into the contract
-passed to ``spx diagnose``. The repository-root constant and the dist reader
-live here because shared test scaffolding is production code outside ``tests/``
-and outside ``spx/``.
-"""
+"""Filesystem access for diagnostics node evidence."""
 
 from __future__ import annotations
 
-import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.build import build, source_plugin_name
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    PLUGINS_DIR_NAME,
+    SKILL_FILENAME,
+    SOURCE_ROOT_NAME,
+    Target,
+)
+from outcomeeng.distribution.diagnose_manifest import (
+    DIAGNOSE_SKILL_NAME,
+    DIAGNOSE_MANIFEST_RELATIVE_PATH,
+    DiagnoseManifest,
+    authored_diagnose_manifest_contract,
+    shipped_diagnose_manifest_contract,
+)
+from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
+from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 # ``parents[2]`` reaches the repository root from
 # ``outcomeeng_testing/harnesses/diagnostics.py`` (harnesses ->
 # outcomeeng_testing -> repo root).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# The plugin and skill the diagnostics node ships.
-SPEC_TREE_PLUGIN = "spec-tree"
-DIAGNOSE_SKILL = "diagnose"
-DIAGNOSE_MANIFEST = "manifest.json"
 
-# The diagnose manifest's fixed contract fields. The expected plugin set is
-# derived from the marketplace manifest so the test tracks the offered plugins.
-EXPECTED_DIAGNOSE_CHECKS = (
-    "session-environment",
-    "spx-reachability",
-    "worktree-pool",
-    "session-store",
-    "marketplace-install",
-)
-EXPECTED_MARKETPLACE = {"name": "outcomeeng", "source": "outcomeeng/plugins"}
+@dataclass(frozen=True)
+class OwnedDiagnoseManifest:
+    """One authored diagnose manifest paired with its owning plugin."""
 
-# The authored ``diagnose`` files the build renders into ``dist/``.
-AUTHORED_DIAGNOSE_SKILL = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / SPEC_TREE_PLUGIN
-    / "skills"
-    / DIAGNOSE_SKILL
-    / "SKILL.md"
-)
-AUTHORED_DIAGNOSE_MANIFEST = AUTHORED_DIAGNOSE_SKILL.with_name(DIAGNOSE_MANIFEST)
-MARKETPLACE_MANIFEST = REPO_ROOT / ".claude-plugin" / "marketplace.json"
-
-# The build template token the authored manifest uses to source the spx version
-# floor; the build's render pass replaces it with the source-of-truth value.
-SPX_FLOOR_TOKEN = "{{! spx_floor !}}"
+    plugin_name: str
+    path: Path
+    manifest: DiagnoseManifest
 
 
-def authored_diagnose_manifest() -> dict[str, object]:
-    """Return the authored diagnose manifest."""
-    return _read_json_object(AUTHORED_DIAGNOSE_MANIFEST)
+def authored_diagnose_manifests() -> tuple[OwnedDiagnoseManifest, ...]:
+    """Return every authored diagnose manifest with its owning plugin."""
+    plugins_root = REPO_ROOT / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+    manifest_paths = tuple(
+        sorted(
+            plugin_root / DIAGNOSE_MANIFEST_RELATIVE_PATH
+            for plugin_root in plugins_root.iterdir()
+            if (plugin_root / DIAGNOSE_MANIFEST_RELATIVE_PATH).is_file()
+        )
+    )
+    return tuple(
+        OwnedDiagnoseManifest(
+            plugin_name=source_plugin_name(
+                manifest_path,
+                src_root=REPO_ROOT / SOURCE_ROOT_NAME,
+            ),
+            path=manifest_path,
+            manifest=DiagnoseManifest.read(manifest_path),
+        )
+        for manifest_path in manifest_paths
+    )
 
 
-def authored_diagnose_text() -> str:
-    """Return the authored ``diagnose`` skill body."""
-    return AUTHORED_DIAGNOSE_SKILL.read_text(encoding="utf-8")
+def authored_diagnose_manifests_match_contract() -> bool:
+    """Return whether every authored manifest matches the source contract."""
+    manifests = authored_diagnose_manifests()
+    return bool(manifests) and all(
+        owned.manifest == authored_diagnose_manifest_contract() for owned in manifests
+    )
 
 
-def expected_plugin_names() -> tuple[str, ...]:
-    """Return the marketplace's offered plugin names in stable order."""
-    manifest = _read_json_object(MARKETPLACE_MANIFEST)
-    plugins = manifest["plugins"]
-    if not isinstance(plugins, list):
-        msg = "marketplace manifest field 'plugins' must be a list"
-        raise TypeError(msg)
-
-    names: list[str] = []
-    for plugin in plugins:
-        if not isinstance(plugin, dict):
-            msg = "marketplace manifest plugins must be objects"
-            raise TypeError(msg)
-        name = plugin.get("name")
-        if not isinstance(name, str) or not name:
-            msg = "marketplace manifest plugin name must be a non-empty string"
-            raise TypeError(msg)
-        names.append(name)
-    return tuple(sorted(names))
+def rendered_diagnose_manifests_match_their_owners() -> bool:
+    """Return whether sibling manifests render only their own plugin identity."""
+    return all(
+        _rendered_diagnose_manifest_matches_owners(owned)
+        for owned in authored_diagnose_manifests()
+    )
 
 
-def read_shipped_diagnose_manifest(target: Target) -> dict[str, object]:
+def _rendered_diagnose_manifest_matches_owners(
+    authored: OwnedDiagnoseManifest,
+) -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        builder = SrcTreeBuilder(root)
+        for owner in Target:
+            builder.add_plugin(
+                owner.value,
+                skills={
+                    DIAGNOSE_SKILL_NAME: authored.path.with_name(
+                        SKILL_FILENAME
+                    ).read_text(encoding="utf-8")
+                },
+            )
+            manifest_path = (
+                builder.src_root
+                / PLUGINS_DIR_NAME
+                / owner.value
+                / DIAGNOSE_MANIFEST_RELATIVE_PATH
+            )
+            manifest_path.write_text(
+                authored.path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+        build(builder.src_root, root / DIST_DIR_NAME)
+        reader = DistTreeReader(root)
+        return all(
+            DiagnoseManifest.read(
+                reader.target_root(target)
+                / owner.value
+                / DIAGNOSE_MANIFEST_RELATIVE_PATH
+            )
+            == shipped_diagnose_manifest_contract(
+                plugin_name=owner.value,
+                spx_floor=REQUIRED_SPX_VERSION,
+            )
+            for owner in Target
+            for target in Target
+        )
+
+
+def canonical_shipped_diagnose_manifests_match_contract() -> bool:
+    """Return whether every committed target carries the canonical contract."""
+    manifests = authored_diagnose_manifests()
+    return bool(manifests) and all(
+        read_shipped_diagnose_manifest(target, plugin_name=owned.plugin_name)
+        == shipped_diagnose_manifest_contract(
+            plugin_name=owned.plugin_name,
+            spx_floor=REQUIRED_SPX_VERSION,
+        )
+        for owned in manifests
+        for target in Target
+    )
+
+
+def read_shipped_diagnose_manifest(
+    target: Target,
+    *,
+    plugin_name: str,
+) -> DiagnoseManifest:
     """Return the shipped diagnose manifest for one distribution target."""
     manifest_path = (
         shipped_dist_reader().target_root(target)
-        / SPEC_TREE_PLUGIN
-        / "skills"
-        / DIAGNOSE_SKILL
-        / DIAGNOSE_MANIFEST
+        / plugin_name
+        / DIAGNOSE_MANIFEST_RELATIVE_PATH
     )
-    return _read_json_object(manifest_path)
+    return DiagnoseManifest.read(manifest_path)
 
 
 def shipped_dist_reader() -> DistTreeReader:
     """Return a reader over the committed ``dist/`` tree at the repository root."""
     return DistTreeReader(REPO_ROOT)
-
-
-def _read_json_object(path: Path) -> dict[str, object]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        msg = f"{path} must contain a JSON object"
-        raise TypeError(msg)
-    return cast(dict[str, object], data)

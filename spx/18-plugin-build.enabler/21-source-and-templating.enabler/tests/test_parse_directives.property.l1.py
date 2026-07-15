@@ -1,41 +1,21 @@
-"""Round-trip property: parse(format(d)) == (d,) for every directive d.
-
-If parse_directives and format_directive are inverses, then formatting a
-directive and parsing the result must yield the original directive. This
-property catches representation drift between the two functions.
-"""
+"""Property evidence for directive parse/format inversion."""
 
 from __future__ import annotations
 
-import pytest
-from hypothesis import given
-
-from outcomeeng.distribution.build import (
-    IMPLEMENTED,
-    Directive,
-    format_directive,
-    parse_directives,
+from outcomeeng_testing.harnesses.source_and_templating import (
+    directive_roundtrip_property_holds,
+    property_failure_notes_include_seed_and_replay,
+    standard_jinja_syntax_property_holds,
 )
-from outcomeeng_testing.generators.directives import directives
 
 
-@pytest.fixture(autouse=True)
-def _require_module_implemented() -> None:
-    if not IMPLEMENTED:
-        pytest.fail(
-            "outcomeeng.distribution.build is a stub; implement it before "
-            "running this test, or filter via `spx test passing` "
-            "(node is listed in spx/EXCLUDE)"
-        )
+def test_parse_of_format_yields_original_directive() -> None:
+    assert directive_roundtrip_property_holds()
 
 
-class TestParseFormatRoundtrip:
-    """Every directive survives a format-then-parse cycle unchanged."""
+def test_standard_jinja_syntax_passes_through_rendering() -> None:
+    assert standard_jinja_syntax_property_holds()
 
-    @given(directives())
-    def test_parse_of_format_yields_original_directive(
-        self, directive: Directive
-    ) -> None:
-        text = format_directive(directive)
-        parsed = parse_directives(text)
-        assert parsed == (directive,)
+
+def test_property_failures_report_seed_and_replay_path() -> None:
+    assert property_failure_notes_include_seed_and_replay()

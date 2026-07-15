@@ -4,7 +4,7 @@ A combined Codex and Claude Code plugin marketplace for [Outcome Engineering](ht
 
 This repository publishes two plugin surfaces from the same source tree:
 
-- `.claude-plugin` packages for Claude Code plugins, commands, and agents
+- `.claude-plugin` packages for Claude Code skills and thin agents
 - `.codex-plugin` packages for Codex skill bundles
 
 `AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Spec Tree sections.
@@ -162,7 +162,7 @@ its changes:
 | Plugin's changes include…                                                                          | Segment |
 | -------------------------------------------------------------------------------------------------- | ------- |
 | Added / deleted / renamed `skills/<slug>/SKILL.md`                                                 | `minor` |
-| Added / deleted / renamed `commands/<slug>.md` or `agents/<slug>.md`                               | `minor` |
+| Added / deleted / renamed `agents/<slug>.md`                                                       | `minor` |
 | Added `.claude-plugin/plugin.json` or `.codex-plugin/plugin.json` (whole plugin or new surface)    | `minor` |
 | Anything else — modifications to existing files, internal helpers, templates, references, fixtures | `patch` |
 
@@ -189,7 +189,7 @@ The pre-commit hook runs `build-skills` automatically, and `just check-full`'s `
 
 ## Plugins
 
-Skills are available in both Claude Code and Codex, with generated plugin surfaces carrying the agents and commands their target supports. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check-full` enforces freshness in CI.
+Skills are available in both Claude Code and Codex, with generated plugin surfaces carrying the thin agents their target supports. Every skill and thin agent across every plugin is listed in the auto-generated catalog below, sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate after touching any of those files; `just check-full` enforces freshness in CI.
 
 <details>
 <summary><strong><code>/bootstrap</code> in action</strong> — interactive product interview and scaffold</summary>

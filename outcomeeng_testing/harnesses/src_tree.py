@@ -2,8 +2,8 @@
 
 SrcTreeBuilder writes plugins and shared topics to a given root, validating
 inputs against the canonical kebab-case naming rules. Layout constants come
-from outcomeeng.distribution.build so the harness stays aligned with the
-production module's contract.
+from outcomeeng.distribution.contracts so the harness stays aligned with the
+production contract.
 """
 
 from __future__ import annotations
@@ -15,20 +15,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Iterator, Mapping
 
-from outcomeeng.distribution.build import (
+from outcomeeng.distribution.build import SHARED_DIR_NAME, SHARED_FRAGMENT_FILENAME
+from outcomeeng.distribution.contracts import (
     AGENTS_SUBDIR_NAME,
-    AGENT_FILE_SUFFIX,
-    COMMANDS_SUBDIR_NAME,
-    COMMAND_FILE_SUFFIX,
+    MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
+    PLUGIN_SUBDIRS,
     REFERENCES_SUBDIR_NAME,
-    SHARED_DIR_NAME,
-    SHARED_FRAGMENT_FILENAME,
-    SKILLS_SUBDIR_NAME,
     SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
 )
-
-SRC_DIR_NAME = "src"
 
 # Kebab-case: starts with letter, contains lowercase letters/digits/hyphens,
 # does not start or end with hyphen, no consecutive hyphens.
@@ -49,8 +46,8 @@ def _validate_reference_filename(filename: str) -> None:
     if "/" in filename or "\\" in filename:
         msg = f"reference filename {filename!r} must not contain path separators"
         raise ValueError(msg)
-    if not filename.endswith(".md"):
-        msg = f"reference filename {filename!r} must end in .md"
+    if not filename.endswith(MARKDOWN_FILE_SUFFIX):
+        msg = f"reference filename {filename!r} must end in {MARKDOWN_FILE_SUFFIX}"
         raise ValueError(msg)
 
 
@@ -75,11 +72,11 @@ def write_agent_source(
     write_agent_tree(root, plugin_name, {agent_name: content})
     return (
         root
-        / SRC_DIR_NAME
+        / SOURCE_ROOT_NAME
         / PLUGINS_DIR_NAME
         / plugin_name
         / AGENTS_SUBDIR_NAME
-        / f"{agent_name}{AGENT_FILE_SUFFIX}"
+        / f"{agent_name}{MARKDOWN_FILE_SUFFIX}"
     )
 
 
@@ -96,7 +93,7 @@ class SrcTreeBuilder:
 
     @property
     def src_root(self) -> Path:
-        return self.root / SRC_DIR_NAME
+        return self.root / SOURCE_ROOT_NAME
 
     @property
     def shared_root(self) -> Path:
@@ -108,17 +105,18 @@ class SrcTreeBuilder:
         name: str,
         *,
         skills: Mapping[str, str] | None = None,
-        commands: Mapping[str, str] | None = None,
         agents: Mapping[str, str] | None = None,
+        artifacts: Mapping[Path, bytes] | None = None,
     ) -> SrcTreeBuilder:
         """Materialize a plugin at src/plugins/<name>/ with the given components.
 
         skills: skill-directory-name -> SKILL.md body content.
                 Each entry creates src/plugins/<name>/skills/<skill>/SKILL.md.
-        commands: command-name -> markdown body.
-                  Each entry creates src/plugins/<name>/commands/<command>.md.
         agents: agent-name -> markdown body.
                 Each entry creates src/plugins/<name>/agents/<agent>.md.
+        artifacts: plugin-relative path -> opaque bytes. A nested path must begin
+                   with one of the build's source subdirectories; a one-part path
+                   materializes an ordinary file at the plugin root.
 
         Names are validated as kebab-case before any file is written.
         """
@@ -127,35 +125,9 @@ class SrcTreeBuilder:
         plugin_root = self.src_root / PLUGINS_DIR_NAME / name
         plugin_root.mkdir(parents=True, exist_ok=True)
 
-        if skills:
-            for skill_name in skills:
-                _validate_name(skill_name, kind="skill")
-            skills_root = plugin_root / SKILLS_SUBDIR_NAME
-            skills_root.mkdir(exist_ok=True)
-            for skill_name, content in skills.items():
-                skill_dir = skills_root / skill_name
-                skill_dir.mkdir(exist_ok=True)
-                (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
-
-        if commands:
-            for command_name in commands:
-                _validate_name(command_name, kind="command")
-            commands_root = plugin_root / COMMANDS_SUBDIR_NAME
-            commands_root.mkdir(exist_ok=True)
-            for command_name, content in commands.items():
-                (commands_root / f"{command_name}{COMMAND_FILE_SUFFIX}").write_text(
-                    content, encoding="utf-8"
-                )
-
-        if agents:
-            for agent_name in agents:
-                _validate_name(agent_name, kind="agent")
-            agents_root = plugin_root / AGENTS_SUBDIR_NAME
-            agents_root.mkdir(exist_ok=True)
-            for agent_name, content in agents.items():
-                (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
-                    content, encoding="utf-8"
-                )
+        _write_skills(plugin_root, skills)
+        _write_agents(plugin_root, agents)
+        _write_artifacts(plugin_root, artifacts)
 
         return self
 
@@ -191,6 +163,59 @@ class SrcTreeBuilder:
                 (references_root / ref_name).write_text(content, encoding="utf-8")
 
         return self
+
+
+def _write_skills(plugin_root: Path, skills: Mapping[str, str] | None) -> None:
+    if not skills:
+        return
+    for skill_name in skills:
+        _validate_name(skill_name, kind="skill")
+    skills_root = plugin_root / SKILLS_SUBDIR_NAME
+    skills_root.mkdir(exist_ok=True)
+    for skill_name, content in skills.items():
+        skill_dir = skills_root / skill_name
+        skill_dir.mkdir(exist_ok=True)
+        (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
+
+
+def _write_agents(plugin_root: Path, agents: Mapping[str, str] | None) -> None:
+    if not agents:
+        return
+    for agent_name in agents:
+        _validate_name(agent_name, kind="agent")
+    agents_root = plugin_root / AGENTS_SUBDIR_NAME
+    agents_root.mkdir(exist_ok=True)
+    for agent_name, content in agents.items():
+        (agents_root / f"{agent_name}{MARKDOWN_FILE_SUFFIX}").write_text(
+            content, encoding="utf-8"
+        )
+
+
+def _write_artifacts(
+    plugin_root: Path,
+    artifacts: Mapping[Path, bytes] | None,
+) -> None:
+    if not artifacts:
+        return
+    for relative_path, artifact_content in artifacts.items():
+        _validate_artifact_path(relative_path)
+        artifact_path = plugin_root / relative_path
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_bytes(artifact_content)
+
+
+def _validate_artifact_path(relative_path: Path) -> None:
+    nested_outside_plugin_subdirs = (
+        len(relative_path.parts) > 1 and relative_path.parts[0] not in PLUGIN_SUBDIRS
+    )
+    if (
+        relative_path.is_absolute()
+        or not relative_path.parts
+        or nested_outside_plugin_subdirs
+        or ".." in relative_path.parts
+    ):
+        msg = f"invalid plugin artifact path {relative_path}"
+        raise ValueError(msg)
 
 
 @contextmanager

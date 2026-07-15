@@ -28,8 +28,8 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 
 **MINOR version (0.3.x → 0.4.x):**
 
-- ✅ Adding new commands (e.g., new `/pickup` command)
 - ✅ Adding new skills (e.g., new `/design-frontend` skill)
+- ✅ Adding new thin agents
 - ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
 - ✅ Significant user experience improvements
 - 🎯 **Use sparingly** — only for substantial additions or changes
@@ -70,7 +70,7 @@ just bump-check    # exit non-zero if any changed plugin still needs a bump (loc
 
 The `bump*` recipes take two **positional** arguments — `base_ref` (default `origin/main`) then `segment` (default: auto-detected): `just bump <base_ref> <segment>`. Pass a different base for a stacked branch (`just bump origin/<base>`); force a segment by giving both arguments, since `segment` is the second positional — `just bump origin/main minor`. `just bump --segment minor` and `just bump segment=minor` are NOT valid recipe syntax (`--segment` is the underlying Python flag, not the `just` parameter). Run `just bump` BEFORE `just build-skills` so the regenerated `dist/` manifests carry the bumped version.
 
-**Segment auto-detection is structural.** `just bump` keys on structure, not on a change's semantic weight: a plugin that gains, loses, or renames a skill, command, agent, or manifest detects `minor`; every other plugin-distribution change detects `patch`. One run can write `minor` for one changed plugin and `patch` for another. It NEVER selects `major`. It also cannot recognize a non-structural change the policy still treats as `minor` — a **major functional change** or **significant user experience improvement** per `## Version Management` (for example a new claim mechanism inside an existing skill) gains no skill/command/agent/manifest, so `just bump` detects `patch`; pass `just bump origin/main minor` for it. Giving an explicit positional `segment` (`major`/`minor`/`patch`) forces that segment for every changed plugin and warns on stderr for any plugin whose detected segment differed. In `## Version Bump Examples` below, the structural rows (new command, new skill) are what auto-detection produces; a row marked "not structural" needs the positional `minor` override.
+**Segment auto-detection is structural.** `just bump` keys on structure, not on a change's semantic weight: a plugin that gains, loses, or renames a skill, thin agent, or manifest detects `minor`; every other plugin-distribution change detects `patch`. One run can write `minor` for one changed plugin and `patch` for another. It NEVER selects `major`. It also cannot recognize a non-structural change the policy still treats as `minor` — a **major functional change** or **significant user experience improvement** per `## Version Management` (for example a new claim mechanism inside an existing skill) gains no skill, agent, or manifest, so `just bump` detects `patch`; pass `just bump origin/main minor` for it. Giving an explicit positional `segment` (`major`/`minor`/`patch`) forces that segment for every changed plugin and warns on stderr for any plugin whose detected segment differed. In `## Version Bump Examples` below, the structural rows (new skill, new thin agent) are what auto-detection produces; a row marked "not structural" needs the positional `minor` override.
 
 **`bump-check` is local, not a CI gate.** The quality gate (`just check-full`) does not run `bump-check`, so a missing or wrong version is NOT caught by CI — run `just bump` (or at least `just bump-check`) yourself before pushing.
 
@@ -115,7 +115,7 @@ just build-skills  # propagate the bumped version into dist/
 
 | Change                                  | Old   | New   | Reason                                                                               |
 | --------------------------------------- | ----- | ----- | ------------------------------------------------------------------------------------ |
-| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                                                                  |
+| Add an implementation-auditor agent     | 0.2.0 | 0.3.0 | New thin agent = MINOR                                                               |
 | Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR — not structural, pass `just bump origin/main minor` |
 | Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch                                                   |
 | Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                                  |

@@ -1,7 +1,7 @@
 # Runtime Token Validation
 
 PROVIDES a validator that flags a raw runtime-divergent name in authored source the build renders or inlines — plugin content under `src/plugins/` and shared fragments under `src/_shared/` — a name that renders differently per coding agent and so must be a registry-backed token such as `{{! tool('…') !}}` / `{{! file('…') !}}`, or a per-runtime conditional — while passing token-expressed references and an explicit ignore-list of tracked exemptions
-SO THAT the marketplace quality gate and skill, agent, and command authors
+SO THAT the marketplace quality gate and skill and agent authors
 CAN keep each generated target's output naming only its own native tools and instruction files, with a raw literal caught at the validation gate rather than shipped as a foreign instruction into another agent's output
 
 ## Assertions

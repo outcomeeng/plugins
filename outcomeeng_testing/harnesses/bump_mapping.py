@@ -6,8 +6,8 @@ Covers the segment-increment and auto-detection mapping assertions:
   component; MINOR increments the second and resets the third to 0;
   MAJOR increments the first and resets the second and third to 0.
 - The auto-detection (file-status, path-pattern) → segment mapping:
-  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `commands/<slug>.md`,
-  `agents/<slug>.md`, or `{.claude,.codex}-plugin/plugin.json` yields
+  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `agents/<slug>.md`,
+  or `{.claude,.codex}-plugin/plugin.json` yields
   `MINOR`; everything else yields `PATCH`.
 
 Evidence is exercised against the `Version` and `auto_segment` source
@@ -16,33 +16,62 @@ contracts directly, not through the `bump()` orchestration.
 
 from __future__ import annotations
 
+from typing import Final
+
+from hypothesis import given, seed, settings
+
 from outcomeeng.distribution.bump import (
     ChangedPath,
     Segment,
     Version,
     auto_segment,
+    bump_version,
 )
 from outcomeeng_testing.generators.bump_mapping import (
     AUTO_SEGMENT_MAPPING_CASES,
-    SEGMENT_DISPATCH,
-    SEGMENT_MAPPING_CASES,
     mixed_minor_triggering_changes,
     patch_only_changes,
+    segments,
+    versions,
+)
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+
+BUMP_SEGMENT_PROPERTY_EXAMPLES: Final = 100
+BUMP_SEGMENT_PROPERTY_SEED: Final = 20260714
+BUMP_SEGMENT_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/32-distribution.enabler/21-bump.enabler/tests/"
+    "test_bump.property.l1.py"
 )
 
 
-def segment_increment_matches_mapping() -> bool:
-    for (
-        segment,
-        input_major,
-        input_minor,
-        input_patch,
-        expected,
-    ) in SEGMENT_MAPPING_CASES:
-        start = Version(major=input_major, minor=input_minor, patch=input_patch)
-        if SEGMENT_DISPATCH[segment](start) != expected:
-            return False
+def segment_increment_property_holds() -> bool:
+    run_replayable_property(
+        _generated_segment_increment_property,
+        seed_value=BUMP_SEGMENT_PROPERTY_SEED,
+        replay_path=BUMP_SEGMENT_PROPERTY_REPLAY_PATH,
+    )
     return True
+
+
+@seed(BUMP_SEGMENT_PROPERTY_SEED)
+@settings(
+    max_examples=BUMP_SEGMENT_PROPERTY_EXAMPLES,
+    deadline=None,
+    print_blob=True,
+)
+@given(version=versions(), segment=segments())
+def _generated_segment_increment_property(version: Version, segment: Segment) -> None:
+    assert bump_version(version, segment) == _expected_bump(version, segment)
+
+
+def _expected_bump(version: Version, segment: Segment) -> Version:
+    if segment is Segment.PATCH:
+        return Version(version.major, version.minor, version.patch + 1)
+    if segment is Segment.MINOR:
+        return Version(version.major, version.minor + 1, 0)
+    if segment is Segment.MAJOR:
+        return Version(version.major + 1, 0, 0)
+    raise AssertionError(segment)
 
 
 def auto_segment_classifies_each_status_and_path_pattern() -> bool:

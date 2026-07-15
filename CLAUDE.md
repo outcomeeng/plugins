@@ -164,7 +164,7 @@ Carrying assumptions from one surface to the other is the most common source of 
 
 This repository publishes two plugin surfaces from the same source tree:
 
-- `.claude-plugin` for Claude Code plugins, commands, and agents
+- `.claude-plugin` for Claude Code skills and thin agents
 - `.codex-plugin` for Codex skill bundles
 
 Shared plugins ship both manifests where supported.
@@ -214,7 +214,7 @@ Historical plugin implementations are pruned from this repository. The history t
 
 - ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See the plugin catalog in [`README.md`](README.md#plugins) for the available skills.
 - ⚠️ **NEVER write code without invoking a skill first** - See the plugin catalog in [`README.md`](README.md#plugins) for language-specific coding skills.
-- ⚠️ **Use the managed router as the sole `/understand` trigger** - The "Before product-content access" section at the top of this file decides when the foundation marker is required and which operational commands are exempt. Once that gate requires `/understand`, invoke `/contextualize <full-path>` before working on each existing governed node; it loads product, decisions, ancestry, target, and lower-index constraints. For edits to a node-governed skill, command, agent, template, test, or implementation, load `/understand`, then `/contextualize`, then the artifact-authoring skill. The "Spec-tree navigation" section below explains inverse mapping from changed files to governing nodes.
+- ⚠️ **Use the managed router as the sole `/understand` trigger** - The "Before product-content access" section at the top of this file decides when the foundation marker is required and which operational commands are exempt. Once that gate requires `/understand`, invoke `/contextualize <full-path>` before working on each existing governed node; it loads product, decisions, ancestry, target, and lower-index constraints. For edits to a node-governed skill, agent, template, test, or implementation, load `/understand`, then `/contextualize`, then the artifact-authoring skill. The "Spec-tree navigation" section below explains inverse mapping from changed files to governing nodes.
 - ⚠️ **ALWAYS use the root managed Spec Tree instruction block before spec-tree work** - The instruction block in this root instruction file is the spec-tree skill router. Read it before working with files under `spx/` or applying spec-tree lifecycle rules from the product-owned root instruction content.
 - ⚠️ **NEVER create a spec-tree artifact without invoking `/author` first** - Before creating a product spec, ADR, PDR, enabler, or outcome, invoke `/author`. The skill carries the templates, the index-assignment procedure, and chains into `/contextualize` on the parent directory so sibling enumeration prevents index collisions. Do not invoke `/contextualize` directly on a not-yet-existing node path — it will abort with "Target path not found"; the bootstrap-mode entry point belongs to `/author`.
 - ⚠️ **ALWAYS read harness guide files in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's active harness guide first if it exists: `CLAUDE.md` in Claude Code, `AGENTS.md` in Codex.
@@ -356,7 +356,7 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 
 ## Plugin Catalog
 
-Every skill, agent, and command across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
+Every skill and thin agent across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
 
 ## Spec Tree Methodology
 
@@ -413,7 +413,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 ### Top-level layout
 
-- `src/plugins/` — authored skills, agents, commands, manifests, and templates. One subdirectory per plugin.
+- `src/plugins/` — authored skills, thin agents, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
 - `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. Per-node `local/` holds product-specific skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.

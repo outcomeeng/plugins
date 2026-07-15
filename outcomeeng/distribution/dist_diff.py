@@ -25,6 +25,7 @@ from outcomeeng.distribution.orchestration import DIST_ROOT_NAME, SOURCE_PLUGINS
 HEADER: Final = "dist/ differs from a fresh build."
 DRIFTING_FILES_HEADING: Final = "Drifting generated files:"
 EXPECTED_PRECOMMIT_NOTE: Final = "Expected pre-commit state"
+EXPECTED_PRECOMMIT_REMEDIATION: Final = "Commit src/ and dist/ together"
 DRIFT_REBUILD_NOTE: Final = "Run `just build-skills`"
 
 
@@ -60,7 +61,7 @@ def render_report(entries: Sequence[str], *, src_dirty: bool) -> str:
     lines.append("")
     if src_dirty:
         lines.append("Detected: src/plugins/ has matching uncommitted edits.")
-        lines.append(f"→ {EXPECTED_PRECOMMIT_NOTE}. Commit src/ and dist/ together;")
+        lines.append(f"→ {EXPECTED_PRECOMMIT_NOTE}. {EXPECTED_PRECOMMIT_REMEDIATION};")
         lines.append(
             "  the lefthook pre-commit hook stages the regenerated dist/ for you."
         )

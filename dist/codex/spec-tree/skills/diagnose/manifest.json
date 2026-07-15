@@ -4,17 +4,7 @@
     "name": "outcomeeng",
     "source": "outcomeeng/plugins"
   },
-  "expected_plugins": [
-    "frontend",
-    "hdl",
-    "instructions",
-    "prose",
-    "python",
-    "rust",
-    "spec-tree",
-    "typescript",
-    "work"
-  ],
+  "expected_plugins": ["spec-tree"],
   "checks": [
     "session-environment",
     "spx-reachability",

@@ -2,267 +2,60 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
-from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.build import (
-    CLAUDE_ONLY_FRONTMATTER_FIELDS,
-    CLAUDE_SKILL_DIR_TOKEN,
-    CODEX_SKILL_DIR_TOKEN,
-    COMMAND_FILE_SUFFIX,
-    COMMANDS_SUBDIR_NAME,
-    IMPLEMENTED,
-    REFERENCES_SUBDIR_NAME,
-    SHARED_FRAGMENT_FILENAME,
-    SKILL_FILENAME,
-    SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
-    SKILLS_SUBDIR_NAME,
-    build,
-    rewrite_paths_for_target,
-    strip_frontmatter_fields,
-)
-from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
-from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
-
-
-@pytest.fixture(autouse=True)
-def _require_module_implemented() -> None:
-    if not IMPLEMENTED:
-        pytest.fail(
-            "outcomeeng.distribution.build is a stub; implement it before "
-            "running this test, or filter via `spx test passing` "
-            "(node is listed in spx/EXCLUDE)"
-        )
-
-
-PLUGIN_NAME = "sample"
-SKILL_NAME = "example-skill"
-COMMAND_NAME = "example-command"
-SHARED_SCOPE = "shared-scope"
-SHARED_TOPIC = "shared-topic"
-SHARED_REFERENCE_FILENAME = "guide.md"
-STRIPPED_CODEX_FIELD = CLAUDE_ONLY_FRONTMATTER_FIELDS[0]
-PORTABLE_FRONTMATTER_FIELD = "argument-hint"
-SKILL_RELATIVE_PATH = "references/guide.md"
-CLAUDE_SKILL_REFERENCE = f"{CLAUDE_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
-CODEX_SKILL_REFERENCE = f"{CODEX_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
-ESCAPED_AUTHORING_GUIDANCE = (
-    f"Write `{CLAUDE_SKILL_REFERENCE}`. {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}\n"
-)
-SOURCE_SKILL = (
-    "---\n"
-    "name: example-skill\n"
-    "description: Example skill.\n"
-    f"{STRIPPED_CODEX_FIELD}: true\n"
-    "---\n"
-    "\n"
-    f"Read `{CLAUDE_SKILL_REFERENCE}`.\n"
-)
-SOURCE_COMMAND = "---\ndescription: Example command.\n---\n\nCommand body.\n"
-FRONTMATTER_WITH_ALL_CLAUDE_FIELDS = (
-    "---\n"
-    "name: sample\n"
-    "allowed-tools: Read\n"
-    "disable-model-invocation: true\n"
-    f"{PORTABLE_FRONTMATTER_FIELD}: [path]\n"
-    "description: Keep me.\n"
-    "---\n"
-    "\n"
-    "Body.\n"
+from outcomeeng_testing.harnesses.target_emission import (
+    claude_output_preserves_skill_dir_token,
+    codex_output_rewrites_skill_dir_token,
+    codex_skill_frontmatter_strips_claude_fields,
+    every_source_file_emits_to_each_target,
+    frontmatter_strip_is_idempotent,
+    outputs_exclude_execution_time_injection,
+    path_rewrite_is_idempotent,
+    repeated_include_emits_shared_source_once,
+    skill_dir_escape_preserves_authoring_guidance,
+    target_scoped_includes_emit_only_to_matching_tree,
+    target_trees_mirror_source_structure,
 )
 
 
-def test_every_source_file_emits_to_both_target_trees(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(
-        PLUGIN_NAME,
-        skills={SKILL_NAME: SOURCE_SKILL},
-        commands={COMMAND_NAME: SOURCE_COMMAND},
-    )
-
-    build(builder.src_root, tmp_path / "dist")
-
-    reader = DistTreeReader(tmp_path)
-    for target in Target:
-        files = reader.list_all_files(target)
-        assert (
-            Path(PLUGIN_NAME, SKILLS_SUBDIR_NAME, SKILL_NAME, SKILL_FILENAME) in files
-        )
-        assert (
-            Path(
-                PLUGIN_NAME,
-                COMMANDS_SUBDIR_NAME,
-                f"{COMMAND_NAME}{COMMAND_FILE_SUFFIX}",
-            )
-            in files
-        )
+def test_every_source_file_emits_to_both_target_trees() -> None:
+    assert every_source_file_emits_to_each_target()
 
 
-def test_target_trees_mirror_source_structure(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
-
-    build(builder.src_root, tmp_path / "dist")
-
-    reader = DistTreeReader(tmp_path)
-    assert reader.list_plugins(Target.CLAUDE) == (PLUGIN_NAME,)
-    assert reader.list_plugins(Target.CODEX) == (PLUGIN_NAME,)
-    assert reader.list_skills(PLUGIN_NAME, target=Target.CLAUDE) == (SKILL_NAME,)
-    assert reader.list_skills(PLUGIN_NAME, target=Target.CODEX) == (SKILL_NAME,)
+def test_target_trees_mirror_source_structure() -> None:
+    assert target_trees_mirror_source_structure()
 
 
-def test_claude_output_preserves_skill_dir_token(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
-
-    build(builder.src_root, tmp_path / "dist")
-
-    body = DistTreeReader(tmp_path).read_skill_body(
-        PLUGIN_NAME,
-        SKILL_NAME,
-        target=Target.CLAUDE,
-    )
-    assert CLAUDE_SKILL_REFERENCE in body
+def test_repeated_include_emits_shared_source_once_per_target() -> None:
+    assert repeated_include_emits_shared_source_once()
 
 
-def test_codex_output_rewrites_skill_dir_token_to_codex_token(
-    tmp_path: Path,
-) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
-
-    build(builder.src_root, tmp_path / "dist")
-
-    body = DistTreeReader(tmp_path).read_skill_body(
-        PLUGIN_NAME,
-        SKILL_NAME,
-        target=Target.CODEX,
-    )
-    assert CLAUDE_SKILL_DIR_TOKEN not in body
-    assert CODEX_SKILL_REFERENCE in body
+def test_claude_output_preserves_skill_dir_token() -> None:
+    assert claude_output_preserves_skill_dir_token()
 
 
-def test_skill_dir_rewrite_escape_preserves_authoring_guidance(
-    tmp_path: Path,
-) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: ESCAPED_AUTHORING_GUIDANCE})
-
-    build(builder.src_root, tmp_path / "dist")
-
-    reader = DistTreeReader(tmp_path)
-    for target in Target:
-        body = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=target)
-        assert CLAUDE_SKILL_REFERENCE in body
-        assert SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in body
+def test_codex_output_rewrites_skill_dir_token_to_codex_token() -> None:
+    assert codex_output_rewrites_skill_dir_token()
 
 
-def test_codex_skill_frontmatter_strips_claude_only_fields(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(
-        PLUGIN_NAME, skills={SKILL_NAME: FRONTMATTER_WITH_ALL_CLAUDE_FIELDS}
-    )
-
-    build(builder.src_root, tmp_path / "dist")
-
-    codex_body = DistTreeReader(tmp_path).read_skill_body(
-        PLUGIN_NAME,
-        SKILL_NAME,
-        target=Target.CODEX,
-    )
-    claude_body = DistTreeReader(tmp_path).read_skill_body(
-        PLUGIN_NAME,
-        SKILL_NAME,
-        target=Target.CLAUDE,
-    )
-    for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
-        assert f"{field}:" in claude_body
-        assert f"{field}:" not in codex_body
-    assert "allowed-tools: Read" in claude_body
-    assert "allowed-tools: Read" in codex_body
-    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in claude_body
-    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in codex_body
-    assert "description: Keep me." in codex_body
+def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
+    assert skill_dir_escape_preserves_authoring_guidance()
 
 
-def test_codex_command_frontmatter_strips_claude_only_fields(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(
-        PLUGIN_NAME, commands={COMMAND_NAME: FRONTMATTER_WITH_ALL_CLAUDE_FIELDS}
-    )
+def test_codex_skill_frontmatter_strips_claude_only_fields() -> None:
+    assert codex_skill_frontmatter_strips_claude_fields()
 
-    build(builder.src_root, tmp_path / "dist")
 
-    reader = DistTreeReader(tmp_path)
-    command_path = (
-        reader.target_root(Target.CODEX)
-        / PLUGIN_NAME
-        / COMMANDS_SUBDIR_NAME
-        / f"{COMMAND_NAME}{COMMAND_FILE_SUFFIX}"
-    )
-    codex_body = command_path.read_text(encoding="utf-8")
-    for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
-        assert f"{field}:" not in codex_body
-    assert "allowed-tools: Read" in codex_body
-    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in codex_body
-    assert "description: Keep me." in codex_body
+def test_target_scoped_includes_emit_only_to_matching_tree() -> None:
+    assert target_scoped_includes_emit_only_to_matching_tree()
 
 
 def test_path_rewrite_is_idempotent() -> None:
-    once = rewrite_paths_for_target(CLAUDE_SKILL_REFERENCE, target=Target.CODEX)
-    twice = rewrite_paths_for_target(once, target=Target.CODEX)
-
-    assert once == twice
+    assert path_rewrite_is_idempotent()
 
 
 def test_frontmatter_strip_is_idempotent() -> None:
-    once = strip_frontmatter_fields(
-        FRONTMATTER_WITH_ALL_CLAUDE_FIELDS,
-        fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
-    )
-    twice = strip_frontmatter_fields(once, fields=CLAUDE_ONLY_FRONTMATTER_FIELDS)
-
-    assert once == twice
+    assert frontmatter_strip_is_idempotent()
 
 
-def test_outputs_do_not_contain_execution_time_cat_injection(tmp_path: Path) -> None:
-    builder = SrcTreeBuilder(tmp_path)
-    builder.add_shared_topic(
-        SHARED_SCOPE,
-        SHARED_TOPIC,
-        "Shared body.\n",
-        references={SHARED_REFERENCE_FILENAME: "Reference body.\n"},
-    )
-    builder.add_plugin(
-        PLUGIN_NAME,
-        skills={
-            SKILL_NAME: (
-                "---\n"
-                "name: example-skill\n"
-                "description: Example skill.\n"
-                "---\n"
-                "\n"
-                f"{{!% include '{SHARED_SCOPE}/{SHARED_TOPIC}/{SHARED_FRAGMENT_FILENAME}' %!}}\n"
-            )
-        },
-    )
-
-    build(builder.src_root, tmp_path / "dist")
-
-    reader = DistTreeReader(tmp_path)
-    for target in Target:
-        for relative_path in reader.list_all_files(target):
-            body = (reader.target_root(target) / relative_path).read_text(
-                encoding="utf-8"
-            )
-            assert "!`cat" not in body
-        assert (
-            reader.target_root(target)
-            / PLUGIN_NAME
-            / SKILLS_SUBDIR_NAME
-            / SKILL_NAME
-            / REFERENCES_SUBDIR_NAME
-            / SHARED_REFERENCE_FILENAME
-        ).is_file()
+def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
+    assert outputs_exclude_execution_time_injection()

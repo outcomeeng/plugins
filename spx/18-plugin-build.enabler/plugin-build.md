@@ -2,7 +2,7 @@
 
 PROVIDES Claude Code-authored plugin files with deterministic compatibility emission for Codex
 SO THAT plugin authors and the marketplace
-CAN maintain skills, commands, and agents as one canonical source while delivering coding-agent-specific outputs.
+CAN maintain skills and thin agents as one canonical source while delivering coding-agent-specific outputs.
 
 ## Assertions
 

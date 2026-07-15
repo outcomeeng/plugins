@@ -58,6 +58,13 @@ from outcomeeng.distribution.bump import (
     changed_plugins_from_diff,
     main,
 )
+from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
+    CODEX_PLUGIN_SUBDIR_NAME,
+    MARKDOWN_FILE_SUFFIX,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+)
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
     distribution_relpath,
@@ -686,11 +693,17 @@ def auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> bool:
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     content = manifest_text(plugin, "0.4.1")
     changes = (
-        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/skills/new/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/commands/new-command.md"),
-        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/agents/new-agent.md"),
         ChangedPath(
-            FileStatus.ADDED, f"src/plugins/{plugin}/.codex-plugin/plugin.json"
+            FileStatus.ADDED,
+            f"{SOURCE_PLUGINS_DIR}/{plugin}/{SKILLS_SUBDIR_NAME}/new/{SKILL_FILENAME}",
+        ),
+        ChangedPath(
+            FileStatus.ADDED,
+            f"{SOURCE_PLUGINS_DIR}/{plugin}/{AGENTS_SUBDIR_NAME}/new-agent{MARKDOWN_FILE_SUFFIX}",
+        ),
+        ChangedPath(
+            FileStatus.ADDED,
+            f"{SOURCE_PLUGINS_DIR}/{plugin}/{CODEX_PLUGIN_SUBDIR_NAME}/plugin.json",
         ),
     )
     run = BumpRun(

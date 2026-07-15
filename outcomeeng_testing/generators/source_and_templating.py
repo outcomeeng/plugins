@@ -4,16 +4,28 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from dataclasses import dataclass
+from enum import StrEnum
+from pathlib import Path
 
 from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
+    SHARED_FRAGMENT_FILENAME,
+    IncludeDirective,
+    RequireSkillDirective,
+    format_directive,
+    format_jinja_raw_block,
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
 from outcomeeng.distribution.contracts import (
+    MARKDOWN_FILE_SUFFIX,
+    PLUGIN_SUBDIRS,
+    REFERENCES_SUBDIR_NAME,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_TOOL_KIND,
+    SKILLS_SUBDIR_NAME,
     Target,
+    format_target_conditional,
 )
 
 
@@ -64,6 +76,35 @@ def runtime_token_probe_name(kind: str, capability: str) -> str:
     return _name_outside(RUNTIME_TOKEN_REGISTRY[kind].names[capability].values())
 
 
+class IncludePlacement(StrEnum):
+    """Authored location of a target-scoped include directive."""
+
+    SOURCE = "source"
+    SHARED_FRAGMENT = "shared-fragment"
+
+
+@dataclass(frozen=True)
+class TargetScopedIncludeCase:
+    """One target-scoped include and its expected fan-out path."""
+
+    source: SourceScenario
+    target: Target
+    placement: IncludePlacement
+    root_body: str
+    outer_fragment_body: str | None
+    reference_filename: str
+    expected_relative_path: Path
+
+
+@dataclass(frozen=True)
+class RawDirectiveCase:
+    """One build directive authored as literal content in a Jinja raw block."""
+
+    source: SourceScenario
+    directive: str
+    template: str
+
+
 def source_scenarios() -> tuple[SourceScenario, ...]:
     """Compose source-tree cases from every production runtime-token coordinate."""
     return tuple(
@@ -108,3 +149,82 @@ def _name_outside(domain: Collection[str]) -> str:
     while candidate in names:
         candidate = f"{candidate}_outside_domain"
     return candidate
+
+
+def target_scoped_include_cases() -> tuple[TargetScopedIncludeCase, ...]:
+    """Cover each target with direct and nested conditional includes."""
+    cases: list[TargetScopedIncludeCase] = []
+    for source in source_scenarios():
+        inner_directive = format_directive(
+            IncludeDirective(
+                f"{source.scope}/{source.inner_topic}/{SHARED_FRAGMENT_FILENAME}"
+            )
+        )
+        outer_directive = format_directive(
+            IncludeDirective(
+                f"{source.scope}/{source.outer_topic}/{SHARED_FRAGMENT_FILENAME}"
+            )
+        )
+        reference_filename = f"{source.cycle_topic}{MARKDOWN_FILE_SUFFIX}"
+        expected_relative_path = (
+            Path(source.plugin)
+            / SKILLS_SUBDIR_NAME
+            / source.skill
+            / REFERENCES_SUBDIR_NAME
+            / reference_filename
+        )
+        for target in Target:
+            conditional = format_target_conditional(target, inner_directive)
+            cases.extend(
+                (
+                    TargetScopedIncludeCase(
+                        source=source,
+                        target=target,
+                        placement=IncludePlacement.SOURCE,
+                        root_body=conditional,
+                        outer_fragment_body=None,
+                        reference_filename=reference_filename,
+                        expected_relative_path=expected_relative_path,
+                    ),
+                    TargetScopedIncludeCase(
+                        source=source,
+                        target=target,
+                        placement=IncludePlacement.SHARED_FRAGMENT,
+                        root_body=outer_directive,
+                        outer_fragment_body=conditional,
+                        reference_filename=reference_filename,
+                        expected_relative_path=expected_relative_path,
+                    ),
+                )
+            )
+    return tuple(cases)
+
+
+def raw_directive_cases() -> tuple[RawDirectiveCase, ...]:
+    """Cover literal includes across the generated source domain."""
+    return tuple(
+        RawDirectiveCase(
+            source=source,
+            directive=directive,
+            template=format_jinja_raw_block(directive),
+        )
+        for source in source_scenarios()
+        for directive in (
+            format_directive(
+                IncludeDirective(
+                    f"{source.scope}/{source.cycle_topic}/{SHARED_FRAGMENT_FILENAME}"
+                )
+            ),
+            format_directive(RequireSkillDirective(source.skill_ref)),
+        )
+    )
+
+
+def unrecognized_plugin_subdirectory_names() -> tuple[str, ...]:
+    """Return generated directory names outside the production allowlist."""
+    candidates = {
+        name
+        for scenario in source_scenarios()
+        for name in (scenario.outer_topic, scenario.cycle_topic)
+    }
+    return tuple(sorted(candidates.difference(PLUGIN_SUBDIRS)))

@@ -99,3 +99,8 @@ def inert_fragment_bodies() -> SearchStrategy[str]:
             )
         )
     )
+
+
+def include_chain_indices() -> SearchStrategy[list[int]]:
+    """Generate distinct suffixes for variable-length recursive include chains."""
+    return st.lists(st.integers(min_value=0), min_size=1, unique=True)

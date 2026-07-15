@@ -19,6 +19,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import Final
 
 from outcomeeng.vendor.anthropics_skills.quick_validate import (
     validate_skill as _default_validate_skill,
@@ -27,10 +28,10 @@ from outcomeeng.vendor.anthropics_skills.quick_validate import (
 # Type for the vendored validator: (skill_dir) -> (valid, message)
 type SkillValidator = Callable[[Path], tuple[bool, str]]
 
+ALLOWED_TOOLS_FIELD: Final = "allowed-tools"
+ARGUMENT_HINT_FIELD: Final = "argument-hint"
 PORTABLE_CAPABILITY_FIELDS: frozenset[str] = frozenset(
-    {
-        "argument-hint",
-    }
+    {ALLOWED_TOOLS_FIELD, ARGUMENT_HINT_FIELD}
 )
 
 # Claude Code-specific fields accepted by the CLI but absent from the Agent

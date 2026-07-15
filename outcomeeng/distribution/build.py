@@ -16,8 +16,10 @@ import re
 import shutil
 import subprocess
 import sys
+from ast import literal_eval
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
@@ -36,6 +38,17 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
 )
 from outcomeeng.distribution.contracts import (
+    BUILD_BLOCK_DELIMITER_END,
+    BUILD_BLOCK_DELIMITER_START,
+    BUILD_COMMENT_DELIMITER_END,
+    BUILD_COMMENT_DELIMITER_START,
+    BUILD_TARGET_VARIABLE,
+    BUILD_VARIABLE_DELIMITER_END,
+    BUILD_VARIABLE_DELIMITER_START,
+    PLUGIN_NAME_VARIABLE,
+    PLUGINS_DIR_NAME,
+    PLUGIN_SUBDIRS,
+    REFERENCES_SUBDIR_NAME,
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
     RUNTIME_TOKEN_ASK_USER_NAMES,
@@ -61,8 +74,15 @@ from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_TOOL_KIND,
     RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
     RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
+    SPX_FLOOR_VARIABLE,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
+)
+from outcomeeng.distribution.diagnose_manifest import (
+    diagnose_manifest_render_variables,
 )
 from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 
@@ -85,44 +105,20 @@ IMPLEMENTED: Final = True
 # Source tree layout
 # ---------------------------------------------------------------------------
 
-PLUGINS_DIR_NAME: Final = "plugins"
 SHARED_DIR_NAME: Final = "_shared"
 SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
-SKILLS_SUBDIR_NAME: Final = "skills"
-COMMANDS_SUBDIR_NAME: Final = "commands"
-AGENTS_SUBDIR_NAME: Final = "agents"
-SCRIPTS_SUBDIR_NAME: Final = "scripts"
-HOOKS_SUBDIR_NAME: Final = "hooks"
-CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
-CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
-REFERENCES_SUBDIR_NAME: Final = "references"
-PLUGIN_SUBDIRS: Final = frozenset(
-    {
-        SKILLS_SUBDIR_NAME,
-        COMMANDS_SUBDIR_NAME,
-        AGENTS_SUBDIR_NAME,
-        SCRIPTS_SUBDIR_NAME,
-        HOOKS_SUBDIR_NAME,
-        CLAUDE_PLUGIN_SUBDIR_NAME,
-        CODEX_PLUGIN_SUBDIR_NAME,
-    }
-)
-
-SKILL_FILENAME: Final = "SKILL.md"
-COMMAND_FILE_SUFFIX: Final = ".md"
-AGENT_FILE_SUFFIX: Final = ".md"
 
 
 # ---------------------------------------------------------------------------
 # Template delimiters (custom Jinja2)
 # ---------------------------------------------------------------------------
 
-BLOCK_DELIMITER_START: Final = "{!%"
-BLOCK_DELIMITER_END: Final = "%!}"
-VARIABLE_DELIMITER_START: Final = "{{!"
-VARIABLE_DELIMITER_END: Final = "!}}"
-COMMENT_DELIMITER_START: Final = "{!#"
-COMMENT_DELIMITER_END: Final = "#!}"
+BLOCK_DELIMITER_START: Final = BUILD_BLOCK_DELIMITER_START
+BLOCK_DELIMITER_END: Final = BUILD_BLOCK_DELIMITER_END
+VARIABLE_DELIMITER_START: Final = BUILD_VARIABLE_DELIMITER_START
+VARIABLE_DELIMITER_END: Final = BUILD_VARIABLE_DELIMITER_END
+COMMENT_DELIMITER_START: Final = BUILD_COMMENT_DELIMITER_START
+COMMENT_DELIMITER_END: Final = BUILD_COMMENT_DELIMITER_END
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +126,8 @@ COMMENT_DELIMITER_END: Final = "#!}"
 # ---------------------------------------------------------------------------
 
 # Frontmatter fields that appear in dist/claude/ and are stripped from dist/codex/.
-CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = ("disable-model-invocation",)
+DISABLE_MODEL_INVOCATION_FIELD: Final = "disable-model-invocation"
+CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (DISABLE_MODEL_INVOCATION_FIELD,)
 
 # The literal token Claude Code expands during skill execution. Source files
 # contain this token verbatim; the build preserves it in dist/claude/ outputs
@@ -139,15 +136,72 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = ("disable-model-invocation",)
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
+EXECUTION_TIME_INJECTION_START: Final = "!`"
+EXECUTION_TIME_INJECTION_END: Final = "`"
+EXECUTION_TIME_INJECTION_PATTERN: Final = re.compile(
+    rf"(?<!`){re.escape(EXECUTION_TIME_INJECTION_START)}"
+    rf"(?P<command>[^`\r\n]*)"
+    rf"{re.escape(EXECUTION_TIME_INJECTION_END)}"
+)
+SKILL_DIR_REFERENCE_SUFFIX_PATTERN: Final = r"/[^\s`\"']+"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
 # the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
 SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
 
 FORMATTER_COMMAND_NAME: Final = "dprint"
+FORMATTER_VERSION: Final = "0.54.0"  # renovate: datasource=npm depName=dprint
+FORMATTER_VERSION_OUTPUT: Final = f"{FORMATTER_COMMAND_NAME} {FORMATTER_VERSION}"
 FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
+FORMATTER_CONFIG_PATH: Final = Path(__file__).resolve().parents[2] / "dprint.jsonc"
+IGNORED_SOURCE_DIRECTORY_NAMES: Final = frozenset({"__pycache__"})
+IGNORED_SOURCE_FILE_SUFFIXES: Final = (".pyc",)
 FormatterProbe = Callable[[str], str | None]
-FormatterRunner = Callable[[tuple[str, ...]], subprocess.CompletedProcess[str]]
+FormatterRunner = Callable[[tuple[str, ...], Path], subprocess.CompletedProcess[str]]
+
+
+class EmissionAction(StrEnum):
+    """How one source file reaches a generated target tree."""
+
+    RENDER = "render"
+    COPY = "copy"
+    FAN_OUT = "fan-out"
+
+
+@dataclass(frozen=True)
+class PlannedEmission:
+    """One source-owned output in one generated target tree."""
+
+    source: Path
+    target: _Target
+    relative_path: Path
+    action: EmissionAction
+
+
+@dataclass(frozen=True)
+class BuildPlan:
+    """Complete source and output inventory for one build."""
+
+    plugin_sources: tuple[Path, ...]
+    emissions: tuple[PlannedEmission, ...]
+
+    def for_target(self, target: _Target) -> tuple[PlannedEmission, ...]:
+        """Return the planned outputs for ``target``."""
+        return tuple(
+            emission for emission in self.emissions if emission.target is target
+        )
+
+    def collisions(self) -> dict[tuple[_Target, Path], tuple[Path, ...]]:
+        """Return output coordinates with more than one producing source."""
+        producers: dict[tuple[_Target, Path], set[Path]] = {}
+        for emission in self.emissions:
+            coordinate = (emission.target, emission.relative_path)
+            producers.setdefault(coordinate, set()).add(emission.source)
+        return {
+            coordinate: tuple(sorted(paths))
+            for coordinate, paths in producers.items()
+            if len(paths) > 1
+        }
 
 
 @dataclass(frozen=True)
@@ -325,21 +379,49 @@ _DIRECTIVE_RE: Final = re.compile(
 )
 _DIRECTIVE_BODY_RE: Final = re.compile(
     r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s+"
-    r"(?P<quote>['\"])(?P<argument>.*?)(?P=quote)$",
+    r"(?P<argument>.+)$",
     re.DOTALL,
 )
+_PLANNING_DIRECTIVE_PLACEHOLDER_START: Final = "\ue000outcomeeng-directive:"
+_PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
 
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
-# directives. A block whose first token is one of these is a Jinja statement the
-# build leaves for the render pass; any other non-`name 'arg'` body is a malformed
-# directive that must fail the build rather than ship verbatim.
-_JINJA_CONTROL_KEYWORDS: Final = frozenset(
-    {"if", "elif", "else", "endif", "for", "endfor", "set", "with", "endwith"}
+# directives. The build owns this vocabulary; validators and evidence import it
+# rather than maintaining parallel keyword tables.
+JINJA_RAW_BLOCK_NAME: Final = "raw"
+JINJA_RAW_BLOCK_END_NAME: Final = "endraw"
+JINJA_NEUTRAL_BLOCK_ENDINGS: Final = {
+    "block": "endblock",
+    "call": "endcall",
+    "filter": "endfilter",
+    "for": "endfor",
+    "macro": "endmacro",
+    JINJA_RAW_BLOCK_NAME: JINJA_RAW_BLOCK_END_NAME,
+    "set": "endset",
+    "with": "endwith",
+}
+JINJA_CONTROL_KEYWORDS: Final = frozenset(
+    {
+        "if",
+        "elif",
+        "else",
+        "endif",
+        *JINJA_NEUTRAL_BLOCK_ENDINGS,
+        *JINJA_NEUTRAL_BLOCK_ENDINGS.values(),
+    }
+)
+_JINJA_RAW_BLOCK_RE: Final = re.compile(
+    rf"(?P<start>{re.escape(BLOCK_DELIMITER_START)}\s*"
+    rf"{re.escape(JINJA_RAW_BLOCK_NAME)}\s*{re.escape(BLOCK_DELIMITER_END)})"
+    rf"(?P<body>.*?)"
+    rf"(?P<end>{re.escape(BLOCK_DELIMITER_START)}\s*"
+    rf"{re.escape(JINJA_RAW_BLOCK_END_NAME)}\s*{re.escape(BLOCK_DELIMITER_END)})",
+    re.DOTALL,
 )
 
 
 def _is_jinja_control_block(body: str) -> bool:
-    return bool(body) and body.split()[0] in _JINJA_CONTROL_KEYWORDS
+    return bool(body) and body.split()[0] in JINJA_CONTROL_KEYWORDS
 
 
 @dataclass(frozen=True)
@@ -426,16 +508,14 @@ def parse_directives(text: str) -> tuple[Directive, ...]:
     """
     directives: list[Directive] = []
     for match in _DIRECTIVE_RE.finditer(text):
-        body = " ".join(match.group(1).split())
-        body_match = _DIRECTIVE_BODY_RE.match(body)
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            continue
+        body_match = _DIRECTIVE_BODY_RE.fullmatch(body)
         if body_match is None:
-            if _is_jinja_control_block(body):
-                # A Jinja block statement (`{!% if target == 'codex' %!}`,
-                # `{!% endif %!}`) — not a directive to collect; Jinja evaluates it.
-                continue
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
-        argument = body_match.group("argument")
+        argument = _directive_argument(body_match.group("argument"), match.group(0))
         if name == "include":
             directives.append(IncludeDirective(path=argument))
         elif name == "require_skill":
@@ -453,14 +533,25 @@ def format_directive(directive: Directive) -> str:
     """
     if isinstance(directive, IncludeDirective):
         return (
-            f"{BLOCK_DELIMITER_START} include '{directive.path}' {BLOCK_DELIMITER_END}"
+            f"{BLOCK_DELIMITER_START} include "
+            f"{_directive_literal(directive.path)} {BLOCK_DELIMITER_END}"
         )
     if isinstance(directive, RequireSkillDirective):
         return (
-            f"{BLOCK_DELIMITER_START} require_skill '{directive.skill_ref}' "
+            f"{BLOCK_DELIMITER_START} require_skill "
+            f"{_directive_literal(directive.skill_ref)} "
             f"{BLOCK_DELIMITER_END}"
         )
     raise DirectiveSyntaxError(f"unsupported directive: {directive!r}")
+
+
+def format_jinja_raw_block(body: str) -> str:
+    """Return an authored Jinja raw block containing ``body``."""
+    return (
+        f"{BLOCK_DELIMITER_START} {JINJA_RAW_BLOCK_NAME} {BLOCK_DELIMITER_END}"
+        f"{body}"
+        f"{BLOCK_DELIMITER_START} {JINJA_RAW_BLOCK_END_NAME} {BLOCK_DELIMITER_END}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -503,7 +594,11 @@ def expand_require_skill(directive: RequireSkillDirective) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _render_variables(target: _Target) -> dict[str, object]:
+def _render_variables(
+    target: _Target,
+    *,
+    plugin_name: str | None = None,
+) -> dict[str, object]:
     """Return the Jinja render variables for a build target.
 
     Carries the build target name and the spx version floor. The floor is
@@ -511,7 +606,14 @@ def _render_variables(target: _Target) -> dict[str, object]:
     ``outcomeeng.validation.spx_version`` so the value the build renders into
     shipped content cannot drift from the floor the product enforces.
     """
-    return {"target": target.value, "spx_floor": REQUIRED_SPX_VERSION}
+    variables = {
+        BUILD_TARGET_VARIABLE: target.value,
+        SPX_FLOOR_VARIABLE: REQUIRED_SPX_VERSION,
+        **diagnose_manifest_render_variables(),
+    }
+    if plugin_name is not None:
+        variables[PLUGIN_NAME_VARIABLE] = plugin_name
+    return variables
 
 
 def render_text(
@@ -529,24 +631,46 @@ def render_text(
 
     Raises CyclicIncludeError if include directives form a cycle.
     """
+    raw_literals: list[tuple[str, str]] = []
     rendered = _render_directives(
         template,
         shared_root=shared_root,
         include_stack=(),
+        variables=variables,
+        runtime_token_registry=runtime_token_registry,
+        raw_literals=raw_literals,
     )
+    return _restore_literals(
+        _render_jinja(
+            rendered,
+            shared_root=shared_root,
+            variables=variables,
+            runtime_token_registry=runtime_token_registry,
+        ),
+        tuple(raw_literals),
+    )
+
+
+def _render_jinja(
+    template: str,
+    *,
+    shared_root: Path | None,
+    variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> str:
+    """Evaluate custom-delimiter Jinja variables and control blocks."""
     # Run the Jinja pass when a variable token ({{! !}}) or a Jinja control block
     # ({!% if %!}) survives directive expansion — bare conditionals carry no
-    # variable token but still need evaluation. The remaining {!% blocks are
-    # control statements; include/require_skill directives were already expanded.
+    # variable token but still need evaluation.
     if (
-        VARIABLE_DELIMITER_START not in rendered
-        and BLOCK_DELIMITER_START not in rendered
+        VARIABLE_DELIMITER_START not in template
+        and BLOCK_DELIMITER_START not in template
     ):
-        return rendered
+        return template
     # The skill-directory rewrite escape shares the {!# #!} syntax Jinja treats as
     # a comment, but it is processed later by rewrite_paths_for_target, not here.
     # Protect it across the Jinja render so the escape survives intact.
-    protected = rendered.replace(
+    protected = template.replace(
         SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
     )
     try:
@@ -560,6 +684,85 @@ def render_text(
     return result.replace(
         SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER, SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
     )
+
+
+def _render_target_scope(
+    template: str,
+    *,
+    target: _Target,
+    plugin_name: str,
+    shared_root: Path,
+) -> str:
+    """Evaluate one target's Jinja control flow while preserving directives."""
+    raw_literals: list[tuple[str, str]] = []
+    return _render_jinja_preserving_directives(
+        template,
+        shared_root=shared_root,
+        variables=_render_variables(target, plugin_name=plugin_name),
+        raw_literals=raw_literals,
+    )
+
+
+def _render_jinja_preserving_directives(
+    template: str,
+    *,
+    shared_root: Path | None,
+    variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+    raw_literals: list[tuple[str, str]],
+) -> str:
+    """Evaluate Jinja control flow while collecting protected raw literals."""
+    protected_template = _protect_jinja_raw_bodies(template, raw_literals=raw_literals)
+    preserved: list[tuple[str, str]] = []
+
+    def mask_directive(match: re.Match[str]) -> str:
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            return match.group(0)
+        placeholder = _directive_placeholder(protected_template, len(preserved))
+        preserved.append((placeholder, match.group(0)))
+        return placeholder
+
+    scoped = _render_jinja(
+        _DIRECTIVE_RE.sub(mask_directive, protected_template),
+        shared_root=shared_root,
+        variables=variables,
+        runtime_token_registry=runtime_token_registry,
+    )
+    for placeholder, directive in preserved:
+        scoped = scoped.replace(placeholder, directive)
+    return scoped
+
+
+def _protect_jinja_raw_bodies(
+    template: str,
+    *,
+    raw_literals: list[tuple[str, str]],
+) -> str:
+    def replace(match: re.Match[str]) -> str:
+        placeholder = _directive_placeholder(template, len(raw_literals))
+        while any(existing == placeholder for existing, _ in raw_literals):
+            placeholder += _PLANNING_DIRECTIVE_PLACEHOLDER_END
+        raw_literals.append((placeholder, match.group("body")))
+        return f"{match.group('start')}{placeholder}{match.group('end')}"
+
+    return _JINJA_RAW_BLOCK_RE.sub(replace, template)
+
+
+def _restore_literals(text: str, literals: tuple[tuple[str, str], ...]) -> str:
+    for placeholder, literal in literals:
+        text = text.replace(placeholder, literal)
+    return text
+
+
+def _directive_placeholder(template: str, index: int) -> str:
+    placeholder = (
+        f"{_PLANNING_DIRECTIVE_PLACEHOLDER_START}{index}"
+        f"{_PLANNING_DIRECTIVE_PLACEHOLDER_END}"
+    )
+    while placeholder in template:
+        placeholder += _PLANNING_DIRECTIVE_PLACEHOLDER_END
+    return placeholder
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +792,32 @@ def rewrite_paths_for_target(text: str, *, target: _Target) -> str:
 
     translated = protected.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
     return translated.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
+
+
+def execution_time_injection_commands(text: str) -> tuple[str, ...]:
+    """Return the commands embedded in execution-time dynamic context."""
+    return tuple(
+        match.group("command")
+        for match in EXECUTION_TIME_INJECTION_PATTERN.finditer(text)
+    )
+
+
+def contains_execution_time_skill_content_injection(text: str) -> bool:
+    """Return whether dynamic context can inline a skill definition."""
+    return any(
+        SKILL_FILENAME in command
+        or (
+            "../" in command
+            and ("*" in command or f"/{REFERENCES_SUBDIR_NAME}/" in command)
+        )
+        for command in execution_time_injection_commands(text)
+    )
+
+
+def skill_dir_path_references(text: str, token: str) -> tuple[str, ...]:
+    """Return complete path references rooted at ``token`` in source order."""
+    pattern = re.compile(rf"{re.escape(token)}{SKILL_DIR_REFERENCE_SUFFIX_PATTERN}")
+    return tuple(match.group(0) for match in pattern.finditer(text))
 
 
 def _protect_skill_dir_rewrite_escapes(text: str) -> str:
@@ -656,6 +885,23 @@ def strip_frontmatter_fields(
     return suffix.lstrip("\r\n")
 
 
+def frontmatter_field_names(text: str) -> frozenset[str]:
+    """Return top-level field names from the opening YAML frontmatter fence."""
+    if not text.startswith("---\n"):
+        return frozenset()
+    closing_index = text.find("\n---", len("---\n"))
+    if closing_index == -1:
+        raise FrontmatterError("frontmatter starts with --- but has no closing fence")
+    fence_end = closing_index + len("\n---")
+    if len(text) > fence_end and text[fence_end] not in {"\n", "\r"}:
+        raise FrontmatterError("frontmatter closing fence is malformed")
+    return frozenset(
+        key
+        for line in text[len("---\n") : closing_index].splitlines()
+        if (key := _frontmatter_key(line)) is not None
+    )
+
+
 # ---------------------------------------------------------------------------
 # Stage 5: Build orchestration
 # ---------------------------------------------------------------------------
@@ -674,44 +920,45 @@ def emit_skill(
     target-specific translation, and writes the result to the corresponding
     location under dist_root.
     """
-    src_relative = _relative_plugin_path(src_path)
+    src_root = shared_root.parent
+    src_relative = plugin_relative_path(src_path, src_root=src_root)
     destination = dist_root / target.value / src_relative
-    raw_text = src_path.read_text(encoding="utf-8")
-    rendered = render_text(
-        raw_text,
-        shared_root=shared_root,
-        variables=_render_variables(target),
+    rendered = render_source_text(
+        src_path,
+        target=target,
+        src_root=src_root,
     )
-    translated = rewrite_paths_for_target(rendered, target=target)
-    if target is _Target.CODEX:
-        translated = strip_frontmatter_fields(
-            translated,
-            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
-        )
+    translated = _translate_rendered_text(rendered, target=target)
     _write_text(destination, translated)
     shutil.copymode(src_path, destination)
-    _fan_out_shared_references(
-        src_path,
-        destination,
-        shared_root=shared_root,
-        raw_source=raw_text,
-    )
 
 
-def build(src_root: Path, dist_root: Path) -> None:
+def build(
+    src_root: Path,
+    dist_root: Path,
+    *,
+    formatter_probe: FormatterProbe = shutil.which,
+    formatter_runner: FormatterRunner | None = None,
+) -> None:
     """End-to-end build: src/ -> dist/claude/ and dist/codex/.
 
     Validates src_root's tree shape, then iterates every plugin source file
-    and emits both target outputs. The build is deterministic and
-    idempotent — the same src_root always produces byte-identical outputs,
-    and re-running the build over a previously-emitted dist_root produces
-    no changes.
+    and emits both target outputs. Formatter discovery and execution remain
+    injectable so callers can verify host-specific boundaries. The build is
+    deterministic and idempotent — the same src_root always produces
+    byte-identical outputs, and re-running the build over a previously-emitted
+    dist_root produces no changes.
 
     Raises SourceFormatError if src_root's tree shape is invalid.
     """
-    _validate_source_tree(src_root)
+    plan = plan_emissions(src_root)
+    runner = _run_formatter if formatter_runner is None else formatter_runner
+    formatter = _require_formatter(
+        formatter_probe=formatter_probe,
+        runner=runner,
+        cwd=src_root,
+    )
     shared_root = src_root / SHARED_DIR_NAME
-    plugins_root = src_root / PLUGINS_DIR_NAME
 
     for target in _Target:
         target_root = dist_root / target.value
@@ -719,30 +966,45 @@ def build(src_root: Path, dist_root: Path) -> None:
             shutil.rmtree(target_root)
         target_root.mkdir(parents=True, exist_ok=True)
 
-    for source_file in _iter_plugin_files(plugins_root):
-        for target in _Target:
-            if _is_rendered_text(source_file):
-                if (
-                    SKILLS_SUBDIR_NAME in source_file.parts
-                    and source_file.name == SKILL_FILENAME
-                ):
-                    emit_skill(
-                        source_file,
-                        target=target,
-                        dist_root=dist_root,
-                        shared_root=shared_root,
-                    )
-                    continue
-                _emit_rendered_file(
-                    source_file,
-                    target=target,
+    for emission in plan.emissions:
+        if emission.action is EmissionAction.FAN_OUT:
+            _emit_planned_fan_out(
+                emission,
+                dist_root=dist_root,
+                src_root=src_root,
+            )
+            continue
+        if emission.action is EmissionAction.RENDER:
+            if (
+                SKILLS_SUBDIR_NAME in emission.relative_path.parts
+                and emission.source.name == SKILL_FILENAME
+            ):
+                emit_skill(
+                    emission.source,
+                    target=emission.target,
                     dist_root=dist_root,
                     shared_root=shared_root,
                 )
                 continue
-            _copy_unrendered_file(source_file, target=target, dist_root=dist_root)
+            _emit_rendered_file(
+                emission.source,
+                target=emission.target,
+                dist_root=dist_root,
+                src_root=src_root,
+            )
+            continue
+        _copy_unrendered_file(
+            emission.source,
+            target=emission.target,
+            dist_root=dist_root,
+            src_root=src_root,
+        )
 
-    _format_dist(dist_root)
+    _run_dist_formatter(
+        dist_root,
+        formatter=formatter,
+        runner=runner,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -751,7 +1013,9 @@ def main(argv: list[str] | None = None) -> int:
         prog="outcomeeng.distribution.build",
         description="Build src/ plugin sources into dist/claude and dist/codex.",
     )
-    parser.add_argument("src_root", type=Path, nargs="?", default=Path("src"))
+    parser.add_argument(
+        "src_root", type=Path, nargs="?", default=Path(SOURCE_ROOT_NAME)
+    )
     parser.add_argument("dist_root", type=Path, nargs="?", default=Path("dist"))
     args = parser.parse_args(argv)
     try:
@@ -825,18 +1089,27 @@ def _render_directives(
     *,
     shared_root: Path | None,
     include_stack: tuple[Path, ...],
+    variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind],
+    raw_literals: list[tuple[str, str]],
 ) -> str:
+    scoped_template = _render_jinja_preserving_directives(
+        template,
+        shared_root=shared_root,
+        variables=variables,
+        runtime_token_registry=runtime_token_registry,
+        raw_literals=raw_literals,
+    )
+
     def replace(match: re.Match[str]) -> str:
-        body = " ".join(match.group(1).split())
-        body_match = _DIRECTIVE_BODY_RE.match(body)
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            return match.group(0)
+        body_match = _DIRECTIVE_BODY_RE.fullmatch(body)
         if body_match is None:
-            if _is_jinja_control_block(body):
-                # A Jinja block statement sharing the block delimiter — leave it
-                # for Jinja to evaluate during render.
-                return match.group(0)
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
-        argument = body_match.group("argument")
+        argument = _directive_argument(body_match.group("argument"), match.group(0))
         if name == "require_skill":
             return expand_require_skill(RequireSkillDirective(skill_ref=argument))
         if name != "include":
@@ -844,9 +1117,7 @@ def _render_directives(
         if shared_root is None:
             raise IncludeResolutionError("include directive requires shared_root")
         include_path = _resolve_under_root(shared_root, argument)
-        if include_path in include_stack:
-            cycle = " -> ".join(str(path) for path in (*include_stack, include_path))
-            raise CyclicIncludeError(f"cyclic include detected: {cycle}")
+        _assert_include_not_cyclic(include_path, include_stack=include_stack)
         included = expand_include(
             IncludeDirective(path=argument), shared_root=shared_root
         )
@@ -854,9 +1125,26 @@ def _render_directives(
             included,
             shared_root=shared_root,
             include_stack=(*include_stack, include_path),
+            variables=variables,
+            runtime_token_registry=runtime_token_registry,
+            raw_literals=raw_literals,
         )
 
-    return _DIRECTIVE_RE.sub(replace, template)
+    return _DIRECTIVE_RE.sub(replace, scoped_template)
+
+
+def _directive_argument(argument_literal: str, source: str) -> str:
+    try:
+        argument = literal_eval(argument_literal)
+    except (SyntaxError, ValueError) as error:
+        raise DirectiveSyntaxError(f"invalid directive: {source!r}") from error
+    if not isinstance(argument, str):
+        raise DirectiveSyntaxError(f"invalid directive: {source!r}")
+    return argument
+
+
+def _directive_literal(argument: str) -> str:
+    return repr(argument).replace("%", r"\x25")
 
 
 def _resolve_under_root(root: Path, relative_path: str) -> Path:
@@ -871,6 +1159,16 @@ def _resolve_under_root(root: Path, relative_path: str) -> Path:
     return candidate
 
 
+def _assert_include_not_cyclic(
+    include_path: Path,
+    *,
+    include_stack: tuple[Path, ...],
+) -> None:
+    if include_path in include_stack:
+        cycle = " -> ".join(str(path) for path in (*include_stack, include_path))
+        raise CyclicIncludeError(f"cyclic include detected: {cycle}")
+
+
 def _frontmatter_key(line: str) -> str | None:
     if not line or line[0].isspace() or ":" not in line:
         return None
@@ -882,15 +1180,23 @@ def _is_continuation_line(line: str) -> bool:
     return bool(line.startswith((" ", "\t")) or not line.strip())
 
 
-def _relative_plugin_path(path: Path) -> Path:
-    parts = path.parts
+def plugin_relative_path(path: Path, *, src_root: Path) -> Path:
+    """Return ``path`` relative to the source ``plugins/`` directory."""
+    plugins_root = src_root / PLUGINS_DIR_NAME
     try:
-        plugins_index = parts.index(PLUGINS_DIR_NAME)
+        return path.relative_to(plugins_root)
     except ValueError as exc:
         raise SourceFormatError(
-            f"{path} is not under a {PLUGINS_DIR_NAME}/ directory"
+            f"{path} is not under source plugins directory {plugins_root}"
         ) from exc
-    return Path(*parts[plugins_index + 1 :])
+
+
+def source_plugin_name(path: Path, *, src_root: Path) -> str:
+    """Return the source plugin directory that owns ``path``."""
+    relative_path = plugin_relative_path(path, src_root=src_root)
+    if len(relative_path.parts) < 2:
+        raise SourceFormatError(f"{path} has no owning plugin directory")
+    return relative_path.parts[0]
 
 
 def _is_rendered_text(path: Path) -> bool:
@@ -902,42 +1208,98 @@ def _emit_rendered_file(
     *,
     target: _Target,
     dist_root: Path,
-    shared_root: Path,
+    src_root: Path,
 ) -> None:
-    destination = dist_root / target.value / _relative_plugin_path(source_file)
-    raw_text = source_file.read_text(encoding="utf-8")
-    rendered = render_text(
-        raw_text,
-        shared_root=shared_root,
-        variables=_render_variables(target),
+    destination = (
+        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
     )
-    translated = rewrite_paths_for_target(rendered, target=target)
-    if target is _Target.CODEX:
-        translated = strip_frontmatter_fields(
-            translated,
-            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
-        )
+    rendered = render_source_text(
+        source_file,
+        target=target,
+        src_root=src_root,
+    )
+    translated = _translate_rendered_text(rendered, target=target)
     _write_text(destination, translated)
     shutil.copymode(source_file, destination)
-    _fan_out_shared_references(
-        source_file,
-        destination,
-        shared_root=shared_root,
-        raw_source=raw_text,
-    )
 
 
 def _copy_unrendered_file(
-    source_file: Path, *, target: _Target, dist_root: Path
+    source_file: Path, *, target: _Target, dist_root: Path, src_root: Path
 ) -> None:
-    destination = dist_root / target.value / _relative_plugin_path(source_file)
+    destination = (
+        dist_root / target.value / plugin_relative_path(source_file, src_root=src_root)
+    )
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_file, destination)
 
 
-def _run_formatter(command: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+def render_source_text(
+    source_file: Path,
+    *,
+    target: _Target,
+    src_root: Path,
+) -> str:
+    """Render one authored text file before target-specific translation."""
+    return render_text(
+        source_file.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            target,
+            plugin_name=source_plugin_name(source_file, src_root=src_root),
+        ),
+    )
+
+
+def render_planned_emission_text(
+    emission: PlannedEmission,
+    *,
+    src_root: Path,
+) -> str:
+    """Render one planned text emission before target-specific translation."""
+    return render_text(
+        emission.source.read_text(encoding="utf-8"),
+        shared_root=src_root / SHARED_DIR_NAME,
+        variables=_render_variables(
+            emission.target,
+            plugin_name=emission.relative_path.parts[0],
+        ),
+    )
+
+
+def _translate_rendered_text(rendered: str, *, target: _Target) -> str:
+    translated = rewrite_paths_for_target(rendered, target=target)
+    if target is _Target.CODEX:
+        return strip_frontmatter_fields(
+            translated,
+            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
+        )
+    return translated
+
+
+def _emit_planned_fan_out(
+    emission: PlannedEmission,
+    *,
+    dist_root: Path,
+    src_root: Path,
+) -> None:
+    destination = dist_root / emission.target.value / emission.relative_path
+    if not _is_rendered_text(emission.source):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(emission.source, destination)
+        return
+    rendered = render_planned_emission_text(emission, src_root=src_root)
+    translated = _translate_rendered_text(rendered, target=emission.target)
+    _write_text(destination, translated)
+    shutil.copymode(emission.source, destination)
+
+
+def _run_formatter(
+    command: tuple[str, ...],
+    cwd: Path,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
+        cwd=cwd,
         check=False,
         capture_output=True,
         text=True,
@@ -950,16 +1312,71 @@ def _format_dist(
     formatter_probe: FormatterProbe = shutil.which,
     runner: FormatterRunner = _run_formatter,
 ) -> None:
+    formatter = _require_formatter(
+        formatter_probe=formatter_probe,
+        runner=runner,
+        cwd=dist_root,
+    )
+    _run_dist_formatter(dist_root, formatter=formatter, runner=runner)
+
+
+def _require_formatter(
+    *,
+    formatter_probe: FormatterProbe,
+    runner: FormatterRunner,
+    cwd: Path,
+) -> str:
+    """Return the required formatter only when its version contract holds."""
     formatter = formatter_probe(FORMATTER_COMMAND_NAME)
     if formatter is None:
         raise BuildError(
             f"{FORMATTER_COMMAND_NAME} is required to format generated dist output"
         )
-    file_pattern = str(dist_root / FORMATTER_FILE_GLOB)
-    result = runner((formatter, "fmt", "--allow-no-files", file_pattern))
+    version_command = formatter_version_command(formatter)
+    version_result = runner(version_command, cwd)
+    if version_result.returncode != 0:
+        details = (version_result.stderr or version_result.stdout).strip()
+        raise BuildError(f"{FORMATTER_COMMAND_NAME} version check failed: {details}")
+    actual_version = version_result.stdout.strip()
+    if actual_version != FORMATTER_VERSION_OUTPUT:
+        raise BuildError(
+            f"{FORMATTER_COMMAND_NAME} {FORMATTER_VERSION} is required; "
+            f"found {actual_version or 'unknown version'}"
+        )
+    return formatter
+
+
+def _run_dist_formatter(
+    dist_root: Path,
+    *,
+    formatter: str,
+    runner: FormatterRunner,
+) -> None:
+    """Format generated output with an already-accepted formatter."""
+    command = formatter_format_command(formatter)
+    result = runner(command, dist_root)
     if result.returncode != 0:
         details = (result.stderr or result.stdout).strip()
-        raise BuildError(f"dprint failed while formatting dist: {details}")
+        raise BuildError(
+            f"{FORMATTER_COMMAND_NAME} failed while formatting dist: {details}"
+        )
+
+
+def formatter_version_command(formatter: str) -> tuple[str, ...]:
+    """Return the source-owned formatter version probe command."""
+    return (formatter, "--version")
+
+
+def formatter_format_command(formatter: str) -> tuple[str, ...]:
+    """Return the source-owned generated-tree formatting command."""
+    return (
+        formatter,
+        "fmt",
+        "--config",
+        str(FORMATTER_CONFIG_PATH),
+        "--allow-no-files",
+        FORMATTER_FILE_GLOB,
+    )
 
 
 def _write_text(path: Path, text: str) -> None:
@@ -967,21 +1384,162 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _iter_plugin_files(plugins_root: Path) -> tuple[Path, ...]:
-    roots = (
-        plugin_root / subdir
-        for plugin_root in plugins_root.iterdir()
-        if plugin_root.is_dir()
-        for subdir in sorted(PLUGIN_SUBDIRS)
-    )
+def plugin_source_files(src_root: Path) -> tuple[Path, ...]:
+    """Return every authored plugin source file the build emits."""
+    plugins_root = src_root / PLUGINS_DIR_NAME
     return tuple(
         sorted(
             path
-            for root in roots
-            if root.is_dir()
-            for path in root.rglob("*")
+            for path in plugins_root.rglob("*")
             if path.is_file()
+            and _is_authored_source_file(path.relative_to(plugins_root))
         )
+    )
+
+
+def plan_emissions(src_root: Path) -> BuildPlan:
+    """Return the complete collision-free output plan for ``src_root``."""
+    _validate_source_tree(src_root)
+    shared_root = src_root / SHARED_DIR_NAME
+    plugin_sources = plugin_source_files(src_root)
+    emissions: list[PlannedEmission] = []
+    for source_file in plugin_sources:
+        relative_path = plugin_relative_path(source_file, src_root=src_root)
+        action = (
+            EmissionAction.RENDER
+            if _is_rendered_text(source_file)
+            else EmissionAction.COPY
+        )
+        for target in _Target:
+            emissions.append(
+                PlannedEmission(
+                    source=source_file,
+                    target=target,
+                    relative_path=relative_path,
+                    action=action,
+                )
+            )
+            emissions.extend(
+                _planned_fan_out_emissions(
+                    source_file,
+                    target=target,
+                    relative_path=relative_path,
+                    shared_root=shared_root,
+                )
+            )
+    plan = BuildPlan(plugin_sources=plugin_sources, emissions=tuple(emissions))
+    collisions = plan.collisions()
+    if collisions:
+        details = ", ".join(
+            f"{target.value}/{path}: {', '.join(map(str, sources))}"
+            for (target, path), sources in sorted(
+                collisions.items(), key=lambda item: (item[0][0].value, item[0][1])
+            )
+        )
+        raise SourceFormatError(f"multiple sources emit the same output: {details}")
+    return plan
+
+
+def _planned_fan_out_emissions(
+    source_file: Path,
+    *,
+    target: _Target,
+    relative_path: Path,
+    shared_root: Path,
+) -> tuple[PlannedEmission, ...]:
+    if (
+        SKILLS_SUBDIR_NAME not in relative_path.parts
+        or source_file.suffix not in _TEXT_FILE_SUFFIXES
+    ):
+        return ()
+    scoped_source = _render_target_scope(
+        source_file.read_text(encoding="utf-8"),
+        target=target,
+        plugin_name=relative_path.parts[0],
+        shared_root=shared_root,
+    )
+    directives = _include_directives(scoped_source)
+    return tuple(
+        dict.fromkeys(
+            emission
+            for directive in directives
+            for emission in _planned_include_emissions(
+                directive,
+                target=target,
+                relative_path=relative_path,
+                shared_root=shared_root,
+            )
+        )
+    )
+
+
+def _planned_include_emissions(
+    directive: IncludeDirective,
+    *,
+    target: _Target,
+    relative_path: Path,
+    shared_root: Path,
+    include_stack: tuple[Path, ...] = (),
+) -> tuple[PlannedEmission, ...]:
+    pending = [(directive, include_stack)]
+    emissions: list[PlannedEmission] = []
+    while pending:
+        current_directive, current_stack = pending.pop()
+        fragment_path = _resolve_under_root(shared_root, current_directive.path)
+        _assert_include_not_cyclic(fragment_path, include_stack=current_stack)
+        fragment_body = _render_target_scope(
+            expand_include(current_directive, shared_root=shared_root),
+            target=target,
+            plugin_name=relative_path.parts[0],
+            shared_root=shared_root,
+        )
+        topic_root = fragment_path.parent
+        emissions.extend(
+            PlannedEmission(
+                source=child_file,
+                target=target,
+                relative_path=(
+                    relative_path.parent / child_file.relative_to(topic_root)
+                ),
+                action=EmissionAction.FAN_OUT,
+            )
+            for child_file in _fan_out_topic_files(topic_root)
+        )
+        nested_stack = (*current_stack, fragment_path)
+        pending.extend(
+            (nested_directive, nested_stack)
+            for nested_directive in reversed(_include_directives(fragment_body))
+        )
+    return tuple(dict.fromkeys(emissions))
+
+
+def _include_directives(text: str) -> tuple[IncludeDirective, ...]:
+    return tuple(
+        directive
+        for directive in parse_directives(text)
+        if isinstance(directive, IncludeDirective)
+    )
+
+
+def _fan_out_topic_files(topic_root: Path) -> tuple[Path, ...]:
+    return tuple(
+        child_file
+        for child in sorted(topic_root.iterdir())
+        if child.name != SHARED_FRAGMENT_FILENAME
+        for child_file in _fan_out_child_files(child)
+    )
+
+
+def _fan_out_child_files(child: Path) -> tuple[Path, ...]:
+    if child.is_dir():
+        return tuple(sorted(path for path in child.rglob("*") if path.is_file()))
+    return (child,)
+
+
+def _is_authored_source_file(path: Path) -> bool:
+    return not (
+        IGNORED_SOURCE_DIRECTORY_NAMES.intersection(path.parts)
+        or path.suffix in IGNORED_SOURCE_FILE_SUFFIXES
     )
 
 
@@ -1017,32 +1575,6 @@ def _validate_source_tree(src_root: Path) -> None:
                         f"skill directory missing {SKILL_FILENAME}: "
                         f"{skill_root.relative_to(src_root)}"
                     )
-
-
-def _fan_out_shared_references(
-    source_file: Path,
-    destination: Path,
-    *,
-    shared_root: Path,
-    raw_source: str,
-) -> None:
-    if SKILLS_SUBDIR_NAME not in source_file.parts:
-        return
-    for directive in parse_directives(raw_source):
-        if not isinstance(directive, IncludeDirective):
-            continue
-        include_path = _resolve_under_root(shared_root, directive.path)
-        topic_root = include_path.parent
-        for child in sorted(topic_root.iterdir()):
-            if child.name == SHARED_FRAGMENT_FILENAME:
-                continue
-            if child.is_dir():
-                target_child = destination.parent / child.name
-                if target_child.exists():
-                    shutil.rmtree(target_child)
-                shutil.copytree(child, target_child)
-            elif child.is_file():
-                shutil.copy2(child, destination.parent / child.name)
 
 
 if __name__ == "__main__":
