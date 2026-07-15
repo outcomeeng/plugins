@@ -16,7 +16,10 @@ streaming watchers. The runner strips ``CLAUDECODE`` from the inherited
 environment so nested invocations from inside a Claude Code session use
 the subprocess contract rather than the interactive guard.
 
-Test fakes (stubs, recorders) live in ``outcomeeng_testing.evals.fakes``.
+Test fakes (stubs, recorders) for the marketplace's own meta-tests live
+under ``outcomeeng_testing.evals.fakes`` — marketplace-internal test
+infrastructure that is not shipped as part of the installable
+``outcomeeng_evals`` surface.
 """
 
 from __future__ import annotations
@@ -57,8 +60,9 @@ class RunMetadata:
     """Optional per-invocation metadata.
 
     All fields are ``None`` when the runner does not expose them (for
-    example, the stub runners under ``outcomeeng_testing.evals.fakes`` used
-    by l1 meta-tests). Downstream callers must tolerate missing metadata.
+    example, the marketplace-internal stub runners under
+    ``outcomeeng_testing.evals.fakes`` used by l1 meta-tests). Downstream
+    callers must tolerate missing metadata.
     """
 
     duration_ms: float | None = None
