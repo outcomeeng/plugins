@@ -10,7 +10,7 @@
   "baseSha": "2222222222222222222222222222222222222222",
   "configDigest": "cfg-abc123",
   "participants": ["review"],
-  "scope": {"include": ["README.md"]},
+  "scope": { "include": ["README.md"] },
   "startedAt": "2026-06-23T00:00:00Z",
   "completedAt": "2026-06-23T00:00:00Z",
   "outputPaths": []
