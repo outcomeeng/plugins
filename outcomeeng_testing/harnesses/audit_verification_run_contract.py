@@ -40,6 +40,8 @@ from outcomeeng.validation.implementation_audit_contract import (
 from outcomeeng.distribution.orchestration import SOURCE_PLUGINS_DIR
 from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
+    SPX_COMMAND,
+    VERIFICATION_RUN_MINIMUM_SPX_COMMAND,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     is_satisfied,
     parse_version,
@@ -54,7 +56,7 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
 
 
-def spx_floor_provides_verification_run_lifecycle() -> bool:
+def spx_floor_and_ci_pin_meet_verification_run_minimum() -> bool:
     """Return whether the product floor and CI pin include verification runs."""
     workflow_pin = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
     return (
@@ -158,6 +160,28 @@ def implementation_audit_scripts_are_absent_and_rejected() -> bool:
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
     """Exercise the published verification-run contract used by audit skills."""
+    return _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
+        SPX_COMMAND
+    )
+
+
+def minimum_spx_release_accepts_implementation_audit_lifecycle() -> bool:
+    """Exercise the implementation-audit lifecycle against the minimum release."""
+    reported_version = _run(
+        Path.cwd(),
+        (*VERIFICATION_RUN_MINIMUM_SPX_COMMAND, "--version"),
+    ).stdout.strip()
+    return (
+        reported_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
+        and _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
+            VERIFICATION_RUN_MINIMUM_SPX_COMMAND
+        )
+    )
+
+
+def _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
+    spx_command: tuple[str, ...],
+) -> bool:
     language = _source_language_plugin_name()
     if language is None:
         return False
@@ -183,6 +207,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 "stdin",
             ),
             implementation_audit_input_payload(probe.request_kind),
+            spx_command=spx_command,
         )
         run_token = _required_string(start_report, RUN_TOKEN_FIELD)
         _run_spx_json(
@@ -192,6 +217,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 implementation_audit_scope_payload(probe.language, probe.concern),
                 language=probe.language,
             ),
+            spx_command=spx_command,
         )
         _run_spx_json(
             repository,
@@ -213,6 +239,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 ),
                 language=probe.language,
             ),
+            spx_command=spx_command,
         )
         finish_report = _run_spx_json(
             repository,
@@ -231,6 +258,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 "--terminal-status",
                 probe.terminal_status.value,
             ),
+            spx_command=spx_command,
         )
         render_report = _run_spx_json(
             repository,
@@ -247,6 +275,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 "--run",
                 run_token,
             ),
+            spx_command=spx_command,
         )
 
     observed = (
@@ -369,9 +398,11 @@ def _run_spx_json(
     repository: Path,
     arguments: tuple[str, ...],
     payload: Mapping[str, Any] | None = None,
+    *,
+    spx_command: tuple[str, ...] = SPX_COMMAND,
 ) -> dict[str, Any]:
     input_text = None if payload is None else f"{json.dumps(payload)}\n"
-    completed = _run(repository, ("spx", *arguments), input_text=input_text)
+    completed = _run(repository, (*spx_command, *arguments), input_text=input_text)
     parsed = json.loads(completed.stdout)
     if not isinstance(parsed, dict):
         raise TypeError("spx command did not return a JSON object")

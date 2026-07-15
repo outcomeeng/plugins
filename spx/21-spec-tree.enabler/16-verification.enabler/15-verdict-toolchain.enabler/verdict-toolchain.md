@@ -8,7 +8,8 @@ CAN record validated scope evidence, finding evidence, terminal state, and rende
 
 ### Compliance
 
-- ALWAYS: the shipped SPX floor is at least the published release that provides the `spx verification run` lifecycle used by audit skills ([test](tests/test_verification_run_payload_contract.compliance.l1.py))
+- ALWAYS: the shipped SPX floor and CI pin are at least the minimum release for the `spx verification run` lifecycle used by audit skills ([test](tests/test_verification_run_payload_contract.compliance.l1.py))
+- ALWAYS: the exact published SPX minimum release executes `spx verification run start`, `scope add`, `finding add`, `finish`, and `render` for implementation-audit payloads ([test](tests/test_minimum_spx_release.compliance.l3.py))
 - NEVER: the spec-tree plugin ships `verdict.py`, `aggregate_verdicts.py`, `pass_results.py`, `journal_emit.py`, or `audit_orchestrator.py` under the audit skill ([test](tests/test_verification_run_payload_contract.compliance.l1.py))
 
 ### Audit

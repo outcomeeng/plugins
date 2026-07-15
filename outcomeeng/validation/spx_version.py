@@ -36,7 +36,17 @@ import sys
 from pathlib import Path
 from typing import Final
 
+SPX_COMMAND: Final = ("spx",)
+SPX_NPM_PACKAGE_NAME: Final = "@outcomeeng/spx"
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
+VERIFICATION_RUN_MINIMUM_SPX_PACKAGE: Final = (
+    f"{SPX_NPM_PACKAGE_NAME}@{VERIFICATION_RUN_MINIMUM_SPX_VERSION}"
+)
+VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
+    "npx",
+    "--yes",
+    VERIFICATION_RUN_MINIMUM_SPX_PACKAGE,
+)
 
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
