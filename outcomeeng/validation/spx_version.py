@@ -63,6 +63,7 @@ from typing import Final
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
+SPX_PACKAGE_NAME: Final = "@outcomeeng/spx"
 VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "start",
     "scope",

@@ -7,6 +7,7 @@ import subprocess
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
+from shutil import which
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
@@ -47,10 +48,13 @@ from outcomeeng.validation.implementation_audit_contract import (
 )
 from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
+    SPX_PACKAGE_NAME,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     VERIFICATION_RUN_REQUIRED_COMMANDS,
+    WORKFLOW_PATH,
     is_satisfied,
     parse_version,
+    read_pinned_version,
     verification_run_floor_is_satisfied,
 )
 
@@ -120,6 +124,7 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     if not spx_floor_provides_verification_run_lifecycle():
         return False
 
+    spx_command = _pinned_spx_command()
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
     terminal_status = AuditTerminalStatus.REJECTED
 
@@ -131,10 +136,12 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
                 rule,
                 spx_verification_run_accepts_implementation_audit_payloads.__doc__
                 or rule,
+                spx_command,
             )
         )
         finish_report = _run_spx(
             repository,
+            spx_command,
             ("finish",),
             scope,
             run_token=run_token,
@@ -142,6 +149,7 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
         )
         render_report = _run_spx(
             repository,
+            spx_command,
             ("render",),
             scope,
             run_token=run_token,
@@ -170,6 +178,7 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
     if not spx_floor_provides_verification_run_lifecycle():
         return False
 
+    spx_command = _pinned_spx_command()
     rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
 
     with TemporaryDirectory() as temporary_directory:
@@ -178,10 +187,12 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
             repository,
             rule,
             spx_verification_run_rejects_mismatched_terminal_status.__doc__ or rule,
+            spx_command,
         )
         try:
             _run_spx(
                 repository,
+                spx_command,
                 ("finish",),
                 scope,
                 run_token=run_token,
@@ -296,6 +307,7 @@ def _record_implementation_audit_finding(
     repository: Path,
     rule: str,
     message: str,
+    spx_command: tuple[str, ...],
 ) -> tuple[str, str, dict[str, object], dict[str, object]]:
     language = _source_language()
     concern = ImplementationAuditConcern(LANGUAGE_AUDIT_CONCERNS[0])
@@ -303,13 +315,14 @@ def _record_implementation_audit_finding(
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
-        tool_version=_spx_version(),
+        tool_version=_spx_version(spx_command),
     )
     unit_id = implementation_audit_unit_id(language, concern)
     _initialize_changeset_repository(repository, subject)
     scope = _changeset_scope(repository)
     start_report = _run_spx(
         repository,
+        spx_command,
         ("start",),
         scope,
         payload=implementation_audit_input_payload(rule),
@@ -317,6 +330,7 @@ def _record_implementation_audit_finding(
     run_token = _required_string(start_report, RUN_TOKEN_FIELD)
     scope_report = _run_spx(
         repository,
+        spx_command,
         ("scope", "add"),
         scope,
         run_token=run_token,
@@ -330,6 +344,7 @@ def _record_implementation_audit_finding(
     )
     finding_report = _run_spx(
         repository,
+        spx_command,
         ("finding", "add"),
         scope,
         run_token=run_token,
@@ -369,6 +384,7 @@ def _changeset_scope(repository: Path) -> str:
 
 def _run_spx(
     repository: Path,
+    spx_command: tuple[str, ...],
     action: tuple[str, ...],
     scope: str,
     *,
@@ -378,7 +394,7 @@ def _run_spx(
     terminal_status: str | None = None,
 ) -> dict[str, object]:
     command = (
-        "spx",
+        *spx_command,
         "verification",
         "run",
         *action,
@@ -421,8 +437,37 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
-def _spx_version() -> str:
-    return _run(REPO_ROOT, ("spx", "--version")).stdout.strip()
+def _pinned_spx_command() -> tuple[str, ...]:
+    pinned_version = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
+    if pinned_version is None:
+        raise RuntimeError(f"SPX_VERSION pin absent from {WORKFLOW_PATH}")
+
+    if which("spx") is not None:
+        installed_command = ("spx",)
+        if _spx_version(installed_command) == pinned_version:
+            return installed_command
+
+    package_spec = f"{SPX_PACKAGE_NAME}@{pinned_version}"
+    if which("pnpm") is not None:
+        pinned_command = ("pnpm", "dlx", package_spec)
+    elif which("bunx") is not None:
+        pinned_command = ("bunx", "--bun", package_spec)
+    else:
+        raise RuntimeError(
+            "exact pinned SPX execution requires pnpm or bunx when the PATH "
+            "version differs"
+        )
+
+    actual_version = _spx_version(pinned_command)
+    if actual_version != pinned_version:
+        raise RuntimeError(
+            f"pinned SPX command returned {actual_version}, expected {pinned_version}"
+        )
+    return pinned_command
+
+
+def _spx_version(spx_command: tuple[str, ...]) -> str:
+    return _run(REPO_ROOT, (*spx_command, "--version")).stdout.strip()
 
 
 def _run(
