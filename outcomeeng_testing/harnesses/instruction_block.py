@@ -834,7 +834,7 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
     the harness's responsibility, not a test body's.
     """
     bin_dir = repo_root.parent / f"{repo_root.name}-stub-bin"
-    bin_dir.mkdir()
+    bin_dir.mkdir(exist_ok=True)
     write_gh_stub(bin_dir, gh_log)
     env = os.environ.copy()
     env["GH_TOKEN"] = "test-token"
@@ -852,3 +852,61 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
     )
     assert result.returncode == 0, result.stderr
     return result.stdout
+
+
+def materialize_refresh_repository(root: pathlib.Path) -> pathlib.Path:
+    """Clone the committed repository head behind an invocation-owned bare remote."""
+    remote = root / "remote.git"
+    repo = root / "repo"
+    git_command(root, "clone", "--bare", "--no-local", str(REPO_ROOT), str(remote))
+    git_command(root, "clone", str(remote), str(repo))
+    head = git_command(REPO_ROOT, "rev-parse", "HEAD").stdout.strip()
+    git_command(
+        repo, "checkout", "-B", distribution.REFRESH_WORKFLOW.default_branch, head
+    )
+    git_command(repo, "config", "user.name", "Test User")
+    git_command(repo, "config", "user.email", "test@example.com")
+    git_command(repo, "config", "commit.gpgsign", "false")
+    git_command(
+        repo,
+        "push",
+        "--force",
+        "-u",
+        "origin",
+        distribution.REFRESH_WORKFLOW.default_branch,
+    )
+    return repo
+
+
+def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
+    """Execute the refresh workflow's real regeneration command block."""
+    result = subprocess.run(
+        [
+            "/bin/bash",
+            "-c",
+            workflow_run_block(distribution.REFRESH_WORKFLOW.regenerate_step),
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout
+
+
+def advance_authored_template_version(repo_root: pathlib.Path) -> tuple[str, str]:
+    """Advance the real authored template version by one patch release."""
+    module = distribution.load_instruction_block_module()
+    path = repo_root / distribution.AUTHORED_TEMPLATE_RELATIVE_PATH
+    source = path.read_text(encoding="utf-8")
+    current = module.parse_template_version(source)
+    assert current is not None
+    parts = [int(part) for part in current.split(".")]
+    parts[-1] += 1
+    advanced = ".".join(str(part) for part in parts)
+    current_field = f'{module.TEMPLATE_VERSION_KEY}: "{current}"'
+    advanced_field = f'{module.TEMPLATE_VERSION_KEY}: "{advanced}"'
+    updated = source.replace(current_field, advanced_field, 1)
+    assert updated != source
+    path.write_text(updated, encoding="utf-8")
+    return current, advanced

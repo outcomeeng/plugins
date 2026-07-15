@@ -156,6 +156,7 @@ class InstructionBlockModule(Protocol):
     OBSOLETE_SPX_INSTRUCTION_FILENAMES: tuple[str, ...]
     ROUTER_BLOCK_END: str
     ROUTER_MARKER_PREFIX: str
+    TEMPLATE_VERSION_KEY: str
 
     def router_block_bounds(self, text: str) -> tuple[int, int] | None: ...
 

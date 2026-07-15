@@ -165,51 +165,38 @@ def _assert_drift_gate_skips_missing_obsolete_spx_file(tmp_path: pathlib.Path) -
     assert "spx/AGENTS.md" not in drift
 
 
-def _assert_refresh_pr_step_exits_cleanly_without_drift(tmp_path: pathlib.Path) -> None:
+def _assert_refresh_workflow_regeneration_drives_pr_decision(
+    tmp_path: pathlib.Path,
+) -> None:
     gh_log = tmp_path / "gh.log"
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    harness.init_git_identity(repo)
-    harness.git_command(repo, "config", "commit.gpgsign", "false")
-    (repo / harness.INSTRUCTION_CLAUDE).write_text("current\n", encoding="utf-8")
-    (repo / harness.INSTRUCTION_AGENTS).write_text("current\n", encoding="utf-8")
-    harness.git_command(repo, "add", ".")
-    harness.git_command(repo, "commit", "-m", "seed instruction files")
+    repo = harness.materialize_refresh_repository(tmp_path)
 
+    harness.run_refresh_regeneration_step(repo)
     output = harness.run_refresh_pr_step(repo, gh_log)
-    # no drift -> the PR step reports current and never invokes gh
     assert output == "Root instruction blocks are current.\n"
     assert not gh_log.exists()
 
-
-def _assert_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) -> None:
-    remote = tmp_path / "remote.git"
-    repo = tmp_path / "repo"
-    gh_log = tmp_path / "gh.log"
-    harness.git_command(tmp_path, "init", "--bare", str(remote))
-    harness.git_command(tmp_path, "clone", str(remote), str(repo))
-    harness.git_command(repo, "config", "user.name", "Test User")
-    harness.git_command(repo, "config", "user.email", "test@example.com")
-    harness.git_command(repo, "config", "commit.gpgsign", "false")
     spx_dir = repo / "spx"
-    spx_dir.mkdir()
-    for path in (
-        repo / harness.INSTRUCTION_CLAUDE,
-        repo / harness.INSTRUCTION_AGENTS,
-        spx_dir / harness.INSTRUCTION_CLAUDE,
-        spx_dir / harness.INSTRUCTION_AGENTS,
-    ):
-        path.write_text(f"{path.name}\n", encoding="utf-8")
+    for name in harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS:
+        (spx_dir / name).write_text(
+            (repo / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
     harness.git_command(repo, "add", ".")
-    harness.git_command(repo, "commit", "-m", "seed instruction files")
-    harness.git_command(repo, "branch", "-M", WORKFLOW.default_branch)
-    harness.git_command(repo, "push", "-u", "origin", WORKFLOW.default_branch)
+    harness.git_command(repo, "commit", "-m", "seed obsolete instruction files")
+    harness.git_command(repo, "push", "origin", WORKFLOW.default_branch)
 
-    (repo / harness.INSTRUCTION_CLAUDE).write_text("updated\n", encoding="utf-8")
-    (repo / harness.INSTRUCTION_AGENTS).write_text("updated\n", encoding="utf-8")
-    (spx_dir / harness.INSTRUCTION_CLAUDE).unlink()
-    (spx_dir / harness.INSTRUCTION_AGENTS).unlink()
-
+    _, advanced_version = harness.advance_authored_template_version(repo)
+    harness.run_refresh_regeneration_step(repo)
+    for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        rendered_template = dist.dist_template_path(
+            agent_harness, repo_root=repo
+        ).read_text(encoding="utf-8")
+        assert MODULE.parse_template_version(rendered_template) == advanced_version
+    for name in harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS:
+        rendered_root = (repo / name).read_text(encoding="utf-8")
+        assert MODULE.parse_instruction_version(rendered_root) == advanced_version
+    assert not (spx_dir / harness.INSTRUCTION_CLAUDE).exists()
+    assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
     harness.run_refresh_pr_step(repo, gh_log)
 
     committed = harness.git_command(
@@ -222,6 +209,11 @@ def _assert_refresh_pr_step_stages_obsolete_deletions(tmp_path: pathlib.Path) ->
     assert WORKFLOW.commit_subject in committed
     assert f"M\t{harness.INSTRUCTION_CLAUDE}" in committed
     assert f"M\t{harness.INSTRUCTION_AGENTS}" in committed
+    for agent_harness in MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES:
+        rendered_template_path = dist.dist_template_path(
+            agent_harness, repo_root=repo
+        ).relative_to(repo)
+        assert f"M\t{rendered_template_path}" in committed
     assert f"D\tspx/{harness.INSTRUCTION_CLAUDE}" in committed
     assert f"D\tspx/{harness.INSTRUCTION_AGENTS}" in committed
     gh_calls = gh_log.read_text(encoding="utf-8")
