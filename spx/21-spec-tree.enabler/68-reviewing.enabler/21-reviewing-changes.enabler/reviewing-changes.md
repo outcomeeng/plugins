@@ -25,7 +25,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
 - `Severity` enum members map to the wire values `blocking`, `debt` ([test](tests/test_review_result.mapping.l1.py))
 - `Concern` enum members map to exactly the five wire values `consistency`, `security`, `performance`, `evidence`, `architecture` ([test](tests/test_review_result.mapping.l1.py))
 - Review severities map into the shared run-journal projection as `blocking` -> `reject` and `debt` -> `warning`; the projection then owns terminal status rollup from the sealed prefix ([test](tests/test_review_journal_emit.mapping.l1.py))
-- `journal_emit.py render` maps sealed journal events to the compatibility projection, while the live skill path returns only the run token ([test](tests/test_review_journal_emit.mapping.l1.py))
+- `journal_emit.py render` maps sealed journal events to the compatibility projection ([test](tests/test_review_journal_emit.mapping.l1.py))
 
 ### Properties
 
