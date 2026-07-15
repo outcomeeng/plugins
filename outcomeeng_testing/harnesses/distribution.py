@@ -6,7 +6,7 @@ import tempfile
 import tomllib
 from collections import Counter
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import Final, cast
 
 from hypothesis import given, seed, settings
 import yaml  # type: ignore[import-untyped]
@@ -55,6 +55,7 @@ from outcomeeng.distribution.orchestration import (
     DISTRIBUTION_RUNTIME_PATH,
     DISTRIBUTION_SOURCE_PATH,
     RETIRED_DISTRIBUTION_SOURCE_PREFIX,
+    Workflow,
     distribution_python_version_matches_project,
     distribution_workflow_paths_match_contract,
 )
@@ -68,7 +69,6 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_SOURCE_ROOT = REPOSITORY_ROOT / SOURCE_ROOT_NAME
 type FileSnapshot = tuple[tuple[str, bytes], ...]
-type Workflow = dict[str, Any]
 
 DISTRIBUTION_PROPERTY_EXAMPLES: Final = 50
 DISTRIBUTION_PROPERTY_SEED: Final = 20260714
@@ -310,25 +310,25 @@ def _workflow() -> Workflow:
 
 
 def _push_paths(workflow: Workflow) -> set[str]:
-    on_section = cast("dict[str, Any]", workflow[WORKFLOW_ON_FIELD])
-    push_section = cast("dict[str, Any]", on_section[WORKFLOW_PUSH_FIELD])
-    return set(cast("list[str]", push_section[WORKFLOW_PATHS_FIELD]))
+    on_section = cast(Workflow, workflow[WORKFLOW_ON_FIELD])
+    push_section = cast(Workflow, on_section[WORKFLOW_PUSH_FIELD])
+    return set(cast(list[str], push_section[WORKFLOW_PATHS_FIELD]))
 
 
 def _distribution_python_version(workflow: Workflow) -> str:
-    jobs = cast("dict[str, Any]", workflow[WORKFLOW_JOBS_FIELD])
-    distribution = cast("dict[str, Any]", jobs[WORKFLOW_DISTRIBUTION_JOB])
-    steps = cast("list[dict[str, Any]]", distribution[WORKFLOW_STEPS_FIELD])
+    jobs = cast(Workflow, workflow[WORKFLOW_JOBS_FIELD])
+    distribution = cast(Workflow, jobs[WORKFLOW_DISTRIBUTION_JOB])
+    steps = cast(list[Workflow], distribution[WORKFLOW_STEPS_FIELD])
     setup_step = next(
         step
         for step in steps
         if step.get(WORKFLOW_STEP_NAME_FIELD) == WORKFLOW_SETUP_PYTHON_STEP
     )
-    setup = cast("dict[str, Any]", setup_step[WORKFLOW_WITH_FIELD])
-    return cast("str", setup[WORKFLOW_PYTHON_VERSION_FIELD])
+    setup = cast(Workflow, setup_step[WORKFLOW_WITH_FIELD])
+    return cast(str, setup[WORKFLOW_PYTHON_VERSION_FIELD])
 
 
 def _requires_python_specifier() -> str:
     metadata = tomllib.loads((REPOSITORY_ROOT / PROJECT_METADATA_RELATIVE).read_text())
-    project = cast("dict[str, Any]", metadata[PROJECT_FIELD])
-    return cast("str", project[PROJECT_REQUIRES_PYTHON_FIELD])
+    project = cast(Workflow, metadata[PROJECT_FIELD])
+    return cast(str, project[PROJECT_REQUIRES_PYTHON_FIELD])

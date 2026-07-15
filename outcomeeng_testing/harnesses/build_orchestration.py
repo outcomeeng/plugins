@@ -35,6 +35,7 @@ from outcomeeng.distribution.orchestration import (
     CLAUDE_RUNTIME_ROOT,
     CODEX_MARKETPLACE_PATH,
     CODEX_RUNTIME_ROOT,
+    ConfigPathError,
     JUSTFILE_PATH,
     LEFTHOOK_BUILD_COMMAND,
     LEFTHOOK_PATH,
@@ -230,13 +231,14 @@ def dist_diff_surface_violations_are_rejected() -> bool:
         DIST_DIR_NAME,
         1,
     )
-    return not source_dist_diff_surfaces_match_contract(
-        gate_without_reporter,
-        command,
-    ) and not source_dist_diff_surfaces_match_contract(
-        {DIST_DIFF_ARGV},
-        hook_without_reporter,
+    results = (
+        source_dist_diff_surfaces_match_contract(gate_without_reporter, command),
+        source_dist_diff_surfaces_match_contract(
+            {DIST_DIFF_ARGV},
+            hook_without_reporter,
+        ),
     )
+    return results == (False, False)
 
 
 def justfile_matches_build_contract() -> bool:
@@ -271,6 +273,21 @@ def lefthook_matches_build_contract() -> bool:
     with dist_drift_repo() as repo:
         repo.drift_dist()
         return main(cwd=repo.root) != 0
+
+
+def lefthook_config_path_escape_is_rejected() -> bool:
+    with (
+        TemporaryDirectory() as allowed_directory,
+        TemporaryDirectory() as outside_directory,
+    ):
+        try:
+            load_lefthook_config(
+                Path(outside_directory) / LEFTHOOK_PATH,
+                root=Path(allowed_directory),
+            )
+        except ConfigPathError:
+            return True
+    return False
 
 
 def claude_marketplace_matches_runtime_contract() -> bool:

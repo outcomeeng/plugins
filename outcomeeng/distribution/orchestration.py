@@ -57,6 +57,12 @@ CODEX_DISTRIBUTION_PATH: Final = (
     f"{_DIST_DIR_NAME}/{_Target.CODEX.value}/{_RECURSIVE_GLOB}"
 )
 
+type Workflow = dict[str, Any]
+
+
+class ConfigPathError(ValueError):
+    """A requested orchestration config path escapes its declared root."""
+
 
 def just_recipe_commands(
     text: str, recipe_name: str = BUILD_RECIPE_NAME
@@ -90,24 +96,31 @@ def just_recipe_names(text: str) -> tuple[str, ...]:
     )
 
 
-def lefthook_build_command(config: dict[str, Any]) -> str:
+def lefthook_build_command(config: Workflow) -> str:
     """Return the pre-commit build command from a parsed lefthook config."""
 
     return str(config["pre-commit"]["commands"][BUILD_RECIPE_NAME]["run"])
 
 
-def load_lefthook_config(path: Path = LEFTHOOK_PATH) -> dict[str, Any]:
+def load_lefthook_config(
+    path: Path = LEFTHOOK_PATH,
+    *,
+    root: Path | None = None,
+) -> Workflow:
     """Load lefthook YAML as a mapping owned by the build-orchestration contract."""
+    allowed_root = (root or Path.cwd()).resolve()
+    resolved_path = (path if path.is_absolute() else allowed_root / path).resolve()
+    if not resolved_path.is_relative_to(allowed_root):
+        raise ConfigPathError(f"config path escapes declared root: {path}")
+    return parse_lefthook_config(resolved_path.read_text(encoding="utf-8"))
 
-    return parse_lefthook_config(path.read_text(encoding="utf-8"))
 
-
-def parse_lefthook_config(text: str) -> dict[str, Any]:
+def parse_lefthook_config(text: str) -> Workflow:
     """Parse lefthook YAML through the source-owned artifact boundary."""
-    return cast("dict[str, Any]", yaml.safe_load(text))
+    return cast(Workflow, yaml.safe_load(text))
 
 
-def lefthook_config_matches_build_contract(config: dict[str, Any]) -> bool:
+def lefthook_config_matches_build_contract(config: Workflow) -> bool:
     """Return whether pre-commit regenerates and rejects generated-tree drift."""
     return lefthook_build_command(config) == LEFTHOOK_BUILD_COMMAND
 
@@ -153,25 +166,25 @@ def distribution_python_version_matches_project(
     return workflow_version == requires_python.removeprefix(_MINIMUM_VERSION_PREFIX)
 
 
-def load_json_document(path: Path) -> dict[str, Any]:
+def load_json_document(path: Path) -> Workflow:
     """Load a JSON document as a mapping owned by the build-orchestration contract."""
 
-    return cast("dict[str, Any]", json.loads(path.read_text(encoding="utf-8")))
+    return cast(Workflow, json.loads(path.read_text(encoding="utf-8")))
 
 
-def claude_marketplace_plugin_root(catalog: dict[str, Any]) -> str:
+def claude_marketplace_plugin_root(catalog: Workflow) -> str:
     """Return the Claude marketplace plugin root."""
 
     return str(catalog["metadata"]["pluginRoot"])
 
 
-def claude_marketplace_plugin_sources(catalog: dict[str, Any]) -> tuple[str, ...]:
+def claude_marketplace_plugin_sources(catalog: Workflow) -> tuple[str, ...]:
     """Return Claude plugin source paths from the marketplace catalog."""
 
     return tuple(str(plugin["source"]) for plugin in catalog["plugins"])
 
 
-def codex_marketplace_plugin_sources(catalog: dict[str, Any]) -> tuple[str, ...]:
+def codex_marketplace_plugin_sources(catalog: Workflow) -> tuple[str, ...]:
     """Return Codex plugin source paths from the marketplace catalog."""
 
     return tuple(str(plugin["source"]["path"]) for plugin in catalog["plugins"])
@@ -201,7 +214,7 @@ def check_build_orchestration(root: Path) -> list[str]:
             f"{' '.join(_BUILD_COMMAND_ARGV)}"
         )
 
-    lefthook_config = load_lefthook_config(root / LEFTHOOK_PATH)
+    lefthook_config = load_lefthook_config(root / LEFTHOOK_PATH, root=root)
     if not lefthook_config_matches_build_contract(lefthook_config):
         errors.append(
             f"{LEFTHOOK_PATH}: {BUILD_RECIPE_NAME} must run {LEFTHOOK_BUILD_COMMAND}"
