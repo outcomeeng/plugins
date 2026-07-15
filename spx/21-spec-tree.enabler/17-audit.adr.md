@@ -14,15 +14,11 @@ The implementation-audit orchestration embeds no language-specific knowledge bey
 
 ## Verification
 
-### Testing
-
-- ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture` skills ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
-- NEVER: the spec-tree plugin ships multiple implementation-audit wrapper agents; implementation audit has one wrapper, `implementation-auditor` ([test](68-audit.enabler/tests/test_implementation_audit_contract.compliance.l1.py))
-
 ### Audit
 
 - ALWAYS: the implementation-audit wrapper agent contains zero language-specific tokens beyond the dispatch template `audit-{lang}-{code|tests|architecture}` ([audit])
 - ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}-code`, `audit-{lang}-tests`, and `audit-{lang}-architecture` skills ([audit])
+- NEVER: the spec-tree plugin ships multiple implementation-audit wrapper agents; implementation audit has one wrapper, `implementation-auditor` ([audit])
 - ALWAYS: every auditor agent is generic and artifact-type-scoped, never language-scoped — the one spec-tree-owned `implementation-auditor` composes the per-language implementation code, test, and architecture skills, and every other artifact type is covered by a single artifact-type auditor owned by the plugin that governs that artifact type; language audits ship as skills with no language-specific auditor agent ([audit])
 - ALWAYS: the `implementation-auditor` runs all implementation concern composition inside its one isolated verifier context because the main conversation agent launches only one subagent level ([audit])
 - ALWAYS: an artifact-type auditor with language-specific concerns composes them by invoking the matching `audit-{lang}-{code|tests|architecture}` skill set, partitioned by the language detected in scope ([audit])
