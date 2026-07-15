@@ -232,7 +232,13 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
-Build an expected coverage inventory before invoking any language concern skill. Each expected unit records:
+Build an expected coverage inventory before invoking any language concern skill. Discover programming-language plugins from installed `code-{lang}` skill names, then validate the complete read-only `audit-{lang}-{code|tests|architecture}` trio for each discovered language before invoking any concern. Never load a write-capable `code-{lang}` skill inside the audit, and never create a language partition from a file extension, filename, or artifact class alone.
+
+Only paths claimed by a discovered programming-language implementation skill belong to implementation-audit coverage. Leave every other artifact class to its artifact-type auditor and the whole-changeset review; do not manufacture a language name, missing concern skill, unsupported unit, or coverage gap for a path outside implementation-audit ownership.
+
+Give every complete trio the caller's exact scope. Each read-only concern skill owns language-specific applicability and identifies the subject paths it audited or returns `NOT_APPLICABLE`; the orchestration never substitutes its own file-pattern table. Build the pre-dispatch inventory by discovered language and concern, then expand each concern's result into subject-path units when its final coverage status is known. A discovered language with an incomplete trio records the missing required concerns and rejects the run.
+
+Each expected unit records:
 
 - audit class: `implementation`
 - audit kind: `code`, `tests`, or `architecture`
@@ -248,9 +254,9 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Plan the complete inventory before dispatch, but NEVER mark a planned unit `audited`. Record each unit with `spx verification run scope add` only when its final coverage status is known: immediately for a classified gap, or immediately after the corresponding concern finishes for an executed producer. Never append a preliminary required `incomplete` unit that later becomes audited; every accepted required uncovered event rejects the terminal rollup permanently. After a concern returns, immediately record one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited` before inspecting the next concern. Record each returned finding immediately after those scope rows and associate it with the matching path-scoped unit. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. When a concern cannot return a complete result, record `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
 
-A missing required concern skill, unsupported implementation file, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; record the complete final gap inventory, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+A missing required concern skill, unsupported path already claimed by a recognized implementation-language partition, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a recognized language partition; record the complete final gap inventory, finish, and render the rejected run. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
-When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
+When the caller supplied an explicit live file list, pass that list as the exact advisory scope to every complete concern trio rather than inspecting the committed changeset alone. A live path claimed by a recognized implementation-language concern that receives no result is a coverage gap even when it is absent from `<head>`; an artifact outside every implementation concern remains outside implementation-audit ownership.
 
 </coverage_model>
 
@@ -287,7 +293,7 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 <terminal_model>
 
-Finish the run only after every required coverage unit is `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, and after every finding has been recorded. Record missing required skills, unsupported files, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
+Finish the run only after every required coverage unit is `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, and after every finding has been recorded. Record missing required skills, unsupported paths claimed by recognized implementation-language partitions, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
 Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
@@ -361,6 +367,14 @@ Why it failed: The coverage inventory belongs before concern dispatch, so a late
 
 How to avoid: Validate and record the complete concern-skill trio for every language partition before invoking any concern skill. Record an absent required skill as `missing-skill`, then finish and render the rejected run.
 
+**Every changed file extension became a required language partition.**
+
+What happened: Claude treated documentation and manifest suffixes as programming languages, required concern skills that do not exist, rejected the run before dispatch, and skipped an installed implementation-language concern trio.
+
+Why it failed: Implementation-audit ownership comes from installed `code-{lang}` skill surfaces and their scope guidance, not from the set of suffixes present in a changeset. Artifact-specific auditors and whole-changeset review own files outside those programming-language surfaces.
+
+How to avoid: Discover languages from installed `code-{lang}` skills, let those language skills claim applicable paths, validate the required concern trios only for claimed implementation-language partitions, and omit non-implementation artifacts from the coverage inventory.
+
 **A finding was reported only in prose.**
 
 What happened: Claude named a concern finding in text without recording it through `spx verification run finding add`.
@@ -410,7 +424,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
 - A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A missing required concern skill after run start appears as `missing-skill` rejected coverage in that projection. A blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
-- Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
+- Every missing-skill, unsupported-path, or coverage-gap unit within a recognized implementation-language partition appears in the rendered projection rather than being hidden in prose; artifacts outside implementation-audit ownership produce no fabricated coverage unit.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - A gating run addresses a committed head with no live file list; a run carrying modified or untracked files identifies itself as advisory and is never presented as gate evidence.
