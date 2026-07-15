@@ -37,6 +37,8 @@ Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; othe
 </prerequisites>
 
 <audit_scope>
+Begin with the current governing spec and its current evidence links. A deleted test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Python test-evidence scope; under implementation-auditor composition, return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+
 For every in-scope test assertion, inspect the full evidence chain:
 
 - The spec assertion and selected assertion type
@@ -249,12 +251,17 @@ Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and class
 Failure 7: "Artifact is the source-of-truth" rationalization.
 
 Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an HCL attribute, or a systemd unit path. The value appeared in a parsed artifact file but no Python module owned it. Claude classified the artifact as the source-of-truth and accepted the case. The artifact is downstream — a Python module either renders or consumes it, and the absence of that Python module is the architectural defect, not the test's fault for finding nothing to import. Avoid this by naming the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
+
+Failure 8: Required restoration of retired deterministic evidence.
+
+Claude saw a deleted Python test and harness in the changeset, followed the base revision's former link, and rejected the implementation because the deleted files no longer supplied deterministic evidence. The current governing spec had reclassified the assertions to pathless `[audit]` evidence, so no current `[test]` assertion or evidence chain owned those files. Avoid this by deriving test-audit applicability from current spec links first: return `NOT_APPLICABLE` for a retired deleted path, and report missing evidence only when a current `[test]` assertion still links the missing path.
 </failure_modes>
 
 <success_criteria>
 The Python test verdict is sound when:
 
 - Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- Every deleted test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
 - The same test node yields the same verdict regardless of run order (reproducible).
