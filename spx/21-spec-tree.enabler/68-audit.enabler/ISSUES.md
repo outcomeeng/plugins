@@ -46,6 +46,23 @@ projection returned in the same verifier result reported `sealed: false` and
 omitted the terminal event. The verifier output contract needs one
 post-completion projection whose seal and event prefix agree.
 
+Run `2026-07-15_18-09-08-056-1522b5cd4662` reproduced the ownership defect on
+the committed `work/strict-finding-disposition` changeset. All executable
+language concern units reported zero findings, while the orchestrator added one
+required `implementation:unsupported:code` unit for spec, skill, eval,
+generated, and coordination artifacts outside implementation-audit ownership.
+SPX therefore sealed the run as `rejected` with an authoritative finding count
+of zero. The governing `spec-tree:audit-implementation` coverage model must
+classify artifact ownership before required coverage: non-implementation
+artifacts are optional `not-applicable` evidence or absent from the
+implementation inventory, while `unsupported` remains a rejecting status only
+for implementation-owned artifacts that lack an executable concern producer.
+
+Revisit condition: remove this paragraph after the coverage contract is tested,
+the implementation auditor approves the same mixed committed changeset, and its
+rendered projection contains no required unsupported unit for
+non-implementation artifacts.
+
 ## SPX audit verification contract follow-ups
 
 The plugin implementation-auditor model records implementation-audit coverage, findings, terminal state, and projections through `spx verification run`. The remaining issues live in the SPX verification-run contract rather than in plugin-side verdict scripts.
