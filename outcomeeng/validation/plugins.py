@@ -41,6 +41,11 @@ from outcomeeng.distribution.orchestration import (
     CODEX_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
+from outcomeeng.validation.implementation_audit_contract import (
+    IMPLEMENTATION_AUDITOR_AGENT_NAME,
+    LANGUAGE_AUDIT_CONCERNS,
+    SPEC_TREE_PLUGIN_NAME,
+)
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
@@ -50,11 +55,10 @@ PLUGIN_SURFACE_ROOTS: Final = (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
 )
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
 PLUGIN_AGENTS_DIRNAME: Final = "agents"
 PLUGIN_SKILLS_DIRNAME: Final = "skills"
 SKILL_FILENAME: Final = "SKILL.md"
-IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = "implementation-auditor.md"
+IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_AGENT_NAME}.md"
 RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
@@ -78,7 +82,6 @@ RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
     "journal_emit.py",
     "audit_orchestrator.py",
 )
-LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
 
 
 def language_code_skill_relative_path(language: str) -> Path:
