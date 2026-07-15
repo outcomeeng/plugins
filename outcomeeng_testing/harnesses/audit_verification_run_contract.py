@@ -117,6 +117,9 @@ def audit_runtime_trees_exclude_retired_artifacts() -> bool:
 
 def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     """Exercise the SPX lifecycle used by implementation-audit orchestration."""
+    if not spx_floor_provides_verification_run_lifecycle():
+        return False
+
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
     terminal_status = AuditTerminalStatus.REJECTED
 
@@ -164,6 +167,9 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
 
 def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
     """Return whether SPX rejects approval after a blocking finding."""
+    if not spx_floor_provides_verification_run_lifecycle():
+        return False
+
     rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
 
     with TemporaryDirectory() as temporary_directory:
