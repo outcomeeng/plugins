@@ -19,9 +19,6 @@ Live repository state for transport selection, read at invocation.
 **Current branch:**
 !`git branch --show-current || echo '(not a git repo)'`
 
-**Working tree (empty = clean):**
-!`git status --porcelain || echo '(not a git repo)'`
-
 **Transport overlay (selector, if any):**
 !`grep -iE '^transport:' spx/local/merging.md 2>/dev/null || echo '(no explicit transport: selector — default applies)'`
 

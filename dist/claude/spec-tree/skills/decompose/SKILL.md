@@ -19,7 +19,7 @@ Spec Tree structure composed from a target node address, durable spec content, a
 Treat `$target` as exactly one target:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
-- `{path-to-node}` — decompose or restructure children under an existing node.
+- `spx/{path-to-node}` — decompose or restructure children under an existing node.
 
 If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 

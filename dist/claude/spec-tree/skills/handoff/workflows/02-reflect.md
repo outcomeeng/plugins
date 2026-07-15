@@ -52,7 +52,7 @@ For each insight, propose the persistence target (workflow 03 confirms; workflow
 
 - Amend a spec (Tier 2, durable) — when the insight changes what the spec says
 - Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `AskUserQuestion` approval and a real stop condition
-- Remove PLAN.md (a done plan is a stale plan) — also requires approval
+- Remove PLAN.md (a done plan is a stale plan) — fix immediately when reconciliation proves it stale
 - Session file only — coordination context
 
 </perspective_path_forward>
