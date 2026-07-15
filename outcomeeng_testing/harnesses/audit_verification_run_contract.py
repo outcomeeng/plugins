@@ -263,6 +263,31 @@ def language_concern_skill_trios_exist() -> bool:
     return True
 
 
+def implementation_audit_coverage_distinguishes_artifact_ownership() -> bool:
+    """Return whether required coverage excludes non-implementation artifacts."""
+    skill_path = (
+        REPO_ROOT
+        / SOURCE_PLUGINS_DIR
+        / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
+        / "SKILL.md"
+    )
+    skill_text = skill_path.read_text(encoding="utf-8")
+    coverage_model = skill_text.partition("<coverage_model>")[2].partition(
+        "</coverage_model>",
+    )[0]
+    return all(
+        clause in coverage_model
+        for clause in (
+            "Classify every changed path by implementation-audit ownership",
+            "Implementation-owned artifacts are implementation code, linked tests",
+            "Non-implementation artifacts include specs, decisions, coordination notes",
+            "optional `not-applicable`",
+            "never carries `unsupported` or `missing-skill`",
+            "Reserve `unsupported` for an implementation-owned artifact",
+        )
+    )
+
+
 def implementation_audit_scripts_are_absent_and_rejected() -> bool:
     """Return whether real trees are clean and every retired script is rejected."""
     if check_retired_audit_scripts(REPO_ROOT):
