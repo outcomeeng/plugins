@@ -2,7 +2,7 @@
 name: sync-base
 description: >-
   ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push. NEVER rebase a behind-base branch by hand or bring it current with git reset.
-allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
+allowed-tools: Read, Edit, Skill, Bash(python3 "${SKILL_DIR}/scripts/sync_base.py":*), Bash(git status:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git merge-base:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git ls-files:*), Bash(git show:*), Bash(git add:*), Bash(git rebase --continue:*)
 ---
 
 <objective>
@@ -64,7 +64,7 @@ A `conflict` outcome means a rebase is active. Do not abort it reflexively. Read
    - **ordinary implementation or test** — code or evidence governed by the loaded spec node and decisions.
 3. Resolve autonomously when evidence decides:
    - Version or manifest bumps choose the monotonic/latest valid value, then run the project's declared version or manifest validation.
-   - Generated artifacts are resolved by resolving their source of truth first, then running the project-declared regeneration command. Never hand-merge generated output when regeneration is available.
+   - Generated artifacts are resolved by resolving their source of truth first. Never hand-merge generated output when regeneration is available. Return the exact project-declared regeneration command to the caller, which runs it under its own governing workflow and re-enters `/sync-base`; this is a mechanical continuation, not an operator decision.
    - Redundant edits keep the change that supersedes the other by product truth, branch chronology, or source contract; remove the redundant text rather than preserving both.
    - Nearby independent edits are combined when both are compatible with the loaded specs, decisions, and tests.
    - Coordination notes are reconciled to still-true facts; stale, duplicate, or superseded notes are removed or archived through the relevant session/note workflow.
@@ -81,7 +81,7 @@ Stop for the operator only when the remaining conflict is a product-intent confl
 Allowed direct commands:
 
 - Read state: `git status`, `git rev-parse`, `git symbolic-ref --short HEAD`, `git merge-base`, `git rev-list`, `git diff --name-only`, `git diff`, `git ls-files -u`, `git show :1:<path>`, `git show :2:<path>`, `git show :3:<path>`.
-- Resolve: edit files, run project-declared regeneration commands, `git add <resolved-paths>`, `git rebase --continue`.
+- Resolve: edit files, `git add <resolved-paths>`, `git rebase --continue`.
 
 The synchronizer script owns base movement. It runs `git fetch origin <base>` and either `git rebase origin/<base>` for an attached branch or `git switch --detach origin/<base>` for a clean detached HEAD that is an ancestor of the fetched base. Do not substitute direct sync commands for the script.
 
@@ -134,7 +134,7 @@ A base-sync stop reaches the operator for a product-intent conflict the rebase c
 - A dirty tree from a file Claude created this session — commit it per `<dirty_tree_resolution>` and re-run.
 - A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
-- A conflict in a generated artifact whose source of truth can be resolved — resolve the source, regenerate through the project-declared command, and continue the rebase.
+- A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command to the caller, and continue after the caller re-enters with regenerated output.
 - A version bump conflict with an objectively monotonic/latest valid value — choose it, verify it, and continue the rebase.
 - "Stash is forbidden, so the tree cannot be cleared" — committing clears it; the forbidden tool is not a blocker.
 - A detached worktree with no branch to commit onto — create a local branch from the current commit and commit there.
