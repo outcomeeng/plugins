@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:
 ---
 
 <objective>
-A pull request opened ready for review.
+A peer pull request opened ready for review, or a stacked pull request opened draft until its base merges.
 </objective>
 
 <project_specialization>

@@ -359,16 +359,16 @@ Compare timestamps against the most recent push. Entries after that push are re-
 </review_inspection>
 <review_classification>
 
-Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
+Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **concern** (one of five). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
 
-This skill is the canonical consumer-facing taxonomy. Repositories may add local review instructions, but the default severity and category vocabulary below is complete here.
+This skill is the canonical consumer-facing taxonomy. Repositories may add local review instructions, but the default severity and concern vocabulary below is complete here.
 
 **Severity** (one of two — the reviewer's reporting label for the finding's merge-safety nature):
 
-| Severity   | Use when                                                                                           |
-| ---------- | -------------------------------------------------------------------------------------------------- |
-| `BLOCKING` | Merge-safety defect: if deployed, the changeset would create a deterministic issue or pose a risk. |
-| `DEBT`     | Real defect whose evidence does not establish a deterministic merge-safety consequence.            |
+| Severity   | Use when                                                                                |
+| ---------- | --------------------------------------------------------------------------------------- |
+| `BLOCKING` | Defect with evidence of a deterministic merge-safety consequence.                       |
+| `DEBT`     | Real defect whose evidence does not establish a deterministic merge-safety consequence. |
 
 Severity is the reviewer's classification of a valid finding's evidenced consequence. It never supplies disposition. **Disposition** belongs to the review consumer and uses the same resolution set for `BLOCKING` and `DEBT`: repair and current-head re-review, individual refutation as unbacked, removal of the affected capability followed by current-head re-review, or an exact operator waiver accepting the finding's stated consequence. Tracking preserves information only; it never resolves a finding and never contributes to readiness.
 
@@ -380,7 +380,7 @@ Severity is the reviewer's classification of a valid finding's evidenced consequ
 
 **Cross-reviewer union and convergence.** Build one finding ledger from all current-head review surfaces and reviewers, then classify each item once. A no-findings review from the designated CI reviewer, a clean local review, a passing deterministic check, or an approved audit never cancels a valid finding from another reviewer. Multiple review rounds that keep surfacing valid variants in the same area are not reviewer noise and not an operator decision point; they prove the prior fix or sweep was too narrow. Treat the next valid variant as the same defect class until the underlying lifecycle contract is repaired and a new review round finds no valid variant. "Not wired into production yet" and "deferred next slice" are not dispositions for code in the diff; apply the exact resolution set to every valid finding.
 
-**Category** (one of six), grouped by three axes:
+**Concern** (one of five), grouped by three axes:
 
 *What the code does vs. what it is supposed to do*
 
@@ -394,31 +394,29 @@ Severity is the reviewer's classification of a valid finding's evidenced consequ
 
 *How it does what it is supposed to do*
 
-- `standards` — adherence to {{! file('root_guide') !}} and the rules declared in standards skills (naming conventions, command tokens, file structure, language idioms).
-- `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
+- `architecture` — violation of structural principles declared by ADRs, PDRs, root instructions, or standards skills (layer boundaries, separation of concerns, dependency directions, module-shape rules, naming, command tokens, file structure, or language idioms). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
-**Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
+**Finding shape.** Both `BLOCKING` and `DEBT` findings carry `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, and `action`. Reviewers stream one JSON finding object at a time through `append-finding`; consumers may normalize incoming human comments into the same fields before classification.
 
-**No findings: say so directly.** When the changeset has no `BLOCKING` or `DEBT` findings, post a one-line comment saying so. NEVER invent lower-priority findings to prove the review happened.
+**No findings: emit no finding objects.** When the changeset has no `BLOCKING` or `DEBT` findings, the review stream is empty and the run records completion separately. NEVER invent lower-priority findings to prove the review happened.
 
 **Findings only — never open questions, never commentary.** A reviewer with a question frames it as a finding (e.g., "Evidence: cannot verify X from the changeset; if assumption Y holds, this breaks Z because …") rather than asking a question that waits for an answer. Questions add CI roundtrips a single-pass review cannot recover from. Praise, observations, and commentary that do not constitute findings are noise — omit them.
 
 **Forbidden taxonomies.** Severity-rank labels MUST NOT replace the two severities — no `P0` / `P1` / `P2` / `P3`, no `critical` / `high` / `medium` / `low`, no `minor` / `nit` headings. A third scope-shaped severity (`FOLLOW-UP`) MUST NOT reappear — finding resolution belongs to the review consumer and is never a reviewer severity. Risk words may appear inside rationale only when they add concrete evidence, never as a finding's primary label. Legacy class labels `NEEDS-ANSWER` and `NOTE` are forbidden — open questions are reframed as findings; commentary is omitted.
 
-Comment format examples:
+Finding object example:
 
-```text
-### BLOCKING [consistency]: path/to/file:42
-Reference: <quote the standard from {{! file('root_guide') !}}, skills, governance from decisions (PDR/ADR), or assertion from specs>
-Evidence: <quote the diff or behavior and explain the disagreement between layers>
-Required: <concrete change>
-```
-
-```text
-### DEBT [standards]: path/to/file:97
-Reference: <quote the standard from {{! file('root_guide') !}}, skills, governance from decisions (PDR/ADR), or assertion from specs>
-Evidence: <quote the diff or behavior and explain how it violates the standard>
-Required: <concrete change>
+```json
+{
+  "id": "F-001",
+  "concern": "consistency",
+  "severity": "blocking",
+  "file": "path/to/file",
+  "line": 42,
+  "rule": "spx/path/to/node.md:ALWAYS:1",
+  "message": "The changed lower layer contradicts the cited assertion.",
+  "action": "Align the lower layer with the cited assertion."
+}
 ```
 
 </review_classification>
