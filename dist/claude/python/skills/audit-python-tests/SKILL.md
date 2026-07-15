@@ -3,7 +3,7 @@ name: audit-python-tests
 description: >-
   Python test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Python tests in scope.
   Reached only through those auditor agents, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 <dispatch_gate>

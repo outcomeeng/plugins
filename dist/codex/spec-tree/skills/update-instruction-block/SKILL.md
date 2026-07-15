@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
 argument-hint: "[repo-root]"
 arguments: repo_root
-allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read
+allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read, request_user_input
 ---
 
 <objective>

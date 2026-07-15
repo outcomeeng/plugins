@@ -36,18 +36,6 @@ import sys
 from pathlib import Path
 from typing import Final
 
-SPX_COMMAND: Final = ("spx",)
-SPX_NPM_PACKAGE_NAME: Final = "@outcomeeng/spx"
-VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
-VERIFICATION_RUN_MINIMUM_SPX_PACKAGE: Final = (
-    f"{SPX_NPM_PACKAGE_NAME}@{VERIFICATION_RUN_MINIMUM_SPX_VERSION}"
-)
-VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
-    "npx",
-    "--yes",
-    VERIFICATION_RUN_MINIMUM_SPX_PACKAGE,
-)
-
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
@@ -55,8 +43,7 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # provider set include `worktree-pool` and classify a missing, detached, or
 # wrong-branch designated main checkout through that record, which this
 # product's merge overlay uses before merge mutation and after feature-worktree
-# cleanup. spx 0.6.13 introduced `spx verification run` (recorded by
-# `VERIFICATION_RUN_MINIMUM_SPX_VERSION`),
+# cleanup. spx 0.6.13 introduced `spx verification run`,
 # including run start, input replay, scope evidence, finding evidence, finish,
 # status, and render commands used by implementation audits. spx 0.6.10
 # introduced `spx journal
@@ -75,6 +62,14 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
+VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
+VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
+    "start",
+    "scope",
+    "finding",
+    "finish",
+    "render",
+)
 REQUIRED_SPX_VERSION: Final = "0.6.15"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]

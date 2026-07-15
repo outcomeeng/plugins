@@ -13,7 +13,6 @@ from typing import Final, cast
 from outcomeeng.validation.audit_artifacts import (
     AGENTS_DIR_NAME,
     IMPLEMENTATION_AUDITOR_FILENAME,
-    IMPLEMENTATION_AUDIT_SKILL_NAME,
     LANGUAGE_AUDIT_CONCERNS,
     LANGUAGE_AUDIT_SKILL_TEMPLATE,
     LANGUAGE_CODE_SKILL_TEMPLATE,
@@ -30,30 +29,60 @@ from outcomeeng.validation.audit_artifacts import (
     implementation_languages,
     language_specific_auditor_filenames,
 )
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_FINDING_COUNT_FIELD,
+    RUN_SEALED_FIELD,
+    RUN_SEQUENCE_FIELD,
+    RUN_TERMINAL_STATUS_FIELD,
+    RUN_TOKEN_FIELD,
+    AuditTerminalStatus,
+    ImplementationAuditConcern,
+    expected_verification_projection,
+    implementation_audit_finding_payload,
+    implementation_audit_input_payload,
+    implementation_audit_provenance,
+    implementation_audit_scope_payload,
+    implementation_audit_unit_id,
+)
 from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
+    VERIFICATION_RUN_REQUIRED_COMMANDS,
+    is_satisfied,
     verification_run_floor_is_satisfied,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-AUDIT_PAYLOAD_FIXTURE: Final = (
-    REPO_ROOT
-    / "outcomeeng_testing"
-    / "fixtures"
-    / "audit_verification_run_contract.json"
+SPX_RELEASE_FIXTURE: Final = (
+    REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_release.json"
+)
+SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
+    REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
 
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
     """Return whether the repository floor includes verification runs."""
-    return verification_run_floor_is_satisfied(REQUIRED_SPX_VERSION)
-
-
-def verification_run_floor_rejects_pre_capability_version() -> bool:
-    """Return whether the floor validator rejects the preceding release."""
-    return not verification_run_floor_is_satisfied(
-        _preceding_patch_version(VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+    release = cast(
+        object,
+        json.loads(SPX_RELEASE_FIXTURE.read_text(encoding="utf-8")),
+    )
+    if not isinstance(release, dict):
+        raise TypeError("SPX release fixture is not a JSON object")
+    published_version = _required_string(release, "version")
+    integrity = _required_string(release, "dist.integrity")
+    tarball = _required_string(release, "dist.tarball")
+    help_text = SPX_VERIFICATION_RUN_HELP_FIXTURE.read_text(encoding="utf-8")
+    return (
+        published_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
+        and integrity.startswith("sha512-")
+        and tarball.endswith(f"spx-{published_version}.tgz")
+        and is_satisfied(REQUIRED_SPX_VERSION, published_version)
+        and verification_run_floor_is_satisfied(REQUIRED_SPX_VERSION)
+        and all(
+            f"  {command}" in help_text
+            for command in VERIFICATION_RUN_REQUIRED_COMMANDS
+        )
     )
 
 
@@ -80,34 +109,34 @@ def audit_runtime_trees_exclude_retired_artifacts() -> bool:
 def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     """Exercise the SPX lifecycle used by implementation-audit orchestration."""
     language = _source_language()
-    concern = LANGUAGE_AUDIT_CONCERNS[0]
-    agent_name = Path(IMPLEMENTATION_AUDITOR_FILENAME).stem
-    leaf_skill = LANGUAGE_AUDIT_SKILL_TEMPLATE.format(
-        language=language,
-        concern=concern,
-    )
+    concern = ImplementationAuditConcern(LANGUAGE_AUDIT_CONCERNS[0])
     subject = Path(__file__).name
-    unit_id = f"{language}-{concern}"
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
-    scope_payload, finding_payload = _audit_payloads(
-        {
-            "{{UNIT_ID}}": unit_id,
-            "{{LANGUAGE}}": language,
-            "{{CONCERN}}": concern,
-            "{{SUBJECT}}": subject,
-            "{{AGENT_NAME}}": agent_name,
-            "{{SPEC_TREE_PLUGIN}}": SPEC_TREE_PLUGIN_NAME,
-            "{{LEAF_SKILL}}": leaf_skill,
-            "{{DRIVER_SKILL}}": IMPLEMENTATION_AUDIT_SKILL_NAME,
-            "{{SPEC_TREE_VERSION}}": _plugin_version(SPEC_TREE_PLUGIN_NAME),
-            "{{LANGUAGE_VERSION}}": _plugin_version(language),
-            "{{RULE}}": rule,
-            "{{MESSAGE}}": (
-                spx_verification_run_accepts_implementation_audit_payloads.__doc__
-                or rule
-            ),
-        }
+    provenance = implementation_audit_provenance(
+        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        language_plugin_version=_plugin_version(language),
+        tool_version=_spx_version(),
     )
+    unit_id = implementation_audit_unit_id(language, concern)
+    scope_payload = implementation_audit_scope_payload(
+        language,
+        concern,
+        subject_path=subject,
+        producer_provenance=provenance,
+    )
+    finding_payload = implementation_audit_finding_payload(
+        language,
+        concern,
+        rule=rule,
+        subject_path=subject,
+        message=(
+            spx_verification_run_accepts_implementation_audit_payloads.__doc__ or rule
+        ),
+        observed=subject,
+        expected=subject,
+        producer_provenance=provenance,
+    )
+    terminal_status = AuditTerminalStatus.REJECTED
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
@@ -117,9 +146,9 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
             repository,
             ("start",),
             scope,
-            payload={},
+            payload=implementation_audit_input_payload(rule),
         )
-        run_token = _required_string(start_report, "runToken")
+        run_token = _required_string(start_report, RUN_TOKEN_FIELD)
         scope_report = _run_spx(
             repository,
             ("scope", "add"),
@@ -141,7 +170,7 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
             ("finish",),
             scope,
             run_token=run_token,
-            terminal_status="rejected",
+            terminal_status=terminal_status.value,
         )
         render_report = _run_spx(
             repository,
@@ -150,16 +179,21 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
             run_token=run_token,
         )
 
-    scope_sequence = scope_report.get("sequence")
-    return (
+    scope_sequence = scope_report.get(RUN_SEQUENCE_FIELD)
+    actual_projection = (
         isinstance(scope_sequence, int)
-        and finding_report.get("sequence") == scope_sequence + 1
-        and finish_report.get("terminalStatus") == "rejected"
-        and finish_report.get("sealed") is True
-        and render_report.get("runToken") == run_token
-        and render_report.get("findingCount") == 1
-        and render_report.get("sealed") is True
-        and render_report.get("terminalStatus") == "rejected"
+        and finding_report.get(RUN_SEQUENCE_FIELD) == scope_sequence + 1,
+        finish_report.get(RUN_TERMINAL_STATUS_FIELD),
+        finish_report.get(RUN_SEALED_FIELD),
+        render_report.get(RUN_TOKEN_FIELD),
+        render_report.get(RUN_FINDING_COUNT_FIELD),
+        render_report.get(RUN_SEALED_FIELD),
+        render_report.get(RUN_TERMINAL_STATUS_FIELD),
+    )
+    return actual_projection == expected_verification_projection(
+        run_token,
+        finding_count=1,
+        terminal_status=terminal_status,
     )
 
 
@@ -248,18 +282,6 @@ def _source_language() -> str:
     return implementation_languages(Path(".") / PLUGIN_SURFACE_PATHS[0])[0]
 
 
-def _audit_payloads(bindings: Mapping[str, str]) -> tuple[dict[str, object], ...]:
-    text = AUDIT_PAYLOAD_FIXTURE.read_text(encoding="utf-8")
-    for placeholder, replacement in bindings.items():
-        text = text.replace(placeholder, replacement)
-    payloads = cast(object, json.loads(text))
-    if not isinstance(payloads, list) or not all(
-        isinstance(payload, dict) for payload in payloads
-    ):
-        raise TypeError("audit verification fixture is not an object array")
-    return tuple(cast(dict[str, object], payload) for payload in payloads)
-
-
 def _initialize_changeset_repository(repository: Path, subject: str) -> None:
     _run(repository, ("git", "init", "-q"))
     _run(repository, ("git", "config", "user.email", "audit@example.com"))
@@ -333,6 +355,10 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
+def _spx_version() -> str:
+    return _run(REPO_ROOT, ("spx", "--version")).stdout.strip()
+
+
 def _run(
     repository: Path,
     arguments: tuple[str, ...],
@@ -353,12 +379,6 @@ def _required_string(payload: Mapping[str, object], key: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"missing string field: {key}")
     return value
-
-
-def _preceding_patch_version(version: str) -> str:
-    parts = [int(part) for part in version.split(".")]
-    parts[-1] -= 1
-    return ".".join(str(part) for part in parts)
 
 
 def _touch(path: Path) -> None:
