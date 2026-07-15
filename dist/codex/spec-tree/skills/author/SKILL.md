@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance) -> STOP and invoke `/test` with the assertion text; `/test` owns that selection. About to write or edit a test file, or implement a work item -> STOP and invoke `/apply`. Never select an evidence type inside `/author`, and never write the test or implementation behind it.
 
 </stop_triggers>
 
@@ -20,14 +20,14 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Templates and examples live in the understanding skill's directory (`${SKILL_DIR}/../understand/`):
+Templates and examples are owned and listed by `/understand`:
 
-- `${SKILL_DIR}/../understand/templates/product/product-name.product.md`
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
-- `${SKILL_DIR}/../understand/examples/` — filled specs for reference
+- `/understand` template `product-name.product.md`
+- `/understand` template `decision-name.adr.md`
+- `/understand` template `decision-name.pdr.md`
+- `/understand` template `enabler-name.md`
+- `/understand` template `outcome-name.md`
+- `/understand` examples — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -152,7 +152,7 @@ Use `request_user_input` for operator-owned gaps. Do not ask about information a
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template from `${SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
+Read the appropriate template owned by `/understand`. Fill it using the gathered content.
 
 **Voice rules** (from the live `/understand` `<truth_hierarchy>`):
 
@@ -163,7 +163,7 @@ Read the appropriate template from `${SKILL_DIR}/../understand/templates/`. Fill
 **Assertion rules** (from the live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- Before finalizing an assertion, route its text through `/test`, which selects and returns a canonical `[test]` link, canonical `[eval]` link, or pathless `[audit]` tag. Copy that returned evidence form without changing it; `/author` never selects the type, path, or filename.
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
@@ -198,7 +198,7 @@ Before writing files, check:
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
 - [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via request_user_input before proceeding
-- [ ] No content misplacement (per `${SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per `/understand` operational reference `what-goes-where`)
 
 </step>
 
@@ -210,14 +210,13 @@ Before writing files, check:
 
 ```text
 spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
-├── {slug}.md        # Spec file
-└── tests/           # Empty directory for future tests
+└── {slug}.md        # Spec file
 ```
 
 1. Create the directory
 2. Write the spec file
-3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${SKILL_DIR}/../understand/references/excluded-nodes.md`.
+3. Do not create an empty `tests/` directory; `/test` or `/apply` materializes it with the first test file.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `/understand` operational reference `excluded-nodes`.
 5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**

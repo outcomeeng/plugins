@@ -3,6 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
+argument-hint: "[path|changeset]"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
@@ -15,7 +16,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 <principles>
 
 1. **FACTS ONLY** — Report what violates which rule. Never suggest how to fix it. Never rate severity. Never say "should", "consider", or "recommend."
-2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
+2. **RULES FROM UNDERSTANDING** — Mandatory conformance rules live in the inline `/understand` foundation sections; operational references and templates supplement them. This skill owns zero rules. Read the required sources at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
@@ -28,16 +29,16 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 **References (conformance rules):**
 
 - Live `/understand` `<truth_hierarchy>` — atemporal voice and truth-flow rules
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `/understand` operational reference `what-goes-where` — `<common_misplacements>` table: content in wrong artifact type
 - Live `/understand` `<node_model>` — enabler and outcome classification
 
 **Templates (structural rules):**
 
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `/understand` template `decision-name.adr.md` — required ADR sections
+- `/understand` template `decision-name.pdr.md` — required PDR sections
+- `/understand` template `product-name.product.md` — required product sections
+- `/understand` template `enabler-name.md` — required enabler sections
+- `/understand` template `outcome-name.md` — required outcome sections
 
 </required_references>
 
@@ -155,8 +156,8 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
-3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
+2. **Load rules**: Apply the live inline `/understand` `<truth_hierarchy>` and `<node_model>` sections, then read the operational reference and templates listed in `<required_references>`.
+3. **Scope**: Read `$ARGUMENTS` as the requested path or changeset scope. When it is empty, default to `spx/` in the product root. When it requests a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
@@ -205,7 +206,7 @@ Downstream alignment:
 <success_criteria>
 
 - [ ] `<SPEC_TREE_FOUNDATION>` marker verified present
-- [ ] All references and templates read from understanding skill
+- [ ] Live `/understand` `<truth_hierarchy>` and `<node_model>` sections applied, with the listed operational reference and templates read
 - [ ] Every `.md` file in scope classified or reported as unrecognized
 - [ ] Structural checks run against correct template per file type
 - [ ] Language checks applied to all files (including unrecognized)

@@ -324,6 +324,7 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:2",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
+            "spx/21-spec-tree.enabler/18-context-loading.enabler/context-loading.md:COMPLIANCE:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:2",

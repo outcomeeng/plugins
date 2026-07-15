@@ -2,6 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
+arguments: target
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -15,21 +16,21 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Accept exactly one target:
+Treat `$target` as the exact target and accept exactly one value:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
 Use the live foundation sections below before composing. Do not reread the compatibility pointers:
 
 - `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - `/understand` `<ordering_model>` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of this reading rule
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `/understand` operational reference `what-goes-where` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `/understand` operational reference `product-domain-shapes` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `/understand` template `enabler-name.md`
+- `/understand` template `outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -40,7 +41,7 @@ Use the live foundation sections below before composing. Do not reread the compa
 
 **Step 1: Load tree context**
 
-If the target is `spx/`:
+If `$target` is `spx/`:
 
 1. Read the product spec and product-level ADRs/PDRs.
 2. Read `CLAUDE.md` if present.
@@ -48,7 +49,7 @@ If the target is `spx/`:
 4. Enumerate existing top-level children.
 5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
-If the target is a node address:
+If `$target` is a node address:
 
 1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
 2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
@@ -243,7 +244,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the enabler or outcome template owned by `/understand`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.

@@ -101,15 +101,15 @@ Canonical node shape:
 ```text
 NN-{slug}.{enabler|outcome}/
 ├── {slug}.md
-├── tests/
-├── evals/{rule-slug}/
-├── PLAN.md
-├── ISSUES.md
+├── tests/                              # when the first [test] file exists
+├── evals/{rule-slug}/                  # when the first [eval] exists
+├── PLAN.md                             # optional
+├── ISSUES.md                           # optional
 └── NN-{child-slug}.{enabler|outcome}/
 ```
 
 - The spec file is `{slug}.md`, with no numeric or type suffix.
-- `[test]` evidence is co-located under `tests/`; its filename encodes one assertion type and execution level according to the product's language convention.
+- `[test]` evidence is co-located under `tests/`; the directory materializes with the first test file, and its filename encodes one assertion type and execution level according to the product's language convention.
 - `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`; full run transcripts stay ignored under `runs/`.
 - `PLAN.md` and `ISSUES.md` are optional coordination notes, never product truth.
 - ADRs and PDRs are files inside a node directory, never child nodes.
@@ -226,7 +226,7 @@ The ledger is conversation-local. Fixed entries disappear. Unresolved entries pe
 
 <coordination_and_context>
 
-`/contextualize` derives deterministic context from tree structure, never keyword search. It loads product truth, ancestry, lower-index constraints, decisions, cited governance, guides, coordination notes, and lifecycle routing for one canonical target.
+- ALWAYS: `/contextualize` derives deterministic context from tree structure, never keyword search. It loads product truth, ancestry, lower-index constraints, decisions, cited governance, guides, coordination notes, and lifecycle routing for one canonical target.
 
 Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `ISSUES.md` against current decisions, specs, evidence, implementation, and user intent before acting. They never declare product truth or cited governance.
 
@@ -236,7 +236,7 @@ Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `
 
 <delivery_boundary>
 
-No value is delivered until the changeset reaches the default branch on origin through `/merge`. Local edits, tests, audits, reviews, commits, pushes, and clean branches are checkpoints.
+- ALWAYS: no value is delivered until the changeset reaches the default branch on origin through `/merge`. Local edits, tests, audits, reviews, commits, pushes, and clean branches are checkpoints.
 
 After verification and any successful commit or push, continue through `/merge` unless the operator explicitly limited the request to proposal, analysis, review, branch-only, or local-only work. A terse “continue,” “ship it,” or “finish” continues the active lifecycle.
 

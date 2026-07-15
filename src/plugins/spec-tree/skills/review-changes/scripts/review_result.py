@@ -146,7 +146,7 @@ _REQUIRED_FINDING_KEYS = (
 # the cited assertion/rule slug where the citation carries one.
 _SPEC_ASSERTION_RE = re.compile(
     r"(?P<path>spx/[^\s:]+\.md):"
-    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT):"
+    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|COMPLIANCE|PROPERTY|AUDIT):"
     r"(?P<index>[1-9][0-9]*)"
 )
 _DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
@@ -162,6 +162,7 @@ _SECTION_TITLES = {
     "SCENARIO": "Scenarios",
     "MAPPING": "Mappings",
     "CONFORMANCE": "Conformance",
+    "COMPLIANCE": "Compliance",
     "PROPERTY": "Properties",
     "AUDIT": "Audit",
 }

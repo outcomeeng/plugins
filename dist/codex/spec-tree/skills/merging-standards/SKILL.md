@@ -414,7 +414,7 @@ Required: <concrete change>
 ```
 
 ```text
-### DEBT [standards]: path/to/file:97
+### DEBT [consistency]: path/to/file:97
 Reference: <quote the standard from AGENTS.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
 Evidence: <quote the diff or behavior and explain how it violates the standard>
 Required: <concrete change>
