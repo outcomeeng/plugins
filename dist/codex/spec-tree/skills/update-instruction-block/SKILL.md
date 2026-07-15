@@ -2,8 +2,8 @@
 name: update-instruction-block
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
-argument-hint: "[repo-root]"
-arguments: repo_root
+argument-hint: "[repo-root] [languages-csv]"
+arguments: repo_root languages
 allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read, request_user_input
 ---
 
@@ -25,20 +25,20 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the operator-selected worktree rather than assuming the current directory or another checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
+1. **Resolve the paths and optional language override.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Bind `<languages-option>` to `--languages "$languages"` when `$languages` is non-empty; otherwise bind it to an empty string so the generator detects languages from the project's test extensions. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the repository worktree the operator means to update rather than assuming another checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
 
 2. **Detect status.** Run:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> --check
+   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --check
    ```
 
-   The output is one of `current`, `stale`, or `absent` — the worst status across the two root instruction files, and `stale` also when a `shared` region diverges between the two files, is present in only one, or is malformed (an open fence with no matching close). The enabled-language set is detected from `<repo-root>/spx/**/tests/` extensions; pass `--languages <csv>` only to override the detection. Any invocation that exits non-zero prints an actionable `error: …` line to stderr (missing or non-directory `--repo-root`, a symlink whose target escapes the repository, a template with no `template_version`) — report that exact line and stop rather than continuing.
+   The output is one of `current`, `stale`, or `absent` — the worst status across the two root instruction files, and `stale` also when a `shared` region diverges between the two files, is present in only one, or is malformed (an open fence with no matching close). The enabled-language set is detected from `<repo-root>/spx/**/tests/` extensions unless the optional `$languages` argument supplies the comma-separated override carried by `<languages-option>`. Any invocation that exits non-zero prints an actionable `error: …` line to stderr (missing or non-directory `--repo-root`, a symlink whose target escapes the repository, a template with no `template_version`) — report that exact line and stop rather than continuing.
 
 3. **Reconcile diverged `shared` regions first.** When Step 2 reported `current`, both instruction files are up to date — report and stop. Otherwise reconcile before regenerating: the reconcile operates on committed git state, so it runs before `--write` (Step 4) dirties the working tree — a write-then-reconcile order would leave the files dirty and make the reconcile refuse its own uncommitted output. Run:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> --reconcile
+   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --reconcile
    ```
 
    It takes the git-more-recently-committed side for each diverged region and prints `reconciled: {name}` for each it resolved by recency. It exits non-zero and prints an ambiguity to stderr for each case it will not guess. Handle each ambiguity, never guessing:
@@ -47,7 +47,7 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
    - **`ambiguous (recency tie): {name}`** — recency cannot pick a side: the two files' regions carry an identical commit timestamp, or git cannot resolve a commit timestamp for the region's line range in either file. Ask the operator which harness's body is current (inspect `git log` on each file for context), then apply their choice deterministically:
 
      ```bash
-     python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> --reconcile --from <claude|codex>
+     python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --reconcile --from <claude|codex>
      ```
 
      `--from claude` applies `CLAUDE.md`'s diverged region bodies to both files; `--from codex` applies `AGENTS.md`'s. The write is deterministic; only the `--from` choice is the operator's tie break.
@@ -57,7 +57,7 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 4. **Regenerate both files.** With the committed `shared` regions reconciled, regenerate the router block for the `stale` or `absent` status:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> --write
+   python3 "${SKILL_DIR}/scripts/instruction_block.py" --template "${SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --write
    ```
 
    The router block re-renders first in each file, each root file preserves its product-owned content and every `shared` region body, the router is scoped to the detected languages and its own harness, on first encounter the bootstrap pass wraps at most one `shared` region, symlinked root instruction files are replaced by regular file copies, and obsolete `spx/` instruction files are removed. When only one of the two root instruction files exists, the missing file is first seeded with a copy of the existing file's content before its router block is inserted.
