@@ -17,7 +17,7 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 References and workflows:
 
 - `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — content taxonomy (what belongs where)
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler vs outcome
+- Live `/understand` `<node_model>` — enabler vs outcome
 - `/decompose` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
 </quick_start>

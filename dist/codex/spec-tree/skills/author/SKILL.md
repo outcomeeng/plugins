@@ -49,7 +49,7 @@ Ask or infer from context:
 | **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
 | **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
 
-If unclear which type, apply the decision table from `${SKILL_DIR}/../understand/references/node-types.md`:
+If unclear which type, apply the decision table from the live `/understand` `<node_model>`:
 
 - Delivers user-facing value? → Outcome
 - Exists only to serve other nodes? → Enabler
@@ -137,7 +137,7 @@ Before drafting, gather what's needed for the artifact type:
 
 **Outcome (gate — answer the forcing question before proceeding):**
 
-- Apply the forcing question from `${SKILL_DIR}/../understand/references/node-types.md`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
+- Apply the forcing question from the live `/understand` `<node_model>`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
 - Only if the forcing question confirms material uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
@@ -154,13 +154,13 @@ Use `request_user_input` for operator-owned gaps. Do not ask about information a
 
 Read the appropriate template from `${SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
 
-**Voice rules** (from `${SKILL_DIR}/../understand/references/durable-map.md`):
+**Voice rules** (from the live `/understand` `<truth_hierarchy>`):
 
 - **Atemporal**: State product truth. Never narrate history ("we discovered", "currently", "after investigating").
 - **Permanent**: Write as if this will be true forever. If it wouldn't, it's temporal.
 - **Test**: Read any sentence aloud. If it would sound wrong after the work is done, rewrite it.
 
-**Assertion rules** (from `${SKILL_DIR}/../understand/references/assertion-types.md`):
+**Assertion rules** (from the live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
 - Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
@@ -185,8 +185,8 @@ Before writing files, check:
 
 - [ ] Correct artifact type for the content
 - [ ] Placed in the right directory at the right index
-- [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `${SKILL_DIR}/../understand/references/node-types.md` `<nesting_rules>` section)
-- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it is an enabler (see `${SKILL_DIR}/../understand/references/node-types.md`)
+- [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see the live `/understand` `<node_model>`)
+- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it is an enabler (see the live `/understand` `<node_model>`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`

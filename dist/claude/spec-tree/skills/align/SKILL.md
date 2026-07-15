@@ -27,9 +27,9 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 **References (conformance rules):**
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- Live `/understand` `<truth_hierarchy>` — atemporal voice and truth-flow rules
 - `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- Live `/understand` `<node_model>` — enabler and outcome classification
 
 **Templates (structural rules):**
 
