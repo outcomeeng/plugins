@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke for implementation audits over code, tests, and architecture in
   a changeset scope after implementation changes land or before merging the changeset.
 tools: Bash, Read, Glob, Grep, Skill
-model: sonnet
+model: "sonnet"
 
 skills:
   - spec-tree:audit-implementation
