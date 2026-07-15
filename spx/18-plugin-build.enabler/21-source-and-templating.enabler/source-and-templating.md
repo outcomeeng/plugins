@@ -14,6 +14,7 @@ CAN locate sources predictably and express shared-content includes uniformly.
 - Given an included fragment whose body itself contains an `{!% include %!}` or `{!% require_skill %!}` directive, when the source renders, then the nested directive is expanded too — rendering re-processes an inlined body, not only the top-level source ([test](tests/test_render_text.scenario.l1.py))
 - Given `{!% include %!}` directives that form a reference cycle, when the source renders, then `CyclicIncludeError` is raised so a self-referential include fails the build instead of recursing without end ([test](tests/test_render_text.scenario.l1.py))
 - Given a template carrying the variable delimiter `{{! name !}}` with that variable bound, when the source renders, then a Jinja pass substitutes the bound value — source references the build target by name ([test](tests/test_render_text.scenario.l1.py))
+- Given a Jinja raw block containing a build directive, when the source renders, then the raw wrapper is removed and the directive ships literally without expansion ([test](tests/test_render_text.scenario.l1.py))
 
 ### Compliance
 
