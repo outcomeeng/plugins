@@ -6,7 +6,7 @@ description: >-
   session, or when troubleshooting a missing session identity, worktree claim,
   or unreachable spx CLI. NEVER guess why session state is missing without
   running these checks first.
-allowed-tools: Bash(spx diagnose:*)
+allowed-tools: Read, Bash(spx diagnose:*)
 ---
 
 <objective>

@@ -63,14 +63,14 @@ A `conflict` outcome means a rebase is active. Do not abort it reflexively. Read
    - **governance surface** — specs, decisions, review policy, merge policy, or project-declared control files.
    - **ordinary implementation or test** — code or evidence governed by the loaded spec node and decisions.
 3. Resolve autonomously when evidence decides:
-   - Version or manifest bumps choose the monotonic/latest valid value, then run the project's declared version or manifest validation.
+   - Version or manifest bumps choose the monotonic/latest valid value, then return the exact project-declared version or manifest validation command to the caller.
    - Generated artifacts are resolved by resolving their source of truth first. Never hand-merge generated output when regeneration is available. Return the exact project-declared regeneration command to the caller, which runs it under its own governing workflow and re-enters `/sync-base`; this is a mechanical continuation, not an operator decision.
    - Redundant edits keep the change that supersedes the other by product truth, branch chronology, or source contract; remove the redundant text rather than preserving both.
    - Nearby independent edits are combined when both are compatible with the loaded specs, decisions, and tests.
    - Coordination notes are reconciled to still-true facts; stale, duplicate, or superseded notes are removed or archived through the relevant session/note workflow.
 4. After resolving a file, run `git add <resolved-paths>`.
 5. Continue with `git rebase --continue`.
-6. Run the narrowest deterministic verification the project overlay declares for the resolved paths; fall back to the full deterministic gate when the overlay cannot classify the paths.
+6. Return the resolved-path scope and the narrowest deterministic verification command the project overlay declares to the caller. The caller runs it under its governing workflow after the rebase completes; when the overlay cannot classify the paths, return the full deterministic gate command.
 
 Stop for the operator only when the remaining conflict is a product-intent conflict: specs, decisions, tests, newer session state, and git facts do not choose which behavior should survive. The human-facing report must say `Base sync stopped: rebase conflict requires reconciliation`, list conflicted paths, summarize every attempted reconciliation class, explain why evidence did not decide, and present the exact manual options from the `conflict.operator_options` list. Leave the rebase active. The operator can inspect, resolve and continue, or run `git rebase --abort`.
 
@@ -109,7 +109,7 @@ On `rebased` or `already_current`, the result carries a `preservation` object so
 - `branch_patch_changed` — whether the branch's patch identity differs across the sync.
 - `branch_diff_unchanged` — the git-only reuse signal: the branch patch is unchanged and the base delta does not overlap the branch.
 
-Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. For deterministic verification, run the project overlay's narrowest lane covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no lane name — lane mapping is the project overlay's.
+Read `branch_diff_unchanged` to consider a prior local review reusable — and **also** confirm, against the project's overlay, that no `base_delta_paths` entry is a governance surface the reviewer judges against. The caller runs the project overlay's narrowest deterministic lane covering `base_delta_paths`, falling back to the full gate when any path is unclassified or `path_overlap` is non-empty. The proof carries no lane name — lane mapping is the project overlay's.
 
 The proof scopes pre-push local work only. It never satisfies a merge gate: current-head pull-request checks and the current-head CI review still decide `MERGE_READINESS` after the push.
 
@@ -135,7 +135,7 @@ A base-sync stop reaches the operator for a product-intent conflict the rebase c
 - A coordination note (`PLAN.md` / `ISSUES.md`) Claude wrote that now makes the tree dirty — commit it to its own branch, record the pending `/merge` in the imperfection ledger, and re-run.
 - A conflict in a coordination note where one side is stale or superseded — reconcile the note to still-true facts and continue the rebase.
 - A conflict in a generated artifact whose source of truth can be resolved — resolve the source, return the exact project-declared regeneration command to the caller, and continue after the caller re-enters with regenerated output.
-- A version bump conflict with an objectively monotonic/latest valid value — choose it, verify it, and continue the rebase.
+- A version bump conflict with an objectively monotonic/latest valid value — choose it, return the exact validation command to the caller, and let the caller run validation after the rebase completes.
 - "Stash is forbidden, so the tree cannot be cleared" — committing clears it; the forbidden tool is not a blocker.
 - A detached worktree with no branch to commit onto — create a local branch from the current commit and commit there.
 - Uncertainty about which branch a change belongs on — objective work goes on the change branch, an unrelated coordination note on its own branch routed by `/merge`.
