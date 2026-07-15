@@ -4,7 +4,7 @@ PROVIDES the complete TypeScript development workflow — architecture, testing,
 SO THAT TypeScript projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The typescript plugin contains 9 skills following the foundational + language-specific pattern: `/typescript-standards` (reference), `/typescript-architecture-standards` (reference), `/typescript-test-standards` (reference), `/test-typescript`, `/code-typescript`, `/audit-typescript-code`, `/audit-typescript-tests`, `/architect-typescript`, `/audit-typescript-architecture`. The `typescript-simplifier` agent preloads its skill; the `audit-typescript-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors. `implementation-auditor` composes the code, test, and architecture concern skills for implementation audits; `adr-auditor` and `test-evidence-auditor` compose the matching concern skills for decision and test-evidence audits, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
+The typescript plugin contains 9 skills following the foundational + language-specific pattern: `/typescript-standards` (reference), `/typescript-architecture-standards` (reference), `/typescript-test-standards` (reference), `/test-typescript`, `/code-typescript`, `/audit-typescript-code`, `/audit-typescript-tests`, `/architect-typescript`, `/audit-typescript-architecture`. The `typescript-simplifier` agent preloads its skill; the `audit-typescript-{code|tests|architecture}` skills carry no language-specific auditor agent and are composed by the generic artifact-type auditors, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
 
 ## Assertions
 
