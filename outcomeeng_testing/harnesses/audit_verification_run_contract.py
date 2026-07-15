@@ -42,6 +42,7 @@ from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     is_satisfied,
+    parse_version,
     read_pinned_version,
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
@@ -64,6 +65,13 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
         and workflow_pin is not None
         and is_satisfied(workflow_pin, REQUIRED_SPX_VERSION)
     )
+
+
+def spx_floor_rejects_version_below_verification_run_minimum() -> bool:
+    """Exercise the version oracle against a source-derived below-floor version."""
+    floor = parse_version(VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+    lower = ".".join(str(part) for part in (*floor[:-1], floor[-1] - 1))
+    return not is_satisfied(lower, VERIFICATION_RUN_MINIMUM_SPX_VERSION)
 
 
 def implementation_auditor_is_the_only_implementation_wrapper() -> bool:

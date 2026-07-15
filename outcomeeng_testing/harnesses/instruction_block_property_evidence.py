@@ -22,6 +22,7 @@ from outcomeeng_testing.generators.instruction_block import (
 )
 
 from outcomeeng_testing.harnesses.instruction_block import (
+    EvidenceRun,
     ROOT_SHARED_BODY,
     SHARED_REGION_NAME,
     TEMPLATE_HARNESSES,
@@ -101,10 +102,14 @@ def _assert_bootstrap_wraps_at_most_one_shared_region(
     assert len(module.parse_shared_regions(wrapped_b)) <= 1
 
 
-def property_evidence_is_valid() -> bool:
-    """Run generated property domains behind one zero-argument harness API."""
+def property_evidence_run() -> EvidenceRun:
+    """Run every declared generated property domain."""
+    declared: list[str] = []
+    executed: list[str] = []
 
     for index, agent_harness in enumerate(TEMPLATE_HARNESSES):
+        case_name = f"render-version[{agent_harness}]"
+        declared.append(case_name)
 
         @seed(20260714 + index)
         @settings(max_examples=50, deadline=None)
@@ -113,6 +118,7 @@ def property_evidence_is_valid() -> bool:
             _assert_render_output_version_equals_installed(agent_harness, installed)
 
         render_version()
+        executed.append(case_name)
 
     @seed(20260720)
     @settings(max_examples=50, deadline=None)
@@ -144,9 +150,15 @@ def property_evidence_is_valid() -> bool:
     def bootstrap_bound(content_a: str, content_b: str) -> None:
         _assert_bootstrap_wraps_at_most_one_shared_region(content_a, content_b)
 
-    trailing_newline()
-    stale_order()
-    reconcile_identity()
-    reconcile_idempotence()
-    bootstrap_bound()
-    return True
+    properties = (
+        ("trailing-newline", trailing_newline),
+        ("stale-order", stale_order),
+        ("reconcile-identity", reconcile_identity),
+        ("reconcile-idempotence", reconcile_idempotence),
+        ("bootstrap-bound", bootstrap_bound),
+    )
+    for name, assertion in properties:
+        declared.append(name)
+        assertion()
+        executed.append(name)
+    return EvidenceRun(declared=tuple(declared), executed=tuple(executed))

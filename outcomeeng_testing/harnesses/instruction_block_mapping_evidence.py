@@ -196,12 +196,20 @@ def _assert_span_ratio_maps_to_wrap_decision() -> None:
     assert not MODULE.parse_shared_regions(no_wrap_b)
 
 
-def mapping_evidence_is_valid() -> bool:
-    """Run every finite source-owned mapping behind one harness entrypoint."""
+def mapping_evidence_run() -> harness.EvidenceRun:
+    """Run every declared finite source-owned mapping."""
+    declared: list[str] = []
+    executed: list[str] = []
     for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
+        case_name = f"extension[{extension}]"
+        declared.append(case_name)
         _assert_extension_maps_to_language(extension, language)
+        executed.append(case_name)
     for language in harness.TEMPLATE_LANGUAGES:
+        case_name = f"language-block[{language}]"
+        declared.append(case_name)
         _assert_language_block_appears_iff_enabled(language)
+        executed.append(case_name)
 
     legacy_markers = tuple(
         marker for pair in MODULE.LEGACY_MANAGED_BLOCK_MARKERS for marker in pair
@@ -246,16 +254,24 @@ def mapping_evidence_is_valid() -> bool:
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
+        declared.append("detected-language-set")
         _assert_detected_language_set_is_the_mapped_extensions(root / "spx")
+        executed.append("detected-language-set")
         router_path = root / "router-state"
         router_path.mkdir()
+        declared.append("router-state-report")
         _assert_check_maps_router_state_to_report(router_path)
+        executed.append("router-state-report")
         shared_path = root / "shared-state"
         shared_path.mkdir()
+        declared.append("shared-region-state-report")
         _assert_check_maps_shared_region_state_to_report(shared_path)
+        executed.append("shared-region-state-report")
         for index, (topology_factory, expected_body, removed_tokens) in enumerate(
             topology_cases
         ):
+            case_name = f"topology[{topology_factory.__name__}]"
+            declared.append(case_name)
             topology_path = root / f"topology-{index}"
             topology_path.mkdir()
             _assert_topology_maps_to_bootstrap_outcome(
@@ -264,6 +280,9 @@ def mapping_evidence_is_valid() -> bool:
                 expected_body,
                 removed_tokens,
             )
+            executed.append(case_name)
 
+    declared.append("span-ratio-wrap-decision")
     _assert_span_ratio_maps_to_wrap_decision()
-    return True
+    executed.append("span-ratio-wrap-decision")
+    return harness.EvidenceRun(declared=tuple(declared), executed=tuple(executed))

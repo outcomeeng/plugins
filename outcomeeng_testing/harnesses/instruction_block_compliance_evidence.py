@@ -424,25 +424,34 @@ def _assert_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -
     assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
 
 
-def compliance_evidence_is_valid() -> bool:
-    """Run every deterministic rule check through harness-owned resources."""
+def compliance_evidence_run() -> harness.EvidenceRun:
+    """Run every declared compliance check through harness-owned resources."""
     assertions = sorted(
         (name, assertion)
         for name, assertion in globals().items()
         if name.startswith("_assert_") and callable(assertion)
     )
+    declared: list[str] = []
+    executed: list[str] = []
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
         for index, (name, assertion) in enumerate(assertions):
             parameters = inspect.signature(assertion).parameters
             if "agent_harness" in parameters:
                 for agent_harness in harness.TEMPLATE_HARNESSES:
+                    case_name = f"{name.removeprefix('_assert_')}[{agent_harness}]"
+                    declared.append(case_name)
                     assertion(agent_harness=agent_harness)
+                    executed.append(case_name)
                 continue
+            case_name = name.removeprefix("_assert_")
+            declared.append(case_name)
             if "tmp_path" in parameters:
                 tmp_path = root / f"{index:02d}-{name.removeprefix('_assert_')}"
                 tmp_path.mkdir()
                 assertion(tmp_path=tmp_path)
+                executed.append(case_name)
                 continue
             assertion()
-    return True
+            executed.append(case_name)
+    return harness.EvidenceRun(declared=tuple(declared), executed=tuple(executed))

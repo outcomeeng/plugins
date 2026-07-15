@@ -949,13 +949,15 @@ def _assert_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) ->
     assert agents_region == harness.SHARED_REGION_BODY
 
 
-def scenario_evidence_is_valid() -> bool:
-    """Run every scenario assertion through harness-owned resources."""
+def scenario_evidence_run() -> harness.EvidenceRun:
+    """Run every declared scenario check through harness-owned resources."""
     assertions = sorted(
         (name, assertion)
         for name, assertion in globals().items()
         if name.startswith("_assert_") and callable(assertion)
     )
+    declared = tuple(name.removeprefix("_assert_") for name, _ in assertions)
+    executed: list[str] = []
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
         for index, (name, assertion) in enumerate(assertions):
@@ -972,4 +974,5 @@ def scenario_evidence_is_valid() -> bool:
                     assertion(**arguments)
             else:
                 assertion(**arguments)
-    return True
+            executed.append(name.removeprefix("_assert_"))
+    return harness.EvidenceRun(declared=declared, executed=tuple(executed))

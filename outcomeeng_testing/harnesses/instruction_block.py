@@ -8,11 +8,11 @@ Exposes resource and execution infrastructure for generated cases:
 - Generator-owned templates and protocol cases derived from the production module and
   canonical template, plus harness-accessed inert whole-document fixtures for root bodies,
   shared-region examples, and line-boundary examples.
-- ``canonical_router_spacing_is_valid_for_all_mappings``. Renders the canonical template for
-  every source-owned harness and every subset of its declared languages, then checks the
-  marker-to-body separator without placing setup or iteration policy in a test file.
-- ``unsupported_language_overrides_are_rejected``. Searches unsupported language tokens with
-  replayable property-run settings derived from the canonical template's declared languages.
+- ``canonical_router_spacing_observations``. Renders the canonical template for every
+  source-owned harness and every subset of its declared languages, returning observations whose
+  marker-to-body invariant the typed mapping file asserts.
+- ``for_all_unsupported_language_overrides``. Searches unsupported language tokens with
+  replayable property-run settings and passes each observation to the typed property's invariant.
 
 Pure render and parse checks use document strings. CLI-edge checks materialize
 only invocation-owned temporary repositories and clean them on exit.
@@ -26,6 +26,7 @@ import itertools
 import os
 import pathlib
 import subprocess
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 import sys
@@ -65,6 +66,33 @@ class RootInstructionTopology:
 
     files: dict[str, str]
     symlinks: dict[str, str]
+
+
+@dataclass(frozen=True)
+class EvidenceRun:
+    """Declared and successfully executed checks for one typed evidence file."""
+
+    declared: tuple[str, ...]
+    executed: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RouterSpacingObservation:
+    """One source-owned harness/language rendering observed by mapping evidence."""
+
+    marker_and_separator: str
+    rendered: str
+    unexpected_additional_separator: str
+
+
+@dataclass(frozen=True)
+class LanguageOverrideObservation:
+    """One generated unsupported-language CLI result observed by property evidence."""
+
+    token: str
+    supported_languages: tuple[str, ...]
+    returncode: int
+    stderr: str
 
 
 def root_instruction_topology_only_claude() -> RootInstructionTopology:
@@ -353,12 +381,13 @@ def _language_subsets(languages: tuple[str, ...]) -> tuple[tuple[str, ...], ...]
     )
 
 
-def canonical_router_spacing_is_valid_for_all_mappings() -> bool:
-    """Check canonical spacing for every source harness and declared-language subset."""
+def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, ...]:
+    """Observe canonical spacing for every source harness and language subset."""
     module = load_instruction_block_module()
     template = read_canonical_template()
     languages = template_declared_languages(template)
     version = module.parse_template_version(template)
+    observations: list[RouterSpacingObservation] = []
 
     for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
         for enabled_languages in _language_subsets(languages):
@@ -370,21 +399,27 @@ def canonical_router_spacing_is_valid_for_all_mappings() -> bool:
                 version,
                 agent_harness,
             )
-            body = rendered.removeprefix(separator)
-            if body == rendered or body.startswith("\n"):
-                return False
-    return True
+            observations.append(
+                RouterSpacingObservation(
+                    marker_and_separator=separator,
+                    rendered=rendered,
+                    unexpected_additional_separator=module.ROUTER_BODY_SEPARATOR[:1],
+                )
+            )
+    return tuple(observations)
 
 
-def unsupported_language_overrides_are_rejected() -> bool:
-    """Check generated unsupported tokens against the canonical template language contract."""
+def for_all_unsupported_language_overrides(
+    assertion: Callable[[LanguageOverrideObservation], None],
+) -> None:
+    """Bind generated unsupported tokens while the typed test owns the invariant."""
     module = load_instruction_block_module()
     supported_languages = template_declared_languages(read_canonical_template())
 
     @seed(LANGUAGE_OVERRIDE_PROPERTY_SEED)
     @settings(max_examples=LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES, deadline=None)
     @given(token=unsupported_language_tokens(supported_languages))
-    def assertion(token: str) -> None:
+    def generated_assertion(token: str) -> None:
         stderr = io.StringIO()
         with TemporaryDirectory() as directory, redirect_stderr(stderr):
             result = run_generator_write(
@@ -393,14 +428,16 @@ def unsupported_language_overrides_are_rejected() -> bool:
                 CANONICAL_TEMPLATE_PATH,
                 languages=token,
             )
+        assertion(
+            LanguageOverrideObservation(
+                token=token,
+                supported_languages=supported_languages,
+                returncode=result,
+                stderr=stderr.getvalue(),
+            )
+        )
 
-        message = stderr.getvalue()
-        assert result == 2
-        assert token in message
-        assert all(language in message for language in supported_languages)
-
-    assertion()
-    return True
+    generated_assertion()
 
 
 def extract_markdown_section(document: str, heading: str) -> str:
@@ -528,34 +565,6 @@ def run_generator_check(
             ),
         )
     return result, output.getvalue().strip()
-
-
-def scenario_evidence_is_valid() -> bool:
-    """Run all scenario cases behind one zero-argument harness entrypoint."""
-    from outcomeeng_testing.harnesses import instruction_block_scenario_evidence
-
-    return instruction_block_scenario_evidence.scenario_evidence_is_valid()
-
-
-def mapping_evidence_is_valid() -> bool:
-    """Run all mapping cases behind one zero-argument harness entrypoint."""
-    from outcomeeng_testing.harnesses import instruction_block_mapping_evidence
-
-    return instruction_block_mapping_evidence.mapping_evidence_is_valid()
-
-
-def property_evidence_is_valid() -> bool:
-    """Run all property cases behind one zero-argument harness entrypoint."""
-    from outcomeeng_testing.harnesses import instruction_block_property_evidence
-
-    return instruction_block_property_evidence.property_evidence_is_valid()
-
-
-def compliance_evidence_is_valid() -> bool:
-    """Run all compliance cases behind one zero-argument harness entrypoint."""
-    from outcomeeng_testing.harnesses import instruction_block_compliance_evidence
-
-    return instruction_block_compliance_evidence.compliance_evidence_is_valid()
 
 
 def root_document_with_shared_region(
