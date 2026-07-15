@@ -3,9 +3,10 @@ cases = "cases.jsonl"
 prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
-  "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**",
-  "src/plugins/spec-tree/skills/review-changes/**",
-  "dist/claude/spec-tree/skills/review-changes/**",
+  "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md",
+  "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/severity-classification/**",
+  "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
+  "dist/claude/spec-tree/skills/review-changes/references/review-prompt.md",
 ]
 smoke_cases = ["must-fix-null-deref-introduced", "nit-only-trailing-whitespace"]
 threshold = 0.85
