@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from hypothesis import given, seed, settings
+from hypothesis import given
 
 from outcomeeng_testing.generators.instruction_block import (
     BootstrapThresholdRelation,
@@ -36,6 +36,7 @@ from outcomeeng_testing.harnesses.instruction_block import (
     build_template,
     load_instruction_block_module,
     property_evidence_contract,
+    run_instruction_block_property,
 )
 
 
@@ -137,39 +138,29 @@ def property_evidence_run() -> EvidenceRun:
     declared: list[str] = []
     executed: list[str] = []
 
-    for index, agent_harness in enumerate(TEMPLATE_HARNESSES):
+    for agent_harness in TEMPLATE_HARNESSES:
         case_name = f"render-version[{agent_harness}]"
         declared.append(case_name)
 
-        @seed(20260714 + index)
-        @settings(max_examples=50, deadline=None)
         @given(installed=version_triples())
         def render_version(installed: tuple[int, int, int]) -> None:
             _assert_render_output_version_equals_installed(agent_harness, installed)
 
-        render_version()
+        run_instruction_block_property(render_version)
         executed.append(case_name)
 
-    @seed(20260720)
-    @settings(max_examples=50, deadline=None)
     @given(installed=version_triples())
     def trailing_newline(installed: tuple[int, int, int]) -> None:
         _assert_managed_surface_ends_with_single_newline(installed)
 
-    @seed(20260721)
-    @settings(max_examples=50, deadline=None)
     @given(left=version_triples(), right=version_triples())
     def stale_order(left: tuple[int, int, int], right: tuple[int, int, int]) -> None:
         _assert_is_stale_matches_numeric_version_order(left, right)
 
-    @seed(20260722)
-    @settings(max_examples=50, deadline=None)
     @given(body_a=shared_region_bodies(), body_b=shared_region_bodies())
     def reconcile_identity(body_a: str, body_b: str) -> None:
         _assert_reconcile_makes_shared_region_identical(body_a, body_b)
 
-    @seed(20260723)
-    @settings(max_examples=50, deadline=None)
     @given(body=shared_region_bodies())
     def reconcile_idempotence(body: str) -> None:
         _assert_reconcile_identical_region_is_idempotent(body)
@@ -182,20 +173,18 @@ def property_evidence_run() -> EvidenceRun:
     )
     for name, assertion in properties:
         declared.append(name)
-        assertion()
+        run_instruction_block_property(assertion)
         executed.append(name)
 
     module = load_instruction_block_module()
-    for index, relation in enumerate(BootstrapThresholdRelation):
+    for relation in BootstrapThresholdRelation:
         case_name = f"bootstrap-threshold[{relation.value}]"
         declared.append(case_name)
 
-        @seed(20260724 + index)
-        @settings(max_examples=50, deadline=None)
         @given(case=bootstrap_wrap_cases(module.BOOTSTRAP_SHARED_THRESHOLD, relation))
         def bootstrap_threshold(case: BootstrapWrapCase) -> None:
             _assert_bootstrap_threshold_decision(case)
 
-        bootstrap_threshold()
+        run_instruction_block_property(bootstrap_threshold)
         executed.append(case_name)
     return EvidenceRun(declared=tuple(declared), executed=tuple(executed))

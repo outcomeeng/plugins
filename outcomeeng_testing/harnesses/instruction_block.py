@@ -46,14 +46,43 @@ from outcomeeng_testing.generators.instruction_block import (
     instruction_block_cases,
     unsupported_language_tokens,
 )
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
 CANONICAL_TEMPLATE_PATH = distribution.AUTHORED_TEMPLATE_PATH
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
-LANGUAGE_OVERRIDE_PROPERTY_SEED = 20260714
-LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES = 50
+INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
+INSTRUCTION_BLOCK_PROPERTY_SEED: Final = 20260714
+INSTRUCTION_BLOCK_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
+    "test_instruction_block.property.l1.py"
+)
+LANGUAGE_OVERRIDE_PROPERTY_REPLAY_PATH: Final = (
+    "just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
+    "test_language_override.property.l1.py"
+)
+
+
+def run_instruction_block_property(
+    assertion: Callable[[], None],
+    *,
+    replay_path: str = INSTRUCTION_BLOCK_PROPERTY_REPLAY_PATH,
+) -> None:
+    """Run a generated property with harness-owned settings and replay diagnostics."""
+    configured_assertion = seed(INSTRUCTION_BLOCK_PROPERTY_SEED)(
+        settings(
+            max_examples=INSTRUCTION_BLOCK_PROPERTY_EXAMPLES,
+            deadline=None,
+            print_blob=True,
+        )(assertion)
+    )
+    run_replayable_property(
+        configured_assertion,
+        seed_value=INSTRUCTION_BLOCK_PROPERTY_SEED,
+        replay_path=replay_path,
+    )
 
 
 def _fixture_text(name: str) -> str:
@@ -565,8 +594,6 @@ def for_all_unsupported_language_overrides(
     module = load_instruction_block_module()
     supported_languages = template_declared_languages(read_canonical_template())
 
-    @seed(LANGUAGE_OVERRIDE_PROPERTY_SEED)
-    @settings(max_examples=LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES, deadline=None)
     @given(token=unsupported_language_tokens(supported_languages))
     def generated_assertion(token: str) -> None:
         stderr = io.StringIO()
@@ -586,7 +613,10 @@ def for_all_unsupported_language_overrides(
             )
         )
 
-    generated_assertion()
+    run_instruction_block_property(
+        generated_assertion,
+        replay_path=LANGUAGE_OVERRIDE_PROPERTY_REPLAY_PATH,
+    )
 
 
 def unsupported_language_override_declarations() -> tuple[str, ...]:
