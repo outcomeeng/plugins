@@ -240,28 +240,33 @@ def check_language_concern_skill_trios(root: Path) -> list[str]:
         if not plugins_root.is_dir():
             continue
         for plugin_dir in plugins_root.iterdir():
-            language = plugin_dir.name
-            if not (
-                plugins_root / language_code_skill_relative_path(language)
-            ).is_file():
-                continue
-            for concern in LANGUAGE_AUDIT_CONCERNS:
-                skill_path = plugins_root / language_audit_skill_relative_path(
-                    language,
-                    concern,
-                )
-                if not skill_path.is_file():
-                    errors.append(
-                        f"language audit concern absent: {skill_path.relative_to(root)}"
-                    )
-            retired_skill = plugins_root / retired_language_audit_skill_relative_path(
-                language
+            errors.extend(
+                _language_concern_skill_errors(root, plugins_root, plugin_dir.name)
             )
-            if retired_skill.exists():
-                errors.append(
-                    f"retired language audit skill present: "
-                    f"{retired_skill.relative_to(root)}"
-                )
+    return errors
+
+
+def _language_concern_skill_errors(
+    root: Path,
+    plugins_root: Path,
+    language: str,
+) -> list[str]:
+    code_skill = plugins_root / language_code_skill_relative_path(language)
+    if not code_skill.is_file():
+        return []
+    errors = [
+        f"language audit concern absent: {skill_path.relative_to(root)}"
+        for concern in LANGUAGE_AUDIT_CONCERNS
+        if not (
+            skill_path := plugins_root
+            / language_audit_skill_relative_path(language, concern)
+        ).is_file()
+    ]
+    retired_skill = plugins_root / retired_language_audit_skill_relative_path(language)
+    if retired_skill.exists():
+        errors.append(
+            f"retired language audit skill present: {retired_skill.relative_to(root)}"
+        )
     return errors
 
 
@@ -342,6 +347,44 @@ def _read_captures(out: IO[bytes], err: IO[bytes]) -> tuple[str, str]:
     return out.read().decode(errors="replace"), err.read().decode(errors="replace")
 
 
+def _validate_target(
+    target: Path,
+    runner: Callable[..., subprocess.CompletedProcess[str]],
+) -> tuple[Path, subprocess.CompletedProcess[str]]:
+    cmd = ["claude", "plugin", "validate", str(target)]
+    return target, runner(cmd)
+
+
+def _validate_targets(
+    targets: list[Path],
+    runner: Callable[..., subprocess.CompletedProcess[str]],
+) -> list[tuple[Path, str]]:
+    failures: list[tuple[Path, str]] = []
+    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
+        futures = {
+            pool.submit(_validate_target, target, runner): target for target in targets
+        }
+        for future in as_completed(futures):
+            target, result = future.result()
+            if result.returncode != 0:
+                failures.append((target, result.stderr or result.stdout))
+            else:
+                print(result.stdout, end="")
+    return failures
+
+
+def _report_validation_failures(failures: list[tuple[Path, str]]) -> None:
+    for target, output in failures:
+        print(f"error: validation failed for {target}", file=sys.stderr)
+        if output.strip():
+            print(f"  {output.strip()}", file=sys.stderr)
+
+
+def _report_contract_errors(prefix: str, errors: list[str]) -> None:
+    for message in errors:
+        print(f"error: {prefix}: {message}", file=sys.stderr)
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -358,41 +401,23 @@ def main(
         )
         return 1
 
-    failures: list[tuple[Path, str]] = []
-
-    def _validate(target: Path) -> tuple[Path, subprocess.CompletedProcess[str]]:
-        cmd = ["claude", "plugin", "validate", str(target)]
-        return target, runner(cmd)
-
-    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
-        futures = {pool.submit(_validate, t): t for t in targets}
-        for future in as_completed(futures):
-            target, result = future.result()
-            if result.returncode != 0:
-                failures.append((target, result.stderr or result.stdout))
-            else:
-                print(result.stdout, end="")
-
-    for target, output in failures:
-        print(f"error: validation failed for {target}", file=sys.stderr)
-        if output.strip():
-            print(f"  {output.strip()}", file=sys.stderr)
+    failures = _validate_targets(targets, runner)
+    _report_validation_failures(failures)
 
     sync_errors = check_catalog_sync(root)
-    for msg in sync_errors:
-        print(f"error: catalog sync: {msg}", file=sys.stderr)
+    _report_contract_errors("catalog sync", sync_errors)
 
     parity_errors = check_manifest_parity(root)
-    for msg in parity_errors:
-        print(f"error: manifest parity: {msg}", file=sys.stderr)
+    _report_contract_errors("manifest parity", parity_errors)
 
     audit_contract_errors = (
         *check_implementation_auditor_wrapper(root),
         *check_language_concern_skill_trios(root),
         *check_retired_audit_scripts(root),
     )
-    for msg in audit_contract_errors:
-        print(f"error: implementation audit contract: {msg}", file=sys.stderr)
+    _report_contract_errors(
+        "implementation audit contract", list(audit_contract_errors)
+    )
 
     return (
         1 if (failures or sync_errors or parity_errors or audit_contract_errors) else 0
