@@ -504,11 +504,15 @@ def run_generator_write_primary(
 
 
 def run_generator_check(
-    repo_root: pathlib.Path, template_path: pathlib.Path
+    repo_root: pathlib.Path,
+    template_path: pathlib.Path,
+    *,
+    languages: str | None = None,
 ) -> tuple[int, str]:
     """Run the real ``--check`` surface and return its exit code and report word."""
     output = io.StringIO()
     cases = generated_cases()
+    selected_languages = cases.lang_primary if languages is None else languages
     with redirect_stdout(output):
         result = cast(
             int,
@@ -518,7 +522,7 @@ def run_generator_check(
                     str(template_path),
                     "--repo-root",
                     str(repo_root),
-                    f"--languages={cases.lang_primary}",
+                    f"--languages={selected_languages}",
                     "--check",
                 ]
             ),

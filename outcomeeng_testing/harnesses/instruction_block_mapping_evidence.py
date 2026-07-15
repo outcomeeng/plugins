@@ -12,7 +12,6 @@ from __future__ import annotations
 import pathlib
 from collections.abc import Callable
 from tempfile import TemporaryDirectory
-from typing import cast
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 
@@ -24,9 +23,12 @@ def _assert_extension_maps_to_language(extension: str, language: str) -> None:
     assert MODULE.language_for_extension(f".{extension}") == language
 
 
-def _assert_detected_language_set_is_the_mapped_extensions() -> None:
+def _assert_detected_language_set_is_the_mapped_extensions(
+    spx_dir: pathlib.Path,
+) -> None:
     extensions = tuple(MODULE.LANGUAGE_BY_EXTENSION)
-    assert MODULE.detect_languages(extensions) == MODULE.normalize_languages(
+    harness.write_spx_tree_with_tests(spx_dir, extensions)
+    assert MODULE.detect_languages_from_tree(spx_dir) == MODULE.normalize_languages(
         MODULE.LANGUAGE_BY_EXTENSION.values()
     )
 
@@ -52,19 +54,11 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
     harness.run_generator_write_primary(repo, template)
     claude = repo / harness.INSTRUCTION_CLAUDE
 
-    def check() -> str:
-        return cast(
-            str,
-            MODULE.instruction_status(
-                claude, harness.NEW_VERSION, (harness.LANG_PRIMARY,), repo
-            ),
-        )
-
     # current: freshly written at the installed version and language
-    assert check() == "current"
+    assert harness.run_generator_check(repo, template) == (0, "current")
     # absent: the file removed
     claude.unlink()
-    assert check() == "absent"
+    assert harness.run_generator_check(repo, template) == (0, "absent")
     # stale: a version numerically behind the installed one
     stale_block = MODULE.render(
         harness.build_template(harness.OLD_VERSION),
@@ -73,7 +67,7 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
         harness.HARNESS_CLAUDE,
     )
     claude.write_text(MODULE.prepend_router_block(stale_block, ""), encoding="utf-8")
-    assert check() == "stale"
+    assert harness.run_generator_check(repo, template) == (0, "stale")
     # stale: the recorded language set differs from the detected/expected set
     current_block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
@@ -82,15 +76,11 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
         harness.HARNESS_CLAUDE,
     )
     claude.write_text(MODULE.prepend_router_block(current_block, ""), encoding="utf-8")
-    assert (
-        MODULE.instruction_status(
-            claude,
-            harness.NEW_VERSION,
-            (harness.LANG_SECONDARY,),
-            repo,
-        )
-        == "stale"
-    )
+    assert harness.run_generator_check(
+        repo,
+        template,
+        languages=harness.LANG_SECONDARY,
+    ) == (0, "stale")
 
 
 def _assert_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> None:
@@ -205,7 +195,6 @@ def mapping_evidence_is_valid() -> bool:
     """Run every finite source-owned mapping behind one harness entrypoint."""
     for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
         _assert_extension_maps_to_language(extension, language)
-    _assert_detected_language_set_is_the_mapped_extensions()
     for language in harness.TEMPLATE_LANGUAGES:
         _assert_language_block_appears_iff_enabled(language)
 
@@ -252,6 +241,7 @@ def mapping_evidence_is_valid() -> bool:
     )
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
+        _assert_detected_language_set_is_the_mapped_extensions(root / "spx")
         router_path = root / "router-state"
         router_path.mkdir()
         _assert_check_maps_router_state_to_report(router_path)
