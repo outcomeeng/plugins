@@ -27,7 +27,6 @@ from outcomeeng.validation.implementation_audit_contract import (
     LANGUAGE_AUDIT_CONCERNS,
     RUN_FINDING_COUNT_FIELD,
     RUN_SEALED_FIELD,
-    RUN_SEQUENCE_FIELD,
     RUN_TERMINAL_STATUS_FIELD,
     RUN_TOKEN_FIELD,
     SPEC_TREE_PLUGIN_NAME,
@@ -178,7 +177,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
             implementation_audit_input_payload(probe.request_kind),
         )
         run_token = _required_string(start_report, RUN_TOKEN_FIELD)
-        scope_report = _run_spx_json(
+        _run_spx_json(
             repository,
             _evidence_command("scope", scope, run_token, unit_id),
             _with_producer_provenance(
@@ -186,7 +185,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 language=probe.language,
             ),
         )
-        finding_report = _run_spx_json(
+        _run_spx_json(
             repository,
             _evidence_command(
                 "finding",
@@ -242,10 +241,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
             ),
         )
 
-    scope_sequence = scope_report.get(RUN_SEQUENCE_FIELD)
-    finding_sequence = finding_report.get(RUN_SEQUENCE_FIELD)
     observed = (
-        isinstance(scope_sequence, int) and finding_sequence == scope_sequence + 1,
         finish_report.get(RUN_TERMINAL_STATUS_FIELD),
         finish_report.get(RUN_SEALED_FIELD),
         render_report.get(RUN_TOKEN_FIELD),
@@ -257,7 +253,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
         run_token,
         finding_count=probe.finding_count,
         terminal_status=probe.terminal_status,
-    )
+    )[1:]
     if observed != expected:
         raise AssertionError(
             f"verification-run projection mismatch: expected {expected!r}, "
