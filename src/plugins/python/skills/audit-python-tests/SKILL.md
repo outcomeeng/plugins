@@ -265,13 +265,13 @@ The Python test verdict is sound when:
 - Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
 - Every deleted test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
-- Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
+- Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>
 
 <reference_guides>
 
-- `references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
+- `references/python-test-audit-examples.md` — worked Python test-audit analysis cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Use them to inspect evidence; `<verdict_format>` and the inherited `/audit-tests` JSON schema remain the output contract.
 
 </reference_guides>
