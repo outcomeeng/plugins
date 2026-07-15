@@ -616,6 +616,7 @@ def render_text(
         template,
         shared_root=shared_root,
         include_stack=(),
+        variables=variables,
     )
     return _render_jinja(
         rendered,
@@ -668,27 +669,41 @@ def _render_target_scope(
     shared_root: Path,
 ) -> str:
     """Evaluate one target's Jinja control flow while preserving directives."""
+    return _render_jinja_preserving_directives(
+        template,
+        shared_root=shared_root,
+        variables=_render_variables(target, plugin_name=plugin_name),
+    )
+
+
+def _render_jinja_preserving_directives(
+    template: str,
+    *,
+    shared_root: Path | None,
+    variables: dict[str, object] | None,
+) -> str:
+    """Evaluate Jinja control flow without resolving build directives."""
     preserved: list[tuple[str, str]] = []
 
     def mask_directive(match: re.Match[str]) -> str:
         body = match.group(1).strip()
         if _is_jinja_control_block(body):
             return match.group(0)
-        placeholder = _planning_directive_placeholder(template, len(preserved))
+        placeholder = _directive_placeholder(template, len(preserved))
         preserved.append((placeholder, match.group(0)))
         return placeholder
 
     scoped = _render_jinja(
         _DIRECTIVE_RE.sub(mask_directive, template),
         shared_root=shared_root,
-        variables=_render_variables(target, plugin_name=plugin_name),
+        variables=variables,
     )
     for placeholder, directive in preserved:
         scoped = scoped.replace(placeholder, directive)
     return scoped
 
 
-def _planning_directive_placeholder(template: str, index: int) -> str:
+def _directive_placeholder(template: str, index: int) -> str:
     placeholder = (
         f"{_PLANNING_DIRECTIVE_PLACEHOLDER_START}{index}"
         f"{_PLANNING_DIRECTIVE_PLACEHOLDER_END}"
@@ -1022,7 +1037,14 @@ def _render_directives(
     *,
     shared_root: Path | None,
     include_stack: tuple[Path, ...],
+    variables: dict[str, object] | None,
 ) -> str:
+    scoped_template = _render_jinja_preserving_directives(
+        template,
+        shared_root=shared_root,
+        variables=variables,
+    )
+
     def replace(match: re.Match[str]) -> str:
         body = match.group(1).strip()
         if _is_jinja_control_block(body):
@@ -1047,9 +1069,10 @@ def _render_directives(
             included,
             shared_root=shared_root,
             include_stack=(*include_stack, include_path),
+            variables=variables,
         )
 
-    return _DIRECTIVE_RE.sub(replace, template)
+    return _DIRECTIVE_RE.sub(replace, scoped_template)
 
 
 def _directive_argument(argument_literal: str, source: str) -> str:

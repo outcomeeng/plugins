@@ -28,11 +28,13 @@ from outcomeeng.distribution.build import (
     frontmatter_field_names,
     plan_emissions,
     render_planned_emission_text,
+    render_text,
     rewrite_paths_for_target,
     skill_dir_path_references,
     strip_frontmatter_fields,
 )
 from outcomeeng.distribution.contracts import (
+    BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
     MARKDOWN_FILE_SUFFIX,
     PLUGINS_DIR_NAME,
@@ -49,6 +51,7 @@ from outcomeeng.validation.skill_frontmatter import (
 )
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
+    TargetScopedIncludeCase,
     source_scenarios,
     target_scoped_include_cases,
 )
@@ -306,6 +309,11 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
 def target_scoped_includes_emit_only_to_matching_tree() -> bool:
     failures: list[str] = []
     for case in target_scoped_include_cases():
+        if not _nonmatching_target_skips_absent_include(case):
+            failures.append(
+                f"{case.source.skill_ref}:{case.placement.value}:"
+                f"{case.target.value}:resolved-dead-branch"
+            )
         with TemporaryDirectory() as temporary_directory:
             builder = SrcTreeBuilder(Path(temporary_directory))
             builder.add_shared_topic(
@@ -340,6 +348,28 @@ def target_scoped_includes_emit_only_to_matching_tree() -> bool:
     if failures:
         raise AssertionError(f"target-scoped include fan-out mismatch: {failures}")
     return True
+
+
+def _nonmatching_target_skips_absent_include(case: TargetScopedIncludeCase) -> bool:
+    nonmatching_target = next(target for target in Target if target is not case.target)
+    with TemporaryDirectory() as temporary_directory:
+        builder = SrcTreeBuilder(Path(temporary_directory))
+        if case.outer_fragment_body is None:
+            builder.shared_root.mkdir(parents=True)
+        else:
+            builder.add_shared_topic(
+                case.source.scope,
+                case.source.outer_topic,
+                case.outer_fragment_body,
+            )
+        return (
+            render_text(
+                case.root_body,
+                shared_root=builder.shared_root,
+                variables={BUILD_TARGET_VARIABLE: nonmatching_target.value},
+            )
+            == ""
+        )
 
 
 def path_rewrite_is_idempotent() -> bool:
