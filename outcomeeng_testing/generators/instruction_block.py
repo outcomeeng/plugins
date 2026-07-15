@@ -1,10 +1,9 @@
 """Generated input domains for instruction-block evidence.
 
-The instruction-block harness owns filesystems, subprocesses, and cleanup. This
-module owns variable input domains and source-derived carrier cases. Carrier
-text is derived from the production module's harness, filename, marker, and
-template contracts so the harness never becomes a second source of product
-vocabulary.
+The instruction-block harness owns filesystems, fixtures, subprocesses, and
+cleanup. This module owns variable input domains and source-derived protocol
+cases from the production module's harness, filename, marker, and template
+contracts.
 """
 
 from __future__ import annotations
@@ -25,20 +24,7 @@ class InstructionBlockCases:
 
     instruction_claude: str
     instruction_agents: str
-    root_claude_body: str
-    root_agents_body: str
-    root_shared_body: str
     shared_region_name: str
-    shared_region_body: str
-    shared_region_body_alt: str
-    root_near_identical_claude: str
-    root_near_identical_codex: str
-    root_near_identical_shared: str
-    root_legacy_managed_body: str
-    root_straddling_claude: str
-    root_straddling_codex: str
-    root_midline_claude: str
-    root_midline_codex: str
     read_entire_file_instruction: str
     lang_primary: str
     lang_secondary: str
@@ -65,43 +51,6 @@ def _prior_dotted_version(version: str) -> str:
     raise ValueError(f"version has no lower non-negative value: {version}")
 
 
-def _carrier_body(filename: str, harness: str) -> str:
-    """Build a root-file payload from source-owned filename and harness values."""
-    return f"# {filename}\n\n{harness} repository instructions.\n"
-
-
-def _boundary_pairs(
-    harness_claude: str,
-    harness_codex: str,
-) -> tuple[tuple[str, str, str], tuple[str, str], tuple[str, str]]:
-    """Generate meaningful bootstrap line-boundary carrier pairs."""
-    near_common = "".join(
-        f"shared line {index} for {harness_claude} and {harness_codex}\n"
-        for index in range(30)
-    )
-    near = (
-        near_common + f"shared opening then {harness_claude} tail\n",
-        near_common + f"shared opening then {harness_codex} tail\n",
-        near_common,
-    )
-    whole_lines = "".join(
-        f"whole shared line {index} for both harnesses\n" for index in range(6)
-    )
-    long_prefix = "x" * 480
-    straddling = (
-        whole_lines + long_prefix + f" {harness_claude} tail\n",
-        whole_lines + long_prefix + f" {harness_codex} tail\n",
-    )
-    midline_common = "".join(
-        f"identical generated line {index} for both harnesses\n" for index in range(20)
-    )
-    midline = (
-        "shared prose here\n" + midline_common,
-        f"{harness_codex} prefix shared prose here\n" + midline_common,
-    )
-    return near, straddling, midline
-
-
 def instruction_block_cases(
     module: ModuleType,
     canonical_template: str,
@@ -124,22 +73,7 @@ def instruction_block_cases(
     version = module.parse_template_version(canonical_template)
     if version is None:
         raise ValueError("canonical instruction-block template has no version")
-    near, straddling, midline = _boundary_pairs(harness_claude, harness_codex)
     shared_name = module.BOOTSTRAP_SHARED_REGION_NAME
-    shared_body = module.router_marker(version, languages)
-    shared_body_alt = module.router_marker(_prior_dotted_version(version), languages)
-    legacy_open, legacy_close = module.LEGACY_MANAGED_BLOCK_MARKERS[0]
-    root_shared_body = _carrier_body(shared_name, module.DEFAULT_TEMPLATE_SOURCE)
-    legacy_metadata = (
-        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {version} -->\n"
-        f"{module.MANAGED_TEMPLATE_SOURCE_PREFIX} "
-        f"{module.DEFAULT_TEMPLATE_SOURCE} -->\n"
-        f"{module.MANAGED_LANGUAGES_PREFIX} {','.join(languages)} -->\n"
-    )
-    root_legacy_managed_body = (
-        f"{legacy_open}\n{legacy_metadata}{module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{legacy_close}\n\n{root_shared_body}"
-    )
     first_section = next(
         line.removeprefix("## ")
         for line in canonical_template.splitlines()
@@ -153,20 +87,7 @@ def instruction_block_cases(
     return InstructionBlockCases(
         instruction_claude=instruction_claude,
         instruction_agents=instruction_agents,
-        root_claude_body=_carrier_body(instruction_claude, harness_claude),
-        root_agents_body=_carrier_body(instruction_agents, harness_codex),
-        root_shared_body=root_shared_body,
         shared_region_name=shared_name,
-        shared_region_body=shared_body,
-        shared_region_body_alt=shared_body_alt,
-        root_near_identical_claude=near[0],
-        root_near_identical_codex=near[1],
-        root_near_identical_shared=near[2],
-        root_legacy_managed_body=root_legacy_managed_body,
-        root_straddling_claude=straddling[0],
-        root_straddling_codex=straddling[1],
-        root_midline_claude=midline[0],
-        root_midline_codex=midline[1],
         read_entire_file_instruction=read_directive,
         lang_primary=languages[0],
         lang_secondary=languages[-1],

@@ -5,9 +5,9 @@ Exposes resource and execution infrastructure for generated cases:
 - An importlib loader for ``instruction_block.py``. The module ships under a
   generated plugin skill directory and is not importable by package
   name; tests load it through ``importlib`` instead.
-- Generator-owned templates and carrier cases derived from the production module and
-  canonical template. This harness consumes those cases while owning only filesystem,
-  subprocess, temporary-repository, and cleanup behavior.
+- Generator-owned templates and protocol cases derived from the production module and
+  canonical template, plus harness-accessed inert whole-document fixtures for root bodies,
+  shared-region examples, and line-boundary examples.
 - ``canonical_router_spacing_is_valid_for_all_mappings``. Renders the canonical template for
   every source-owned harness and every subset of its declared languages, then checks the
   marker-to-body separator without placing setup or iteration policy in a test file.
@@ -48,9 +48,15 @@ from outcomeeng_testing.generators.instruction_block import (
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
 CANONICAL_TEMPLATE_PATH = distribution.AUTHORED_TEMPLATE_PATH
+FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 LANGUAGE_OVERRIDE_PROPERTY_SEED = 20260714
 LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES = 50
+
+
+def _fixture_text(name: str) -> str:
+    """Read one inert whole-document instruction-block fixture."""
+    return FIXTURES_DIR.joinpath(name).read_text(encoding="utf-8")
 
 
 @dataclass(frozen=True)
@@ -65,7 +71,7 @@ def root_instruction_topology_only_claude() -> RootInstructionTopology:
     """Return a root topology with only the Claude harness instruction file present."""
     cases = generated_cases()
     return RootInstructionTopology(
-        files={cases.instruction_claude: cases.root_claude_body}, symlinks={}
+        files={cases.instruction_claude: ROOT_CLAUDE_BODY}, symlinks={}
     )
 
 
@@ -73,7 +79,7 @@ def root_instruction_topology_only_agents() -> RootInstructionTopology:
     """Return a root topology with only the Codex harness instruction file present."""
     cases = generated_cases()
     return RootInstructionTopology(
-        files={cases.instruction_agents: cases.root_agents_body}, symlinks={}
+        files={cases.instruction_agents: ROOT_AGENTS_BODY}, symlinks={}
     )
 
 
@@ -82,8 +88,8 @@ def root_instruction_topology_separate() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={
-            cases.instruction_claude: cases.root_claude_body,
-            cases.instruction_agents: cases.root_agents_body,
+            cases.instruction_claude: ROOT_CLAUDE_BODY,
+            cases.instruction_agents: ROOT_AGENTS_BODY,
         },
         symlinks={},
     )
@@ -93,7 +99,7 @@ def root_instruction_topology_symlinked() -> RootInstructionTopology:
     """Return a root topology matching a shared instruction file with a harness symlink."""
     cases = generated_cases()
     return RootInstructionTopology(
-        files={cases.instruction_agents: cases.root_shared_body},
+        files={cases.instruction_agents: ROOT_SHARED_BODY},
         symlinks={cases.instruction_claude: cases.instruction_agents},
     )
 
@@ -103,8 +109,8 @@ def root_instruction_topology_identical() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={
-            cases.instruction_claude: cases.root_shared_body,
-            cases.instruction_agents: cases.root_shared_body,
+            cases.instruction_claude: ROOT_SHARED_BODY,
+            cases.instruction_agents: ROOT_SHARED_BODY,
         },
         symlinks={},
     )
@@ -115,8 +121,8 @@ def root_instruction_topology_legacy_managed() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={
-            cases.instruction_claude: cases.root_legacy_managed_body,
-            cases.instruction_agents: cases.root_legacy_managed_body,
+            cases.instruction_claude: ROOT_LEGACY_MANAGED_BODY,
+            cases.instruction_agents: ROOT_LEGACY_MANAGED_BODY,
         },
         symlinks={},
     )
@@ -127,8 +133,8 @@ def root_instruction_topology_near_identical() -> RootInstructionTopology:
     cases = generated_cases()
     return RootInstructionTopology(
         files={
-            cases.instruction_claude: cases.root_near_identical_claude,
-            cases.instruction_agents: cases.root_near_identical_codex,
+            cases.instruction_claude: ROOT_NEAR_IDENTICAL_CLAUDE,
+            cases.instruction_agents: ROOT_NEAR_IDENTICAL_CODEX,
         },
         symlinks={},
     )
@@ -196,10 +202,10 @@ def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
             and agents_path.is_file()
             and not claude_path.is_symlink()
             and not agents_path.is_symlink()
-            and claude_path.read_text(encoding="utf-8") == cases.root_shared_body
-            and agents_path.read_text(encoding="utf-8") == cases.root_shared_body
-            and materialized[cases.instruction_claude] == cases.root_shared_body
-            and materialized[cases.instruction_agents] == cases.root_shared_body
+            and claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+            and agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
+            and materialized[cases.instruction_claude] == ROOT_SHARED_BODY
+            and materialized[cases.instruction_agents] == ROOT_SHARED_BODY
         )
 
 
@@ -210,29 +216,29 @@ def root_instruction_topology_seed_mapping_is_valid() -> bool:
         (
             root_instruction_topology_only_claude(),
             {
-                generated.instruction_claude: generated.root_claude_body,
-                generated.instruction_agents: generated.root_claude_body,
+                generated.instruction_claude: ROOT_CLAUDE_BODY,
+                generated.instruction_agents: ROOT_CLAUDE_BODY,
             },
         ),
         (
             root_instruction_topology_only_agents(),
             {
-                generated.instruction_claude: generated.root_agents_body,
-                generated.instruction_agents: generated.root_agents_body,
+                generated.instruction_claude: ROOT_AGENTS_BODY,
+                generated.instruction_agents: ROOT_AGENTS_BODY,
             },
         ),
         (
             root_instruction_topology_separate(),
             {
-                generated.instruction_claude: generated.root_claude_body,
-                generated.instruction_agents: generated.root_agents_body,
+                generated.instruction_claude: ROOT_CLAUDE_BODY,
+                generated.instruction_agents: ROOT_AGENTS_BODY,
             },
         ),
         (
             root_instruction_topology_symlinked(),
             {
-                generated.instruction_claude: generated.root_shared_body,
-                generated.instruction_agents: generated.root_shared_body,
+                generated.instruction_claude: ROOT_SHARED_BODY,
+                generated.instruction_agents: ROOT_SHARED_BODY,
             },
         ),
     )
@@ -278,20 +284,24 @@ def generated_cases() -> InstructionBlockCases:
 _GENERATED_CASES = generated_cases()
 INSTRUCTION_CLAUDE = _GENERATED_CASES.instruction_claude
 INSTRUCTION_AGENTS = _GENERATED_CASES.instruction_agents
-ROOT_CLAUDE_BODY = _GENERATED_CASES.root_claude_body
-ROOT_AGENTS_BODY = _GENERATED_CASES.root_agents_body
-ROOT_SHARED_BODY = _GENERATED_CASES.root_shared_body
+ROOT_CLAUDE_BODY = _fixture_text("root-claude.md")
+ROOT_AGENTS_BODY = _fixture_text("root-agents.md")
+ROOT_SHARED_BODY = _fixture_text("root-shared.md")
 SHARED_REGION_NAME = _GENERATED_CASES.shared_region_name
-SHARED_REGION_BODY = _GENERATED_CASES.shared_region_body
-SHARED_REGION_BODY_ALT = _GENERATED_CASES.shared_region_body_alt
-ROOT_NEAR_IDENTICAL_CLAUDE = _GENERATED_CASES.root_near_identical_claude
-ROOT_NEAR_IDENTICAL_CODEX = _GENERATED_CASES.root_near_identical_codex
-ROOT_NEAR_IDENTICAL_SHARED = _GENERATED_CASES.root_near_identical_shared
-ROOT_LEGACY_MANAGED_BODY = _GENERATED_CASES.root_legacy_managed_body
-ROOT_STRADDLING_CLAUDE = _GENERATED_CASES.root_straddling_claude
-ROOT_STRADDLING_CODEX = _GENERATED_CASES.root_straddling_codex
-ROOT_MIDLINE_CLAUDE = _GENERATED_CASES.root_midline_claude
-ROOT_MIDLINE_CODEX = _GENERATED_CASES.root_midline_codex
+SHARED_REGION_BODY = load_instruction_block_module().parse_shared_regions(
+    _fixture_text("shared-region-primary.md")
+)[SHARED_REGION_NAME]
+SHARED_REGION_BODY_ALT = load_instruction_block_module().parse_shared_regions(
+    _fixture_text("shared-region-alternate.md")
+)[SHARED_REGION_NAME]
+ROOT_NEAR_IDENTICAL_CLAUDE = _fixture_text("near-identical-claude.md")
+ROOT_NEAR_IDENTICAL_CODEX = _fixture_text("near-identical-codex.md")
+ROOT_NEAR_IDENTICAL_SHARED = _fixture_text("near-identical-shared.md")
+ROOT_LEGACY_MANAGED_BODY = _fixture_text("retired-managed.md")
+ROOT_STRADDLING_CLAUDE = _fixture_text("straddling-claude.md")
+ROOT_STRADDLING_CODEX = _fixture_text("straddling-codex.md")
+ROOT_MIDLINE_CLAUDE = _fixture_text("midline-claude.md")
+ROOT_MIDLINE_CODEX = _fixture_text("midline-codex.md")
 READ_ENTIRE_FILE_INSTRUCTION = _GENERATED_CASES.read_entire_file_instruction
 LANG_PRIMARY = _GENERATED_CASES.lang_primary
 LANG_SECONDARY = _GENERATED_CASES.lang_secondary
@@ -588,11 +598,11 @@ def write_both_root_files_with_shared_region(
     cases = generated_cases()
     bodies = {
         cases.instruction_claude: (
-            claude_region or cases.shared_region_body,
+            claude_region or SHARED_REGION_BODY,
             cases.harness_claude,
         ),
         cases.instruction_agents: (
-            agents_region or cases.shared_region_body,
+            agents_region or SHARED_REGION_BODY,
             cases.harness_codex,
         ),
     }
