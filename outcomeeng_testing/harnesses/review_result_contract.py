@@ -198,7 +198,6 @@ class TestRuleCitationForm:
     def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        review_result = load_review_result_module()
         monkeypatch.chdir(tmp_path)
         from outcomeeng_testing.harnesses.reviewing_changes import (
             versioned_sibling_plugin_resolution_holds,

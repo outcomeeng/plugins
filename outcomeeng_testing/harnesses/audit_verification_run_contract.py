@@ -12,6 +12,7 @@ from typing import Any
 from typing import Final
 
 from outcomeeng.validation.plugins import (
+    IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH,
     IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH,
     PLUGIN_SURFACE_ROOTS,
     RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS,
