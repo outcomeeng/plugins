@@ -13,8 +13,9 @@ config (``justfile``, ``lefthook.yml``, the workflow) is read through harness he
 
 from __future__ import annotations
 
-import pathlib
 import inspect
+import pathlib
+import re
 from collections.abc import Callable
 from tempfile import TemporaryDirectory
 from typing import cast
@@ -330,13 +331,26 @@ def _assert_refresh_workflow_installs_dprint() -> None:
 
 
 def _assert_render_passes_brace_token_through_unchanged() -> None:
-    rendered = MODULE.render(
-        harness.build_template(harness.NEW_VERSION),
-        (harness.LANG_PRIMARY,),
-        harness.NEW_VERSION,
-        harness.HARNESS_CLAUDE,
+    template = harness.read_canonical_template()
+    template_version = MODULE.parse_template_version(template)
+    assert template_version is not None
+    brace_tokens = tuple(
+        dict.fromkeys(re.findall(r"\{\{![^{}\n]+!\}\}|\{[^{}\n]+\}", template))
     )
-    assert harness.ILLUSTRATION_TOKEN in rendered
+    assert brace_tokens
+    rendered = tuple(
+        MODULE.render(
+            template,
+            harness.TEMPLATE_LANGUAGES,
+            template_version,
+            agent_harness,
+        )
+        for agent_harness in harness.TEMPLATE_HARNESSES
+    )
+    missing = tuple(
+        token for token in brace_tokens if not any(token in body for body in rendered)
+    )
+    assert not missing, f"rendering changed or removed brace tokens: {missing!r}"
 
 
 def _assert_former_command_slot_fence_is_ordinary_content(
