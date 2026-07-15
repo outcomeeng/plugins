@@ -6,7 +6,7 @@ description: >-
   implementation audits; the main conversation reaches this audit only through
   that agent.
 argument-hint: "<implementation audit request>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(spx verification run:*)
+allowed-tools: Read, Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 
 <dispatch_gate>

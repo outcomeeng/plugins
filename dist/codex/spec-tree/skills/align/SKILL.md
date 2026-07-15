@@ -25,19 +25,12 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-**References (conformance rules):**
+Invoke `spec-tree:understand` and use the reference and template paths it exposes. Read these named sources in full before checking conformance:
 
-- `${SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
-
-**Templates (structural rules):**
-
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `durable-map.md` — `<atemporal_voice>` and `<decision_to_spec_alignment>`
+- `what-goes-where.md` — `<common_misplacements>`
+- `node-types.md` — `<enabler>` and `<outcome>`
+- `decision-name.adr.md`, `decision-name.pdr.md`, `product-name.product.md`, `enabler-name.md`, and `outcome-name.md` — structural rules for each artifact class
 
 </required_references>
 
@@ -155,7 +148,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
+2. **Load rules**: Invoke `spec-tree:understand`, then read every named reference and template in `<required_references>` through the paths that workflow exposes.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo_path)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
