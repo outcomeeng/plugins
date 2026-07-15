@@ -139,12 +139,14 @@ def _assert_newer_template_adds_section_preserving_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.OLD_VERSION
     )
     harness.run_generator_write_primary(repo, _template(tmp_path, extra_section=True))
-    claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-    assert f"## {harness.NEW_SECTION}" in claude
-    assert (
-        MODULE.parse_shared_regions(claude)[harness.SHARED_REGION_NAME]
-        == harness.SHARED_REGION_BODY
-    )
+    for name in harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS:
+        rendered = (repo / name).read_text(encoding="utf-8")
+        assert f"## {harness.NEW_SECTION}" in rendered
+        assert MODULE.parse_instruction_languages(rendered) == (harness.LANG_PRIMARY,)
+        assert (
+            MODULE.parse_shared_regions(rendered)[harness.SHARED_REGION_NAME]
+            == harness.SHARED_REGION_BODY
+        )
 
 
 def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:

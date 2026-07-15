@@ -903,6 +903,11 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
                 "from outcomeeng.distribution import build as distribution_build",
                 "from outcomeeng.distribution import instruction_block as distribution_instructions",
                 "",
+                "repo_root = Path.cwd().resolve()",
+                "for module in (distribution_build, distribution_instructions):",
+                "    if not Path(module.__file__).resolve().is_relative_to(repo_root):",
+                "        raise SystemExit(f'production module outside clone: {module.__file__}')",
+                "",
                 "def formatter_runner(args: tuple[str, ...], cwd: Path) -> subprocess.CompletedProcess[str]:",
                 "    return subprocess.CompletedProcess(",
                 "        args, 0, distribution_build.FORMATTER_VERSION_OUTPUT, ''",
@@ -928,6 +933,7 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
     just.chmod(0o755)
     env = os.environ.copy()
     env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    env["PYTHONPATH"] = str(repo_root)
     result = subprocess.run(
         [
             "/bin/bash",
