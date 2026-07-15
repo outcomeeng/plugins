@@ -20,14 +20,14 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Use the templates and examples owned by `/understand`:
+Templates and examples live in the understanding skill's directory (`${CLAUDE_SKILL_DIR}/../understand/`):
 
-- product template
-- ADR template
-- PDR template
-- enabler template
-- outcome template
-- filled examples
+- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `${CLAUDE_SKILL_DIR}/../understand/examples/` — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -49,7 +49,7 @@ Ask or infer from context:
 | **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
 | **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
 
-If unclear which type, apply `/understand` `<node_model>`:
+If unclear which type, apply the decision table from `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`:
 
 - Delivers user-facing value? → Outcome
 - Exists only to serve other nodes? → Enabler
@@ -137,7 +137,7 @@ Before drafting, gather what's needed for the artifact type:
 
 **Outcome (gate — answer the forcing question before proceeding):**
 
-- Apply the forcing question from `/understand` `<node_model>`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
+- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
 - Only if the forcing question confirms material uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
@@ -152,20 +152,20 @@ Use `{{! tool('ask_user') !}}` for operator-owned gaps. Do not ask about informa
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template owned by `/understand`. Fill it using the gathered content.
+Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
 
-**Voice rules** (from `/understand` `<truth_hierarchy>`):
+**Voice rules** (from `${CLAUDE_SKILL_DIR}/../understand/references/durable-map.md`):
 
 - **Atemporal**: State product truth. Never narrate history ("we discovered", "currently", "after investigating").
 - **Permanent**: Write as if this will be true forever. If it wouldn't, it's temporal.
 - **Test**: Read any sentence aloud. If it would sound wrong after the work is done, rewrite it.
 
-**Assertion-text rules** (from `/understand` `<assertion_model>`):
+**Assertion rules** (from `${CLAUDE_SKILL_DIR}/../understand/references/assertion-types.md`):
 
 - Every outcome must have at least one assertion
-- Write only the assertion text and mark it as requiring evidence selection; do not add `[test]`, `[eval]`, `[audit]`, or a test path from `/author`
-- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type, then writes the canonical evidence tag and path
-- A missing evidence tag is temporary authoring state resolved by the `/apply` flow before the node is claimed as verified
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
+- Test targets don't need to exist yet — the link is a contract for what will be created
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -185,20 +185,20 @@ Before writing files, check:
 
 - [ ] Correct artifact type for the content
 - [ ] Placed in the right directory at the right index
-- [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `/understand` `<node_model>`)
-- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it is an enabler (see `/understand` `<node_model>`)
+- [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` `<nesting_rules>` section)
+- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it is an enabler (see `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] New or changed assertion text is marked as requiring evidence selection and carries no `[test]`, `[eval]`, or `[audit]` tag from `/author`
+- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
 - [ ] Verification type and assertion type are left to `/test` — authoring does not select them
-- [ ] ADR/PDR verification rules use MUST/NEVER text and remain marked for `/test` to select their evidence lane and subsection
-- [ ] Existing evidence tags remain unchanged unless `/test` has routed their replacement
+- [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
+- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via {{! tool('ask_user') !}} before proceeding
-- [ ] No content misplacement (per `/understand` operational reference `what-goes-where`)
+- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
 
 </step>
 
@@ -210,14 +210,15 @@ Before writing files, check:
 
 ```text
 spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
-└── {slug}.md        # Spec file
+├── {slug}.md        # Spec file
+└── tests/           # Empty directory for future tests
 ```
 
 1. Create the directory
 2. Write the spec file
-3. Leave evidence tags, test paths, and the `tests/` directory to `/test`; `/author` creates no forward-reference tag or empty test directory.
-4. Leave the node out of `spx/EXCLUDE` while it has no authored evidence. `/test` adds the node only after evidence exists while implementation remains absent, per `/understand` operational reference `excluded-nodes`.
-5. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
+3. Create the `tests/` directory
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md`.
+5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**
 
@@ -277,11 +278,11 @@ Recommend next steps based on artifact type:
 
 Claude drafted an outcome spec from the user's description: "Users currently can't export data, so we need to add CSV export." The spec read: "The system currently lacks export functionality. CSV export addresses this gap." Both sentences are temporal — they narrate a problem being solved rather than stating product truth. The atemporal version: "The system exports query results as CSV files."
 
-How to avoid: After drafting, apply the read-aloud test from `/understand`'s `<truth_hierarchy>` to every sentence. If it would sound wrong after the feature ships, rewrite it.
+How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to every sentence. If it would sound wrong after the feature ships, rewrite it.
 
 **Failure 2: Assertions placed in ADRs**
 
-Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. A genuinely semantic ADR rule under `## Verification` → `### Audit` is: "ALWAYS: persistence remains isolated behind domain interfaces ([audit])."
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR states the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
 
 How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
 
@@ -289,7 +290,7 @@ How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verifie
 
 Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
-How to avoid: Apply `/understand`'s `<node_model>` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
+How to avoid: Apply the decision table from `node-types.md` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
 
 **Failure 4: Index collision with existing sibling**
 

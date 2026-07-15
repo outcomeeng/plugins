@@ -15,7 +15,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 <principles>
 
 1. **FACTS ONLY** — Report what violates which rule. Never suggest how to fix it. Never rate severity. Never say "should", "consider", or "recommend."
-2. **RULES FROM UNDERSTANDING** — Core conformance rules live in `/understand`'s inline foundation; conditional taxonomy and structure live in its operational references and templates. This skill owns zero rules. Load the applicable capability at check time.
+2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
@@ -25,19 +25,19 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-**Understanding capabilities (conformance rules):**
+**References (conformance rules):**
 
-- `/understand` `<truth_hierarchy>` — temporal markers table and read-aloud test
-- `/understand` operational reference `what-goes-where` — `<common_misplacements>` table: content in wrong artifact type
-- `/understand` `<node_model>` — directory suffix classification
+- `${CLAUDE_SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `/understand` ADR template — required ADR sections
-- `/understand` PDR template — required PDR sections
-- `/understand` product template — required product sections
-- `/understand` enabler template — required enabler sections
-- `/understand` outcome template — required outcome sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
 
 </required_references>
 
@@ -88,7 +88,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 <language_conformance>
 
-Read the atemporal-voice rules in `/understand`'s `<truth_hierarchy>`. They provide two checking mechanisms:
+Read the `<atemporal_voice>` section from `durable-map.md`. It provides two checking mechanisms:
 
 **A. Temporal markers table** — The left column lists specific phrases to find. Scan every line for matches.
 
@@ -139,7 +139,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the same-changeset alignment rules in `/understand`'s `<truth_hierarchy>`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
+Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -155,7 +155,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Use the `/understand` foundation, operational reference, and template capabilities listed in `<required_references>`.
+2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
@@ -186,7 +186,7 @@ Placement:
 - {finding} (ref: what-goes-where)
 
 Downstream alignment:
-- {finding} (ref: /understand truth_hierarchy)
+- {finding} (ref: durable-map decision_to_spec_alignment)
 
 ---
 
@@ -205,7 +205,7 @@ Downstream alignment:
 <success_criteria>
 
 - [ ] `<SPEC_TREE_FOUNDATION>` marker verified present
-- [ ] Applicable inline foundation sections, operational references, and templates loaded from `/understand`
+- [ ] All references and templates read from understanding skill
 - [ ] Every `.md` file in scope classified or reported as unrecognized
 - [ ] Structural checks run against correct template per file type
 - [ ] Language checks applied to all files (including unrecognized)

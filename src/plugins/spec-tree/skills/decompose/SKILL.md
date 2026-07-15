@@ -22,14 +22,14 @@ Accept exactly one target:
 
 If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
-Read before composing — revisit these inline sections directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning:
+Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
 
-- `/understand` `<node_model>` — enabler/outcome structure and nesting rules
-- `/understand` `<ordering_model>` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so revisit it before assigning any index
-- `/understand` operational reference `what-goes-where` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `/understand` operational reference `product-domain-shapes` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `/understand` enabler template
-- `/understand` outcome template
+- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
+- `${CLAUDE_SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
+- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -101,7 +101,7 @@ Each area is complete when:
 - **Scope Boundary** — included and excluded concerns are named, and the aggregate concern stays coherent.
 - **Decision Placement** — requested ADR/PDR locations are resolved to an owning directory when placement depends on concept ownership, stale node naming, node splitting, parent/child boundaries, or context-loading reach.
 - **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
-- **Evidence Strategy** — each concern names the intended `[test]`, `[eval]`, or `[audit]` evidence lane, or records that `/test` still must select it; validation and review remain gates rather than assertion tags.
+- **Evidence Strategy** — each concern has a verification type: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
 - **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
 - **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has real outcome uncertainty.
 - **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
@@ -190,7 +190,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of `/understand`'s `<ordering_model>`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 
@@ -243,8 +243,8 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template owned by `/understand`.
-4. Add redistributed assertions or placeholder `[audit]` assertions only when the child declares a semantic constraint with no deterministic or structurally scored evidence yet.
+3. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.
 

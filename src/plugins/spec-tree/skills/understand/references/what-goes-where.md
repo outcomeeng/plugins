@@ -103,13 +103,13 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Typed assertion files only, one assertion type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
+**Contains:** Typed assertion files only, one assertion type per file. The filename encodes subject, evidence type, execution level, and an optional runner according to the product's active language convention:
 
-| Level | Suffix shape                | Question                             |
-| ----- | --------------------------- | ------------------------------------ |
-| 1     | `.<evidence>.l1.test.{ext}` | Is our logic correct?                |
-| 2     | `.<evidence>.l2.test.{ext}` | Does it work with real dependencies? |
-| 3     | `.<evidence>.l3.test.{ext}` | Does it work for users?              |
+| Level | Question                             |
+| ----- | ------------------------------------ |
+| 1     | Is our logic correct?                |
+| 2     | Does it work with real dependencies? |
+| 3     | Does it work for users?              |
 
 Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
 
