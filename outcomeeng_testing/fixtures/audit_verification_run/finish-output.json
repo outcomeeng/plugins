@@ -1,0 +1,9 @@
+[
+  {
+    "runToken": "{{RUN_TOKEN}}",
+    "terminalStatus": "rejected",
+    "sealed": true,
+    "findingCount": 1,
+    "lastSequence": 4
+  }
+]

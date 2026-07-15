@@ -1,0 +1,24 @@
+{
+  "unitId": "unit-python-code",
+  "producerIdentity": {
+    "producerKind": "skill",
+    "agentName": "implementation-auditor",
+    "agentOwningPluginName": "spec-tree",
+    "skillName": "audit-python-code",
+    "skillOwningPluginName": "python",
+    "invocationRole": "leaf-skill"
+  },
+  "rule": "example-rule",
+  "severity": "blocking",
+  "location": "file.txt:1",
+  "message": "example finding",
+  "evidence": {
+    "observed": "problem",
+    "expected": "clean"
+  },
+  "producerProvenance": {
+    "agentOwningPluginVersion": "{{SPEC_TREE_VERSION}}",
+    "skillOwningPluginVersion": "{{PYTHON_VERSION}}",
+    "toolVersion": "0.6.17"
+  }
+}
