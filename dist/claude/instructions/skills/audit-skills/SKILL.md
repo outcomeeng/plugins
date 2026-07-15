@@ -38,7 +38,7 @@ During audits, prioritize evaluation of:
 - YAML compliance (name length, description quality by skill role, `argument-hint` when arguments are used)
 - Command capabilities (argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `@` file references)
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
-- Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
+- Progressive disclosure structure (SKILL.md < 500 lines or a standards-conformant eager foundation, references one level deep)
 - Conciseness and signal-to-noise ratio (every word earns its place)
 - Required XML tags (objective, success_criteria)
 - Conditional XML tags (appropriate for complexity level)
@@ -82,7 +82,12 @@ Check for:
 
 <area name="structure_and_organization">
 Check for:
-- **Progressive disclosure**: SKILL.md is overview (<500 lines), detailed content in reference files, references one level deep
+- **Progressive disclosure**: SKILL.md is an overview (<500 lines) with one-level references, or an eager foundation whose always-loaded canonical payload satisfies `/skill-standards`' exception
+  - Every inlined reference would otherwise be mandatory on every invocation
+  - Inlining removes secondary discovery/read obligations and leaves one canonical copy
+  - Repeated summaries, examples, and failure explanations are consolidated
+  - Conditional operational detail, templates, examples, and repository-local overlays remain separate
+  - The resulting eager payload is measured in characters and audited for effectiveness and internal consistency; report the measured character count
 - **XML structure quality**:
   - Required tags present (objective, success_criteria)
   - Conditional tags appropriate for skill type (quick_start for on-demand tools only — omit for foundation/gate/validator/reference skills)

@@ -1,4 +1,14 @@
 <operational_effectiveness_examples>
+
+<table_of_contents>
+
+- `unverifiable_success_criteria` — make completion observable
+- `missing_verification_gates` — include required checks
+- `missing_failure_modes` — teach recovery from likely failures
+- `abstract_vs_concrete_examples` — prefer executable examples
+- `procedural_without_operational` — connect procedure to observable outcome
+
+</table_of_contents>
 Examples of operational effectiveness issues to flag:
 
 <example name="unverifiable_success_criteria">

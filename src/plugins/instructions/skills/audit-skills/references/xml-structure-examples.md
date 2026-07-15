@@ -1,4 +1,14 @@
 <xml_structure_examples>
+
+<table_of_contents>
+
+- `markdown_headings_in_body` — replace Markdown sections with semantic XML
+- `missing_required_tags` — require objective and success criteria
+- `hybrid_xml_markdown` — reject mixed body structure
+- `unclosed_xml_tags` — close every semantic section
+- `inappropriate_conditional_tags` — match optional tags to skill behavior
+
+</table_of_contents>
 **What to flag as XML structure violations:**
 
 <example name="markdown_headings_in_body">
