@@ -45,7 +45,7 @@ Evaluate against each criterion:
 
 ### Structure
 
-- [ ] SKILL.md under 500 lines
+- [ ] SKILL.md under 500 lines, unless an eager foundation satisfies the bounded-payload exception in `/skill-standards`
 - [ ] Pure XML structure (no markdown headings # in body)
 - [ ] All XML tags properly closed
 - [ ] Has required tags: `<objective>` or `<essential_principles>`

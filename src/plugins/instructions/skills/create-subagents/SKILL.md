@@ -422,9 +422,9 @@ Edit {{! term('configured_agent_files') !}} directly:
 
 What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source exceeded `/skill-standards`' 500-line cap.
 
-Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
+Why it failed: This non-foundation skill remains subject to the 500-line cap, and its fast path absorbed detail that belongs in references.
 
-How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
+How to avoid: Keep this SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
 
 </failure_modes>
 

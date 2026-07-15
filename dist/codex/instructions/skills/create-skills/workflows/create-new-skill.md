@@ -143,7 +143,7 @@ Check:
 - [ ] Pure XML structure (no markdown headings in body)
 - [ ] Required tags present: objective, quick_start, success_criteria
 - [ ] All referenced files exist
-- [ ] SKILL.md under 500 lines
+- [ ] SKILL.md under 500 lines, unless an eager foundation satisfies the bounded-payload exception in `/skill-standards`
 - [ ] XML tags properly closed
 
 Run: `python3 "${SKILL_DIR}/scripts/quick_validate.py" {skill-path}`
