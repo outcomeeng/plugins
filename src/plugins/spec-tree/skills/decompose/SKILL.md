@@ -27,10 +27,10 @@ Use the live foundation sections below before composing. Do not reread the compa
 
 - `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - `/understand` `<ordering_model>` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of this reading rule
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `/understand` `references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `/understand` `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `/understand` `templates/nodes/enabler-name.md`
+- `/understand` `templates/nodes/outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -244,7 +244,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the enabler or outcome template from `/understand` `templates/nodes/`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.

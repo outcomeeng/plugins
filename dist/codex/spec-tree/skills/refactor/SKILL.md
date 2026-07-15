@@ -16,7 +16,7 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 
 References and workflows:
 
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — content taxonomy (what belongs where)
+- `/understand` `references/what-goes-where.md` — content taxonomy (what belongs where)
 - Live `/understand` `<node_model>` — enabler vs outcome
 - `/decompose` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
@@ -182,7 +182,7 @@ After applying any operation:
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `${SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per `/understand` `references/what-goes-where.md`)
 
 </step>
 

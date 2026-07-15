@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose a spec assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the spec assertion's text without an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. ADR/PDR verification rules follow their decision template's `Testing` / `Eval` / `Audit` grammar. Tagging a spec assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -20,14 +20,14 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Templates and examples live in the understanding skill's directory (`${CLAUDE_SKILL_DIR}/../understand/`):
+Templates and examples belong to `/understand`:
 
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/examples/` — filled specs for reference
+- `/understand` `templates/product/product-name.product.md`
+- `/understand` `templates/decisions/decision-name.adr.md`
+- `/understand` `templates/decisions/decision-name.pdr.md`
+- `/understand` `templates/nodes/enabler-name.md`
+- `/understand` `templates/nodes/outcome-name.md`
+- `/understand` `examples/` — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -152,7 +152,7 @@ Use `AskUserQuestion` for operator-owned gaps. Do not ask about information alre
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
+Read the appropriate template from `/understand` `templates/`. Fill it using the gathered content.
 
 **Voice rules** (from the live `/understand` `<truth_hierarchy>`):
 
@@ -163,9 +163,10 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/
 **Assertion rules** (from the live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{evidence}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval](evals/{rule-slug}/eval.toml))` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
-- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
+- Write each spec assertion as untagged product-output text
+- `/test` (with `/test-{language}`) selects each spec assertion's verification type and, under testing, its assertion type
 - Do not invent evidence tags or paths during authoring — `/test` selects the verification type, assertion type, and proving artifact
+- Write ADR/PDR verification rules under the subsection and tag required by the decision template
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -193,12 +194,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
-- [ ] Verification type and assertion type are left to `/test` — authoring does not select them
+- [ ] Spec assertions remain untagged for `/test` to classify
+- [ ] Spec verification type and assertion type are left to `/test`
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
-- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
-- [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
-- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per `/understand` `references/what-goes-where.md`)
 
 </step>
 
@@ -279,11 +278,11 @@ Claude drafted an outcome spec from the user's description: "Users currently can
 
 How to avoid: After drafting, apply the read-aloud test from the live `/understand` `<truth_hierarchy>` to every sentence. If it would sound wrong after the feature ships, rewrite it.
 
-**Failure 2: Assertions placed in ADRs**
+**Failure 2: Spec assertions placed in ADRs**
 
 Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR states the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
 
-How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
+How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, carrying the decision template's assertion-type, `[eval]`, or `[audit]` tag per subsection. Given/When/Then text is a spec assertion, not a decision record.
 
 **Failure 3: Wrong template used for node type**
 

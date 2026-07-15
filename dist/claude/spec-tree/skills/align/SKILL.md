@@ -27,16 +27,16 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 **References (conformance rules):**
 
 - Live `/understand` `<truth_hierarchy>` — atemporal voice and truth-flow rules
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `/understand` `references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
 - Live `/understand` `<node_model>` — enabler and outcome classification
 
 **Templates (structural rules):**
 
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `/understand` `templates/decisions/decision-name.adr.md` — required ADR sections
+- `/understand` `templates/decisions/decision-name.pdr.md` — required PDR sections
+- `/understand` `templates/product/product-name.product.md` — required product sections
+- `/understand` `templates/nodes/enabler-name.md` — required enabler sections
+- `/understand` `templates/nodes/outcome-name.md` — required outcome sections
 
 </required_references>
 
