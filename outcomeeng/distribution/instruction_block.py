@@ -57,26 +57,9 @@ WRITE_FLAG: Final = "--write"
 JUSTFILE_NAME: Final = "justfile"
 MODULE_INVOCATION: Final = "outcomeeng.distribution.instruction_block"
 LEFTHOOK_PATH: Final = Path("lefthook.yml")
-REFRESH_WORKFLOW_PATH: Final = Path(".github/workflows/refresh-instruction-blocks.yml")
 PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND: Final = "run: just build-instructions"
 LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
 LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
-WORKFLOW_DISPATCH_TRIGGER: Final = "workflow_dispatch:"
-WORKFLOW_REGENERATE_STEP: Final = "Regenerate instruction blocks"
-WORKFLOW_OPEN_PR_STEP: Final = "Open instruction-block refresh pull request"
-WORKFLOW_CHECKOUT_STEP: Final = "Checkout"
-WORKFLOW_INSTALL_JUST_STEP: Final = "Install just"
-WORKFLOW_INSTALL_DPRINT_STEP: Final = "Install dprint"
-WORKFLOW_JUST_CHECKSUM_ENV: Final = "JUST_SHA256"
-WORKFLOW_DPRINT_VERSION_ENV: Final = "DPRINT_VERSION"
-WORKFLOW_BUILD_INSTRUCTIONS_COMMAND: Final = "just build-instructions"
-WORKFLOW_DRIFT_COMMAND: Final = "git status --porcelain"
-DEFAULT_BRANCH: Final = "main"
-WORKFLOW_JUST_CHECKSUM_REFERENCE: Final = f"${WORKFLOW_JUST_CHECKSUM_ENV}"
-WORKFLOW_DPRINT_INSTALL_COMMAND: Final = (
-    f'bun add -g "dprint@${{{WORKFLOW_DPRINT_VERSION_ENV}}}"'
-)
-WORKFLOW_DPRINT_VERSION_COMMAND: Final = "dprint --version"
 FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
 FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
