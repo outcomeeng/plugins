@@ -11,11 +11,15 @@ Python tuple ordering and string equality are the independent oracles.
 
 from __future__ import annotations
 
-from types import ModuleType
+from hypothesis import given, seed, settings
 
-import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from outcomeeng_testing.generators.instruction_block import (
+    dotted_version,
+    free_root_contents,
+    shared_document,
+    shared_region_bodies,
+    version_triples,
+)
 
 from outcomeeng_testing.harnesses.instruction_block import (
     ROOT_SHARED_BODY,
@@ -26,58 +30,24 @@ from outcomeeng_testing.harnesses.instruction_block import (
     load_instruction_block_module,
 )
 
-_VERSION_PART = st.integers(min_value=0, max_value=999)
-_VERSION = st.tuples(_VERSION_PART, _VERSION_PART, _VERSION_PART)
 
-# Region body text: no fence-forming characters (`<`, `>`, `!`, `/`, `:`) and no newlines, so it
-# round-trips through a shared fence unambiguously. The domain varies per case; the reconcile and
-# idempotence invariants are the oracles.
-_REGION_BODY = st.text(
-    alphabet=st.characters(
-        whitelist_categories=("L", "N"), whitelist_characters=" -_`"
-    ),
-    min_size=1,
-).filter(lambda body: body.strip() != "")
-# Free content for bootstrap: may span multiple lines but carries no fence-forming characters.
-_FREE_CONTENT = st.text(
-    alphabet=st.characters(
-        whitelist_categories=("L", "N"), whitelist_characters=" -_`\n"
-    ),
-    max_size=200,
-)
-
-
-def _to_version(parts: tuple[int, int, int]) -> str:
-    return ".".join(str(part) for part in parts)
-
-
-def _shared_document(module: ModuleType, name: str, body: str) -> str:
-    return (
-        f"{module.shared_open_marker(name)}\n\n{body}\n\n"
-        f"{module.shared_close_marker(name)}\n"
-    )
-
-
-@pytest.mark.parametrize("harness", TEMPLATE_HARNESSES)
-@given(installed=_VERSION)
-def test_render_output_version_equals_installed(
+def _assert_render_output_version_equals_installed(
     harness: str,
     installed: tuple[int, int, int],
 ) -> None:
     module = load_instruction_block_module()
-    installed_str = _to_version(installed)
+    installed_str = dotted_version(installed)
     rendered = module.render(
         build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, harness
     )
     assert module.parse_template_version(rendered) == installed_str
 
 
-@given(installed=_VERSION)
-def test_managed_surface_ends_with_single_newline(
+def _assert_managed_surface_ends_with_single_newline(
     installed: tuple[int, int, int],
 ) -> None:
     module = load_instruction_block_module()
-    installed_str = _to_version(installed)
+    installed_str = dotted_version(installed)
     blocks = {
         harness: module.render(
             build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, harness
@@ -94,19 +64,19 @@ def test_managed_surface_ends_with_single_newline(
         assert not document.endswith("\n\n")
 
 
-@given(left=_VERSION, right=_VERSION)
-def test_is_stale_matches_numeric_version_order(
+def _assert_is_stale_matches_numeric_version_order(
     left: tuple[int, int, int], right: tuple[int, int, int]
 ) -> None:
     module = load_instruction_block_module()
-    assert module.is_stale(_to_version(left), _to_version(right)) is (left < right)
+    assert module.is_stale(dotted_version(left), dotted_version(right)) is (
+        left < right
+    )
 
 
-@given(body_a=_REGION_BODY, body_b=_REGION_BODY)
-def test_reconcile_makes_shared_region_identical(body_a: str, body_b: str) -> None:
+def _assert_reconcile_makes_shared_region_identical(body_a: str, body_b: str) -> None:
     module = load_instruction_block_module()
-    doc_a = _shared_document(module, SHARED_REGION_NAME, body_a)
-    doc_b = _shared_document(module, SHARED_REGION_NAME, body_b)
+    doc_a = shared_document(module, SHARED_REGION_NAME, body_a)
+    doc_b = shared_document(module, SHARED_REGION_NAME, body_b)
     for winner in ("a", "b"):
         new_a, new_b = module.reconcile_shared_regions(doc_a, doc_b, winner)
         region_a = module.parse_shared_regions(new_a)[SHARED_REGION_NAME]
@@ -114,20 +84,69 @@ def test_reconcile_makes_shared_region_identical(body_a: str, body_b: str) -> No
         assert region_a == region_b
 
 
-@given(body=_REGION_BODY)
-def test_reconcile_identical_region_is_idempotent(body: str) -> None:
+def _assert_reconcile_identical_region_is_idempotent(body: str) -> None:
     module = load_instruction_block_module()
-    doc_a = _shared_document(module, SHARED_REGION_NAME, body)
-    doc_b = _shared_document(module, SHARED_REGION_NAME, body)
+    doc_a = shared_document(module, SHARED_REGION_NAME, body)
+    doc_b = shared_document(module, SHARED_REGION_NAME, body)
     for winner in ("a", "b", None):
         assert module.reconcile_shared_regions(doc_a, doc_b, winner) == (doc_a, doc_b)
 
 
-@given(content_a=_FREE_CONTENT, content_b=_FREE_CONTENT)
-def test_bootstrap_wraps_at_most_one_shared_region(
+def _assert_bootstrap_wraps_at_most_one_shared_region(
     content_a: str, content_b: str
 ) -> None:
     module = load_instruction_block_module()
     wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
     assert len(module.parse_shared_regions(wrapped_a)) <= 1
     assert len(module.parse_shared_regions(wrapped_b)) <= 1
+
+
+def property_evidence_is_valid() -> bool:
+    """Run generated property domains behind one zero-argument harness API."""
+
+    for index, agent_harness in enumerate(TEMPLATE_HARNESSES):
+
+        @seed(20260714 + index)
+        @settings(max_examples=50, deadline=None)
+        @given(installed=version_triples())
+        def render_version(installed: tuple[int, int, int]) -> None:
+            _assert_render_output_version_equals_installed(agent_harness, installed)
+
+        render_version()
+
+    @seed(20260720)
+    @settings(max_examples=50, deadline=None)
+    @given(installed=version_triples())
+    def trailing_newline(installed: tuple[int, int, int]) -> None:
+        _assert_managed_surface_ends_with_single_newline(installed)
+
+    @seed(20260721)
+    @settings(max_examples=50, deadline=None)
+    @given(left=version_triples(), right=version_triples())
+    def stale_order(left: tuple[int, int, int], right: tuple[int, int, int]) -> None:
+        _assert_is_stale_matches_numeric_version_order(left, right)
+
+    @seed(20260722)
+    @settings(max_examples=50, deadline=None)
+    @given(body_a=shared_region_bodies(), body_b=shared_region_bodies())
+    def reconcile_identity(body_a: str, body_b: str) -> None:
+        _assert_reconcile_makes_shared_region_identical(body_a, body_b)
+
+    @seed(20260723)
+    @settings(max_examples=50, deadline=None)
+    @given(body=shared_region_bodies())
+    def reconcile_idempotence(body: str) -> None:
+        _assert_reconcile_identical_region_is_idempotent(body)
+
+    @seed(20260724)
+    @settings(max_examples=50, deadline=None)
+    @given(content_a=free_root_contents(), content_b=free_root_contents())
+    def bootstrap_bound(content_a: str, content_b: str) -> None:
+        _assert_bootstrap_wraps_at_most_one_shared_region(content_a, content_b)
+
+    trailing_newline()
+    stale_order()
+    reconcile_identity()
+    reconcile_idempotence()
+    bootstrap_bound()
+    return True

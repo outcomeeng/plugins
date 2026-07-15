@@ -1,8 +1,5 @@
-from outcomeeng_testing.harnesses.instruction_block_property_evidence import (
-    test_bootstrap_wraps_at_most_one_shared_region as test_bootstrap_wraps_at_most_one_shared_region,
-    test_is_stale_matches_numeric_version_order as test_is_stale_matches_numeric_version_order,
-    test_managed_surface_ends_with_single_newline as test_managed_surface_ends_with_single_newline,
-    test_reconcile_identical_region_is_idempotent as test_reconcile_identical_region_is_idempotent,
-    test_reconcile_makes_shared_region_identical as test_reconcile_makes_shared_region_identical,
-    test_render_output_version_equals_installed as test_render_output_version_equals_installed,
-)
+from outcomeeng_testing.harnesses import instruction_block as harness
+
+
+def test_instruction_block_property_evidence() -> None:
+    assert harness.property_evidence_is_valid()

@@ -11,13 +11,38 @@ region. The harness owns all fixture setup — templates, topologies, git commit
 from __future__ import annotations
 
 import pathlib
+import inspect
+import io
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass
+from tempfile import TemporaryDirectory
 from typing import cast
-
-import pytest
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
+
+
+@dataclass(frozen=True)
+class _CapturedOutput:
+    out: str
+    err: str
+
+
+class _OutputCapture:
+    """Capture output for CLI assertions without pytest fixture binding."""
+
+    def __init__(self) -> None:
+        self.stdout = io.StringIO()
+        self.stderr = io.StringIO()
+
+    def readouterr(self) -> _CapturedOutput:
+        captured = _CapturedOutput(self.stdout.getvalue(), self.stderr.getvalue())
+        self.stdout.seek(0)
+        self.stdout.truncate(0)
+        self.stderr.seek(0)
+        self.stderr.truncate(0)
+        return captured
 
 
 def _template(tmp_path: pathlib.Path, *, extra_section: bool = False) -> pathlib.Path:
@@ -26,7 +51,7 @@ def _template(tmp_path: pathlib.Path, *, extra_section: bool = False) -> pathlib
     )
 
 
-def test_write_produces_both_files_language_and_harness_filtered(
+def _assert_write_produces_both_files_language_and_harness_filtered(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -43,7 +68,7 @@ def test_write_produces_both_files_language_and_harness_filtered(
     assert harness.harness_line(harness.HARNESS_CLAUDE) not in agents
 
 
-def test_write_preserves_shared_region_and_independent_prose(
+def _assert_write_preserves_shared_region_and_independent_prose(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -57,8 +82,16 @@ def test_write_preserves_shared_region_and_independent_prose(
         claude.read_text(encoding="utf-8") + f"\n{marker}\n", encoding="utf-8"
     )
 
-    harness.run_generator_write_primary(repo, _template(tmp_path))
+    template = _template(tmp_path)
+    harness.run_generator_write_primary(repo, template)
     result = claude.read_text(encoding="utf-8")
+    expected_router = MODULE.render(
+        template.read_text(encoding="utf-8"),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    assert result.startswith(expected_router.rstrip("\n") + "\n\n")
     assert marker in result
     assert (
         MODULE.parse_shared_regions(result)[harness.SHARED_REGION_NAME]
@@ -66,7 +99,7 @@ def test_write_preserves_shared_region_and_independent_prose(
     )
 
 
-def test_router_marker_format(tmp_path: pathlib.Path) -> None:
+def _assert_router_marker_format(tmp_path: pathlib.Path) -> None:
     rendered = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
         (harness.LANG_PRIMARY,),
@@ -80,7 +113,7 @@ def test_router_marker_format(tmp_path: pathlib.Path) -> None:
     assert MODULE.TEMPLATE_SOURCE_KEY not in rendered
 
 
-def test_both_files_identical_except_harness_spans(tmp_path: pathlib.Path) -> None:
+def _assert_both_files_identical_except_harness_spans(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.run_generator_write_primary(repo, _template(tmp_path))
@@ -96,7 +129,7 @@ def test_both_files_identical_except_harness_spans(tmp_path: pathlib.Path) -> No
     assert claude_norm == agents_norm
 
 
-def test_newer_template_adds_section_preserving_shared_region(
+def _assert_newer_template_adds_section_preserving_shared_region(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -113,7 +146,7 @@ def test_newer_template_adds_section_preserving_shared_region(
     )
 
 
-def test_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
+def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
     real = _template(tmp_path)
     link = tmp_path / "link-template.md"
     link.symlink_to(real)
@@ -133,8 +166,8 @@ def test_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
     assert code == 2
 
 
-def test_cli_rejects_missing_repo_root(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_missing_repo_root(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     code = MODULE.main(
         [
@@ -149,8 +182,8 @@ def test_cli_rejects_missing_repo_root(
     assert "--repo-root does not exist" in capsys.readouterr().err
 
 
-def test_cli_rejects_non_directory_repo_root(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_non_directory_repo_root(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     plain = tmp_path / "plain.txt"
     plain.write_text("x", encoding="utf-8")
@@ -161,8 +194,8 @@ def test_cli_rejects_non_directory_repo_root(
     assert "is not a directory" in capsys.readouterr().err
 
 
-def test_cli_rejects_missing_template(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_missing_template(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -173,8 +206,8 @@ def test_cli_rejects_missing_template(
     assert "--template does not exist" in capsys.readouterr().err
 
 
-def test_cli_rejects_directory_template(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_directory_template(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -187,8 +220,8 @@ def test_cli_rejects_directory_template(
     assert "is not a regular file" in capsys.readouterr().err
 
 
-def test_cli_rejects_root_symlink_escaping_repo(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_root_symlink_escaping_repo(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -213,8 +246,8 @@ def test_cli_rejects_root_symlink_escaping_repo(
     assert "escapes --repo-root" in capsys.readouterr().err
 
 
-def test_cli_rejects_spx_symlink_during_language_detection(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_rejects_spx_symlink_during_language_detection(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -229,22 +262,22 @@ def test_cli_rejects_spx_symlink_during_language_detection(
     assert "spx directory is a symlink" in capsys.readouterr().err
 
 
-def test_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> None:
+def _assert_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> None:
     spx_dir = tmp_path / "spx"
     harness.write_spx_tree_with_tests(spx_dir, ("py", "ts"))
     assert MODULE.detect_languages_from_tree(spx_dir) == ("python", "typescript")
 
 
-def test_cli_write_without_repo_root_exits(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_write_without_repo_root_exits(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     code = MODULE.main(["--template", str(_template(tmp_path)), "--write"])
     assert code == 2
     assert "--write requires --repo-root" in capsys.readouterr().err
 
 
-def test_cli_check_reports_absent_when_one_file_missing(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_check_reports_absent_when_one_file_missing(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -267,7 +300,7 @@ def test_cli_check_reports_absent_when_one_file_missing(
     assert capsys.readouterr().out.strip() == "absent"
 
 
-def test_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None:
+def _assert_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None:
     languages = (harness.LANG_PRIMARY, harness.LANG_SECONDARY)
     block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
@@ -288,7 +321,7 @@ def test_cli_check_treats_language_order_as_set(tmp_path: pathlib.Path) -> None:
     )
 
 
-def test_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> None:
+def _assert_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> None:
     block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
         (harness.LANG_PRIMARY,),
@@ -318,7 +351,7 @@ def test_cli_check_marks_router_not_first_as_stale(tmp_path: pathlib.Path) -> No
     assert check() == "stale"
 
 
-def test_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
+def _assert_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     block = MODULE.render(
@@ -338,7 +371,7 @@ def test_unparseable_version_is_stale(tmp_path: pathlib.Path) -> None:
     )
 
 
-def test_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> None:
+def _assert_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / harness.INSTRUCTION_AGENTS).write_text(
@@ -358,7 +391,7 @@ def test_symlinked_root_file_becomes_regular_file(tmp_path: pathlib.Path) -> Non
         )
 
 
-def test_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
+def _assert_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     heading = MODULE.RETIRED_GENERATED_INSTRUCTION_HEADINGS[0]
@@ -376,7 +409,7 @@ def test_markerless_generated_body_is_replaced(tmp_path: pathlib.Path) -> None:
     assert result.startswith(MODULE.ROUTER_MARKER_PREFIX)
 
 
-def test_legacy_marker_block_reported_stale_and_replaced(
+def _assert_legacy_marker_block_reported_stale_and_replaced(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -404,7 +437,7 @@ def test_legacy_marker_block_reported_stale_and_replaced(
     assert "product prose kept" in result
 
 
-def test_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> None:
+def _assert_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     quoted = (
@@ -420,7 +453,7 @@ def test_quoted_router_marker_in_prose_is_preserved(tmp_path: pathlib.Path) -> N
     assert result.count(MODULE.ROUTER_BLOCK_END) == 1
 
 
-def test_quoted_router_closing_marker_after_block_is_preserved(
+def _assert_quoted_router_closing_marker_after_block_is_preserved(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -445,12 +478,12 @@ def test_quoted_router_closing_marker_after_block_is_preserved(
     assert result.count(MODULE.ROUTER_MARKER_PREFIX) == 1
 
 
-def test_quoted_shared_fence_in_prose_is_not_a_region() -> None:
+def _assert_quoted_shared_fence_in_prose_is_not_a_region() -> None:
     inline = f"Use `{MODULE.shared_open_marker('example')}` inline to open a region.\n"
     assert MODULE.parse_shared_regions(inline) == {}
 
 
-def test_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> None:
+def _assert_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     block = MODULE.render(
@@ -477,7 +510,7 @@ def test_malformed_shared_fence_is_reported_stale(tmp_path: pathlib.Path) -> Non
     assert "commands" in MODULE.shared_region_drift(repo)
 
 
-def test_bootstrap_refuses_a_malformed_seed_fence() -> None:
+def _assert_bootstrap_refuses_a_malformed_seed_fence() -> None:
     # The sixth initial topology: both seeds carry the same malformed (unclosed) shared fence.
     # parse_shared_regions reads them as region-free, so a naive bootstrap would wrap the dangling
     # marker into a new region and bury it in a permanently stuck stale state. The bootstrap must
@@ -503,7 +536,7 @@ def test_bootstrap_refuses_a_malformed_seed_fence() -> None:
     assert claude_doc.startswith(MODULE.ROUTER_MARKER_PREFIX)
 
 
-def test_duplicate_shared_region_name_is_malformed() -> None:
+def _assert_duplicate_shared_region_name_is_malformed() -> None:
     open_marker = MODULE.shared_open_marker("commands")
     close_marker = MODULE.shared_close_marker("commands")
     # the same name opened twice: parse_shared_regions silently collapses to the last body, so the
@@ -516,7 +549,7 @@ def test_duplicate_shared_region_name_is_malformed() -> None:
     assert "commands" in MODULE.malformed_shared_regions(duplicated)
 
 
-def test_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> None:
+def _assert_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     seed = "# Product\n\nfirst\n\n\n\nsecond\n"
@@ -528,7 +561,7 @@ def test_blank_run_in_independent_content_preserved(tmp_path: pathlib.Path) -> N
     assert "first\n\n\n\nsecond" in result
 
 
-def test_bootstrap_preserves_lines_when_common_span_ends_mid_line() -> None:
+def _assert_bootstrap_preserves_lines_when_common_span_ends_mid_line() -> None:
     # Two root files more than 80% identical whose longest common span ends mid-line, at a
     # harness-specific word — the case a byte-level span would split across the fence.
     claude = harness.ROOT_NEAR_IDENTICAL_CLAUDE
@@ -550,12 +583,14 @@ def test_bootstrap_preserves_lines_when_common_span_ends_mid_line() -> None:
         assert line in wrapped_claude
     for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
         assert line in wrapped_codex
-    # the divergent line stays whole in independent content, never inside the shared region
-    assert "CLAUDE specific tail" not in region_claude
-    assert "CODEX specific tail" not in region_codex
+    # every harness-specific line stays in independent content, outside the shared region
+    claude_only = set(claude.splitlines()) - set(codex.splitlines())
+    codex_only = set(codex.splitlines()) - set(claude.splitlines())
+    assert claude_only.isdisjoint(region_claude.splitlines())
+    assert codex_only.isdisjoint(region_codex.splitlines())
 
 
-def test_bootstrap_finds_whole_line_block_over_longer_straddling_match() -> None:
+def _assert_bootstrap_finds_whole_line_block_over_longer_straddling_match() -> None:
     # The byte-level-longest common substring is the long near-duplicate line, which snaps away to
     # nothing at a line boundary; the biggest *whole-line* span is the block elsewhere. The span
     # must be that block, not empty — proving the search considers more than the single longest
@@ -563,15 +598,14 @@ def test_bootstrap_finds_whole_line_block_over_longer_straddling_match() -> None
     claude = harness.ROOT_STRADDLING_CLAUDE
     codex = harness.ROOT_STRADDLING_CODEX
     span, _ = MODULE.biggest_identical_span(claude, codex)
-    assert "Common whole line number 0" in span
-    assert "Common whole line number 5" in span
-    # the straddling divergent line never enters the span
-    assert "x" * 480 not in span
-    assert "claude-specific tail" not in span
-    assert "codex-specific tail" not in span
+    shared_lines = set(claude.splitlines()) & set(codex.splitlines())
+    divergent_lines = set(claude.splitlines()) ^ set(codex.splitlines())
+    assert shared_lines
+    assert all(line in span for line in shared_lines)
+    assert all(line not in span for line in divergent_lines)
 
 
-def test_bootstrap_snaps_span_to_line_boundaries_in_both_files() -> None:
+def _assert_bootstrap_snaps_span_to_line_boundaries_in_both_files() -> None:
     # The shared content starts at a line boundary in one file but mid-line in the other — the
     # second file carries a harness-specific prefix on the otherwise-shared first line. Snapping to
     # line boundaries in only the first file would place the fence mid-line in the second and split
@@ -592,8 +626,9 @@ def test_bootstrap_snaps_span_to_line_boundaries_in_both_files() -> None:
     for line in (candidate for candidate in codex.splitlines() if candidate.strip()):
         assert line in wrapped_codex
     # the divergent prefixed line stays whole in independent content, never inside the region
-    assert "harness-prefix shared prose here" in wrapped_codex
-    assert "harness-prefix" not in region_codex
+    codex_only = set(codex.splitlines()) - set(claude.splitlines())
+    assert codex_only.issubset(set(wrapped_codex.splitlines()))
+    assert codex_only.isdisjoint(region_codex.splitlines())
 
 
 def _init_repo_with_committed_shared_region(
@@ -620,7 +655,7 @@ def _init_repo_with_committed_shared_region(
     return repo
 
 
-def test_diverged_shared_region_reconciles_to_more_recent_side(
+def _assert_diverged_shared_region_reconciles_to_more_recent_side(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = _init_repo_with_committed_shared_region(
@@ -649,7 +684,7 @@ def test_diverged_shared_region_reconciles_to_more_recent_side(
     assert agents_regions[harness.SHARED_REGION_NAME] == harness.SHARED_REGION_BODY_ALT
 
 
-def test_reconcile_replaces_losing_region_whole_without_blending(
+def _assert_reconcile_replaces_losing_region_whole_without_blending(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = _init_repo_with_committed_shared_region(
@@ -678,7 +713,7 @@ def test_reconcile_replaces_losing_region_whole_without_blending(
     assert harness.SHARED_REGION_BODY not in agents_region
 
 
-def test_reconcile_uses_region_recency_not_whole_file_recency(
+def _assert_reconcile_uses_region_recency_not_whole_file_recency(
     tmp_path: pathlib.Path,
 ) -> None:
     # AGENTS's region is edited more recently than CLAUDE's, but CLAUDE's file then gets a later
@@ -716,7 +751,7 @@ def test_reconcile_uses_region_recency_not_whole_file_recency(
     assert claude_region == harness.SHARED_REGION_BODY_ALT
 
 
-def test_region_line_range_covers_content_lines_only() -> None:
+def _assert_region_line_range_covers_content_lines_only() -> None:
     # opening fence line 2, blank 3, body lines 4-5, blank 6, close fence line 7. The range that
     # feeds `git log -L` must be the body lines (4, 5) only — a fence or separator line inside the
     # range would let a fence-only commit read as a region-content change and flip the recency.
@@ -733,7 +768,7 @@ def test_region_line_range_covers_content_lines_only() -> None:
     assert MODULE._region_line_range(text, name) == (4, 5)
 
 
-def test_recency_tie_is_reported_ambiguous(tmp_path: pathlib.Path) -> None:
+def _assert_recency_tie_is_reported_ambiguous(tmp_path: pathlib.Path) -> None:
     repo = _init_repo_with_committed_shared_region(
         tmp_path,
         claude_region=harness.SHARED_REGION_BODY,
@@ -745,7 +780,7 @@ def test_recency_tie_is_reported_ambiguous(tmp_path: pathlib.Path) -> None:
     assert report.reconciled == ()
 
 
-def test_one_sided_shared_region_is_reported_ambiguous(
+def _assert_one_sided_shared_region_is_reported_ambiguous(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -780,7 +815,7 @@ def test_one_sided_shared_region_is_reported_ambiguous(
     assert report.reconciled == ()
 
 
-def test_reconcile_reports_malformed_fence_as_ambiguous(
+def _assert_reconcile_reports_malformed_fence_as_ambiguous(
     tmp_path: pathlib.Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -800,7 +835,7 @@ def test_reconcile_reports_malformed_fence_as_ambiguous(
     assert report.ambiguous
 
 
-def test_reconcile_skips_a_malformed_duplicate_name(tmp_path: pathlib.Path) -> None:
+def _assert_reconcile_skips_a_malformed_duplicate_name(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.init_git_identity(repo)
@@ -828,16 +863,16 @@ def test_reconcile_skips_a_malformed_duplicate_name(tmp_path: pathlib.Path) -> N
     assert report.reconciled == ()
 
 
-def test_cli_reconcile_requires_repo_root(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_reconcile_requires_repo_root(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     code = MODULE.main(["--template", str(_template(tmp_path)), "--reconcile"])
     assert code == 2
     assert "--reconcile requires --repo-root" in capsys.readouterr().err
 
 
-def test_cli_reconcile_from_applies_operator_tie_break(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_reconcile_from_applies_operator_tie_break(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     # a diverged region committed at the same time is a recency tie; `--from claude` resolves it,
     # exercising main()'s --reconcile/--from branch end to end — the interface the skill documents
@@ -866,8 +901,8 @@ def test_cli_reconcile_from_applies_operator_tie_break(
     assert agents_region == harness.SHARED_REGION_BODY
 
 
-def test_cli_reconcile_reports_no_change_when_regions_agree(
-    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+def _assert_cli_reconcile_reports_no_change_when_regions_agree(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
 ) -> None:
     repo = _init_repo_with_committed_shared_region(
         tmp_path,
@@ -888,7 +923,7 @@ def test_cli_reconcile_reports_no_change_when_regions_agree(
     assert capsys.readouterr().out.strip() == ""
 
 
-def test_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) -> None:
+def _assert_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) -> None:
     repo = _init_repo_with_committed_shared_region(
         tmp_path,
         claude_region=harness.SHARED_REGION_BODY,
@@ -912,3 +947,29 @@ def test_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) -> No
         (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
     )[harness.SHARED_REGION_NAME]
     assert agents_region == harness.SHARED_REGION_BODY
+
+
+def scenario_evidence_is_valid() -> bool:
+    """Run every scenario assertion through harness-owned resources."""
+    assertions = sorted(
+        (name, assertion)
+        for name, assertion in globals().items()
+        if name.startswith("_assert_") and callable(assertion)
+    )
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory).resolve()
+        for index, (name, assertion) in enumerate(assertions):
+            parameters = inspect.signature(assertion).parameters
+            arguments: dict[str, object] = {}
+            if "tmp_path" in parameters:
+                tmp_path = root / f"{index:02d}-{name.removeprefix('_assert_')}"
+                tmp_path.mkdir()
+                arguments["tmp_path"] = tmp_path
+            if "capsys" in parameters:
+                capture = _OutputCapture()
+                arguments["capsys"] = capture
+                with redirect_stdout(capture.stdout), redirect_stderr(capture.stderr):
+                    assertion(**arguments)
+            else:
+                assertion(**arguments)
+    return True

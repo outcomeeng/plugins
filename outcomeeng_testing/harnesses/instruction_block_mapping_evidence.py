@@ -11,32 +11,27 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Callable
+from tempfile import TemporaryDirectory
 from typing import cast
-
-import pytest
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
 
 
-@pytest.mark.parametrize(
-    "extension,language", sorted(MODULE.LANGUAGE_BY_EXTENSION.items())
-)
-def test_extension_maps_to_language(extension: str, language: str) -> None:
+def _assert_extension_maps_to_language(extension: str, language: str) -> None:
     assert MODULE.language_for_extension(extension) == language
     assert MODULE.language_for_extension(f".{extension}") == language
 
 
-def test_detected_language_set_is_the_mapped_extensions() -> None:
+def _assert_detected_language_set_is_the_mapped_extensions() -> None:
     extensions = tuple(MODULE.LANGUAGE_BY_EXTENSION)
     assert MODULE.detect_languages(extensions) == MODULE.normalize_languages(
         MODULE.LANGUAGE_BY_EXTENSION.values()
     )
 
 
-@pytest.mark.parametrize("language", harness.TEMPLATE_LANGUAGES)
-def test_language_block_appears_iff_enabled(language: str) -> None:
+def _assert_language_block_appears_iff_enabled(language: str) -> None:
     template = harness.build_template(harness.NEW_VERSION)
     heading = f"### {language.capitalize()}"
     enabled = MODULE.render(
@@ -50,7 +45,7 @@ def test_language_block_appears_iff_enabled(language: str) -> None:
     assert heading not in disabled
 
 
-def test_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
+def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     template = harness.write_template(tmp_path, harness.NEW_VERSION)
@@ -79,19 +74,37 @@ def test_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
     )
     claude.write_text(MODULE.prepend_router_block(stale_block, ""), encoding="utf-8")
     assert check() == "stale"
+    # stale: the recorded language set differs from the detected/expected set
+    current_block = MODULE.render(
+        harness.build_template(harness.NEW_VERSION),
+        (harness.LANG_PRIMARY,),
+        harness.NEW_VERSION,
+        harness.HARNESS_CLAUDE,
+    )
+    claude.write_text(MODULE.prepend_router_block(current_block, ""), encoding="utf-8")
+    assert (
+        MODULE.instruction_status(
+            claude,
+            harness.NEW_VERSION,
+            (harness.LANG_SECONDARY,),
+            repo,
+        )
+        == "stale"
+    )
 
 
-def test_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> None:
+def _assert_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
+    template = harness.write_template(tmp_path, harness.NEW_VERSION)
 
-    # byte-identical shared regions -> no drift
+    # byte-identical shared regions -> current report
     harness.write_both_root_files_with_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    assert MODULE.shared_region_drift(repo) == ()
+    assert harness.run_generator_check(repo, template) == (0, "current")
 
-    # diverged bodies -> drift names the region
+    # diverged bodies -> stale report
     harness.write_both_root_files_with_shared_region(
         MODULE,
         repo,
@@ -100,9 +113,9 @@ def test_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> Non
         claude_region=harness.SHARED_REGION_BODY,
         agents_region=harness.SHARED_REGION_BODY_ALT,
     )
-    assert harness.SHARED_REGION_NAME in MODULE.shared_region_drift(repo)
+    assert harness.run_generator_check(repo, template) == (0, "stale")
 
-    # one-sided region -> drift names the region
+    # one-sided region -> stale report
     codex_block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
         (harness.LANG_PRIMARY,),
@@ -113,21 +126,14 @@ def test_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> Non
         MODULE.prepend_router_block(codex_block, harness.ROOT_AGENTS_BODY),
         encoding="utf-8",
     )
-    assert harness.SHARED_REGION_NAME in MODULE.shared_region_drift(repo)
+    assert harness.run_generator_check(repo, template) == (0, "stale")
 
 
-@pytest.mark.parametrize(
-    "topology_factory",
-    [
-        harness.root_instruction_topology_only_claude,
-        harness.root_instruction_topology_only_agents,
-        harness.root_instruction_topology_separate,
-        harness.root_instruction_topology_symlinked,
-    ],
-)
-def test_topology_maps_to_bootstrap_outcome(
+def _assert_topology_maps_to_bootstrap_outcome(
     tmp_path: pathlib.Path,
     topology_factory: Callable[[], harness.RootInstructionTopology],
+    expected_region_body: str | None,
+    removed_tokens: tuple[str, ...] = (),
 ) -> None:
     repo = tmp_path / "repo"
     seeds = harness.materialize_root_instruction_topology(repo, topology_factory())
@@ -136,27 +142,53 @@ def test_topology_maps_to_bootstrap_outcome(
 
     claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
     agents = (repo / harness.INSTRUCTION_AGENTS).read_text(encoding="utf-8")
-    seeds_identical = (
-        seeds[harness.INSTRUCTION_CLAUDE] == seeds[harness.INSTRUCTION_AGENTS]
-    )
-    # bootstrap wraps one shared region exactly when the two seeded bodies are identical
-    assert bool(MODULE.parse_shared_regions(claude)) == seeds_identical
-    if seeds_identical:
-        assert set(MODULE.parse_shared_regions(claude)) == set(
-            MODULE.parse_shared_regions(agents)
-        )
+    claude_regions = MODULE.parse_shared_regions(claude)
+    agents_regions = MODULE.parse_shared_regions(agents)
+    if expected_region_body is None:
+        assert claude_regions == {}
+        assert agents_regions == {}
+        assert seeds[harness.INSTRUCTION_CLAUDE].strip() in claude
+        assert seeds[harness.INSTRUCTION_AGENTS].strip() in agents
+    else:
+        expected_body = expected_region_body.strip("\n")
+        assert claude_regions == {harness.SHARED_REGION_NAME: expected_body}
+        assert agents_regions == {harness.SHARED_REGION_NAME: expected_body}
+        for filename, document in (
+            (harness.INSTRUCTION_CLAUDE, claude),
+            (harness.INSTRUCTION_AGENTS, agents),
+        ):
+            other = (
+                harness.INSTRUCTION_AGENTS
+                if filename == harness.INSTRUCTION_CLAUDE
+                else harness.INSTRUCTION_CLAUDE
+            )
+            exclusive_lines = set(seeds[filename].splitlines()) - set(
+                seeds[other].splitlines()
+            )
+            assert all(line in document for line in exclusive_lines)
+    assert all(token not in claude and token not in agents for token in removed_tokens)
     # the router block is always first, whatever the topology
     assert claude.startswith(MODULE.ROUTER_MARKER_PREFIX)
     assert agents.startswith(MODULE.ROUTER_MARKER_PREFIX)
 
 
-def test_span_ratio_maps_to_wrap_decision() -> None:
+def _assert_span_ratio_maps_to_wrap_decision() -> None:
     identical = harness.ROOT_SHARED_BODY
-    _, ratio_identical = MODULE.biggest_identical_span(identical, identical)
+    span_identical, ratio_identical = MODULE.biggest_identical_span(
+        identical, identical
+    )
+    assert span_identical == identical
     assert ratio_identical > MODULE.BOOTSTRAP_SHARED_THRESHOLD
     wrapped_a, wrapped_b = MODULE.bootstrap_wrap(identical, identical)
     assert MODULE.parse_shared_regions(wrapped_a)
     assert MODULE.parse_shared_regions(wrapped_b)
+
+    span_near, ratio_near = MODULE.biggest_identical_span(
+        harness.ROOT_NEAR_IDENTICAL_CLAUDE,
+        harness.ROOT_NEAR_IDENTICAL_CODEX,
+    )
+    assert span_near == harness.ROOT_NEAR_IDENTICAL_SHARED
+    assert ratio_near > MODULE.BOOTSTRAP_SHARED_THRESHOLD
 
     _, ratio_divergent = MODULE.biggest_identical_span(
         harness.ROOT_CLAUDE_BODY, harness.ROOT_AGENTS_BODY
@@ -167,3 +199,76 @@ def test_span_ratio_maps_to_wrap_decision() -> None:
     )
     assert not MODULE.parse_shared_regions(no_wrap_a)
     assert not MODULE.parse_shared_regions(no_wrap_b)
+
+
+def mapping_evidence_is_valid() -> bool:
+    """Run every finite source-owned mapping behind one harness entrypoint."""
+    for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
+        _assert_extension_maps_to_language(extension, language)
+    _assert_detected_language_set_is_the_mapped_extensions()
+    for language in harness.TEMPLATE_LANGUAGES:
+        _assert_language_block_appears_iff_enabled(language)
+
+    legacy_markers = tuple(
+        marker for pair in MODULE.LEGACY_MANAGED_BLOCK_MARKERS for marker in pair
+    )
+    legacy_metadata_prefixes = (
+        MODULE.MANAGED_TEMPLATE_VERSION_PREFIX,
+        MODULE.MANAGED_TEMPLATE_SOURCE_PREFIX,
+        MODULE.MANAGED_LANGUAGES_PREFIX,
+    )
+    topology_cases = (
+        (
+            harness.root_instruction_topology_only_claude,
+            harness.ROOT_CLAUDE_BODY,
+            (),
+        ),
+        (
+            harness.root_instruction_topology_only_agents,
+            harness.ROOT_AGENTS_BODY,
+            (),
+        ),
+        (
+            harness.root_instruction_topology_symlinked,
+            harness.ROOT_SHARED_BODY,
+            (),
+        ),
+        (
+            harness.root_instruction_topology_identical,
+            harness.ROOT_SHARED_BODY,
+            (),
+        ),
+        (
+            harness.root_instruction_topology_legacy_managed,
+            harness.ROOT_SHARED_BODY,
+            legacy_markers + legacy_metadata_prefixes,
+        ),
+        (
+            harness.root_instruction_topology_near_identical,
+            harness.ROOT_NEAR_IDENTICAL_SHARED,
+            (),
+        ),
+        (harness.root_instruction_topology_separate, None, ()),
+    )
+    with TemporaryDirectory() as directory:
+        root = pathlib.Path(directory).resolve()
+        router_path = root / "router-state"
+        router_path.mkdir()
+        _assert_check_maps_router_state_to_report(router_path)
+        shared_path = root / "shared-state"
+        shared_path.mkdir()
+        _assert_check_maps_shared_region_state_to_report(shared_path)
+        for index, (topology_factory, expected_body, removed_tokens) in enumerate(
+            topology_cases
+        ):
+            topology_path = root / f"topology-{index}"
+            topology_path.mkdir()
+            _assert_topology_maps_to_bootstrap_outcome(
+                topology_path,
+                topology_factory,
+                expected_body,
+                removed_tokens,
+            )
+
+    _assert_span_ratio_maps_to_wrap_decision()
+    return True

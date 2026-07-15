@@ -1,9 +1,5 @@
-from outcomeeng_testing.harnesses.instruction_block_mapping_evidence import (
-    test_check_maps_router_state_to_report as test_check_maps_router_state_to_report,
-    test_check_maps_shared_region_state_to_report as test_check_maps_shared_region_state_to_report,
-    test_detected_language_set_is_the_mapped_extensions as test_detected_language_set_is_the_mapped_extensions,
-    test_extension_maps_to_language as test_extension_maps_to_language,
-    test_language_block_appears_iff_enabled as test_language_block_appears_iff_enabled,
-    test_span_ratio_maps_to_wrap_decision as test_span_ratio_maps_to_wrap_decision,
-    test_topology_maps_to_bootstrap_outcome as test_topology_maps_to_bootstrap_outcome,
-)
+from outcomeeng_testing.harnesses import instruction_block as harness
+
+
+def test_instruction_block_mapping_evidence() -> None:
+    assert harness.mapping_evidence_is_valid()

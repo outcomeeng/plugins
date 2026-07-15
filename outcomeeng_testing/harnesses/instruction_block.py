@@ -1,17 +1,13 @@
 """Test harness for the instruction-block render module.
 
-Exposes:
+Exposes resource and execution infrastructure for generated cases:
 
 - An importlib loader for ``instruction_block.py``. The module ships under a
   generated plugin skill directory and is not importable by package
   name; tests load it through ``importlib`` instead.
-- ``build_template``. Constructs a synthetic instruction-block.md-shaped template with a
-  brace-delimited illustration token, a language-conditional block per language in
-  ``TEMPLATE_LANGUAGES``, and (optionally) a section that exists only in a newer
-  template — for exercising new-section propagation on update. The lang-block
-  marker syntax mirrors the module's ``<!-- lang:NAME -->`` conditional-block contract
-  (parsed by ``_filter_languages``); a synthetic template that drifts from it fails to
-  render, which is the intended input-fixture coupling.
+- Generator-owned templates and carrier cases derived from the production module and
+  canonical template. This harness consumes those cases while owning only filesystem,
+  subprocess, temporary-repository, and cleanup behavior.
 - ``canonical_router_spacing_is_valid_for_all_mappings``. Renders the canonical template for
   every source-owned harness and every subset of its declared languages, then checks the
   marker-to-body separator without placing setup or iteration policy in a test file.
@@ -24,142 +20,35 @@ only invocation-owned temporary repositories and clean them on exit.
 
 from __future__ import annotations
 
+import importlib.util
+import io
 import itertools
 import os
 import pathlib
-import re
 import subprocess
-import tempfile
-from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-from io import StringIO
+import sys
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Final, cast
 
-import pytest
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution import instruction_block as dist
-from outcomeeng_testing.generators import instruction_block as generators
+from outcomeeng.distribution import instruction_block as distribution
+from outcomeeng_testing.generators.instruction_block import (
+    InstructionBlockCases,
+    build_macro as generate_build_macro,
+    build_template as generate_template,
+    harness_line as generate_harness_line,
+    instruction_block_cases,
+    unsupported_language_tokens,
+)
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
-FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
-CANONICAL_TEMPLATE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "update-instruction-block"
-    / "templates"
-    / "instruction-block.md"
-)
+INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
+CANONICAL_TEMPLATE_PATH = distribution.AUTHORED_TEMPLATE_PATH
 
-
-def _fixture_text(name: str) -> str:
-    """Read one inert whole-document instruction-block fixture."""
-    return FIXTURES_DIR.joinpath(name).read_text(encoding="utf-8")
-
-
-_SOURCE_MODULE = dist.load_instruction_block_module()
-TEMPLATE_HARNESSES = tuple(_SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES)
-HARNESS_CLAUDE, HARNESS_CODEX = TEMPLATE_HARNESSES
-INSTRUCTION_CLAUDE = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CLAUDE]
-INSTRUCTION_AGENTS = _SOURCE_MODULE.AGENT_HARNESS_INSTRUCTION_FILENAMES[HARNESS_CODEX]
-GIT_GPGSIGN_CONFIG: Final = "commit.gpgsign"
-ROOT_CLAUDE_BODY: Final = _fixture_text("root-claude.md")
-ROOT_AGENTS_BODY: Final = _fixture_text("root-agents.md")
-ROOT_SHARED_BODY: Final = _fixture_text("root-shared.md")
-ROOT_RETIRED_MANAGED_BODY: Final = _fixture_text("retired-managed.md")
-
-# Invented shared-region body payloads the harness owns, for shared-region preservation and
-# recency-reconcile tests. Their byte-identity (or, for the ALT, their divergence) across the two
-# root files is what the tests assert; the strings carry no domain vocabulary.
-SHARED_REGION_NAME: Final = _SOURCE_MODULE.BOOTSTRAP_SHARED_REGION_NAME
-SHARED_REGION_BODY: Final = _SOURCE_MODULE.parse_shared_regions(
-    _fixture_text("shared-region-primary.md")
-)[SHARED_REGION_NAME]
-SHARED_REGION_BODY_ALT: Final = _SOURCE_MODULE.parse_shared_regions(
-    _fixture_text("shared-region-alternate.md")
-)[SHARED_REGION_NAME]
-
-# Two near-identical root-file bodies for the bootstrap line-boundary guard: more than 80%
-# identical but diverging mid-line on a harness-specific word, so the longest contiguous common
-# span ends mid-line. The bootstrap must snap to line boundaries rather than split the divergent
-# line across the shared-region fence.
-ROOT_NEAR_IDENTICAL_CLAUDE: Final = _fixture_text("near-identical-claude.md")
-ROOT_NEAR_IDENTICAL_CODEX: Final = _fixture_text("near-identical-codex.md")
-
-# A pair for the bootstrap span-maximality guard: a whole-line-identical block plus a longer
-# near-duplicate single line diverging mid-line. The byte-level-longest match is that long line,
-# which snaps away to nothing at a line boundary — so the biggest whole-line span is the block
-# elsewhere, and the wrap must find it rather than under-detect from the single longest byte match.
-ROOT_STRADDLING_CLAUDE: Final = _fixture_text("straddling-claude.md")
-ROOT_STRADDLING_CODEX: Final = _fixture_text("straddling-codex.md")
-
-# A pair whose shared content starts at a line boundary in one file but mid-line in the other: the
-# second file carries a harness-specific prefix on the otherwise-shared first line. The bootstrap
-# must snap the span to line boundaries in BOTH files, never splitting the prefixed line.
-ROOT_MIDLINE_CLAUDE: Final = _fixture_text("midline-claude.md")
-ROOT_MIDLINE_CODEX: Final = _fixture_text("midline-codex.md")
-
-# The retired session-result tokens the shipped instruction block must never teach. No
-# production module owns a removed token, so the regression guard declares the forbidden
-# strings here and asserts they are absent from the real rendered output.
-SESSION_ARCHIVE_RESULT_INSTRUCTION, SESSION_RESULT_FRONTMATTER_FIELD = (
-    dist.FORBIDDEN_ROUTER_TOKENS
-)
-READ_ENTIRE_FILE_INSTRUCTION: Final = "Read this entire file"
-
-# Invented scenario payload owned by the harness.
-TEMPLATE_LANGUAGES = tuple(dict.fromkeys(_SOURCE_MODULE.LANGUAGE_BY_EXTENSION.values()))
-LANG_PRIMARY, LANG_SECONDARY, *_ = TEMPLATE_LANGUAGES
-_BASE_TEMPLATE = _fixture_text("template-base.md")
-_EXTENDED_TEMPLATE = _fixture_text("template-extended.md")
-_BASE_HEADINGS = tuple(
-    line.removeprefix("## ")
-    for line in _BASE_TEMPLATE.splitlines()
-    if line.startswith("## ")
-)
-_EXTENDED_HEADINGS = tuple(
-    line.removeprefix("## ")
-    for line in _EXTENDED_TEMPLATE.splitlines()
-    if line.startswith("## ")
-)
-BASE_SECTION = _BASE_HEADINGS[0]
-NEW_SECTION = next(
-    heading for heading in _EXTENDED_HEADINGS if heading not in _BASE_HEADINGS
-)
-# Invented scenario version payload owned by the harness: NEW_VERSION is the installed (current)
-# template version, OLD_VERSION a version numerically below it. The values carry no domain
-# meaning; the dotted-numeric ordering NEW_VERSION > OLD_VERSION is what the staleness and
-# upgrade scenarios rely on.
-_CURRENT_TEMPLATE_VERSION = _SOURCE_MODULE.parse_template_version(_BASE_TEMPLATE)
-if _CURRENT_TEMPLATE_VERSION is None:
-    raise RuntimeError(
-        "instruction-block base template fixture has no template version"
-    )
-NEW_VERSION: Final[str] = _CURRENT_TEMPLATE_VERSION
-_VERSION_PARTS = [int(part) for part in NEW_VERSION.split(".")]
-_PREVIOUS_PART = next(
-    index for index in range(len(_VERSION_PARTS) - 1, -1, -1) if _VERSION_PARTS[index]
-)
-_VERSION_PARTS[_PREVIOUS_PART] -= 1
-for _index in range(_PREVIOUS_PART + 1, len(_VERSION_PARTS)):
-    _VERSION_PARTS[_index] = 0
-OLD_VERSION: Final = ".".join(str(part) for part in _VERSION_PARTS)
-# A brace-delimited illustration token the render must pass through unchanged.
-ILLUSTRATION_TOKEN = next(
-    token
-    for token in re.findall(r"\{[^{}\n]+\}", _BASE_TEMPLATE)
-    if token not in dist.UNRESOLVED_BUILD_TEMPLATE_TOKENS
-)
-
-# Harness payload: the template carries a per-harness block for each agent harness,
-# rendered only into that harness's instruction file. The marker syntax mirrors the module's
-# ``<!-- harness:NAME -->`` conditional-block contract (parsed by ``_filter_harness``); a
-# synthetic template that drifts from it fails to render.
 LANGUAGE_OVERRIDE_PROPERTY_SEED = 20260714
 LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES = 50
 
@@ -174,57 +63,27 @@ class RootInstructionTopology:
 
 def root_instruction_topology_only_claude() -> RootInstructionTopology:
     """Return a root topology with only the Claude harness instruction file present."""
+    cases = generated_cases()
     return RootInstructionTopology(
-        files={INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY}, symlinks={}
+        files={cases.instruction_claude: cases.root_claude_body}, symlinks={}
     )
 
 
 def root_instruction_topology_only_agents() -> RootInstructionTopology:
     """Return a root topology with only the Codex harness instruction file present."""
+    cases = generated_cases()
     return RootInstructionTopology(
-        files={INSTRUCTION_AGENTS: ROOT_AGENTS_BODY}, symlinks={}
+        files={cases.instruction_agents: cases.root_agents_body}, symlinks={}
     )
 
 
 def root_instruction_topology_separate() -> RootInstructionTopology:
     """Return a root topology with two independent harness instruction files."""
+    cases = generated_cases()
     return RootInstructionTopology(
         files={
-            INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
-            INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
-        },
-        symlinks={},
-    )
-
-
-def root_instruction_topology_identical() -> RootInstructionTopology:
-    """Return two identical regular root instruction files without a managed block."""
-    return RootInstructionTopology(
-        files={
-            INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
-            INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
-        },
-        symlinks={},
-    )
-
-
-def root_instruction_topology_retired_managed() -> RootInstructionTopology:
-    """Return two identical root files carrying a retired managed block."""
-    return RootInstructionTopology(
-        files={
-            INSTRUCTION_CLAUDE: ROOT_RETIRED_MANAGED_BODY,
-            INSTRUCTION_AGENTS: ROOT_RETIRED_MANAGED_BODY,
-        },
-        symlinks={},
-    )
-
-
-def root_instruction_topology_above_shared_threshold() -> RootInstructionTopology:
-    """Return differing files whose biggest identical span exceeds the source threshold."""
-    return RootInstructionTopology(
-        files={
-            INSTRUCTION_CLAUDE: ROOT_NEAR_IDENTICAL_CLAUDE,
-            INSTRUCTION_AGENTS: ROOT_NEAR_IDENTICAL_CODEX,
+            cases.instruction_claude: cases.root_claude_body,
+            cases.instruction_agents: cases.root_agents_body,
         },
         symlinks={},
     )
@@ -232,9 +91,46 @@ def root_instruction_topology_above_shared_threshold() -> RootInstructionTopolog
 
 def root_instruction_topology_symlinked() -> RootInstructionTopology:
     """Return a root topology matching a shared instruction file with a harness symlink."""
+    cases = generated_cases()
     return RootInstructionTopology(
-        files={INSTRUCTION_AGENTS: ROOT_SHARED_BODY},
-        symlinks={INSTRUCTION_CLAUDE: INSTRUCTION_AGENTS},
+        files={cases.instruction_agents: cases.root_shared_body},
+        symlinks={cases.instruction_claude: cases.instruction_agents},
+    )
+
+
+def root_instruction_topology_identical() -> RootInstructionTopology:
+    """Return two identical regular instruction files with no managed block."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: cases.root_shared_body,
+            cases.instruction_agents: cases.root_shared_body,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_legacy_managed() -> RootInstructionTopology:
+    """Return identical files carrying a source-derived alternate managed block."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: cases.root_legacy_managed_body,
+            cases.instruction_agents: cases.root_legacy_managed_body,
+        },
+        symlinks={},
+    )
+
+
+def root_instruction_topology_near_identical() -> RootInstructionTopology:
+    """Return differing files whose source-derived common span exceeds the threshold."""
+    cases = generated_cases()
+    return RootInstructionTopology(
+        files={
+            cases.instruction_claude: cases.root_near_identical_claude,
+            cases.instruction_agents: cases.root_near_identical_codex,
+        },
+        symlinks={},
     )
 
 
@@ -268,14 +164,18 @@ def materialize_root_instruction_topology(
             link_path.unlink()
         link_path.symlink_to(target)
 
-    claude_seed = _seed_body(root, INSTRUCTION_CLAUDE, None)
-    agents_seed = _seed_body(root, INSTRUCTION_AGENTS, claude_seed)
+    cases = generated_cases()
+    claude_seed = _seed_body(root, cases.instruction_claude, None)
+    agents_seed = _seed_body(root, cases.instruction_agents, claude_seed)
     if claude_seed is None:
         claude_seed = agents_seed
     if claude_seed is None or agents_seed is None:
         claude_seed = agents_seed = ""
 
-    seeds = {INSTRUCTION_CLAUDE: claude_seed, INSTRUCTION_AGENTS: agents_seed}
+    seeds = {
+        cases.instruction_claude: claude_seed,
+        cases.instruction_agents: agents_seed,
+    }
     for name, body in seeds.items():
         _replace_path_with_text(root / name, body)
     return seeds
@@ -283,59 +183,61 @@ def materialize_root_instruction_topology(
 
 def symlinked_instruction_topology_materializes_as_regular_files() -> bool:
     """Check symlink normalization and source-body preservation in one owned workspace."""
+    cases = generated_cases()
     with TemporaryDirectory() as directory:
-        root = pathlib.Path(directory)
+        root = pathlib.Path(directory).resolve()
         materialized = materialize_root_instruction_topology(
             root, root_instruction_topology_symlinked()
         )
-        claude_path = root / INSTRUCTION_CLAUDE
-        agents_path = root / INSTRUCTION_AGENTS
+        claude_path = root / cases.instruction_claude
+        agents_path = root / cases.instruction_agents
         return (
             claude_path.is_file()
             and agents_path.is_file()
             and not claude_path.is_symlink()
             and not agents_path.is_symlink()
-            and claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-            and materialized[INSTRUCTION_CLAUDE] == ROOT_SHARED_BODY
-            and materialized[INSTRUCTION_AGENTS] == ROOT_SHARED_BODY
+            and claude_path.read_text(encoding="utf-8") == cases.root_shared_body
+            and agents_path.read_text(encoding="utf-8") == cases.root_shared_body
+            and materialized[cases.instruction_claude] == cases.root_shared_body
+            and materialized[cases.instruction_agents] == cases.root_shared_body
         )
 
 
 def root_instruction_topology_seed_mapping_is_valid() -> bool:
     """Check every source-owned root topology against its expected harness seed bodies."""
+    generated = generated_cases()
     cases = (
         (
             root_instruction_topology_only_claude(),
             {
-                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
-                INSTRUCTION_AGENTS: ROOT_CLAUDE_BODY,
+                generated.instruction_claude: generated.root_claude_body,
+                generated.instruction_agents: generated.root_claude_body,
             },
         ),
         (
             root_instruction_topology_only_agents(),
             {
-                INSTRUCTION_CLAUDE: ROOT_AGENTS_BODY,
-                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+                generated.instruction_claude: generated.root_agents_body,
+                generated.instruction_agents: generated.root_agents_body,
             },
         ),
         (
             root_instruction_topology_separate(),
             {
-                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
-                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
+                generated.instruction_claude: generated.root_claude_body,
+                generated.instruction_agents: generated.root_agents_body,
             },
         ),
         (
             root_instruction_topology_symlinked(),
             {
-                INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
-                INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
+                generated.instruction_claude: generated.root_shared_body,
+                generated.instruction_agents: generated.root_shared_body,
             },
         ),
     )
     with TemporaryDirectory() as directory:
-        root = pathlib.Path(directory)
+        root = pathlib.Path(directory).resolve()
         return all(
             materialize_root_instruction_topology(root / str(index), topology)
             == expected
@@ -343,34 +245,87 @@ def root_instruction_topology_seed_mapping_is_valid() -> bool:
         )
 
 
-def harness_line(harness: str) -> str:
-    """Read the harness-specific body from the inert whole-template fixture."""
-    open_marker = f"<!-- harness:{harness} -->"
-    close_marker = f"<!-- /harness:{harness} -->"
-    try:
-        body = _BASE_TEMPLATE.split(open_marker, maxsplit=1)[1].split(
-            close_marker, maxsplit=1
-        )[0]
-    except IndexError as error:
-        raise AssertionError(
-            f"template fixture has no harness block: {harness}"
-        ) from error
-    return body.strip()
-
-
-def render_build_macro() -> str:
-    """Return a source-owned unresolved build delimiter as template content."""
-    return f"\n{dist.UNRESOLVED_BUILD_TEMPLATE_TOKENS[0]}\n"
-
-
 def load_instruction_block_module() -> ModuleType:
-    """Return the distribution module's loaded instruction-block implementation."""
-    return cast(ModuleType, dist.load_instruction_block_module())
+    """Load the ``instruction_block`` module via importlib and cache it."""
+    cached = sys.modules.get("instruction_block")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "instruction_block", INSTRUCTION_BLOCK_MODULE_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load instruction_block from {INSTRUCTION_BLOCK_MODULE_PATH}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["instruction_block"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def read_canonical_template() -> str:
     """Read the canonical template both instruction files render from."""
     return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def generated_cases() -> InstructionBlockCases:
+    """Return source-derived carrier cases from the generator layer."""
+    return instruction_block_cases(
+        load_instruction_block_module(), read_canonical_template()
+    )
+
+
+_GENERATED_CASES = generated_cases()
+INSTRUCTION_CLAUDE = _GENERATED_CASES.instruction_claude
+INSTRUCTION_AGENTS = _GENERATED_CASES.instruction_agents
+ROOT_CLAUDE_BODY = _GENERATED_CASES.root_claude_body
+ROOT_AGENTS_BODY = _GENERATED_CASES.root_agents_body
+ROOT_SHARED_BODY = _GENERATED_CASES.root_shared_body
+SHARED_REGION_NAME = _GENERATED_CASES.shared_region_name
+SHARED_REGION_BODY = _GENERATED_CASES.shared_region_body
+SHARED_REGION_BODY_ALT = _GENERATED_CASES.shared_region_body_alt
+ROOT_NEAR_IDENTICAL_CLAUDE = _GENERATED_CASES.root_near_identical_claude
+ROOT_NEAR_IDENTICAL_CODEX = _GENERATED_CASES.root_near_identical_codex
+ROOT_NEAR_IDENTICAL_SHARED = _GENERATED_CASES.root_near_identical_shared
+ROOT_LEGACY_MANAGED_BODY = _GENERATED_CASES.root_legacy_managed_body
+ROOT_STRADDLING_CLAUDE = _GENERATED_CASES.root_straddling_claude
+ROOT_STRADDLING_CODEX = _GENERATED_CASES.root_straddling_codex
+ROOT_MIDLINE_CLAUDE = _GENERATED_CASES.root_midline_claude
+ROOT_MIDLINE_CODEX = _GENERATED_CASES.root_midline_codex
+READ_ENTIRE_FILE_INSTRUCTION = _GENERATED_CASES.read_entire_file_instruction
+LANG_PRIMARY = _GENERATED_CASES.lang_primary
+LANG_SECONDARY = _GENERATED_CASES.lang_secondary
+TEMPLATE_LANGUAGES = _GENERATED_CASES.template_languages
+BASE_SECTION = _GENERATED_CASES.base_section
+NEW_SECTION = _GENERATED_CASES.new_section
+OLD_VERSION = _GENERATED_CASES.old_version
+NEW_VERSION = _GENERATED_CASES.new_version
+ILLUSTRATION_TOKEN = _GENERATED_CASES.illustration_token
+BUILD_MACRO_CAPABILITY = _GENERATED_CASES.build_macro_capability
+BUILD_MACRO_HARNESS = _GENERATED_CASES.build_macro_harness
+HARNESS_CLAUDE = _GENERATED_CASES.harness_claude
+HARNESS_CODEX = _GENERATED_CASES.harness_codex
+TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
+
+
+def harness_line(harness: str) -> str:
+    """Return generator-owned carrier content for one source-owned harness."""
+    return generate_harness_line(harness)
+
+
+def render_build_macro() -> str:
+    """Return a generator-owned unresolved macro carrier."""
+    return generate_build_macro(generated_cases())
+
+
+def build_template(version: str, *, extra_section: bool = False) -> str:
+    """Return a generator-owned template over source-declared domains."""
+    return generate_template(
+        load_instruction_block_module(),
+        generated_cases(),
+        version,
+        extra_section=extra_section,
+    )
 
 
 def template_declared_languages(template: str) -> tuple[str, ...]:
@@ -394,8 +349,6 @@ def canonical_router_spacing_is_valid_for_all_mappings() -> bool:
     template = read_canonical_template()
     languages = template_declared_languages(template)
     version = module.parse_template_version(template)
-    if version is None:
-        raise RuntimeError("canonical instruction-block template has no version")
 
     for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
         for enabled_languages in _language_subsets(languages):
@@ -420,13 +373,13 @@ def unsupported_language_overrides_are_rejected() -> bool:
 
     @seed(LANGUAGE_OVERRIDE_PROPERTY_SEED)
     @settings(max_examples=LANGUAGE_OVERRIDE_PROPERTY_EXAMPLES, deadline=None)
-    @given(token=generators.unsupported_language_tokens(supported_languages))
+    @given(token=unsupported_language_tokens(supported_languages))
     def assertion(token: str) -> None:
-        stderr = StringIO()
-        with tempfile.TemporaryDirectory() as directory, redirect_stderr(stderr):
+        stderr = io.StringIO()
+        with TemporaryDirectory() as directory, redirect_stderr(stderr):
             result = run_generator_write(
                 module,
-                pathlib.Path(directory),
+                pathlib.Path(directory).resolve(),
                 CANONICAL_TEMPLATE_PATH,
                 languages=token,
             )
@@ -440,20 +393,20 @@ def unsupported_language_overrides_are_rejected() -> bool:
     return True
 
 
-def _language_heading(language: str) -> str:
-    """The H3 heading the harness emits inside a language block — what render keeps or drops."""
-    return f"### {language.capitalize()}"
-
-
-def build_template(version: str, *, extra_section: bool = False) -> str:
-    """Read a whole-template fixture and replace only its source-owned version value."""
-    template = _EXTENDED_TEMPLATE if extra_section else _BASE_TEMPLATE
-    current = load_instruction_block_module().parse_template_version(template)
-    if current is None:
-        raise RuntimeError("instruction-block template fixture has no template version")
-    return template.replace(
-        f'template_version: "{current}"', f'template_version: "{version}"', 1
-    )
+def extract_markdown_section(document: str, heading: str) -> str:
+    """Return a markdown section by exact heading line, including the heading."""
+    lines = document.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as exc:
+        raise RuntimeError(f"Heading not found: {heading}") from exc
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index, line in enumerate(lines[start + 1 :], start=start + 1):
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end])
 
 
 def write_spx_tree_with_tests(
@@ -482,15 +435,17 @@ def write_template(
     pytest ``tmp_path``; the harness owns the on-disk setup.
     """
     path = directory / "instruction-block.md"
+    module = load_instruction_block_module()
     path.write_text(
-        build_template(version, extra_section=extra_section), encoding="utf-8"
+        generate_template(
+            module,
+            generated_cases(),
+            version,
+            extra_section=extra_section,
+        ),
+        encoding="utf-8",
     )
     return path
-
-
-def write_current_template(directory: pathlib.Path) -> pathlib.Path:
-    """Write the harness's current synthetic template into ``directory``."""
-    return write_template(directory, NEW_VERSION)
 
 
 def run_generator_write(
@@ -529,468 +484,64 @@ def run_generator_write_primary(
     The render-model scenario tests share this exact run configuration — the loaded module and the
     single primary language — so it lives in the harness rather than a test-local wrapper.
     """
+    cases = generated_cases()
     return run_generator_write(
         load_instruction_block_module(),
         repo_root,
         template_path,
-        languages=LANG_PRIMARY,
+        languages=cases.lang_primary,
     )
 
 
 def run_generator_check(
-    module: ModuleType,
-    repo_root: pathlib.Path,
-    template_path: pathlib.Path,
-    *,
-    languages: str,
-) -> str:
-    """Run the generator CLI's ``--check`` and return its status report."""
-    output = StringIO()
+    repo_root: pathlib.Path, template_path: pathlib.Path
+) -> tuple[int, str]:
+    """Run the real ``--check`` surface and return its exit code and report word."""
+    output = io.StringIO()
+    cases = generated_cases()
     with redirect_stdout(output):
-        exit_code = cast(
+        result = cast(
             int,
-            module.main(
+            load_instruction_block_module().main(
                 [
                     "--template",
                     str(template_path),
                     "--repo-root",
                     str(repo_root),
-                    "--languages",
-                    languages,
+                    f"--languages={cases.lang_primary}",
                     "--check",
                 ]
             ),
         )
-    assert exit_code == 0
-    return output.getvalue().strip()
+    return result, output.getvalue().strip()
 
 
-def copy_shipped_dist_templates(repo_root: pathlib.Path) -> None:
-    """Copy each shipped instruction-block template into an isolated repository."""
-    for source, target in (
-        (
-            dist.dist_template_path(HARNESS_CLAUDE),
-            dist.dist_template_path(HARNESS_CLAUDE, repo_root=repo_root),
-        ),
-        (
-            dist.dist_template_path(HARNESS_CODEX),
-            dist.dist_template_path(HARNESS_CODEX, repo_root=repo_root),
-        ),
-    ):
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+def scenario_evidence_is_valid() -> bool:
+    """Run all scenario cases behind one zero-argument harness entrypoint."""
+    from outcomeeng_testing.harnesses import instruction_block_scenario_evidence
+
+    return instruction_block_scenario_evidence.scenario_evidence_is_valid()
 
 
-def render_shipped_dist_with_generation_entrypoint() -> dict[str, str]:
-    """Run production generation against copied shipped templates and return both outputs."""
-    with tempfile.TemporaryDirectory() as directory:
-        repo_root = pathlib.Path(directory).resolve() / "repo"
-        repo_root.mkdir()
-        copy_shipped_dist_templates(repo_root)
-        dist.regenerate_instruction_blocks(repo_root=repo_root)
-        return {
-            HARNESS_CLAUDE: repo_root.joinpath(INSTRUCTION_CLAUDE).read_text(
-                encoding="utf-8"
-            ),
-            HARNESS_CODEX: repo_root.joinpath(INSTRUCTION_AGENTS).read_text(
-                encoding="utf-8"
-            ),
-        }
+def mapping_evidence_is_valid() -> bool:
+    """Run all mapping cases behind one zero-argument harness entrypoint."""
+    from outcomeeng_testing.harnesses import instruction_block_mapping_evidence
+
+    return instruction_block_mapping_evidence.mapping_evidence_is_valid()
 
 
-def assert_generation_writes_both_root_files() -> None:
-    """Assert one generation writes both runtime root instruction files."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        run_generator_write_primary(repo, write_current_template(tmp_path))
-        assert (repo / INSTRUCTION_CLAUDE).is_file()
-        assert (repo / INSTRUCTION_AGENTS).is_file()
+def property_evidence_is_valid() -> bool:
+    """Run all property cases behind one zero-argument harness entrypoint."""
+    from outcomeeng_testing.harnesses import instruction_block_property_evidence
+
+    return instruction_block_property_evidence.property_evidence_is_valid()
 
 
-def assert_router_is_first() -> None:
-    """Assert production generation places the shipped router first in each output."""
-    module = load_instruction_block_module()
-    for document in render_shipped_dist_with_generation_entrypoint().values():
-        assert document.startswith(module.ROUTER_MARKER_PREFIX)
-        assert READ_ENTIRE_FILE_INSTRUCTION in dist.managed_router_block(document)
+def compliance_evidence_is_valid() -> bool:
+    """Run all compliance cases behind one zero-argument harness entrypoint."""
+    from outcomeeng_testing.harnesses import instruction_block_compliance_evidence
 
-
-def assert_generation_reads_dist_templates() -> None:
-    """Assert production generation consumes each runtime's shipped dist content."""
-    with tempfile.TemporaryDirectory() as directory:
-        repo_root = pathlib.Path(directory).resolve() / "repo"
-        repo_root.mkdir()
-        copy_shipped_dist_templates(repo_root)
-        probes = {
-            HARNESS_CLAUDE: f"<!-- dist-template-source:{HARNESS_CLAUDE} -->",
-            HARNESS_CODEX: f"<!-- dist-template-source:{HARNESS_CODEX} -->",
-        }
-        for path, probe in (
-            (
-                dist.dist_template_path(HARNESS_CLAUDE, repo_root=repo_root),
-                probes[HARNESS_CLAUDE],
-            ),
-            (
-                dist.dist_template_path(HARNESS_CODEX, repo_root=repo_root),
-                probes[HARNESS_CODEX],
-            ),
-        ):
-            path.write_text(
-                path.read_text(encoding="utf-8").rstrip() + f"\n\n{probe}\n",
-                encoding="utf-8",
-            )
-
-        dist.regenerate_instruction_blocks(repo_root=repo_root)
-        for agent_harness, document in (
-            (
-                HARNESS_CLAUDE,
-                repo_root.joinpath(INSTRUCTION_CLAUDE).read_text(encoding="utf-8"),
-            ),
-            (
-                HARNESS_CODEX,
-                repo_root.joinpath(INSTRUCTION_AGENTS).read_text(encoding="utf-8"),
-            ),
-        ):
-            router = dist.managed_router_block(document)
-            assert probes[agent_harness] in router
-            assert all(
-                probe not in router
-                for other_harness, probe in probes.items()
-                if other_harness != agent_harness
-            )
-
-
-def assert_justfile_binds_instruction_recipes() -> None:
-    """Assert repository recipes bind generation and drift checking."""
-    justfile = dist.REPO_ROOT.joinpath(dist.JUSTFILE_NAME).read_text(encoding="utf-8")
-    build_body = justfile_recipe_body(justfile, dist.BUILD_INSTRUCTIONS_RECIPE)
-    check_body = justfile_recipe_body(justfile, dist.INSTRUCTIONS_CHECK_RECIPE)
-    assert f"{dist.MODULE_INVOCATION} {dist.WRITE_FLAG}" in build_body
-    assert dist.MODULE_INVOCATION in check_body
-    assert dist.WRITE_FLAG not in check_body
-
-
-def assert_lefthook_regenerates_through_build_instructions() -> None:
-    """Assert pre-commit regeneration uses the repository recipe."""
-    lefthook = dist.REPO_ROOT.joinpath(dist.LEFTHOOK_PATH).read_text(encoding="utf-8")
-    assert dist.PRECOMMIT_BUILD_INSTRUCTIONS_COMMAND in lefthook
-    assert dist.LEGACY_DIRECT_TEMPLATE_ARGUMENT not in lefthook
-    assert dist.LEGACY_DIRECT_REPO_ROOT_ARGUMENT not in lefthook
-
-
-def assert_drift_gate_reports_missing_root_instruction_file() -> None:
-    """Assert a deleted generated root file registers as drift."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        init_git_identity(repo)
-        write_both_root_files_with_shared_region(
-            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
-        )
-        git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
-        (repo / INSTRUCTION_CLAUDE).unlink()
-        drift = dist.drifting_instruction_files(
-            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
-        )
-        assert INSTRUCTION_CLAUDE in drift
-
-
-def assert_drift_gate_marks_untracked_root_files() -> None:
-    """Assert never-committed root files register as intent-to-add drift."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        init_git_identity(repo)
-        write_both_root_files_with_shared_region(
-            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
-        )
-        drift = dist.drifting_instruction_files(
-            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
-        )
-        assert INSTRUCTION_CLAUDE in drift
-        assert INSTRUCTION_AGENTS in drift
-
-
-def assert_drift_gate_skips_missing_obsolete_spx_file() -> None:
-    """Assert absent untracked legacy instruction paths do not create drift."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        init_git_identity(repo)
-        write_both_root_files_with_shared_region(
-            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
-        )
-        git_commit_at(repo, 1000, INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS)
-        drift = dist.drifting_instruction_files(
-            repo_root=repo, module=cast(dist.InstructionBlockModule, module)
-        )
-        assert drift == []
-        assert "spx/CLAUDE.md" not in drift
-        assert "spx/AGENTS.md" not in drift
-
-
-def assert_refresh_pr_step_exits_cleanly_without_drift() -> None:
-    """Assert refresh automation leaves GitHub untouched when output is current."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        gh_log = tmp_path / "gh.log"
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        init_git_identity(repo)
-        git_command(repo, "config", GIT_GPGSIGN_CONFIG, "false")
-        (repo / INSTRUCTION_CLAUDE).write_text(ROOT_CLAUDE_BODY, encoding="utf-8")
-        (repo / INSTRUCTION_AGENTS).write_text(ROOT_AGENTS_BODY, encoding="utf-8")
-        git_command(repo, "add", ".")
-        git_command(repo, "commit", "-m", "seed instruction files")
-        output = run_refresh_pr_step(repo, gh_log)
-        assert output == "Root instruction blocks are current.\n"
-        assert not gh_log.exists()
-
-
-def assert_refresh_pr_step_stages_obsolete_deletions() -> None:
-    """Assert refresh automation commits retired nested instruction deletions."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        remote = tmp_path / "remote.git"
-        repo = tmp_path / "repo"
-        gh_log = tmp_path / "gh.log"
-        git_command(tmp_path, "init", "--bare", str(remote))
-        git_command(tmp_path, "clone", str(remote), str(repo))
-        git_command(repo, "config", "user.name", "Test User")
-        git_command(repo, "config", "user.email", "test@example.com")
-        git_command(repo, "config", GIT_GPGSIGN_CONFIG, "false")
-        spx_dir = repo / "spx"
-        spx_dir.mkdir()
-        for root_dir in (repo, spx_dir):
-            root_dir.joinpath(INSTRUCTION_CLAUDE).write_text(
-                ROOT_CLAUDE_BODY, encoding="utf-8"
-            )
-            root_dir.joinpath(INSTRUCTION_AGENTS).write_text(
-                ROOT_AGENTS_BODY, encoding="utf-8"
-            )
-        git_command(repo, "add", ".")
-        git_command(repo, "commit", "-m", "seed instruction files")
-        git_command(repo, "branch", "-M", "main")
-        git_command(repo, "push", "-u", "origin", "main")
-        (repo / INSTRUCTION_CLAUDE).write_text(ROOT_SHARED_BODY, encoding="utf-8")
-        (repo / INSTRUCTION_AGENTS).write_text(ROOT_SHARED_BODY, encoding="utf-8")
-        (spx_dir / INSTRUCTION_CLAUDE).unlink()
-        (spx_dir / INSTRUCTION_AGENTS).unlink()
-        run_refresh_pr_step(repo, gh_log)
-        committed = git_command(
-            repo,
-            "show",
-            "--name-status",
-            "--format=%s",
-            "automation/refresh-instruction-blocks",
-        ).stdout
-        assert "Refresh root instruction blocks" in committed
-        assert f"M\t{INSTRUCTION_CLAUDE}" in committed
-        assert f"M\t{INSTRUCTION_AGENTS}" in committed
-        assert f"D\tspx/{INSTRUCTION_CLAUDE}" in committed
-        assert f"D\tspx/{INSTRUCTION_AGENTS}" in committed
-        gh_calls = gh_log.read_text(encoding="utf-8")
-        assert "pr list" in gh_calls
-        assert "pr create" in gh_calls
-
-
-def assert_regenerate_overwrites_router_drift() -> None:
-    """Assert regeneration overwrites a stale router version."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        template = write_current_template(tmp_path)
-        run_generator_write_primary(repo, template)
-        claude = repo / INSTRUCTION_CLAUDE
-        claude.write_text(
-            claude.read_text(encoding="utf-8").replace(f"v{NEW_VERSION}", "v0.0.1"),
-            encoding="utf-8",
-        )
-        run_generator_write_primary(repo, template)
-        assert module.parse_instruction_version(claude.read_text(encoding="utf-8")) == (
-            NEW_VERSION
-        )
-
-
-def assert_refresh_workflow_regenerates_and_opens_pr() -> None:
-    """Assert refresh workflow dispatch regenerates before opening a drift PR."""
-    workflow = dist.REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
-        encoding="utf-8"
-    )
-    assert dist.WORKFLOW_DISPATCH_TRIGGER in workflow
-    assert dist.WORKFLOW_BUILD_INSTRUCTIONS_COMMAND in workflow_run_block(
-        dist.WORKFLOW_REGENERATE_STEP
-    )
-    assert dist.WORKFLOW_DRIFT_COMMAND in workflow_step_block(
-        dist.WORKFLOW_OPEN_PR_STEP
-    )
-
-
-def assert_refresh_workflow_checks_out_main() -> None:
-    """Assert refresh automation starts from the default branch."""
-    assert dist.DEFAULT_BRANCH in workflow_step_block(dist.WORKFLOW_CHECKOUT_STEP)
-
-
-def assert_refresh_workflow_verifies_just_download() -> None:
-    """Assert refresh automation verifies its pinned just download."""
-    install = workflow_run_block(dist.WORKFLOW_INSTALL_JUST_STEP)
-    just_sha256 = workflow_env_value(dist.WORKFLOW_JUST_CHECKSUM_ENV)
-    assert len(just_sha256) == 64
-    assert dist.WORKFLOW_JUST_CHECKSUM_REFERENCE in install
-    assert "mktemp -d" in install
-    assert "trap " in install
-    assert "rm -rf" in install
-    assert install.index("sha256sum -c") < install.index("install -m 0755")
-    assert "-o just.tar.gz" not in install
-    assert "tar -xzf just.tar.gz" not in install
-
-
-def assert_refresh_workflow_installs_dprint() -> None:
-    """Assert refresh automation installs and verifies its pinned formatter."""
-    install = workflow_run_block(dist.WORKFLOW_INSTALL_DPRINT_STEP)
-    dprint_version = workflow_env_value(dist.WORKFLOW_DPRINT_VERSION_ENV)
-    assert dprint_version
-    assert dist.WORKFLOW_DPRINT_INSTALL_COMMAND in install
-    assert dist.WORKFLOW_DPRINT_VERSION_COMMAND in install
-
-
-def assert_render_preserves_brace_token() -> None:
-    """Assert rendering preserves ordinary brace-delimited illustrations."""
-    module = load_instruction_block_module()
-    rendered = module.render(
-        build_template(NEW_VERSION),
-        (LANG_PRIMARY,),
-        NEW_VERSION,
-        HARNESS_CLAUDE,
-    )
-    assert ILLUSTRATION_TOKEN in rendered
-
-
-def assert_former_command_slot_fence_is_ordinary_content() -> None:
-    """Assert retired command-slot fences remain unmanaged root content."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        module = load_instruction_block_module()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        slot_fence = (
-            "<!-- SPEC-TREE:author -->\n\nproduct author command\n\n"
-            "<!-- /SPEC-TREE:author -->\n"
-        )
-        for name in (INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS):
-            (repo / name).write_text(slot_fence, encoding="utf-8")
-        run_generator_write_primary(repo, write_current_template(tmp_path))
-        result = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-        assert "product author command" in result
-        assert set(module.parse_shared_regions(result)) == {SHARED_REGION_NAME}
-
-
-def assert_reconcile_replaces_losing_region_whole() -> None:
-    """Assert shared-region reconciliation takes one complete side."""
-    module = load_instruction_block_module()
-    open_marker = module.shared_open_marker(SHARED_REGION_NAME)
-    close_marker = module.shared_close_marker(SHARED_REGION_NAME)
-    doc_a = f"{open_marker}\n\n{SHARED_REGION_BODY}\n\n{close_marker}\n"
-    doc_b = f"{open_marker}\n\n{SHARED_REGION_BODY_ALT}\n\n{close_marker}\n"
-    _, new_b = module.reconcile_shared_regions(doc_a, doc_b, "a")
-    reconciled = module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
-    assert reconciled == SHARED_REGION_BODY
-    assert SHARED_REGION_BODY_ALT not in reconciled
-
-
-def assert_rendered_router_omits_retired_session_tokens() -> None:
-    """Assert legacy session result fields never render into the router."""
-    for (
-        agent_harness,
-        document,
-    ) in render_shipped_dist_with_generation_entrypoint().items():
-        router = dist.managed_router_block(document)
-        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in router
-        assert SESSION_RESULT_FRONTMATTER_FIELD not in router
-        independent_prose = (
-            document
-            + "\n"
-            + SESSION_ARCHIVE_RESULT_INSTRUCTION
-            + "\n"
-            + SESSION_RESULT_FRONTMATTER_FIELD
-            + "\n"
-        )
-        dist.validate_foundation_access_policy({agent_harness: independent_prose})
-
-
-def assert_foundation_policy_guard_rejects_missing_requirement() -> None:
-    """Assert every required foundation-policy phrase is enforced inside the router."""
-    agent_harness, document = next(
-        iter(render_shipped_dist_with_generation_entrypoint().items())
-    )
-    required_text = dist.FOUNDATION_POLICY_REQUIREMENTS[0][1]
-    router = dist.managed_router_block(document)
-    assert required_text in router
-    invalid_document = document.replace(router, router.replace(required_text, "", 1), 1)
-    with pytest.raises(dist.FoundationAccessPolicyError, match="policy is incomplete"):
-        dist.validate_foundation_access_policy({agent_harness: invalid_document})
-
-
-def assert_foundation_policy_guard_rejects_forbidden_router_token() -> None:
-    """Assert retired session-result vocabulary is rejected inside the router body."""
-    agent_harness, document = next(
-        iter(render_shipped_dist_with_generation_entrypoint().items())
-    )
-    module = load_instruction_block_module()
-    forbidden_text = dist.FORBIDDEN_ROUTER_TOKENS[0]
-    invalid_document = document.replace(
-        module.ROUTER_BLOCK_END,
-        f"{forbidden_text}\n\n{module.ROUTER_BLOCK_END}",
-        1,
-    )
-    with pytest.raises(
-        dist.FoundationAccessPolicyError, match="forbidden session-result"
-    ):
-        dist.validate_foundation_access_policy({agent_harness: invalid_document})
-
-
-def assert_unresolved_build_macro_is_rejected() -> None:
-    """Assert production rendering rejects an unresolved build macro."""
-    module = load_instruction_block_module()
-    harness_templates = {
-        agent_harness: build_template(NEW_VERSION)
-        for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
-    harness_templates[HARNESS_CODEX] += render_build_macro()
-    instruction_module = cast(dist.InstructionBlockModule, module)
-    with pytest.raises(dist.UnresolvedInstructionTemplateError):
-        dist.render_instruction_blocks_from_harness_templates(
-            instruction_module,
-            harness_templates,
-            (LANG_PRIMARY,),
-        )
-
-
-def assert_obsolete_spx_instruction_files_are_removed() -> None:
-    """Assert generation removes retired nested instruction files."""
-    with tempfile.TemporaryDirectory() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        spx_dir = repo / "spx"
-        spx_dir.mkdir()
-        for name in INSTRUCTION_CLAUDE, INSTRUCTION_AGENTS:
-            (spx_dir / name).write_text(
-                "retired spx instruction file\n", encoding="utf-8"
-            )
-        run_generator_write_primary(repo, write_current_template(tmp_path))
-        assert not (spx_dir / INSTRUCTION_CLAUDE).exists()
-        assert not (spx_dir / INSTRUCTION_AGENTS).exists()
+    return instruction_block_compliance_evidence.compliance_evidence_is_valid()
 
 
 def root_document_with_shared_region(
@@ -1000,7 +551,7 @@ def root_document_with_shared_region(
     *,
     languages: tuple[str, ...],
     version: str,
-    name: str = SHARED_REGION_NAME,
+    name: str | None = None,
 ) -> str:
     """Return a root document: the harness router block first, then one shared region.
 
@@ -1008,11 +559,13 @@ def root_document_with_shared_region(
     region — so a file this helper produces has the three-content-kind shape a ``--reconcile``
     operates on. This root instruction-file setup policy lives in the harness, not a test body.
     """
-    template = build_template(version)
+    cases = generated_cases()
+    template = generate_template(module, cases, version)
     block = module.render(template, languages, version, harness)
+    region_name = name or cases.shared_region_name
     fenced = (
-        f"{module.shared_open_marker(name)}\n\n{region_body}\n\n"
-        f"{module.shared_close_marker(name)}"
+        f"{module.shared_open_marker(region_name)}\n\n{region_body}\n\n"
+        f"{module.shared_close_marker(region_name)}"
     )
     return cast(str, module.prepend_router_block(block, fenced))
 
@@ -1023,18 +576,25 @@ def write_both_root_files_with_shared_region(
     *,
     languages: tuple[str, ...],
     version: str,
-    claude_region: str = SHARED_REGION_BODY,
-    agents_region: str = SHARED_REGION_BODY,
-    name: str = SHARED_REGION_NAME,
+    claude_region: str | None = None,
+    agents_region: str | None = None,
+    name: str | None = None,
 ) -> None:
     """Write root CLAUDE.md and AGENTS.md, each a router block over one named shared region.
 
     The two region bodies are equal by default; passing different ``claude_region`` and
     ``agents_region`` seeds a diverged shared region for a recency-reconcile test.
     """
+    cases = generated_cases()
     bodies = {
-        module.AGENT_HARNESS_INSTRUCTION_FILENAMES["claude"]: (claude_region, "claude"),
-        module.AGENT_HARNESS_INSTRUCTION_FILENAMES["codex"]: (agents_region, "codex"),
+        cases.instruction_claude: (
+            claude_region or cases.shared_region_body,
+            cases.harness_claude,
+        ),
+        cases.instruction_agents: (
+            agents_region or cases.shared_region_body,
+            cases.harness_codex,
+        ),
     }
     for filename, (region_body, harness) in bodies.items():
         (repo_root / filename).write_text(
@@ -1073,7 +633,7 @@ def init_git_identity(repo_root: pathlib.Path) -> None:
     git_command(repo_root, "init")
     git_command(repo_root, "config", "user.name", "Test User")
     git_command(repo_root, "config", "user.email", "test@example.com")
-    git_command(repo_root, "config", GIT_GPGSIGN_CONFIG, "false")
+    git_command(repo_root, "config", "commit.gpgsign", "false")
 
 
 def git_commit_at(
@@ -1111,9 +671,7 @@ def workflow_run_block(step_name: str) -> str:
     of the named step. Workflow parsing is shared setup, so it lives in the harness rather than a
     test body.
     """
-    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
-        encoding="utf-8"
-    )
+    workflow = distribution.REFRESH_WORKFLOW.path().read_text(encoding="utf-8")
     lines = workflow.splitlines()
     step_line = f"      - name: {step_name}"
     start = lines.index(step_line)
@@ -1133,9 +691,7 @@ def workflow_run_block(step_name: str) -> str:
 
 def workflow_step_block(step_name: str) -> str:
     """Return the full YAML block of one refresh-workflow step, for step assertions."""
-    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
-        encoding="utf-8"
-    )
+    workflow = distribution.REFRESH_WORKFLOW.path().read_text(encoding="utf-8")
     lines = workflow.splitlines()
     step_line = f"      - name: {step_name}"
     start = lines.index(step_line)
@@ -1149,9 +705,7 @@ def workflow_step_block(step_name: str) -> str:
 
 def workflow_env_value(name: str) -> str:
     """Return the value of one refresh-workflow ``env`` entry, for env assertions."""
-    workflow = REPO_ROOT.joinpath(dist.REFRESH_WORKFLOW_PATH).read_text(
-        encoding="utf-8"
-    )
+    workflow = distribution.REFRESH_WORKFLOW.path().read_text(encoding="utf-8")
     prefix = f"      {name}: "
     for line in workflow.splitlines():
         if line.startswith(prefix):
@@ -1218,7 +772,7 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
         [
             "/bin/bash",
             "-c",
-            workflow_run_block(dist.WORKFLOW_OPEN_PR_STEP),
+            workflow_run_block(distribution.REFRESH_WORKFLOW.open_pr_step),
         ],
         cwd=repo_root,
         capture_output=True,
@@ -1227,470 +781,3 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
     )
     assert result.returncode == 0, result.stderr
     return result.stdout
-
-
-INSTRUCTION_BLOCK_PROPERTY_SEED: Final = 43054
-INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 100
-INSTRUCTION_BLOCK_PROPERTY_TEST_PATH: Final = (
-    "spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
-    "test_instruction_block.property.l1.py::"
-)
-
-
-def _temporary_root() -> tempfile.TemporaryDirectory[str]:
-    """Return an isolated root whose lifecycle is owned by the harness."""
-    return tempfile.TemporaryDirectory()
-
-
-def assert_extension_maps_to_language() -> None:
-    """Assert every source-owned extension maps with or without a leading dot."""
-    module = load_instruction_block_module()
-    for extension, language in sorted(module.LANGUAGE_BY_EXTENSION.items()):
-        assert module.language_for_extension(extension) == language
-        assert module.language_for_extension(f".{extension}") == language
-
-
-def assert_detected_language_set_is_mapped_extensions() -> None:
-    """Assert tree detection maps every source-owned extension from real test paths."""
-    module = load_instruction_block_module()
-    extensions = tuple(module.LANGUAGE_BY_EXTENSION)
-    with _temporary_root() as directory:
-        spx_dir = write_spx_tree_with_tests(
-            pathlib.Path(directory).resolve() / "spx", extensions
-        )
-        assert module.detect_languages_from_tree(spx_dir) == module.normalize_languages(
-            module.LANGUAGE_BY_EXTENSION.values()
-        )
-
-
-def assert_language_block_appears_iff_enabled() -> None:
-    """Assert language blocks follow their enabled-language membership."""
-    module = load_instruction_block_module()
-    template = build_template(NEW_VERSION)
-    for language in TEMPLATE_LANGUAGES:
-        heading = f"### {language.capitalize()}"
-        enabled = module.render(template, (language,), NEW_VERSION, HARNESS_CLAUDE)
-        others = tuple(name for name in TEMPLATE_LANGUAGES if name != language)
-        disabled = module.render(template, others, NEW_VERSION, HARNESS_CLAUDE)
-        assert heading in enabled
-        assert heading not in disabled
-
-
-def assert_check_maps_router_state_to_report() -> None:
-    """Assert every declared router state maps to its check report."""
-    module = load_instruction_block_module()
-    status = module.InstructionStatus
-    with _temporary_root() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        template = write_template(tmp_path, NEW_VERSION)
-        run_generator_write_primary(repo, template)
-        claude = repo / INSTRUCTION_CLAUDE
-
-        def check(languages: tuple[str, ...]) -> str:
-            return cast(
-                str,
-                module.instruction_status(claude, NEW_VERSION, languages, repo),
-            )
-
-        assert check((LANG_PRIMARY,)) == status.CURRENT
-        claude.unlink()
-        assert check((LANG_PRIMARY,)) == status.ABSENT
-        stale_block = module.render(
-            build_template(OLD_VERSION),
-            (LANG_PRIMARY,),
-            OLD_VERSION,
-            HARNESS_CLAUDE,
-        )
-        claude.write_text(
-            module.prepend_router_block(stale_block, ""), encoding="utf-8"
-        )
-        assert check((LANG_PRIMARY,)) == status.STALE
-        run_generator_write_primary(repo, template)
-        assert check((LANG_SECONDARY,)) == status.STALE
-
-
-def assert_check_maps_shared_region_state_to_report() -> None:
-    """Assert the CLI promotes shared-region drift into its stale report."""
-    module = load_instruction_block_module()
-    with _temporary_root() as directory:
-        tmp_path = pathlib.Path(directory).resolve()
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        template = write_template(tmp_path, NEW_VERSION)
-        write_both_root_files_with_shared_region(
-            module, repo, languages=(LANG_PRIMARY,), version=NEW_VERSION
-        )
-        current_status = cast(
-            str,
-            module.instruction_status(
-                repo / INSTRUCTION_CLAUDE,
-                NEW_VERSION,
-                (LANG_PRIMARY,),
-                repo,
-            ),
-        )
-        stale_status = cast(
-            str,
-            module.instruction_status(
-                repo / INSTRUCTION_CLAUDE,
-                NEW_VERSION,
-                (LANG_SECONDARY,),
-                repo,
-            ),
-        )
-        assert module.shared_region_drift(repo) == ()
-        assert (
-            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
-            == current_status
-        )
-
-        write_both_root_files_with_shared_region(
-            module,
-            repo,
-            languages=(LANG_PRIMARY,),
-            version=NEW_VERSION,
-            claude_region=SHARED_REGION_BODY,
-            agents_region=SHARED_REGION_BODY_ALT,
-        )
-        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
-        assert (
-            module.instruction_status(
-                repo / INSTRUCTION_CLAUDE,
-                NEW_VERSION,
-                (LANG_PRIMARY,),
-                repo,
-            )
-            == current_status
-        )
-        assert (
-            module.instruction_status(
-                repo / INSTRUCTION_AGENTS,
-                NEW_VERSION,
-                (LANG_PRIMARY,),
-                repo,
-            )
-            == current_status
-        )
-        assert (
-            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
-            == stale_status
-        )
-
-        codex_block = module.render(
-            build_template(NEW_VERSION),
-            (LANG_PRIMARY,),
-            NEW_VERSION,
-            HARNESS_CODEX,
-        )
-        (repo / INSTRUCTION_AGENTS).write_text(
-            module.prepend_router_block(codex_block, ROOT_AGENTS_BODY),
-            encoding="utf-8",
-        )
-        assert SHARED_REGION_NAME in module.shared_region_drift(repo)
-        assert (
-            run_generator_check(module, repo, template, languages=LANG_PRIMARY)
-            == stale_status
-        )
-
-
-def assert_topology_maps_to_bootstrap_outcome() -> None:
-    """Assert every harness topology maps to its shared-region bootstrap outcome."""
-    module = load_instruction_block_module()
-    topology_cases = (
-        (root_instruction_topology_only_claude, True),
-        (root_instruction_topology_only_agents, True),
-        (root_instruction_topology_symlinked, True),
-        (root_instruction_topology_identical, True),
-        (root_instruction_topology_retired_managed, True),
-        (root_instruction_topology_above_shared_threshold, True),
-        (root_instruction_topology_separate, False),
-    )
-    for topology_factory, expected_shared in topology_cases:
-        with _temporary_root() as directory:
-            tmp_path = pathlib.Path(directory).resolve()
-            repo = tmp_path / "repo"
-            seeds = materialize_root_instruction_topology(repo, topology_factory())
-            template = write_template(tmp_path, NEW_VERSION)
-            blocks = {
-                HARNESS_CLAUDE: module.render(
-                    build_template(NEW_VERSION),
-                    (LANG_PRIMARY,),
-                    NEW_VERSION,
-                    HARNESS_CLAUDE,
-                ),
-                HARNESS_CODEX: module.render(
-                    build_template(NEW_VERSION),
-                    (LANG_PRIMARY,),
-                    NEW_VERSION,
-                    HARNESS_CODEX,
-                ),
-            }
-            expected_documents = module.build_root_instruction_documents(
-                {
-                    HARNESS_CLAUDE: seeds[INSTRUCTION_CLAUDE],
-                    HARNESS_CODEX: seeds[INSTRUCTION_AGENTS],
-                },
-                blocks,
-            )
-            run_generator_write_primary(repo, template)
-            claude = (repo / INSTRUCTION_CLAUDE).read_text(encoding="utf-8")
-            agents = (repo / INSTRUCTION_AGENTS).read_text(encoding="utf-8")
-            assert claude == expected_documents[HARNESS_CLAUDE]
-            assert agents == expected_documents[HARNESS_CODEX]
-            assert (repo / INSTRUCTION_CLAUDE).is_file()
-            assert (repo / INSTRUCTION_AGENTS).is_file()
-            assert not (repo / INSTRUCTION_CLAUDE).is_symlink()
-            assert not (repo / INSTRUCTION_AGENTS).is_symlink()
-            shared_span, shared_ratio = module.biggest_identical_span(
-                seeds[INSTRUCTION_CLAUDE], seeds[INSTRUCTION_AGENTS]
-            )
-            if seeds[INSTRUCTION_CLAUDE] != seeds[INSTRUCTION_AGENTS]:
-                assert expected_shared == (
-                    bool(shared_span)
-                    and shared_ratio > module.BOOTSTRAP_SHARED_THRESHOLD
-                )
-            assert bool(module.parse_shared_regions(claude)) == expected_shared
-            if expected_shared:
-                assert set(module.parse_shared_regions(claude)) == set(
-                    module.parse_shared_regions(agents)
-                )
-            for open_marker, close_marker in module.LEGACY_MANAGED_BLOCK_MARKERS:
-                assert open_marker not in claude
-                assert close_marker not in claude
-                assert open_marker not in agents
-                assert close_marker not in agents
-            assert claude.startswith(module.ROUTER_MARKER_PREFIX)
-            assert agents.startswith(module.ROUTER_MARKER_PREFIX)
-
-
-def assert_root_instruction_topology_maps_to_harness_seed_bodies() -> None:
-    """Assert each root topology resolves to the harness-owned whole-body seeds."""
-    cases = (
-        (
-            root_instruction_topology_only_claude(),
-            {
-                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
-                INSTRUCTION_AGENTS: ROOT_CLAUDE_BODY,
-            },
-        ),
-        (
-            root_instruction_topology_only_agents(),
-            {
-                INSTRUCTION_CLAUDE: ROOT_AGENTS_BODY,
-                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
-            },
-        ),
-        (
-            root_instruction_topology_separate(),
-            {
-                INSTRUCTION_CLAUDE: ROOT_CLAUDE_BODY,
-                INSTRUCTION_AGENTS: ROOT_AGENTS_BODY,
-            },
-        ),
-        (
-            root_instruction_topology_symlinked(),
-            {
-                INSTRUCTION_CLAUDE: ROOT_SHARED_BODY,
-                INSTRUCTION_AGENTS: ROOT_SHARED_BODY,
-            },
-        ),
-    )
-    for topology, expected in cases:
-        with _temporary_root() as directory:
-            root = pathlib.Path(directory).resolve()
-            assert materialize_root_instruction_topology(root, topology) == expected
-
-
-def assert_symlinked_harness_files_materialize_as_regular_files() -> None:
-    """Assert symlinked root instructions become harness-specific regular files."""
-    with _temporary_root() as directory:
-        root = pathlib.Path(directory).resolve()
-        materialized = materialize_root_instruction_topology(
-            root, root_instruction_topology_symlinked()
-        )
-        claude_path = root / INSTRUCTION_CLAUDE
-        agents_path = root / INSTRUCTION_AGENTS
-        assert claude_path.is_file()
-        assert agents_path.is_file()
-        assert not claude_path.is_symlink()
-        assert not agents_path.is_symlink()
-        assert claude_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-        assert agents_path.read_text(encoding="utf-8") == ROOT_SHARED_BODY
-        assert materialized[INSTRUCTION_CLAUDE] == ROOT_SHARED_BODY
-        assert materialized[INSTRUCTION_AGENTS] == ROOT_SHARED_BODY
-
-
-def _run_instruction_block_property(
-    configured: Callable[[], None], *, replay_test_name: str
-) -> None:
-    """Run one configured property and attach deterministic replay diagnostics."""
-    try:
-        configured()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {INSTRUCTION_BLOCK_PROPERTY_SEED}")
-        error.add_note(
-            f"Replay path: {INSTRUCTION_BLOCK_PROPERTY_TEST_PATH}{replay_test_name}"
-        )
-        raise
-
-
-def _configured_property(test: Callable[..., None]) -> Callable[[], None]:
-    """Apply the common instruction-block property run configuration."""
-    return cast(
-        Callable[[], None],
-        seed(INSTRUCTION_BLOCK_PROPERTY_SEED)(
-            settings(max_examples=INSTRUCTION_BLOCK_PROPERTY_EXAMPLES, deadline=None)(
-                test
-            )
-        ),
-    )
-
-
-def assert_render_output_version_equals_installed() -> None:
-    """Assert rendered harness surfaces record the generated installed version."""
-
-    @given(installed=generators.versions())
-    def assertion(installed: tuple[int, int, int]) -> None:
-        module = load_instruction_block_module()
-        installed_str = generators.to_version(installed)
-        for agent_harness in TEMPLATE_HARNESSES:
-            rendered = module.render(
-                build_template("0.0.0"),
-                TEMPLATE_LANGUAGES,
-                installed_str,
-                agent_harness,
-            )
-            assert module.parse_template_version(rendered) == installed_str
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_render_output_version_equals_installed",
-    )
-
-
-def assert_managed_surface_ends_with_single_newline() -> None:
-    """Assert generated managed surfaces have exactly one trailing newline."""
-
-    @given(installed=generators.versions())
-    def assertion(installed: tuple[int, int, int]) -> None:
-        module = load_instruction_block_module()
-        installed_str = generators.to_version(installed)
-        blocks = {
-            agent_harness: module.render(
-                build_template("0.0.0"),
-                TEMPLATE_LANGUAGES,
-                installed_str,
-                agent_harness,
-            )
-            for agent_harness in module.AGENT_HARNESS_INSTRUCTION_FILENAMES
-        }
-        seeds = dict.fromkeys(
-            module.AGENT_HARNESS_INSTRUCTION_FILENAMES, ROOT_SHARED_BODY
-        )
-        documents = module.build_root_instruction_documents(seeds, blocks)
-        for document in documents.values():
-            assert document.endswith("\n")
-            assert not document.endswith("\n\n")
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_managed_surface_ends_with_single_newline",
-    )
-
-
-def assert_is_stale_matches_numeric_version_order() -> None:
-    """Assert source staleness ordering matches generated numeric tuples."""
-
-    @given(left=generators.versions(), right=generators.versions())
-    def assertion(left: tuple[int, int, int], right: tuple[int, int, int]) -> None:
-        module = load_instruction_block_module()
-        assert module.is_stale(
-            generators.to_version(left), generators.to_version(right)
-        ) is (left < right)
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_is_stale_matches_numeric_version_order",
-    )
-
-
-def assert_reconcile_makes_shared_region_identical() -> None:
-    """Assert reconcile yields byte-identical generated shared-region bodies."""
-
-    @given(body_a=generators.region_bodies(), body_b=generators.region_bodies())
-    def assertion(body_a: str, body_b: str) -> None:
-        module = load_instruction_block_module()
-        doc_a = generators.shared_document(module, SHARED_REGION_NAME, body_a)
-        doc_b = generators.shared_document(module, SHARED_REGION_NAME, body_b)
-        for winner in ("a", "b"):
-            new_a, new_b = module.reconcile_shared_regions(doc_a, doc_b, winner)
-            region_a = module.parse_shared_regions(new_a)[SHARED_REGION_NAME]
-            region_b = module.parse_shared_regions(new_b)[SHARED_REGION_NAME]
-            assert region_a == region_b
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_reconcile_makes_shared_region_identical",
-    )
-
-
-def assert_reconcile_identical_region_is_idempotent() -> None:
-    """Assert reconcile preserves already-identical generated regions."""
-
-    @given(body=generators.region_bodies())
-    def assertion(body: str) -> None:
-        module = load_instruction_block_module()
-        doc_a = generators.shared_document(module, SHARED_REGION_NAME, body)
-        doc_b = generators.shared_document(module, SHARED_REGION_NAME, body)
-        for winner in ("a", "b", None):
-            assert module.reconcile_shared_regions(doc_a, doc_b, winner) == (
-                doc_a,
-                doc_b,
-            )
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_reconcile_identical_region_is_idempotent",
-    )
-
-
-def assert_bootstrap_wraps_at_most_one_shared_region() -> None:
-    """Assert bootstrap never creates more than one generated shared region."""
-
-    @given(
-        content_a=generators.free_instruction_content(),
-        content_b=generators.free_instruction_content(),
-    )
-    def assertion(content_a: str, content_b: str) -> None:
-        module = load_instruction_block_module()
-        wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
-        assert len(module.parse_shared_regions(wrapped_a)) <= 1
-        assert len(module.parse_shared_regions(wrapped_b)) <= 1
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_bootstrap_wraps_at_most_one_shared_region",
-    )
-
-
-def assert_biggest_span_ratio_determines_wrap_decision() -> None:
-    """Assert bootstrap wrapping follows the source-computed biggest-span ratio."""
-
-    @given(
-        content_a=generators.free_instruction_content(),
-        content_b=generators.free_instruction_content(),
-    )
-    def assertion(content_a: str, content_b: str) -> None:
-        module = load_instruction_block_module()
-        span, ratio = module.biggest_identical_span(content_a, content_b)
-        wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
-        should_wrap = ratio > module.BOOTSTRAP_SHARED_THRESHOLD and bool(span.strip())
-        assert bool(module.parse_shared_regions(wrapped_a)) is should_wrap
-        assert bool(module.parse_shared_regions(wrapped_b)) is should_wrap
-
-    _run_instruction_block_property(
-        _configured_property(assertion),
-        replay_test_name="test_biggest_span_ratio_determines_wrap_decision",
-    )

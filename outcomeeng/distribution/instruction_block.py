@@ -21,16 +21,21 @@ import importlib.util
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
 
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-_GENERATOR: Final = (
-    REPO_ROOT
-    / "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
+GENERATOR_RELATIVE_PATH: Final = Path(
+    "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
+GENERATOR_PATH: Final = REPO_ROOT / GENERATOR_RELATIVE_PATH
+AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
+    "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+)
+AUTHORED_TEMPLATE_PATH: Final = REPO_ROOT / AUTHORED_TEMPLATE_RELATIVE_PATH
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
     "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
@@ -85,6 +90,48 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("diagnose exemption", "`spx diagnose`"),
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
+)
+
+
+@dataclass(frozen=True)
+class RefreshWorkflowContract:
+    """Source-owned selectors and commands for instruction-block refresh workflow checks."""
+
+    relative_path: Path
+    dispatch_key: str
+    checkout_step: str
+    default_branch: str
+    install_just_step: str
+    just_checksum_env: str
+    install_dprint_step: str
+    dprint_version_env: str
+    regenerate_step: str
+    build_commands: tuple[str, ...]
+    open_pr_step: str
+    drift_probe: str
+    automation_branch: str
+    commit_subject: str
+
+    def path(self, *, repo_root: Path = REPO_ROOT) -> Path:
+        """Return the authored workflow path below ``repo_root``."""
+        return repo_root / self.relative_path
+
+
+REFRESH_WORKFLOW: Final = RefreshWorkflowContract(
+    relative_path=Path(".github/workflows/refresh-instruction-blocks.yml"),
+    dispatch_key="workflow_dispatch:",
+    checkout_step="Checkout",
+    default_branch="main",
+    install_just_step="Install just",
+    just_checksum_env="JUST_SHA256",
+    install_dprint_step="Install dprint",
+    dprint_version_env="DPRINT_VERSION",
+    regenerate_step="Regenerate instruction blocks",
+    build_commands=("just build-skills", "just build-instructions"),
+    open_pr_step="Open instruction-block refresh pull request",
+    drift_probe="git status --porcelain",
+    automation_branch="automation/refresh-instruction-blocks",
+    commit_subject="Refresh root instruction blocks",
 )
 
 
@@ -148,9 +195,9 @@ def load_instruction_block_module() -> InstructionBlockModule:
     cached = sys.modules.get("instruction_block")
     if cached is not None:
         return cast(InstructionBlockModule, cached)
-    spec = importlib.util.spec_from_file_location("instruction_block", _GENERATOR)
+    spec = importlib.util.spec_from_file_location("instruction_block", GENERATOR_PATH)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load instruction_block from {_GENERATOR}")
+        raise RuntimeError(f"cannot load instruction_block from {GENERATOR_PATH}")
     module = importlib.util.module_from_spec(spec)
     # Register before exec so dataclass type introspection can resolve the module by name.
     sys.modules["instruction_block"] = module
