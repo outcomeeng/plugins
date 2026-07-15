@@ -15,7 +15,7 @@ Skills conform to these standards when, at minimum: (a) the SKILL.md is under 50
 </success_criteria>
 
 <reference_note>
-This is a reference skill. `/create-skills` and `/audit-skills` load these standards automatically. Do not invoke directly.
+This is a reference skill. `/create-skills` and `/audit-skills` explicitly invoke these standards before authoring or auditing. Users do not invoke it as a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
@@ -28,14 +28,14 @@ Skills follow a **reference pattern** to avoid duplication:
 
 1. **Foundational skill** (e.g., `/test`) — core principles and domain-agnostic patterns.
 2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
-3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards loaded by other skills, never invoked directly.
+3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards explicitly invoked by composing skills, never selected as standalone user workflows.
 
 For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed.
 
 **Skill-tool composition:** A skill may invoke another skill when the parent workflow explicitly composes that capability. Composition obeys these limits:
 
 1. The parent carries the runtime's skill-invocation capability in `allowed-tools` and names the exact installed skill to invoke.
-2. The target remains model-invocable; `disable-model-invocation: true` is forbidden on composed and reference skills.
+2. The target remains callable through the active runtime's skill-invocation surface; no runtime setting may block composed or reference-skill invocation.
 3. The parent owns sequencing, validates the returned shape, and merges the child result into its own output contract.
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
@@ -242,7 +242,7 @@ Six skill types. Each has a distinct purpose and primary output.
 
 <reference_skills>
 
-Reference skills hold shared domain knowledge that multiple skills need. They are **not** invoked directly — consuming skills reach them via `/skill-name` references in their text.
+Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows explicitly invoke them through the runtime's documented skill-composition surface. A `/skill-name` mention in prose records the dependency but never loads the reference.
 
 **When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${SKILL_DIR}`.
 
@@ -262,16 +262,16 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 
-**How consuming skills reference it.** Write the reference skill path in running text and invoke it through the runtime's documented skill-composition surface.
+**How consuming skills reference it.** Name the reference skill in running text for traceability, then explicitly invoke it through the runtime's documented skill-composition surface before applying its rules. A bare `See /skill-name` instruction is insufficient.
 
 ```markdown
 # In test-typescript/SKILL.md:
 
-See `/typescript-test-standards` for test file naming, execution levels, and reusable test patterns.
+Invoke `/typescript-test-standards` through the runtime's skill-composition surface before applying its test file naming, execution-level, and reusable-pattern rules.
 
 # In audit-typescript-tests/SKILL.md:
 
-Before auditing, read `/typescript-test-standards` for the complete catalog of TypeScript test rules.
+Before auditing, invoke `/typescript-test-standards` through the runtime's skill-composition surface and apply its complete catalog of TypeScript test rules.
 ```
 
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.
