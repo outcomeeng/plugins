@@ -111,6 +111,28 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 <coverage_model>
 
+Classify every changed path by implementation-audit ownership before building
+the expected coverage inventory:
+
+- Implementation-owned artifacts are implementation code, linked tests, and
+  implementation or test infrastructure. Partition these artifacts by language
+  and require the applicable code, tests, and architecture concern units.
+- Non-implementation artifacts include specs, decisions, coordination notes,
+  skill or agent prompts, eval artifacts, generated copies, workflow
+  configuration, documentation, and inert fixtures. Omit these paths from
+  required implementation coverage or record one optional `not-applicable`
+  unit that lists them for scope transparency. Such a unit has no expected
+  language concern producer, never carries `unsupported` or `missing-skill`,
+  and never rejects the run.
+- Reserve `unsupported` for an implementation-owned artifact whose language or
+  artifact kind requires implementation audit but has no executable concern
+  producer. That unit remains required and rejects the run.
+
+Derive ownership from the loaded project context, governing nodes, linked test
+evidence, and artifact role. Do not classify every changed path as implementation
+merely because it appears in the changeset, and do not hard-code repository-local
+paths or language-specific extensions into this language-neutral orchestrator.
+
 Build an expected coverage inventory before invoking any language concern skill. Each expected unit records:
 
 - audit class: `implementation`
@@ -127,7 +149,7 @@ Build an expected coverage inventory before invoking any language concern skill.
 
 Plan the complete inventory before dispatch, but NEVER mark a planned unit `audited`. Invoke each concern skill inside the open run. After that concern returns, immediately record one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited` before inspecting the next concern. Record each returned finding immediately after those scope rows and associate it with the matching path-scoped unit. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. When a concern cannot return a complete result, record `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
 
-A missing required concern skill, unsupported implementation file, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+A missing required concern skill, unsupported implementation-owned artifact, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
@@ -256,6 +278,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
+- Non-implementation artifacts never create required unsupported or missing-skill units; when recorded for transparency, they appear only as optional `not-applicable` coverage.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - A gating run addresses a committed head with no live file list; a run carrying modified or untracked files identifies itself as advisory and is never presented as gate evidence.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.
