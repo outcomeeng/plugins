@@ -373,7 +373,7 @@ What happened: Claude treated documentation and manifest suffixes as programming
 
 Why it failed: Implementation-audit ownership comes from installed `code-{lang}` skill surfaces and their scope guidance, not from the set of suffixes present in a changeset. Artifact-specific auditors and whole-changeset review own files outside those programming-language surfaces.
 
-How to avoid: Discover languages from installed `code-{lang}` skills, let those language skills claim applicable paths, validate the required concern trios only for claimed implementation-language partitions, and omit non-implementation artifacts from the coverage inventory.
+How to avoid: Discover languages from installed `code-{lang}` skills, validate the required concern trio for every discovered language before dispatch, then let each complete concern trio claim applicable paths or return `NOT_APPLICABLE`; omit non-implementation artifacts from the coverage inventory.
 
 **A finding was reported only in prose.**
 
