@@ -51,13 +51,25 @@ PLUGIN_SURFACE_ROOTS: Final = (
     CODEX_DIST_PLUGINS_DIR,
 )
 SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+PLUGIN_AGENTS_DIRNAME: Final = "agents"
+PLUGIN_SKILLS_DIRNAME: Final = "skills"
+SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = "implementation-auditor.md"
 RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
 )
+IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH: Final = (
+    Path(SPEC_TREE_PLUGIN_NAME)
+    / PLUGIN_AGENTS_DIRNAME
+    / IMPLEMENTATION_AUDITOR_AGENT_FILENAME
+)
+RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS: Final = tuple(
+    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_AGENTS_DIRNAME / filename
+    for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+)
 IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH: Final = (
-    Path(SPEC_TREE_PLUGIN_NAME) / "skills" / "audit-implementation"
+    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_SKILLS_DIRNAME / "audit-implementation"
 )
 RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
     "verdict.py",
@@ -67,6 +79,26 @@ RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
     "audit_orchestrator.py",
 )
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
+
+
+def language_code_skill_relative_path(language: str) -> Path:
+    """Return the source-owned relative path for a language code skill."""
+    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"code-{language}" / SKILL_FILENAME
+
+
+def language_audit_skill_relative_path(language: str, concern: str) -> Path:
+    """Return the source-owned relative path for a language audit concern."""
+    return (
+        Path(language)
+        / PLUGIN_SKILLS_DIRNAME
+        / f"audit-{language}-{concern}"
+        / SKILL_FILENAME
+    )
+
+
+def retired_language_audit_skill_relative_path(language: str) -> Path:
+    """Return the source-owned relative path for a retired language audit skill."""
+    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"audit-{language}"
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -187,12 +219,11 @@ def check_implementation_auditor_wrapper(root: Path) -> list[str]:
     """Report absent or retired implementation-auditor wrapper agents."""
     errors: list[str] = []
     for surface_root in PLUGIN_SURFACE_ROOTS:
-        agent_dir = root / surface_root / SPEC_TREE_PLUGIN_NAME / "agents"
-        wrapper = agent_dir / IMPLEMENTATION_AUDITOR_AGENT_FILENAME
+        wrapper = root / surface_root / IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH
         if not wrapper.is_file():
             errors.append(f"implementation auditor absent: {wrapper.relative_to(root)}")
-        for retired_name in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES:
-            retired_path = agent_dir / retired_name
+        for retired_relative_path in RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS:
+            retired_path = root / surface_root / retired_relative_path
             if retired_path.exists():
                 errors.append(
                     f"retired implementation auditor present: "
@@ -210,17 +241,22 @@ def check_language_concern_skill_trios(root: Path) -> list[str]:
             continue
         for plugin_dir in plugins_root.iterdir():
             language = plugin_dir.name
-            if not (plugin_dir / "skills" / f"code-{language}" / "SKILL.md").is_file():
+            if not (
+                plugins_root / language_code_skill_relative_path(language)
+            ).is_file():
                 continue
             for concern in LANGUAGE_AUDIT_CONCERNS:
-                skill_path = (
-                    plugin_dir / "skills" / f"audit-{language}-{concern}" / "SKILL.md"
+                skill_path = plugins_root / language_audit_skill_relative_path(
+                    language,
+                    concern,
                 )
                 if not skill_path.is_file():
                     errors.append(
                         f"language audit concern absent: {skill_path.relative_to(root)}"
                     )
-            retired_skill = plugin_dir / "skills" / f"audit-{language}"
+            retired_skill = plugins_root / retired_language_audit_skill_relative_path(
+                language
+            )
             if retired_skill.exists():
                 errors.append(
                     f"retired language audit skill present: "
