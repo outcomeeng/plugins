@@ -2,6 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
+arguments: target
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -15,12 +16,12 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Accept exactly one target:
+Treat `$target` as exactly one target:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
 Use the live foundation sections below before composing. Do not reread the compatibility pointers:
 
@@ -190,7 +191,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment is the inverse of the live `/understand` `<ordering_model>` context-loading rule: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 

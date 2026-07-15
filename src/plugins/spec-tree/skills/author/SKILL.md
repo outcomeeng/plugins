@@ -1,7 +1,7 @@
 ---
 name: author
 description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -165,7 +165,7 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/
 - Every outcome must have at least one assertion
 - Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
-- Test targets don't need to exist yet — the link is a contract for what will be created
+- Do not invent evidence tags or paths during authoring — `/test` selects the verification type, assertion type, and proving artifact
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -217,8 +217,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md`.
-5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
+4. Leave spec-only nodes out of `spx/EXCLUDE`. `/test` adds an EXCLUDE entry only after linked test evidence exists while implementation is absent. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**
 
@@ -278,7 +277,7 @@ Recommend next steps based on artifact type:
 
 Claude drafted an outcome spec from the user's description: "Users currently can't export data, so we need to add CSV export." The spec read: "The system currently lacks export functionality. CSV export addresses this gap." Both sentences are temporal — they narrate a problem being solved rather than stating product truth. The atemporal version: "The system exports query results as CSV files."
 
-How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to every sentence. If it would sound wrong after the feature ships, rewrite it.
+How to avoid: After drafting, apply the read-aloud test from the live `/understand` `<truth_hierarchy>` to every sentence. If it would sound wrong after the feature ships, rewrite it.
 
 **Failure 2: Assertions placed in ADRs**
 
@@ -290,7 +289,7 @@ How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verifie
 
 Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
-How to avoid: Apply the decision table from `node-types.md` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
+How to avoid: Apply the decision table from the live `/understand` `<node_model>` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
 
 **Failure 4: Index collision with existing sibling**
 
