@@ -331,12 +331,6 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",
             FIXTURE_SKILL_RULE_CITATION,
-            "plugins/spec-tree/skills/understand/SKILL.md:truth-hierarchy",
-            "plugins/spec-tree/skills/understand/SKILL.md:node-model",
-            "plugins/spec-tree/skills/understand/SKILL.md:assertion-model",
-            "plugins/spec-tree/skills/understand/SKILL.md:ordering-model",
-            "plugins/spec-tree/skills/understand/SKILL.md:verification-model",
-            "plugins/spec-tree/skills/understand/SKILL.md:imperfection-protocol",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
         ],
@@ -357,6 +351,23 @@ class TestRuleCitationForm:
         review_result.parse_json(
             json.dumps(make_review_result_dict(findings=[finding]))
         )
+
+    def test_parser_accepts_understand_foundation_rule_sections(self) -> None:
+        review_result = load_review_result_module()
+        for _tag, slug in review_result.UNDERSTAND_FOUNDATION_RULE_SECTIONS:
+            finding = {
+                "id": "F-001",
+                "concern": "consistency",
+                "severity": "debt",
+                "file": "x.py",
+                "line": 1,
+                "rule": f"plugins/spec-tree/skills/understand/SKILL.md:{slug}",
+                "message": "m",
+                "action": "a",
+            }
+            review_result.parse_json(
+                json.dumps(make_review_result_dict(findings=[finding]))
+            )
 
     def test_plugin_skill_rule_can_resolve_absolute_runtime_path(self) -> None:
         review_result = load_review_result_module()
