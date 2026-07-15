@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*), Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*), Skill
 ---
 
 <objective>
