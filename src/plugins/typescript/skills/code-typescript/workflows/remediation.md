@@ -2,9 +2,9 @@
 
 - Read the complete rejection feedback, including every referenced file and line.
 - Read the affected code in context before editing.
-- Read the governing spec, ADR, or PDR when the rejection concerns compliance or product behavior.
+- For a spec-tree work item, require the live governing node context and read every loaded spec, ADR, and PDR before editing. For a non-spec-tree item, require the caller-provided specification or contract and block when none is available.
 - Read `/typescript-standards` and `/typescript-test-standards` before changing implementation or tests.
-- Invoke `/test-typescript <full-spx-node-path>` before changing TypeScript tests; that skill owns test-evidence repair and the resolved product test command.
+- Before changing TypeScript tests for a spec-tree work item, invoke `/test-typescript <full-spx-node-path>`; that skill owns test-evidence repair and the resolved product test command. For a non-spec-tree item, apply `/typescript-test-standards` to the caller-provided contract and resolve the product test command from the repository.
 
 </required_reading>
 
@@ -33,7 +33,7 @@ Issue: {description}
 
 6. Apply fixes systematically, keeping changes bounded to the rejected defect class and any same-class instances in the touched node.
 7. Use `@ts-expect-error` or lint suppression only with a precise reason and only when the governing rules allow the exception.
-8. Route test additions or corrections through `/test-typescript <full-spx-node-path>` when the rejection identifies missing or weak evidence. The added test names the behavior and fails for the original defect.
+8. When the rejection identifies missing or weak evidence, route spec-tree test additions or corrections through `/test-typescript <full-spx-node-path>`. For non-spec-tree work, apply `/typescript-test-standards` to the caller-provided contract and repository-resolved test command. The added test names the behavior and fails for the original defect.
 9. Run the focused test as the inner loop. Then run the product's resolved TypeScript test command for the governed node or changeset, followed by typecheck, lint, and repository-selected validation commands. Repeat the fix loop until every command passes.
 10. Apply the re-review-readiness gate: proceed only when every valid finding has repair evidence, every unbacked finding has refutation evidence, the resolved TypeScript test command and all selected validation commands pass, and the changeset is ready to present as one exact re-review subject.
 11. Prepare the re-review summary with original issue, fix applied, and verification command output.
@@ -83,8 +83,8 @@ it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
 
 # Bare-repo fallback examples only when no repository wrapper exists:
 # npx tsc --noEmit
-# npx eslint src/ test/ --fix
-# npx eslint src/ test/
+# npx eslint . --fix
+# npx eslint .
 # npx vitest run
 ```
 
@@ -112,9 +112,10 @@ This fix is ready for re-review.
 
 <success_criteria>
 
-- Every verifier finding has a traced root cause and resolution evidence accepted by the governing verifier and merge contracts.
-- Implementation defects are fixed in implementation, test-evidence defects are fixed in evidence, and specs are not weakened to match broken lower layers.
-- Same-class defects across the touched node have been swept.
-- Focused inner-loop tests, the product's resolved TypeScript test command for the governed node or changeset, typecheck, lint, and selected validation pass through repository-selected commands.
+- The re-review summary maps every input finding ID to a repaired file and line, an evidence-backed refutation, removed capability, or exact operator waiver accepting that finding's consequence.
+- The summary names the artifact layer changed for each valid finding, and no spec or test change weakens a higher-layer contract to match defective implementation.
+- The same-class sweep records every inspected touched path and reports zero unrepaired parallel instances.
+- The focused inner-loop test, resolved TypeScript test command for the governed node or changeset, typecheck, lint, and selected validation commands each exit successfully and appear with their exact command and result in the verification table.
+- A current-head re-review reports no unresolved valid finding, except an individually recorded exact operator waiver.
 
 </success_criteria>
