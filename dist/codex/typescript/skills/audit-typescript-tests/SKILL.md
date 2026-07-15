@@ -3,7 +3,7 @@ name: audit-typescript-tests
 description: >-
   TypeScript test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the TypeScript tests in scope.
   Reached only through those auditor agents, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 <dispatch_gate>
@@ -31,6 +31,8 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 

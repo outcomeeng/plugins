@@ -30,6 +30,8 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 {!% require_skill 'python:python-test-standards' %!}
 
+{!% require_skill 'spec-tree:audit-tests' %!}
+
 {!% require_skill 'spec-tree:test' %!}
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.

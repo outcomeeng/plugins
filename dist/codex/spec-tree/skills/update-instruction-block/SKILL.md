@@ -2,9 +2,8 @@
 name: update-instruction-block
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
-argument-hint: "[repo-root] [languages-csv]"
-arguments: repo_root languages
-allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read, request_user_input
+argument-hint: "[--repo-root <path>] [--languages <csv>]"
+allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read, Edit, request_user_input
 ---
 
 <objective>
@@ -25,7 +24,7 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 
 <workflow>
 
-1. **Resolve the paths and optional language override.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Bind `<languages-option>` to `--languages "$languages"` when `$languages` is non-empty; otherwise bind it to an empty string so the generator detects languages from the project's test extensions. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the repository worktree the operator means to update rather than assuming another checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
+1. **Resolve the paths and optional language override.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Parse the raw invocation string `$ARGUMENTS` exactly once as optional flags: `--repo-root <path>` and `--languages <csv>`, accepted in either order. Preserve each shell-quoted value as one value, including a repository path containing spaces. Reject positional tokens, unknown or duplicate flags, and a flag with no value; report `usage: /update-instruction-block [--repo-root <path>] [--languages <csv>]` and stop. Bind `<repo-root>` to the `--repo-root` value when supplied, otherwise to the current working directory. Bind `<languages-option>` to `--languages "<csv>"` when supplied, otherwise to an empty string so the generator detects languages from the project's test extensions. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the repository worktree the operator means to update rather than assuming another checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
 
 2. **Detect status.** Run:
 
@@ -51,8 +50,8 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
      ```
 
      `--from claude` applies `CLAUDE.md`'s diverged region bodies to both files; `--from codex` applies `AGENTS.md`'s. The write is deterministic; only the `--from` choice is the operator's tie break.
-   - **`ambiguous (one-sided): {name}`** — a `shared` region is present in one file but not the other. Report it and ask the operator whether the region should be added to the file that lacks it or removed from the file that has it; a reconcile never invents a region in the file that lacks its fence.
-   - **`malformed: {name}`** — a `shared` open fence has no matching closing fence, so the region's extent is unknowable. Report it and ask the operator to repair the fence (add the missing close on its own line) or remove the stray open fence; the generator never guesses where a region ends, so the closing `--check` stays `stale` until the operator resolves it.
+   - **`ambiguous (one-sided): {name}`** — a `shared` region is present in one file but not the other. Read both root files and inspect the region-touching history with `git log` before asking. Derive a recommendation from the surrounding content and history; when the evidence is inconclusive, recommend preserving the existing region by adding the same complete fenced body to the file that lacks it. Use `request_user_input` with three choices: the evidence-backed reconciliation first and labeled `(Recommended)`, the opposing add-or-remove reconciliation second, and `Pause and inspect` third. After the operator chooses a reconciliation, apply that fence-only choice without blending region bodies, then rerun `--reconcile`. A reconcile never invents a region in the file that lacks its fence without this operator choice.
+   - **`malformed: {name}`** — a `shared` fence is unclosed or duplicated, so the region's extent or identity is unknowable. Read both root files and inspect the nearest valid fences plus the region-touching history with `git log`. Derive the expected boundary when the evidence identifies one; otherwise recommend removing the stray fence while preserving its body as independent content. Use `request_user_input` with three choices: the evidence-backed fence repair first and labeled `(Recommended)`, the alternative add-close-or-remove-fence repair second, and `Pause and inspect` third. Apply only the selected fence repair, never a content blend, then rerun `--reconcile`. The closing `--check` stays `stale` until this operator-selected repair resolves the malformed fence.
 
 4. **Regenerate both files.** With the committed `shared` regions reconciled, regenerate the router block for the `stale` or `absent` status:
 
