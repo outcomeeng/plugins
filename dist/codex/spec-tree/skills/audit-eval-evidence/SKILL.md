@@ -4,6 +4,7 @@ description: >-
   Eval-evidence audit methodology preloaded by the eval-evidence-auditor agent.
   Dispatch eval-evidence-auditor to audit eval evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 

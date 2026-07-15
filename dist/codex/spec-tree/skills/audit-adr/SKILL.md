@@ -3,6 +3,7 @@ name: audit-adr
 description: >-
   ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
   to audit an ADR; the main conversation reaches this audit only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
