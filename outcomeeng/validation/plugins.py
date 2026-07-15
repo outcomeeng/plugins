@@ -38,11 +38,35 @@ from typing import IO, Final
 from outcomeeng.distribution.orchestration import (
     CATALOG_PATHS,
     CLAUDE_DIST_PLUGINS_DIR,
+    CODEX_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
+
+PLUGIN_SURFACE_ROOTS: Final = (
+    SOURCE_PLUGINS_DIR,
+    CLAUDE_DIST_PLUGINS_DIR,
+    CODEX_DIST_PLUGINS_DIR,
+)
+SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = "implementation-auditor.md"
+RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
+    "auditor.md",
+    "audit-orchestrator.md",
+)
+IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH: Final = (
+    Path(SPEC_TREE_PLUGIN_NAME) / "skills" / "audit-implementation"
+)
+RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
+    "verdict.py",
+    "aggregate_verdicts.py",
+    "pass_results.py",
+    "journal_emit.py",
+    "audit_orchestrator.py",
+)
+LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -159,6 +183,65 @@ def check_manifest_parity(root: Path) -> list[str]:
     return errors
 
 
+def check_implementation_auditor_wrapper(root: Path) -> list[str]:
+    """Report absent or retired implementation-auditor wrapper agents."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        agent_dir = root / surface_root / SPEC_TREE_PLUGIN_NAME / "agents"
+        wrapper = agent_dir / IMPLEMENTATION_AUDITOR_AGENT_FILENAME
+        if not wrapper.is_file():
+            errors.append(f"implementation auditor absent: {wrapper.relative_to(root)}")
+        for retired_name in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES:
+            retired_path = agent_dir / retired_name
+            if retired_path.exists():
+                errors.append(
+                    f"retired implementation auditor present: "
+                    f"{retired_path.relative_to(root)}"
+                )
+    return errors
+
+
+def check_language_concern_skill_trios(root: Path) -> list[str]:
+    """Report language plugins whose implementation-audit skill trio is incomplete."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        plugins_root = root / surface_root
+        if not plugins_root.is_dir():
+            continue
+        for plugin_dir in plugins_root.iterdir():
+            language = plugin_dir.name
+            if not (plugin_dir / "skills" / f"code-{language}" / "SKILL.md").is_file():
+                continue
+            for concern in LANGUAGE_AUDIT_CONCERNS:
+                skill_path = (
+                    plugin_dir / "skills" / f"audit-{language}-{concern}" / "SKILL.md"
+                )
+                if not skill_path.is_file():
+                    errors.append(
+                        f"language audit concern absent: {skill_path.relative_to(root)}"
+                    )
+            retired_skill = plugin_dir / "skills" / f"audit-{language}"
+            if retired_skill.exists():
+                errors.append(
+                    f"retired language audit skill present: "
+                    f"{retired_skill.relative_to(root)}"
+                )
+    return errors
+
+
+def check_retired_audit_scripts(root: Path) -> list[str]:
+    """Report plugin-side audit scripts whose responsibilities belong to SPX."""
+    errors: list[str] = []
+    for surface_root in PLUGIN_SURFACE_ROOTS:
+        skill_root = root / surface_root / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
+        for retired_name in RETIRED_AUDIT_SCRIPT_FILENAMES:
+            for retired_path in skill_root.rglob(retired_name):
+                errors.append(
+                    f"retired audit script present: {retired_path.relative_to(root)}"
+                )
+    return errors
+
+
 # Wall-clock bound for a single `claude plugin validate` invocation. Tests import this
 # constant rather than restating the value.
 VALIDATE_TIMEOUT_SECONDS: Final = 60.0
@@ -267,7 +350,17 @@ def main(
     for msg in parity_errors:
         print(f"error: manifest parity: {msg}", file=sys.stderr)
 
-    return 1 if (failures or sync_errors or parity_errors) else 0
+    audit_contract_errors = (
+        *check_implementation_auditor_wrapper(root),
+        *check_language_concern_skill_trios(root),
+        *check_retired_audit_scripts(root),
+    )
+    for msg in audit_contract_errors:
+        print(f"error: implementation audit contract: {msg}", file=sys.stderr)
+
+    return (
+        1 if (failures or sync_errors or parity_errors or audit_contract_errors) else 0
+    )
 
 
 if __name__ == "__main__":
