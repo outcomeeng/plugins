@@ -249,7 +249,7 @@ The local `changes-reviewer` gate is the author-side, pre-push instance of the s
 - **Let the review resolve its own scope.** `changes-reviewer` self-discovers the worktree it runs in and computes the diff itself. The caller makes the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and passes nothing else — no file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
-- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions ({{! file('root_guide') !}} and the standards skills) and the shared taxonomy itself.
+- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions and the shared taxonomy itself.
 
 Run it via the `changes-reviewer` agent. The isolated context keeps the verdict from being biased by what the operator's main context has been doing. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 
@@ -359,7 +359,7 @@ Compare timestamps against the most recent push. Entries after that push are re-
 </review_inspection>
 <review_classification>
 
-Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
+Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of five). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
 
 This skill is the canonical consumer-facing taxonomy. Repositories may add local review instructions, but the default severity and category vocabulary below is complete here.
 
@@ -380,7 +380,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 **Cross-reviewer union and convergence.** Build one finding ledger from all current-head review surfaces and reviewers, then classify each item once. A no-findings review from the designated CI reviewer, a clean local review, a passing deterministic check, or an approved audit never cancels a valid finding from another reviewer. Multiple review rounds that keep surfacing valid variants in the same area are not reviewer noise and not an operator decision point; they prove the prior fix or sweep was too narrow. Treat the next valid variant as the same defect class until the underlying lifecycle contract is repaired and a new review round finds no valid in-scope variant. "Not wired into production yet" and "deferred next slice" are not dispositions for code in the diff — if the changed diff carries the defect and the finding is valid in scope, fix it in the changeset before merge.
 
-**Category** (one of six), grouped by three axes:
+**Category** (one of five), grouped by three axes:
 
 *What the code does vs. what it is supposed to do*
 
@@ -394,7 +394,6 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 *How it does what it is supposed to do*
 
-- `standards` — adherence to {{! file('root_guide') !}} and the rules declared in standards skills (naming conventions, command tokens, file structure, language idioms).
 - `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
