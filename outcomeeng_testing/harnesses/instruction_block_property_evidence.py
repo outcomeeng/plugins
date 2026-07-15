@@ -102,6 +102,18 @@ def _assert_bootstrap_wraps_at_most_one_shared_region(
     assert len(module.parse_shared_regions(wrapped_b)) <= 1
 
 
+def property_evidence_declarations() -> tuple[str, ...]:
+    """Return every generated property identity in execution order."""
+    return (
+        *(f"render-version[{agent_harness}]" for agent_harness in TEMPLATE_HARNESSES),
+        "trailing-newline",
+        "stale-order",
+        "reconcile-identity",
+        "reconcile-idempotence",
+        "bootstrap-bound",
+    )
+
+
 def property_evidence_run() -> EvidenceRun:
     """Run every declared generated property domain."""
     declared: list[str] = []

@@ -2,5 +2,7 @@ from outcomeeng_testing.harnesses import instruction_block_mapping_evidence as e
 
 
 def test_instruction_block_mapping_evidence() -> None:
-    run = evidence.mapping_evidence_run()
-    assert run.executed == run.declared
+    assert (
+        evidence.mapping_evidence_run().executed
+        == evidence.mapping_evidence_declarations()
+    )

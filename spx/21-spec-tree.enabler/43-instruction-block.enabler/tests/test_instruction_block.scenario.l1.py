@@ -2,5 +2,7 @@ from outcomeeng_testing.harnesses import instruction_block_scenario_evidence as 
 
 
 def test_instruction_block_scenario_evidence() -> None:
-    run = evidence.scenario_evidence_run()
-    assert run.executed == run.declared
+    assert (
+        evidence.scenario_evidence_run().executed
+        == evidence.scenario_evidence_declarations()
+    )

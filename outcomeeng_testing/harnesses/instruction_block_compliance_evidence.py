@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pathlib
 import inspect
+from collections.abc import Callable
 from tempfile import TemporaryDirectory
 from typing import cast
 
@@ -424,13 +425,32 @@ def _assert_obsolete_spx_instruction_files_are_removed(tmp_path: pathlib.Path) -
     assert not (spx_dir / harness.INSTRUCTION_AGENTS).exists()
 
 
-def compliance_evidence_run() -> harness.EvidenceRun:
-    """Run every declared compliance check through harness-owned resources."""
-    assertions = sorted(
-        (name, assertion)
+def _compliance_assertions() -> list[tuple[str, Callable[..., None]]]:
+    """Return every compliance assertion callable in deterministic order."""
+    return sorted(
+        (name, cast(Callable[..., None], assertion))
         for name, assertion in globals().items()
         if name.startswith("_assert_") and callable(assertion)
     )
+
+
+def compliance_evidence_declarations() -> tuple[str, ...]:
+    """Return every compliance case identity in execution order."""
+    declarations: list[str] = []
+    for name, assertion in _compliance_assertions():
+        if "agent_harness" in inspect.signature(assertion).parameters:
+            declarations.extend(
+                f"{name.removeprefix('_assert_')}[{agent_harness}]"
+                for agent_harness in harness.TEMPLATE_HARNESSES
+            )
+        else:
+            declarations.append(name.removeprefix("_assert_"))
+    return tuple(declarations)
+
+
+def compliance_evidence_run() -> harness.EvidenceRun:
+    """Run every declared compliance check through harness-owned resources."""
+    assertions = _compliance_assertions()
     declared: list[str] = []
     executed: list[str] = []
     with TemporaryDirectory() as directory:

@@ -13,6 +13,7 @@ from __future__ import annotations
 import pathlib
 import inspect
 import io
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
@@ -949,13 +950,23 @@ def _assert_reconcile_makes_no_change_to_a_dirty_file(tmp_path: pathlib.Path) ->
     assert agents_region == harness.SHARED_REGION_BODY
 
 
-def scenario_evidence_run() -> harness.EvidenceRun:
-    """Run every declared scenario check through harness-owned resources."""
-    assertions = sorted(
-        (name, assertion)
+def _scenario_assertions() -> list[tuple[str, Callable[..., None]]]:
+    """Return every scenario assertion callable in deterministic order."""
+    return sorted(
+        (name, cast(Callable[..., None], assertion))
         for name, assertion in globals().items()
         if name.startswith("_assert_") and callable(assertion)
     )
+
+
+def scenario_evidence_declarations() -> tuple[str, ...]:
+    """Return every declared scenario case identity."""
+    return tuple(name.removeprefix("_assert_") for name, _ in _scenario_assertions())
+
+
+def scenario_evidence_run() -> harness.EvidenceRun:
+    """Run every declared scenario check through harness-owned resources."""
+    assertions = _scenario_assertions()
     declared = tuple(name.removeprefix("_assert_") for name, _ in assertions)
     executed: list[str] = []
     with TemporaryDirectory() as directory:

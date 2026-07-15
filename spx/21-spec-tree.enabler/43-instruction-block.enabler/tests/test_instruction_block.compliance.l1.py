@@ -4,5 +4,7 @@ from outcomeeng_testing.harnesses import (
 
 
 def test_instruction_block_compliance_evidence() -> None:
-    run = evidence.compliance_evidence_run()
-    assert run.executed == run.declared
+    assert (
+        evidence.compliance_evidence_run().executed
+        == evidence.compliance_evidence_declarations()
+    )

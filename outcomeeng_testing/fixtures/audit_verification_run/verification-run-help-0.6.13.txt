@@ -1,0 +1,21 @@
+Usage: spx verification run [options] [command]
+
+Manage a typed verification run lifecycle
+
+Options:
+  -h, --help        display help for command
+
+Commands:
+  start [options]   Start a changeset-scoped verification run and report its
+                    run locator
+  input [options]   Replay the verification input recorded at start
+  scope             Manage inspected scope evidence for a started verification
+                    run
+  finding           Manage finding evidence for a started verification run
+  finish [options]  Record terminal completion, seal the run journal, and
+                    report its terminal projection
+  status [options]  Report the run's resumable status projected from its
+                    journal history
+  render [options]  Render the run's journal projection with its authoritative
+                    finding count
+  help [command]    display help for command

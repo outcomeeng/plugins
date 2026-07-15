@@ -409,6 +409,33 @@ def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, .
     return tuple(observations)
 
 
+def canonical_router_spacing_declarations() -> tuple[str, ...]:
+    """Return the finite source-owned case identities for router spacing."""
+    languages = template_declared_languages(read_canonical_template())
+    return tuple(
+        f"{agent_harness}[{','.join(enabled_languages)}]"
+        for agent_harness in sorted(
+            load_instruction_block_module().AGENT_HARNESS_INSTRUCTION_FILENAMES
+        )
+        for enabled_languages in _language_subsets(languages)
+    )
+
+
+def canonical_router_spacing_evidence_run() -> EvidenceRun:
+    """Assert every router-spacing mapping behind one harness entrypoint."""
+    declared = canonical_router_spacing_declarations()
+    executed: list[str] = []
+    for name, observation in zip(
+        declared, canonical_router_spacing_observations(), strict=True
+    ):
+        assert observation.rendered.startswith(observation.marker_and_separator)
+        assert not observation.rendered.removeprefix(
+            observation.marker_and_separator
+        ).startswith(observation.unexpected_additional_separator)
+        executed.append(name)
+    return EvidenceRun(declared=declared, executed=tuple(executed))
+
+
 def for_all_unsupported_language_overrides(
     assertion: Callable[[LanguageOverrideObservation], None],
 ) -> None:
@@ -438,6 +465,27 @@ def for_all_unsupported_language_overrides(
         )
 
     generated_assertion()
+
+
+def unsupported_language_override_declarations() -> tuple[str, ...]:
+    """Return the property identity covered by generated unsupported tokens."""
+    return ("unsupported-language-overrides",)
+
+
+def unsupported_language_override_evidence_run() -> EvidenceRun:
+    """Assert the unsupported-language property behind one harness entrypoint."""
+
+    def assert_rejected(observation: LanguageOverrideObservation) -> None:
+        assert observation.returncode != 0
+        assert observation.token in observation.stderr
+        assert all(
+            language in observation.stderr
+            for language in observation.supported_languages
+        )
+
+    for_all_unsupported_language_overrides(assert_rejected)
+    declared = unsupported_language_override_declarations()
+    return EvidenceRun(declared=declared, executed=declared)
 
 
 def extract_markdown_section(document: str, heading: str) -> str:
