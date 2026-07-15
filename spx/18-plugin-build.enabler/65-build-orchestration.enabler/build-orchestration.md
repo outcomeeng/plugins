@@ -20,3 +20,4 @@ CAN run the build deterministically and install from the committed generated tre
 - ALWAYS: the gate dist-diff step and the lefthook pre-commit drift check both invoke the actionable drift reporter rather than a raw `git diff --exit-code` — one drift-report shape across both surfaces ([test](tests/test_build_orchestration.compliance.l1.py))
 - ALWAYS: `.claude-plugin/marketplace.json` references plugin sources under `dist/claude/` — Claude Code installs from the committed Claude Code output tree ([test](tests/test_build_orchestration.compliance.l1.py))
 - ALWAYS: `.agents/plugins/marketplace.json` references plugin sources under `dist/codex/` — Codex installs from the committed Codex output tree ([test](tests/test_build_orchestration.compliance.l1.py))
+- NEVER: orchestration config loaders access a path outside their declared repository root ([test](tests/test_build_orchestration.compliance.l1.py))
