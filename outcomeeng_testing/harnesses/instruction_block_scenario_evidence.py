@@ -136,7 +136,7 @@ def _assert_newer_template_adds_section_preserving_shared_region(
     repo = tmp_path / "repo"
     repo.mkdir()
     harness.write_both_root_files_with_shared_region(
-        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
+        MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.OLD_VERSION
     )
     harness.run_generator_write_primary(repo, _template(tmp_path, extra_section=True))
     claude = (repo / harness.INSTRUCTION_CLAUDE).read_text(encoding="utf-8")

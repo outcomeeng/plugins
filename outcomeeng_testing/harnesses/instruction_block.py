@@ -811,6 +811,9 @@ def write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
                 "set -euo pipefail",
                 f'printf "%s\\n" "$*" >> {str(log_path)!r}',
                 'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "list" ]; then',
+                '  if [ -n "${REFRESH_EXISTING_PR_NUMBER:-}" ]; then',
+                '    printf "%s\\n" "$REFRESH_EXISTING_PR_NUMBER"',
+                "  fi",
                 "  exit 0",
                 "fi",
                 'if [ "${1:-}" = "pr" ] && [ "${2:-}" = "create" ]; then',
@@ -826,7 +829,12 @@ def write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
     stub.chmod(0o755)
 
 
-def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
+def run_refresh_pr_step(
+    repo_root: pathlib.Path,
+    gh_log: pathlib.Path,
+    *,
+    existing_pr_number: str | None = None,
+) -> str:
     """Run the refresh workflow's PR-opening step against ``repo_root`` with a stubbed ``gh``.
 
     Executes the extracted step's bash block with a fake ``gh`` on PATH so the drift-driven
@@ -839,6 +847,8 @@ def run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
     env = os.environ.copy()
     env["GH_TOKEN"] = "test-token"
     env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    if existing_pr_number is not None:
+        env["REFRESH_EXISTING_PR_NUMBER"] = existing_pr_number
     result = subprocess.run(
         [
             "/bin/bash",
@@ -879,7 +889,45 @@ def materialize_refresh_repository(root: pathlib.Path) -> pathlib.Path:
 
 
 def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
-    """Execute the refresh workflow's real regeneration command block."""
+    """Execute the refresh workflow's regeneration block with an owned toolchain stub."""
+    bin_dir = repo_root.parent / f"{repo_root.name}-refresh-toolchain"
+    bin_dir.mkdir(exist_ok=True)
+    just = bin_dir / "just"
+    just.write_text(
+        "\n".join(
+            [
+                f"#!{sys.executable}",
+                "from pathlib import Path",
+                "import subprocess",
+                "import sys",
+                "from outcomeeng.distribution import build as distribution_build",
+                "from outcomeeng.distribution import instruction_block as distribution_instructions",
+                "",
+                "def formatter_runner(args: tuple[str, ...], cwd: Path) -> subprocess.CompletedProcess[str]:",
+                "    return subprocess.CompletedProcess(",
+                "        args, 0, distribution_build.FORMATTER_VERSION_OUTPUT, ''",
+                "    )",
+                "",
+                "recipe = sys.argv[1]",
+                "if recipe == 'build-skills':",
+                "    distribution_build.build(",
+                "        Path('src'),",
+                "        Path('dist'),",
+                "        formatter_probe=lambda _: 'dprint',",
+                "        formatter_runner=formatter_runner,",
+                "    )",
+                "elif recipe == 'build-instructions':",
+                "    distribution_instructions.regenerate_instruction_blocks(repo_root=Path.cwd())",
+                "else:",
+                "    raise SystemExit(f'unexpected recipe: {recipe}')",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    just.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
     result = subprocess.run(
         [
             "/bin/bash",
@@ -889,6 +937,7 @@ def run_refresh_regeneration_step(repo_root: pathlib.Path) -> str:
         cwd=repo_root,
         capture_output=True,
         text=True,
+        env=env,
     )
     assert result.returncode == 0, result.stderr
     return result.stdout
