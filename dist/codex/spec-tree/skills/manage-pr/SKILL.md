@@ -3,7 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
-allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, Skill, Bash
 ---
 
 <objective>
@@ -218,6 +218,12 @@ python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --repo <ow
 ```
 
 </commands_reference>
+
+<shell_scope>
+
+Use the broad Bash grant only for exact commands declared by this workflow, the consumer's `AGENTS.md`, or `spx/local/merging.md`. Consumer preflight and verification commands are product-defined and cannot be represented by a finite portable allowlist.
+
+</shell_scope>
 
 <failure_modes>
 

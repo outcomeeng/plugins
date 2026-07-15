@@ -3,15 +3,15 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Skill
+allowed-tools: Read, Glob, Grep, Edit, Write, Task, Bash, Skill
 ---
 
 <objective>
-A pull request opened ready for review.
+A pull request opened in the review state its topology permits — ready for a peer branch or draft for a stacked branch awaiting its base.
 </objective>
 
 <project_specialization>
-After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
+After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks and additional required body sections).
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
@@ -53,7 +53,7 @@ branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
 
-If the product defines a custom branch-push command, follow CLAUDE.md instead — the explicit destination ref must remain part of any custom command.
+If `spx/local/merging.md` defines a custom branch-push command, follow that overlay instead — the explicit destination ref must remain part of any custom command.
 
 **Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
 
@@ -165,6 +165,12 @@ Adapt by change type:
 Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec nodes by full path from `spx/`. No `<self_reference>` violations per /merging-standards.
 
 </body_template>
+
+<shell_scope>
+
+Use the broad Bash grant only for exact commands declared by this workflow, the consumer's `CLAUDE.md`, or `spx/local/merging.md`. Consumer preflight and verification commands are product-defined and cannot be represented by a finite portable allowlist.
+
+</shell_scope>
 
 <failure_modes>
 
