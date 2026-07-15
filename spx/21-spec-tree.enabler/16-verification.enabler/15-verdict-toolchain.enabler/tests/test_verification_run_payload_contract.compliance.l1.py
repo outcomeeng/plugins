@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
+    audit_finding_payload_rejects_empty_subject_paths,
     audited_scope_payload_carries_concern_evidence,
     audited_scope_payload_rejects_empty_subject_paths,
     implementation_audit_scripts_are_absent_and_rejected,
@@ -16,6 +17,10 @@ def test_audited_scope_payload_carries_concern_evidence() -> None:
 
 def test_audited_scope_payload_rejects_empty_subject_paths() -> None:
     assert audited_scope_payload_rejects_empty_subject_paths()
+
+
+def test_audit_finding_payload_rejects_empty_subject_paths() -> None:
+    assert audit_finding_payload_rejects_empty_subject_paths()
 
 
 def test_spx_floor_and_ci_pin_meet_verification_run_minimum() -> None:

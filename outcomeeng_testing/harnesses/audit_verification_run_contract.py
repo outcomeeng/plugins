@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -64,13 +65,15 @@ from outcomeeng_testing.generators.audit_verification_run_contract import (
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
-EXPECTED_RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
-    "verdict.py",
-    "aggregate_verdicts.py",
-    "pass_results.py",
-    "journal_emit.py",
-    "audit_orchestrator.py",
+VERDICT_TOOLCHAIN_SPEC_PATH: Final = (
+    REPO_ROOT
+    / "spx"
+    / "21-spec-tree.enabler"
+    / "16-verification.enabler"
+    / "15-verdict-toolchain.enabler"
+    / "verdict-toolchain.md"
 )
+RETIRED_SCRIPT_NAME_PATTERN: Final = re.compile(r"`([^`]+\.py)`")
 
 
 def spx_floor_and_ci_pin_meet_verification_run_minimum() -> bool:
@@ -127,6 +130,27 @@ def audited_scope_payload_rejects_empty_subject_paths() -> bool:
             probe.language,
             probe.concern,
             subject_path="",
+        )
+    except ValueError:
+        return True
+    return False
+
+
+def audit_finding_payload_rejects_empty_subject_paths() -> bool:
+    """Return whether an audit finding rejects an empty inspected path."""
+    language = _source_language_plugin_name()
+    if language is None:
+        return False
+    probe = implementation_audit_verification_probe(language)
+    try:
+        implementation_audit_finding_payload(
+            probe.language,
+            probe.concern,
+            rule=probe.rule,
+            subject_path="",
+            message=probe.message,
+            observed=probe.observed,
+            expected=probe.expected,
         )
     except ValueError:
         return True
@@ -211,8 +235,28 @@ def implementation_audit_scripts_are_absent_and_rejected() -> bool:
     return all(
         _retired_script_is_rejected(surface_root, retired_name)
         for surface_root in PLUGIN_SURFACE_ROOTS
-        for retired_name in EXPECTED_RETIRED_AUDIT_SCRIPT_FILENAMES
+        for retired_name in _retired_audit_script_names_from_spec()
     )
+
+
+def _retired_audit_script_names_from_spec() -> tuple[str, ...]:
+    """Read the independent retired-script oracle from the governing assertion."""
+    assertion = next(
+        (
+            line
+            for line in VERDICT_TOOLCHAIN_SPEC_PATH.read_text(
+                encoding="utf-8"
+            ).splitlines()
+            if line.startswith("- NEVER:") and "under the audit skill" in line
+        ),
+        None,
+    )
+    if assertion is None:
+        raise ValueError("verdict-toolchain spec lacks the retired-script assertion")
+    names = tuple(RETIRED_SCRIPT_NAME_PATTERN.findall(assertion))
+    if not names:
+        raise ValueError("retired-script assertion names no Python scripts")
+    return names
 
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
@@ -466,6 +510,7 @@ def _initialize_changeset_repository(
     _run(repository, ("git", "config", "user.email", "test@example.com"))
     _run(repository, ("git", "config", "user.name", "Test User"))
     subject_path = repository / probe.subject_path
+    subject_path.parent.mkdir(parents=True)
     subject_path.write_text("before\n", encoding="utf-8")
     _run(repository, ("git", "add", probe.subject_path))
     _run(repository, ("git", "commit", "-q", "-m", "initial"))

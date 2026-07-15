@@ -89,6 +89,14 @@ def implementation_audit_subject_unit_id(
     return f"{implementation_audit_unit_id(language, concern)}:{subject_path}"
 
 
+def implementation_audit_concern_skill_name(
+    language: str,
+    concern: ImplementationAuditConcern,
+) -> str:
+    """Return the source-owned skill name for one language concern."""
+    return f"audit-{language}-{concern.value}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,
@@ -98,7 +106,7 @@ def implementation_audit_producer_identity(
         "producerKind": "skill",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
         "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
-        "skillName": f"audit-{language}-{concern.value}",
+        "skillName": implementation_audit_concern_skill_name(language, concern),
         "skillOwningPluginName": language,
         "invocationRole": "concern",
     }
@@ -168,6 +176,8 @@ def implementation_audit_finding_payload(
     expected: str,
 ) -> dict[str, object]:
     """Return one valid blocking implementation-audit finding."""
+    if not subject_path:
+        raise ValueError("implementation audit findings require a subject path")
     return {
         UNIT_ID_FIELD: implementation_audit_subject_unit_id(
             language,
