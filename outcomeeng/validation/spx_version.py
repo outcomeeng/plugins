@@ -36,6 +36,8 @@ import sys
 from pathlib import Path
 from typing import Final
 
+VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
+
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
@@ -43,7 +45,8 @@ from typing import Final
 # provider set include `worktree-pool` and classify a missing, detached, or
 # wrong-branch designated main checkout through that record, which this
 # product's merge overlay uses before merge mutation and after feature-worktree
-# cleanup. spx 0.6.13 introduced `spx verification run`,
+# cleanup. spx 0.6.13 introduced `spx verification run` (recorded by
+# `VERIFICATION_RUN_MINIMUM_SPX_VERSION`),
 # including run start, input replay, scope evidence, finding evidence, finish,
 # status, and render commands used by implementation audits. spx 0.6.10
 # introduced `spx journal

@@ -1,0 +1,7 @@
+{
+  "auditClass": "implementation",
+  "auditKind": "code",
+  "subject": "file.txt",
+  "coverageRequirement": "required",
+  "coverageStatus": "audited"
+}

@@ -57,6 +57,27 @@
     ],
     "input": "finding-input.json"
   },
+  "invalid-scope": {
+    "argv": [
+      "verification",
+      "run",
+      "scope",
+      "add",
+      "--verification-type",
+      "audit",
+      "--scope-type",
+      "changeset",
+      "--scope",
+      "{{SCOPE}}",
+      "--run",
+      "{{RUN_TOKEN}}",
+      "--payload",
+      "stdin",
+      "--idempotency-key",
+      "invalid-unit"
+    ],
+    "input": "invalid-scope-input.json"
+  },
   "finish": {
     "argv": [
       "verification",
