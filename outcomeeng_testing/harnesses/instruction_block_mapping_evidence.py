@@ -53,12 +53,15 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
     template = harness.write_template(tmp_path, harness.NEW_VERSION)
     harness.run_generator_write_primary(repo, template)
     claude = repo / harness.INSTRUCTION_CLAUDE
+    current = MODULE.InstructionStatus.CURRENT.value
+    absent = MODULE.InstructionStatus.ABSENT.value
+    stale = MODULE.InstructionStatus.STALE.value
 
     # current: freshly written at the installed version and language
-    assert harness.run_generator_check(repo, template) == (0, "current")
+    assert harness.run_generator_check(repo, template) == (0, current)
     # absent: the file removed
     claude.unlink()
-    assert harness.run_generator_check(repo, template) == (0, "absent")
+    assert harness.run_generator_check(repo, template) == (0, absent)
     # stale: a version numerically behind the installed one
     stale_block = MODULE.render(
         harness.build_template(harness.OLD_VERSION),
@@ -67,7 +70,7 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
         harness.HARNESS_CLAUDE,
     )
     claude.write_text(MODULE.prepend_router_block(stale_block, ""), encoding="utf-8")
-    assert harness.run_generator_check(repo, template) == (0, "stale")
+    assert harness.run_generator_check(repo, template) == (0, stale)
     # stale: the recorded language set differs from the detected/expected set
     current_block = MODULE.render(
         harness.build_template(harness.NEW_VERSION),
@@ -80,19 +83,21 @@ def _assert_check_maps_router_state_to_report(tmp_path: pathlib.Path) -> None:
         repo,
         template,
         languages=harness.LANG_SECONDARY,
-    ) == (0, "stale")
+    ) == (0, stale)
 
 
 def _assert_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     template = harness.write_template(tmp_path, harness.NEW_VERSION)
+    current = MODULE.InstructionStatus.CURRENT.value
+    stale = MODULE.InstructionStatus.STALE.value
 
     # byte-identical shared regions -> current report
     harness.write_both_root_files_with_shared_region(
         MODULE, repo, languages=(harness.LANG_PRIMARY,), version=harness.NEW_VERSION
     )
-    assert harness.run_generator_check(repo, template) == (0, "current")
+    assert harness.run_generator_check(repo, template) == (0, current)
 
     # diverged bodies -> stale report
     harness.write_both_root_files_with_shared_region(
@@ -103,7 +108,7 @@ def _assert_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> 
         claude_region=harness.SHARED_REGION_BODY,
         agents_region=harness.SHARED_REGION_BODY_ALT,
     )
-    assert harness.run_generator_check(repo, template) == (0, "stale")
+    assert harness.run_generator_check(repo, template) == (0, stale)
 
     # one-sided region -> stale report
     codex_block = MODULE.render(
@@ -116,7 +121,7 @@ def _assert_check_maps_shared_region_state_to_report(tmp_path: pathlib.Path) -> 
         MODULE.prepend_router_block(codex_block, harness.ROOT_AGENTS_BODY),
         encoding="utf-8",
     )
-    assert harness.run_generator_check(repo, template) == (0, "stale")
+    assert harness.run_generator_check(repo, template) == (0, stale)
 
 
 def _assert_topology_maps_to_bootstrap_outcome(
