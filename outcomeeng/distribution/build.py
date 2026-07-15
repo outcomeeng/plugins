@@ -617,6 +617,7 @@ def render_text(
         shared_root=shared_root,
         include_stack=(),
         variables=variables,
+        runtime_token_registry=runtime_token_registry,
     )
     return _render_jinja(
         rendered,
@@ -681,6 +682,7 @@ def _render_jinja_preserving_directives(
     *,
     shared_root: Path | None,
     variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> str:
     """Evaluate Jinja control flow without resolving build directives."""
     preserved: list[tuple[str, str]] = []
@@ -697,6 +699,7 @@ def _render_jinja_preserving_directives(
         _DIRECTIVE_RE.sub(mask_directive, template),
         shared_root=shared_root,
         variables=variables,
+        runtime_token_registry=runtime_token_registry,
     )
     for placeholder, directive in preserved:
         scoped = scoped.replace(placeholder, directive)
@@ -1038,11 +1041,13 @@ def _render_directives(
     shared_root: Path | None,
     include_stack: tuple[Path, ...],
     variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind],
 ) -> str:
     scoped_template = _render_jinja_preserving_directives(
         template,
         shared_root=shared_root,
         variables=variables,
+        runtime_token_registry=runtime_token_registry,
     )
 
     def replace(match: re.Match[str]) -> str:
@@ -1070,6 +1075,7 @@ def _render_directives(
             shared_root=shared_root,
             include_stack=(*include_stack, include_path),
             variables=variables,
+            runtime_token_registry=runtime_token_registry,
         )
 
     return _DIRECTIVE_RE.sub(replace, scoped_template)

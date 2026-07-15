@@ -12,8 +12,10 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
     RuntimeTokenKind,
     build,
+    frontmatter_field_names,
     render_text,
     runtime_token_resolver_cases,
+    strip_frontmatter_fields,
 )
 from outcomeeng.distribution.contracts import (
     RUNTIME_TOKEN_ASK_USER_CAPABILITY,
@@ -403,11 +405,12 @@ def _skill_with(body: str) -> str:
 
 
 def _rendered_skill_body(path: Path) -> str:
-    _, separator, body = path.read_text(encoding="utf-8").partition("---\n\n")
-    if not separator:
+    rendered = path.read_text(encoding="utf-8")
+    fields = tuple(frontmatter_field_names(rendered))
+    if not fields:
         msg = f"generated skill lacks a frontmatter boundary: {path}"
         raise AssertionError(msg)
-    return body.strip()
+    return strip_frontmatter_fields(rendered, fields=fields).strip()
 
 
 def _target_bodies_equal(
