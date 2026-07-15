@@ -3,11 +3,11 @@
 Apply the complete merge producer below to the supplied lifecycle state. Return exactly one JSON object with these mandatory fields:
 
 - `completion_state`: `UNFINISHED`, `LOCAL_SCOPE_COMPLETE`, `GATE_STOP`, or `NO_CHANGES`
-- `next_action`: `ENTER_MERGE`, `PRESENT_PRE_MUTATION_CONFIRMATION`, `STOP_AT_LIFECYCLE_GATE`, `STOP_LOCAL_SCOPE`, or `NO_MERGE_NEEDED`
+- `next_action`: `ENTER_MERGE`, `ENTER_DEPLOY`, `ENTER_RELEASE`, `ENTER_CLOSE`, `PRESENT_PRE_MUTATION_CONFIRMATION`, `STOP_AT_LIFECYCLE_GATE`, `STOP_LOCAL_SCOPE`, or `NO_MERGE_NEEDED`
 - `confirmation_required`: boolean
 - `operator_input_required`: boolean
 - `blocking_gate`: the gate label, or `none`
-- `reason`: `branch-ahead`, `terse-followup`, `overlay-confirmation`, `local-only`, `lifecycle-gate`, or `no-ahead-commits`
+- `reason`: `branch-ahead`, `terse-followup`, `overlay-confirmation`, `local-only`, `lifecycle-gate`, `no-ahead-commits`, `merge-complete-deploy`, `deploy-complete-release`, or `delivery-complete-close`
 
 ---
 name: merge
