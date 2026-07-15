@@ -13,7 +13,6 @@ from typing import Final
 from outcomeeng.validation.plugins import (
     IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH,
     IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH,
-    LANGUAGE_AUDIT_CONCERNS,
     PLUGIN_SURFACE_ROOTS,
     RETIRED_AUDIT_SCRIPT_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS,
@@ -24,6 +23,21 @@ from outcomeeng.validation.plugins import (
     language_code_skill_relative_path,
     retired_language_audit_skill_relative_path,
 )
+from outcomeeng.validation.implementation_audit_contract import (
+    LANGUAGE_AUDIT_CONCERNS,
+    RUN_FINDING_COUNT_FIELD,
+    RUN_SEALED_FIELD,
+    RUN_SEQUENCE_FIELD,
+    RUN_TERMINAL_STATUS_FIELD,
+    RUN_TOKEN_FIELD,
+    SPEC_TREE_PLUGIN_NAME,
+    expected_verification_projection,
+    implementation_audit_finding_payload,
+    implementation_audit_input_payload,
+    implementation_audit_provenance,
+    implementation_audit_scope_payload,
+    implementation_audit_unit_id,
+)
 from outcomeeng.distribution.orchestration import SOURCE_PLUGINS_DIR
 from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
@@ -31,55 +45,13 @@ from outcomeeng.validation.spx_version import (
     is_satisfied,
     read_pinned_version,
 )
+from outcomeeng_testing.generators.audit_verification_run_contract import (
+    ImplementationAuditVerificationProbe,
+    implementation_audit_verification_probe,
+)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
-AUDIT_SUBJECT_PATH: Final = "file.txt"
-IMPLEMENTATION_AUDIT_UNIT_ID: Final = "implementation:python:code"
-IMPLEMENTATION_AUDIT_INPUT: Final = {
-    "schema_version": 1,
-    "request": {"kind": "implementation-audit-contract"},
-}
-IMPLEMENTATION_AUDIT_PRODUCER: Final = {
-    "producerKind": "skill",
-    "agentName": "implementation-auditor",
-    "agentOwningPluginName": "spec-tree",
-    "skillName": "audit-python-code",
-    "skillOwningPluginName": "python",
-    "invocationRole": "concern",
-}
-IMPLEMENTATION_AUDIT_RUN_DRIVER: Final = {
-    "producerKind": "agent",
-    "agentName": "implementation-auditor",
-    "agentOwningPluginName": "spec-tree",
-    "skillName": "audit-implementation",
-    "skillOwningPluginName": "spec-tree",
-    "invocationRole": "run-driver",
-}
-IMPLEMENTATION_AUDIT_SCOPE_UNIT: Final = {
-    "unitId": IMPLEMENTATION_AUDIT_UNIT_ID,
-    "auditClass": "implementation",
-    "auditKind": "code",
-    "subject": "partition:python",
-    "coverageRequirement": "required",
-    "coverageStatus": "audited",
-    "priorContext": {
-        "changedFilePartition": "python",
-        "concernPartition": "code",
-        "languagePartition": "python",
-    },
-    "expectedProducer": IMPLEMENTATION_AUDIT_PRODUCER,
-    "recordedByRunDriver": IMPLEMENTATION_AUDIT_RUN_DRIVER,
-}
-IMPLEMENTATION_AUDIT_FINDING: Final = {
-    "unitId": IMPLEMENTATION_AUDIT_UNIT_ID,
-    "producerIdentity": IMPLEMENTATION_AUDIT_PRODUCER,
-    "rule": "contract-probe",
-    "severity": "blocking",
-    "location": f"{AUDIT_SUBJECT_PATH}:1",
-    "message": "verification-run compatibility probe",
-    "evidence": {"observed": "probe", "expected": "accepted"},
-}
 
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
@@ -179,10 +151,15 @@ def implementation_audit_scripts_are_absent_and_rejected() -> bool:
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:
     """Exercise the published verification-run contract used by audit skills."""
+    language = _source_language_plugin_name()
+    if language is None:
+        return False
+    probe = implementation_audit_verification_probe(language)
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
-        _initialize_changeset_repository(repository)
+        _initialize_changeset_repository(repository, probe)
         scope = _changeset_scope(repository)
+        unit_id = implementation_audit_unit_id(probe.language, probe.concern)
         start_report = _run_spx_json(
             repository,
             (
@@ -198,18 +175,37 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 "--input",
                 "stdin",
             ),
-            IMPLEMENTATION_AUDIT_INPUT,
+            implementation_audit_input_payload(probe.request_kind),
         )
-        run_token = _required_string(start_report, "runToken")
+        run_token = _required_string(start_report, RUN_TOKEN_FIELD)
         scope_report = _run_spx_json(
             repository,
-            _evidence_command("scope", scope, run_token, IMPLEMENTATION_AUDIT_UNIT_ID),
-            _with_producer_provenance(IMPLEMENTATION_AUDIT_SCOPE_UNIT),
+            _evidence_command("scope", scope, run_token, unit_id),
+            _with_producer_provenance(
+                implementation_audit_scope_payload(probe.language, probe.concern),
+                language=probe.language,
+            ),
         )
         finding_report = _run_spx_json(
             repository,
-            _evidence_command("finding", scope, run_token, "contract-finding"),
-            _with_producer_provenance(IMPLEMENTATION_AUDIT_FINDING),
+            _evidence_command(
+                "finding",
+                scope,
+                run_token,
+                probe.finding_key,
+            ),
+            _with_producer_provenance(
+                implementation_audit_finding_payload(
+                    probe.language,
+                    probe.concern,
+                    rule=probe.rule,
+                    subject_path=probe.subject_path,
+                    message=probe.message,
+                    observed=probe.observed,
+                    expected=probe.expected,
+                ),
+                language=probe.language,
+            ),
         )
         finish_report = _run_spx_json(
             repository,
@@ -226,7 +222,7 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
                 "--run",
                 run_token,
                 "--terminal-status",
-                "rejected",
+                probe.terminal_status.value,
             ),
         )
         render_report = _run_spx_json(
@@ -246,18 +242,22 @@ def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bo
             ),
         )
 
-    scope_sequence = scope_report.get("sequence")
-    finding_sequence = finding_report.get("sequence")
+    scope_sequence = scope_report.get(RUN_SEQUENCE_FIELD)
+    finding_sequence = finding_report.get(RUN_SEQUENCE_FIELD)
     observed = (
         isinstance(scope_sequence, int) and finding_sequence == scope_sequence + 1,
-        finish_report.get("terminalStatus"),
-        finish_report.get("sealed"),
-        render_report.get("runToken"),
-        render_report.get("findingCount"),
-        render_report.get("sealed"),
-        render_report.get("terminalStatus"),
+        finish_report.get(RUN_TERMINAL_STATUS_FIELD),
+        finish_report.get(RUN_SEALED_FIELD),
+        render_report.get(RUN_TOKEN_FIELD),
+        render_report.get(RUN_FINDING_COUNT_FIELD),
+        render_report.get(RUN_SEALED_FIELD),
+        render_report.get(RUN_TERMINAL_STATUS_FIELD),
     )
-    expected = (True, "rejected", True, run_token, 1, True, "rejected")
+    expected = expected_verification_projection(
+        run_token,
+        finding_count=probe.finding_count,
+        terminal_status=probe.terminal_status,
+    )
     if observed != expected:
         raise AssertionError(
             f"verification-run projection mismatch: expected {expected!r}, "
@@ -313,16 +313,19 @@ def _create_valid_language_concern_topology(root: Path, language: str) -> None:
             concern_path.touch()
 
 
-def _initialize_changeset_repository(repository: Path) -> None:
+def _initialize_changeset_repository(
+    repository: Path,
+    probe: ImplementationAuditVerificationProbe,
+) -> None:
     _run(repository, ("git", "init", "-q"))
     _run(repository, ("git", "config", "user.email", "test@example.com"))
     _run(repository, ("git", "config", "user.name", "Test User"))
-    subject_path = repository / AUDIT_SUBJECT_PATH
+    subject_path = repository / probe.subject_path
     subject_path.write_text("before\n", encoding="utf-8")
-    _run(repository, ("git", "add", AUDIT_SUBJECT_PATH))
+    _run(repository, ("git", "add", probe.subject_path))
     _run(repository, ("git", "commit", "-q", "-m", "initial"))
     subject_path.write_text("after\n", encoding="utf-8")
-    _run(repository, ("git", "add", AUDIT_SUBJECT_PATH))
+    _run(repository, ("git", "add", probe.subject_path))
     _run(repository, ("git", "commit", "-q", "-m", "change"))
 
 
@@ -371,16 +374,20 @@ def _run_spx_json(
     return parsed
 
 
-def _with_producer_provenance(payload: Mapping[str, Any]) -> dict[str, Any]:
+def _with_producer_provenance(
+    payload: Mapping[str, Any],
+    *,
+    language: str,
+) -> dict[str, Any]:
     workflow_pin = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
     if workflow_pin is None:
         raise ValueError("CI workflow does not declare an SPX_VERSION pin")
     result = dict(payload)
-    result["producerProvenance"] = {
-        "agentOwningPluginVersion": _plugin_version("spec-tree"),
-        "skillOwningPluginVersion": _plugin_version("python"),
-        "toolVersion": workflow_pin,
-    }
+    result["producerProvenance"] = implementation_audit_provenance(
+        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        language_plugin_version=_plugin_version(language),
+        tool_version=workflow_pin,
+    )
     return result
 
 
