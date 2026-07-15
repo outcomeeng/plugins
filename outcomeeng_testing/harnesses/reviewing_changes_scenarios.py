@@ -47,7 +47,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     init_review_git_repo,
     isolated_review_env,
     load_review_result_module,
-    make_finding_dict,
     make_review_result_dict,
     review_git_repo,
     review_git_repo_with_secondary_head,
