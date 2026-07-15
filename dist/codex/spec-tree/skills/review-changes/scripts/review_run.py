@@ -42,6 +42,24 @@ JOURNAL_ENV_KEYS = (
     ENV_PULL_REQUEST_NUMBER,
 )
 
+START_RESULT_RUN_TOKEN = "runToken"
+START_RESULT_STATE_PATH = "statePath"
+START_RESULT_DIFF_PATH = "diffPath"
+START_RESULT_MANIFEST_PATH = "manifestPath"
+START_RESULT_CHANGED_FILES = "changedFiles"
+START_RESULT_FIELDS = (
+    START_RESULT_RUN_TOKEN,
+    START_RESULT_STATE_PATH,
+    START_RESULT_DIFF_PATH,
+    START_RESULT_MANIFEST_PATH,
+    START_RESULT_CHANGED_FILES,
+)
+
+REVIEW_SUMMARY_FIELD = "review"
+REVIEW_SUMMARY_BLOCKING_FIELD = "blocking"
+REVIEW_SUMMARY_DEBT_FIELD = "debt"
+REVIEW_SUMMARY_OVERALL_FIELD = "overall"
+
 
 def _load_module(name: str, path: pathlib.Path) -> ModuleType:
     cached = sys.modules.get(name)
@@ -375,10 +393,14 @@ def _completed_event(
     event = jp.run_completed_event(run, status=status, now=completed_at)
     data = event.get("data")
     if isinstance(data, dict):
-        data["review"] = {
-            "blocking": _finding_counts(prefix)["blocking"],
-            "debt": _finding_counts(prefix)["debt"],
-            "overall": str(overall),
+        data[REVIEW_SUMMARY_FIELD] = {
+            REVIEW_SUMMARY_BLOCKING_FIELD: _finding_counts(prefix)[
+                REVIEW_SUMMARY_BLOCKING_FIELD
+            ],
+            REVIEW_SUMMARY_DEBT_FIELD: _finding_counts(prefix)[
+                REVIEW_SUMMARY_DEBT_FIELD
+            ],
+            REVIEW_SUMMARY_OVERALL_FIELD: str(overall),
         }
     return event
 
@@ -434,7 +456,7 @@ def _scope_unit_delta_message(*, expected: set[str], advanced: set[str]) -> str 
 
 
 def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
-    counts = {"blocking": 0, "debt": 0}
+    counts = {REVIEW_SUMMARY_BLOCKING_FIELD: 0, REVIEW_SUMMARY_DEBT_FIELD: 0}
     for event in events:
         if event.get("type") != jp.FINDING_REPORTED:
             continue
@@ -442,9 +464,9 @@ def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
         if not isinstance(data, dict):
             continue
         if data.get("severity") == jp.Severity.REJECT:
-            counts["blocking"] += 1
+            counts[REVIEW_SUMMARY_BLOCKING_FIELD] += 1
         if data.get("severity") == jp.Severity.WARNING:
-            counts["debt"] += 1
+            counts[REVIEW_SUMMARY_DEBT_FIELD] += 1
     return counts
 
 
@@ -506,11 +528,11 @@ def _start(args: argparse.Namespace) -> int:
         state_path = _write_state(state)
         manifest = _read_json_file(manifest_path, name="review manifest")
         output = {
-            "runToken": run_token,
-            "statePath": str(state_path),
-            "diffPath": str(summary["diff_path"]),
-            "manifestPath": str(manifest_path),
-            "changedFiles": _manifest_changed_files(manifest),
+            START_RESULT_RUN_TOKEN: run_token,
+            START_RESULT_STATE_PATH: str(state_path),
+            START_RESULT_DIFF_PATH: str(summary["diff_path"]),
+            START_RESULT_MANIFEST_PATH: str(manifest_path),
+            START_RESULT_CHANGED_FILES: _manifest_changed_files(manifest),
         }
         json.dump(output, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")

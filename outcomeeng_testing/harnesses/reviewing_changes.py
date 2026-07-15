@@ -355,6 +355,15 @@ def review_finding(*, severity: Any) -> Any:
     return next(finding for finding in findings if finding.severity == severity)
 
 
+def review_finding_payloads() -> tuple[dict[str, Any], ...]:
+    """Return the complete captured review finding payloads."""
+
+    return tuple(
+        cast("dict[str, Any]", json.loads(line))
+        for line in REVIEW_FINDINGS_FIXTURE.read_text(encoding="utf-8").splitlines()
+    )
+
+
 def streamed_review_events(
     metadata: Any,
     findings: tuple[Any, ...],
@@ -595,6 +604,18 @@ def review_run_journal_env_key(name: str) -> str:
     return value
 
 
+def review_run_contract_value(name: str) -> str | tuple[str, ...]:
+    """Return one public field contract owned by ``review_run``."""
+
+    module = load_review_run_module()
+    value = getattr(module, name)
+    if isinstance(value, str):
+        return value
+    if isinstance(value, tuple) and all(isinstance(item, str) for item in value):
+        return cast("tuple[str, ...]", value)
+    raise RuntimeError(f"review_run.{name} must be a string or string tuple")
+
+
 REVIEW_EVENT_TIME = "2026-06-23T00:00:06Z"
 REVIEW_COMPLETION_TIME = "2026-06-23T00:00:05Z"
 REVIEW_ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
@@ -602,6 +623,34 @@ REVIEW_ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
 REVIEW_ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
 REVIEW_ENV_PULL_REQUEST_NUMBER = review_run_journal_env_key(
     "ENV_PULL_REQUEST_NUMBER",
+)
+REVIEW_START_RUN_TOKEN = cast(
+    "str", review_run_contract_value("START_RESULT_RUN_TOKEN")
+)
+REVIEW_START_STATE_PATH = cast(
+    "str", review_run_contract_value("START_RESULT_STATE_PATH")
+)
+REVIEW_START_DIFF_PATH = cast(
+    "str", review_run_contract_value("START_RESULT_DIFF_PATH")
+)
+REVIEW_START_MANIFEST_PATH = cast(
+    "str", review_run_contract_value("START_RESULT_MANIFEST_PATH")
+)
+REVIEW_START_CHANGED_FILES = cast(
+    "str", review_run_contract_value("START_RESULT_CHANGED_FILES")
+)
+REVIEW_START_FIELDS = cast(
+    "tuple[str, ...]", review_run_contract_value("START_RESULT_FIELDS")
+)
+REVIEW_SUMMARY_FIELD = cast("str", review_run_contract_value("REVIEW_SUMMARY_FIELD"))
+REVIEW_SUMMARY_BLOCKING_FIELD = cast(
+    "str", review_run_contract_value("REVIEW_SUMMARY_BLOCKING_FIELD")
+)
+REVIEW_SUMMARY_DEBT_FIELD = cast(
+    "str", review_run_contract_value("REVIEW_SUMMARY_DEBT_FIELD")
+)
+REVIEW_SUMMARY_OVERALL_FIELD = cast(
+    "str", review_run_contract_value("REVIEW_SUMMARY_OVERALL_FIELD")
 )
 
 

@@ -26,10 +26,23 @@ import pathlib
 import pytest
 
 from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
+from outcomeeng_testing.harnesses.journal_projection import (
+    load_journal_projection_module,
+)
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
     REVIEW_RUN_SCRIPT,
+    REVIEW_START_CHANGED_FILES,
+    REVIEW_START_DIFF_PATH,
+    REVIEW_START_FIELDS,
+    REVIEW_START_MANIFEST_PATH,
+    REVIEW_START_RUN_TOKEN,
+    REVIEW_START_STATE_PATH,
+    REVIEW_SUMMARY_BLOCKING_FIELD,
+    REVIEW_SUMMARY_DEBT_FIELD,
+    REVIEW_SUMMARY_FIELD,
+    REVIEW_SUMMARY_OVERALL_FIELD,
     init_renamed_review_git_repo,
     init_review_git_repo,
     isolated_review_env,
@@ -38,6 +51,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     make_review_result_dict,
     review_git_repo,
     review_git_repo_with_secondary_head,
+    review_finding_payloads,
     review_run_journal_env_from_state,
     review_run_journal_env_keys,
     run_git,
@@ -180,73 +194,89 @@ class TestReviewRunnerBoundary:
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
-        expected_namespace = review_run_journal_env_from_state(
-            pathlib.Path(start_payload["statePath"])
-        )
+        assert set(start_payload) == set(REVIEW_START_FIELDS)
+        assert pathlib.Path(start_payload[REVIEW_START_DIFF_PATH]).is_file()
+        assert pathlib.Path(start_payload[REVIEW_START_MANIFEST_PATH]).is_file()
+        assert isinstance(start_payload[REVIEW_START_CHANGED_FILES], list)
+        state_path = pathlib.Path(start_payload[REVIEW_START_STATE_PATH])
+        expected_namespace = review_run_journal_env_from_state(state_path)
 
         scoped = run_script(
             REVIEW_RUN_SCRIPT,
             "append-scope",
             "--state",
-            start_payload["statePath"],
+            str(state_path),
             "README.md",
             env=later_env,
             cwd=repo,
         )
         assert scoped.returncode == 0, scoped.stderr
 
-        finding = make_finding_dict(file_path="README.md", line=2)
-        appended = run_script(
-            REVIEW_RUN_SCRIPT,
-            "append-finding",
-            "--state",
-            start_payload["statePath"],
-            stdin=json.dumps(finding),
-            env=later_env,
-            cwd=repo,
-        )
-        assert appended.returncode == 0, appended.stderr
+        findings = review_finding_payloads()
+        for finding in findings:
+            appended = run_script(
+                REVIEW_RUN_SCRIPT,
+                "append-finding",
+                "--state",
+                str(state_path),
+                stdin=json.dumps(finding),
+                env=later_env,
+                cwd=repo,
+            )
+            assert appended.returncode == 0, appended.stderr
 
         finished = run_script(
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            str(state_path),
             env=later_env,
             cwd=repo,
         )
         assert finished.returncode == 0, finished.stderr
 
-        assert finished.stdout == "run-001\n"
-        assert pathlib.Path(start_payload["statePath"]).exists() is False
+        assert finished.stdout == f"{start_payload[REVIEW_START_RUN_TOKEN]}\n"
+        assert state_path.exists() is False
 
         journal = json.loads(journal_path.read_text(encoding="utf-8"))
+        projection = load_journal_projection_module()
+        expected_event_types = [
+            projection.SCOPE_ENTERED,
+            projection.SCOPE_ADVANCED,
+            *[projection.FINDING_REPORTED for _finding in findings],
+            projection.RUN_COMPLETED,
+        ]
         assert journal["sealed"] is True
         assert journal["commands"] == [
             "open",
-            "append",
-            "append",
-            "append",
+            *["append" for _event in expected_event_types[:-1]],
             "read",
             "append",
             "seal",
         ]
         event_types = [event["type"] for event in journal["events"]]
-        assert event_types == [
-            "verification.scope.entered",
-            "verification.scope.advanced",
-            "verification.finding.reported",
-            "com.outcomeeng.spx.journal.run.completed",
+        assert event_types == expected_event_types
+        finding_events = [
+            event
+            for event in journal["events"]
+            if event["type"] == projection.FINDING_REPORTED
         ]
-        assert journal["events"][2]["data"]["id"] == finding["id"]
+        assert [event["data"]["id"] for event in finding_events] == [
+            finding["id"] for finding in findings
+        ]
         assert journal["namespace"] == expected_namespace
         terminal_event = journal["events"][-1]
-        assert terminal_event["data"]["status"] == "approved"
-        assert terminal_event["data"]["review"] == {
-            "blocking": 0,
-            "debt": 1,
-            "overall": "approved",
-        }
+        assert terminal_event["data"]["status"] == projection.JournalRunStatus.REJECTED
+        summary = terminal_event["data"][REVIEW_SUMMARY_FIELD]
+        review_result = load_review_result_module()
+        assert summary[REVIEW_SUMMARY_BLOCKING_FIELD] == sum(
+            finding["severity"] == review_result.Severity.BLOCKING
+            for finding in findings
+        )
+        assert summary[REVIEW_SUMMARY_DEBT_FIELD] == sum(
+            finding["severity"] == review_result.Severity.DEBT for finding in findings
+        )
+        assert summary[REVIEW_SUMMARY_OVERALL_FIELD] == projection.Outcome.REJECTED
 
     def test_runner_rejects_finish_before_scope_coverage(
         self, tmp_path: pathlib.Path
@@ -273,7 +303,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            start_payload[REVIEW_START_STATE_PATH],
             env=env,
             cwd=repo,
         )
@@ -305,13 +335,13 @@ class TestReviewRunnerBoundary:
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
-        assert start_payload["changedFiles"] == ["README.md", "RENAMED.md"]
+        assert start_payload[REVIEW_START_CHANGED_FILES] == ["README.md", "RENAMED.md"]
 
         scoped = run_script(
             REVIEW_RUN_SCRIPT,
             "append-scope",
             "--state",
-            start_payload["statePath"],
+            start_payload[REVIEW_START_STATE_PATH],
             "RENAMED.md",
             env=env,
             cwd=repo,
@@ -322,7 +352,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            start_payload[REVIEW_START_STATE_PATH],
             env=env,
             cwd=repo,
         )
@@ -333,7 +363,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "append-scope",
             "--state",
-            start_payload["statePath"],
+            start_payload[REVIEW_START_STATE_PATH],
             "README.md",
             env=env,
             cwd=repo,
@@ -344,7 +374,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            start_payload[REVIEW_START_STATE_PATH],
             env=env,
             cwd=repo,
         )
