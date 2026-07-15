@@ -1,6 +1,6 @@
 <overview>
 
-Platform-specific constraints that affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read this before adding code-fenced examples to a SKILL.md or using `!` commands.
+Platform-specific constraints that affect skill authoring. The nested-code-fence constraint applies to every target; runtime-only sections render only where they apply.
 
 </overview>
 

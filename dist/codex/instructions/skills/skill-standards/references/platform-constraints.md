@@ -1,6 +1,6 @@
 <overview>
 
-Platform-specific constraints that affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read this before adding code-fenced examples to a SKILL.md or using `!` commands.
+Platform-specific constraints that affect skill authoring. The nested-code-fence constraint applies to every target; runtime-only sections render only where they apply.
 
 </overview>
 
@@ -29,26 +29,3 @@ Read `${SKILL_DIR}/references/example-audit.md` for a complete example.
 ```
 
 </nested_code_fences>
-
-<bash_expansion_restrictions>
-
-`!` bash expansion in skill commands has restrictions. Use single quotes for outer strings when inner strings contain double quotes:
-
-```bash
-# ✅ Single quotes outside, double quotes inside
-!`spx session list || echo 'Ask user to install: "npm install --global @outcomeeng/spx"'`
-
-# ❌ Triggers "ambiguous syntax" permission error
-!`spx session list || echo "Ask user to install: \"npm install --global @outcomeeng/spx\""`
-```
-
-**Avoid in `!` commands:**
-
-- Shell operators: `(N)` nullglob, `*` globbing in zsh
-- Parameter substitution: `${f/DOING/TODO}`
-- Loops: `while read f; do ... done`
-- Complex awk/sed pipelines with nested quotes
-
-These all trigger permission errors from the Claude Code bash safety checker.
-
-</bash_expansion_restrictions>

@@ -1,6 +1,6 @@
 <overview>
 
-Platform-specific constraints that affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read this before adding code-fenced examples to a SKILL.md or using `!` commands.
+Platform-specific constraints that affect skill authoring. The nested-code-fence constraint applies to every target; runtime-only sections render only where they apply.
 
 </overview>
 
@@ -30,6 +30,7 @@ Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete example.
 
 </nested_code_fences>
 
+{!% if target == 'claude' %!}
 <bash_expansion_restrictions>
 
 `!` bash expansion in skill commands has restrictions. Use single quotes for outer strings when inner strings contain double quotes:
@@ -52,3 +53,4 @@ Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete example.
 These all trigger permission errors from the Claude Code bash safety checker.
 
 </bash_expansion_restrictions>
+{!% endif %!}
