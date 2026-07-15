@@ -117,62 +117,18 @@ def audit_runtime_trees_exclude_retired_artifacts() -> bool:
 
 def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     """Exercise the SPX lifecycle used by implementation-audit orchestration."""
-    language = _source_language()
-    concern = ImplementationAuditConcern(LANGUAGE_AUDIT_CONCERNS[0])
-    subject = Path(__file__).name
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
-    provenance = implementation_audit_provenance(
-        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
-        language_plugin_version=_plugin_version(language),
-        tool_version=_spx_version(),
-    )
-    unit_id = implementation_audit_unit_id(language, concern)
-    scope_payload = implementation_audit_scope_payload(
-        language,
-        concern,
-        subject_path=subject,
-        producer_provenance=provenance,
-    )
-    finding_payload = implementation_audit_finding_payload(
-        language,
-        concern,
-        rule=rule,
-        subject_path=subject,
-        message=(
-            spx_verification_run_accepts_implementation_audit_payloads.__doc__ or rule
-        ),
-        observed=subject,
-        expected=subject,
-        producer_provenance=provenance,
-    )
     terminal_status = AuditTerminalStatus.REJECTED
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
-        _initialize_changeset_repository(repository, subject)
-        scope = _changeset_scope(repository)
-        start_report = _run_spx(
-            repository,
-            ("start",),
-            scope,
-            payload=implementation_audit_input_payload(rule),
-        )
-        run_token = _required_string(start_report, RUN_TOKEN_FIELD)
-        scope_report = _run_spx(
-            repository,
-            ("scope", "add"),
-            scope,
-            run_token=run_token,
-            payload=scope_payload,
-            idempotency_key=unit_id,
-        )
-        finding_report = _run_spx(
-            repository,
-            ("finding", "add"),
-            scope,
-            run_token=run_token,
-            payload=finding_payload,
-            idempotency_key=rule,
+        scope, run_token, scope_report, finding_report = (
+            _record_implementation_audit_finding(
+                repository,
+                rule,
+                spx_verification_run_accepts_implementation_audit_payloads.__doc__
+                or rule,
+            )
         )
         finish_report = _run_spx(
             repository,
@@ -204,6 +160,31 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
         finding_count=1,
         terminal_status=terminal_status,
     )
+
+
+def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
+    """Return whether SPX rejects approval after a blocking finding."""
+    rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
+
+    with TemporaryDirectory() as temporary_directory:
+        repository = Path(temporary_directory)
+        scope, run_token, _, _ = _record_implementation_audit_finding(
+            repository,
+            rule,
+            spx_verification_run_rejects_mismatched_terminal_status.__doc__ or rule,
+        )
+        try:
+            _run_spx(
+                repository,
+                ("finish",),
+                scope,
+                run_token=run_token,
+                terminal_status=AuditTerminalStatus.APPROVED.value,
+            )
+        except subprocess.CalledProcessError:
+            return True
+
+    return False
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
@@ -303,6 +284,62 @@ def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
 
 def _source_language() -> str:
     return implementation_languages(Path(".") / PLUGIN_SURFACE_PATHS[0])[0]
+
+
+def _record_implementation_audit_finding(
+    repository: Path,
+    rule: str,
+    message: str,
+) -> tuple[str, str, dict[str, object], dict[str, object]]:
+    language = _source_language()
+    concern = ImplementationAuditConcern(LANGUAGE_AUDIT_CONCERNS[0])
+    subject = Path(__file__).name
+    provenance = implementation_audit_provenance(
+        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        language_plugin_version=_plugin_version(language),
+        tool_version=_spx_version(),
+    )
+    unit_id = implementation_audit_unit_id(language, concern)
+    _initialize_changeset_repository(repository, subject)
+    scope = _changeset_scope(repository)
+    start_report = _run_spx(
+        repository,
+        ("start",),
+        scope,
+        payload=implementation_audit_input_payload(rule),
+    )
+    run_token = _required_string(start_report, RUN_TOKEN_FIELD)
+    scope_report = _run_spx(
+        repository,
+        ("scope", "add"),
+        scope,
+        run_token=run_token,
+        payload=implementation_audit_scope_payload(
+            language,
+            concern,
+            subject_path=subject,
+            producer_provenance=provenance,
+        ),
+        idempotency_key=unit_id,
+    )
+    finding_report = _run_spx(
+        repository,
+        ("finding", "add"),
+        scope,
+        run_token=run_token,
+        payload=implementation_audit_finding_payload(
+            language,
+            concern,
+            rule=rule,
+            subject_path=subject,
+            message=message,
+            observed=subject,
+            expected=subject,
+            producer_provenance=provenance,
+        ),
+        idempotency_key=rule,
+    )
+    return scope, run_token, scope_report, finding_report
 
 
 def _initialize_changeset_repository(repository: Path, subject: str) -> None:
