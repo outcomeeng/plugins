@@ -10,7 +10,7 @@ A contract phrased in facts and derivations — append, read, cursor, seal, rend
 
 ### Testing
 
-- ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares an explicit non-inherited verification model plus its required skill set; target conversion emits an explicit native model and enables every required skill in source order ([mapping])
+- ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares an explicit non-inherited verification model plus its required skill set; target conversion emits an explicit native model and enables every required skill in source order ([test](tests/test_agent_model_field.mapping.l1.py))
 
 ### Audit
 
