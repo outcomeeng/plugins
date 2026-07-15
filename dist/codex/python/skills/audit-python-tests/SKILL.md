@@ -272,6 +272,6 @@ The Python test verdict is sound when:
 
 <reference_guides>
 
-- `references/python-test-audit-examples.md` — worked Python test-audit analysis cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Use them to inspect evidence; `<verdict_format>` and the inherited `/audit-tests` JSON schema remain the output contract.
+- `${SKILL_DIR}/references/python-test-audit-examples.md` — worked Python test-audit analysis cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Use them to inspect evidence; `<verdict_format>` and the inherited `/audit-tests` JSON schema remain the output contract.
 
 </reference_guides>
