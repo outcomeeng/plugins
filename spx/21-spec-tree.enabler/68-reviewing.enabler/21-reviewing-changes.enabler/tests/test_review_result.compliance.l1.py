@@ -1,22 +1,11 @@
-"""Scenario and mapping tests for the ``review_result`` policy module.
+"""Compliance tests for the ``review_result`` policy module.
 
 Covers these clauses in ``../reviewing-changes.md``:
 
-Scenarios
+Compliance
 - ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a
   conforming document and raises ``ReviewResultValidationError`` on
   every schema violation.
-- ``review_result.to_json_dict`` and ``review_result.from_json_dict``
-  round-trip a ``ReviewResult`` instance without loss.
-
-Mappings
-- ``Severity`` enum members map to the wire values ``blocking``,
-  ``debt``.
-- ``Concern`` enum members map to exactly the five wire values
-  ``consistency``, ``security``, ``performance``, ``evidence``,
-  ``architecture``.
-
-Audit (subset)
 - The policy module declares ``SCHEMA_VERSION``, frozen ``Finding`` and
   ``ReviewResult`` dataclasses, the ``Severity`` / ``Concern`` enums.
 - The schema carries no ``decision``/verdict field — the reviewer emits
@@ -72,32 +61,6 @@ class TestModuleSurface:
     def test_validation_error_subclass_of_exception(self) -> None:
         review_result = load_review_result_module()
         assert issubclass(review_result.ReviewResultValidationError, Exception)
-
-
-class TestSeverityMapping:
-    """``Severity`` members map to the wire values ``blocking``,
-    ``debt``."""
-
-    def test_severity_members_map_to_wire_values(self) -> None:
-        review_result = load_review_result_module()
-        wire_values = {member.value for member in review_result.Severity}
-        assert wire_values == {"blocking", "debt"}
-
-
-class TestConcernMapping:
-    """``Concern`` members map to exactly the five wire values
-    declared in the spec."""
-
-    def test_concern_members_map_to_five_wire_values(self) -> None:
-        review_result = load_review_result_module()
-        wire_values = {member.value for member in review_result.Concern}
-        assert wire_values == {
-            "consistency",
-            "security",
-            "performance",
-            "evidence",
-            "architecture",
-        }
 
 
 class TestParseJsonConforming:
@@ -192,6 +155,22 @@ class TestParseJsonRejection:
         with pytest.raises(review_result.ReviewResultValidationError):
             review_result.parse_json("{not valid json")
 
+    def test_missing_action_field_raises(self) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_RULE_CITATION,
+            "message": "m",
+        }
+        document = make_review_result_dict(findings=[finding])
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(json.dumps(document))
+        assert "action" in str(excinfo.value)
+
 
 class TestRuleCitationValidation:
     """``Finding.rule`` accepts declared citation families and rejects prose."""
@@ -247,62 +226,6 @@ class TestRuleCitationValidation:
         assert FIXTURE_MALFORMED_RULE_CITATION in message
 
 
-class TestRoundTrip:
-    """``to_json_dict`` and ``from_json_dict`` round-trip a
-    ``ReviewResult`` without loss."""
-
-    def test_round_trip_via_json_dict_preserves_equality(self) -> None:
-        review_result = load_review_result_module()
-        document = make_review_result_dict()
-        result = review_result.parse_json(json.dumps(document))
-        round_tripped = review_result.from_json_dict(review_result.to_json_dict(result))
-        assert round_tripped == result
-
-    def test_round_trip_via_parse_json_preserves_equality(self) -> None:
-        review_result = load_review_result_module()
-        document = make_review_result_dict()
-        first = review_result.parse_json(json.dumps(document))
-        emitted = json.dumps(review_result.to_json_dict(first))
-        second = review_result.parse_json(emitted)
-        assert first == second
-
-    def test_action_field_round_trips(self) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "Issue body",
-            "action": "ISSUES.md",
-        }
-        document = make_review_result_dict(findings=[finding])
-        first = review_result.parse_json(json.dumps(document))
-        assert first.findings[0].action == "ISSUES.md"
-        emitted = json.dumps(review_result.to_json_dict(first))
-        second = review_result.parse_json(emitted)
-        assert second.findings[0].action == "ISSUES.md"
-
-    def test_missing_action_field_raises(self) -> None:
-        review_result = load_review_result_module()
-        finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "debt",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            # action is required; omitting it must raise
-        }
-        document = make_review_result_dict(findings=[finding])
-        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
-            review_result.parse_json(json.dumps(document))
-        assert "action" in str(excinfo.value)
-
-
 class TestRuleCitationForm:
     """``Finding.rule`` must be a path-style citation; the parser rejects others.
 
@@ -325,8 +248,8 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:2",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:2",
             "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",

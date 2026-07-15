@@ -10,3 +10,8 @@ owned_paths = [
 smoke_cases = ["clean-docstring-typo-fix", "broken-off-by-one-loop-bound"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md"
+template = "prompt.template.md"

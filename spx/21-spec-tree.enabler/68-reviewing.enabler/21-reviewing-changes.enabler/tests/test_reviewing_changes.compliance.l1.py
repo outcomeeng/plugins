@@ -1,3 +1,5 @@
+"""Compliance evidence for review-changes scripts."""
+
 from outcomeeng_testing.harnesses.reviewing_changes_audit import (
     TestComputeDiffHasNoPersistenceAddressing as _ComputeDiffHasNoPersistenceAddressing,
     TestNoParallelReviewResultRenderer as _NoParallelReviewResultRenderer,
