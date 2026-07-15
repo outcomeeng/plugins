@@ -3,6 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
+argument-hint: "[path or changed-file list]"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
@@ -19,7 +20,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
-6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, invoke `/scope-changeset` and use `branch_scope(base, repo=repo_path)` from its `changeset_scope.py` API. Do not hand-roll base-ref or git-diff derivation in this skill.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the caller-supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
 
@@ -132,7 +133,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo=repo_path)`.
+Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use the exact changed-file set the caller derived through `/scope-changeset`. Stop and request that derived set when the caller did not supply it; never derive git scope inside `/align`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -149,8 +150,8 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
 2. **Load rules**: Invoke `spec-tree:understand`, then read every named reference and template in `<required_references>` through the paths that workflow exposes.
-3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo=repo_path)` API.
-4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
+3. **Scope**: Read `$ARGUMENTS` as the caller's complete scope input. When it names a path, use that path; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after caller derivation through `/scope-changeset`; stop with that requirement when the set is absent.
+4. **Discover**: For a path scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the caller-supplied changed-file set directly. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
    - If classified: run structural, language, and placement checks
