@@ -34,21 +34,21 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 1. Read the caller's repository path, changeset scope, live file list when supplied, governing node paths, language partitions, and deterministic verification state.
 2. Invoke `spec-tree:audit-implementation` with the repository path, changeset scope, live file list when supplied, governing node paths, language partitions, and deterministic verification state unchanged.
-3. If `spec-tree:audit-implementation` reports a blocked SPX command, return the exact blocked command.
+3. If `spec-tree:audit-implementation` reports a blocked SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr.
 4. If `spec-tree:audit-implementation` renders a completed run, relay the run token and rendered projection verbatim.
 
 </workflow>
 
 <output_format>
 
-Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-implementation`, or the exact blocked SPX command. Do not add prose outside that output.
+Return only the `spx verification run` token and rendered projection produced by `spec-tree:audit-implementation`, or the complete blocked diagnostic with run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. Do not add prose outside that output.
 
 </output_format>
 
 <success_criteria>
 
 - `spec-tree:audit-implementation` ran in this isolated context over the caller's exact changeset scope, language partitions, and live file list when supplied, with no nested agent, verifier, or agent-CLI invocation.
-- The final output carries the `spx verification run` token and rendered projection, or the exact blocked SPX command.
+- The final output carries the `spx verification run` token and rendered projection, or the complete blocked diagnostic with run token or `not-started`, exact command, payload source, payload key, exit code, and stderr.
 - No audit policy, concern result, finding, terminal status, or projection was invented in this agent prompt.
 
 </success_criteria>
