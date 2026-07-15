@@ -12,6 +12,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     path_rewrite_is_idempotent,
     repeated_include_emits_shared_source_once,
     skill_dir_escape_preserves_authoring_guidance,
+    target_scoped_includes_emit_only_to_matching_tree,
     target_trees_mirror_source_structure,
 )
 
@@ -42,6 +43,10 @@ def test_skill_dir_rewrite_escape_preserves_authoring_guidance() -> None:
 
 def test_codex_skill_frontmatter_strips_claude_only_fields() -> None:
     assert codex_skill_frontmatter_strips_claude_fields()
+
+
+def test_target_scoped_includes_emit_only_to_matching_tree() -> None:
+    assert target_scoped_includes_emit_only_to_matching_tree()
 
 
 def test_path_rewrite_is_idempotent() -> None:

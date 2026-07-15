@@ -382,6 +382,8 @@ _DIRECTIVE_BODY_RE: Final = re.compile(
     r"(?P<argument>.+)$",
     re.DOTALL,
 )
+_PLANNING_DIRECTIVE_PLACEHOLDER_START: Final = "\ue000outcomeeng-directive:"
+_PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
 
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
 # directives. A block whose first token is one of these is a Jinja statement the
@@ -599,19 +601,34 @@ def render_text(
         shared_root=shared_root,
         include_stack=(),
     )
+    return _render_jinja(
+        rendered,
+        shared_root=shared_root,
+        variables=variables,
+        runtime_token_registry=runtime_token_registry,
+    )
+
+
+def _render_jinja(
+    template: str,
+    *,
+    shared_root: Path | None,
+    variables: dict[str, object] | None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> str:
+    """Evaluate custom-delimiter Jinja variables and control blocks."""
     # Run the Jinja pass when a variable token ({{! !}}) or a Jinja control block
     # ({!% if %!}) survives directive expansion — bare conditionals carry no
-    # variable token but still need evaluation. The remaining {!% blocks are
-    # control statements; include/require_skill directives were already expanded.
+    # variable token but still need evaluation.
     if (
-        VARIABLE_DELIMITER_START not in rendered
-        and BLOCK_DELIMITER_START not in rendered
+        VARIABLE_DELIMITER_START not in template
+        and BLOCK_DELIMITER_START not in template
     ):
-        return rendered
+        return template
     # The skill-directory rewrite escape shares the {!# #!} syntax Jinja treats as
     # a comment, but it is processed later by rewrite_paths_for_target, not here.
     # Protect it across the Jinja render so the escape survives intact.
-    protected = rendered.replace(
+    protected = template.replace(
         SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
     )
     try:
@@ -625,6 +642,44 @@ def render_text(
     return result.replace(
         SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER, SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
     )
+
+
+def _render_target_scope(
+    template: str,
+    *,
+    target: _Target,
+    plugin_name: str,
+    shared_root: Path,
+) -> str:
+    """Evaluate one target's Jinja control flow while preserving directives."""
+    preserved: list[tuple[str, str]] = []
+
+    def mask_directive(match: re.Match[str]) -> str:
+        body = match.group(1).strip()
+        if _is_jinja_control_block(body):
+            return match.group(0)
+        placeholder = _planning_directive_placeholder(template, len(preserved))
+        preserved.append((placeholder, match.group(0)))
+        return placeholder
+
+    scoped = _render_jinja(
+        _DIRECTIVE_RE.sub(mask_directive, template),
+        shared_root=shared_root,
+        variables=_render_variables(target, plugin_name=plugin_name),
+    )
+    for placeholder, directive in preserved:
+        scoped = scoped.replace(placeholder, directive)
+    return scoped
+
+
+def _planning_directive_placeholder(template: str, index: int) -> str:
+    placeholder = (
+        f"{_PLANNING_DIRECTIVE_PLACEHOLDER_START}{index}"
+        f"{_PLANNING_DIRECTIVE_PLACEHOLDER_END}"
+    )
+    while placeholder in template:
+        placeholder += _PLANNING_DIRECTIVE_PLACEHOLDER_END
+    return placeholder
 
 
 # ---------------------------------------------------------------------------
@@ -1300,7 +1355,13 @@ def _planned_fan_out_emissions(
         or source_file.suffix not in _TEXT_FILE_SUFFIXES
     ):
         return ()
-    directives = _include_directives(source_file.read_text(encoding="utf-8"))
+    scoped_source = _render_target_scope(
+        source_file.read_text(encoding="utf-8"),
+        target=target,
+        plugin_name=relative_path.parts[0],
+        shared_root=shared_root,
+    )
+    directives = _include_directives(scoped_source)
     return tuple(
         dict.fromkeys(
             emission
@@ -1325,7 +1386,12 @@ def _planned_include_emissions(
 ) -> tuple[PlannedEmission, ...]:
     fragment_path = _resolve_under_root(shared_root, directive.path)
     _assert_include_not_cyclic(fragment_path, include_stack=include_stack)
-    fragment_body = expand_include(directive, shared_root=shared_root)
+    fragment_body = _render_target_scope(
+        expand_include(directive, shared_root=shared_root),
+        target=target,
+        plugin_name=relative_path.parts[0],
+        shared_root=shared_root,
+    )
     topic_root = fragment_path.parent
     topic_emissions = tuple(
         PlannedEmission(

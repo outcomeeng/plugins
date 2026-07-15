@@ -50,6 +50,7 @@ from outcomeeng.validation.skill_frontmatter import (
 from outcomeeng_testing.generators.source_and_templating import (
     SourceScenario,
     source_scenarios,
+    target_scoped_include_cases,
 )
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
@@ -300,6 +301,45 @@ def codex_skill_frontmatter_strips_claude_fields() -> bool:
         )
         and _synthetic_fan_out_translation_holds()
     )
+
+
+def target_scoped_includes_emit_only_to_matching_tree() -> bool:
+    failures: list[str] = []
+    for case in target_scoped_include_cases():
+        with TemporaryDirectory() as temporary_directory:
+            builder = SrcTreeBuilder(Path(temporary_directory))
+            builder.add_shared_topic(
+                case.source.scope,
+                case.source.inner_topic,
+                case.source.fragment_body,
+                references={case.reference_filename: case.source.fragment_body},
+            )
+            if case.outer_fragment_body is not None:
+                builder.add_shared_topic(
+                    case.source.scope,
+                    case.source.outer_topic,
+                    case.outer_fragment_body,
+                )
+            builder.add_plugin(
+                case.source.plugin,
+                skills={
+                    case.source.skill: "\n".join(
+                        (_frontmatter_source(case.source), case.root_body)
+                    )
+                },
+            )
+            plan = plan_emissions(builder.src_root)
+        for target in Target:
+            emitted = case.expected_relative_path in _planned_paths(plan, target)
+            if emitted == (target is case.target):
+                continue
+            failures.append(
+                f"{case.source.skill_ref}:{case.placement.value}:"
+                f"{case.target.value}:{target.value}:{emitted}"
+            )
+    if failures:
+        raise AssertionError(f"target-scoped include fan-out mismatch: {failures}")
+    return True
 
 
 def path_rewrite_is_idempotent() -> bool:
