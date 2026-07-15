@@ -276,7 +276,7 @@ def missing_directive_argument_raises() -> bool:
 
 
 def custom_jinja_controls_have_no_directives() -> bool:
-    return all(
+    return all(_bare_conditional_renders(case) for case in source_scenarios()) and all(
         parse_directives(f"{BLOCK_DELIMITER_START} {keyword} {BLOCK_DELIMITER_END}")
         == ()
         for keyword in JINJA_CONTROL_KEYWORDS
