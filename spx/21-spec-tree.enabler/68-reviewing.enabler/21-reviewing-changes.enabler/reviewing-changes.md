@@ -35,7 +35,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
 ### Audit
 
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([test](tests/test_review_result.scenario.l1.py))
-- NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and phase per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.scenario.l1.py))
+- NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and explicit resolution evidence per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.scenario.l1.py))
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])
 - ALWAYS: the `review-changes` skill prose loads only the bundled prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; repository-root `REVIEW.md`, `REVIEW.example.md`, and other review prompt files are not review context ([audit])
 - ALWAYS: scripts under `plugins/spec-tree/skills/review-changes/scripts/` write no durable review state directly; `compute_diff.py` may write only the caller-owned scratch review-input bundle files, and `review_run.py` may write and remove runner-owned scratch state ([test](tests/test_reviewing_changes.audit.l1.py))
