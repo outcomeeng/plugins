@@ -39,6 +39,7 @@ import sys
 from bisect import bisect_right
 from collections.abc import Iterable
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
@@ -116,6 +117,9 @@ _TARGET_BRANCH_PATTERN: Final = re.compile(
     rf"(?P<keyword>if|elif)\s+{re.escape(BUILD_TARGET_VARIABLE)}\s*==\s*"
     rf"(?P<quote>['\"])(?P<target>{_TARGET_VALUES})(?P=quote)\s*"
 )
+_JINJA_NEUTRAL_BLOCK_STARTS: Final = {
+    ending: kind for kind, ending in JINJA_NEUTRAL_BLOCK_ENDINGS.items()
+}
 _RUNTIME_TOKEN_REMEDIATION: Final = (
     "must be a registry token or appear only in its matching per-runtime conditional"
 )
@@ -171,6 +175,50 @@ class _ScopeFrame:
     saw_else: bool = False
 
 
+class _BlockDisposition(StrEnum):
+    """How one Jinja block affects target-scope scanning."""
+
+    HANDLED = "handled"
+    INVALID = "invalid"
+    SCAN = "scan"
+
+
+@dataclass(frozen=True)
+class _TokenScanner:
+    """Token matcher with source positions and runtime ownership."""
+
+    text: str
+    pattern: re.Pattern[str]
+    native_targets: dict[str, frozenset[str]]
+    all_targets: frozenset[str]
+    line_starts: tuple[int, ...]
+
+    def scan_range(
+        self,
+        start: int,
+        end: int,
+        active_targets: frozenset[str],
+        *,
+        target_scoped: bool,
+    ) -> list[tuple[int, str]]:
+        matches: list[tuple[int, str]] = []
+        for match in self.pattern.finditer(self.text, start, end):
+            token = match.group(0)
+            if target_scoped and active_targets.issubset(self.native_targets[token]):
+                continue
+            matches.append((bisect_right(self.line_starts, match.start()) + 1, token))
+        return matches
+
+    def flat_matches(self) -> list[tuple[int, str]]:
+        """Return matches with no target-scope exemptions."""
+        return self.scan_range(
+            0,
+            len(self.text),
+            self.all_targets,
+            target_scoped=False,
+        )
+
+
 def runtime_name_targets(
     *,
     registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
@@ -186,6 +234,135 @@ def runtime_name_targets(
     return {name: frozenset(runtimes) for name, runtimes in targets.items()}
 
 
+def _open_if_frame(
+    frames: list[_ScopeFrame],
+    active_targets: frozenset[str],
+    target_scoped: bool,
+    target_branch: re.Match[str] | None,
+) -> _BlockDisposition:
+    branch_targets = (
+        frozenset({target_branch.group("target")})
+        if target_branch is not None
+        else frozenset()
+    )
+    frames.append(
+        _ScopeFrame(
+            kind="if",
+            parent_targets=active_targets,
+            active_targets=(
+                active_targets & branch_targets if branch_targets else active_targets
+            ),
+            matched_targets=branch_targets,
+            target_scoped=True if branch_targets else target_scoped,
+        )
+    )
+    return _BlockDisposition.HANDLED
+
+
+def _update_elif_frame(
+    frames: list[_ScopeFrame],
+    target_branch: re.Match[str] | None,
+) -> _BlockDisposition:
+    if not frames or frames[-1].kind != "if" or frames[-1].saw_else:
+        return _BlockDisposition.INVALID
+    frame = frames[-1]
+    if target_branch is None:
+        if frame.target_scoped:
+            return _BlockDisposition.INVALID
+        frames[-1] = _ScopeFrame(
+            kind=frame.kind,
+            parent_targets=frame.parent_targets,
+            active_targets=frame.parent_targets,
+            matched_targets=frame.matched_targets,
+            target_scoped=False,
+        )
+        return _BlockDisposition.HANDLED
+    branch_targets = frozenset({target_branch.group("target")})
+    available_targets = frame.parent_targets - frame.matched_targets
+    frames[-1] = _ScopeFrame(
+        kind=frame.kind,
+        parent_targets=frame.parent_targets,
+        active_targets=available_targets & branch_targets,
+        matched_targets=frame.matched_targets | branch_targets,
+        target_scoped=True,
+    )
+    return _BlockDisposition.HANDLED
+
+
+def _update_else_frame(frames: list[_ScopeFrame]) -> _BlockDisposition:
+    if not frames or frames[-1].kind not in {"for", "if"} or frames[-1].saw_else:
+        return _BlockDisposition.INVALID
+    frame = frames[-1]
+    active_targets = frame.parent_targets
+    if frame.kind == "if" and frame.target_scoped:
+        active_targets -= frame.matched_targets
+    frames[-1] = _ScopeFrame(
+        kind=frame.kind,
+        parent_targets=frame.parent_targets,
+        active_targets=active_targets,
+        matched_targets=frame.matched_targets,
+        target_scoped=frame.target_scoped,
+        saw_else=True,
+    )
+    return _BlockDisposition.HANDLED
+
+
+def _close_scope_frame(
+    frames: list[_ScopeFrame], expected_kind: str
+) -> _BlockDisposition:
+    if not frames or frames[-1].kind != expected_kind:
+        return _BlockDisposition.INVALID
+    frames.pop()
+    return _BlockDisposition.HANDLED
+
+
+def _open_neutral_frame(
+    frames: list[_ScopeFrame],
+    keyword: str,
+    active_targets: frozenset[str],
+    target_scoped: bool,
+) -> _BlockDisposition:
+    frames.append(
+        _ScopeFrame(
+            kind=keyword,
+            parent_targets=active_targets,
+            active_targets=active_targets,
+            matched_targets=frozenset(),
+            target_scoped=target_scoped,
+        )
+    )
+    return _BlockDisposition.HANDLED
+
+
+def _apply_scope_block(
+    frames: list[_ScopeFrame],
+    body: str,
+    active_targets: frozenset[str],
+    target_scoped: bool,
+) -> _BlockDisposition:
+    keyword = body.partition(" ")[0]
+    target_branch = _TARGET_BRANCH_PATTERN.fullmatch(body)
+    if keyword == "if":
+        return _open_if_frame(frames, active_targets, target_scoped, target_branch)
+    if keyword == "elif":
+        return _update_elif_frame(frames, target_branch)
+    if keyword == "else":
+        return _update_else_frame(frames)
+    if keyword == "endif":
+        return _close_scope_frame(frames, "if")
+    if keyword in JINJA_NEUTRAL_BLOCK_ENDINGS:
+        return _open_neutral_frame(
+            frames,
+            keyword,
+            active_targets,
+            target_scoped,
+        )
+    expected_kind = _JINJA_NEUTRAL_BLOCK_STARTS.get(keyword)
+    if expected_kind is not None:
+        return _close_scope_frame(frames, expected_kind)
+    return _BlockDisposition.SCAN
+
+
 def find_raw_tokens(
     text: str,
     *,
@@ -193,157 +370,49 @@ def find_raw_tokens(
 ) -> list[tuple[int, str]]:
     """Return raw names outside their matching per-runtime conditional."""
     names = forbidden_names(registry=registry)
-    pattern = (
-        _RAW_RUNTIME_TOKEN
-        if registry is RUNTIME_TOKEN_REGISTRY
-        else compile_forbidden_pattern(names)
+    scanner = _TokenScanner(
+        text=text,
+        pattern=(
+            _RAW_RUNTIME_TOKEN
+            if registry is RUNTIME_TOKEN_REGISTRY
+            else compile_forbidden_pattern(names)
+        ),
+        native_targets=runtime_name_targets(registry=registry),
+        all_targets=frozenset(target.value for target in Target),
+        line_starts=tuple(
+            index + 1 for index, character in enumerate(text) if character == "\n"
+        ),
     )
-    native_targets = runtime_name_targets(registry=registry)
-    all_targets = frozenset(target.value for target in Target)
-    line_starts = tuple(
-        index + 1 for index, character in enumerate(text) if character == "\n"
-    )
-
-    def scan_range(
-        start: int,
-        end: int,
-        active_targets: frozenset[str],
-        *,
-        target_scoped: bool,
-    ) -> list[tuple[int, str]]:
-        matches: list[tuple[int, str]] = []
-        for match in pattern.finditer(text, start, end):
-            token = match.group(0)
-            if target_scoped and active_targets.issubset(native_targets[token]):
-                continue
-            matches.append((bisect_right(line_starts, match.start()) + 1, token))
-        return matches
-
-    def flat_matches() -> list[tuple[int, str]]:
-        return scan_range(0, len(text), all_targets, target_scoped=False)
-
     violations: list[tuple[int, str]] = []
     frames: list[_ScopeFrame] = []
     cursor = 0
     for block in _BUILD_BLOCK_PATTERN.finditer(text):
-        active_targets = frames[-1].active_targets if frames else all_targets
+        active_targets = frames[-1].active_targets if frames else scanner.all_targets
         target_scoped = frames[-1].target_scoped if frames else False
         violations.extend(
-            scan_range(
+            scanner.scan_range(
                 cursor,
                 block.start(),
                 active_targets,
                 target_scoped=target_scoped,
             )
         )
-
         body = block.group("body").strip()
         keyword = body.partition(" ")[0]
         if frames and frames[-1].kind == "raw" and keyword != "endraw":
-            violations.extend(
-                scan_range(
-                    block.start(),
-                    block.end(),
-                    active_targets,
-                    target_scoped=target_scoped,
-                )
-            )
-            cursor = block.end()
-            continue
-
-        target_branch = _TARGET_BRANCH_PATTERN.fullmatch(body)
-        if keyword == "if":
-            if target_branch is None:
-                frames.append(
-                    _ScopeFrame(
-                        kind=keyword,
-                        parent_targets=active_targets,
-                        active_targets=active_targets,
-                        matched_targets=frozenset(),
-                        target_scoped=target_scoped,
-                    )
-                )
-            else:
-                branch_targets = frozenset({target_branch.group("target")})
-                frames.append(
-                    _ScopeFrame(
-                        kind=keyword,
-                        parent_targets=active_targets,
-                        active_targets=active_targets & branch_targets,
-                        matched_targets=branch_targets,
-                        target_scoped=True,
-                    )
-                )
-        elif keyword == "elif":
-            if not frames or frames[-1].kind != "if" or frames[-1].saw_else:
-                return flat_matches()
-            frame = frames[-1]
-            if target_branch is None:
-                if frame.target_scoped:
-                    return flat_matches()
-                frames[-1] = _ScopeFrame(
-                    kind=frame.kind,
-                    parent_targets=frame.parent_targets,
-                    active_targets=frame.parent_targets,
-                    matched_targets=frame.matched_targets,
-                    target_scoped=frame.target_scoped,
-                )
-            else:
-                branch_targets = frozenset({target_branch.group("target")})
-                available_targets = frame.parent_targets - frame.matched_targets
-                frames[-1] = _ScopeFrame(
-                    kind=frame.kind,
-                    parent_targets=frame.parent_targets,
-                    active_targets=available_targets & branch_targets,
-                    matched_targets=frame.matched_targets | branch_targets,
-                    target_scoped=True,
-                )
-        elif keyword == "else":
-            if (
-                not frames
-                or frames[-1].kind not in {"for", "if"}
-                or frames[-1].saw_else
-            ):
-                return flat_matches()
-            frame = frames[-1]
-            frames[-1] = _ScopeFrame(
-                kind=frame.kind,
-                parent_targets=frame.parent_targets,
-                active_targets=(
-                    frame.parent_targets - frame.matched_targets
-                    if frame.kind == "if" and frame.target_scoped
-                    else frame.parent_targets
-                ),
-                matched_targets=frame.matched_targets,
-                target_scoped=frame.target_scoped,
-                saw_else=True,
-            )
-        elif keyword == "endif":
-            if not frames or frames[-1].kind != "if":
-                return flat_matches()
-            frames.pop()
-        elif keyword in JINJA_NEUTRAL_BLOCK_ENDINGS:
-            frames.append(
-                _ScopeFrame(
-                    kind=keyword,
-                    parent_targets=active_targets,
-                    active_targets=active_targets,
-                    matched_targets=frozenset(),
-                    target_scoped=target_scoped,
-                )
-            )
-        elif keyword in JINJA_NEUTRAL_BLOCK_ENDINGS.values():
-            expected_kind = next(
-                kind
-                for kind, ending in JINJA_NEUTRAL_BLOCK_ENDINGS.items()
-                if ending == keyword
-            )
-            if not frames or frames[-1].kind != expected_kind:
-                return flat_matches()
-            frames.pop()
+            disposition = _BlockDisposition.SCAN
         else:
+            disposition = _apply_scope_block(
+                frames,
+                body,
+                active_targets,
+                target_scoped,
+            )
+        if disposition is _BlockDisposition.INVALID:
+            return scanner.flat_matches()
+        if disposition is _BlockDisposition.SCAN:
             violations.extend(
-                scan_range(
+                scanner.scan_range(
                     block.start(),
                     block.end(),
                     active_targets,
@@ -353,8 +422,15 @@ def find_raw_tokens(
         cursor = block.end()
 
     if frames:
-        return flat_matches()
-    violations.extend(scan_range(cursor, len(text), all_targets, target_scoped=False))
+        return scanner.flat_matches()
+    violations.extend(
+        scanner.scan_range(
+            cursor,
+            len(text),
+            scanner.all_targets,
+            target_scoped=False,
+        )
+    )
     return violations
 
 
