@@ -2,7 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript, or when remediating TypeScript implementation findings from a reviewer.
-allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(git status:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -47,7 +47,7 @@ These patterns are enforced by the reviewer. Violations will be REJECTED.
 
 **Constants**
 
-All literal values (strings, numbers) must be module-level constants:
+Domain-significant literals must be named in the production module that owns them. Preserve idiomatic values such as `0`, `1`, `-1`, array indexes, and enum values inline, as `/typescript-standards` declares.
 
 ```typescript
 // ❌ REJECTED: Magic values inline
@@ -246,11 +246,11 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **If working on a spec-tree work item** (enabler/outcome):
 
-1. **Invoke `spec-tree:contextualize` FIRST** with the node path
+1. **Invoke `/contextualize` FIRST** with the node path
 2. **If context loading fails**: ABORT - do not proceed until all required documents exist
 3. **If context loading succeeds**: Proceed with implementation using loaded context
 
-**The `spec-tree:contextualize` skill provides:**
+**The `/contextualize` skill provides:**
 
 - Complete ancestor hierarchy (product → all ancestor nodes → target)
 - All ADRs/PDRs at every level along the path
@@ -259,7 +259,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **Example invocation:** Invoke `/contextualize` with `spx/<node-path>`.
 
-**If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
+**If `/contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
 **If NOT working on spec-tree work item**: Proceed directly to implementation mode with provided spec.
 </context_loading>
@@ -337,7 +337,7 @@ const API_KEY = process.env.API_KEY;
 if (!API_KEY) throw new Error("API_KEY required");
 ```
 
-**Never Use Deep Relative Imports**:
+**Keep Imports Inside Their Ownership Boundary**:
 
 Before writing any import, ask: *"Is this a module-internal file (same module, moves together), stable production infrastructure (lib/, shared/), or test-only infrastructure used from tests (`testing/harnesses/`)?"*
 
@@ -354,11 +354,13 @@ import { Config } from "@shared/config";
 import { treeBuilder } from "@testing/harnesses/tree-builder";
 ```
 
-**Depth Rules:**
+**Ownership and depth rules:**
 
 - `./sibling` — ✅ OK (same directory, module-internal)
 - `../parent` — ⚠️ Review (is it truly module-internal?)
-- `../../` or deeper — ❌ REJECT (use path alias)
+- Deep relative imports to stable shared infrastructure — ❌ REJECT (use a repository-declared path alias)
+- Relative imports inside one module that moves together — ✅ OK
+- Relative imports from checked-in `scripts/` entrypoints — ✅ OK at that boundary
 
 **Configure tsconfig.json:**
 
