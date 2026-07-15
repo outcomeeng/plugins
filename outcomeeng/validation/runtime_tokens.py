@@ -42,7 +42,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY, RuntimeTokenKind
+from outcomeeng.distribution.build import (
+    JINJA_NEUTRAL_BLOCK_ENDINGS,
+    RUNTIME_TOKEN_REGISTRY,
+    RuntimeTokenKind,
+)
 from outcomeeng.distribution.contracts import (
     BUILD_BLOCK_DELIMITER_END,
     BUILD_BLOCK_DELIMITER_START,
@@ -112,16 +116,6 @@ _TARGET_BRANCH_PATTERN: Final = re.compile(
     rf"(?P<keyword>if|elif)\s+{re.escape(BUILD_TARGET_VARIABLE)}\s*==\s*"
     rf"(?P<quote>['\"])(?P<target>{_TARGET_VALUES})(?P=quote)\s*"
 )
-_NEUTRAL_BLOCK_ENDINGS: Final = {
-    "block": "endblock",
-    "call": "endcall",
-    "filter": "endfilter",
-    "for": "endfor",
-    "macro": "endmacro",
-    "raw": "endraw",
-    "set": "endset",
-    "with": "endwith",
-}
 _RUNTIME_TOKEN_REMEDIATION: Final = (
     "must be a registry token or appear only in its matching per-runtime conditional"
 )
@@ -328,7 +322,7 @@ def find_raw_tokens(
             if not frames or frames[-1].kind != "if":
                 return flat_matches()
             frames.pop()
-        elif keyword in _NEUTRAL_BLOCK_ENDINGS:
+        elif keyword in JINJA_NEUTRAL_BLOCK_ENDINGS:
             frames.append(
                 _ScopeFrame(
                     kind=keyword,
@@ -338,10 +332,10 @@ def find_raw_tokens(
                     target_scoped=target_scoped,
                 )
             )
-        elif keyword in _NEUTRAL_BLOCK_ENDINGS.values():
+        elif keyword in JINJA_NEUTRAL_BLOCK_ENDINGS.values():
             expected_kind = next(
                 kind
-                for kind, ending in _NEUTRAL_BLOCK_ENDINGS.items()
+                for kind, ending in JINJA_NEUTRAL_BLOCK_ENDINGS.items()
                 if ending == keyword
             )
             if not frames or frames[-1].kind != expected_kind:

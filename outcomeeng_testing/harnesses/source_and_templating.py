@@ -18,6 +18,7 @@ from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
+    JINJA_CONTROL_KEYWORDS,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
@@ -274,8 +275,12 @@ def missing_directive_argument_raises() -> bool:
     )
 
 
-def custom_jinja_control_has_no_directives() -> bool:
-    return all(_bare_conditional_renders(case) for case in source_scenarios())
+def custom_jinja_controls_have_no_directives() -> bool:
+    return all(
+        parse_directives(f"{BLOCK_DELIMITER_START} {keyword} {BLOCK_DELIMITER_END}")
+        == ()
+        for keyword in JINJA_CONTROL_KEYWORDS
+    )
 
 
 def render_missing_fragment() -> None:

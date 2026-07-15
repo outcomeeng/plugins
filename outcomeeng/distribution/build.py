@@ -386,16 +386,32 @@ _PLANNING_DIRECTIVE_PLACEHOLDER_START: Final = "\ue000outcomeeng-directive:"
 _PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
 
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
-# directives. A block whose first token is one of these is a Jinja statement the
-# build leaves for the render pass; any other non-`name 'arg'` body is a malformed
-# directive that must fail the build rather than ship verbatim.
-_JINJA_CONTROL_KEYWORDS: Final = frozenset(
-    {"if", "elif", "else", "endif", "for", "endfor", "set", "with", "endwith"}
+# directives. The build owns this vocabulary; validators and evidence import it
+# rather than maintaining parallel keyword tables.
+JINJA_NEUTRAL_BLOCK_ENDINGS: Final = {
+    "block": "endblock",
+    "call": "endcall",
+    "filter": "endfilter",
+    "for": "endfor",
+    "macro": "endmacro",
+    "raw": "endraw",
+    "set": "endset",
+    "with": "endwith",
+}
+JINJA_CONTROL_KEYWORDS: Final = frozenset(
+    {
+        "if",
+        "elif",
+        "else",
+        "endif",
+        *JINJA_NEUTRAL_BLOCK_ENDINGS,
+        *JINJA_NEUTRAL_BLOCK_ENDINGS.values(),
+    }
 )
 
 
 def _is_jinja_control_block(body: str) -> bool:
-    return bool(body) and body.split()[0] in _JINJA_CONTROL_KEYWORDS
+    return bool(body) and body.split()[0] in JINJA_CONTROL_KEYWORDS
 
 
 @dataclass(frozen=True)
