@@ -5,6 +5,7 @@ description: >-
   a changeset scope after implementation changes land or before merging the changeset.
 tools: Bash, Read, Glob, Grep, Skill
 model: sonnet
+
 skills:
   - spec-tree:audit-implementation
 ---
