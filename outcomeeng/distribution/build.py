@@ -1423,36 +1423,36 @@ def _planned_include_emissions(
     shared_root: Path,
     include_stack: tuple[Path, ...] = (),
 ) -> tuple[PlannedEmission, ...]:
-    fragment_path = _resolve_under_root(shared_root, directive.path)
-    _assert_include_not_cyclic(fragment_path, include_stack=include_stack)
-    fragment_body = _render_target_scope(
-        expand_include(directive, shared_root=shared_root),
-        target=target,
-        plugin_name=relative_path.parts[0],
-        shared_root=shared_root,
-    )
-    topic_root = fragment_path.parent
-    topic_emissions = tuple(
-        PlannedEmission(
-            source=child_file,
+    pending = [(directive, include_stack)]
+    emissions: list[PlannedEmission] = []
+    while pending:
+        current_directive, current_stack = pending.pop()
+        fragment_path = _resolve_under_root(shared_root, current_directive.path)
+        _assert_include_not_cyclic(fragment_path, include_stack=current_stack)
+        fragment_body = _render_target_scope(
+            expand_include(current_directive, shared_root=shared_root),
             target=target,
-            relative_path=relative_path.parent / child_file.relative_to(topic_root),
-            action=EmissionAction.FAN_OUT,
-        )
-        for child_file in _fan_out_topic_files(topic_root)
-    )
-    nested_emissions = tuple(
-        emission
-        for nested_directive in _include_directives(fragment_body)
-        for emission in _planned_include_emissions(
-            nested_directive,
-            target=target,
-            relative_path=relative_path,
+            plugin_name=relative_path.parts[0],
             shared_root=shared_root,
-            include_stack=(*include_stack, fragment_path),
         )
-    )
-    return tuple(dict.fromkeys((*topic_emissions, *nested_emissions)))
+        topic_root = fragment_path.parent
+        emissions.extend(
+            PlannedEmission(
+                source=child_file,
+                target=target,
+                relative_path=(
+                    relative_path.parent / child_file.relative_to(topic_root)
+                ),
+                action=EmissionAction.FAN_OUT,
+            )
+            for child_file in _fan_out_topic_files(topic_root)
+        )
+        nested_stack = (*current_stack, fragment_path)
+        pending.extend(
+            (nested_directive, nested_stack)
+            for nested_directive in reversed(_include_directives(fragment_body))
+        )
+    return tuple(dict.fromkeys(emissions))
 
 
 def _include_directives(text: str) -> tuple[IncludeDirective, ...]:
