@@ -47,9 +47,9 @@ SCHEMA_VERSION = 4
 class Severity(StrEnum):
     """Finding severity — one of ``blocking``, ``debt``.
 
-    ``blocking`` marks a merge-safety defect; ``debt`` marks a real defect
-    that does not jeopardize merge safety. The reviewer judges validity and
-    severity; the author judges disposition (fix-in-PR or track-out-of-scope).
+    ``blocking`` marks a defect with evidence of a deterministic merge-safety
+    consequence; ``debt`` marks a real defect whose evidence does not establish
+    that consequence. The reviewer judges validity and severity only.
     """
 
     BLOCKING = "blocking"

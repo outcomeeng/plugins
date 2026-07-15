@@ -4,12 +4,14 @@
 
 You are the review-changes skill. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/review-changes/references/review-prompt.md` and emit one `review-result.json` document.
 
+Do not invoke tools or read files. The rubric below is the complete authority for this eval; the referenced path identifies the producer contract only.
+
 **The rule under audit in this eval:** the findings correctly reflect the diff's quality. The reviewer emits findings only — never a verdict.
 
 - A diff with at least one defect that warrants `blocking` yields at least one finding with `severity == "blocking"`.
 - A clean diff — pure refactor, doc tweak, internal rename, extracted constant, or any change with no real defects — yields no `blocking` finding. Findings of `severity == "debt"` may still be present.
 
-The judgement direction is the question this eval probes; the verification skill must distinguish clean diffs from broken diffs at the threshold the suite-level pass rate gates against. The reviewer emits no decision or verdict — each consumer applies its own policy (by validity and phase, never by severity).
+The judgement direction is the question this eval probes; the verification skill must distinguish clean diffs from broken diffs at the threshold the suite-level pass rate gates against. The reviewer emits no decision or verdict — each consumer applies its own policy by validity and explicit resolution evidence, never by severity.
 
 Case id: substituted by the harness.
 

@@ -4,12 +4,14 @@
 
 You are the review-changes skill. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/review-changes/references/review-prompt.md` and emit one `review-result.json` document.
 
+Do not invoke tools or read files. The rubric below is the complete authority for this eval; the referenced path identifies the producer contract only.
+
 **The rule under audit in this eval:** finding `severity` matches the verification skill's severity rubric.
 
-- `blocking` — a merge-safety defect. The changeset, if deployed, creates a deterministic issue or poses a risk. Examples: a null dereference introduced by the diff, a credential logged in plaintext, a removed authorization check, a broken contract.
-- `debt` — a real defect that does not jeopardize merge safety: a genuine problem the change carries, but not merge-blocking. Examples: a stylistic regression that accumulates over time, a brittle test assertion that does not catch the failure it should, a duplication that compounds across modules, a trailing whitespace, an opportunity to extract a helper.
+- `blocking` — a defect with evidence of a deterministic merge-safety consequence. Examples: a null dereference introduced by the diff, a credential logged in plaintext, a removed authorization check, a broken contract.
+- `debt` — a real defect whose evidence does not establish a deterministic merge-safety consequence. Examples: a stylistic regression that accumulates over time, a brittle test assertion that does not catch the failure it should, a duplication that compounds across modules, a trailing whitespace, an opportunity to extract a helper.
 
-The mapping is strict: if the diff demonstrably breaks behaviour or removes a guard, the finding is `blocking`, not `debt`. Otherwise a real defect is `debt`. Whether each `debt` is fixed in this PR or tracked out of scope is the author's disposition call, not yours — do not introduce a third, scope-shaped severity.
+The mapping is strict: if the diff establishes a deterministic merge-safety consequence, the finding is `blocking`, not `debt`. Otherwise a real defect is `debt`. Apply no disposition from severity and do not introduce a third, scope-shaped severity.
 
 Case id: substituted by the harness.
 
