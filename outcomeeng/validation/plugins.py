@@ -44,6 +44,7 @@ from outcomeeng.distribution.orchestration import (
 from outcomeeng.validation.implementation_audit_contract import (
     IMPLEMENTATION_AUDITOR_AGENT_NAME,
     LANGUAGE_AUDIT_CONCERNS,
+    RetiredAuditScript,
     SPEC_TREE_PLUGIN_NAME,
 )
 
@@ -74,13 +75,6 @@ RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS: Final = tuple(
 )
 IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH: Final = (
     Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_SKILLS_DIRNAME / "audit-implementation"
-)
-RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
-    "verdict.py",
-    "aggregate_verdicts.py",
-    "pass_results.py",
-    "journal_emit.py",
-    "audit_orchestrator.py",
 )
 
 
@@ -278,8 +272,8 @@ def check_retired_audit_scripts(root: Path) -> list[str]:
     errors: list[str] = []
     for surface_root in PLUGIN_SURFACE_ROOTS:
         skill_root = root / surface_root / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
-        for retired_name in RETIRED_AUDIT_SCRIPT_FILENAMES:
-            for retired_path in skill_root.rglob(retired_name):
+        for retired_script in RetiredAuditScript:
+            for retired_path in skill_root.rglob(retired_script.value):
                 errors.append(
                     f"retired audit script present: {retired_path.relative_to(root)}"
                 )

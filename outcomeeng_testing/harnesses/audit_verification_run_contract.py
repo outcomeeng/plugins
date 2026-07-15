@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -36,6 +35,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     RUN_SEALED_FIELD,
     RUN_TERMINAL_STATUS_FIELD,
     RUN_TOKEN_FIELD,
+    RetiredAuditScript,
     SPEC_TREE_PLUGIN_NAME,
     SUBJECT_FIELD,
     UNIT_ID_FIELD,
@@ -65,15 +65,6 @@ from outcomeeng_testing.generators.audit_verification_run_contract import (
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
-VERDICT_TOOLCHAIN_SPEC_PATH: Final = (
-    REPO_ROOT
-    / "spx"
-    / "21-spec-tree.enabler"
-    / "16-verification.enabler"
-    / "15-verdict-toolchain.enabler"
-    / "verdict-toolchain.md"
-)
-RETIRED_SCRIPT_NAME_PATTERN: Final = re.compile(r"`([^`]+\.py)`")
 
 
 def spx_floor_and_ci_pin_meet_verification_run_minimum() -> bool:
@@ -233,30 +224,10 @@ def implementation_audit_scripts_are_absent_and_rejected() -> bool:
         return False
 
     return all(
-        _retired_script_is_rejected(surface_root, retired_name)
+        _retired_script_is_rejected(surface_root, retired_script.value)
         for surface_root in PLUGIN_SURFACE_ROOTS
-        for retired_name in _retired_audit_script_names_from_spec()
+        for retired_script in RetiredAuditScript
     )
-
-
-def _retired_audit_script_names_from_spec() -> tuple[str, ...]:
-    """Read the independent retired-script oracle from the governing assertion."""
-    assertion = next(
-        (
-            line
-            for line in VERDICT_TOOLCHAIN_SPEC_PATH.read_text(
-                encoding="utf-8"
-            ).splitlines()
-            if line.startswith("- NEVER:") and "under the audit skill" in line
-        ),
-        None,
-    )
-    if assertion is None:
-        raise ValueError("verdict-toolchain spec lacks the retired-script assertion")
-    names = tuple(RETIRED_SCRIPT_NAME_PATTERN.findall(assertion))
-    if not names:
-        raise ValueError("retired-script assertion names no Python scripts")
-    return names
 
 
 def spx_audit_verification_run_lifecycle_accepts_implementation_payloads() -> bool:

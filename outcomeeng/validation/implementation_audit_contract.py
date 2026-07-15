@@ -1,4 +1,4 @@
-"""Source-owned implementation-audit payload and projection contracts."""
+"""Source-owned implementation-audit topology, payload, and projection contracts."""
 
 from __future__ import annotations
 
@@ -33,6 +33,16 @@ class ImplementationAuditConcern(StrEnum):
     CODE = "code"
     TESTS = "tests"
     ARCHITECTURE = "architecture"
+
+
+class RetiredAuditScript(StrEnum):
+    """Plugin-side audit scripts replaced by the SPX verification-run contract."""
+
+    VERDICT = "verdict.py"
+    AGGREGATE_VERDICTS = "aggregate_verdicts.py"
+    PASS_RESULTS = "pass_results.py"
+    JOURNAL_EMIT = "journal_emit.py"
+    AUDIT_ORCHESTRATOR = "audit_orchestrator.py"
 
 
 class AuditCoverageRequirement(StrEnum):
