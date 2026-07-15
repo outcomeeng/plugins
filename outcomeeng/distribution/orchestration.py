@@ -108,10 +108,7 @@ def load_lefthook_config(
     root: Path | None = None,
 ) -> Workflow:
     """Load lefthook YAML as a mapping owned by the build-orchestration contract."""
-    allowed_root = (root or Path.cwd()).resolve()
-    resolved_path = (path if path.is_absolute() else allowed_root / path).resolve()
-    if not resolved_path.is_relative_to(allowed_root):
-        raise ConfigPathError(f"config path escapes declared root: {path}")
+    resolved_path = _resolve_config_path(path, root=root)
     return parse_lefthook_config(resolved_path.read_text(encoding="utf-8"))
 
 
@@ -166,10 +163,14 @@ def distribution_python_version_matches_project(
     return workflow_version == requires_python.removeprefix(_MINIMUM_VERSION_PREFIX)
 
 
-def load_json_document(path: Path) -> Workflow:
+def load_json_document(
+    path: Path,
+    *,
+    root: Path | None = None,
+) -> Workflow:
     """Load a JSON document as a mapping owned by the build-orchestration contract."""
-
-    return cast(Workflow, json.loads(path.read_text(encoding="utf-8")))
+    resolved_path = _resolve_config_path(path, root=root)
+    return cast(Workflow, json.loads(resolved_path.read_text(encoding="utf-8")))
 
 
 def claude_marketplace_plugin_root(catalog: Workflow) -> str:
@@ -220,7 +221,7 @@ def check_build_orchestration(root: Path) -> list[str]:
             f"{LEFTHOOK_PATH}: {BUILD_RECIPE_NAME} must run {LEFTHOOK_BUILD_COMMAND}"
         )
 
-    claude_catalog = load_json_document(root / CLAUDE_MARKETPLACE_PATH)
+    claude_catalog = load_json_document(root / CLAUDE_MARKETPLACE_PATH, root=root)
     if claude_marketplace_plugin_root(claude_catalog) != CLAUDE_RUNTIME_ROOT:
         errors.append(
             f"{CLAUDE_MARKETPLACE_PATH}: metadata.pluginRoot must be "
@@ -236,7 +237,7 @@ def check_build_orchestration(root: Path) -> list[str]:
                 f"{CLAUDE_RUNTIME_ROOT}"
             )
 
-    codex_catalog = load_json_document(root / CODEX_MARKETPLACE_PATH)
+    codex_catalog = load_json_document(root / CODEX_MARKETPLACE_PATH, root=root)
     codex_sources = codex_marketplace_plugin_sources(codex_catalog)
     if not codex_sources:
         errors.append(f"{CODEX_MARKETPLACE_PATH}: must list plugin sources")
@@ -252,6 +253,14 @@ def check_build_orchestration(root: Path) -> list[str]:
 def _is_recipe_header(line: str) -> bool:
     stripped = line.strip()
     return bool(stripped) and line == stripped and ":" in stripped
+
+
+def _resolve_config_path(path: Path, *, root: Path | None) -> Path:
+    allowed_root = (root or Path.cwd()).resolve()
+    resolved_path = (path if path.is_absolute() else allowed_root / path).resolve()
+    if not resolved_path.is_relative_to(allowed_root):
+        raise ConfigPathError(f"config path escapes declared root: {path}")
+    return resolved_path
 
 
 def _recipe_header_name(header: str) -> str:

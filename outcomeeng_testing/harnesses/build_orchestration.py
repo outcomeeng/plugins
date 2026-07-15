@@ -21,6 +21,7 @@ from outcomeeng.distribution.contracts import (
     DIST_DIFF_ARGV,
     DIST_DIFF_MODULE_NAME,
     ORCHESTRATION_VALIDATION_ARGV,
+    SOURCE_ROOT_NAME,
     Target,
 )
 from outcomeeng.distribution.dist_diff import (
@@ -213,6 +214,18 @@ def quality_gate_matches_build_orchestration_contract() -> bool:
         ORCHESTRATION_VALIDATION_ARGV in {step.argv for step in VALIDATION_STEPS}
         and validate_build_orchestration([str(REPOSITORY_ROOT)]) == 0
     )
+
+
+def json_config_path_escape_is_rejected() -> bool:
+    with TemporaryDirectory() as temporary_directory:
+        boundary_root = Path(temporary_directory) / SOURCE_ROOT_NAME
+        boundary_root.mkdir()
+        escaped_path = boundary_root.parent / CLAUDE_MARKETPLACE_PATH
+        try:
+            load_json_document(escaped_path, root=boundary_root)
+        except ConfigPathError:
+            return True
+        return False
 
 
 def dist_diff_surfaces_match_contract() -> bool:

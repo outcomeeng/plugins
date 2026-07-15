@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.build_orchestration import (
     dist_diff_surfaces_match_contract,
     justfile_matches_build_contract,
     justfile_recipe_violation_is_rejected,
+    json_config_path_escape_is_rejected,
     lefthook_config_path_escape_is_rejected,
     lefthook_matches_build_contract,
     quality_gate_matches_build_orchestration_contract,
@@ -46,6 +47,10 @@ def test_lefthook_runs_build_and_checks_dist_drift() -> None:
 
 def test_lefthook_config_path_escape_is_rejected() -> None:
     assert lefthook_config_path_escape_is_rejected()
+
+
+def test_json_config_path_escape_is_rejected() -> None:
+    assert json_config_path_escape_is_rejected()
 
 
 def test_claude_marketplace_points_at_dist_claude() -> None:
