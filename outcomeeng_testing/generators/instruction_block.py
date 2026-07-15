@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass
+from enum import StrEnum
+from fractions import Fraction
 from types import ModuleType
 
 from hypothesis import strategies as st
@@ -39,6 +41,24 @@ class InstructionBlockCases:
     harness_claude: str
     harness_codex: str
     template_harnesses: tuple[str, ...]
+
+
+class BootstrapThresholdRelation(StrEnum):
+    """Generated positions around the source-owned bootstrap threshold."""
+
+    ABOVE = "above"
+    AT = "at"
+    BELOW = "below"
+
+
+@dataclass(frozen=True)
+class BootstrapWrapCase:
+    """A root-content pair with one controlled biggest whole-line shared span."""
+
+    content_a: str
+    content_b: str
+    shared_body: str
+    relation: BootstrapThresholdRelation
 
 
 def _prior_dotted_version(version: str) -> str:
@@ -189,14 +209,91 @@ def shared_region_bodies() -> SearchStrategy[str]:
     ).filter(lambda body: body.strip() != "")
 
 
-def free_root_contents() -> SearchStrategy[str]:
-    """Generate root content with line variation and no fence-forming characters."""
-    return st.text(
-        alphabet=st.characters(
-            whitelist_categories=("L", "N"), whitelist_characters=" -_`\n"
-        ),
-        max_size=200,
+@st.composite
+def _bootstrap_wrap_cases(
+    draw: st.DrawFn,
+    threshold: float,
+    relation: BootstrapThresholdRelation,
+) -> BootstrapWrapCase:
+    """Generate one exact threshold relation with no accidental common whole line."""
+    threshold_fraction = Fraction(str(threshold)).limit_denominator()
+    if not 0 < threshold_fraction < 1:
+        raise ValueError(
+            f"bootstrap threshold must be between zero and one: {threshold}"
+        )
+
+    scale = draw(st.integers(min_value=1, max_value=8))
+    common_line_count = threshold_fraction.numerator * scale
+    equal_divergent_count = (
+        threshold_fraction.denominator - threshold_fraction.numerator
+    ) * scale
+    if relation is BootstrapThresholdRelation.ABOVE:
+        largest_divergent_count = draw(
+            st.integers(min_value=0, max_value=equal_divergent_count - 1)
+        )
+    elif relation is BootstrapThresholdRelation.AT:
+        largest_divergent_count = equal_divergent_count
+    else:
+        largest_divergent_count = draw(
+            st.integers(
+                min_value=equal_divergent_count + 1,
+                max_value=equal_divergent_count + common_line_count,
+            )
+        )
+
+    smaller_divergent_count = draw(
+        st.integers(min_value=0, max_value=largest_divergent_count)
     )
+    if draw(st.booleans()):
+        divergent_a, divergent_b = (
+            largest_divergent_count,
+            smaller_divergent_count,
+        )
+    else:
+        divergent_a, divergent_b = (
+            smaller_divergent_count,
+            largest_divergent_count,
+        )
+    before_a = draw(st.integers(min_value=0, max_value=divergent_a))
+    before_b = draw(st.integers(min_value=0, max_value=divergent_b))
+    line_width = draw(st.integers(min_value=1, max_value=20))
+    common_character, character_a, character_b = draw(
+        st.lists(
+            st.sampled_from(tuple(string.ascii_letters + string.digits)),
+            min_size=3,
+            max_size=3,
+            unique=True,
+        )
+    )
+
+    def lines(character: str, count: int) -> str:
+        return f"{character * line_width}\n" * count
+
+    shared = lines(common_character, common_line_count)
+    content_a = (
+        lines(character_a, before_a)
+        + shared
+        + lines(character_a, divergent_a - before_a)
+    )
+    content_b = (
+        lines(character_b, before_b)
+        + shared
+        + lines(character_b, divergent_b - before_b)
+    )
+    return BootstrapWrapCase(
+        content_a=content_a,
+        content_b=content_b,
+        shared_body=shared.rstrip("\n"),
+        relation=relation,
+    )
+
+
+def bootstrap_wrap_cases(
+    threshold: float,
+    relation: BootstrapThresholdRelation,
+) -> SearchStrategy[BootstrapWrapCase]:
+    """Generate root pairs above, at, or below the supplied source threshold."""
+    return _bootstrap_wrap_cases(threshold, relation)
 
 
 def shared_document(module: ModuleType, name: str, body: str) -> str:

@@ -5,17 +5,23 @@ Universal invariants in ``instruction-block.md``: after a render the output's
 trailing newline, staleness ordering matches dotted-numeric version order (catching
 lexicographic defects such as 0.9.0 vs 0.10.0), a reconciled shared region is byte-identical
 across both files, the bootstrap pass wraps at most one shared region, and reconciling an
-already-identical region is idempotent. Hypothesis owns the generated version and body domains;
-Python tuple ordering and string equality are the independent oracles.
+already-identical region is idempotent. The bootstrap domain constructs one controlled biggest
+whole-line span above, exactly at, and below the source-owned threshold, making the expected
+decision independent of the production span finder. Hypothesis owns the generated version and
+body domains; Python tuple ordering and string equality are the independent oracles.
 """
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 from hypothesis import given, seed, settings
 
 from outcomeeng_testing.generators.instruction_block import (
+    BootstrapThresholdRelation,
+    BootstrapWrapCase,
+    bootstrap_wrap_cases,
     dotted_version,
-    free_root_contents,
     shared_document,
     shared_region_bodies,
     version_triples,
@@ -93,13 +99,31 @@ def _assert_reconcile_identical_region_is_idempotent(body: str) -> None:
         assert module.reconcile_shared_regions(doc_a, doc_b, winner) == (doc_a, doc_b)
 
 
-def _assert_bootstrap_wraps_at_most_one_shared_region(
-    content_a: str, content_b: str
-) -> None:
+def _assert_bootstrap_threshold_decision(case: BootstrapWrapCase) -> None:
     module = load_instruction_block_module()
-    wrapped_a, wrapped_b = module.bootstrap_wrap(content_a, content_b)
-    assert len(module.parse_shared_regions(wrapped_a)) <= 1
-    assert len(module.parse_shared_regions(wrapped_b)) <= 1
+    threshold = Fraction(str(module.BOOTSTRAP_SHARED_THRESHOLD))
+    shared_ratio = Fraction(
+        len(case.shared_body) + 1,
+        max(len(case.content_a), len(case.content_b)),
+    )
+    if case.relation is BootstrapThresholdRelation.ABOVE:
+        assert shared_ratio > threshold
+    elif case.relation is BootstrapThresholdRelation.AT:
+        assert shared_ratio == threshold
+    else:
+        assert shared_ratio < threshold
+
+    wrapped_a, wrapped_b = module.bootstrap_wrap(case.content_a, case.content_b)
+    regions_a = module.parse_shared_regions(wrapped_a)
+    regions_b = module.parse_shared_regions(wrapped_b)
+    if case.relation is BootstrapThresholdRelation.ABOVE:
+        expected = {module.BOOTSTRAP_SHARED_REGION_NAME: case.shared_body}
+        assert regions_a == expected
+        assert regions_b == expected
+    else:
+        assert regions_a == {}
+        assert regions_b == {}
+        assert (wrapped_a, wrapped_b) == (case.content_a, case.content_b)
 
 
 def property_evidence_declarations() -> tuple[str, ...]:
@@ -110,7 +134,10 @@ def property_evidence_declarations() -> tuple[str, ...]:
         "stale-order",
         "reconcile-identity",
         "reconcile-idempotence",
-        "bootstrap-bound",
+        *(
+            f"bootstrap-threshold[{relation.value}]"
+            for relation in BootstrapThresholdRelation
+        ),
     )
 
 
@@ -156,21 +183,28 @@ def property_evidence_run() -> EvidenceRun:
     def reconcile_idempotence(body: str) -> None:
         _assert_reconcile_identical_region_is_idempotent(body)
 
-    @seed(20260724)
-    @settings(max_examples=50, deadline=None)
-    @given(content_a=free_root_contents(), content_b=free_root_contents())
-    def bootstrap_bound(content_a: str, content_b: str) -> None:
-        _assert_bootstrap_wraps_at_most_one_shared_region(content_a, content_b)
-
     properties = (
         ("trailing-newline", trailing_newline),
         ("stale-order", stale_order),
         ("reconcile-identity", reconcile_identity),
         ("reconcile-idempotence", reconcile_idempotence),
-        ("bootstrap-bound", bootstrap_bound),
     )
     for name, assertion in properties:
         declared.append(name)
         assertion()
         executed.append(name)
+
+    module = load_instruction_block_module()
+    for index, relation in enumerate(BootstrapThresholdRelation):
+        case_name = f"bootstrap-threshold[{relation.value}]"
+        declared.append(case_name)
+
+        @seed(20260724 + index)
+        @settings(max_examples=50, deadline=None)
+        @given(case=bootstrap_wrap_cases(module.BOOTSTRAP_SHARED_THRESHOLD, relation))
+        def bootstrap_threshold(case: BootstrapWrapCase) -> None:
+            _assert_bootstrap_threshold_decision(case)
+
+        bootstrap_threshold()
+        executed.append(case_name)
     return EvidenceRun(declared=tuple(declared), executed=tuple(executed))
