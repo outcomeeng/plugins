@@ -75,7 +75,6 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
-VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 REQUIRED_SPX_VERSION: Final = "0.6.15"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
