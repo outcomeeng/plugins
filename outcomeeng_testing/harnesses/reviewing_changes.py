@@ -44,6 +44,7 @@ import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Any, Callable, cast
 from unittest.mock import patch
@@ -82,6 +83,7 @@ REVIEW_FIXTURES_DIR = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "reviewing_changes"
 )
 RULE_SLUG_DOCUMENT_FIXTURE = REVIEW_FIXTURES_DIR / "rule_slug_document.md"
+CONFORMING_REVIEW_RESULT_FIXTURE = REVIEW_FIXTURES_DIR / "conforming_review_result.json"
 
 
 def load_review_result_module() -> ModuleType:
@@ -213,6 +215,103 @@ def review_result_round_trip_holds() -> bool:
     return True
 
 
+def malformed_finding_ids_are_rejected() -> bool:
+    """Run the configured open-domain finding-identifier property."""
+    from outcomeeng_testing.generators.reviewing_changes import malformed_finding_ids
+
+    review_result = load_review_result_module()
+    seed_value = review_result.SCHEMA_VERSION
+
+    @seed(seed_value)
+    @settings(max_examples=100, deadline=None)
+    @given(finding_id=malformed_finding_ids())
+    def rejects_invalid_identifier(finding_id: str) -> None:
+        payload = json.dumps(
+            make_review_result_dict(findings=[make_finding_dict(finding_id=finding_id)])
+        )
+        try:
+            review_result.parse_json(payload)
+        except review_result.ReviewResultValidationError as exc:
+            assert repr(finding_id) in str(exc)
+            return
+        raise AssertionError(f"accepted malformed finding id {finding_id!r}")
+
+    run_replayable_property(
+        rejects_invalid_identifier,
+        seed_value=seed_value,
+        replay_path=str(REVIEW_RESULT_MODULE_PATH),
+    )
+    return True
+
+
+def malformed_rule_citations_are_rejected() -> bool:
+    """Run the configured open-domain rule-citation property."""
+    from outcomeeng_testing.generators.reviewing_changes import (
+        malformed_rule_citations,
+    )
+
+    review_result = load_review_result_module()
+    seed_value = review_result.SCHEMA_VERSION
+
+    @seed(seed_value)
+    @settings(max_examples=100, deadline=None)
+    @given(rule=malformed_rule_citations())
+    def rejects_invalid_citation(rule: str) -> None:
+        payload = json.dumps(
+            make_review_result_dict(findings=[make_finding_dict(rule=rule)])
+        )
+        try:
+            review_result.parse_json(payload)
+        except review_result.ReviewResultValidationError as exc:
+            assert repr(rule) in str(exc)
+            return
+        raise AssertionError(f"accepted malformed rule citation {rule!r}")
+
+    run_replayable_property(
+        rejects_invalid_citation,
+        seed_value=seed_value,
+        replay_path=str(REVIEW_RESULT_MODULE_PATH),
+    )
+    return True
+
+
+def versioned_sibling_plugin_resolution_holds() -> bool:
+    """Exercise citation resolution across versioned sibling plugin roots."""
+    review_result = load_review_result_module()
+    with TemporaryDirectory() as temporary_directory:
+        marketplace_root = pathlib.Path(temporary_directory) / "outcomeeng"
+        script_path = (
+            marketplace_root
+            / "spec-tree"
+            / "0.77.2"
+            / "skills"
+            / "review-changes"
+            / "scripts"
+            / "review_result.py"
+        )
+        sibling_skill = (
+            marketplace_root
+            / "typescript"
+            / "0.22.0"
+            / "skills"
+            / "code-typescript"
+            / "SKILL.md"
+        )
+        sibling_skill.parent.mkdir(parents=True)
+        sibling_skill.write_text(
+            "<principles>\nALWAYS: typed\n</principles>\n", encoding="utf-8"
+        )
+
+        candidates = review_result._runtime_plugin_skill_candidates_from(
+            script_path,
+            "typescript",
+            "code-typescript",
+        )
+
+        assert sibling_skill in candidates
+    return True
+
+
 def review_run_metadata(
     *,
     pull_request: bool = False,
@@ -256,9 +355,9 @@ def review_finding(*, severity: Any, identifier: str) -> Any:
     return review_result.parse_finding_json(
         json.dumps(
             make_finding_dict(
-                id=identifier,
+                finding_id=identifier,
                 severity=severity,
-                file="README.md",
+                file_path="README.md",
                 line=1,
                 message=f"{identifier} evidence",
                 action=f"{identifier} action",
@@ -921,29 +1020,25 @@ def make_review_result_dict(
     up future bumps without re-asserting the version.
     """
     review_result = load_review_result_module()
-    version = (
-        schema_version if schema_version is not None else review_result.SCHEMA_VERSION
-    )
-    if findings is None:
-        findings = [
-            {
-                "id": "F-001",
-                "concern": review_result.Concern.ARCHITECTURE,
-                "severity": review_result.Severity.DEBT,
-                "file": "example.py",
-                "line": 10,
-                "rule": review_rule_citations()[0],
-                "message": "The identifier is not descriptive.",
-                "action": "Rename the symbol to convey its role.",
-            }
-        ]
-    return {
-        "schema_version": version,
-        "findings": findings,
-    }
+    document = json.loads(CONFORMING_REVIEW_RESULT_FIXTURE.read_text(encoding="utf-8"))
+    if schema_version is not None:
+        document[review_result.DOCUMENT_SCHEMA_VERSION_FIELD] = schema_version
+    if findings is not None:
+        document[review_result.DOCUMENT_FINDINGS_FIELD] = findings
+    return cast(dict[str, Any], document)
 
 
-def make_finding_dict(**overrides: Any) -> dict[str, Any]:
+def make_finding_dict(
+    *,
+    finding_id: str | None = None,
+    concern: Any | None = None,
+    severity: Any | None = None,
+    file_path: str | None = None,
+    line: int | None = None,
+    rule: str | None = None,
+    message: str | None = None,
+    action: str | None = None,
+) -> dict[str, Any]:
     """Return one synthetic finding dict with every required field populated.
 
     The streaming review emits findings one at a time, so the per-finding
@@ -954,15 +1049,52 @@ def make_finding_dict(**overrides: Any) -> dict[str, Any]:
     rejection-path document.
     """
     review_result = load_review_result_module()
-    finding = {
-        "id": "F-001",
-        "concern": review_result.Concern.ARCHITECTURE,
-        "severity": review_result.Severity.DEBT,
-        "file": "example.py",
-        "line": 10,
-        "rule": review_rule_citations()[0],
-        "message": "The identifier is not descriptive.",
-        "action": "Rename the symbol to convey its role.",
-    }
-    finding.update(overrides)
-    return finding
+    document = make_review_result_dict()
+    fixture_finding = document[review_result.DOCUMENT_FINDINGS_FIELD][0]
+    finding = review_result.Finding(
+        id=(
+            finding_id
+            if finding_id is not None
+            else fixture_finding[review_result.FINDING_ID_FIELD]
+        ),
+        concern=(
+            concern
+            if concern is not None
+            else review_result.Concern(
+                fixture_finding[review_result.FINDING_CONCERN_FIELD]
+            )
+        ),
+        severity=(
+            severity
+            if severity is not None
+            else review_result.Severity(
+                fixture_finding[review_result.FINDING_SEVERITY_FIELD]
+            )
+        ),
+        file=(
+            file_path
+            if file_path is not None
+            else fixture_finding[review_result.FINDING_FILE_FIELD]
+        ),
+        line=(
+            line
+            if line is not None
+            else fixture_finding[review_result.FINDING_LINE_FIELD]
+        ),
+        rule=(
+            rule
+            if rule is not None
+            else fixture_finding[review_result.FINDING_RULE_FIELD]
+        ),
+        message=(
+            message
+            if message is not None
+            else fixture_finding[review_result.FINDING_MESSAGE_FIELD]
+        ),
+        action=(
+            action
+            if action is not None
+            else fixture_finding[review_result.FINDING_ACTION_FIELD]
+        ),
+    )
+    return cast(dict[str, Any], review_result.finding_to_json_dict(finding))

@@ -1,0 +1,15 @@
+{
+  "schema_version": 4,
+  "findings": [
+    {
+      "id": "F-001",
+      "concern": "architecture",
+      "severity": "debt",
+      "file": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md",
+      "line": 44,
+      "rule": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1",
+      "message": "The changed lower layer contradicts the cited rule.",
+      "action": "Align the lower layer with the cited rule."
+    }
+  ]
+}

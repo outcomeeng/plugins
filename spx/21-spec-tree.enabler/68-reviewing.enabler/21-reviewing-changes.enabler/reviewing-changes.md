@@ -30,10 +30,11 @@ CAN project the sealed journal into the surface they own without duplicating rev
 ### Properties
 
 - For every `ReviewResult` instance, `from_json_dict(to_json_dict(r)) == r` — serialization is lossless ([test](tests/test_review_result.property.l1.py))
+- For every finding identifier or rule citation outside the source-owned wire predicate, `review_result.parse_json` raises `ReviewResultValidationError` naming the offending value ([test](tests/test_review_result.property.l1.py))
 
 ### Compliance
 
-- ALWAYS: `review_result.parse_json` returns a `ReviewResult` dataclass for a conforming document and raises `ReviewResultValidationError` naming the offending value for a missing required key, unknown `severity` or `concern`, malformed citation, or other schema violation ([test](tests/test_review_result.compliance.l1.py))
+- ALWAYS: `review_result.parse_json` returns a `ReviewResult` dataclass for a conforming document and raises `ReviewResultValidationError` for a missing required key, unknown `severity` or `concern`, malformed JSON, or other closed schema violation ([test](tests/test_review_result.compliance.l1.py))
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical compatibility review-result schema lives in one Python module ([test](tests/test_review_result.compliance.l1.py))
 - NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and explicit resolution evidence per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.compliance.l1.py))
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])

@@ -7,11 +7,16 @@ from outcomeeng_testing.harnesses.reviewing_changes_audit import (
     TestScriptsAreStdlibOnly as _ScriptsAreStdlibOnly,
     render_command_projects_from_journal_events,
     scripts_use_no_direct_write_primitives,
+    violating_review_script_fixtures_are_rejected,
 )
 
 
 def test_scripts_use_no_direct_write_primitives() -> None:
     scripts_use_no_direct_write_primitives()
+
+
+def test_violating_script_fixtures_are_rejected() -> None:
+    violating_review_script_fixtures_are_rejected()
 
 
 def test_scripts_import_only_stdlib_and_local_modules() -> None:

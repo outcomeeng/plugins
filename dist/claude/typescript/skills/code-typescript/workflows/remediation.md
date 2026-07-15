@@ -112,7 +112,7 @@ This fix is ready for re-review.
 
 <success_criteria>
 
-- The re-review summary maps every input finding ID to a repaired file and line, an evidence-backed refutation, removed capability, or exact operator waiver accepting that finding's consequence.
+- The re-review summary maps every input finding, using its supplied ID or stable file/line/rule key, to a repaired file and line, an evidence-backed refutation, removed capability, or exact operator waiver accepting that finding's consequence.
 - The summary names the artifact layer changed for each valid finding, and no spec or test change weakens a higher-layer contract to match defective implementation.
 - The same-class sweep records every inspected touched path and reports zero unrepaired parallel instances.
 - The focused inner-loop test, resolved TypeScript test command for the governed node or changeset, typecheck, lint, and selected validation commands each exit successfully and appear with their exact command and result in the verification table.

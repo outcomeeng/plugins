@@ -12,7 +12,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_ENV_PULL_REQUEST_NUMBER,
     REVIEW_ENV_TARGET_KIND,
     load_review_result_module,
-    malformed_rule_citation,
     make_finding_dict,
     review_rule_citations,
 )
@@ -46,10 +45,13 @@ def review_results() -> st.SearchStrategy[Any]:
     )
 
 
-def malformed_finding_ids() -> tuple[str, ...]:
-    """Return representative values outside the source finding-id predicate."""
+def malformed_finding_ids() -> st.SearchStrategy[str]:
+    """Generate the open complement of the source finding-id predicate."""
 
-    return ("", "1", "F-1", "F-0000", "X-001")
+    review_result = load_review_result_module()
+    return st.text(max_size=24).filter(
+        lambda value: not review_result.is_valid_finding_id(value)
+    )
 
 
 def unknown_review_severity() -> str:
@@ -72,20 +74,12 @@ def valid_rule_citations() -> tuple[str, ...]:
     return review_rule_citations()
 
 
-def malformed_rule_citations() -> tuple[str, ...]:
-    """Return invalid citation shapes derived around the source contract."""
+def malformed_rule_citations() -> st.SearchStrategy[str]:
+    """Generate the open complement of the accepted citation-shape grammar."""
 
-    return (
-        "",
-        malformed_rule_citation(),
-        "spx/",
-        "spx/rules.md",
-        "spx/rules.md:ALWAYS",
-        "plugins/spec-tree/skills/review-changes/SKILL.md",
-        "AGENTS.md",
-        "CLAUDE.md",
-        "REVIEW.md:not-a-real-rule-slug",
-        "SKILL.md:render-templates-as-data",
+    review_result = load_review_result_module()
+    return st.text(max_size=160).filter(
+        lambda value: not review_result.is_supported_rule_citation_shape(value)
     )
 
 

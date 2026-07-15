@@ -225,7 +225,9 @@ def assert_prompt_renderer_reports_fixture_placeholder_drift() -> None:
     assert known_rendered == _fixture_path("prompt_known_rendered.txt").read_text(
         encoding="utf-8"
     )
-    assert unknown_stderr.getvalue()
+    warning = unknown_stderr.getvalue()
+    assert "{input_jsn}" in warning
+    assert "{lang}" not in warning
     assert not known_stderr.getvalue()
 
 

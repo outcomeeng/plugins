@@ -1,7 +1,7 @@
 ---
 name: code-typescript
 description: >-
-  ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
+  ALWAYS invoke this skill when writing or fixing implementation code for TypeScript, or when remediating TypeScript implementation findings from a reviewer.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 ---
 
@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
 <objective>
-TypeScript implementation code that makes its node's tests pass.
+TypeScript implementation or remediation changes that satisfy the supplied specification or review findings and pass the product's resolved verification commands.
 </objective>
 
 <accessing_skill_files>

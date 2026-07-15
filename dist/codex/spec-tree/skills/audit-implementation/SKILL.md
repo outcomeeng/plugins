@@ -109,7 +109,7 @@ The final response relays the rendered SPX projection and run token. Do not summ
 
 </verification_run_contract>
 
-<coverage_model>
+<step name="classify_implementation_ownership">
 
 Classify every changed path by implementation-audit ownership before building
 the expected coverage inventory:
@@ -153,7 +153,7 @@ A missing required concern skill, unsupported implementation-owned artifact, or 
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
-</coverage_model>
+</step>
 
 <skill_map>
 

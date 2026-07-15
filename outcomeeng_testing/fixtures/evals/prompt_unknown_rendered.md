@@ -1,1 +1,1 @@
-case=fixture-case payload={input_jsn}
+case=fixture-case payload={input_jsn} language={lang}

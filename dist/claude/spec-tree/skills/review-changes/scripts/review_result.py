@@ -42,6 +42,16 @@ from enum import StrEnum
 from typing import Any, cast
 
 SCHEMA_VERSION = 4
+DOCUMENT_SCHEMA_VERSION_FIELD = "schema_version"
+DOCUMENT_FINDINGS_FIELD = "findings"
+FINDING_ID_FIELD = "id"
+FINDING_CONCERN_FIELD = "concern"
+FINDING_SEVERITY_FIELD = "severity"
+FINDING_FILE_FIELD = "file"
+FINDING_LINE_FIELD = "line"
+FINDING_RULE_FIELD = "rule"
+FINDING_MESSAGE_FIELD = "message"
+FINDING_ACTION_FIELD = "action"
 SEVERITY_BLOCKING = "blocking"
 SEVERITY_DEBT = "debt"
 CONCERN_CONSISTENCY = "consistency"
@@ -130,22 +140,22 @@ class ReviewResult:
 # Required keys at the document level. ``findings`` is required and may be
 # an empty list.
 _REQUIRED_DOCUMENT_KEYS = (
-    "schema_version",
-    "findings",
+    DOCUMENT_SCHEMA_VERSION_FIELD,
+    DOCUMENT_FINDINGS_FIELD,
 )
 
 # Required keys per finding. ``action`` carries the Required change for
 # both ``blocking`` and ``debt`` findings; the render templates label it
 # uniformly.
 _REQUIRED_FINDING_KEYS = (
-    "id",
-    "concern",
-    "severity",
-    "file",
-    "line",
-    "rule",
-    "message",
-    "action",
+    FINDING_ID_FIELD,
+    FINDING_CONCERN_FIELD,
+    FINDING_SEVERITY_FIELD,
+    FINDING_FILE_FIELD,
+    FINDING_LINE_FIELD,
+    FINDING_RULE_FIELD,
+    FINDING_MESSAGE_FIELD,
+    FINDING_ACTION_FIELD,
 )
 
 # Accepted ``Finding.rule`` citation forms. A rule must cite an existing rule in
@@ -238,13 +248,13 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
     offending value and (for enum violations) the allowed set.
     """
     _require_keys(data, _REQUIRED_DOCUMENT_KEYS)
-    schema_version = _require_int(data, "schema_version")
+    schema_version = _require_int(data, DOCUMENT_SCHEMA_VERSION_FIELD)
     if schema_version != SCHEMA_VERSION:
         raise ReviewResultValidationError(
             f"unsupported schema_version {schema_version}; expected {SCHEMA_VERSION}"
         )
 
-    findings_raw = data["findings"]
+    findings_raw = data[DOCUMENT_FINDINGS_FIELD]
     if not isinstance(findings_raw, list):
         raise ReviewResultValidationError("findings must be a JSON array")
     findings = tuple(_parse_finding(entry) for entry in findings_raw)
@@ -263,21 +273,22 @@ def to_json_dict(result: ReviewResult) -> dict[str, Any]:
     ``parse_json`` round-trips back to an equal instance.
     """
     return {
-        "schema_version": result.schema_version,
-        "findings": [_finding_to_dict(f) for f in result.findings],
+        DOCUMENT_SCHEMA_VERSION_FIELD: result.schema_version,
+        DOCUMENT_FINDINGS_FIELD: [finding_to_json_dict(f) for f in result.findings],
     }
 
 
-def _finding_to_dict(finding: Finding) -> dict[str, Any]:
+def finding_to_json_dict(finding: Finding) -> dict[str, Any]:
+    """Serialize one source-contract finding to its JSON-compatible shape."""
     return {
-        "id": finding.id,
-        "concern": str(finding.concern),
-        "severity": str(finding.severity),
-        "file": finding.file,
-        "line": finding.line,
-        "rule": finding.rule,
-        "message": finding.message,
-        "action": finding.action,
+        FINDING_ID_FIELD: finding.id,
+        FINDING_CONCERN_FIELD: str(finding.concern),
+        FINDING_SEVERITY_FIELD: str(finding.severity),
+        FINDING_FILE_FIELD: finding.file,
+        FINDING_LINE_FIELD: finding.line,
+        FINDING_RULE_FIELD: finding.rule,
+        FINDING_MESSAGE_FIELD: finding.message,
+        FINDING_ACTION_FIELD: finding.action,
     }
 
 
@@ -285,38 +296,58 @@ def _parse_finding(data: Any) -> Finding:
     if not isinstance(data, dict):
         raise ReviewResultValidationError("finding must be a JSON object")
     _require_keys(data, _REQUIRED_FINDING_KEYS)
-    concern_raw = _require_str(data, "concern")
-    concern = _parse_enum(concern_raw, Concern, field="concern")
-    severity_raw = _require_str(data, "severity")
-    severity = _parse_enum(severity_raw, Severity, field="severity")
-    line = _require_int(data, "line")
-    rule = _require_str(data, "rule")
+    concern_raw = _require_str(data, FINDING_CONCERN_FIELD)
+    concern = _parse_enum(concern_raw, Concern, field=FINDING_CONCERN_FIELD)
+    severity_raw = _require_str(data, FINDING_SEVERITY_FIELD)
+    severity = _parse_enum(severity_raw, Severity, field=FINDING_SEVERITY_FIELD)
+    line = _require_int(data, FINDING_LINE_FIELD)
+    rule = _require_str(data, FINDING_RULE_FIELD)
     _validate_rule_citation(rule)
-    finding_id = _require_str(data, "id")
+    finding_id = _require_str(data, FINDING_ID_FIELD)
     _validate_finding_id(finding_id)
     return Finding(
         id=finding_id,
         concern=concern,
         severity=severity,
-        file=_require_str(data, "file"),
+        file=_require_str(data, FINDING_FILE_FIELD),
         line=line,
         rule=rule,
-        message=_require_str(data, "message"),
-        action=_require_str(data, "action"),
+        message=_require_str(data, FINDING_MESSAGE_FIELD),
+        action=_require_str(data, FINDING_ACTION_FIELD),
     )
 
 
 def _validate_finding_id(finding_id: str) -> None:
-    if not _FINDING_ID_RE.fullmatch(finding_id):
+    if not is_valid_finding_id(finding_id):
         raise ReviewResultValidationError(
             f"finding 'id' must match F-NNN; got {finding_id!r}"
         )
 
 
+def is_valid_finding_id(finding_id: str) -> bool:
+    """Return whether a finding identifier conforms to the wire grammar."""
+    return _FINDING_ID_RE.fullmatch(finding_id) is not None
+
+
+def is_supported_rule_citation_shape(rule: str) -> bool:
+    """Return whether a citation has one of the accepted wire shapes."""
+    return any(
+        pattern.fullmatch(rule) is not None
+        for pattern in (
+            _SPEC_ASSERTION_RE,
+            _DECISION_RE,
+            _PLUGIN_SKILL_RE,
+            _ROOT_RULE_RE,
+        )
+    )
+
+
 def _validate_rule_citation(rule: str) -> None:
     """Reject ``rule`` values that do not cite a repository rule."""
     if not rule:
-        raise ReviewResultValidationError("finding 'rule' must be a non-empty string")
+        raise ReviewResultValidationError(
+            f"finding 'rule' must be a non-empty string; got {rule!r}"
+        )
     if match := _SPEC_ASSERTION_RE.fullmatch(rule):
         _validate_spec_assertion(match)
         return
@@ -519,15 +550,51 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
 def _runtime_plugin_skill_candidates(
     plugin: str, skill: str
 ) -> tuple[pathlib.Path, ...]:
+    return _runtime_plugin_skill_candidates_from(
+        pathlib.Path(__file__).resolve(), plugin, skill
+    )
+
+
+def _runtime_plugin_skill_candidates_from(
+    script_path: pathlib.Path, plugin: str, skill: str
+) -> tuple[pathlib.Path, ...]:
     candidates: list[pathlib.Path] = []
-    for ancestor in pathlib.Path(__file__).resolve().parents:
+    for ancestor in script_path.parents:
+        plugin_root = ancestor / plugin
+        candidates.extend(_installed_plugin_skill_candidates(plugin_root, skill))
         skills_dir = ancestor / "skills"
         if not skills_dir.is_dir():
             continue
         if ancestor.name != plugin and ancestor.parent.name != plugin:
             continue
         candidates.append(skills_dir / skill / "SKILL.md")
+    return tuple(dict.fromkeys(candidates))
+
+
+def _installed_plugin_skill_candidates(
+    plugin_root: pathlib.Path, skill: str
+) -> tuple[pathlib.Path, ...]:
+    """Return direct and versioned skill paths beneath one plugin cache root."""
+    if not plugin_root.is_dir():
+        return ()
+
+    skill_suffix = pathlib.Path("skills") / skill / "SKILL.md"
+    candidates = [plugin_root / skill_suffix]
+    version_roots = sorted(
+        (entry for entry in plugin_root.iterdir() if entry.is_dir()),
+        key=lambda entry: _version_sort_key(entry.name),
+        reverse=True,
+    )
+    candidates.extend(version_root / skill_suffix for version_root in version_roots)
     return tuple(candidates)
+
+
+def _version_sort_key(version: str) -> tuple[tuple[int, ...], str]:
+    """Order semantic-looking cache versions without third-party packaging."""
+    numeric_prefix = version.partition("-")[0]
+    if all(part.isdigit() for part in numeric_prefix.split(".")):
+        return tuple(int(part) for part in numeric_prefix.split(".")), version
+    return (), version
 
 
 def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:

@@ -7,6 +7,7 @@ import re
 import subprocess
 from collections.abc import Callable
 from datetime import datetime, timezone
+from difflib import get_close_matches
 from pathlib import Path
 from typing import Final, Protocol, cast
 
@@ -32,6 +33,10 @@ RUNNER_FACTORY_KEY: Final = "runner_factory"
 PLUGIN_DIR_OPTION: Final = "--plugin-dir"
 MAX_BUDGET_USD_OPTION: Final = "--max-budget-usd"
 TIMEOUT_SECONDS_OPTION: Final = "--timeout-seconds"
+CASE_ID_PLACEHOLDER: Final = "{case_id}"
+INPUT_JSON_PLACEHOLDER: Final = "{input_json}"
+PROMPT_PLACEHOLDERS: Final = (CASE_ID_PLACEHOLDER, INPUT_JSON_PLACEHOLDER)
+PLACEHOLDER_TYPO_SIMILARITY: Final = 0.8
 
 
 class RunnerFactory(Protocol):
@@ -201,8 +206,8 @@ def _render_prompt(template: str, case: Case) -> str:
     # literal run up to the next ``{`` in one append rather than copying a
     # character at a time.
     substitutions = {
-        "{case_id}": case.id,
-        "{input_json}": json.dumps(case.input, indent=2),
+        CASE_ID_PLACEHOLDER: case.id,
+        INPUT_JSON_PLACEHOLDER: json.dumps(case.input, indent=2),
     }
     parts: list[str] = []
     index = 0
@@ -223,7 +228,7 @@ def _render_prompt(template: str, case: Case) -> str:
         )
         if match is None:
             typo = _PLACEHOLDER_LIKE_RE.match(template, next_brace)
-            if typo is not None:
+            if typo is not None and _resembles_prompt_placeholder(typo.group(0)):
                 click.echo(
                     f"warning: prompt template references unrecognized placeholder "
                     f"{typo.group(0)} — known placeholders are "
@@ -237,6 +242,17 @@ def _render_prompt(template: str, case: Case) -> str:
         parts.append(substitutions[match])
         index = next_brace + len(match)
     return "".join(parts)
+
+
+def _resembles_prompt_placeholder(candidate: str) -> bool:
+    return bool(
+        get_close_matches(
+            candidate,
+            PROMPT_PLACEHOLDERS,
+            n=1,
+            cutoff=PLACEHOLDER_TYPO_SIMILARITY,
+        )
+    )
 
 
 def _timestamp_label() -> str:

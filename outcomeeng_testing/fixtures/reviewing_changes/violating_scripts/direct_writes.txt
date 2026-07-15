@@ -1,0 +1,20 @@
+import os
+import shutil
+from pathlib import Path
+
+target = Path("review-state.json")
+open(target, "w").close()
+target.open("a").close()
+target.mkdir()
+target.rename("renamed.json")
+target.replace("replaced.json")
+target.rmdir()
+target.touch()
+target.unlink()
+target.write_bytes(b"state")
+target.write_text("state")
+os.remove(target)
+os.rename(target, "renamed.json")
+os.replace(target, "replaced.json")
+os.unlink(target)
+shutil.rmtree(target)

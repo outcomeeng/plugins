@@ -84,6 +84,13 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
         "review_run",
     }
 )
+VIOLATING_SCRIPTS_DIR = (
+    REPO_ROOT
+    / "outcomeeng_testing"
+    / "fixtures"
+    / "reviewing_changes"
+    / "violating_scripts"
+)
 je = load_journal_emit_module()
 
 
@@ -429,6 +436,28 @@ def scripts_use_no_direct_write_primitives() -> None:
     subject = TestScriptsDoNotWriteStorageDirectly()
     for script_path in _script_files():
         subject.test_script_uses_no_direct_write_primitives(script_path)
+
+
+def violating_review_script_fixtures_are_rejected() -> None:
+    """Prove each scanner rule against an inert violating script."""
+    direct_writes = VIOLATING_SCRIPTS_DIR / "direct_writes.txt"
+    non_stdlib_import = VIOLATING_SCRIPTS_DIR / "non_stdlib_import.txt"
+    product_toolchain_import = VIOLATING_SCRIPTS_DIR / "product_toolchain_import.txt"
+    runtime_uv = VIOLATING_SCRIPTS_DIR / "runtime_uv.txt"
+
+    assert _direct_write_violations(direct_writes)
+    assert any(
+        module not in sys.stdlib_module_names
+        and module not in LOCAL_REVIEWING_CHANGES_MODULES
+        for module in _imported_modules(non_stdlib_import.read_text(encoding="utf-8"))
+    )
+    assert any(
+        module.startswith("outcomeeng_") or module == "outcomeeng"
+        for module in _imported_modules(
+            product_toolchain_import.read_text(encoding="utf-8")
+        )
+    )
+    assert _runtime_uv_violations(runtime_uv)
 
 
 def render_command_projects_from_journal_events() -> None:

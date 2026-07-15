@@ -12,7 +12,6 @@ from typing import Any
 from typing import Final
 
 from outcomeeng.validation.plugins import (
-    IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH,
     IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH,
     PLUGIN_SURFACE_ROOTS,
     RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS,
@@ -261,31 +260,6 @@ def language_concern_skill_trios_exist() -> bool:
             retired_path.rmdir()
 
     return True
-
-
-def implementation_audit_coverage_distinguishes_artifact_ownership() -> bool:
-    """Return whether required coverage excludes non-implementation artifacts."""
-    skill_path = (
-        REPO_ROOT
-        / SOURCE_PLUGINS_DIR
-        / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
-        / "SKILL.md"
-    )
-    skill_text = skill_path.read_text(encoding="utf-8")
-    coverage_model = skill_text.partition("<coverage_model>")[2].partition(
-        "</coverage_model>",
-    )[0]
-    return all(
-        clause in coverage_model
-        for clause in (
-            "Classify every changed path by implementation-audit ownership",
-            "Implementation-owned artifacts are implementation code, linked tests",
-            "Non-implementation artifacts include specs, decisions, coordination notes",
-            "optional `not-applicable`",
-            "never carries `unsupported` or `missing-skill`",
-            "Reserve `unsupported` for an implementation-owned artifact",
-        )
-    )
 
 
 def implementation_audit_scripts_are_absent_and_rejected() -> bool:

@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, Agent, request_user_input, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Read
+allowed-tools: Skill, Agent, request_user_input, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Read
 ---
 
 <objective>
@@ -21,9 +21,6 @@ Live repository state for transport selection, read at invocation.
 
 **Working tree (empty = clean):**
 !`git status --porcelain || echo '(not a git repo)'`
-
-**Transport overlay (selector, if any):**
-!`grep -iE '^transport:' spx/local/merging.md 2>/dev/null || echo '(no explicit transport: selector — default applies)'`
 
 The changeset classification is computed in Step 2 by the classification script, not in this block — base-ref and committed branch-scope derivation route through the canonical `scope-changeset` primitives rather than inline git.
 
@@ -45,13 +42,15 @@ The transport binds the gate predicates (which verification establishes `VERIFIC
 
 **Step 1 — Load foundation and vocabulary.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first. Invoke `/merging-standards` for the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Read `spx/local/merging.md` for the transport selector and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`AGENTS.md`) to change it — `/merge` and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
 
+Throughout classification and dispatch, a default-branch-scoped changeset with commits ahead of its resolved base remains unfinished. An overlay-required pre-mutation confirmation pauses the next mutation and requires operator input, but it never turns local readiness into completion.
+
 **Step 2 — Select the transport.** Compute the changeset classification by running the classification script, which routes base-ref and committed branch-scope derivation through the canonical `changeset_scope` primitives:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/classify_changeset.py"
 ```
 
-It prints the total and non-coordination-note counts over the full changed-file set (committed branch scope plus working tree) and a bounded file preview. Apply `<transport_selection>` against those counts and the overlay selector from `<context>`. Name the selected transport and the policy reason: overlay selector, coordination-note-only, or default GitHub PR. Do not expose raw file counts unless the count is itself the decision boundary the operator needs to inspect.
+It prints the total and non-coordination-note counts over the full changed-file set (committed branch scope plus working tree) and a bounded file preview. Apply `<transport_selection>` against those counts and the overlay selector read in Step 1. Name the selected transport and the policy reason: overlay selector, coordination-note-only, or default GitHub PR. Do not expose raw file counts unless the count is itself the decision boundary the operator needs to inspect.
 
 **Step 3 — Dispatch.**
 
