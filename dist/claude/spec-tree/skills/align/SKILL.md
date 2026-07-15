@@ -19,7 +19,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
-5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
+5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, invoke `spec-tree:understand` before continuing.
 6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the caller-supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
@@ -80,6 +80,23 @@ Compare each classified file's `##` headings against its template's `##` heading
 - Missing optional sections (templates mark optional sections with "Only include if...")
 
 </structural_conformance>
+
+<ancestor_decision_conformance>
+
+For each classified enabler or outcome spec, invoke `/contextualize` on the spec's canonical full node path and compare the spec against every applicable ADR and PDR in the resulting context. A governing decision wins over the spec.
+
+**Report as findings:**
+
+- The spec path and incompatible declaration
+- The conflicting ADR or PDR's full path and governing rule
+- Reference: the full `spx/.../*.adr.md` or `spx/.../*.pdr.md` path
+
+**Do NOT report:**
+
+- A decision cited only by `PLAN.md`, `ISSUES.md`, or another coordination note
+- A lower-layer test or implementation mismatch as a decision contradiction
+
+</ancestor_decision_conformance>
 
 <language_conformance>
 
@@ -147,13 +164,13 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <workflow>
 
-1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Invoke `spec-tree:understand`, then read every named reference and template in `<required_references>` through the paths that workflow exposes.
+1. **Gate**: Check the conversation for a live `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `spec-tree:understand` and resume only after it emits the marker.
+2. **Load rules**: Use the paths exposed by the loaded understanding foundation to read every named reference and template in `<required_references>`.
 3. **Scope**: Read `$ARGUMENTS` as the caller's complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after caller derivation through `/scope-changeset`; stop with that requirement when the set is absent.
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the caller-supplied changed-file set directly. In every mode, exclude `CLAUDE.md` and `AGENTS.md`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, and files inside `spx/local/`.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
-   - If classified: run structural, language, and placement checks
+   - If classified: run structural, language, and placement checks; for an enabler or outcome spec, also run ancestor-decision conformance through `/contextualize`
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
 7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or first-affected-node `PLAN.md` grounding.
 8. **Report**: Emit findings grouped by file path per `<report_format>`.
@@ -172,6 +189,9 @@ Classification: {type}
 Structural:
 - {finding}
 
+Decision alignment:
+- {finding} (ref: {full decision path})
+
 Language:
 - Line {N}: "{text}" — {rule violated} (ref: atemporal_voice) → Atemporal: "{rewrite}"
 
@@ -188,7 +208,7 @@ Downstream alignment:
 
 **Formatting rules:**
 
-- Omit dimension headings (Structural / Language / Placement) when a file has no findings for that dimension
+- Omit dimension headings (Structural / Decision alignment / Language / Placement / Downstream alignment) when a file has no findings for that dimension
 - Omit files with zero findings entirely
 - If all files pass all checks: `"{N} files checked. 0 findings across 0 files."`
 - For unrecognized files, replace the Classification line with: `Classification: Unrecognized — {reason}`
@@ -199,6 +219,7 @@ Downstream alignment:
 
 - [ ] Every in-scope Markdown artifact is either represented by a finding or included in the report's checked-file count; declared skip targets are absent
 - [ ] Every finding names the full file path, artifact classification or failure, violated authoritative rule, and applicable conformance dimension
+- [ ] Every classified node spec is checked against all applicable governing ADRs/PDRs, and every contradiction finding names the full decision path
 - [ ] Every temporal-language finding includes the source line, temporal text, governing atemporal-voice rule, and a concrete atemporal rewrite
 - [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under `what-goes-where.md`
 - [ ] A changeset report identifies every changed higher-level declaration lacking both first-affected lower-spec alignment and first-affected-node `PLAN.md` grounding

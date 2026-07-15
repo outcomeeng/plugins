@@ -90,13 +90,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Typed assertion files only, one assertion type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
-
-| Level | Suffix shape                | Question                             |
-| ----- | --------------------------- | ------------------------------------ |
-| 1     | `.<evidence>.l1.test.{ext}` | Is our logic correct?                |
-| 2     | `.<evidence>.l2.test.{ext}` | Does it work with real dependencies? |
-| 3     | `.<evidence>.l3.test.{ext}` | Does it work for users?              |
+**Contains:** Typed assertion files only, one assertion type per file. Each filename encodes subject, evidence type, execution level, and an optional runner according to the product's enabled language convention. `/test` selects the evidence type and level; `/test-{language}` binds their canonical order, extension, and runner placement. No single cross-language suffix shape is authoritative.
 
 Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
 
