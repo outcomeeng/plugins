@@ -76,6 +76,7 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
 REQUIRED_SPX_VERSION: Final = "0.6.15"
+VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
@@ -104,8 +105,24 @@ def is_satisfied(pinned: str, floor: str) -> bool:
     return parse_version(pinned) >= parse_version(floor)
 
 
+def verification_run_floor_is_satisfied(
+    required_version: str = REQUIRED_SPX_VERSION,
+) -> bool:
+    """Return whether the shipped floor includes verification-run support."""
+    return is_satisfied(required_version, VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+
+
 def main(workflow_path: Path = WORKFLOW_PATH) -> int:
     """Read the workflow pin and fail when it is below ``REQUIRED_SPX_VERSION``."""
+    if not verification_run_floor_is_satisfied():
+        print(
+            "error: shipped implementation audits require @outcomeeng/spx >= "
+            f"{VERIFICATION_RUN_MINIMUM_SPX_VERSION} for spx verification run, "
+            f"but the repository floor is {REQUIRED_SPX_VERSION}.",
+            file=sys.stderr,
+        )
+        return 1
+
     if not workflow_path.is_file():
         print(f"error: CI workflow not found at {workflow_path}", file=sys.stderr)
         return 1
