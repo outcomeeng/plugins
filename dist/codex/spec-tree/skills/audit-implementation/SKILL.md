@@ -77,6 +77,8 @@ spx verification run start \
 
 The `--input` payload carries the caller request, deterministic verification state, governing nodes, and any explicit live file list supplied for pre-commit audits. The command returns a JSON locator; extract its `runToken` field exactly and use that token for every later command. Never pass the whole JSON locator as `--run`.
 
+Execute every state-changing `spx verification run` command serially. Wait for one `start`, `scope add`, `finding add`, or `finish` command to exit and preserve its result before invoking the next command for the same run. NEVER launch concurrent journal mutations; parallel writes can race sequence assignment and produce a sealed projection whose event prefix is neither strictly increasing nor contiguous. Render only after `finish` exits successfully.
+
 Every scope payload uses the published SPX field names below. Emit one scope
 unit per subject path and concern partition; `subject` and
 `priorContext.changedFilePartition` are strings, never path arrays. Emit only
@@ -390,6 +392,14 @@ What happened: Claude inspected changed files before opening the verification ru
 Why it failed: An `audited` label asserted completion without naming the inspected paths or preserving the concern invocation that produced the judgment. The sealed projection could not distinguish a completed concern audit from orchestration self-certification.
 
 How to avoid: Start the run before project inspection, invoke each concern skill while the run is open, and assign `audited` only after recording that concern's exact `subjectPaths` and completed `concernResult`.
+
+**Scope events were persisted concurrently.**
+
+What happened: Claude launched multiple `spx verification run scope add` commands at the same time. The sealed render carried duplicate sequence numbers and skipped the intervening sequence even though the terminal status was approved.
+
+Why it failed: Concurrent mutations raced the journal's sequence assignment, so the rendered event prefix violated the strictly increasing, contiguous sequence contract.
+
+How to avoid: Execute every state-changing `spx verification run` command serially and wait for its exit before issuing the next mutation for that run.
 
 **An implementation code scope used semantic aliases instead of SPX fields.**
 
