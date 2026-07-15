@@ -37,6 +37,30 @@ from outcomeeng.distribution.agents import (
 )
 from outcomeeng.distribution.contracts import (
     REQUIRE_SKILL_GUIDANCE_TEMPLATE,
+    RUNTIME_TOKEN_ASK_USER_CAPABILITY,
+    RUNTIME_TOKEN_ASK_USER_NAMES,
+    RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY,
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY,
+    RUNTIME_TOKEN_FIELD_KIND,
+    RUNTIME_TOKEN_FILE_KIND,
+    RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT,
+    RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY,
+    RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY,
+    RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES,
+    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+    RUNTIME_TOKEN_TERM_KIND,
+    RUNTIME_TOKEN_TOOL_KIND,
+    RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
@@ -152,8 +176,15 @@ class RuntimeTokenResolverCase:
     runtime: str
 
 
+CONFIGURED_AGENT_PROMPT_FIELD_NAMES: Final[dict[str, str]] = {
+    "claude": "system prompt",
+    "codex": "developer_instructions",
+}
 CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
-    "configured_agent": {"claude": "subagent", "codex": "custom agent"},
+    RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: {
+        "claude": "subagent",
+        "codex": "custom agent",
+    },
     "configured_agents": {"claude": "subagents", "codex": "custom agents"},
     "configured_agent_file": {
         "claude": "subagent file",
@@ -163,7 +194,7 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
         "claude": "subagent files",
         "codex": "custom agent files",
     },
-    "configured_agent_prompt": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: {
         "claude": "system prompt",
         "codex": "developer instructions",
     },
@@ -171,23 +202,23 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
         "claude": "system prompts",
         "codex": "developer instructions",
     },
-    "configured_agent_standard_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: {
         "claude": "sonnet",
         "codex": CODEX_STANDARD_MODEL,
     },
-    "configured_agent_fast_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: {
         "claude": "haiku",
         "codex": CODEX_FAST_MODEL,
     },
-    "configured_agent_auditor_model": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: {
         "claude": "sonnet",
         "codex": CODEX_STANDARD_MODEL,
     },
-    "configured_agent_strong_models": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: {
         "claude": "Sonnet",
         "codex": f"{CODEX_STRONG_MODEL} or {CODEX_STANDARD_MODEL}",
     },
-    "configured_agent_fast_or_standard_models": {
+    RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: {
         "claude": "Haiku or Sonnet",
         "codex": f"{CODEX_FAST_MODEL} or {CODEX_STANDARD_MODEL}",
     },
@@ -208,30 +239,34 @@ CONFIGURED_AGENT_TERM_NAMES: Final[dict[str, dict[str, str]]] = {
 # lint (outcomeeng.validation.runtime_tokens), which derives its forbidden set from
 # the lint-enforced kinds only — not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
-    "tool": RuntimeTokenKind(
-        lint_enforced=True,
+    RUNTIME_TOKEN_TOOL_KIND: RuntimeTokenKind(
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TOOL_KIND],
         names={
-            "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
-            "schedule_wakeup": {"claude": "ScheduleWakeup"},
+            RUNTIME_TOKEN_ASK_USER_CAPABILITY: RUNTIME_TOKEN_ASK_USER_NAMES,
+            RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+            RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+            RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
+            RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: (
+                RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
+            ),
         },
     ),
-    "field": RuntimeTokenKind(
-        lint_enforced=True,
+    RUNTIME_TOKEN_FIELD_KIND: RuntimeTokenKind(
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FIELD_KIND],
         names={
-            "configured_agent_prompt": {
-                "claude": "system prompt",
-                "codex": "developer_instructions",
-            },
+            RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: (
+                CONFIGURED_AGENT_PROMPT_FIELD_NAMES
+            ),
         },
     ),
-    "term": RuntimeTokenKind(
-        lint_enforced=False,
+    RUNTIME_TOKEN_TERM_KIND: RuntimeTokenKind(
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_TERM_KIND],
         names=CONFIGURED_AGENT_TERM_NAMES,
     ),
-    "file": RuntimeTokenKind(
-        lint_enforced=True,
+    RUNTIME_TOKEN_FILE_KIND: RuntimeTokenKind(
+        lint_enforced=RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT[RUNTIME_TOKEN_FILE_KIND],
         names={
-            "root_guide": {"claude": "CLAUDE.md", "codex": "AGENTS.md"},
+            RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: RUNTIME_TOKEN_ROOT_GUIDE_NAMES,
         },
     ),
 }
@@ -484,6 +519,7 @@ def render_text(
     *,
     shared_root: Path | None = None,
     variables: dict[str, object] | None = None,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
 ) -> str:
     """Render a template by parsing and recursively expanding directives.
 
@@ -514,7 +550,10 @@ def render_text(
         SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
     )
     try:
-        environment = make_jinja_environment(shared_root)
+        environment = make_jinja_environment(
+            shared_root,
+            runtime_token_registry=runtime_token_registry,
+        )
         result = environment.from_string(protected).render(variables or {})
     except TemplateError as exc:
         raise TemplateRenderError(str(exc)) from exc
@@ -723,7 +762,10 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _make_kind_global(kind: str) -> Callable[..., str]:
+def _make_kind_global(
+    kind: str,
+    runtime_token_registry: dict[str, RuntimeTokenKind],
+) -> Callable[..., str]:
     """Build the template global that renders the named registry ``kind``.
 
     Each kind (`tool`, `field`, `term`, `file`) is exposed under its own name. The
@@ -742,12 +784,21 @@ def _make_kind_global(kind: str) -> Callable[..., str]:
             raise RuntimeTokenError(
                 f"{kind} token {capability!r} rendered with no target in context"
             )
-        return resolve_runtime_token(kind, capability, resolved)
+        return resolve_runtime_token(
+            kind,
+            capability,
+            resolved,
+            registry=runtime_token_registry,
+        )
 
     return render
 
 
-def make_jinja_environment(shared_root: Path | None = None) -> Environment:
+def make_jinja_environment(
+    shared_root: Path | None = None,
+    *,
+    runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> Environment:
     """Return the build's configured Jinja2 environment."""
     loader = FileSystemLoader(str(shared_root)) if shared_root is not None else None
     environment = Environment(
@@ -764,8 +815,8 @@ def make_jinja_environment(shared_root: Path | None = None) -> Environment:
     )
     # One template global per registry kind, named after the kind: tool(), field(),
     # term(), file(). A new kind in the registry is exposed automatically.
-    for kind in RUNTIME_TOKEN_REGISTRY:
-        environment.globals[kind] = _make_kind_global(kind)
+    for kind in runtime_token_registry:
+        environment.globals[kind] = _make_kind_global(kind, runtime_token_registry)
     return environment
 
 

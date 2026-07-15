@@ -23,6 +23,83 @@ class Target(StrEnum):
     CODEX = "codex"
 
 
+RUNTIME_TOKEN_TOOL_KIND: Final = "tool"
+RUNTIME_TOKEN_FIELD_KIND: Final = "field"
+RUNTIME_TOKEN_TERM_KIND: Final = "term"
+RUNTIME_TOKEN_FILE_KIND: Final = "file"
+RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT: Final[dict[str, bool]] = {
+    RUNTIME_TOKEN_TOOL_KIND: True,
+    RUNTIME_TOKEN_FIELD_KIND: True,
+    RUNTIME_TOKEN_TERM_KIND: False,
+    RUNTIME_TOKEN_FILE_KIND: True,
+}
+
+RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
+RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
+RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
+RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: Final = "close_agent"
+RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
+RUNTIME_TOKEN_CONFIGURED_AGENT_PROMPT_CAPABILITY: Final = "configured_agent_prompt"
+RUNTIME_TOKEN_CONFIGURED_AGENT_CAPABILITY: Final = "configured_agent"
+RUNTIME_TOKEN_CONFIGURED_AGENT_STANDARD_MODEL_CAPABILITY: Final = (
+    "configured_agent_standard_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_MODEL_CAPABILITY: Final = (
+    "configured_agent_fast_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_AUDITOR_MODEL_CAPABILITY: Final = (
+    "configured_agent_auditor_model"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_STRONG_MODELS_CAPABILITY: Final = (
+    "configured_agent_strong_models"
+)
+RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
+    "configured_agent_fast_or_standard_models"
+)
+RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
+
+RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
+    Target.CLAUDE.value: "AskUserQuestion",
+    Target.CODEX.value: "request_user_input",
+}
+RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
+    Target.CODEX.value: "multi_agent_v1.spawn_agent",
+}
+RUNTIME_TOKEN_WAIT_AGENT_NAMES: Final[dict[str, str]] = {
+    Target.CODEX.value: "multi_agent_v1.wait_agent",
+}
+RUNTIME_TOKEN_CLOSE_AGENT_NAMES: Final[dict[str, str]] = {
+    Target.CODEX.value: "multi_agent_v1.close_agent",
+}
+RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES: Final[dict[str, str]] = {
+    Target.CLAUDE.value: "ScheduleWakeup",
+}
+RUNTIME_TOKEN_ROOT_GUIDE_NAMES: Final[dict[str, str]] = {
+    Target.CLAUDE.value: "CLAUDE.md",
+    Target.CODEX.value: "AGENTS.md",
+}
+RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_ASK_USER_CAPABILITY): (
+        RUNTIME_TOKEN_ASK_USER_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): (
+        RUNTIME_TOKEN_SPAWN_AGENT_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY): (
+        RUNTIME_TOKEN_WAIT_AGENT_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY): (
+        RUNTIME_TOKEN_CLOSE_AGENT_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY): (
+        RUNTIME_TOKEN_SCHEDULE_WAKEUP_NAMES
+    ),
+    (RUNTIME_TOKEN_FILE_KIND, RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY): (
+        RUNTIME_TOKEN_ROOT_GUIDE_NAMES
+    ),
+}
+
+
 SOURCE_ROOT_NAME: Final = "src"
 BUILD_MODULE_NAME: Final = "outcomeeng.distribution.build"
 BUILD_COMMAND_ARGV: Final = (

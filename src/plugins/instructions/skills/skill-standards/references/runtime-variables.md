@@ -1,27 +1,33 @@
 <overview>
 
-Runtime variable scopes and how to reference skill-bundled files. Read this before referencing files from a SKILL.md body or wiring hook `command:` paths.
+Runtime variable scopes and how to reference skill-bundled files.
 
 </overview>
 
 <skill_file_references>
 
-Use the runtime's skill-directory token to reference files within the current skill directory. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`.
+{!# Source-only maintainer guidance: author CLAUDE_SKILL_DIR once. The build
+rewrites that token to SKILL_DIR for Codex output. Generated runtime guidance
+must describe only its own runtime token. #!}
 
-Authored source examples, using files bundled with the skill that contains the prose:
+Use `${CLAUDE_SKILL_DIR}` to reference files within the current skill directory.
+
+Examples using files bundled with the skill that contains the prose:
 
 ```markdown
-Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md` {!# no-codex-skill-dir-rewrite #!}
-Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>` {!# no-codex-skill-dir-rewrite #!}
+Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
+Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 ```
 
-NEVER write Codex's skill-directory token in source. NEVER reference a skill-bundled file through repository-local authored or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path.
+NEVER reference a skill-bundled file through repository-local source or generated plugin paths, or through legacy plugin-root paths. If the file is not bundled with the current skill, name the capability or owning workflow instead of inventing a filesystem path.
 
-Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
+Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens.
 
 </skill_file_references>
 
 <variable_scopes>
+
+{!% if target == 'claude' %!}
 
 | Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
 | ----------------------- | -------------------------- | ---------------------------- | --------------------- |
@@ -40,5 +46,14 @@ hooks:
         - type: command
           command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
 ```
+
+{!% else %!}
+
+| Variable              | Scope                      | Skill content |
+| --------------------- | -------------------------- | ------------- |
+| `${CLAUDE_SKILL_DIR}` | Skill's SKILL.md directory | Yes           |
+
+Codex exposes the rendered skill-directory token for bundled references and scripts. This reference declares no plugin-root, plugin-data, project-root, or hook-command variable without a Codex runtime contract.
+{!% endif %!}
 
 </variable_scopes>

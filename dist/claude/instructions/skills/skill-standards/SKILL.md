@@ -11,11 +11,11 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when Claude auto-activates the skill by description-match, passive when it is invoked only by exact name or by a parent skill (a `user-invocable: false` reference, or a user-invocable protocol/loop skill a timer targets), and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
-This is a reference skill. `/create-skills` and `/audit-skills` load these standards automatically. Do not invoke directly.
+This is a reference skill. `/create-skills` and `/audit-skills` explicitly invoke these standards before authoring or auditing. Users do not invoke it as a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
@@ -28,15 +28,17 @@ Skills follow a **reference pattern** to avoid duplication:
 
 1. **Foundational skill** (e.g., `/test`) — core principles and domain-agnostic patterns.
 2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
-3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards loaded by other skills, never invoked directly.
+3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards explicitly invoked by composing skills, never selected as standalone user workflows.
 
-For language-specific skills that reference a foundation, use unqualified names (`/test`) so they resolve to whichever foundational skill is installed.
+For language-specific skill prose that references a foundation, use the unqualified invocation name (`/test`) so it resolves to whichever foundational skill is installed.
 
-**Skill invocation limitations:** Skills cannot automatically invoke other skills. They can:
+**Skill-tool composition:** A skill may invoke another skill when the parent workflow explicitly composes that capability. Composition obeys these limits:
 
-1. Instruct Claude to read another skill file first
-2. Reference foundational concepts by skill name
-3. Be invoked sequentially by the user or Claude
+1. The parent carries the runtime's skill-invocation capability in `allowed-tools` and names the exact installed skill to invoke.
+2. The target remains callable through the active runtime's skill-invocation surface; no runtime setting may block composed or reference-skill invocation.
+3. The parent owns sequencing, validates the returned shape, and merges the child result into its own output contract.
+4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
+5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
 </skill_organization>
 
@@ -76,48 +78,15 @@ Pick the gate by role:
 - A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
 - A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body. Such a loop body keeps a **passive** description — it is invoked by exact name (the timer or a parent skill), not by description-match, so a directive description would only cause false auto-activations. A user-invocable skill with a passive description is the correct shape here, not a defect.
 
-```yaml
-# Invoked skill (routing, workflow, creation)
----
-name: create-skills
-description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-  NEVER create or modify skills without this skill.
----
-```
-
-```yaml
-# Reference skill (standards, loaded programmatically by other skills)
----
-name: skill-standards
-user-invocable: false
-description: >-
-  Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
-allowed-tools: Read
----
-```
-
-```yaml
-# User-only command (side effects; Claude must not auto-trigger)
----
-name: deploy
-disable-model-invocation: true
-description: Deploy the application to production
-allowed-tools: Bash(git *) Bash(./deploy *)
----
-```
-
-Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills — audit runs never modify files.
+Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the read-only rule for audit skills, plus `Skill` when the audit composes another skill — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/author/` → `name: author`. A mismatch breaks skill lookup.
 
-**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent skill invoke it via the Skill tool — there is no preload field on the consumer side.
+**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent invoke it by installed name through the runtime's skill-invocation surface — there is no preload field on the consumer side.
 
 **Command-capability fields.** A SKILL.md carries every capability a slash command had — `argument-hint`/`arguments`, `allowed-tools` restriction, plus `!`-dynamic context and `@` file references in the body. The authoring and audit rules for that surface live in `${CLAUDE_SKILL_DIR}/references/command-capabilities.md`; read it before authoring a skill that takes arguments, injects state, or restricts tools.
 
 </frontmatter>
-
----
 
 <naming_conventions>
 
@@ -135,8 +104,6 @@ The `name` field is the user invocation path (`/skill-name`). Match user speech 
 **Vocabulary precedence:** Skill-name grammar does not override declared methodology vocabulary. When a term can belong both to a skill-name form and to another taxonomy, read the source that declares that taxonomy and inspect file history before calling the term a naming defect.
 
 Treat generated runtime output and implementation names as lower-layer evidence, never as the authority for vocabulary classification.
-
-**Material-change rule:** Any material change to a skill implies renaming all skills in the entire plugin to match the latest instruction-authoring rules.
 
 ```yaml
 # ✅ Matches user speech
@@ -216,7 +183,7 @@ description: >-
 
 Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) anywhere in the body. Keep markdown formatting *within* content (bold, italic, lists, tables, code blocks, links).
 
-**Why pure XML:** unambiguous section boundaries, consistent cross-skill structure, better token efficiency, better Claude performance.
+**Why pure XML:** unambiguous section boundaries, consistent cross-skill structure, better token efficiency, and more reliable runtime interpretation.
 
 **Required tags (every skill):**
 
@@ -290,19 +257,18 @@ Constraints:
 
 **Intelligence rules** — match structure to complexity:
 
-| Skill class                               | Expected tags                                                                                                                                       |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Simple (single domain)                    | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                                                                                     |
-| Medium (multiple patterns)                | Required + `<workflow>` and/or `<examples>`                                                                                                         |
-| Complex (multi-domain, API, sec)          | Required + router pattern + appropriate conditional tags                                                                                            |
-| Foundation / gate / validator / reference | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                     |
-| Auditor (agent-preloaded)                 | The canonical auditor skeleton — **read** `references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`. |
+| Skill class                      | Expected tags                                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simple (single domain)           | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                                                                                                         |
+| Medium (multiple patterns)       | Required + `<workflow>` and/or `<examples>`                                                                                                                             |
+| Complex (multi-domain, API, sec) | Required + router pattern + appropriate conditional tags                                                                                                                |
+| Foundation / gate / validator    | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                                         |
+| Reference                        | Required; add `<workflow>` only when the reference defines an ordered procedure. A declarative standards or vocabulary catalog omits procedural tags.                   |
+| Auditor (agent-preloaded)        | The canonical auditor skeleton — **read** `${CLAUDE_SKILL_DIR}/references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`. |
 
 Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
-
----
 
 <progressive_disclosure>
 
@@ -332,22 +298,20 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 </progressive_disclosure>
 
----
-
 <conciseness>
 
 The context window is shared. A skill competes for tokens with the system prompt, conversation history, other skills' metadata, and the user's request.
 
-**Test every sentence:** "Does removing this reduce Claude's effectiveness at the task?" If no — cut it.
+**Test every sentence:** "Does removing this reduce the skill's effectiveness at the task?" If no — cut it.
 
-**What Claude already knows (never include):**
+**What the executing runtime already knows (never include):**
 
 - General programming knowledge
 - Language syntax and standard-library APIs
 - Common design patterns
 - How to use its own tools
 
-**What Claude needs (include):**
+**What the executing runtime needs (include):**
 
 - Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
@@ -365,20 +329,18 @@ The context window is shared. A skill competes for tokens with the system prompt
 
 </conciseness>
 
----
-
 <skill_types>
 
 Six skill types. Each has a distinct purpose and primary output.
 
-| Type           | Purpose                      | Primary output                    | Key sections                                                                                                                                        |
-| -------------- | ---------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/`                                                                      |
-| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                                                                                       |
-| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                           |
-| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                       |
-| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `user-invocable: false` when invoked only by agents or explicit `Skill(name)` calls |
-| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `user-invocable: false`, passive description, `allowed-tools: Read`                                                                                 |
+| Type           | Purpose                      | Primary output                    | Key sections                                                                                                                                             |
+| -------------- | ---------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/`                                                                           |
+| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                                                                                            |
+| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                                |
+| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                            |
+| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `user-invocable: false` when invoked only by agents or explicit runtime skill invocation |
+| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `user-invocable: false`, passive description, `allowed-tools: Read`                                                                                      |
 
 **Type-selection rule of thumb:**
 
@@ -391,11 +353,9 @@ Six skill types. Each has a distinct purpose and primary output.
 
 </skill_types>
 
----
-
 <reference_skills>
 
-Reference skills hold shared domain knowledge that multiple skills need. They are **not** invoked directly — consuming skills reach them via `/skill-name` references in their text.
+Reference skills hold shared domain knowledge that multiple skills need. Consuming workflows explicitly invoke them through the runtime's documented skill-composition surface. A `/skill-name` mention in prose records the dependency but never loads the reference.
 
 **When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${CLAUDE_SKILL_DIR}`.
 
@@ -415,16 +375,16 @@ allowed-tools: Read
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 
-**How consuming skills reference it.** Write the reference skill path in running text; Claude loads the reference into context on encounter.
+**How consuming skills reference it.** Name the reference skill in running text for traceability, then explicitly invoke it through the runtime's documented skill-composition surface before applying its rules. A bare `See /skill-name` instruction is insufficient.
 
 ```markdown
 # In test-typescript/SKILL.md:
 
-See `/typescript-test-standards` for test file naming, execution levels, and reusable test patterns.
+Invoke `/typescript-test-standards` through the runtime's skill-composition surface before applying its test file naming, execution-level, and reusable-pattern rules.
 
 # In audit-typescript-tests/SKILL.md:
 
-Before auditing, read `/typescript-test-standards` for the complete catalog of TypeScript test rules.
+Before auditing, invoke `/typescript-test-standards` through the runtime's skill-composition surface and apply its complete catalog of TypeScript test rules.
 ```
 
 **Naming convention:** `{domain}-standards` for standards. Examples: `typescript-test-standards`, `skill-standards`, `agent-prompt-standards`.
@@ -434,21 +394,19 @@ Before auditing, read `/typescript-test-standards` for the complete catalog of T
 **Anti-patterns:**
 
 - Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — `${CLAUDE_SKILL_DIR}` is isolated per skill.
+- Shared content buried in one skill's `references/` — the skill-directory token is isolated per skill.
 - Same content duplicated across multiple `references/` — drifts.
 - Partial extraction: naming a new standards skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
 
 </reference_skills>
 
----
-
 <templates_and_variables>
 
-Reference skill-bundled files with the Claude Code skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
+The runtime variable scopes and bundled-file path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files.
+
+Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism, hook `command:` paths, and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`. Read it before wiring hook commands.
 
 </templates_and_variables>
-
----
 
 <platform_constraints>
 
@@ -456,20 +414,17 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 
 </platform_constraints>
 
----
-
 <xml_tag_formatting>
 
 **Always add a blank line before a closing pseudo-XML tag that follows an unordered list.** Without it, markdown parsers indent the closing tag as part of the last list item.
 
-```markdown
+```text
 # ❌ WRONG
 
 <section>
 
 - Item 1
 - Item 2
-
 </section>
 
 # ✅ CORRECT
@@ -482,11 +437,7 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 </section>
 ```
 
-Enforced by the `fix-xml-spacing` pre-commit hook (`scripts/fix-xml-spacing.py`).
-
 </xml_tag_formatting>
-
----
 
 <script_standards>
 
