@@ -1,3 +1,16 @@
+<table_of_contents>
+
+- `<overview>` — governing distinction between artifact content and reach
+- `<adr>` and `<pdr>` — architecture and product decisions
+- `<enabler_spec>` and `<outcome_spec>` — declarative node content
+- `<test_files>` and `<test_infrastructure>` — evidence and infrastructure placement
+- `<enforcement>` — automated and audit enforcement boundaries
+- `<coordination_notes>` — PLAN.md and ISSUES.md placement
+- `<flow>` — decision-to-implementation direction
+- `<common_misplacements>` — wrong-artifact diagnostics
+
+</table_of_contents>
+
 <overview>
 
 Every artifact in the Spec Tree has a specific purpose. Content placed in the wrong artifact creates confusion and duplication.
@@ -6,15 +19,15 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | ----------------------- | ---------------------------------------- | -------------------------------------------- | --------------------------------------------------- |
 | **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                                           |
 | **PDR**                 | GOVERNS what (product)                   | Decisions, product properties                | PDR audit                                           |
-| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                                               |
-| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                                               |
+| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Test, evaluate, or audit evidence                   |
+| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Test, evaluate, or audit evidence                   |
 | **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
 | **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, test evidence audit, architecture audit |
 | **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule                                   |
 | **PLAN.md**             | COORDINATES pending steps                | Concrete plan for a node                     | Any agent in the next session                       |
 | **ISSUES.md**           | COORDINATES known issues                 | Gaps, bugs, untestable specs                 | Any agent in the next session                       |
 
-ADR vs PDR is decided by content alone — ADR governs how the product is built (architecture, invisible to its users); PDR governs what the product does (behavior its users observe). A decision's **reach** — the nodes it constrains — is set by its tree position (directory and numeric prefix per `ordering-rules.md`) and is identical for an ADR or a PDR at the same index; reach never distinguishes the two, so "it holds tree-wide" or "it's foundational" is not a PDR argument. Because "user-observable" is relative to a product's users, the same concern can be a PDR in one product and an ADR in another: test-infrastructure layout is product behavior for a methodology whose users adopt the tree shape, and architecture for an application whose users never see it.
+ADR vs PDR is decided by content alone — ADR governs how the product is built (architecture, invisible to its users); PDR governs what the product does (behavior its users observe). A decision's **reach** — the nodes it constrains — is set by its tree position (directory and numeric prefix per `../SKILL.md` `<ordering_model>`) and is identical for an ADR or a PDR at the same index; reach never distinguishes the two, so "it holds tree-wide" or "it's foundational" is not a PDR argument. Because "user-observable" is relative to a product's users, the same concern can be a PDR in one product and an ADR in another: test-infrastructure layout is product behavior for a methodology whose users adopt the tree shape, and architecture for an application whose users never see it.
 
 </overview>
 
@@ -80,7 +93,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 **Contains:**
 
 - Three-part hypothesis: WE BELIEVE THAT [output] WILL [outcome] CONTRIBUTING TO [impact]
-- Assertions specifying the output — locally verifiable by tests or review
+- Assertions specifying the output — verified through `[test]`, `[eval]`, or `[audit]` evidence
 
 **Does NOT contain:** Architecture decisions (→ ADR), product decisions (→ PDR), implementation details.
 
@@ -162,12 +175,12 @@ Higher-level truth belongs in product specs, ADRs, PDRs, and ancestor specs. Low
 <flow>
 
 ```text
-                             ┌──[test]────→ Test
-                             │               "does it hold?"
-ADR/PDR ──governs──→ Spec ──┤
-                             │
-                             └──[audit]───→ Human/agent
-                                            "does the design follow W?"
+                             ┌──[test]────→ Test runner
+                             │               "does deterministic behavior hold?"
+ADR/PDR ──governs──→ Spec ──┼──[eval]────→ Eval runner
+                             │               "does structured output meet the threshold?"
+                             └──[audit]───→ Auditor
+                                             "does the semantic constraint hold?"
 ```
 
 </flow>
