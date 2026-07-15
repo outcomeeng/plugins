@@ -388,13 +388,15 @@ _PLANNING_DIRECTIVE_PLACEHOLDER_END: Final = "\ue001"
 # Jinja control statements share the `{!% %!}` block delimiter with the build's
 # directives. The build owns this vocabulary; validators and evidence import it
 # rather than maintaining parallel keyword tables.
+JINJA_RAW_BLOCK_NAME: Final = "raw"
+JINJA_RAW_BLOCK_END_NAME: Final = "endraw"
 JINJA_NEUTRAL_BLOCK_ENDINGS: Final = {
     "block": "endblock",
     "call": "endcall",
     "filter": "endfilter",
     "for": "endfor",
     "macro": "endmacro",
-    "raw": "endraw",
+    JINJA_RAW_BLOCK_NAME: JINJA_RAW_BLOCK_END_NAME,
     "set": "endset",
     "with": "endwith",
 }
@@ -407,6 +409,14 @@ JINJA_CONTROL_KEYWORDS: Final = frozenset(
         *JINJA_NEUTRAL_BLOCK_ENDINGS,
         *JINJA_NEUTRAL_BLOCK_ENDINGS.values(),
     }
+)
+_JINJA_RAW_BLOCK_RE: Final = re.compile(
+    rf"(?P<start>{re.escape(BLOCK_DELIMITER_START)}\s*"
+    rf"{re.escape(JINJA_RAW_BLOCK_NAME)}\s*{re.escape(BLOCK_DELIMITER_END)})"
+    rf"(?P<body>.*?)"
+    rf"(?P<end>{re.escape(BLOCK_DELIMITER_START)}\s*"
+    rf"{re.escape(JINJA_RAW_BLOCK_END_NAME)}\s*{re.escape(BLOCK_DELIMITER_END)})",
+    re.DOTALL,
 )
 
 
@@ -535,6 +545,15 @@ def format_directive(directive: Directive) -> str:
     raise DirectiveSyntaxError(f"unsupported directive: {directive!r}")
 
 
+def format_jinja_raw_block(body: str) -> str:
+    """Return an authored Jinja raw block containing ``body``."""
+    return (
+        f"{BLOCK_DELIMITER_START} {JINJA_RAW_BLOCK_NAME} {BLOCK_DELIMITER_END}"
+        f"{body}"
+        f"{BLOCK_DELIMITER_START} {JINJA_RAW_BLOCK_END_NAME} {BLOCK_DELIMITER_END}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Stage 2: Directive expansion
 # ---------------------------------------------------------------------------
@@ -612,18 +631,23 @@ def render_text(
 
     Raises CyclicIncludeError if include directives form a cycle.
     """
+    raw_literals: list[tuple[str, str]] = []
     rendered = _render_directives(
         template,
         shared_root=shared_root,
         include_stack=(),
         variables=variables,
         runtime_token_registry=runtime_token_registry,
+        raw_literals=raw_literals,
     )
-    return _render_jinja(
-        rendered,
-        shared_root=shared_root,
-        variables=variables,
-        runtime_token_registry=runtime_token_registry,
+    return _restore_literals(
+        _render_jinja(
+            rendered,
+            shared_root=shared_root,
+            variables=variables,
+            runtime_token_registry=runtime_token_registry,
+        ),
+        tuple(raw_literals),
     )
 
 
@@ -670,10 +694,12 @@ def _render_target_scope(
     shared_root: Path,
 ) -> str:
     """Evaluate one target's Jinja control flow while preserving directives."""
+    raw_literals: list[tuple[str, str]] = []
     return _render_jinja_preserving_directives(
         template,
         shared_root=shared_root,
         variables=_render_variables(target, plugin_name=plugin_name),
+        raw_literals=raw_literals,
     )
 
 
@@ -683,20 +709,22 @@ def _render_jinja_preserving_directives(
     shared_root: Path | None,
     variables: dict[str, object] | None,
     runtime_token_registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+    raw_literals: list[tuple[str, str]],
 ) -> str:
-    """Evaluate Jinja control flow without resolving build directives."""
+    """Evaluate Jinja control flow while collecting protected raw literals."""
+    protected_template = _protect_jinja_raw_bodies(template, raw_literals=raw_literals)
     preserved: list[tuple[str, str]] = []
 
     def mask_directive(match: re.Match[str]) -> str:
         body = match.group(1).strip()
         if _is_jinja_control_block(body):
             return match.group(0)
-        placeholder = _directive_placeholder(template, len(preserved))
+        placeholder = _directive_placeholder(protected_template, len(preserved))
         preserved.append((placeholder, match.group(0)))
         return placeholder
 
     scoped = _render_jinja(
-        _DIRECTIVE_RE.sub(mask_directive, template),
+        _DIRECTIVE_RE.sub(mask_directive, protected_template),
         shared_root=shared_root,
         variables=variables,
         runtime_token_registry=runtime_token_registry,
@@ -704,6 +732,27 @@ def _render_jinja_preserving_directives(
     for placeholder, directive in preserved:
         scoped = scoped.replace(placeholder, directive)
     return scoped
+
+
+def _protect_jinja_raw_bodies(
+    template: str,
+    *,
+    raw_literals: list[tuple[str, str]],
+) -> str:
+    def replace(match: re.Match[str]) -> str:
+        placeholder = _directive_placeholder(template, len(raw_literals))
+        while any(existing == placeholder for existing, _ in raw_literals):
+            placeholder += _PLANNING_DIRECTIVE_PLACEHOLDER_END
+        raw_literals.append((placeholder, match.group("body")))
+        return f"{match.group('start')}{placeholder}{match.group('end')}"
+
+    return _JINJA_RAW_BLOCK_RE.sub(replace, template)
+
+
+def _restore_literals(text: str, literals: tuple[tuple[str, str], ...]) -> str:
+    for placeholder, literal in literals:
+        text = text.replace(placeholder, literal)
+    return text
 
 
 def _directive_placeholder(template: str, index: int) -> str:
@@ -1042,12 +1091,14 @@ def _render_directives(
     include_stack: tuple[Path, ...],
     variables: dict[str, object] | None,
     runtime_token_registry: dict[str, RuntimeTokenKind],
+    raw_literals: list[tuple[str, str]],
 ) -> str:
     scoped_template = _render_jinja_preserving_directives(
         template,
         shared_root=shared_root,
         variables=variables,
         runtime_token_registry=runtime_token_registry,
+        raw_literals=raw_literals,
     )
 
     def replace(match: re.Match[str]) -> str:
@@ -1076,6 +1127,7 @@ def _render_directives(
             include_stack=(*include_stack, include_path),
             variables=variables,
             runtime_token_registry=runtime_token_registry,
+            raw_literals=raw_literals,
         )
 
     return _DIRECTIVE_RE.sub(replace, scoped_template)

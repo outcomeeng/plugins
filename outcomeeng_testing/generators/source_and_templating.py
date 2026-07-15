@@ -11,7 +11,9 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
     SHARED_FRAGMENT_FILENAME,
     IncludeDirective,
+    RequireSkillDirective,
     format_directive,
+    format_jinja_raw_block,
     resolve_runtime_token,
     runtime_token_resolver_cases,
 )
@@ -92,6 +94,15 @@ class TargetScopedIncludeCase:
     outer_fragment_body: str | None
     reference_filename: str
     expected_relative_path: Path
+
+
+@dataclass(frozen=True)
+class RawDirectiveCase:
+    """One build directive authored as literal content in a Jinja raw block."""
+
+    source: SourceScenario
+    directive: str
+    template: str
 
 
 def source_scenarios() -> tuple[SourceScenario, ...]:
@@ -187,6 +198,26 @@ def target_scoped_include_cases() -> tuple[TargetScopedIncludeCase, ...]:
                 )
             )
     return tuple(cases)
+
+
+def raw_directive_cases() -> tuple[RawDirectiveCase, ...]:
+    """Cover literal includes across the generated source domain."""
+    return tuple(
+        RawDirectiveCase(
+            source=source,
+            directive=directive,
+            template=format_jinja_raw_block(directive),
+        )
+        for source in source_scenarios()
+        for directive in (
+            format_directive(
+                IncludeDirective(
+                    f"{source.scope}/{source.cycle_topic}/{SHARED_FRAGMENT_FILENAME}"
+                )
+            ),
+            format_directive(RequireSkillDirective(source.skill_ref)),
+        )
+    )
 
 
 def unrecognized_plugin_subdirectory_names() -> tuple[str, ...]:

@@ -56,7 +56,9 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng_testing.generators.source_and_templating import (
+    RawDirectiveCase,
     SourceScenario,
+    raw_directive_cases,
     source_scenarios,
     unrecognized_plugin_subdirectory_names,
 )
@@ -423,6 +425,10 @@ def skill_dir_escape_survives_jinja_pass() -> bool:
     return all(_skill_dir_escape_survives(case) for case in source_scenarios())
 
 
+def raw_directive_ships_literally() -> bool:
+    return all(_raw_directive_ships_literally(case) for case in raw_directive_cases())
+
+
 def require_skill_emits_identically_across_targets() -> bool:
     return all(_require_emits_identically(case) for case in source_scenarios())
 
@@ -667,6 +673,33 @@ def _skill_dir_escape_survives(case: SourceScenario) -> bool:
             in reader.read_skill_body(case.plugin, case.skill, target=target)
             and SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
             not in reader.read_skill_body(case.plugin, case.skill, target=target)
+            for target in Target
+        )
+
+
+def _raw_directive_ships_literally(case: RawDirectiveCase) -> bool:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        builder = SrcTreeBuilder(root)
+        if (
+            render_text(case.template, shared_root=builder.shared_root)
+            != case.directive
+        ):
+            return False
+        builder.add_plugin(
+            case.source.plugin,
+            skills={case.source.skill: case.template},
+        )
+        plan_emissions(builder.src_root)
+        build(builder.src_root, root / DIST_DIR_NAME)
+        reader = DistTreeReader(root)
+        return all(
+            reader.read_skill_body(
+                case.source.plugin,
+                case.source.skill,
+                target=target,
+            ).strip()
+            == case.directive
             for target in Target
         )
 
