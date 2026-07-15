@@ -1,4 +1,4 @@
-"""Repository-owned implementation-audit contract checks."""
+"""Repository-owned audit contract checks."""
 
 from __future__ import annotations
 
@@ -14,9 +14,11 @@ from outcomeeng.validation.audit_artifacts import (
     LANGUAGE_AUDIT_SKILL_TEMPLATE,
     LANGUAGE_CODE_SKILL_TEMPLATE,
     PLUGIN_SURFACE_PATHS,
+    RETIRED_AUDIT_RUNTIME_FILENAMES,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
     SPEC_TREE_PLUGIN_NAME,
+    check_audit_runtime_surface,
     check_language_concern_surface,
     check_runtime_surface,
     check_wrapper_surface,
@@ -58,6 +60,11 @@ def implementation_audit_runtime_contains_only_skill() -> bool:
     return _all_live_surfaces_pass(check_runtime_surface)
 
 
+def audit_runtime_trees_exclude_retired_artifacts() -> bool:
+    """Return whether every live audit runtime satisfies artifact rules."""
+    return _all_live_surfaces_pass(check_audit_runtime_surface)
+
+
 def audit_contract_rejects_language_specific_wrapper() -> bool:
     """Return whether validation rejects a language-specific wrapper."""
     with _valid_surface() as surface:
@@ -90,6 +97,15 @@ def audit_contract_rejects_missing_runtime_skill() -> bool:
         runtime_dir = implementation_audit_runtime_directory(surface)
         (runtime_dir / SKILL_FILENAME).unlink()
         return bool(check_runtime_surface(surface))
+
+
+def audit_contract_rejects_retired_artifact_in_other_runtime() -> bool:
+    """Return whether validation rejects retired files in another audit skill."""
+    with _valid_surface() as surface:
+        runtime_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME / "audit-tests"
+        _touch(runtime_dir / SKILL_FILENAME)
+        _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
+        return bool(check_audit_runtime_surface(surface))
 
 
 def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
