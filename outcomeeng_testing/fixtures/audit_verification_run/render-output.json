@@ -64,7 +64,7 @@
             "producerProvenance": {
               "agentOwningPluginVersion": "{{SPEC_TREE_VERSION}}",
               "skillOwningPluginVersion": "{{PYTHON_VERSION}}",
-              "toolVersion": "0.6.17"
+              "toolVersion": "{{SPX_VERSION}}"
             }
           }
         }
@@ -94,7 +94,7 @@
             "producerProvenance": {
               "agentOwningPluginVersion": "{{SPEC_TREE_VERSION}}",
               "skillOwningPluginVersion": "{{PYTHON_VERSION}}",
-              "toolVersion": "0.6.17"
+              "toolVersion": "{{SPX_VERSION}}"
             },
             "rule": "example-rule",
             "severity": "blocking",
