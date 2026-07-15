@@ -33,17 +33,18 @@ def implementation_audit_verification_probe(
 ) -> ImplementationAuditVerificationProbe:
     """Derive a compatibility case from one source-owned coverage unit."""
     concern = ImplementationAuditConcern.CODE
-    unit_id = implementation_audit_unit_id(language, concern)
+    partition_id = implementation_audit_unit_id(language, concern)
+    subject_path = f"{partition_id}.txt"
     return ImplementationAuditVerificationProbe(
         language=language,
         concern=concern,
-        subject_path=f"{unit_id}.txt",
-        finding_key=f"{unit_id}:finding",
-        request_kind=f"{unit_id}:request",
-        rule=f"{unit_id}:rule",
-        message=f"{unit_id}:message",
-        observed=f"{unit_id}:observed",
-        expected=f"{unit_id}:expected",
+        subject_path=subject_path,
+        finding_key=f"{partition_id}:finding",
+        request_kind=f"{partition_id}:request",
+        rule=f"{partition_id}:rule",
+        message=f"{partition_id}:message",
+        observed=f"{partition_id}:observed",
+        expected=f"{partition_id}:expected",
         finding_count=1,
         terminal_status=AuditTerminalStatus.REJECTED,
     )

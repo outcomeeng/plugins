@@ -14,7 +14,6 @@ from outcomeeng.validation.plugins import (
     IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH,
     IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH,
     PLUGIN_SURFACE_ROOTS,
-    RETIRED_AUDIT_SCRIPT_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS,
     check_implementation_auditor_wrapper,
     check_language_concern_skill_trios,
@@ -24,19 +23,29 @@ from outcomeeng.validation.plugins import (
     retired_language_audit_skill_relative_path,
 )
 from outcomeeng.validation.implementation_audit_contract import (
-    CONCERN_RESULT_COMPLETED,
+    AuditCoverageStatus,
+    COVERAGE_STATUS_FIELD,
+    EVENT_DATA_FIELD,
+    EVENT_PAYLOAD_FIELD,
+    EVENT_TYPE_FIELD,
     LANGUAGE_AUDIT_CONCERNS,
+    PRIOR_CONTEXT_FIELD,
+    RUN_EVENTS_FIELD,
     RUN_FINDING_COUNT_FIELD,
     RUN_SEALED_FIELD,
     RUN_TERMINAL_STATUS_FIELD,
     RUN_TOKEN_FIELD,
     SPEC_TREE_PLUGIN_NAME,
+    SUBJECT_FIELD,
+    UNIT_ID_FIELD,
+    VERIFICATION_FINDING_EVENT_TYPE,
+    VERIFICATION_SCOPE_EVENT_TYPE,
     expected_verification_projection,
     implementation_audit_finding_payload,
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
-    implementation_audit_unit_id,
+    implementation_audit_subject_unit_id,
 )
 from outcomeeng.distribution.orchestration import SOURCE_PLUGINS_DIR
 from outcomeeng.validation.spx_version import (
@@ -55,6 +64,13 @@ from outcomeeng_testing.generators.audit_verification_run_contract import (
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
+EXPECTED_RETIRED_AUDIT_SCRIPT_FILENAMES: Final = (
+    "verdict.py",
+    "aggregate_verdicts.py",
+    "pass_results.py",
+    "journal_emit.py",
+    "audit_orchestrator.py",
+)
 
 
 def spx_floor_and_ci_pin_meet_verification_run_minimum() -> bool:
@@ -86,12 +102,18 @@ def audited_scope_payload_carries_concern_evidence() -> bool:
     payload = implementation_audit_scope_payload(
         probe.language,
         probe.concern,
-        subject_paths=(probe.subject_path,),
-        finding_count=1,
+        subject_path=probe.subject_path,
     )
-    return payload.get("subjectPaths") == [probe.subject_path] and payload.get(
-        "concernResult"
-    ) == {"status": CONCERN_RESULT_COMPLETED, "findingCount": 1}
+    prior_context = payload.get(PRIOR_CONTEXT_FIELD)
+    if not isinstance(prior_context, Mapping):
+        return False
+    return (
+        payload.get(SUBJECT_FIELD) == probe.subject_path
+        and payload.get(COVERAGE_STATUS_FIELD) == AuditCoverageStatus.AUDITED.value
+        and prior_context.get("changedFilePartition") == probe.language
+        and prior_context.get("concernPartition") == probe.concern.value
+        and prior_context.get("languagePartition") == probe.language
+    )
 
 
 def audited_scope_payload_rejects_empty_subject_paths() -> bool:
@@ -104,8 +126,7 @@ def audited_scope_payload_rejects_empty_subject_paths() -> bool:
         implementation_audit_scope_payload(
             probe.language,
             probe.concern,
-            subject_paths=(),
-            finding_count=0,
+            subject_path="",
         )
     except ValueError:
         return True
@@ -190,7 +211,7 @@ def implementation_audit_scripts_are_absent_and_rejected() -> bool:
     return all(
         _retired_script_is_rejected(surface_root, retired_name)
         for surface_root in PLUGIN_SURFACE_ROOTS
-        for retired_name in RETIRED_AUDIT_SCRIPT_FILENAMES
+        for retired_name in EXPECTED_RETIRED_AUDIT_SCRIPT_FILENAMES
     )
 
 
@@ -226,7 +247,11 @@ def _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
         repository = Path(temporary_directory)
         _initialize_changeset_repository(repository, probe)
         scope = _changeset_scope(repository)
-        unit_id = implementation_audit_unit_id(probe.language, probe.concern)
+        unit_id = implementation_audit_subject_unit_id(
+            probe.language,
+            probe.concern,
+            probe.subject_path,
+        )
         start_report = _run_spx_json(
             repository,
             (
@@ -253,8 +278,7 @@ def _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
                 implementation_audit_scope_payload(
                     probe.language,
                     probe.concern,
-                    subject_paths=(probe.subject_path,),
-                    finding_count=1,
+                    subject_path=probe.subject_path,
                 ),
                 language=probe.language,
             ),
@@ -337,7 +361,54 @@ def _spx_audit_verification_run_lifecycle_accepts_implementation_payloads(
             f"verification-run projection mismatch: expected {expected!r}, "
             f"observed {observed!r}",
         )
+    _assert_rendered_scope_preserves_concern_evidence(
+        render_report,
+        unit_id=unit_id,
+        subject_path=probe.subject_path,
+        finding_count=probe.finding_count,
+    )
     return True
+
+
+def _assert_rendered_scope_preserves_concern_evidence(
+    render_report: Mapping[str, object],
+    *,
+    unit_id: str,
+    subject_path: str,
+    finding_count: int,
+) -> None:
+    events = render_report.get(RUN_EVENTS_FIELD)
+    if not isinstance(events, list):
+        raise AssertionError("verification-run render omitted its event list")
+    matching_scope_payloads: list[Mapping[str, object]] = []
+    matching_finding_count = 0
+    for event in events:
+        if not isinstance(event, Mapping):
+            continue
+        data = event.get(EVENT_DATA_FIELD)
+        if not isinstance(data, Mapping):
+            continue
+        payload = data.get(EVENT_PAYLOAD_FIELD)
+        if not isinstance(payload, Mapping) or payload.get(UNIT_ID_FIELD) != unit_id:
+            continue
+        if event.get(EVENT_TYPE_FIELD) == VERIFICATION_SCOPE_EVENT_TYPE:
+            matching_scope_payloads.append(payload)
+        elif event.get(EVENT_TYPE_FIELD) == VERIFICATION_FINDING_EVENT_TYPE:
+            matching_finding_count += 1
+    expected_scope = {
+        SUBJECT_FIELD: subject_path,
+        COVERAGE_STATUS_FIELD: AuditCoverageStatus.AUDITED.value,
+    }
+    scope_matches = any(
+        all(payload.get(key) == value for key, value in expected_scope.items())
+        for payload in matching_scope_payloads
+    )
+    if not scope_matches or matching_finding_count != finding_count:
+        raise AssertionError(
+            f"rendered scope {unit_id!r} omitted preserved concern evidence: "
+            f"expected scope {expected_scope!r} and {finding_count} findings, "
+            f"observed {matching_scope_payloads!r} and {matching_finding_count}",
+        )
 
 
 def _retired_script_is_rejected(surface_root: Path, retired_name: str) -> bool:

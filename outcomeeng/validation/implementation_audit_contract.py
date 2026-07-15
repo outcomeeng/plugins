@@ -9,13 +9,22 @@ SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
 IMPLEMENTATION_AUDITOR_AGENT_NAME: Final = "implementation-auditor"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_CLASS: Final = "implementation"
-CONCERN_RESULT_COMPLETED: Final = "completed"
 
 RUN_TOKEN_FIELD: Final = "runToken"
 RUN_SEQUENCE_FIELD: Final = "sequence"
 RUN_TERMINAL_STATUS_FIELD: Final = "terminalStatus"
 RUN_SEALED_FIELD: Final = "sealed"
 RUN_FINDING_COUNT_FIELD: Final = "findingCount"
+RUN_EVENTS_FIELD: Final = "events"
+EVENT_TYPE_FIELD: Final = "type"
+EVENT_DATA_FIELD: Final = "data"
+EVENT_PAYLOAD_FIELD: Final = "payload"
+VERIFICATION_SCOPE_EVENT_TYPE: Final = "sh.spx.verify.scope"
+VERIFICATION_FINDING_EVENT_TYPE: Final = "sh.spx.verify.finding"
+PRIOR_CONTEXT_FIELD: Final = "priorContext"
+SUBJECT_FIELD: Final = "subject"
+COVERAGE_STATUS_FIELD: Final = "coverageStatus"
+UNIT_ID_FIELD: Final = "unitId"
 
 
 class ImplementationAuditConcern(StrEnum):
@@ -71,6 +80,15 @@ def implementation_audit_unit_id(
     return f"{IMPLEMENTATION_AUDIT_CLASS}:{language}:{concern.value}"
 
 
+def implementation_audit_subject_unit_id(
+    language: str,
+    concern: ImplementationAuditConcern,
+    subject_path: str,
+) -> str:
+    """Return the stable coverage-unit identity for one inspected path."""
+    return f"{implementation_audit_unit_id(language, concern)}:{subject_path}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,
@@ -110,29 +128,23 @@ def implementation_audit_scope_payload(
     language: str,
     concern: ImplementationAuditConcern,
     *,
-    subject_paths: tuple[str, ...],
-    finding_count: int,
+    subject_path: str,
 ) -> dict[str, object]:
-    """Return one audited implementation coverage unit."""
-    if not subject_paths:
-        raise ValueError("audited implementation scope requires subject paths")
-    if finding_count < 0:
-        raise ValueError(
-            "audited implementation scope requires a nonnegative finding count"
-        )
+    """Return one audited implementation coverage unit for one inspected path."""
+    if not subject_path:
+        raise ValueError("audited implementation scope requires a subject path")
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        UNIT_ID_FIELD: implementation_audit_subject_unit_id(
+            language,
+            concern,
+            subject_path,
+        ),
         "auditClass": IMPLEMENTATION_AUDIT_CLASS,
         "auditKind": concern.value,
-        "subject": f"partition:{language}",
+        SUBJECT_FIELD: subject_path,
         "coverageRequirement": AuditCoverageRequirement.REQUIRED.value,
-        "coverageStatus": AuditCoverageStatus.AUDITED.value,
-        "subjectPaths": list(subject_paths),
-        "concernResult": {
-            "status": CONCERN_RESULT_COMPLETED,
-            "findingCount": finding_count,
-        },
-        "priorContext": {
+        COVERAGE_STATUS_FIELD: AuditCoverageStatus.AUDITED.value,
+        PRIOR_CONTEXT_FIELD: {
             "changedFilePartition": language,
             "concernPartition": concern.value,
             "languagePartition": language,
@@ -157,7 +169,11 @@ def implementation_audit_finding_payload(
 ) -> dict[str, object]:
     """Return one valid blocking implementation-audit finding."""
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        UNIT_ID_FIELD: implementation_audit_subject_unit_id(
+            language,
+            concern,
+            subject_path,
+        ),
         "producerIdentity": implementation_audit_producer_identity(
             language,
             concern,
