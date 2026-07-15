@@ -116,7 +116,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
-| "Implement this outcome"                   | `/contextualize`       | —                       |
+| "Implement this outcome"                   | `/apply`               | `applier`               |
 | "Create an outcome"                        | `/author`              | —                       |
 | "Add an ADR"                               | `/author`              | —                       |
 | "Add a new node" or "This node is too big" | `/decompose`           | —                       |
