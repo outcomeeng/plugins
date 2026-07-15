@@ -22,3 +22,4 @@ The skills-about-skills cluster is three peers with distinct roles:
 - NEVER: block main-conversation invocation of an agent-loaded `audit-*` skill with `disable-model-invocation` — it also blocks the auditor agent's preload and skill-to-skill loading, so the dispatch gate and description enforce the rule instead ([review])
 - NEVER: restate `/skill-standards` rules inside `/create-skills` or `/audit-skills` — a single source of truth prevents drift between standard and enforcer ([review])
 - NEVER: add standards content to `/create-skills/references/` — that directory carries workflow guidance; standards belong in `/skill-standards` ([review])
+- ALWAYS: when a foundation skill loads the same references on every invocation, `/skill-standards` requires one consolidated canonical eager payload and governs its total loaded size instead of applying the 500-line overview rule; conditional operational detail, templates, examples, and overlays remain separate ([audit])
