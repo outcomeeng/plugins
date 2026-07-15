@@ -1,7 +1,7 @@
 # Reviewing Changes
 
 PROVIDES a verification skill that reviews a working changeset through a single shipped runner, records the review as a sealed `spx journal --type review` run, and returns the raw run token
-SO THAT local reviewers, wrapper agents, and future hosted integrations share one durable review record
+SO THAT local reviewers, wrapper agents, and hosted integrations share one durable review record
 CAN project the sealed journal into the surface they own without duplicating review rendering inside the skill
 
 ## Assertions
@@ -17,38 +17,37 @@ CAN project the sealed journal into the surface they own without duplicating rev
 - Given `compute_diff.py --bundle-dir <dir>`, the script writes a caller-owned scratch review-input bundle outside the git worktree containing `diff.md` and `manifest.json`, and stdout reports the two paths plus the diff byte count and section count so the reviewer can read the diff with random access while durable review state remains journal-only ([test](tests/test_skill_orchestration.scenario.l2.py))
 - Given one raised finding, `review_run.py append-finding` appends one finding-reported event through the journal and `review_run.py finish` appends a terminal run-completed event carrying review status and finding counts, seals the run, removes runner-owned scratch state, and returns only `runToken` ([test](tests/test_skill_orchestration.scenario.l2.py))
 - Given `review_run.py finish` is called before every changed file has a scope-advanced event, `finish` exits non-zero and names the unexamined files in stderr so an incomplete review cannot be sealed ([test](tests/test_skill_orchestration.scenario.l2.py))
-- `review_result.parse_json` returns a `ReviewResult` dataclass on a conforming document and raises `ReviewResultValidationError` on every violation — a missing required key, an unknown `severity` or `concern` value, or a malformed citation — naming the offending value ([test](tests/test_review_result.scenario.l1.py))
-- `review_result.to_json_dict` and `review_result.from_json_dict` round-trip a `ReviewResult` instance without loss ([test](tests/test_review_result.scenario.l1.py))
+- Given findings carrying rejecting and warning severities, when `review_run.py finish` seals the run, then the run-completed event counts rejecting findings as `blocking` and warning findings as `debt` ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given the live `review-changes` path finishes a review, then it returns only the raw run token and performs no caller-facing rendering, summarization, counting, or finding restatement ([test](tests/test_skill_orchestration.scenario.l2.py))
 
 ### Mappings
 
-- `Severity` enum members map to the wire values `blocking`, `debt` ([test](tests/test_review_result.scenario.l1.py))
-- `Concern` enum members map to exactly the five wire values `consistency`, `security`, `performance`, `evidence`, `architecture` ([test](tests/test_review_result.scenario.l1.py))
+- `Severity` enum members map to the wire values `blocking`, `debt` ([test](tests/test_review_result.mapping.l1.py))
+- `Concern` enum members map to exactly the five wire values `consistency`, `security`, `performance`, `evidence`, `architecture` ([test](tests/test_review_result.mapping.l1.py))
 - Review severities map into the shared run-journal projection as `blocking` -> `reject` and `debt` -> `warning`; the projection then owns terminal status rollup from the sealed prefix ([test](tests/test_review_journal_emit.mapping.l1.py))
-- `review_run.py finish` maps finding severities into terminal review counts on the run-completed event: rejecting findings increment `blocking`, warning findings increment `debt` ([test](tests/test_skill_orchestration.scenario.l2.py))
-- `journal_emit.py render` remains a legacy helper projection over sealed journal events for compatibility tests, while the live skill path returns only the run token ([test](tests/test_review_journal_emit.mapping.l1.py))
+- `journal_emit.py render` maps sealed journal events to the compatibility projection, while the live skill path returns only the run token ([test](tests/test_review_journal_emit.mapping.l1.py))
 
 ### Properties
 
 - For every `ReviewResult` instance, `from_json_dict(to_json_dict(r)) == r` — serialization is lossless ([test](tests/test_review_result.property.l1.py))
 
-### Audit
+### Compliance
 
-- ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([test](tests/test_review_result.scenario.l1.py))
-- NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and explicit resolution evidence per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.scenario.l1.py))
+- ALWAYS: `review_result.parse_json` returns a `ReviewResult` dataclass for a conforming document and raises `ReviewResultValidationError` naming the offending value for a missing required key, unknown `severity` or `concern`, malformed citation, or other schema violation ([test](tests/test_review_result.compliance.l1.py))
+- ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical compatibility review-result schema lives in one Python module ([test](tests/test_review_result.compliance.l1.py))
+- NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer applies its own policy by validity and explicit resolution evidence per `spx/15-merging.pdr.md`, never by severity ([test](tests/test_review_result.compliance.l1.py))
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])
 - ALWAYS: the `review-changes` skill prose loads only the bundled prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; repository-root `REVIEW.md`, `REVIEW.example.md`, and other review prompt files are not review context ([audit])
-- ALWAYS: scripts under `plugins/spec-tree/skills/review-changes/scripts/` write no durable review state directly; `compute_diff.py` may write only the caller-owned scratch review-input bundle files, and `review_run.py` may write and remove runner-owned scratch state ([test](tests/test_reviewing_changes.audit.l1.py))
+- ALWAYS: scripts under `plugins/spec-tree/skills/review-changes/scripts/` write no durable review state directly; `compute_diff.py` may write only the caller-owned scratch review-input bundle files, and `review_run.py` may write and remove runner-owned scratch state ([test](tests/test_reviewing_changes.compliance.l1.py))
 - ALWAYS: the swappable review prompt template lives at `plugins/spec-tree/skills/review-changes/references/review-prompt.md` and the skill prose loads it via `${CLAUDE_SKILL_DIR}/references/review-prompt.md` ([audit])
-- ALWAYS: `Finding.rule` is a non-empty string whose form is a path-style citation into an existing rule in the spec-tree or skill ecosystem — `spx/<path>:<MUST\|NEVER\|ALWAYS\|SCENARIO\|MAPPING\|CONFORMANCE\|PROPERTY\|AUDIT>:<n>`, a path to a spec-tree ADR/PDR, `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>`, `AGENTS.md:<rule-slug>`, or `CLAUDE.md:<rule-slug>`. `rule` is never a free-form description, a required-action string, a repository-root review policy citation, or a tracking-location string ([test](tests/test_review_result.scenario.l1.py))
+- ALWAYS: `Finding.rule` is a non-empty string whose form is a path-style citation into an existing rule in the spec-tree or skill ecosystem — `spx/<path>:<MUST\|NEVER\|ALWAYS\|SCENARIO\|MAPPING\|CONFORMANCE\|PROPERTY\|COMPLIANCE\|AUDIT>:<n>`, a path to a spec-tree ADR/PDR, `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>`, `AGENTS.md:<rule-slug>`, or `CLAUDE.md:<rule-slug>`. `rule` is never a free-form description, a required-action string, a repository-root review policy citation, or a tracking-location string ([test](tests/test_review_result.compliance.l1.py))
 - ALWAYS: `Finding.rule` cites a rule that actually exists at the referenced location — the review prompt instructs the model to populate `rule` from rules declared in the loaded context, never to invent a citation ([eval](evals/judgment-grounding/eval.toml))
 - ALWAYS: the wrapper agent invokes the `review-changes` skill and the skill uses only `review_run.py` as its command surface ([eval](evals/wrapper-protocol/eval.toml))
 - ALWAYS: the verification skill emits a `blocking` finding asserting absence of a file or fact only when the diff itself contains the deletion or omission — the verification skill does not hallucinate missing artifacts it cannot observe ([eval](evals/judgment-grounding/eval.toml))
 - ALWAYS: finding `severity` matches the rubric in `plugins/spec-tree/skills/review-changes/references/review-prompt.md` — `blocking` for a defect whose evidence establishes a deterministic merge-safety consequence, `debt` for a real defect whose evidence does not establish that consequence ([eval](evals/severity-classification/eval.toml))
 - ALWAYS: each pass against a given changeset surfaces every finding the changeset exhibits in that single pass — there is no cross-pass continuity, and a finding missed on this pass has no second chance unless the diff itself changes ([audit])
 - ALWAYS: known-clean diffs yield zero `blocking` findings and known-broken diffs yield at least one `blocking` finding at the per-eval threshold — the suite gate value `0.85` governs CI pass/fail, not a single trial ([eval](evals/findings-direction/eval.toml))
-- NEVER: any script under `plugins/spec-tree/skills/review-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md` ([test](tests/test_reviewing_changes.audit.l1.py))
+- NEVER: any script under `plugins/spec-tree/skills/review-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md` ([test](tests/test_reviewing_changes.compliance.l1.py))
 - NEVER: the wrapper agent writes review artifacts outside `spx journal`; durable review state is the sealed review journal prefix ([eval](evals/wrapper-protocol/eval.toml))
 - NEVER: the review prompt is embedded inside `SKILL.md` or any script — the prompt is one standalone markdown file at the declared reference path so swapping the prompt does not require touching code ([audit])
 - NEVER: repository-root `REVIEW.md` or `REVIEW.example.md` exists in this product checkout — local and CI review use the hidden prompt shipped by the `review-changes` skill ([audit])
-- NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token ([test](tests/test_skill_orchestration.scenario.l2.py))
