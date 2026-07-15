@@ -14,10 +14,6 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
-<reference_note>
-This is a reference skill. `/create-skills` and `/audit-skills` explicitly invoke these standards before authoring or auditing. Users do not invoke it as a standalone workflow.
-</reference_note>
-
 <repo_local_overlay>
 When another skill loads this reference inside a repository, check for `spx/local/skills.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., marketplace-specific naming conventions or additional constraints). A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
@@ -60,7 +56,6 @@ The `name` field is the user invocation path (`/skill-name`). Match user speech 
 
 - Use domain acronyms: `author` not `author-spec-tree-artifacts`
 - Use terms users actually say: `test-python` not `python-unit-test-framework`
-- Think "CD-ROM" not "Compact Disc Read Only Memory"
 - Directory name MUST match: `skills/author/` → `name: author`
 
 **Naming form:** invoked workflow skills use imperative verbs. Reference skills use noun phrases ending in the domain they standardize, such as `skill-standards` or `typescript-test-standards`.
@@ -174,8 +169,6 @@ Constraints:
 | Foundation / gate / validator    | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                                  |
 | Reference                        | Required; add `<workflow>` only when the reference defines an ordered procedure. A declarative standards or vocabulary catalog omits procedural tags.            |
 | Auditor (agent-preloaded)        | The canonical auditor skeleton — **read** `${SKILL_DIR}/references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`. |
-
-Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
 

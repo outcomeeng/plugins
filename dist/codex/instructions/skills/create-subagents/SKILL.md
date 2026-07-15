@@ -306,7 +306,7 @@ A well-configured custom agent has:
 - Appropriate sandbox and tool-surface restrictions
 - XML-structured developer instructions with role, approach, and constraints
 
-- Description field optimized for automatic routing
+- Description field matches the target runtime's selection semantics
 - At least one verification run or documented dry-run against the custom agent's intended workflow
 - Model selection appropriate for task complexity, cost, and reproducibility needs
 

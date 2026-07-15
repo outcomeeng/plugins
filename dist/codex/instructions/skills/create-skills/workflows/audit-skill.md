@@ -1,141 +1,59 @@
-# Workflow: Audit a Skill
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+Read `/skill-standards` and `/agent-prompt-standards` before running this workflow. Check for `spx/local/skills.md` at the repository root and read it when present.
 </required_reading>
 
 <process>
-## Step 1: Identify Skill to Audit
 
-**If user provided path**: Read the skill directly
+<step name="identify_target">
 
-**If user didn't specify**: List available skills:
+Accept the skill path supplied by the operator. When no path is supplied, list the available skills and ask which one to audit. Resolve the target to its `SKILL.md` plus every cited file under `references/`, `workflows/`, `templates/`, and `scripts/`.
 
-```bash
-ls ~/.claude/skills/
-```
+</step>
 
-Present as numbered list and ask: "Which skill would you like to audit?"
+<step name="dispatch_audit">
 
-## Step 2: Read the Skill
+Dispatch the configured `skill-auditor` with the repository path, every target skill-content path, governing node paths when known, and deterministic verification already run. The audit is read-only: never edit files, assign a numeric score, or ask the auditor to produce fixes.
 
-Read the full skill structure:
+The verdict must evaluate:
 
-```bash
-# Read main file
-cat ~/.claude/skills/{skill-name}/SKILL.md
+- YAML frontmatter and argument integration
+- Required `<objective>` and `<success_criteria>` tags for every skill
+- Additive router tags for router skills
+- Pure XML body structure and closed tags
+- Conditional tags appropriate to the skill type
+- Progressive disclosure or the eager-foundation exception
+- Command-capability security and bundled-file portability
+- Prompt voice, constraint strength, conciseness, and operational effectiveness
 
-# Check for additional directories
-ls ~/.claude/skills/{skill-name}/
-ls ~/.claude/skills/{skill-name}/workflows/ 2>/dev/null
-ls ~/.claude/skills/{skill-name}/references/ 2>/dev/null
-```
+</step>
 
-## Step 3: Run Audit Checklist
+<step name="present_verdict">
 
-Evaluate against each criterion:
+Present the auditor's complete JSON verdict unchanged, including its `overall` value (`APPROVED` or `REJECTED`) and every `keep-these-aspects`, `worth-improving`, and `must-fix` row with file and line locations. Never convert the verdict into a score or offer mutations as part of the audit workflow. A separate operator request to improve the skill returns to `/create-skills` for authoring after the read-only verdict is complete.
 
-### YAML Frontmatter
-
-- [ ] Has `name:` field (lowercase-with-hyphens)
-- [ ] Name matches directory name
-- [ ] Has `description:` field (≤1024 chars)
-- [ ] Description says what it does AND when to use it
-- [ ] Description uses directive style with negative constraint (ALWAYS/NEVER)
-
-### Structure
-
-- [ ] SKILL.md under 500 lines, unless an eager foundation satisfies the bounded-payload exception in `/skill-standards`
-- [ ] Pure XML structure (no markdown headings # in body)
-- [ ] All XML tags properly closed
-- [ ] Has required tags: `<objective>` or `<essential_principles>`
-- [ ] Has `<success_criteria>`
-
-### Router Pattern (if complex skill)
-
-- [ ] Essential principles inline in SKILL.md (not in separate file)
-- [ ] Has `<intake>` question
-- [ ] Has `<routing>` table
-- [ ] All referenced workflow files exist
-- [ ] All referenced reference files exist
-
-### Workflows (if present)
-
-- [ ] Each has `<required_reading>` section
-- [ ] Each has `<process>` section
-- [ ] Each has `<success_criteria>` section
-- [ ] Required reading references exist
-
-### Content Quality
-
-- [ ] Principles are actionable (not vague platitudes)
-- [ ] Steps are specific (not "do the thing")
-- [ ] Success criteria are verifiable
-- [ ] No redundant content across files
-
-## Step 4: Generate Report
-
-Present findings as:
-
-```
-## Audit Report: {skill-name}
-
-### Passing
-- [list passing items]
-
-### Issues Found
-1. **[Issue name]**: [Description]
-   → Fix: [Specific action]
-
-2. **[Issue name]**: [Description]
-   → Fix: [Specific action]
-
-### Score: X/Y criteria passing
-```
-
-## Step 5: Offer Fixes
-
-If issues found, ask:
-"Would you like me to fix these issues?"
-
-Options:
-
-1. **Fix all** - Apply all recommended fixes
-2. **Fix one by one** - Review each fix before applying
-3. **Just the report** - No changes needed
-
-If fixing:
-
-- Make each change
-- Verify file validity after each change
-- Report what was fixed
+</step>
 
 </process>
 
 <audit_anti_patterns>
-Common anti-patterns to flag:
 
-| Anti-Pattern         | Description                                             |
-| -------------------- | ------------------------------------------------------- |
-| Skippable principles | Essential principles in separate file instead of inline |
-| Monolithic skill     | Single file over 500 lines                              |
-| Mixed concerns       | Procedures and knowledge in same file                   |
-| Vague steps          | "Handle the error appropriately"                        |
-| Untestable criteria  | "User is satisfied"                                     |
-| Markdown headings    | Using # instead of XML tags in body                     |
-| Missing routing      | Complex skill without intake/routing                    |
-| Broken references    | Files mentioned but don't exist                         |
-| Redundant content    | Same information in multiple places                     |
+| Anti-pattern               | Defect                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| Skippable principles       | Essential principles live outside the eagerly loaded skill surface                |
+| Monolithic optional detail | Conditional material is inlined without satisfying the eager-foundation exception |
+| Hybrid structure           | Markdown headings appear in an XML-structured body                                |
+| Missing required tags      | `<objective>` or `<success_criteria>` is absent                                   |
+| Broken reference           | A cited bundled file is absent or reached through a nonportable path              |
+| Score-based audit          | A numeric rating replaces actionable findings and an approval verdict             |
+| Audit mutation             | The audit edits files or offers fixes inside its read-only workflow               |
 
 </audit_anti_patterns>
 
 <success_criteria>
-Audit is complete when:
 
-- [ ] Skill fully read and analyzed
-- [ ] All checklist items evaluated
-- [ ] Report presented to user
-- [ ] Fixes applied (if requested)
-- [ ] User has clear picture of skill health
+- The target skill and every cited bundled file were included in the audit scope.
+- The configured `skill-auditor` returned a terminal `APPROVED` or `REJECTED` verdict.
+- Every rejection names a concrete file, line, governing standard, and required correction.
+- The workflow performed no repository mutation and emitted no numeric score.
 
 </success_criteria>

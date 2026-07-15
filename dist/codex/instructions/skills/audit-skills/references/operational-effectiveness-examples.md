@@ -28,15 +28,15 @@ Examples of operational effectiveness issues to flag:
 ```xml
 <success_criteria>Outcome is complete when:
 
-- Every assertion in `<spec>.md` has a `[test]` or `[review]` link resolving to an existing file (verify: count of `\[test\]\(tests/` plus `\[review\]` matches the assertion bullet count)
-- Architecture audit verdict is APPROVED for every ADR touched this turn (verify: each `<audit_verdict>` XML output has `<verdict>APPROVED</verdict>` and three `<gate status="PASS">` entries; `spx validation audit-verdict` exits 0)
-- Test evidence audit verdict is APPROVED for every assertion (verify: same XML schema check; per-assertion `<verdict>APPROVED</verdict>` present)
-- Code audit verdict is APPROVED (verify: same XML schema check)
+- Every assertion in `<spec>.md` carries current evidence: each `[test]` or `[eval]` link resolves to its target, and each pathless `[audit]` tag is present on the assertion it governs
+- Architecture audit verdict is APPROVED for every ADR touched this turn (verify: each auditor's JSON `<verdict_format>` reports `"overall": "APPROVED"` with no `REJECT` finding)
+- Test evidence audit verdict is APPROVED for every assertion (verify: the `audit-tests` JSON `<verdict_format>` reports every applicable row as `PASS`)
+- Code audit verdict is APPROVED (verify: the implementation-audit projection reports `terminalStatus: approved`)
 - All tests pass: `just test` exits 0
 - Coverage delta is non-negative on assertion-relevant source files (verify: see the `coverage_protocol` procedure in `/audit-tests` references)</success_criteria>
 ```
 
-**Why it works**: Each criterion names the file or command that produces the evidence, and each "green" is defined by a concrete output shape (`<verdict>APPROVED</verdict>`) rather than an adjective.
+**Why it works**: Each criterion names the file or command that produces the evidence, and each "green" is defined by a concrete output shape (`"overall": "APPROVED"`) rather than an adjective.
 </example>
 
 <example name="missing_verification_gates">
@@ -82,7 +82,7 @@ If gate fails, fix tests before writing implementation — code derives from tes
 **GATE 3**: Before closing the outcome, verify:
 - [ ] Code audit (`/audit-<lang>`) returns APPROVED
 - [ ] `just test` exits 0
-- [ ] `spx validation audit-verdict` exits 0 on every emitted verdict
+- [ ] Every auditor result conforms to its owning skill's JSON `<verdict_format>`
 If gate fails, do not commit.</workflow>
 ```
 
@@ -126,7 +126,7 @@ Skill has detailed workflow but no `<failure_modes>` section.
 ✅ Should be:
 
 ```xml
-<success_criteria>Audit verdict conforms to `audit-verdict.xsd` and reports a verdict per assertion. Concrete example:
+<success_criteria>Audit verdict conforms to the owning audit skill's JSON `<verdict_format>` and reports a verdict per assertion. Concrete example:
 
 Spec assertion:
   Given a tree with one failing child, when status is computed, parent reports failing
@@ -147,7 +147,7 @@ Audit verdict for this assertion (Gate 1 finding shape):
   Coverage: src/status.ts baseline 65.1% → with test 83.5% (+18.4%)
   Verdict: APPROVED — four properties satisfied.
 
-Output shape (full verdict): `<assertion>` element with `<verdict>APPROVED</verdict>` and one `<finding>` per evaluated step.</success_criteria>
+Output shape (full verdict): `{"schema_version": 1, "overall": "APPROVED", "rows": [{"name": "gate-1-assertion", "status": "PASS", "findings": []}]}`.</success_criteria>
 ```
 
 **Why it works**: Claude can compare its actual verdict to the example line-for-line — same field names, same shape, same expected values for a known input — and detect a mismatch before emitting.

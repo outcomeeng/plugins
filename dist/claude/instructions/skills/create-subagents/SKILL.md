@@ -312,7 +312,7 @@ A well-configured subagent has:
 - Appropriate tool restrictions (least privilege)
 - XML-structured system prompt with role, approach, and constraints
 
-- Description field optimized for automatic routing
+- Description field matches the target runtime's selection semantics
 - At least one verification run or documented dry-run against the subagent's intended workflow
 - Model selection appropriate for task complexity, cost, and reproducibility needs
 
