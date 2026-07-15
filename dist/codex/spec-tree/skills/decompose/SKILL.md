@@ -2,7 +2,6 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-arguments: target
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -16,21 +15,21 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Treat `$target` as exactly one target:
+Accept exactly one target:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
-- `spx/{path-to-node}` — decompose or restructure children under an existing node.
+- `{path-to-node}` — decompose or restructure children under an existing node.
 
-If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
 Use the live foundation sections below before composing. Do not reread the compatibility pointers:
 
 - `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - `/understand` `<ordering_model>` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of this reading rule
-- `/understand` `references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `/understand` `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `/understand` `templates/nodes/enabler-name.md`
-- `/understand` `templates/nodes/outcome-name.md`
+- `${SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `${SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
+- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -244,7 +243,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `/understand` `templates/nodes/`.
+3. Use the enabler or outcome template from `${SKILL_DIR}/../understand/templates/nodes/`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.

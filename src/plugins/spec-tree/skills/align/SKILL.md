@@ -19,6 +19,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, invoke `/scope-changeset` and use `branch_scope(base, repo)` from its `changeset_scope.py` API. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
 
@@ -27,16 +28,16 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 **References (conformance rules):**
 
 - Live `/understand` `<truth_hierarchy>` — atemporal voice and truth-flow rules
-- `/understand` `references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
 - Live `/understand` `<node_model>` — enabler and outcome classification
 
 **Templates (structural rules):**
 
-- `/understand` `templates/decisions/decision-name.adr.md` — required ADR sections
-- `/understand` `templates/decisions/decision-name.pdr.md` — required PDR sections
-- `/understand` `templates/product/product-name.product.md` — required product sections
-- `/understand` `templates/nodes/enabler-name.md` — required enabler sections
-- `/understand` `templates/nodes/outcome-name.md` — required outcome sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
 
 </required_references>
 
@@ -138,7 +139,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Apply the live `/understand` `<truth_hierarchy>` decision-to-spec alignment rules.
+Apply the decision-to-spec alignment rules from the live `/understand` `<truth_hierarchy>`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -155,7 +156,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
 2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
-3. **Scope**: Use the user-specified filesystem path, or default to `spx/` in the product root.
+3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `{{! file('root_guide', 'claude') !}}` and `{{! file('root_guide', 'codex') !}}` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
@@ -209,6 +210,7 @@ Downstream alignment:
 - [ ] Structural checks run against correct template per file type
 - [ ] Language checks applied to all files (including unrecognized)
 - [ ] Placement checks applied to all classified files
+- [ ] Changeset checks report higher-level declaration changes that lack lower-spec alignment and `PLAN.md` grounding
 - [ ] Report contains only factual findings — no suggestions, no severity, no "should"
 - [ ] Summary counts emitted
 
