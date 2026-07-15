@@ -9,7 +9,7 @@
 
 <process>
 
-1. Validate each finding against its cited rule, then classify it as valid in-scope, unbacked, or a separate larger concern according to the governing verifier and merge contracts. Preserve the verifier's concrete file and line references.
+1. Validate each finding against its cited rule, then classify it as valid or unbacked according to the governing verifier and merge contracts. Preserve the verifier's concrete file and line references. Repair every valid finding and re-run review; when its repair belongs to a capability too large for the changeset, remove that capability before re-review. Treat only an exact operator waiver that accepts the finding's stated consequence as waiver evidence; tracking, general merge authorization, and severity-only authorization resolve nothing.
 2. Group repeated findings by root cause. A single wrong return type, missing source contract, or invalid abstraction can surface as many local failures.
 3. Identify the actual layer in violation: implementation, test evidence, source contract, or specification alignment. Do not change tests to make implementation defects disappear.
 4. For complex fixes, write a brief local plan before editing:
@@ -109,7 +109,7 @@ This fix is ready for re-review.
 
 <success_criteria>
 
-- Every verifier finding has a traced root cause and a bounded disposition.
+- Every verifier finding has a traced root cause and resolution evidence accepted by the governing verifier and merge contracts.
 - Implementation defects are fixed in implementation, test-evidence defects are fixed in evidence, and specs are not weakened to match broken lower layers.
 - Same-class defects across the touched node have been swept.
 - Focused tests, typecheck, lint, and selected validation pass through repository-selected commands.
