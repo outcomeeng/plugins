@@ -22,7 +22,7 @@ from outcomeeng_evals.report import (
 )
 from outcomeeng_evals.definition import RUNS_DIRNAME
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     ReportFixture,
     load_report_fixture,
     make_cache_only_report_suite_result,

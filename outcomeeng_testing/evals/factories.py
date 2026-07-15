@@ -50,7 +50,7 @@ from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HistoryRow
 from outcomeeng_evals.runner import ModelProcessResult, RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
-from outcomeeng_evals.testing.fakes import (
+from outcomeeng_testing.evals.fakes import (
     RecordingCommandRunner,
     RecordingModelProcessLauncher,
     RecordingUvExecutable,

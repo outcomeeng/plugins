@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     assert_changed_paths_file_reads_git_name_status_rows,
     assert_empty_plan_exits_successfully_without_commands,
     assert_failing_suite_fails_aggregate_after_attempting_every_suite,

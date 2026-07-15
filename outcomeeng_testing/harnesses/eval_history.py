@@ -25,7 +25,7 @@ from outcomeeng_evals.history import (
     HistoryRow,
     append_history_row,
 )
-from outcomeeng_evals.testing.factories import (
+from outcomeeng_testing.evals.factories import (
     load_history_rows_fixture,
     make_bimodal_cache_suite_result,
     make_suite_result,

@@ -28,7 +28,7 @@ from outcomeeng_evals.grader import grade, is_subset, parse_verdict
 from outcomeeng_evals.runner import DEFAULT_CLAUDE_BINARY, RunResult
 from outcomeeng_evals.settings import DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_evals.suite import TIMEOUT_ERROR_PREFIX, run_suite
-from outcomeeng_evals.testing.fakes import (
+from outcomeeng_testing.evals.fakes import (
     ConcurrencyTrackingRunner,
     RaisingModelRunner,
     StubModelRunner,

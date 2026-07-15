@@ -56,10 +56,6 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 
 `outcomeeng_evals` builds from the single repo `pyproject.toml`. Split into an independent uv project only when it is published to PyPI or its dependency surfaces diverge from the marketplace's.
 
-## `outcomeeng_evals.testing` public-API contract
-
-The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether that subpackage is a stable, versioned surface or an internal helper with no compatibility guarantees is not yet declared. Decide when the first external consumer appears.
-
 ## Prompt-template placeholder validation (stricter form)
 
 `_render_prompt` (in `outcomeeng_evals/cli/commands/run.py`) emits a stderr warning when it meets an identifier-shaped `{token}` that isn't a known placeholder (catching `{casse_id}` and similar typos at render time). A stricter form — validating `prompt.md` against the known keys at `load_definition` time and *raising* rather than warning — would catch the typo before any model call. Deferred: the render-time warning covers the common case, and raising would need care so a template that legitimately contains a `{identifier}` literal (rare, but possible) is not rejected. Revisit if prompt authoring becomes a frequent operation.
@@ -70,7 +66,7 @@ The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether t
 
 ## Tilde-fenced code blocks in the link walker
 
-`_strip_code_regions` (in `outcomeeng_testing/evals/link_integrity.py`) blanks backtick fences (`` ``` ``) but not tilde fences (`~~~`), which CommonMark also allows. A `~~~`-fenced block containing a `[test](...)` or `[eval](...)` example would be treated as a real evidence reference and flagged broken. No marketplace spec markdown uses tilde fences today; if one does, add tilde-fence matching to `_strip_code_regions`.
+`_strip_code_regions` (in `outcomeeng/validation/link_integrity.py`) blanks backtick fences (`` ``` ``) but not tilde fences (`~~~`), which CommonMark also allows. A `~~~`-fenced block containing a `[test](...)` or `[eval](...)` example would be treated as a real evidence reference and flagged broken. No marketplace spec markdown uses tilde fences today; if one does, add tilde-fence matching to `_strip_code_regions`.
 
 ## Partial-trial evidence in parallel-path errors
 
@@ -78,4 +74,4 @@ The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether t
 
 ## Drop `[review]` once the `[audit]` migration completes
 
-`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng_testing/evals/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in `references/assertion-types.md`, `references/verification-kinds.md`, and any validator or lint rule that enumerates the lane set.
+`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng/validation/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in `references/assertion-types.md`, `references/verification-kinds.md`, and any validator or lint rule that enumerates the lane set.
