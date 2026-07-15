@@ -53,14 +53,11 @@ review_result = load_review_result_module()
 def test_adapter_maps_review_severity_to_projection(
     severity: Any, expected_severity: Any, expected_overall: Any
 ) -> None:
-    event = je.finding_reported_event(
-        review_finding(severity=severity, identifier="F-001"),
-        now=REVIEW_EVENT_TIME,
-        attempt=1,
-    )
+    finding = review_finding(severity=severity)
+    event = je.finding_reported_event(finding, now=REVIEW_EVENT_TIME, attempt=1)
 
     assert event["type"] == jp.FINDING_REPORTED
-    assert event["data"]["id"] == "F-001"
+    assert event["data"]["id"] == finding.id
     assert event["data"]["severity"] == expected_severity
     assert jp.compute_overall([event]) == expected_overall
 
@@ -84,8 +81,8 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_BASE_REF] == metadata.base_ref
     assert data[jp.RUN_STATE_BASE_SHA] == metadata.base_sha
     assert data[jp.RUN_STATE_CONFIG_DIGEST] == metadata.config_digest
-    assert data[jp.RUN_STATE_PARTICIPANTS] == ["review"]
-    assert data[jp.RUN_STATE_SCOPE] == {"include": ["README.md"]}
+    assert data[jp.RUN_STATE_PARTICIPANTS] == list(metadata.participants)
+    assert data[jp.RUN_STATE_SCOPE] == dict(metadata.scope)
     assert data[jp.RUN_STATE_STARTED_AT] == metadata.started_at
     # The run-completed event carries the real completion time, not the
     # provisional start-time the start-of-run metadata bakes in.
@@ -105,17 +102,15 @@ def test_adapter_terminal_event_carries_pull_request_identity() -> None:
     data = event["data"]
 
     assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
-    assert data[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
+    assert data[jp.RUN_STATE_PULL_REQUEST_NUMBER] == metadata.pull_request_number
 
 
 def test_render_events_counts_review_findings_by_render_class() -> None:
     events = streamed_review_events(
         review_run_metadata(),
         (
-            review_finding(
-                severity=review_result.Severity.BLOCKING, identifier="F-001"
-            ),
-            review_finding(severity=review_result.Severity.DEBT, identifier="F-002"),
+            review_finding(severity=review_result.Severity.BLOCKING),
+            review_finding(severity=review_result.Severity.DEBT),
         ),
     )
     rendered = je.render_events(events)

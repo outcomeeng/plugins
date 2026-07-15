@@ -1,0 +1,17 @@
+{
+  "target": "working-diff",
+  "scopeHash": "abc123def456",
+  "branchName": "work/example",
+  "branchSlug": "work__example",
+  "targetKind": "pull-request",
+  "pullRequestNumber": 123,
+  "headSha": "1111111111111111111111111111111111111111",
+  "baseRef": "main",
+  "baseSha": "2222222222222222222222222222222222222222",
+  "configDigest": "cfg-abc123",
+  "participants": ["review"],
+  "scope": {"include": ["README.md"]},
+  "startedAt": "2026-06-23T00:00:00Z",
+  "completedAt": "2026-06-23T00:00:00Z",
+  "outputPaths": []
+}

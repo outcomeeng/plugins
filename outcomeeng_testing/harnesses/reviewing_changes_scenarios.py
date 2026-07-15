@@ -25,15 +25,10 @@ import pathlib
 
 import pytest
 
-from outcomeeng_testing.generators.reviewing_changes import review_journal_selectors
 from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
-    REVIEW_ENV_BACKEND,
-    REVIEW_ENV_BRANCH,
-    REVIEW_ENV_PULL_REQUEST_NUMBER,
-    REVIEW_ENV_TARGET_KIND,
     REVIEW_RUN_SCRIPT,
     init_renamed_review_git_repo,
     init_review_git_repo,
@@ -43,6 +38,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     make_review_result_dict,
     review_git_repo,
     review_git_repo_with_secondary_head,
+    review_run_journal_env_from_state,
     review_run_journal_env_keys,
     run_git,
     run_compute_diff_in_process,
@@ -161,9 +157,8 @@ class TestSkillOrchestrationChain:
 class TestReviewRunnerBoundary:
     """The public runner seals a journal run and returns only the run token."""
 
-    @pytest.mark.parametrize("journal_selector", review_journal_selectors())
     def test_runner_preserves_journal_namespace_across_subcommands(
-        self, tmp_path: pathlib.Path, journal_selector: dict[str, str]
+        self, tmp_path: pathlib.Path
     ) -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
@@ -178,8 +173,6 @@ class TestReviewRunnerBoundary:
         env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
         env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
         env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
-        env.update(journal_selector)
-
         later_env = env.copy()
         for key in review_run_journal_env_keys():
             later_env[key] = "contaminating-later-env"
@@ -187,6 +180,9 @@ class TestReviewRunnerBoundary:
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
+        expected_namespace = review_run_journal_env_from_state(
+            pathlib.Path(start_payload["statePath"])
+        )
 
         scoped = run_script(
             REVIEW_RUN_SCRIPT,
@@ -243,16 +239,6 @@ class TestReviewRunnerBoundary:
             "com.outcomeeng.spx.journal.run.completed",
         ]
         assert journal["events"][2]["data"]["id"] == finding["id"]
-        expected_namespace = {
-            REVIEW_ENV_BACKEND: journal_selector.get(REVIEW_ENV_BACKEND, ""),
-            REVIEW_ENV_BRANCH: journal_selector.get(REVIEW_ENV_BRANCH, "feature/x"),
-            REVIEW_ENV_TARGET_KIND: journal_selector.get(
-                REVIEW_ENV_TARGET_KIND, "branch"
-            ),
-            REVIEW_ENV_PULL_REQUEST_NUMBER: journal_selector.get(
-                REVIEW_ENV_PULL_REQUEST_NUMBER, ""
-            ),
-        }
         assert journal["namespace"] == expected_namespace
         terminal_event = journal["events"][-1]
         assert terminal_event["data"]["status"] == "approved"

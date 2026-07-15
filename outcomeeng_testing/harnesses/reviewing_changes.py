@@ -43,7 +43,7 @@ import pathlib
 import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Any, Callable, cast
@@ -84,6 +84,13 @@ REVIEW_FIXTURES_DIR = (
 )
 RULE_SLUG_DOCUMENT_FIXTURE = REVIEW_FIXTURES_DIR / "rule_slug_document.md"
 CONFORMING_REVIEW_RESULT_FIXTURE = REVIEW_FIXTURES_DIR / "conforming_review_result.json"
+REVIEW_RUN_METADATA_BRANCH_FIXTURE = (
+    REVIEW_FIXTURES_DIR / "review_run_metadata_branch.json"
+)
+REVIEW_RUN_METADATA_PULL_REQUEST_FIXTURE = (
+    REVIEW_FIXTURES_DIR / "review_run_metadata_pull_request.json"
+)
+REVIEW_FINDINGS_FIXTURE = REVIEW_FIXTURES_DIR / "review_findings.jsonl"
 
 
 def load_review_result_module() -> ModuleType:
@@ -324,46 +331,28 @@ def review_run_metadata(
     )
 
     projection = load_journal_projection_module()
-    options: dict[str, object] = {}
-    if pull_request:
-        options = {
-            "target_kind": projection.JournalTargetKind.PULL_REQUEST,
-            "pull_request_number": 123,
-        }
-    return projection.RunMetadata(
-        target="working-diff",
-        scope_hash="abc123def456",
-        branch_name="work/example",
-        branch_slug="work__example",
-        head_sha="1" * 40,
-        base_ref="main",
-        base_sha="" if missing_base_identity else "2" * 40,
-        config_digest="cfg-abc123",
-        participants=("review",),
-        scope={"include": ["README.md"]},
-        started_at="2026-06-23T00:00:00Z",
-        completed_at="2026-06-23T00:00:00Z",
-        output_paths=(),
-        **options,
+    fixture_path = (
+        REVIEW_RUN_METADATA_PULL_REQUEST_FIXTURE
+        if pull_request
+        else REVIEW_RUN_METADATA_BRANCH_FIXTURE
     )
+    metadata = projection.run_metadata_from_json(
+        fixture_path.read_text(encoding="utf-8")
+    )
+    if missing_base_identity:
+        return replace(metadata, base_sha="")
+    return metadata
 
 
-def review_finding(*, severity: Any, identifier: str) -> Any:
-    """Return one parsed source-contract finding for journal projection."""
+def review_finding(*, severity: Any) -> Any:
+    """Return the complete captured finding carrying ``severity``."""
 
     review_result = load_review_result_module()
-    return review_result.parse_finding_json(
-        json.dumps(
-            make_finding_dict(
-                finding_id=identifier,
-                severity=severity,
-                file_path="README.md",
-                line=1,
-                message=f"{identifier} evidence",
-                action=f"{identifier} action",
-            ),
-        ),
+    findings = tuple(
+        review_result.parse_finding_json(line)
+        for line in REVIEW_FINDINGS_FIXTURE.read_text(encoding="utf-8").splitlines()
     )
+    return next(finding for finding in findings if finding.severity == severity)
 
 
 def streamed_review_events(
@@ -403,32 +392,7 @@ def streamed_review_events(
 def review_metadata_wire_json() -> str:
     """Serialize source-shaped review metadata to the streaming CLI wire."""
 
-    from outcomeeng_testing.harnesses.journal_projection import (
-        load_journal_projection_module,
-    )
-
-    projection = load_journal_projection_module()
-    metadata = review_run_metadata()
-    return json.dumps(
-        {
-            "target": metadata.target,
-            projection.RUN_STATE_SCOPE_HASH: metadata.scope_hash,
-            projection.RUN_STATE_BRANCH_NAME: metadata.branch_name,
-            projection.RUN_STATE_BRANCH_SLUG: metadata.branch_slug,
-            projection.RUN_STATE_TARGET_KIND: str(
-                projection.JournalTargetKind.BRANCH,
-            ),
-            projection.RUN_STATE_HEAD_SHA: metadata.head_sha,
-            projection.RUN_STATE_BASE_REF: metadata.base_ref,
-            projection.RUN_STATE_BASE_SHA: metadata.base_sha,
-            projection.RUN_STATE_CONFIG_DIGEST: metadata.config_digest,
-            projection.RUN_STATE_PARTICIPANTS: list(metadata.participants),
-            projection.RUN_STATE_SCOPE: dict(metadata.scope),
-            projection.RUN_STATE_STARTED_AT: metadata.started_at,
-            projection.RUN_STATE_COMPLETED_AT: metadata.completed_at,
-            projection.RUN_STATE_OUTPUT_PATHS: [],
-        },
-    )
+    return REVIEW_RUN_METADATA_BRANCH_FIXTURE.read_text(encoding="utf-8")
 
 
 def write_review_skill_config(root: pathlib.Path, *, prompt: str) -> None:
@@ -610,6 +574,15 @@ def review_run_journal_env_keys() -> tuple[str, ...]:
 
     module = load_review_run_module()
     return tuple(cast("tuple[str, ...]", module.JOURNAL_ENV_KEYS))
+
+
+def review_run_journal_env_from_state(state_path: pathlib.Path) -> dict[str, str]:
+    """Read the runner-owned journal namespace from persisted run state."""
+
+    module = load_review_run_module()
+    state = module._read_state(state_path)
+    persisted = cast("dict[str, str]", module._journal_env_from_state(state))
+    return {key: persisted.get(key, "") for key in module.JOURNAL_ENV_KEYS}
 
 
 def review_run_journal_env_key(name: str) -> str:

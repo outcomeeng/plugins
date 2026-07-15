@@ -7,10 +7,6 @@ from typing import Any
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    REVIEW_ENV_BACKEND,
-    REVIEW_ENV_BRANCH,
-    REVIEW_ENV_PULL_REQUEST_NUMBER,
-    REVIEW_ENV_TARGET_KIND,
     load_review_result_module,
     make_finding_dict,
     review_rule_citations,
@@ -89,24 +85,6 @@ def finding_without_required_field(field: str) -> dict[str, Any]:
     finding = make_finding_dict()
     del finding[field]
     return finding
-
-
-def review_journal_selectors() -> tuple[dict[str, str], ...]:
-    """Return the finite journal-selector domain from source-owned keys."""
-
-    return (
-        {},
-        {REVIEW_ENV_BRANCH: "feature/x"},
-        {
-            REVIEW_ENV_BACKEND: "local",
-            REVIEW_ENV_BRANCH: "feature/x",
-        },
-        {
-            REVIEW_ENV_BRANCH: "feature/x",
-            REVIEW_ENV_TARGET_KIND: "pull-request",
-            REVIEW_ENV_PULL_REQUEST_NUMBER: "384",
-        },
-    )
 
 
 def review_severity_projection_cases() -> tuple[tuple[Any, Any, Any], ...]:
