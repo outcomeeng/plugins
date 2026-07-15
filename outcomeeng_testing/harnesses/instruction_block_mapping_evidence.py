@@ -198,27 +198,7 @@ def _assert_span_ratio_maps_to_wrap_decision() -> None:
 
 def mapping_evidence_declarations() -> tuple[str, ...]:
     """Return every finite mapping case identity in execution order."""
-    topology_factories = (
-        harness.root_instruction_topology_only_claude,
-        harness.root_instruction_topology_only_agents,
-        harness.root_instruction_topology_symlinked,
-        harness.root_instruction_topology_identical,
-        harness.root_instruction_topology_legacy_managed,
-        harness.root_instruction_topology_near_identical,
-        harness.root_instruction_topology_separate,
-    )
-    return (
-        *(
-            f"extension[{extension}]"
-            for extension in sorted(MODULE.LANGUAGE_BY_EXTENSION)
-        ),
-        *(f"language-block[{language}]" for language in harness.TEMPLATE_LANGUAGES),
-        "detected-language-set",
-        "router-state-report",
-        "shared-region-state-report",
-        *(f"topology[{factory.__name__}]" for factory in topology_factories),
-        "span-ratio-wrap-decision",
-    )
+    return harness.mapping_evidence_contract()
 
 
 def mapping_evidence_run() -> harness.EvidenceRun:

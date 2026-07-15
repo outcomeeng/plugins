@@ -475,16 +475,7 @@ def _compliance_assertions() -> list[tuple[str, Callable[..., None]]]:
 
 def compliance_evidence_declarations() -> tuple[str, ...]:
     """Return every compliance case identity in execution order."""
-    declarations: list[str] = []
-    for name, assertion in _compliance_assertions():
-        if "agent_harness" in inspect.signature(assertion).parameters:
-            declarations.extend(
-                f"{name.removeprefix('_assert_')}[{agent_harness}]"
-                for agent_harness in harness.TEMPLATE_HARNESSES
-            )
-        else:
-            declarations.append(name.removeprefix("_assert_"))
-    return tuple(declarations)
+    return harness.compliance_evidence_contract()
 
 
 def compliance_evidence_run() -> harness.EvidenceRun:

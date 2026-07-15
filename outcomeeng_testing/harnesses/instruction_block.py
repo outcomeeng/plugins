@@ -38,6 +38,7 @@ from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
 from outcomeeng_testing.generators.instruction_block import (
+    BootstrapThresholdRelation,
     InstructionBlockCases,
     build_macro as generate_build_macro,
     build_template as generate_template,
@@ -344,6 +345,127 @@ BUILD_MACRO_HARNESS = _GENERATED_CASES.build_macro_harness
 HARNESS_CLAUDE = _GENERATED_CASES.harness_claude
 HARNESS_CODEX = _GENERATED_CASES.harness_codex
 TEMPLATE_HARNESSES = _GENERATED_CASES.template_harnesses
+
+
+def scenario_evidence_contract() -> tuple[str, ...]:
+    """Return the independent case manifest required by scenario evidence."""
+    return (
+        "blank_run_in_independent_content_preserved",
+        "bootstrap_finds_whole_line_block_over_longer_straddling_match",
+        "bootstrap_preserves_lines_when_common_span_ends_mid_line",
+        "bootstrap_refuses_a_malformed_seed_fence",
+        "bootstrap_snaps_span_to_line_boundaries_in_both_files",
+        "both_files_identical_except_harness_spans",
+        "cli_check_marks_router_not_first_as_stale",
+        "cli_check_reports_absent_when_one_file_missing",
+        "cli_check_treats_language_order_as_set",
+        "cli_detects_languages_from_test_extensions",
+        "cli_reconcile_from_applies_operator_tie_break",
+        "cli_reconcile_reports_no_change_when_regions_agree",
+        "cli_reconcile_requires_repo_root",
+        "cli_rejects_directory_template",
+        "cli_rejects_missing_repo_root",
+        "cli_rejects_missing_template",
+        "cli_rejects_non_directory_repo_root",
+        "cli_rejects_root_symlink_escaping_repo",
+        "cli_rejects_spx_symlink_during_language_detection",
+        "cli_write_without_repo_root_exits",
+        "diverged_shared_region_reconciles_to_more_recent_side",
+        "duplicate_shared_region_name_is_malformed",
+        "legacy_marker_block_reported_stale_and_replaced",
+        "malformed_shared_fence_is_reported_stale",
+        "markerless_generated_body_is_replaced",
+        "newer_template_adds_section_preserving_shared_region",
+        "one_sided_shared_region_is_reported_ambiguous",
+        "quoted_router_closing_marker_after_block_is_preserved",
+        "quoted_router_marker_in_prose_is_preserved",
+        "quoted_shared_fence_in_prose_is_not_a_region",
+        "recency_tie_is_reported_ambiguous",
+        "reconcile_makes_no_change_to_a_dirty_file",
+        "reconcile_replaces_losing_region_whole_without_blending",
+        "reconcile_reports_malformed_fence_as_ambiguous",
+        "reconcile_skips_a_malformed_duplicate_name",
+        "reconcile_uses_region_recency_not_whole_file_recency",
+        "region_line_range_covers_content_lines_only",
+        "router_marker_format",
+        "symlinked_root_file_becomes_regular_file",
+        "template_symlink_is_rejected",
+        "unparseable_version_is_stale",
+        "write_preserves_shared_region_and_independent_prose",
+        "write_produces_both_files_language_and_harness_filtered",
+    )
+
+
+def mapping_evidence_contract() -> tuple[str, ...]:
+    """Return the independent case manifest required by mapping evidence."""
+    module = load_instruction_block_module()
+    topology_factories = (
+        root_instruction_topology_only_claude,
+        root_instruction_topology_only_agents,
+        root_instruction_topology_symlinked,
+        root_instruction_topology_identical,
+        root_instruction_topology_legacy_managed,
+        root_instruction_topology_near_identical,
+        root_instruction_topology_separate,
+    )
+    return (
+        *(
+            f"extension[{extension}]"
+            for extension in sorted(module.LANGUAGE_BY_EXTENSION)
+        ),
+        *(f"language-block[{language}]" for language in TEMPLATE_LANGUAGES),
+        "detected-language-set",
+        "router-state-report",
+        "shared-region-state-report",
+        *(f"topology[{factory.__name__}]" for factory in topology_factories),
+        "span-ratio-wrap-decision",
+    )
+
+
+def property_evidence_contract() -> tuple[str, ...]:
+    """Return the independent case manifest required by property evidence."""
+    return (
+        *(f"render-version[{agent_harness}]" for agent_harness in TEMPLATE_HARNESSES),
+        "trailing-newline",
+        "stale-order",
+        "reconcile-identity",
+        "reconcile-idempotence",
+        *(
+            f"bootstrap-threshold[{relation.value}]"
+            for relation in BootstrapThresholdRelation
+        ),
+    )
+
+
+def compliance_evidence_contract() -> tuple[str, ...]:
+    """Return the independent case manifest required by compliance evidence."""
+    return (
+        "drift_gate_marks_untracked_root_file_intent_to_add",
+        "drift_gate_reports_a_missing_root_instruction_file",
+        "drift_gate_skips_missing_obsolete_spx_file",
+        "former_command_slot_fence_is_ordinary_content",
+        "foundation_policy_guard_rejects_forbidden_router_token",
+        "foundation_policy_guard_rejects_missing_requirement",
+        "generation_reads_dist_templates",
+        "generation_writes_both_root_files",
+        "justfile_binds_build_and_check_recipes",
+        "lefthook_regenerates_through_build_instructions",
+        "obsolete_spx_instruction_files_are_removed",
+        "reconcile_replaces_the_losing_region_whole",
+        "refresh_workflow_checks_out_main",
+        "refresh_workflow_installs_dprint",
+        "refresh_workflow_regenerates_and_opens_pr",
+        "refresh_workflow_regeneration_drives_pr_decision",
+        "refresh_workflow_verifies_just_download",
+        "regenerate_overwrites_router_drift",
+        "render_passes_brace_token_through_unchanged",
+        "rendered_router_omits_forbidden_session_tokens",
+        *(
+            f"router_is_first_and_carries_read_whole_file_instruction[{agent_harness}]"
+            for agent_harness in TEMPLATE_HARNESSES
+        ),
+        "unresolved_build_macro_is_rejected",
+    )
 
 
 def harness_line(harness: str) -> str:

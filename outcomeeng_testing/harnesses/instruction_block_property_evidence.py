@@ -35,6 +35,7 @@ from outcomeeng_testing.harnesses.instruction_block import (
     TEMPLATE_LANGUAGES,
     build_template,
     load_instruction_block_module,
+    property_evidence_contract,
 )
 
 
@@ -128,17 +129,7 @@ def _assert_bootstrap_threshold_decision(case: BootstrapWrapCase) -> None:
 
 def property_evidence_declarations() -> tuple[str, ...]:
     """Return every generated property identity in execution order."""
-    return (
-        *(f"render-version[{agent_harness}]" for agent_harness in TEMPLATE_HARNESSES),
-        "trailing-newline",
-        "stale-order",
-        "reconcile-identity",
-        "reconcile-idempotence",
-        *(
-            f"bootstrap-threshold[{relation.value}]"
-            for relation in BootstrapThresholdRelation
-        ),
-    )
+    return property_evidence_contract()
 
 
 def property_evidence_run() -> EvidenceRun:

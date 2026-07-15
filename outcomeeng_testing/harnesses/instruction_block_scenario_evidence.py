@@ -963,13 +963,13 @@ def _scenario_assertions() -> list[tuple[str, Callable[..., None]]]:
 
 def scenario_evidence_declarations() -> tuple[str, ...]:
     """Return every declared scenario case identity."""
-    return tuple(name.removeprefix("_assert_") for name, _ in _scenario_assertions())
+    return harness.scenario_evidence_contract()
 
 
 def scenario_evidence_run() -> harness.EvidenceRun:
     """Run every declared scenario check through harness-owned resources."""
     assertions = _scenario_assertions()
-    declared = tuple(name.removeprefix("_assert_") for name, _ in assertions)
+    declared = scenario_evidence_declarations()
     executed: list[str] = []
     with TemporaryDirectory() as directory:
         root = pathlib.Path(directory).resolve()
