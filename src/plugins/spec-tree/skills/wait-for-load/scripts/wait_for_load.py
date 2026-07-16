@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wait silently until all normalized host load averages are at capacity."""
+"""Wait silently until all normalized host load averages are at or below capacity."""
 
 from __future__ import annotations
 

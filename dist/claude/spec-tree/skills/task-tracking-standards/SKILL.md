@@ -103,7 +103,9 @@ Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded
 <local_background_work>
 A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or service convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
 
-When a backgrounded shell command or a background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
+When a backgrounded shell command or an ordinary background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
+
+Typed verifier and reviewer agents are excluded from completion-notification handling. When the runtime router requires an exposed wait capability, collect their final result through that capability; treat any completion notification as supplemental rather than the planned result-collection mechanism.
 
 When the wait is short and ending the turn is overkill, run the command in the foreground with a timeout large enough to cover it — one bounded invocation, not a background launch followed by polling.
 
@@ -116,7 +118,7 @@ The prompt is the skills to reload plus the pointers each handles — nothing th
 Warm re-entry (a context that may still hold the prior conversation) — name the owning skill and its pointer:
 
 ```text
-/<owning-workflow-command> <work-item-pointer>
+Resume /<owning-workflow-command> (+ /task-tracking-standards) for <work-item-pointer>.
 ```
 
 Cold re-entry (a fresh thread) — name the repository, the skills to reload, and the pointers each handles, so they resolve without the prior conversation:

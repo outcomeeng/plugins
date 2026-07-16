@@ -41,12 +41,12 @@ It emits nothing while waiting. Immediately before exit it writes exactly one co
 
 <error_handling>
 
-| Terminal status | Exit | Meaning                                       | Action                               |
-| --------------- | ---: | --------------------------------------------- | ------------------------------------ |
-| `ready`         |    0 | All three normalized averages are at capacity | Start the resource-intensive command |
-| `unsupported`   |    2 | Load averages or CPU count are unavailable    | Stop and report the terminal JSON    |
-| `interrupted`   |  130 | The foreground wait received an interruption  | Stop and report the terminal JSON    |
-| `error`         |    1 | An internal operation failed                  | Stop and report the terminal JSON    |
+| Terminal status | Exit | Meaning                                                | Action                               |
+| --------------- | ---: | ------------------------------------------------------ | ------------------------------------ |
+| `ready`         |    0 | All three normalized averages are at or below capacity | Start the resource-intensive command |
+| `unsupported`   |    2 | Load averages or CPU count are unavailable             | Stop and report the terminal JSON    |
+| `interrupted`   |  130 | The foreground wait received an interruption           | Stop and report the terminal JSON    |
+| `error`         |    1 | An internal operation failed                           | Stop and report the terminal JSON    |
 
 </error_handling>
 
