@@ -3,23 +3,22 @@ name: task-tracking-standards
 user-invocable: false
 description: >-
   Runtime task-tracking standards for skills that schedule heartbeats or timers. Loaded by other skills, not invoked directly.
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py")
+allowed-tools: Read
 ---
 
 <objective>
-One shared standard for host-load readiness and runtime tracking that keeps active repository work alive across waits.
+One shared standard for routing heartbeat and timer creation that keeps active repository work alive across external waits.
 </objective>
 
 <reference_note>
-This is a reference skill. Skills load it via the Skill tool before resource-intensive local work or before creating, updating, or deleting a heartbeat or timer; `<when_to_load>` names the moments. The bundled Python waiter owns local host-load readiness, while runtime tracking owns delayed external-state re-entry. Do not load this skill for GitHub PR check/review waits governed by /merging-standards; those use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
+This is a reference skill. Skills that create, update, or delete a heartbeat or timer load it via the Skill tool; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool. Do not load this skill for GitHub PR check/review waits governed by /merging-standards; those use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
 </reference_note>
 
 <when_to_load>
 Load `/task-tracking-standards` before any workflow:
 
-- starts a resource-intensive local command
 - creates or refreshes a heartbeat for a workflow whose governing skill has no foreground wait command
-- schedules a delayed rollout or external-convergence re-check
+- schedules a delayed rollout, host-load, or external-convergence re-check
 - deletes a heartbeat because acceptance is reached, the work item closed, or the only remaining action is operator approval
 - launches local background work the harness tracks — a backgrounded command or a subagent — and must choose between ending the turn for the completion notification and running it in the foreground with an adequate timeout
 
@@ -34,7 +33,7 @@ Load `/task-tracking-standards` before any workflow:
 - On wake-up, reload the named workflow skills, `/task-tracking-standards`, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
 - "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
-- Host-load readiness is established by the bundled waiter before resource-intensive local work; delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
+- High host load or delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
 - Use one active heartbeat per work item. Refresh it instead of creating duplicates.
 - Delete a heartbeat only when no timer-backed repository action remains.
 
@@ -76,7 +75,7 @@ NEVER copy these into a heartbeat:
 </stale_context_boundary>
 
 <lifecycle>
-Create tracking when active work is blocked only by time, external convergence, or a delayed repository-governed action whose governing skill has no foreground wait command. Host load uses the foreground waiter and creates no tracking.
+Create tracking when active work is blocked only by time, host load, external convergence, or a delayed repository-governed action whose governing skill has no foreground wait command.
 
 Refresh tracking on a new commit, run id, work-item id, blocker, approval boundary, failure classification, or next repository action. Refreshing re-schedules the next fire and updates the pointer when the work-item id itself changes; it never writes the blocker, approval boundary, or failure classification into the prompt — that state is reconstructed on wake-up, and anything a later fire needs is written to a durable artifact.
 
@@ -86,18 +85,6 @@ Convert tracking to a repair path when a failure is deterministic and can be fix
 
 Delete tracking when the PR is merged and every declared deploy or release phase has completed or no-oped, the work item is closed, the task acceptance condition is met, or the only remaining step is operator approval and the owning workflow says to stop for approval.
 </lifecycle>
-
-<host_load_wait>
-Before every resource-intensive local command, run exactly:
-
-```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py"
-```
-
-This one foreground process is the complete host-load wait. It reads `os.getloadavg()` and `os.cpu_count()`, normalizes the 1-, 5-, and 15-minute averages, calculates every interval, sleeps, and rechecks internally. It emits no progress output and imposes no total wait ceiling. Collect only the process completion; never re-read load, calculate another interval, or start a second waiter while it runs.
-
-Proceed with the resource-intensive command only when the waiter exits zero and its one terminal JSON document carries `status: "ready"` and `ready: true`. A nonzero exit identifies an unsupported platform, interruption, or internal failure in the same terminal JSON; stop the heavy command and report that result.
-</host_load_wait>
 
 <runtime_timer>
 Use the runtime timer or heartbeat tool when available. Select the tool by runtime:
@@ -114,7 +101,7 @@ Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded
 </runtime_timer>
 
 <local_background_work>
-A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or service convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll. Host-load convergence is owned by `<host_load_wait>` and never creates runtime tracking.
+A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or host-load convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
 
 When a backgrounded shell command or a background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
 
@@ -145,7 +132,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 
 - Queued, in-progress, and pending states outside the PR-check lifecycle: report material changes, refresh the heartbeat, and continue on the next wake-up.
 - Failed, cancelled, or timed-out external work: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md` (never into the prompt), and keep the work active unless the next step requires operator approval, credentials, or judgment.
-- Non-ready host load: keep the one foreground waiter active and avoid starting the resource-intensive command until its terminal result permits it.
+- High host load: record the load condition, schedule the next load-aware checkpoint, and avoid starting heavy validation.
 - Missing approval: stop the work item at the approval boundary, delete heartbeat tracking, and ask with the identifiers, effect, and non-effect required by the owning workflow.
 
 </failure_handling>
@@ -153,13 +140,11 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 <success_criteria>
 Tracking is correct when:
 
-- every resource-intensive local command is preceded by one bundled waiter run that owns all host-load observation, interval selection, sleeping, and rechecking
-- the resource-intensive command starts only after the waiter exits zero with `status: "ready"` and `ready: true`
 - every heartbeat-producing skill loads `/task-tracking-standards` before mutating runtime tracking
 - the continuation prompt carries only the skills to reload and the pointers each handles — never the directive, finding assessments, or rationale, which are reconstructed on wake-up; anything the next fire needs is written to a durable artifact
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision
-- agent-owned host-load arithmetic, repeated load commands, host-load timers, shell `sleep`, polling loops, `gh run watch`, background keep-alives, backgrounded watchers, and duplicate heartbeats are absent
+- shell `sleep`, polling loops, `gh run watch`, background keep-alives, backgrounded watchers, and duplicate heartbeats are absent
 - local background work the harness tracks ends the turn for its completion notification, or runs in the foreground with an adequate timeout — never a poll loop or a heartbeat that duplicates the notification
 - heartbeat deletion happens only at acceptance, closure, no remaining repository action, or approval-only boundary
 
