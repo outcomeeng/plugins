@@ -4,7 +4,6 @@ description: >-
   Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
   Dispatch test-evidence-auditor to audit test evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 

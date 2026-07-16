@@ -6,6 +6,9 @@ description: >-
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
   - Read
+  - Glob
+  - Grep
+  - Skill
 ---
 
 <objective>
@@ -52,12 +55,14 @@ ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 
 Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
 
+Before judging the diff, load those repository authorities explicitly. Invoke `/understand`, read the runtime's root guide, derive every governing full `spx/...` node path using the guide's declared navigation procedure, and invoke `/contextualize` for each node. Invoke the installed standards skills the root guide declares for each changed implementation, test, skill, or documentation surface. A rule is citable only after its declaring spec, decision, guide, or standards skill has been loaded.
+
 </review_materials>
 
 <workflow>
 
 1. Run `start` and parse the returned JSON.
-2. Load the prompt reference and diff bundle.
+2. Load the prompt reference, diff bundle, root guide, governing node contexts, and applicable standards skills per `<review_materials>`.
 3. Examine every changed file and every emitted diff section. After each changed file has been examined, call `append-scope` for that file.
 4. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
 5. When review is complete, call `finish`.

@@ -2,12 +2,12 @@
 name: open-pr
 user-invocable: false
 description: >-
-  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
+  PR opening protocol for VERIFICATION_READINESS, branch push, ready peer or draft stacked PR creation, and first management pass. Loaded by /manage-github-pr.
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(printf:*), Skill
 ---
 
 <objective>
-A pull request opened ready for review against its resolved peer or stacked base.
+A peer pull request opened ready for review, or a stacked pull request opened draft against its unmerged stack base.
 </objective>
 
 <project_specialization>
@@ -26,7 +26,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 <step name="verification_readiness_decision">
 
-**Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
+**Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, publication proceeds only when `VERIFICATION_READINESS` holds — all predicates below. A peer PR opens ready; a stacked PR remains draft until its base merges and post-merge reconstruction reclassifies it as peer.
 
 *(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a temporary log path and inspect only the exit status, summary, and failing sections. It must report success; fix failures and re-run until green.
 
@@ -53,7 +53,7 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If `spx/local/merging.md` defines a custom branch-push command, follow that overlay command instead — the explicit destination ref must remain part of the custom command.
 
-**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+**Step 5 — GATE: Open the PR in its topology-required state.** Pipe the curated body to gh on stdin via `--body-file -`. For peer topology, omit `--draft` so the PR opens `ready_for_review`. For stacked topology, pass `--draft` and `--base "<previous-stack-branch>"`; the PR remains draft until the base merges and /merging-standards `<branch_topology>` post-merge reconstruction completes. Choose the stdin form by harness.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc:
 
@@ -80,15 +80,19 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 ```
 
+For stacked topology, insert `--draft --base "<previous-stack-branch>"` before `<<'EOF'`. The command above is the peer form.
+
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
 printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
 ```
 
+For stacked topology, append `--draft --base "<previous-stack-branch>"` to the programmatic command. The command above is the peer form.
+
 Flag rationale:
 
-- No `--draft` — every PR opens ready per /merging-standards `<authority_gates>` once `VERIFICATION_READINESS` holds against its resolved base, which triggers the configured integration-time review checks.
+- `--draft` — required only for stacked topology while its base is unmerged; omit it for peer topology so verification-ready peer PRs trigger integration-time review checks.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /commit-changes conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
@@ -100,7 +104,7 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 
 **Step 6 — Start the first management pass.** Resolve the PR number, then invoke /manage-pr on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
 
-**Exit.** Surface the PR URL. The managing flow takes over.
+**Exit.** Surface the PR URL and its ready or draft state. The managing flow takes over.
 
 </workflow>
 
