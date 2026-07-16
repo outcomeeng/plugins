@@ -31,6 +31,13 @@ evidence, and artifact role. Do not classify every changed path as implementatio
 merely because it appears in the changeset, and do not hard-code repository-local
 paths or language-specific extensions into this language-neutral orchestrator.
 
+For every implementation-owned language partition, ALWAYS plan all three required
+concern units: code, tests, and architecture. This trio is required even when the
+changed paths contain only one implementation artifact kind. A successful concern
+producer marks its unit `audited`; the tests concern inspects the linked or
+partition-level test surface even when no test file changed, so absence of a test
+diff never makes that required unit optional or incomplete.
+
 Build an expected coverage inventory before invoking any language concern skill. Each expected unit records:
 
 - audit class: `implementation`
