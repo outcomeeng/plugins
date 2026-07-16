@@ -10,6 +10,12 @@ allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/instruction_block.py":*), Bash
 Both root harness instruction files — `CLAUDE.md` and `AGENTS.md` — carry a current managed Spec Tree router block, first in the file, rendered to the installed template version, language-filtered to the extensions the project's tests use and harness-filtered per file, and every `shared` region is byte-identical across the two files.
 </objective>
 
+<dependencies>
+
+- Python 3.13 or 3.14 from a managed interpreter, matching the marketplace's shipped-script support window. The bundled script uses `StrEnum`, which is available throughout that declared window.
+
+</dependencies>
+
 <context>
 Each root file is three content kinds, because one repository is worked by both Claude Code and Codex, each harness reads its own root filename, and root instructions survive compaction:
 
@@ -84,6 +90,17 @@ ambiguous (recency tie): commands
 After the operator selects `claude`, rerun with `--reconcile --from claude`; both files then carry the complete `CLAUDE.md` region body. Run `--write` and the closing `--check`; no line from the prior `AGENTS.md` region is blended into the result.
 
 </examples>
+
+<testing>
+
+The bundled `scripts/instruction_block.py` is covered by the co-located instruction-block scenario, mapping, property, and compliance tests with these input and outcome classes:
+
+- Current, stale, absent, markerless, and retired-marker root-file inputs produce the expected status or regenerated router surface.
+- Diverged shared regions with newer-side history reconcile by whole-side replacement; recency ties, one-sided regions, malformed fences, and dirty root files produce their exact ambiguity or refusal result.
+- Missing paths, escaping symlinks, malformed template versions, unresolved template delimiters, unknown or duplicate flags, and missing flag values exit nonzero with actionable diagnostics.
+- Successful writes preserve independent content and shared-region bodies, replace root-file symlinks with regular files, remove retired `spx/` instruction files, leave one trailing newline, and create no temporary artifacts.
+
+</testing>
 
 <failure_modes>
 

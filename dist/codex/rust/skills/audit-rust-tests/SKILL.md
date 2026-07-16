@@ -49,7 +49,7 @@ This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
 - **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a finding, do not re-validate it.
-- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `product-testing` harness, `product-testing` generator, inert fixture data, or eval case data.
+- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `<product>-testing` harness, `<product>-testing` generator, inert fixture data, or eval case data.
 - **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Fixture reads under `spx/.../tests/` are fine.
 - **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. The credentialed `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and is not a defect in `.l3.rs` files; outside `.l3.rs` it is misplaced.
 - **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
@@ -122,12 +122,12 @@ Reject with an `oracle` finding when the expected value is derived from the modu
 <step name="harness_chain">
 Trace every test-infrastructure import:
 
-- imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
+- imports from the `<product>_testing` workspace-member crate (e.g., `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
 - non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` test-infrastructure modules inside a product crate
 - local functions inside `spx/.../tests/` — these are misplaced infrastructure when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary
 - binary harnesses built around `assert_cmd::Command::cargo_bin(...)`
 
-Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `product-testing` workspace-member crate.
+Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `<product>-testing` workspace-member crate.
 </step>
 
 <step name="four_properties">
@@ -172,7 +172,7 @@ Trigger: two or more in-scope tests share any of these patterns:
 - repeated stdout/stderr/exit-code assertion functions
 - repeated tracing/debug capture setup
 
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `product-testing` workspace-member crate — `product_testing::harnesses::{name}` for shared resource mediators, `product_testing::generators::{name}` for input factories, or `product_testing::fixtures::{name}` for fixture-loading code.
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `<product>-testing` workspace-member crate — `<product>_testing::harnesses::{name}` for shared resource mediators, `<product>_testing::generators::{name}` for input factories, or `<product>_testing::fixtures::{name}` for fixture-loading code.
 
 Gate 2 status:
 
@@ -231,7 +231,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `<product>-testing` workspace-member crate, e.g. `<product>_testing::harnesses::{name}`, `<product>_testing::generators::{name}`, or `<product>_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
 </verdict_format>
 
