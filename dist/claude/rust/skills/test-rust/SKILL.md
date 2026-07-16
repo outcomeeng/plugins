@@ -59,9 +59,9 @@ All Rust test examples are owned by `/rust-test-standards`:
 - `/rust-test-standards` `<property_and_compile_time_patterns>`
 - `/rust-test-standards` `<level_2_patterns>`
 - `/rust-test-standards` `<level_3_patterns>`
-- `/rust-test-standards` `levels/level-1.md`
-- `/rust-test-standards` `levels/level-2.md`
-- `/rust-test-standards` `levels/level-3.md`
+- `/rust-test-standards` `references/level-1.md`
+- `/rust-test-standards` `references/level-2.md`
+- `/rust-test-standards` `references/level-3.md`
 
 </reference_guides>
 
