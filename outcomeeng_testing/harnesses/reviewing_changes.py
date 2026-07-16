@@ -42,12 +42,12 @@ import pathlib
 import re
 import subprocess
 import sys
-from contextlib import redirect_stderr, redirect_stdout
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field, replace
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Any, Callable, cast
-from unittest.mock import patch
 
 from hypothesis import given, seed, settings
 
@@ -93,6 +93,37 @@ FAKE_JOURNAL_PATH_ENV = "SPX_FAKE_JOURNAL_PATH"
 FAKE_NAMESPACE_KEYS_ENV = "SPX_FAKE_NAMESPACE_KEYS"
 FAKE_RUN_TOKEN = "run-001"
 CONTAMINATING_JOURNAL_ENV_VALUE = "contaminating-later-env"
+
+
+@contextmanager
+def configured_environment(
+    values: dict[str, str],
+    *,
+    clear: bool,
+) -> Iterator[None]:
+    """Apply process environment values and restore the original mapping."""
+
+    original = os.environ.copy()
+    try:
+        if clear:
+            os.environ.clear()
+        os.environ.update(values)
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
+
+
+@contextmanager
+def configured_stdin(stream: io.StringIO) -> Iterator[None]:
+    """Install one in-memory stdin stream and restore the original stream."""
+
+    original = sys.stdin
+    try:
+        sys.stdin = stream
+        yield
+    finally:
+        sys.stdin = original
 
 
 def load_review_result_module() -> ModuleType:
@@ -1101,7 +1132,7 @@ def run_compute_diff_in_process(
     try:
         os.chdir(repo)
         with (
-            patch.dict(os.environ, env, clear=True),
+            configured_environment(env, clear=True),
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
@@ -1206,8 +1237,8 @@ def run_journal_emit_in_process(
         if repo is not None:
             os.chdir(repo)
         with (
-            patch.object(sys, "stdin", input_stream),
-            patch.dict(os.environ, env or os.environ.copy(), clear=True),
+            configured_stdin(input_stream),
+            configured_environment(env or os.environ.copy(), clear=True),
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
@@ -2063,7 +2094,7 @@ def review_metadata_observation() -> ReviewMetadataObservation:
                 pull_request_source.pull_request_number
             ),
         }
-        with patch.dict(os.environ, pull_request_env, clear=False):
+        with configured_environment(pull_request_env, clear=False):
             pull_request_metadata = journal_emit.metadata_for_worktree(
                 started_at=harness.metadata.started_at,
                 completed_at=harness.metadata.completed_at,
@@ -2076,7 +2107,7 @@ def review_metadata_observation() -> ReviewMetadataObservation:
             journal_emit.ENV_BRANCH: harness.metadata.branch_name,
             **pull_request_env,
         }
-        with patch.dict(os.environ, detached_env, clear=False):
+        with configured_environment(detached_env, clear=False):
             detached_metadata = journal_emit.metadata_for_worktree(
                 started_at=harness.metadata.started_at,
                 completed_at=harness.metadata.completed_at,
