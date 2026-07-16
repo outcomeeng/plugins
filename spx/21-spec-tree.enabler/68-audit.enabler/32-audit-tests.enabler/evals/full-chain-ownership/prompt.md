@@ -117,6 +117,8 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test. The final `metadata.evidence_chain` MUST contain exactly one entry for every artifact used to resolve imports, ownership, or discovery, including an inspected discovery artifact that produces no finding.
 
+Treat a package manifest as applicable discovery whenever it establishes package identity or resolves a repository import in the chain. Inventory it with `role: "discovery"`, `imported_from: null`, and its actual inspection status.
+
 If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
 **Step 3: Testability precondition**
