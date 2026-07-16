@@ -18,6 +18,7 @@ from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
 _LANGUAGE_TOKEN_CHARACTERS = string.ascii_letters + string.digits + "-_"
+_DOCUMENT_LINE_CHARACTERS = string.ascii_letters + string.digits + " -_`"
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,14 @@ class BootstrapWrapCase:
     content_b: str
     shared_body: str
     relation: BootstrapThresholdRelation
+
+
+@dataclass(frozen=True)
+class RootContentPair:
+    """Two generated root instruction documents."""
+
+    content_a: str
+    content_b: str
 
 
 def _prior_dotted_version(version: str) -> str:
@@ -207,6 +216,118 @@ def shared_region_bodies() -> SearchStrategy[str]:
         ),
         min_size=1,
     ).filter(lambda body: body.strip() != "")
+
+
+def _document_lines() -> SearchStrategy[str]:
+    """Generate one non-blank line without managed-fence syntax."""
+    return st.text(
+        alphabet=_DOCUMENT_LINE_CHARACTERS,
+        min_size=1,
+        max_size=24,
+    ).filter(lambda line: line.strip() != "")
+
+
+def _whole_line_documents(
+    *,
+    min_lines: int = 0,
+    max_lines: int = 8,
+) -> SearchStrategy[str]:
+    """Generate newline-terminated documents that shrink by line and character."""
+    return st.lists(
+        _document_lines(),
+        min_size=min_lines,
+        max_size=max_lines,
+    ).map(lambda lines: "".join(f"{line}\n" for line in lines))
+
+
+@st.composite
+def _root_content_pairs(
+    draw: st.DrawFn,
+    module: ModuleType,
+    shared_region_name: str,
+) -> RootContentPair:
+    """Generate independent, identical, and valid shared-region root topologies."""
+    topology = draw(st.sampled_from(("independent", "identical", "shared")))
+    if topology == "independent":
+        return RootContentPair(
+            content_a=draw(_whole_line_documents()),
+            content_b=draw(_whole_line_documents()),
+        )
+    if topology == "identical":
+        document = draw(_whole_line_documents())
+        return RootContentPair(content_a=document, content_b=document)
+
+    body = draw(shared_region_bodies())
+    region = shared_document(module, shared_region_name, body)
+    return RootContentPair(
+        content_a=(
+            draw(_whole_line_documents(max_lines=4))
+            + region
+            + draw(_whole_line_documents(max_lines=4))
+        ),
+        content_b=(
+            draw(_whole_line_documents(max_lines=4))
+            + region
+            + draw(_whole_line_documents(max_lines=4))
+        ),
+    )
+
+
+def root_content_pairs(
+    module: ModuleType,
+    shared_region_name: str,
+) -> SearchStrategy[RootContentPair]:
+    """Generate varied root topologies for whole-surface invariants."""
+    return _root_content_pairs(module, shared_region_name)
+
+
+def _arbitrary_bootstrap_content_pairs() -> SearchStrategy[RootContentPair]:
+    """Generate unrestricted whole-line pairs for the bootstrap oracle."""
+    return st.builds(
+        RootContentPair,
+        content_a=_whole_line_documents(),
+        content_b=_whole_line_documents(),
+    )
+
+
+@st.composite
+def _competing_bootstrap_content_pairs(draw: st.DrawFn) -> RootContentPair:
+    """Generate two separated equal-length common spans in competing order."""
+    width = draw(st.integers(min_value=1, max_value=24))
+    common_a, common_b, separator_a, separator_b = draw(
+        st.lists(
+            st.sampled_from(tuple(string.ascii_letters + string.digits)),
+            min_size=4,
+            max_size=4,
+            unique=True,
+        )
+    )
+    span_a = f"{common_a * width}\n"
+    span_b = f"{common_b * width}\n"
+    return RootContentPair(
+        content_a=(
+            draw(_whole_line_documents(max_lines=3))
+            + span_a
+            + f"{separator_a * width}\n"
+            + span_b
+            + draw(_whole_line_documents(max_lines=3))
+        ),
+        content_b=(
+            draw(_whole_line_documents(max_lines=3))
+            + span_b
+            + f"{separator_b * width}\n"
+            + span_a
+            + draw(_whole_line_documents(max_lines=3))
+        ),
+    )
+
+
+def bootstrap_content_pairs() -> SearchStrategy[RootContentPair]:
+    """Generate broad bootstrap domains, including competing common spans."""
+    return st.one_of(
+        _arbitrary_bootstrap_content_pairs(),
+        _competing_bootstrap_content_pairs(),
+    )
 
 
 @st.composite

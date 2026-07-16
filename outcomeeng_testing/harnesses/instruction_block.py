@@ -459,6 +459,7 @@ def property_evidence_contract() -> tuple[str, ...]:
         "stale-order",
         "reconcile-identity",
         "reconcile-idempotence",
+        "bootstrap-general-domain",
         *(
             f"bootstrap-threshold[{relation.value}]"
             for relation in BootstrapThresholdRelation

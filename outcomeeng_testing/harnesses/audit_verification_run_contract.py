@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -23,7 +24,9 @@ from outcomeeng.validation.plugins import (
     retired_language_audit_skill_relative_path,
 )
 from outcomeeng.validation.implementation_audit_contract import (
+    IMPLEMENTATION_AUDIT_CLASS,
     AuditCoverageStatus,
+    AuditTerminalStatus,
     COVERAGE_STATUS_FIELD,
     EVENT_DATA_FIELD,
     EVENT_PAYLOAD_FIELD,
@@ -42,6 +45,8 @@ from outcomeeng.validation.implementation_audit_contract import (
     VERIFICATION_FINDING_EVENT_TYPE,
     VERIFICATION_SCOPE_EVENT_TYPE,
     expected_verification_projection,
+    ImplementationAuditConcern,
+    implementation_audit_concern_skill_name,
     implementation_audit_finding_payload,
     implementation_audit_input_payload,
     implementation_audit_provenance,
@@ -58,13 +63,53 @@ from outcomeeng.validation.spx_version import (
     parse_version,
     read_pinned_version,
 )
-from outcomeeng_testing.generators.audit_verification_run_contract import (
-    ImplementationAuditVerificationProbe,
-    implementation_audit_verification_probe,
-)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
+
+
+@dataclass(frozen=True)
+class ImplementationAuditVerificationProbe:
+    """One source-derived scenario case for the SPX lifecycle harness."""
+
+    language: str
+    concern: ImplementationAuditConcern
+    subject_path: str
+    finding_key: str
+    request_kind: str
+    rule: str
+    message: str
+    observed: str
+    expected: str
+    finding_count: int
+    terminal_status: AuditTerminalStatus
+
+
+def implementation_audit_verification_probe(
+    language: str,
+) -> ImplementationAuditVerificationProbe:
+    """Derive the declared lifecycle scenario from production contracts."""
+    concern = ImplementationAuditConcern.CODE
+    subject_path = str(language_code_skill_relative_path(language))
+    finding_key = implementation_audit_subject_unit_id(
+        language,
+        concern,
+        subject_path,
+    )
+    concern_skill = implementation_audit_concern_skill_name(language, concern)
+    return ImplementationAuditVerificationProbe(
+        language=language,
+        concern=concern,
+        subject_path=subject_path,
+        finding_key=finding_key,
+        request_kind=IMPLEMENTATION_AUDIT_CLASS,
+        rule=concern_skill,
+        message=concern_skill,
+        observed=AuditCoverageStatus.AUDITED.value,
+        expected=AuditTerminalStatus.REJECTED.value,
+        finding_count=1,
+        terminal_status=AuditTerminalStatus.REJECTED,
+    )
 
 
 def spx_floor_and_ci_pin_meet_verification_run_minimum() -> bool:
