@@ -9,6 +9,8 @@ Apply the complete merge producer below to the supplied lifecycle state. Return 
 - `blocking_gate`: the gate label, or `none`
 - `reason`: `branch-ahead`, `terse-followup`, `overlay-confirmation`, `local-only`, `lifecycle-gate`, `no-ahead-commits`, `merge-complete-deploy`, `deploy-complete-release`, or `delivery-complete-close`
 
+`UNFINISHED` means any lifecycle action remains, including presenting an overlay-required confirmation or entering close through `/handoff`. `LOCAL_SCOPE_COMPLETE` is valid only for an explicitly local-only task paired with `STOP_LOCAL_SCOPE`; never pair it with `PRESENT_PRE_MUTATION_CONFIRMATION`, `ENTER_MERGE`, `ENTER_DEPLOY`, `ENTER_RELEASE`, or `ENTER_CLOSE`.
+
 ---
 name: merge
 description: >-
