@@ -461,7 +461,9 @@ def _initialize_changeset_repository(
     _run(repository, ("git", "config", "user.email", "audit@example.com"))
     _run(repository, ("git", "config", "user.name", "Audit Contract"))
     for subject in subject_paths:
-        (repository / subject).write_text("", encoding="utf-8")
+        subject_path = repository / subject
+        subject_path.parent.mkdir(parents=True, exist_ok=True)
+        subject_path.write_text("", encoding="utf-8")
     _run(repository, ("git", "add", *subject_paths))
     _run(repository, ("git", "commit", "-q", "-m", "initial"))
     for subject in subject_paths:
