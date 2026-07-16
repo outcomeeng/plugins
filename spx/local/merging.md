@@ -68,6 +68,33 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 
 When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then all applicable evidence auditors and agentic reviews to convergence, then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
 
+## Pull request opening
+
+Before opening a pull request, verify these marketplace predicates in addition to the shared branch-hygiene and readiness gates:
+
+| Check                                                                                             | If failing                                                           |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| The touched-scope deterministic verification selected by this overlay and root `AGENTS.md` passes | STOP. Fix the failing touched-scope lane first.                      |
+| Plugin manifest version bumped when the change warrants it                                        | STOP. Bump per `spx/local/commit-changes.md`.                        |
+| Both marketplace catalogs updated when adding or removing a plugin                                | STOP. Run the catalog or manifest command named by root `AGENTS.md`. |
+| `README.md` skill and thin-agent catalog updated to match the change                              | STOP. New or removed artifacts must appear in the catalog.           |
+| `update-instruction-block/templates/instruction-block.md` updated when skill structure changes    | STOP. New projects inherit this template.                            |
+
+Append these sections to `/open-pr`'s default body template:
+
+```text
+## Versioning
+
+- <plugin>: <old> → <new> (<MAJOR | MINOR | PATCH>)
+
+## Validation
+
+- [ ] Touched-scope deterministic verification passes
+- [ ] `/reload-plugins` confirms the change loads in a running session
+```
+
+Drop the **Versioning** section only when no `plugin.json` files changed.
+
 ## Governance surfaces (base-sync review reuse)
 
 A prior local review is reusable across a clean rebase only when the branch patch is unchanged **and** no base-delta path is a governance surface: `AGENTS.md`, `CLAUDE.md`, any `spx/local/*.md`, the bundled review prompt at `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`, or any standards reference under `src/plugins/*/skills/*-standards/` or `src/plugins/*/skills/**/SKILL.md`.

@@ -257,7 +257,7 @@ Historical plugin implementations are pruned from this repository. The history t
   - Verbose failing test rerun: `just test-v <same pytest-target>...`.
   - `[eval]` evidence: `just eval <eval-toml>`, `just eval-case <eval-toml> <case-id>`, or `just eval-node <node-path>`. These wrap `uv run outcomeeng-evals run`, read `plugin_dir` from `eval.toml` unless `PLUGIN_DIR` is set, and default to `MAX_BUDGET_USD=0.75`, `WORKERS=1`, and `TIMEOUT_SECONDS=180`. Do not run bare `outcomeeng-evals`; do not raise `MAX_BUDGET_USD`, `WORKERS`, or `TIMEOUT_SECONDS` without structured operator approval.
   - Spec-only or Markdown-instruction-only changes: `spx validation markdown` and `spx spec status --format json`. These commands take no changed-file list; the scope is the markdown/spec lane.
-  - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/open-pr.md`.
+  - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/merging.md`.
   - Python formatting: `just fmt-python <changed-python-file>...`. Pass every changed Python file that ruff formats.
   - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
   - Selected local deterministic gate: `just check`. This automatically selects the gate steps that cover the changed paths and prints the selected steps with reasons before running them through the recipe runner.

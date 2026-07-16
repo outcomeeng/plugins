@@ -244,16 +244,16 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 <local_review_invocation>
 
-The local `changes-reviewer` gate is the author-side, pre-push instance of the same review kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
+The local `changes-reviewer` gate is the author-side, pre-push instance of the same review kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Before invoking it for a gate, pass deterministic verification, create a checkpoint commit through /commit-changes, and confirm the worktree has no staged, unstaged, or untracked changes. A dirty-worktree review is advisory and never satisfies `VERIFICATION_READINESS`. Invoke the gating review the way CI invokes its reviewer, passing nothing that narrows it:
 
-- **Let the review resolve its own scope.** `changes-reviewer` self-discovers the worktree it runs in and computes the diff itself. The caller makes the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and passes nothing else — no file list, no changed-area summary, no "the important part is …".
+- **Use a raw committed scope.** Pass `HEAD` for the clean current-head subject. When the changeset's base is not `origin/HEAD`, pass `origin/<base>...HEAD`. Pass nothing else — no file list, no changed-area summary, no "the important part is …". The reviewer self-discovers the worktree and computes the committed diff.
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and explicit resolution evidence per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions ({{! file('root_guide') !}} and the standards skills) and the shared taxonomy itself.
 
-Run it via the `changes-reviewer` agent. The isolated context keeps the verdict from being biased by what the operator's main context has been doing. Iterate to convergence: each round, act on findings by validity and explicit resolution evidence per `<review_classification>`, until no valid finding remains unresolved.
+Run it via the `changes-reviewer` agent. The isolated context keeps the verdict from being biased by what the operator's main context has been doing. Iterate to convergence: each round, act on findings by validity and explicit resolution evidence per `<review_classification>`, rerun affected deterministic and evidence gates, create a new checkpoint commit, confirm the worktree is clean, and review the new committed head until no valid finding remains unresolved.
 
-This is the review predicate `VERIFICATION_READINESS` reads, and it runs before every push — the opening push (`/open-pr`) and every follow-up push (`/manage-pr`), against the diff that push would publish. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
+This is the review predicate `VERIFICATION_READINESS` reads, and it runs before every push — the opening push (`/open-pr`) and every follow-up push (`/manage-pr`) — against the clean committed head that push would publish. Narrowing the invocation or reviewing a dirty worktree diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
 
 </local_review_invocation>
 

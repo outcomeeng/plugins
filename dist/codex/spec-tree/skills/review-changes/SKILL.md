@@ -1,6 +1,8 @@
 ---
 name: review-changes
-description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading persisted review artifacts directly.
+user-invocable: false
+description: >-
+  Changeset-review methodology preloaded by the changes-reviewer agent. The main conversation reaches this review only through that agent.
 allowed-tools:
   - Bash(python3 "${SKILL_DIR}/scripts/review_run.py":*)
   - Read
