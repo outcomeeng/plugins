@@ -6,6 +6,7 @@ from outcomeeng_testing.harnesses.plugin_manifest import (
     absent_claude_version_is_reported,
     absent_codex_manifest_skips_parity,
     absent_codex_version_is_reported,
+    absent_manifest_versions_are_reported,
     absent_validation_targets_are_rejected,
     catalog_entry_without_plugin_is_reported,
     catalog_mismatch_makes_main_fail,
@@ -83,6 +84,10 @@ def test_absent_claude_version_is_reported() -> None:
 
 def test_absent_codex_version_is_reported() -> None:
     assert absent_codex_version_is_reported()
+
+
+def test_absent_manifest_versions_are_reported() -> None:
+    assert absent_manifest_versions_are_reported()
 
 
 def test_parity_drift_makes_main_fail() -> None:

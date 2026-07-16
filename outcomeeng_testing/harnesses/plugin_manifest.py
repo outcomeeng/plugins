@@ -224,6 +224,14 @@ def absent_codex_version_is_reported() -> bool:
     )
 
 
+def absent_manifest_versions_are_reported() -> bool:
+    """Return whether absent version fields in both manifests are named."""
+    return _missing_version_is_reported(
+        claude_version=None,
+        codex_version=None,
+    )
+
+
 def manifest_version_parity_is_symmetric() -> bool:
     """Exercise both drift directions across generated version pairs."""
     run_replayable_property(
