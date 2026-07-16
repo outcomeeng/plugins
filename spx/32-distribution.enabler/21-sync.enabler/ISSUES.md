@@ -2,28 +2,25 @@
 
 Coordination note; not spec truth.
 
-## DEBT [structure]: split sync orchestration boundaries
+Both items below are superseded by `spx/12-marketplace-state.adr.md`: the checkout-bounded
+cutover of `just sync-marketplace` removes the Codex cache-topology inspection, the user-scope
+reconciliation orchestration, and the file-backed single-flight lock these notes concern. They
+remain recorded until that cutover removes the machinery; neither is fixed independently.
 
-Implementation audit `019f2777-97ab-7a03-89d3-30e61c4c820e` raised a decomposition finding: `spx/32-distribution.enabler/21-sync.enabler/sync.md` carries more than roughly seven assertions and mixes independently validated concerns:
+## DEBT [structure]: split sync orchestration boundaries (superseded)
 
-- prerequisite tool checks
-- marketplace source reconciliation
-- distribution-change detection
-- Codex cache topology health checks
-- file-backed single-flight coordination
-- ordered sync-step orchestration
-- named forbidden-step compliance
+An implementation audit raised a decomposition finding when `sync.md` carried more than roughly
+seven assertions mixing prerequisite tool checks, marketplace source reconciliation,
+distribution-change detection, Codex cache topology health checks, file-backed single-flight
+coordination, ordered sync-step orchestration, and named forbidden-step compliance. The aligned
+spec now declares four assertions bounded to the checkout, so the assertion-count trigger no
+longer holds. The cutover removes the reconciliation, topology, and single-flight concerns from
+the implementation; no separate `/decompose` pass is owed once the checkout-bounded rewrite lands.
 
-The audit cited `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, whose decomposition rule treats more than roughly seven assertions as a signal for analysis and separates independent concerns when each concern has a meaningful validation boundary.
+## DEBT [correctness]: PID reuse identity limits (superseded)
 
-Revisit condition: when structural work on `spx/32-distribution.enabler/21-sync.enabler` is scheduled, invoke `/decompose` on the sync node. Split prerequisite checks, reconciliation, change detection, topology/single-flight coordination, and orchestration sequencing into focused child nodes when the ordering-evidence matrix supports the split.
-
-Triggered again: PR #402 added topology health inspection and single-flight repair coordination to this node, increasing the assertion count and adding another independently validated concern. The current branch keeps the behavior change in place and updates this tracking note; the next structural pass should run `/decompose` before adding more sync orchestration concerns.
-
-## DEBT [correctness]: document and bound PID reuse identity limits
-
-The file-backed refresh lock detects stale owners by combining the owner PID with the process start timestamp reported by `ps -p <pid> -o lstart=`.
-BSD and GNU `ps` expose that timestamp at whole-second resolution, so an unrelated process that reuses the same PID within the same wall-clock second can produce the same lock-owner identity string.
-
-The failure mode is conservative: a no-change topology repair can record pending state behind a phantom active owner and skip one refresh attempt rather than corrupting the cache.
-The next topology/single-flight correctness pass should either use a higher-resolution process identity source when available, or declare and test the whole-second PID-reuse window as an accepted limitation.
+The file-backed refresh lock detected stale owners by combining the owner PID with the process
+start timestamp reported by `ps -p <pid> -o lstart=`, whose whole-second resolution let a PID
+reused within the same wall-clock second produce the same lock-owner identity string. The
+checkout-bounded model removes the lock entirely, dissolving the PID-reuse window rather than
+bounding it.
