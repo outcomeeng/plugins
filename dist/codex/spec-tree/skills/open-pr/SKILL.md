@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, Bash, Skill
+allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -18,7 +18,7 @@ The overlay MUST NOT: skip or weaken the local deterministic-verification, evide
 Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
-<the_opening_flow>
+<workflow>
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
@@ -104,7 +104,7 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
-</the_opening_flow>
+</workflow>
 
 <title_format>
 
@@ -168,7 +168,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 <shell_scope>
 
-Use the broad Bash grant only for exact commands declared by this workflow, the consumer's `AGENTS.md`, or `spx/local/merging.md`. Consumer preflight and verification commands are product-defined and cannot be represented by a finite portable allowlist.
+Run consumer-defined commands from `AGENTS.md` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
 
 </shell_scope>
 
