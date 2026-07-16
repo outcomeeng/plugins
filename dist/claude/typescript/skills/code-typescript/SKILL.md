@@ -2,7 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript, or when remediating TypeScript implementation findings from a reviewer.
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(git status:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(git status:*), Bash(just:*), Bash(make:*), Bash(npm run:*), Bash(npm test:*), Bash(pnpm run:*), Bash(pnpm test:*), Bash(yarn run:*), Bash(yarn test:*), Bash(bun run:*), Bash(bun test:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -246,9 +246,10 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **If working on a spec-tree work item** (enabler/outcome):
 
-1. **Invoke `/contextualize` FIRST** with the node path
-2. **If context loading fails**: ABORT - do not proceed until all required documents exist
-3. **If context loading succeeds**: Proceed with implementation using loaded context
+1. **Check for the live `<SPEC_TREE_FOUNDATION>` marker**; invoke `/understand` when it is absent
+2. **Invoke `/contextualize`** with the node path
+3. **If context loading fails**: ABORT - do not proceed until all required documents exist
+4. **If context loading succeeds**: Proceed with implementation using loaded context
 
 **The `/contextualize` skill provides:**
 
@@ -413,11 +414,10 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 <success_criteria>
 The implementation is ready for review when:
 
-- [ ] The product's resolved TypeScript type-check command passes
-- [ ] The product's resolved TypeScript lint/format check command passes
-- [ ] The product's resolved TypeScript test command for the governed node or changeset passes
-- [ ] The implementation follows `/typescript-standards` and any `spx/local/typescript.md` overlay loaded for the repository
-- [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
-- [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
+- [ ] The command-resolution record names the source and exact command selected for TypeScript type checking, linting/formatting, and governed tests
+- [ ] Each selected type-check, lint/format, and governed-test command exits zero
+- [ ] Every product-enforced threshold reported by those commands includes its observed value and required limit, and the observed value passes
+- [ ] Remediation mode maps every supplied finding to either repaired paths plus a passing verification command, or an unbacked disposition with the governing citation and concrete counter-evidence
+- [ ] The final report carries the exact commands and exit results submitted for review
 
 </success_criteria>
