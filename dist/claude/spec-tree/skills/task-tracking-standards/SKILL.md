@@ -11,7 +11,7 @@ One shared standard for routing heartbeat and timer creation that keeps active r
 </objective>
 
 <reference_note>
-This is a reference skill. Skills that create, update, or delete a heartbeat or timer load it via the Skill tool; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool. Do not load this skill for GitHub PR check/review waits governed by /merging-standards; those use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
+This is a reference skill. Skills that create, update, or delete a heartbeat or timer invoke it through the runtime's documented skill-composition surface; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool. Do not load this skill for GitHub PR check/review waits governed by /merging-standards; those use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
 </reference_note>
 
 <when_to_load>
