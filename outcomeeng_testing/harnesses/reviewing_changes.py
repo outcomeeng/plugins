@@ -9,7 +9,7 @@ Provides the shared scaffolding consumed by every test file under
 - ``REFERENCES_DIR`` and ``REVIEW_PROMPT_PATH``. Tests that assert the
   swappable prompt is a standalone reference file consume the path from
   one source.
-- ``SKILL_DIR`` and ``SKILL_FILE``. The compliance tests inspect skill
+- ``SKILL_DIR``. The compliance tests inspect skill
   prose for the absence of an embedded prompt and presence of a
   ``${CLAUDE_SKILL_DIR}/references/review-prompt.md`` load expression.
 - ``REVIEW_RUN_SCRIPT``. Tests assert the skill's public command surface is
@@ -64,7 +64,6 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
-SKILL_FILE = SKILL_DIR / "SKILL.md"
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
@@ -76,14 +75,6 @@ REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
 )
-REVIEW_NODE_DIR = (
-    REPO_ROOT
-    / "spx"
-    / "21-spec-tree.enabler"
-    / "68-reviewing.enabler"
-    / "21-reviewing-changes.enabler"
-)
-REVIEW_SPEC_PATH = REVIEW_NODE_DIR / "reviewing-changes.md"
 REVIEW_FIXTURES_DIR = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "reviewing_changes"
 )
@@ -1510,6 +1501,7 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
             and all(result.returncode == 0 for result in appended)
             and finished.returncode == 0
             and finished.stdout == f"{start_payload[REVIEW_START_RUN_TOKEN]}\n"
+            and finished.stderr == ""
         ),
         scratch_state_is_removed=state_removed,
         journal_protocol_holds=(
@@ -2538,6 +2530,12 @@ def review_chain_with_finding_contract_holds() -> bool:
         and observation.rendered[contracts.journal_emit.RENDER_OVERALL_FIELD]
         == str(contracts.journal_projection.compute_overall(list(observation.events)))
     )
+
+
+def review_runner_finish_output_contract_holds() -> bool:
+    """Return whether the public finish verb emits only the raw run token."""
+
+    return review_runner_lifecycle_observation().finish_returns_raw_token
 
 
 def clean_review_chain_contract_holds() -> bool:
