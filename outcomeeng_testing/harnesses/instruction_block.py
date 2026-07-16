@@ -683,7 +683,7 @@ def write_template(
     Lets CLI-edge tests drive ``main([...])`` against a real template file under a
     pytest ``tmp_path``; the harness owns the on-disk setup.
     """
-    path = directory / "instruction-block.md"
+    path = directory / distribution.AUTHORED_TEMPLATE_PATH.name
     module = load_instruction_block_module()
     path.write_text(
         generate_template(
