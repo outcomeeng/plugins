@@ -55,6 +55,12 @@ Use read-only `git diff` only when the caller's changeset scope requires confirm
 
 </audit_scope>
 
+<structural_reading>
+
+Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding. Fold this reading observation into Gate 1 rather than running a naming-convention command.
+
+</structural_reading>
+
 <literal_laundering_by_reading>
 
 Cross-file literal laundering is judged by reading the test's literals against their sources, not by running `spx validation literal`. The two laundering shapes the validator surfaces are read in Gate 1:
@@ -354,7 +360,7 @@ What happened: The standard in `/typescript-test-standards` rejects `.e2e.test.t
 
 Why it failed: Claude treated a narrower operational prompt as authority over the canonical standards reference.
 
-How to avoid: `/typescript-test-standards` defines the filename convention. Gate 1 step 1 challenges the assertion type; the deferral carveout no longer exists.
+How to avoid: `/typescript-test-standards` defines the filename convention. `<structural_reading>` rejects every legacy suffix before Gate 1; the deferral carveout no longer exists.
 
 **Failure 2 — Harness coupling camouflage: the mock lives in the harness**
 
@@ -426,7 +432,7 @@ How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructur
 
 The TypeScript test verdict is sound when:
 
-- Every applicable rule was judged: each in-scope assertion received all eight Gate 1 steps — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering; Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
+- Every applicable rule was judged: each in-scope test received the filename-policy structural reading, and each in-scope assertion received all eight Gate 1 steps — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering; Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
