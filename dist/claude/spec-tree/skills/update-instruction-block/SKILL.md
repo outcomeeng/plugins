@@ -93,7 +93,13 @@ After the operator selects `claude`, rerun with `--reconcile --from claude`; bot
 
 <testing>
 
-The bundled `scripts/instruction_block.py` is covered by the co-located instruction-block scenario, mapping, property, and compliance tests with these input and outcome classes:
+Release verification lives in the plugin source repository rather than the installed skill directory. Run its governing instruction-block node through the repository's canonical command:
+
+```bash
+just test <governing-instruction-block-node>/tests/
+```
+
+That source-repository suite covers the bundled `scripts/instruction_block.py` through scenario, mapping, property, and compliance evidence with these input and outcome classes:
 
 - Current, stale, absent, markerless, and retired-marker root-file inputs produce the expected status or regenerated router surface.
 - Diverged shared regions with newer-side history reconcile by whole-side replacement; recency ties, one-sided regions, malformed fences, and dirty root files produce their exact ambiguity or refusal result.

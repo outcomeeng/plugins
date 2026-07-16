@@ -315,17 +315,10 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 <success_criteria>
 
-Scan the conversation for these markers before declaring done:
-
-- [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
-- [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
-- [ ] Step 4 `adr-auditor` emitted `APPROVED`
-- [ ] Step 6 `test-evidence-auditor` emitted `APPROVED` or an equivalent passing JSON verdict
-- [ ] Step 8 `implementation-auditor` returned an `spx verification run` token and rendered projection whose `terminalStatus` is `approved`
-- [ ] If the change touched `[test]` assertions, linked tests, or imported test-infrastructure artifacts: `test-evidence-auditor` approved the exact committed diff before the terminal full gate or lifecycle continuation, whether or not Step 9 applies
-- [ ] If the change touched `[eval]` assertions, eval artifacts, or producer artifacts for eval-backed assertions: `eval-evidence-auditor` passed the exact committed diff before the terminal full gate or lifecycle continuation, whether or not Step 9 applies
-- [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` final message was a raw review run token collected through the typed wait, and `/project-run-journal` rendered its sealed prefix with no blocking or debt finding, or every such finding was fixed or individually refuted as unbacked
-- [ ] The product's declared touched-scope verification command has passed for the changed node and implementation, using the consumer repository's local verification overlay or root instructions to select the concrete command
-- [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
+- The completed work item conforms to its governing spec and decisions, and the product's touched-scope deterministic evidence passes.
+- Every applicable architecture, test-evidence, eval-evidence, and implementation audit approves the exact committed subject.
+- A cross-node changeset carries a sealed whole-changeset review with no unresolved valid finding.
+- The exact final head is committed and the worktree is clean.
+- The delivery boundary the user requested is achieved: default-branch work is merged to the default branch on origin and every declared release action is complete, unless the user explicitly selected a proposal, analysis, review, or local-only boundary, or an explicit lifecycle gate blocks with no independent action remaining.
 
 </success_criteria>

@@ -47,6 +47,7 @@ from enum import StrEnum
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
+MISSING_TEMPLATE_VERSION_ERROR = "error: template has no template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
@@ -287,12 +288,15 @@ def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
     return tuple(sorted(set(languages)))
 
 
-def parse_template_version(text: str) -> str | None:
-    """Return the ``template_version`` value from a document's frontmatter, or None."""
+def parse_template_frontmatter_version(text: str) -> str | None:
+    """Return the ``template_version`` value from frontmatter only, or None."""
     frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(
-        frontmatter, TEMPLATE_VERSION_KEY
-    ) or parse_instruction_version(text)
+    return _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY)
+
+
+def parse_template_version(text: str) -> str | None:
+    """Return a template or rendered instruction document's version, or None."""
+    return parse_template_frontmatter_version(text) or parse_instruction_version(text)
 
 
 def parse_instruction_version(text: str) -> str | None:
@@ -1264,9 +1268,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     template_text = template_path.read_text(encoding="utf-8")
-    installed = parse_template_version(template_text)
+    installed = parse_template_frontmatter_version(template_text)
     if installed is None:
-        print("error: template has no template_version", file=sys.stderr)
+        print(MISSING_TEMPLATE_VERSION_ERROR, file=sys.stderr)
         return 2
 
     try:

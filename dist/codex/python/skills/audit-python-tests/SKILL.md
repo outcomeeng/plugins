@@ -242,35 +242,67 @@ Emit this shape only when every supplied subject is outside current Python test-
 <failure_modes>
 Failure 1: Accepted `TYPE_CHECKING` import as coupling.
 
-Claude saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and counted it as runtime coupling. The test declared its own color values and never executed production code. Avoid this by ignoring type-only imports for coupling.
+What happened: Claude saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and counted it as runtime coupling. The test declared its own color values and never executed production code.
+
+Why it failed: Type-only imports disappear at runtime and cannot couple executed evidence to production behavior.
+
+How to avoid: Ignore type-only imports for coupling.
 
 Failure 2: Missed coupling severed by `@patch`.
 
-Claude saw a production import and approved the test, while `@patch("product.database.query")` replaced the imported behavior. Avoid this by checking decorators, fixtures, monkeypatch usage, and harness setup code.
+What happened: Claude saw a production import and approved the test, while `@patch("product.database.query")` replaced the imported behavior.
+
+Why it failed: The patch severed the runtime path the import appeared to exercise.
+
+How to avoid: Check decorators, fixtures, monkeypatch usage, and harness setup code.
 
 Failure 3: Accepted a generator that only hid a constant.
 
-Claude saw a Hypothesis strategy and treated it as property evidence. The strategy returned one copied source value through `st.just(...)`. Avoid this by inspecting generator bodies and requiring meaningful variation.
+What happened: Claude saw a Hypothesis strategy and treated it as property evidence. The strategy returned one copied source value through `st.just(...)`.
+
+Why it failed: Framework syntax wrapped one example without creating a variable property domain.
+
+How to avoid: Inspect generator bodies and require meaningful variation.
 
 Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
-Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the product's test-infrastructure implementation home. Avoid this by checking every applicable `conftest.py`.
+What happened: Claude treated pytest discovery as a reason to put setup logic in `conftest.py`.
+
+Why it failed: Discovery wiring became the owner of harness behavior, hiding setup and lifecycle policy outside the canonical test-infrastructure home.
+
+How to avoid: Check every applicable `conftest.py`; require harness logic to live in the product's test-infrastructure implementation home.
 
 Failure 5: Accepted a hand-picked test case as evidence.
 
-Claude saw `parse("name=alice")` followed by `assert result.name == "alice"` and approved the test. The string `"name=alice"` was invented by the author to demonstrate their understanding of the parser. The same author wrote (or read) the parser. Every future run confirms the author's understanding — that `"name=alice"` parses to a record with `name` field equal to `"alice"` — never the spec assertion about parser correctness. Avoid this by asking, for every case, where the case comes from: a generator, an oracle, a fixture, source-owned vocabulary, or the spec assertion text itself. If the answer is "the author chose it because it seemed reasonable", REJECT.
+What happened: Claude saw `parse("name=alice")` followed by `assert result.name == "alice"` and approved the test. The author invented the string to show their understanding of the parser.
+
+Why it failed: The same mental model produced the case and the implementation, so every run confirmed self-consistency rather than the spec assertion.
+
+How to avoid: Ask where every case comes from: a generator, an oracle, a fixture, source-owned vocabulary, or the spec assertion text itself. If the author chose it because it seemed reasonable, REJECT.
 
 Failure 6: Container-literal keys treated as opaque scaffolding.
 
-Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and classified it as test-fixture scaffolding because the *values* were synthetic. The *keys* were production-owned label vocabulary the author hand-wrote into the template — hand-picked cases for the parser or consumer that reads the JSON. Avoid this by auditing keys and values separately; the construction `json.dumps({LABEL: synthetic_value, ...})` with `LABEL` imported is the only legitimate form.
+What happened: Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and classified it as test-fixture scaffolding because the *values* were synthetic. The author hand-wrote production-owned label vocabulary into the keys.
+
+Why it failed: Container keys are protocol vocabulary; synthetic values do not make copied keys source-owned.
+
+How to avoid: Audit keys and values separately; require `json.dumps({LABEL: synthetic_value, ...})` with `LABEL` imported from its owner.
 
 Failure 7: "Artifact is the source-of-truth" rationalization.
 
-Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an HCL attribute, or a systemd unit path. The value appeared in a parsed artifact file but no Python module owned it. Claude classified the artifact as the source-of-truth and accepted the case. The artifact is downstream — a Python module either renders or consumes it, and the absence of that Python module is the architectural defect, not the test's fault for finding nothing to import. Avoid this by naming the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
+What happened: Claude accepted a hand-copied YAML field name, HCL attribute, or systemd unit path because the value appeared in a parsed artifact and no Python module owned it.
+
+Why it failed: Artifacts are downstream of Python; a missing renderer or consumer module is an architecture defect rather than permission to copy vocabulary into evidence.
+
+How to avoid: Name the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
 
 Failure 8: Required restoration of retired deterministic evidence.
 
-Claude saw a deleted Python test and harness in the changeset, followed the base revision's former link, and rejected the implementation because the deleted files no longer supplied deterministic evidence. The current governing spec had reclassified the assertions to pathless `[audit]` evidence, so no current `[test]` assertion or evidence chain owned those files. Avoid this by deriving test-audit applicability from current spec links first: return `NOT_APPLICABLE` for a retired deleted path, and report missing evidence only when a current `[test]` assertion still links the missing path.
+What happened: Claude followed a base revision's former link to a deleted Python test and harness and rejected the implementation because the deleted files no longer supplied deterministic evidence. The current spec had reclassified the assertions to pathless `[audit]` evidence.
+
+Why it failed: Historical evidence ownership overrode the current governing declaration.
+
+How to avoid: Derive applicability from current spec links first; return `NOT_APPLICABLE` for a retired deleted path, and report missing evidence only when a current `[test]` assertion still links it.
 </failure_modes>
 
 <success_criteria>

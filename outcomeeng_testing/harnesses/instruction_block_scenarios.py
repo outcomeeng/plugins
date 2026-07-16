@@ -188,6 +188,28 @@ def _case_cli_rejects_missing_template(
     assert "--template does not exist" in capsys.readouterr().err
 
 
+def _case_cli_rejects_template_without_frontmatter_version(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = tmp_path / "marker-only-template.md"
+    template.write_text(
+        MODULE.router_marker(harness.NEW_VERSION, (harness.LANG_PRIMARY,))
+        + "\n"
+        + MODULE.ROUTER_BLOCK_END
+        + "\n",
+        encoding="utf-8",
+    )
+    code = MODULE.main(
+        ["--template", str(template), "--repo-root", str(repo), "--write"]
+    )
+    assert code == 2
+    assert MODULE.MISSING_TEMPLATE_VERSION_ERROR in capsys.readouterr().err
+    assert not (repo / harness.INSTRUCTION_CLAUDE).exists()
+    assert not (repo / harness.INSTRUCTION_AGENTS).exists()
+
+
 def _case_cli_rejects_directory_template(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1009,6 +1031,11 @@ def assert_cli_rejects_non_directory_repo_root() -> None:
 def assert_cli_rejects_missing_template() -> None:
     """Run the cli rejects missing template scenario."""
     _run_case(_case_cli_rejects_missing_template)
+
+
+def assert_cli_rejects_template_without_frontmatter_version() -> None:
+    """Run the cli rejects a template without a frontmatter version scenario."""
+    _run_case(_case_cli_rejects_template_without_frontmatter_version)
 
 
 def assert_cli_rejects_directory_template() -> None:

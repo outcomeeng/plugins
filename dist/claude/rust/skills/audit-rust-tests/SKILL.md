@@ -238,19 +238,25 @@ This skill composes the base `/audit-tests` verdict: the row names (`gate-1-asse
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
 
-Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+What happened: Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+
+Why it failed: Claude treated import shape as the only coupling signal and ignored execution through the product binary contract.
 
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 
 **Failure 2: Approved source-text tests**
 
-Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
+What happened: Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
+
+Why it failed: Source-text presence is prose coupling and proves no executable behavior.
 
 How to avoid: `<structural_reading>` reads in-scope tests for production source-file reads; a test asserting on `src/` text is prose-coupling → REJECT in Gate 1.
 
 **Failure 3: Hard-coded a product-specific Level 3 restriction**
 
-Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
+What happened: Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
+
+Why it failed: Product-local execution policy was promoted into a reusable language standard.
 
 How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing product spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
 </failure_modes>
