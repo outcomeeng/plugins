@@ -139,11 +139,14 @@ async function syncFiles(
 Run these searches before implementation:
 
 ```bash
-# 1. Read product documentation
-Read: README.md, docs/, CLAUDE.md, CONTRIBUTING.md
+# 1. Read declared product entry documents
+Read: CLAUDE.md; README.md and CONTRIBUTING.md only when present;
+read a document under docs/ only when the root guide, supplied work item, or one
+of those entry documents names its exact path
 
 # 2. Load the authoritative methodology
-Read: relevant skills and spec docs before inferring any convention
+Invoke the skills required by the root guide; for spec-tree work, load the exact
+governing node through /contextualize instead of searching for related specs
 
 # 3. Check available dependencies (don't add what exists)
 Read: package.json → dependencies, devDependencies
@@ -268,10 +271,11 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 <two_modes>
 This skill operates in one of two modes depending on the input:
 
-| Input                            | Mode               | Workflow                                          |
-| -------------------------------- | ------------------ | ------------------------------------------------- |
-| Spec (ADR/PDR, node spec)        | **Implementation** | `${CLAUDE_SKILL_DIR}/workflows/implementation.md` |
-| Rejection feedback from reviewer | **Remediation**    | `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    |
+| Input                                         | Mode               | Workflow                                          |
+| --------------------------------------------- | ------------------ | ------------------------------------------------- |
+| ADR, PDR, or spec-tree node                   | **Implementation** | `${CLAUDE_SKILL_DIR}/workflows/implementation.md` |
+| Design note, ticket, or direct user request   | **Implementation** | `${CLAUDE_SKILL_DIR}/workflows/implementation.md` |
+| Rejection feedback from a reviewer or auditor | **Remediation**    | `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    |
 
 Determine the mode from the input, then follow the appropriate workflow.
 </two_modes>
@@ -387,6 +391,46 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 ```
 
 </tool_invocation>
+
+<failure_modes>
+
+**Failure 1: Discovery expanded to an unbounded documentation search.**
+
+What happened: implementation began after reading an entire `docs/` tree and
+searching for vaguely relevant specs, so unrelated guidance displaced the
+declared work-item context.
+
+Why it failed: consumer repositories have unknown layouts; relevance is not a
+deterministic file-selection rule.
+
+How to avoid: read the root guide and present entry documents, then follow only
+exact paths they or the supplied work item cite. Use `/contextualize` for an
+exact spec-tree node.
+
+**Failure 2: Implementation mode invented a path-alias layout.**
+
+What happened: a deep relative import was replaced with a familiar alias and a
+new `tsconfig` mapping that the repository had never declared.
+
+Why it failed: aliases encode repository architecture and cannot be prescribed
+portably by this skill.
+
+How to avoid: use an existing repository-declared alias. When none exists,
+follow `/typescript-standards` and the loaded product architecture before
+changing module resolution.
+
+**Failure 3: A non-spec input had no mode.**
+
+What happened: a design note, ticket, or direct request reached the skill, but
+the routing table recognized only spec-tree artifacts and review findings.
+
+Why it failed: the implementation workflow already accepted those inputs while
+the router omitted them.
+
+How to avoid: route every declared implementation input to `implementation.md`;
+reserve `remediation.md` for supplied reviewer or auditor findings.
+
+</failure_modes>
 
 <success_criteria>
 The implementation is ready for review when:
