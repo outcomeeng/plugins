@@ -43,19 +43,43 @@ RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
 def check_audit_artifact_contract(root: Path) -> list[str]:
     """Return implementation-audit contract violations under ``root``."""
     errors: list[str] = []
-    for surface in audit_contract_surfaces(root):
+    surfaces = audit_contract_surfaces(root)
+    expected_languages = tuple(
+        sorted(
+            {
+                language
+                for surface in surfaces
+                for language in implementation_languages(surface)
+            }
+        )
+    )
+    for surface in surfaces:
         errors.extend(check_audit_runtime_surface(surface))
         errors.extend(check_wrapper_surface(surface))
-        errors.extend(check_language_concern_surface(surface))
+        errors.extend(
+            check_language_concern_surface(
+                surface,
+                expected_languages=expected_languages,
+            )
+        )
     return errors
 
 
 def audit_contract_surfaces(root: Path) -> tuple[Path, ...]:
-    """Return present plugin surfaces that expose the audit-owning plugin."""
-    return tuple(
+    """Return the audit surfaces declared by the repository layout."""
+    present_surfaces = tuple(
         root / relative_surface
         for relative_surface in PLUGIN_SURFACE_PATHS
-        if (root / relative_surface / SPEC_TREE_PLUGIN_NAME).is_dir()
+        if (root / relative_surface).is_dir()
+    )
+    if len(present_surfaces) > 1:
+        return tuple(
+            root / relative_surface for relative_surface in PLUGIN_SURFACE_PATHS
+        )
+    return tuple(
+        surface
+        for surface in present_surfaces
+        if (surface / SPEC_TREE_PLUGIN_NAME).is_dir()
     )
 
 
@@ -117,10 +141,19 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     return errors
 
 
-def check_language_concern_surface(surface: Path) -> list[str]:
+def check_language_concern_surface(
+    surface: Path,
+    *,
+    expected_languages: tuple[str, ...] | None = None,
+) -> list[str]:
     """Return language concern-trio violations for one plugin surface."""
     errors: list[str] = []
-    for language in implementation_languages(surface):
+    languages = (
+        implementation_languages(surface)
+        if expected_languages is None
+        else expected_languages
+    )
+    for language in languages:
         retired_skill = (
             surface
             / language
@@ -171,6 +204,8 @@ def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
 
 def implementation_languages(surface: Path) -> tuple[str, ...]:
     """Return languages identified by their implementation skill surface."""
+    if not surface.is_dir():
+        return ()
     return tuple(
         sorted(
             plugin_dir.name

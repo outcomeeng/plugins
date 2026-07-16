@@ -6,7 +6,7 @@ Agentic verification moves onto the published `spx verification run` lifecycle. 
 
 - Audit implementation verification uses `spx verification run start`, `scope add`, `finding add`, `finish`, and `render`.
 - Plugin-side audit verdict scripts are removed. SPX owns payload validation, terminal projection rendering, and authoritative finding counts.
-- The repository SPX floor and CI pin are `0.6.15`, the published release this slice depends on.
+- Compatibility evidence executes the exact published minimum-release fixture; floor-compliance evidence separately requires the repository floor and CI pin to meet or exceed that release.
 
 ## Later slices
 

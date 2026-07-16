@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from itertools import pairwise
 from pathlib import Path
-from shutil import which
+from shutil import rmtree, which
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
@@ -25,6 +25,7 @@ from outcomeeng.validation.audit_artifacts import (
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
     SPEC_TREE_PLUGIN_NAME,
+    check_audit_artifact_contract,
     check_audit_runtime_surface,
     check_language_concern_surface,
     check_runtime_surface,
@@ -73,12 +74,7 @@ SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
     """Return whether the repository floor includes verification runs."""
-    release = cast(
-        object,
-        json.loads(SPX_RELEASE_FIXTURE.read_text(encoding="utf-8")),
-    )
-    if not isinstance(release, dict):
-        raise TypeError("SPX release fixture is not a JSON object")
+    release = _verification_run_release()
     published_version = _required_string(release, "version")
     integrity = _required_string(release, "dist.integrity")
     tarball = _required_string(release, "dist.tarball")
@@ -132,7 +128,7 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     if not spx_floor_provides_verification_run_lifecycle():
         return False
 
-    spx_command = _pinned_spx_command()
+    spx_command = _minimum_release_spx_command()
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
     terminal_status = AuditTerminalStatus.REJECTED
 
@@ -196,7 +192,7 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
     if not spx_floor_provides_verification_run_lifecycle():
         return False
 
-    spx_command = _pinned_spx_command()
+    spx_command = _minimum_release_spx_command()
     rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
 
     with TemporaryDirectory() as temporary_directory:
@@ -361,6 +357,27 @@ def audit_contract_rejects_retired_language_audit_skill() -> bool:
         return bool(check_language_concern_surface(surface))
 
 
+def audit_contract_rejects_missing_generated_surface() -> bool:
+    """Reject a repository missing one declared generated plugin surface."""
+    with _valid_repository_surfaces() as root:
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1])
+        return bool(check_audit_artifact_contract(root))
+
+
+def audit_contract_rejects_missing_generated_audit_host() -> bool:
+    """Reject a generated surface missing the audit-owning plugin."""
+    with _valid_repository_surfaces() as root:
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / SPEC_TREE_PLUGIN_NAME)
+        return bool(check_audit_artifact_contract(root))
+
+
+def audit_contract_rejects_missing_generated_language() -> bool:
+    """Reject a generated surface missing an expected language plugin."""
+    with _valid_repository_surfaces() as root:
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / _source_language())
+        return bool(check_audit_artifact_contract(root))
+
+
 def audit_contract_rejects_extra_runtime_artifact() -> bool:
     """Return whether validation rejects an extra runtime artifact."""
     with _valid_surface() as surface:
@@ -394,24 +411,37 @@ def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
 def _valid_surface() -> Iterator[Path]:
     with TemporaryDirectory() as temporary_directory:
         surface = Path(temporary_directory)
-        language = _source_language()
-        _touch(
-            surface
-            / language
-            / SKILLS_DIR_NAME
-            / LANGUAGE_CODE_SKILL_TEMPLATE.format(language=language)
-            / SKILL_FILENAME
-        )
-        for concern in LANGUAGE_AUDIT_CONCERNS:
-            _touch(_language_concern_path(surface, language, concern))
-        _touch(
-            surface
-            / SPEC_TREE_PLUGIN_NAME
-            / AGENTS_DIR_NAME
-            / IMPLEMENTATION_AUDITOR_FILENAME
-        )
-        _touch(implementation_audit_runtime_directory(surface) / SKILL_FILENAME)
+        _populate_valid_surface(surface, _source_language())
         yield surface
+
+
+@contextmanager
+def _valid_repository_surfaces() -> Iterator[Path]:
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        language = _source_language()
+        for relative_surface in PLUGIN_SURFACE_PATHS:
+            _populate_valid_surface(root / relative_surface, language)
+        yield root
+
+
+def _populate_valid_surface(surface: Path, language: str) -> None:
+    _touch(
+        surface
+        / language
+        / SKILLS_DIR_NAME
+        / LANGUAGE_CODE_SKILL_TEMPLATE.format(language=language)
+        / SKILL_FILENAME
+    )
+    for concern in LANGUAGE_AUDIT_CONCERNS:
+        _touch(_language_concern_path(surface, language, concern))
+    _touch(
+        surface
+        / SPEC_TREE_PLUGIN_NAME
+        / AGENTS_DIR_NAME
+        / IMPLEMENTATION_AUDITOR_FILENAME
+    )
+    _touch(implementation_audit_runtime_directory(surface) / SKILL_FILENAME)
 
 
 def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
@@ -579,33 +609,41 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
-def _pinned_spx_command() -> tuple[str, ...]:
-    pinned_version = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
-    if pinned_version is None:
-        raise RuntimeError(f"SPX_VERSION pin absent from {WORKFLOW_PATH}")
-
+def _minimum_release_spx_command() -> tuple[str, ...]:
+    minimum_version = _required_string(_verification_run_release(), "version")
     if which("spx") is not None:
         installed_command = ("spx",)
-        if _spx_version(installed_command) == pinned_version:
+        if _spx_version(installed_command) == minimum_version:
             return installed_command
 
-    package_spec = f"{SPX_PACKAGE_NAME}@{pinned_version}"
+    package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
     if which("pnpm") is not None:
-        pinned_command = ("pnpm", "dlx", package_spec)
+        minimum_command = ("pnpm", "dlx", package_spec)
     elif which("bunx") is not None:
-        pinned_command = ("bunx", "--bun", package_spec)
+        minimum_command = ("bunx", "--bun", package_spec)
     else:
         raise RuntimeError(
-            "exact pinned SPX execution requires pnpm or bunx when the PATH "
-            "version differs"
+            "exact minimum-release SPX execution requires pnpm or bunx when "
+            "the PATH version differs"
         )
 
-    actual_version = _spx_version(pinned_command)
-    if actual_version != pinned_version:
+    actual_version = _spx_version(minimum_command)
+    if actual_version != minimum_version:
         raise RuntimeError(
-            f"pinned SPX command returned {actual_version}, expected {pinned_version}"
+            "minimum-release SPX command returned "
+            f"{actual_version}, expected {minimum_version}"
         )
-    return pinned_command
+    return minimum_command
+
+
+def _verification_run_release() -> Mapping[str, object]:
+    release = cast(
+        object,
+        json.loads(SPX_RELEASE_FIXTURE.read_text(encoding="utf-8")),
+    )
+    if not isinstance(release, dict):
+        raise TypeError("SPX release fixture is not a JSON object")
+    return cast(dict[str, object], release)
 
 
 def _spx_version(spx_command: tuple[str, ...]) -> str:
