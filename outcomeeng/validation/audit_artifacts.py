@@ -93,15 +93,10 @@ def check_wrapper_surface(surface: Path) -> list[str]:
         if retired_path.exists():
             errors.append(f"{retired_path}: retired wrapper exists")
 
-    forbidden = frozenset(
-        filename
-        for language in implementation_languages(surface)
-        for filename in language_specific_auditor_filenames(language)
-    )
     errors.extend(
         f"{path}: language-specific auditor exists"
         for path in surface.glob(f"*/{AGENTS_DIR_NAME}/*.md")
-        if path.name in forbidden
+        if path.name in language_specific_auditor_filenames(path.parent.parent.name)
     )
     return errors
 

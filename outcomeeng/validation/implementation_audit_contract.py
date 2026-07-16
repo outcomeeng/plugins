@@ -66,9 +66,11 @@ LANGUAGE_AUDIT_CONCERNS: Final = tuple(
 def implementation_audit_unit_id(
     language: str,
     concern: ImplementationAuditConcern,
+    *,
+    subject_path: str,
 ) -> str:
-    """Return the stable coverage-unit identity for one language concern."""
-    return f"{IMPLEMENTATION_AUDIT_CLASS}:{language}:{concern.value}"
+    """Return the stable identity for one subject and language concern."""
+    return f"{IMPLEMENTATION_AUDIT_CLASS}:{language}:{concern.value}:{subject_path}"
 
 
 def implementation_audit_producer_identity(
@@ -115,7 +117,11 @@ def implementation_audit_scope_payload(
 ) -> dict[str, object]:
     """Return one audited implementation coverage unit."""
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        "unitId": implementation_audit_unit_id(
+            language,
+            concern,
+            subject_path=subject_path,
+        ),
         "auditClass": IMPLEMENTATION_AUDIT_CLASS,
         "auditKind": concern.value,
         "subject": subject_path,
@@ -148,7 +154,11 @@ def implementation_audit_finding_payload(
 ) -> dict[str, object]:
     """Return one valid blocking implementation-audit finding."""
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        "unitId": implementation_audit_unit_id(
+            language,
+            concern,
+            subject_path=subject_path,
+        ),
         "producerIdentity": implementation_audit_producer_identity(
             language,
             concern,

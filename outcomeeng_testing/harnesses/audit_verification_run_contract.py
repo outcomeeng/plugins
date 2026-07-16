@@ -6,6 +6,7 @@ import json
 import subprocess
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from itertools import pairwise
 from pathlib import Path
 from shutil import which
 from tempfile import TemporaryDirectory
@@ -44,7 +45,6 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_input_payload,
     implementation_audit_provenance,
     implementation_audit_scope_payload,
-    implementation_audit_unit_id,
 )
 from outcomeeng.validation.spx_version import (
     REQUIRED_SPX_VERSION,
@@ -56,6 +56,9 @@ from outcomeeng.validation.spx_version import (
     parse_version,
     read_pinned_version,
     verification_run_floor_is_satisfied,
+)
+from outcomeeng_testing.generators.audit_verification_run_contract import (
+    implementation_audit_verification_probes,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -130,7 +133,7 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
 
     with TemporaryDirectory() as temporary_directory:
         repository = Path(temporary_directory)
-        scope, run_token, scope_report, finding_report = (
+        scope, run_token, scope_reports, finding_report = (
             _record_implementation_audit_finding(
                 repository,
                 rule,
@@ -155,10 +158,20 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
             run_token=run_token,
         )
 
-    scope_sequence = scope_report.get(RUN_SEQUENCE_FIELD)
+    scope_sequences = tuple(
+        scope_report.get(RUN_SEQUENCE_FIELD) for scope_report in scope_reports
+    )
+    scope_sequence_numbers = tuple(
+        sequence for sequence in scope_sequences if isinstance(sequence, int)
+    )
     actual_projection = (
-        isinstance(scope_sequence, int)
-        and finding_report.get(RUN_SEQUENCE_FIELD) == scope_sequence + 1,
+        bool(scope_sequence_numbers)
+        and len(scope_sequence_numbers) == len(scope_sequences)
+        and all(
+            current == previous + 1
+            for previous, current in pairwise(scope_sequence_numbers)
+        )
+        and finding_report.get(RUN_SEQUENCE_FIELD) == scope_sequence_numbers[-1] + 1,
         finish_report.get(RUN_TERMINAL_STATUS_FIELD),
         finish_report.get(RUN_SEALED_FIELD),
         render_report.get(RUN_TOKEN_FIELD),
@@ -211,6 +224,59 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
         filename = sorted(language_specific_auditor_filenames(language))[0]
         _touch(surface / language / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
+
+
+def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
+    """Reject a language-specific wrapper without a matching code skill."""
+    with _valid_surface() as surface:
+        language = f"{_source_language()}-{ImplementationAuditConcern.CODE.value}"
+        filename = sorted(language_specific_auditor_filenames(language))[0]
+        _touch(surface / language / AGENTS_DIR_NAME / filename)
+        return bool(check_wrapper_surface(surface))
+
+
+def implementation_audit_unit_ids_are_subject_specific() -> bool:
+    """Keep coverage and finding identity distinct for each subject path."""
+    language = _source_language()
+    provenance = implementation_audit_provenance(
+        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        language_plugin_version=_plugin_version(language),
+        tool_version=REQUIRED_SPX_VERSION,
+    )
+    probes = implementation_audit_verification_probes(language)
+    scope_payloads = tuple(
+        implementation_audit_scope_payload(
+            probe.language,
+            probe.concern,
+            subject_path=probe.subject_path,
+            producer_provenance=provenance,
+        )
+        for probe in probes
+    )
+    finding_payloads = tuple(
+        implementation_audit_finding_payload(
+            probe.language,
+            probe.concern,
+            rule=implementation_audit_unit_ids_are_subject_specific.__name__,
+            subject_path=probe.subject_path,
+            message=implementation_audit_unit_ids_are_subject_specific.__doc__
+            or probe.unit_id,
+            observed=probe.subject_path,
+            expected=probe.unit_id,
+            producer_provenance=provenance,
+        )
+        for probe in probes
+    )
+    return len({probe.unit_id for probe in probes}) == len(probes) and all(
+        scope_payload["unitId"] == probe.unit_id
+        and finding_payload["unitId"] == probe.unit_id
+        for probe, scope_payload, finding_payload in zip(
+            probes,
+            scope_payloads,
+            finding_payloads,
+            strict=True,
+        )
+    )
 
 
 def audit_contract_rejects_retired_implementation_wrappers() -> bool:
@@ -308,17 +374,18 @@ def _record_implementation_audit_finding(
     rule: str,
     message: str,
     spx_command: tuple[str, ...],
-) -> tuple[str, str, dict[str, object], dict[str, object]]:
+) -> tuple[str, str, tuple[dict[str, object], ...], dict[str, object]]:
     language = _source_language()
-    concern = ImplementationAuditConcern(LANGUAGE_AUDIT_CONCERNS[0])
-    subject = Path(__file__).name
+    probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
         agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
         tool_version=_spx_version(spx_command),
     )
-    unit_id = implementation_audit_unit_id(language, concern)
-    _initialize_changeset_repository(repository, subject)
+    _initialize_changeset_repository(
+        repository,
+        tuple(probe.subject_path for probe in probes),
+    )
     scope = _changeset_scope(repository)
     start_report = _run_spx(
         repository,
@@ -328,20 +395,24 @@ def _record_implementation_audit_finding(
         payload=implementation_audit_input_payload(rule),
     )
     run_token = _required_string(start_report, RUN_TOKEN_FIELD)
-    scope_report = _run_spx(
-        repository,
-        spx_command,
-        ("scope", "add"),
-        scope,
-        run_token=run_token,
-        payload=implementation_audit_scope_payload(
-            language,
-            concern,
-            subject_path=subject,
-            producer_provenance=provenance,
-        ),
-        idempotency_key=unit_id,
+    scope_reports = tuple(
+        _run_spx(
+            repository,
+            spx_command,
+            ("scope", "add"),
+            scope,
+            run_token=run_token,
+            payload=implementation_audit_scope_payload(
+                probe.language,
+                probe.concern,
+                subject_path=probe.subject_path,
+                producer_provenance=provenance,
+            ),
+            idempotency_key=probe.unit_id,
+        )
+        for probe in probes
     )
+    finding_probe = probes[-1]
     finding_report = _run_spx(
         repository,
         spx_command,
@@ -349,30 +420,34 @@ def _record_implementation_audit_finding(
         scope,
         run_token=run_token,
         payload=implementation_audit_finding_payload(
-            language,
-            concern,
+            finding_probe.language,
+            finding_probe.concern,
             rule=rule,
-            subject_path=subject,
+            subject_path=finding_probe.subject_path,
             message=message,
-            observed=subject,
-            expected=subject,
+            observed=finding_probe.subject_path,
+            expected=finding_probe.subject_path,
             producer_provenance=provenance,
         ),
         idempotency_key=rule,
     )
-    return scope, run_token, scope_report, finding_report
+    return scope, run_token, scope_reports, finding_report
 
 
-def _initialize_changeset_repository(repository: Path, subject: str) -> None:
+def _initialize_changeset_repository(
+    repository: Path,
+    subject_paths: tuple[str, ...],
+) -> None:
     _run(repository, ("git", "init", "-q"))
     _run(repository, ("git", "config", "user.email", "audit@example.com"))
     _run(repository, ("git", "config", "user.name", "Audit Contract"))
-    subject_path = repository / subject
-    subject_path.write_text("", encoding="utf-8")
-    _run(repository, ("git", "add", subject))
+    for subject in subject_paths:
+        (repository / subject).write_text("", encoding="utf-8")
+    _run(repository, ("git", "add", *subject_paths))
     _run(repository, ("git", "commit", "-q", "-m", "initial"))
-    subject_path.write_text(__doc__ or subject, encoding="utf-8")
-    _run(repository, ("git", "add", subject))
+    for subject in subject_paths:
+        (repository / subject).write_text(__doc__ or subject, encoding="utf-8")
+    _run(repository, ("git", "add", *subject_paths))
     _run(repository, ("git", "commit", "-q", "-m", "change"))
 
 

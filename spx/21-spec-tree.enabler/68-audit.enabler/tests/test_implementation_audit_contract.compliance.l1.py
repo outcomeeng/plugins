@@ -4,7 +4,9 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     audit_contract_rejects_incomplete_language_trio,
     audit_contract_rejects_language_specific_wrapper,
     audit_contract_rejects_retired_implementation_wrappers,
+    audit_contract_rejects_unrecognized_language_specific_wrapper,
     implementation_auditor_is_the_only_implementation_wrapper,
+    implementation_audit_unit_ids_are_subject_specific,
     language_concern_skill_trios_exist,
     spx_verification_run_accepts_implementation_audit_payloads,
 )
@@ -24,6 +26,14 @@ def test_spx_accepts_implementation_audit_payloads() -> None:
 
 def test_language_specific_implementation_wrapper_is_rejected() -> None:
     assert audit_contract_rejects_language_specific_wrapper()
+
+
+def test_unrecognized_language_specific_wrapper_is_rejected() -> None:
+    assert audit_contract_rejects_unrecognized_language_specific_wrapper()
+
+
+def test_implementation_audit_unit_ids_are_subject_specific() -> None:
+    assert implementation_audit_unit_ids_are_subject_specific()
 
 
 def test_retired_implementation_wrappers_are_rejected() -> None:
