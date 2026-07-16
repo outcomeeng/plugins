@@ -1,0 +1,65 @@
+{
+  "schema_version": 4,
+  "findings": [
+    {
+      "id": "F-001",
+      "concern": "consistency",
+      "severity": "blocking",
+      "file": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md",
+      "line": 44,
+      "rule": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1",
+      "message": "The finding cites the first declared ALWAYS rule.",
+      "action": "Restore the declared behavior."
+    },
+    {
+      "id": "F-002",
+      "concern": "architecture",
+      "severity": "debt",
+      "file": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
+      "line": 1,
+      "rule": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
+      "message": "The finding cites a node decision.",
+      "action": "Align the implementation with the decision."
+    },
+    {
+      "id": "F-003",
+      "concern": "consistency",
+      "severity": "debt",
+      "file": "spx/15-agent-tools.pdr.md",
+      "line": 1,
+      "rule": "spx/15-agent-tools.pdr.md",
+      "message": "The finding cites a product decision.",
+      "action": "Align the product surface with the decision."
+    },
+    {
+      "id": "F-004",
+      "concern": "architecture",
+      "severity": "blocking",
+      "file": "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+      "line": 10,
+      "rule": "plugins/spec-tree/skills/review-changes/SKILL.md:objective",
+      "message": "The finding cites a shipped skill rule.",
+      "action": "Restore the skill contract."
+    },
+    {
+      "id": "F-005",
+      "concern": "evidence",
+      "severity": "debt",
+      "file": "AGENTS.md",
+      "line": 1,
+      "rule": "AGENTS.md:spec-tree-instructions",
+      "message": "The finding cites the Codex root guide.",
+      "action": "Restore the governed instruction."
+    },
+    {
+      "id": "F-006",
+      "concern": "evidence",
+      "severity": "debt",
+      "file": "CLAUDE.md",
+      "line": 1,
+      "rule": "CLAUDE.md:spec-tree-instructions",
+      "message": "The finding cites the Claude root guide.",
+      "action": "Restore the governed instruction."
+    }
+  ]
+}

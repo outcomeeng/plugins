@@ -23,12 +23,12 @@ REVIEW_RESULT_MODULE_PATH = (
     / "scripts"
     / "review_result.py"
 )
-VALID_RULE_CITATIONS_FIXTURE = (
+VALID_REVIEW_RESULT_FIXTURE = (
     REPO_ROOT
     / "outcomeeng_testing"
     / "fixtures"
     / "reviewing_changes"
-    / "valid_rule_citations.json"
+    / "review_result_with_rule_citations.json"
 )
 
 
@@ -61,30 +61,39 @@ class RuleCitationCase:
 
 
 def valid_rule_citation_cases() -> tuple[RuleCitationCase, ...]:
-    """Load fixed independent citation cases from the inert payload fixture."""
+    """Load citation cases from one inert whole review-result payload."""
 
     review_result = load_review_result_module()
-    payload = json.loads(VALID_RULE_CITATIONS_FIXTURE.read_text(encoding="utf-8"))
-    cases = payload.get("cases") if isinstance(payload, dict) else None
-    if not isinstance(cases, list):
+    payload = json.loads(VALID_REVIEW_RESULT_FIXTURE.read_text(encoding="utf-8"))
+    findings = (
+        payload.get(review_result.DOCUMENT_FINDINGS_FIELD)
+        if isinstance(payload, dict)
+        else None
+    )
+    if not isinstance(findings, list):
         raise RuntimeError(
-            f"citation fixture must contain a cases array: {VALID_RULE_CITATIONS_FIXTURE}"
+            "review-result fixture must contain a findings array: "
+            f"{VALID_REVIEW_RESULT_FIXTURE}"
         )
     resolved: list[RuleCitationCase] = []
-    for case in cases:
-        if not isinstance(case, dict):
+    for finding in findings:
+        if not isinstance(finding, dict):
             raise RuntimeError(
-                f"citation fixture case must be an object: {VALID_RULE_CITATIONS_FIXTURE}"
+                "review-result fixture finding must be an object: "
+                f"{VALID_REVIEW_RESULT_FIXTURE}"
             )
-        family = case.get("family")
-        citation = case.get("citation")
-        if not isinstance(family, str) or not isinstance(citation, str) or not citation:
+        citation = finding.get(review_result.FINDING_RULE_FIELD)
+        if not isinstance(citation, str) or not citation:
             raise RuntimeError(
-                f"citation fixture case requires family and citation strings: {VALID_RULE_CITATIONS_FIXTURE}"
+                "review-result fixture finding requires a rule citation: "
+                f"{VALID_REVIEW_RESULT_FIXTURE}"
             )
-        resolved.append(
-            RuleCitationCase(review_result.RuleCitationFamily(family), citation)
-        )
+        family = review_result.rule_citation_family(citation)
+        if family is None:
+            raise RuntimeError(
+                f"review-result fixture carries an unsupported citation: {citation!r}"
+            )
+        resolved.append(RuleCitationCase(family, citation))
     return tuple(resolved)
 
 
@@ -209,12 +218,12 @@ def make_review_result_dict(
 
 
 def malformed_rule_citations() -> st.SearchStrategy[str]:
-    """Generate variable malformed extensions of every valid citation family."""
+    """Generate the open complement of the source citation-shape predicate."""
 
-    return st.tuples(
-        st.sampled_from(valid_rule_citations()),
-        st.text(min_size=1, max_size=80),
-    ).map(lambda values: f"{values[0]}:{values[1]}")
+    review_result = load_review_result_module()
+    return st.text(max_size=256).filter(
+        lambda value: not review_result.is_supported_rule_citation_shape(value)
+    )
 
 
 def finding_without_required_field(field: str) -> dict[str, Any]:
