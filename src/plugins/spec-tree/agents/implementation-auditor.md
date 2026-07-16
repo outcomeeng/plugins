@@ -5,9 +5,6 @@ description: >-
   a changeset scope after implementation changes land or before merging the changeset.
 tools: Bash, Read, Glob, Grep, Skill
 model: "{{! term('configured_agent_auditor_model') !}}"
-{!% if target == 'codex' %!}
-sandbox_mode: read-only
-{!% endif %!}
 skills:
   - spec-tree:audit-implementation
 ---

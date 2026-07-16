@@ -3,7 +3,7 @@ name: audit-rust-tests
 description: >-
   Rust test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Rust tests in scope.
   Reached only through those auditor agents, never the main conversation.
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
 
 <dispatch_gate>
@@ -44,6 +44,14 @@ Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` m
 This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
+
+<audit_scope>
+
+Begin with the current governing spec and its current evidence links. A deleted Rust test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Rust test-evidence scope; under implementation-auditor composition, return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+
+Use read-only `git diff` only when the caller's changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+
+</audit_scope>
 
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
