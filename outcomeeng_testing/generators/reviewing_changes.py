@@ -8,7 +8,7 @@ import pathlib
 import sys
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Any
+from typing import Any, cast
 
 from hypothesis import strategies as st
 
@@ -185,7 +185,7 @@ def make_finding_dict(
         ),
         action=(action if action is not None else review_result.FINDING_ACTION_FIELD),
     )
-    return review_result.finding_to_json_dict(finding)
+    return cast("dict[str, Any]", review_result.finding_to_json_dict(finding))
 
 
 def make_review_result_dict(
