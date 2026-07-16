@@ -52,6 +52,7 @@ DUPLICATE_FLAG_ERROR_PREFIX = "error: duplicate flag: "
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+READ_ENTIRE_FILE_DIRECTIVE = "**Read this entire file before acting.**"
 CLI_OPTION_NAMES = (
     "--template",
     "--repo-root",

@@ -48,7 +48,7 @@ def _assert_generation_writes_both_root_files(tmp_path: pathlib.Path) -> None:
 def _assert_router_is_first_and_carries_read_whole_file_instruction(
     agent_harness: str,
 ) -> None:
-    template = harness.read_canonical_template()
+    template = harness.read_canonical_template(agent_harness)
     rendered = MODULE.render(
         template,
         harness.TEMPLATE_LANGUAGES,
@@ -331,21 +331,28 @@ def _assert_refresh_workflow_installs_dprint() -> None:
 
 
 def _assert_render_passes_brace_token_through_unchanged() -> None:
-    template = harness.read_canonical_template()
-    template_version = MODULE.parse_template_version(template)
-    assert template_version is not None
+    templates = tuple(
+        harness.read_canonical_template(agent_harness)
+        for agent_harness in harness.TEMPLATE_HARNESSES
+    )
     brace_tokens = tuple(
-        dict.fromkeys(re.findall(r"\{\{![^{}\n]+!\}\}|\{[^{}\n]+\}", template))
+        dict.fromkeys(
+            token
+            for template in templates
+            for token in re.findall(r"\{[^{}\n]+\}", template)
+        )
     )
     assert brace_tokens
     rendered = tuple(
         MODULE.render(
             template,
             harness.TEMPLATE_LANGUAGES,
-            template_version,
+            MODULE.parse_template_version(template),
             agent_harness,
         )
-        for agent_harness in harness.TEMPLATE_HARNESSES
+        for agent_harness, template in zip(
+            harness.TEMPLATE_HARNESSES, templates, strict=True
+        )
     )
     missing = tuple(
         token for token in brace_tokens if not any(token in body for body in rendered)

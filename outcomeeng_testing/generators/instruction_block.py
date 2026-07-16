@@ -111,7 +111,7 @@ def instruction_block_cases(
     read_directive = next(
         line
         for line in canonical_template.splitlines()
-        if "Read this entire file" in line
+        if module.READ_ENTIRE_FILE_DIRECTIVE in line
     )
     return InstructionBlockCases(
         instruction_claude=instruction_claude,

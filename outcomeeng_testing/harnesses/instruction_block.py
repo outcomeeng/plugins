@@ -50,7 +50,6 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
-CANONICAL_TEMPLATE_PATH = distribution.AUTHORED_TEMPLATE_PATH
 FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block"
 
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
@@ -327,9 +326,18 @@ def load_instruction_block_module() -> ModuleType:
     return module
 
 
-def read_canonical_template() -> str:
-    """Read the canonical template both instruction files render from."""
-    return CANONICAL_TEMPLATE_PATH.read_text(encoding="utf-8")
+def canonical_template_path(agent_harness: str | None = None) -> pathlib.Path:
+    """Return one source-declared harness's rendered instruction template path."""
+    harnesses = tuple(
+        sorted(load_instruction_block_module().AGENT_HARNESS_INSTRUCTION_FILENAMES)
+    )
+    selected_harness = harnesses[0] if agent_harness is None else agent_harness
+    return distribution.dist_template_path(selected_harness)
+
+
+def read_canonical_template(agent_harness: str | None = None) -> str:
+    """Read one rendered harness template from the generated runtime tree."""
+    return canonical_template_path(agent_harness).read_text(encoding="utf-8")
 
 
 def generated_cases() -> InstructionBlockCases:
@@ -537,12 +545,12 @@ def _language_subsets(languages: tuple[str, ...]) -> tuple[tuple[str, ...], ...]
 def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, ...]:
     """Observe canonical spacing for every source harness and language subset."""
     module = load_instruction_block_module()
-    template = read_canonical_template()
-    languages = template_declared_languages(template)
-    version = module.parse_template_version(template)
+    languages = template_declared_languages(read_canonical_template())
     observations: list[RouterSpacingObservation] = []
 
     for agent_harness in sorted(module.AGENT_HARNESS_INSTRUCTION_FILENAMES):
+        template = read_canonical_template(agent_harness)
+        version = module.parse_template_version(template)
         for enabled_languages in _language_subsets(languages):
             marker = module.router_marker(version, enabled_languages)
             separator = f"{marker}{module.ROUTER_BODY_SEPARATOR}"
@@ -603,7 +611,7 @@ def for_all_unsupported_language_overrides(
             result = run_generator_write(
                 module,
                 pathlib.Path(directory).resolve(),
-                CANONICAL_TEMPLATE_PATH,
+                canonical_template_path(),
                 languages=token,
             )
         assertion(

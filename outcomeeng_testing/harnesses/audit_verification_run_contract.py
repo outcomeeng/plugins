@@ -341,7 +341,7 @@ def audit_contract_rejects_retired_artifact_in_other_runtime() -> bool:
 
 
 def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
-    return all(not check(Path(".") / relative) for relative in PLUGIN_SURFACE_PATHS)
+    return all(not check(REPO_ROOT / relative) for relative in PLUGIN_SURFACE_PATHS)
 
 
 @contextmanager
@@ -385,7 +385,7 @@ def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
 
 
 def _source_language() -> str:
-    return implementation_languages(Path(".") / PLUGIN_SURFACE_PATHS[0])[0]
+    return implementation_languages(REPO_ROOT / PLUGIN_SURFACE_PATHS[0])[0]
 
 
 def _record_implementation_audit_finding(
