@@ -51,6 +51,17 @@ Build an expected coverage inventory before invoking any language concern skill.
 - coverage requirement: `required` or `optional`
 - coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
 
+Coverage statuses have these complete semantics:
+
+| Status           | Meaning                                                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audited`        | The executable concern producer completed and every accepted finding was recorded.                                                                    |
+| `not-applicable` | The unit is optional transparency for non-implementation artifacts and requires no concern producer.                                                  |
+| `unsupported`    | The unit is required, but its implementation language or artifact kind has no executable concern producer.                                            |
+| `missing-skill`  | The unit is required and names an expected concern skill that is unavailable.                                                                         |
+| `skipped`        | The unit is required and its producer is available, but dispatch stopped after another required unit was classified `unsupported` or `missing-skill`. |
+| `incomplete`     | The unit is required and dispatch began, but no accepted concern result was recorded.                                                                 |
+
 Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation-owned artifact, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
