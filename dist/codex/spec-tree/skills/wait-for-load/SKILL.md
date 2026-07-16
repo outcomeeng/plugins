@@ -55,6 +55,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 - unavailable CPU count producing `unsupported` and exit 2
 - interrupted sleep producing `interrupted` and exit 130
 - load-reader failure producing `error` and exit 1
+- unexpected arguments producing `error` and exit 1 with an actionable message
 - complete silence before one terminal JSON document
 - no subprocess or file creation
 - byte-identical generated runtime copies
@@ -62,9 +63,18 @@ Release verification covers these controlled boundaries without wall-clock delay
 </testing>
 
 <failure_modes>
-**Claude manually selected 1-, 5-, 17-, 20-, and 9-minute delays while waiting for load.** Each wake required another load read, arithmetic pass, and scheduling decision, consuming context and tokens without advancing repository work. Run the waiter once so one process owns the complete readiness loop.
+**Manual delay churn**
 
-**Claude used runtime timers and repeated 60-second result-collection turns for host-load convergence.** The runtime timer knew elapsed time but did not know readiness, so each re-entry reconstructed context and repeated coordination. Collect the same waiter process until its terminal JSON arrives; never substitute a timer or a new waiter.
+- **What happened:** Claude manually selected 1-, 5-, 17-, 20-, and 9-minute delays while waiting for load.
+- **Why it failed:** Each wake required another load read, arithmetic pass, and scheduling decision, consuming context and tokens without advancing repository work.
+- **How to avoid:** Run the waiter once so one process owns the complete readiness loop.
+
+**Timer-driven host-load checks**
+
+- **What happened:** Claude used runtime timers and repeated 60-second result-collection turns for host-load convergence.
+- **Why it failed:** The timer knew elapsed time but did not know readiness, so each re-entry reconstructed context and repeated coordination.
+- **How to avoid:** Collect the same waiter process until its terminal JSON arrives; never substitute a timer or a new waiter.
+
 </failure_modes>
 
 <success_criteria>

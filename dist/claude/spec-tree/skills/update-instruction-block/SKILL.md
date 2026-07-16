@@ -88,11 +88,23 @@ After the operator selects `claude`, rerun with `--reconcile --from claude`; bot
 
 <failure_modes>
 
-**Claude updated the marketplace-source checkout instead of the assigned worktree.** The root argument was described but never bound, so an explicit product path could be ignored. Bind `<repo-root>` from `$repo_root` and confirm that path before the first check.
+**Wrong checkout updated**
 
-**Claude wrote before reconciling.** The write dirtied both root files, then reconcile refused to choose from uncommitted state. Reconcile the committed regions first, then run `--write`.
+- **What happened:** Claude updated the marketplace-source checkout instead of the assigned worktree.
+- **Why it failed:** The root argument was described but never bound, so an explicit product path could be ignored.
+- **How to avoid:** Bind `<repo-root>` from `$repo_root` and confirm that path before the first check.
 
-**Claude kept the instruction-block template under `understand`.** The updater depended on another skill's bundled path, which is unavailable through its own `${CLAUDE_SKILL_DIR}`. Keep the template in this skill's `templates/` directory and invoke every script and template through this skill's local token.
+**Write before reconciliation**
+
+- **What happened:** Claude wrote before reconciling.
+- **Why it failed:** The write dirtied both root files, then reconcile refused to choose from uncommitted state.
+- **How to avoid:** Reconcile the committed regions first, then run `--write`.
+
+**Template owned by another skill**
+
+- **What happened:** Claude kept the instruction-block template under `understand`.
+- **Why it failed:** The updater depended on another skill's bundled path, which is unavailable through its own `${CLAUDE_SKILL_DIR}`.
+- **How to avoid:** Keep the template in this skill's `templates/` directory and invoke every script and template through this skill's local token.
 
 </failure_modes>
 

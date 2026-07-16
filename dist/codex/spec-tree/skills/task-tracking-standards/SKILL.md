@@ -131,11 +131,24 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 </prompt_template>
 
 <failure_modes>
-**Claude created a heartbeat for a background subagent that already produced a completion notification.** Both continuations fired for one work item, causing duplicate state inspection and competing next actions. Use the harness completion notification for ordinary background work and the required typed wait capability for verifier or reviewer agents.
+**Duplicate background-work heartbeat**
 
-**Claude copied the current directive, plan, and finding assessments into a heartbeat prompt.** The branch advanced before the wake-up, so the prompt resumed stale conclusions against a new head. Carry only skills and pointers; write any required continuation facts to durable artifacts that the wake-up re-reads.
+- **What happened:** Claude created a heartbeat for a background subagent that already produced a completion notification.
+- **Why it failed:** Both continuations fired for one work item, causing duplicate state inspection and competing next actions.
+- **How to avoid:** Use the harness completion notification for ordinary background work and the required typed wait capability for verifier or reviewer agents.
 
-**Claude polled a local background command with repeated shell sleeps.** Every iteration added another monitored process tree until process and file-descriptor pressure disrupted unrelated work. End the turn for the harness completion notification or run one foreground command with an adequate timeout.
+**Stale heartbeat payload**
+
+- **What happened:** Claude copied the current directive, plan, and finding assessments into a heartbeat prompt.
+- **Why it failed:** The branch advanced before the wake-up, so the prompt resumed stale conclusions against a new head.
+- **How to avoid:** Carry only skills and pointers; write any required continuation facts to durable artifacts that the wake-up re-reads.
+
+**Local background polling**
+
+- **What happened:** Claude polled a local background command with repeated shell sleeps.
+- **Why it failed:** Every iteration added another monitored process tree until process and file-descriptor pressure disrupted unrelated work.
+- **How to avoid:** End the turn for the harness completion notification or run one foreground command with an adequate timeout.
+
 </failure_modes>
 
 <failure_handling>

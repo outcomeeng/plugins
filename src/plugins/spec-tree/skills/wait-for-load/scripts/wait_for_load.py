@@ -264,7 +264,23 @@ def main() -> int:
         monotonic=time.monotonic,
         sleep=time.sleep,
     )
-    result = wait_until_ready(dependencies)
+    if sys.argv[1:]:
+        started_at = dependencies.monotonic()
+        error = ValueError(
+            "wait_for_load.py accepts no arguments; received "
+            f"{json.dumps(sys.argv[1:])}"
+        )
+        result = terminal_result(
+            status=Status.ERROR,
+            dependencies=dependencies,
+            started_at=started_at,
+            initial=None,
+            final=None,
+            wait_cycles=0,
+            error=error,
+        )
+    else:
+        result = wait_until_ready(dependencies)
     sys.stdout.write(f"{encode_result(result)}\n")
     sys.stdout.flush()
     return int(result.exit_code)
