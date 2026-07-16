@@ -41,8 +41,8 @@ Read the appropriate template before drafting.
 
 Ask or infer from context:
 
-| Artifact         | When to create                        | Template                                    |
-| ---------------- | ------------------------------------- | ------------------------------------------- |
+| Artifact         | When to create                        | Template                       |
+| ---------------- | ------------------------------------- | ------------------------------ |
 | **Product spec** | Bootstrapping a new tree              | `/understand` product template |
 | **ADR**          | Architecture decision needs recording | `/understand` ADR template     |
 | **PDR**          | Product decision needs recording      | `/understand` PDR template     |
