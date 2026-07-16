@@ -3,6 +3,16 @@
 The skill invokes only this runner. The runner owns diff-bundle scratch
 storage, journal command invocation, state passing between verbs, and sealing
 the journal run.
+
+Tested with:
+
+- ``start`` against the real ``spx journal`` backend in an isolated Git repository.
+- ``append-scope`` for normal files and both paths of a rename.
+- ``append-finding`` for conforming findings and malformed required-field input.
+- ``finish`` with complete scope, rejecting findings, and raw run-token output.
+- ``finish`` with incomplete scope, preserving an open journal and naming each path.
+- Scratch state and diff-bundle cleanup after successful sealing.
+- Journal-selector contamination between verbs, with persisted namespace recovery.
 """
 
 from __future__ import annotations
@@ -26,7 +36,9 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _SKILL_DIR = _HERE.parent
 _SKILLS_DIR = _SKILL_DIR.parent
 _STATE_FILENAME = "state.json"
-_REVIEW_TYPE = "review"
+JOURNAL_COMMAND = ("spx", "journal")
+REVIEW_JOURNAL_TYPE = "review"
+JOURNAL_START_CURSOR = "0"
 _DEFAULT_TARGET = "working-diff"
 _PARTICIPANTS = ("review",)
 
@@ -257,7 +269,7 @@ def _run_journal(
             env.pop(key, None)
         env.update(journal_env)
     return subprocess.run(  # noqa: S603,S607
-        ["spx", "journal", *args],
+        [*JOURNAL_COMMAND, *args],
         input=stdin,
         capture_output=True,
         text=True,
@@ -294,7 +306,7 @@ def _append_event(
     result = _run_journal(
         "append",
         "--type",
-        _REVIEW_TYPE,
+        REVIEW_JOURNAL_TYPE,
         "--run",
         run_token,
         stdin=json.dumps(event),
@@ -454,7 +466,7 @@ def _start(args: argparse.Namespace) -> int:
         )
         journal_env = _journal_env_from_metadata(metadata)
         code, opened, _raw = _journal_json(
-            "open", "--type", _REVIEW_TYPE, journal_env=journal_env
+            "open", "--type", REVIEW_JOURNAL_TYPE, journal_env=journal_env
         )
         if code != 0:
             shutil.rmtree(scratch_dir)
@@ -546,11 +558,11 @@ def _finish(args: argparse.Namespace) -> int:
         code, prefix_value, _raw = _journal_json(
             "read",
             "--type",
-            _REVIEW_TYPE,
+            REVIEW_JOURNAL_TYPE,
             "--run",
             run_token,
             "--from",
-            "0",
+            JOURNAL_START_CURSOR,
             journal_env=journal_env,
         )
         if code != 0:
@@ -575,7 +587,12 @@ def _finish(args: argparse.Namespace) -> int:
         if code != 0:
             return code
         sealed = _run_journal(
-            "seal", "--type", _REVIEW_TYPE, "--run", run_token, journal_env=journal_env
+            "seal",
+            "--type",
+            REVIEW_JOURNAL_TYPE,
+            "--run",
+            run_token,
+            journal_env=journal_env,
         )
         failed = _propagate_failure(sealed)
         if failed is not None:

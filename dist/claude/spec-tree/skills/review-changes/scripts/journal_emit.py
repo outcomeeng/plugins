@@ -29,6 +29,15 @@ Review findings map into the shared projection as findings: ``blocking`` is a
 rejecting finding, while ``debt`` is a warning finding. A review carries no
 decision or verdict field; terminal status belongs to the channel projection
 over the recorded event prefix.
+
+Tested with:
+
+- Worktree metadata from branch, pull-request, and detached-head identities.
+- Scope-entered and scope-advanced events with source-derived run metadata.
+- Conforming blocking/debt findings and malformed findings missing a required field.
+- Approved and rejected run-completed rollups, including absent base identity.
+- Sealed-prefix rendering through the shared projection with no temporary files.
+- Git metadata failure with an actionable error and no traceback.
 """
 
 from __future__ import annotations

@@ -61,6 +61,10 @@ CONCERN_SECURITY = "security"
 CONCERN_PERFORMANCE = "performance"
 CONCERN_EVIDENCE = "evidence"
 CONCERN_ARCHITECTURE = "architecture"
+RULE_CITATION_SPEC_ASSERTION = "spec-assertion"
+RULE_CITATION_DECISION = "decision"
+RULE_CITATION_PLUGIN_SKILL = "plugin-skill"
+RULE_CITATION_ROOT_GUIDE = "root-guide"
 
 
 class Severity(StrEnum):
@@ -94,6 +98,15 @@ class Concern(StrEnum):
     PERFORMANCE = CONCERN_PERFORMANCE
     EVIDENCE = CONCERN_EVIDENCE
     ARCHITECTURE = CONCERN_ARCHITECTURE
+
+
+class RuleCitationFamily(StrEnum):
+    """The closed citation families accepted by ``Finding.rule``."""
+
+    SPEC_ASSERTION = RULE_CITATION_SPEC_ASSERTION
+    DECISION = RULE_CITATION_DECISION
+    PLUGIN_SKILL = RULE_CITATION_PLUGIN_SKILL
+    ROOT_GUIDE = RULE_CITATION_ROOT_GUIDE
 
 
 class ReviewResultValidationError(ValueError):
@@ -338,15 +351,21 @@ def format_finding_id(index: int) -> str:
 
 def is_supported_rule_citation_shape(rule: str) -> bool:
     """Return whether a citation has one of the accepted wire shapes."""
-    return any(
-        pattern.fullmatch(rule) is not None
-        for pattern in (
-            _SPEC_ASSERTION_RE,
-            _DECISION_RE,
-            _PLUGIN_SKILL_RE,
-            _ROOT_RULE_RE,
-        )
-    )
+    return rule_citation_family(rule) is not None
+
+
+def rule_citation_family(rule: str) -> RuleCitationFamily | None:
+    """Classify one citation shape into the source-owned family vocabulary."""
+
+    for family, pattern in (
+        (RuleCitationFamily.SPEC_ASSERTION, _SPEC_ASSERTION_RE),
+        (RuleCitationFamily.DECISION, _DECISION_RE),
+        (RuleCitationFamily.PLUGIN_SKILL, _PLUGIN_SKILL_RE),
+        (RuleCitationFamily.ROOT_GUIDE, _ROOT_RULE_RE),
+    ):
+        if pattern.fullmatch(rule) is not None:
+            return family
+    return None
 
 
 def _validate_rule_citation(rule: str) -> None:
@@ -355,20 +374,29 @@ def _validate_rule_citation(rule: str) -> None:
         raise ReviewResultValidationError(
             f"finding 'rule' must be a non-empty string; got {rule!r}"
         )
-    if match := _SPEC_ASSERTION_RE.fullmatch(rule):
+    family = rule_citation_family(rule)
+    if family is RuleCitationFamily.SPEC_ASSERTION:
+        match = _SPEC_ASSERTION_RE.fullmatch(rule)
+        assert match is not None
         _validate_spec_assertion(match)
         return
-    if match := _DECISION_RE.fullmatch(rule):
+    if family is RuleCitationFamily.DECISION:
+        match = _DECISION_RE.fullmatch(rule)
+        assert match is not None
         _validate_decision_path(match.group("path"), rule)
         _require_repo_file(match.group("path"), rule)
         return
-    if match := _PLUGIN_SKILL_RE.fullmatch(rule):
+    if family is RuleCitationFamily.PLUGIN_SKILL:
+        match = _PLUGIN_SKILL_RE.fullmatch(rule)
+        assert match is not None
         path = _resolve_plugin_skill_path(
             match.group("plugin"), match.group("skill"), rule
         )
         _validate_slug(path, match.group("slug"), rule)
         return
-    if match := _ROOT_RULE_RE.fullmatch(rule):
+    if family is RuleCitationFamily.ROOT_GUIDE:
+        match = _ROOT_RULE_RE.fullmatch(rule)
+        assert match is not None
         _validate_slug(pathlib.Path(match.group("path")), match.group("slug"), rule)
         return
     raise ReviewResultValidationError(

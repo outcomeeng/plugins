@@ -89,9 +89,6 @@ REVIEW_RUN_METADATA_BRANCH_FIXTURE = (
 REVIEW_RUN_METADATA_PULL_REQUEST_FIXTURE = (
     REVIEW_FIXTURES_DIR / "review_run_metadata_pull_request.json"
 )
-FAKE_JOURNAL_PATH_ENV = "SPX_FAKE_JOURNAL_PATH"
-FAKE_NAMESPACE_KEYS_ENV = "SPX_FAKE_NAMESPACE_KEYS"
-FAKE_RUN_TOKEN = "run-001"
 CONTAMINATING_JOURNAL_ENV_VALUE = "contaminating-later-env"
 
 
@@ -156,54 +153,11 @@ def load_review_result_module() -> ModuleType:
 
 
 def review_rule_citations() -> tuple[str, ...]:
-    """Derive one valid citation from each supported source family."""
+    """Return the independent citation corpus owned by the test generator."""
 
-    review_result = load_review_result_module()
-    spec_text = REVIEW_SPEC_PATH.read_text(encoding="utf-8")
-    assertion_kind = next(
-        kind for kind in ("ALWAYS", "NEVER") if f"- {kind}:" in spec_text
-    )
-    spec_citation = f"{REVIEW_SPEC_PATH.relative_to(REPO_ROOT)}:{assertion_kind}:1"
-    adr_path = next(iter(sorted(REVIEW_NODE_DIR.glob("*-*.adr.md"))))
-    pdr_path = next(iter(sorted((REPO_ROOT / "spx").glob("*-*.pdr.md"))))
+    from outcomeeng_testing.generators.reviewing_changes import valid_rule_citations
 
-    agents_path = REPO_ROOT / "AGENTS.md"
-    agents_slug = next(
-        iter(
-            sorted(
-                review_result._declared_rule_slugs(
-                    agents_path.read_text(encoding="utf-8"),
-                ),
-            ),
-        ),
-    )
-    skill_slug = next(
-        iter(
-            sorted(
-                review_result._declared_rule_slugs(
-                    SKILL_FILE.read_text(encoding="utf-8"),
-                ),
-            ),
-        ),
-    )
-    claude_path = REPO_ROOT / "CLAUDE.md"
-    claude_slug = next(
-        iter(
-            sorted(
-                review_result._declared_rule_slugs(
-                    claude_path.read_text(encoding="utf-8"),
-                ),
-            ),
-        ),
-    )
-    return (
-        spec_citation,
-        str(adr_path.relative_to(REPO_ROOT)),
-        str(pdr_path.relative_to(REPO_ROOT)),
-        f"plugins/spec-tree/skills/review-changes/SKILL.md:{skill_slug}",
-        f"AGENTS.md:{agents_slug}",
-        f"CLAUDE.md:{claude_slug}",
-    )
+    return valid_rule_citations()
 
 
 def malformed_rule_citation() -> str:
@@ -874,15 +828,6 @@ def review_run_journal_env_keys() -> tuple[str, ...]:
     return tuple(cast("tuple[str, ...]", module.JOURNAL_ENV_KEYS))
 
 
-def review_run_journal_env_from_state(state_path: pathlib.Path) -> dict[str, str]:
-    """Read the runner-owned journal namespace from persisted run state."""
-
-    module = load_review_run_module()
-    state = module._read_state(state_path)
-    persisted = cast("dict[str, str]", module._journal_env_from_state(state))
-    return {key: persisted.get(key, "") for key in module.JOURNAL_ENV_KEYS}
-
-
 def review_run_journal_env_key(name: str) -> str:
     """Return one named journal-selector environment key from ``review_run``."""
 
@@ -951,6 +896,13 @@ REVIEW_SUMMARY_DEBT_FIELD = cast(
 )
 REVIEW_SUMMARY_OVERALL_FIELD = cast(
     "str", review_run_contract_value("REVIEW_SUMMARY_OVERALL_FIELD")
+)
+REVIEW_JOURNAL_COMMAND = cast(
+    "tuple[str, ...]", review_run_contract_value("JOURNAL_COMMAND")
+)
+REVIEW_JOURNAL_TYPE = cast("str", review_run_contract_value("REVIEW_JOURNAL_TYPE"))
+REVIEW_JOURNAL_START_CURSOR = cast(
+    "str", review_run_contract_value("JOURNAL_START_CURSOR")
 )
 
 
@@ -1285,104 +1237,58 @@ def run_script(
     )
 
 
-def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
-    """Write a fake ``spx`` executable that enforces journal namespace continuity.
+def run_review_journal(
+    runner: ReviewRunnerHarness,
+    *args: str,
+    env: dict[str, str] | None = None,
+    stdin: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run the real source-declared journal command in the isolated repository."""
 
-    The fake records the selector environment present at ``journal open`` and
-    rejects later ``append``, ``read``, or ``seal`` calls whose ``--run`` token
-    or selector differs. This makes the runner boundary test exercise the same
-    class of failure as the real journal backend without reaching into the
-    backend's filesystem layout.
-    """
-
-    script = bin_dir / "spx"
-    script.write_text(
-        """#!/usr/bin/env python3
-import json
-import os
-import pathlib
-import sys
-
-
-def namespace():
-    keys = json.loads(os.environ["SPX_FAKE_NAMESPACE_KEYS"])
-    return {key: os.environ.get(key, "") for key in keys}
-
-
-def option_value(args, name):
-    try:
-        index = args.index(name)
-    except ValueError:
-        return ""
-    try:
-        return args[index + 1]
-    except IndexError:
-        return ""
-
-
-path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
-if path.is_file():
-    state = json.loads(path.read_text(encoding="utf-8"))
-else:
-    state = {"commands": [], "events": [], "sealed": False}
-
-args = sys.argv[1:]
-if len(args) < 2 or args[0] != "journal":
-    sys.stderr.write("expected spx journal command\\n")
-    raise SystemExit(2)
-
-command = args[1]
-current_namespace = namespace()
-state["commands"].append(command)
-if command == "open":
-    state["namespace"] = current_namespace
-    state["runToken"] = "__RUN_TOKEN__"
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"runToken": "__RUN_TOKEN__"}))
-elif option_value(args, "--run") != state.get("runToken"):
-    path.write_text(json.dumps(state), encoding="utf-8")
-    sys.stderr.write("journal run not found; open the run before operating on it\\n")
-    raise SystemExit(4)
-elif current_namespace != state.get("namespace"):
-    path.write_text(json.dumps(state), encoding="utf-8")
-    sys.stderr.write("journal run not found; open the run before operating on it\\n")
-    raise SystemExit(4)
-elif command == "append":
-    if state["sealed"]:
-        sys.stderr.write("run is sealed\\n")
-        raise SystemExit(3)
-    state["events"].append(json.load(sys.stdin))
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"ok": True}))
-elif command == "read":
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
-elif command == "seal":
-    state["sealed"] = True
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"ok": True}))
-elif command == "render":
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
-else:
-    sys.stderr.write(f"unknown command {command}\\n")
-    raise SystemExit(2)
-""".replace("__RUN_TOKEN__", FAKE_RUN_TOKEN),
-        encoding="utf-8",
+    return subprocess.run(  # noqa: S603
+        [*REVIEW_JOURNAL_COMMAND, *args],
+        input=stdin,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env or runner.env,
+        cwd=runner.repo,
     )
-    script.chmod(0o755)
-    return script
+
+
+def read_review_journal(
+    runner: ReviewRunnerHarness,
+    run_token: str,
+) -> tuple[dict[str, Any], ...]:
+    """Read one real journal run and validate its event-array response."""
+
+    result = run_review_journal(
+        runner,
+        "read",
+        "--type",
+        REVIEW_JOURNAL_TYPE,
+        "--run",
+        run_token,
+        "--from",
+        REVIEW_JOURNAL_START_CURSOR,
+    )
+    if result.returncode != 0:
+        raise AssertionError(result.stderr)
+    payload = json.loads(result.stdout)
+    if not isinstance(payload, list) or not all(
+        isinstance(event, dict) for event in payload
+    ):
+        raise AssertionError(f"spx journal read returned invalid events: {payload!r}")
+    return tuple(cast("dict[str, Any]", event) for event in payload)
 
 
 @dataclass(frozen=True)
 class ReviewRunnerHarness:
-    """Resources and isolated environments for one review-runner scenario."""
+    """Temporary repository and environments for one real journal scenario."""
 
     repo: pathlib.Path
-    journal_path: pathlib.Path
     env: dict[str, str]
     later_env: dict[str, str]
-    run_token: str = FAKE_RUN_TOKEN
 
 
 @dataclass(frozen=True)
@@ -1491,8 +1397,11 @@ def malformed_runner_finding_observation() -> MalformedRunnerFindingObservation:
             env=runner.env,
             cwd=runner.repo,
         )
-        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
-        event_types = tuple(event["type"] for event in journal["events"])
+        journal = read_review_journal(
+            runner,
+            start_payload[REVIEW_START_RUN_TOKEN],
+        )
+        event_types = tuple(event["type"] for event in journal)
         return MalformedRunnerFindingObservation(
             returncode=appended.returncode,
             stderr=appended.stderr,
@@ -1533,7 +1442,6 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
             pathlib.Path(start_payload[REVIEW_START_DIFF_PATH]).is_file()
             and pathlib.Path(start_payload[REVIEW_START_MANIFEST_PATH]).is_file()
         )
-        expected_namespace = review_run_journal_env_from_state(state_path)
         scoped = run_script(
             REVIEW_RUN_SCRIPT,
             "append-scope",
@@ -1565,7 +1473,17 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
             cwd=runner.repo,
         )
         state_removed = not state_path.exists()
-        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
+        run_token = start_payload[REVIEW_START_RUN_TOKEN]
+        journal = read_review_journal(runner, run_token)
+        append_after_seal = run_review_journal(
+            runner,
+            "append",
+            "--type",
+            REVIEW_JOURNAL_TYPE,
+            "--run",
+            run_token,
+            stdin=json.dumps(journal[-1]),
+        )
 
     expected_event_types = (
         projection.SCOPE_ENTERED,
@@ -1573,13 +1491,11 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
         *(projection.FINDING_REPORTED for _finding in findings),
         projection.RUN_COMPLETED,
     )
-    event_types = tuple(event["type"] for event in journal["events"])
+    event_types = tuple(event["type"] for event in journal)
     finding_events = tuple(
-        event
-        for event in journal["events"]
-        if event["type"] == projection.FINDING_REPORTED
+        event for event in journal if event["type"] == projection.FINDING_REPORTED
     )
-    terminal_event = journal["events"][-1]
+    terminal_event = journal[-1]
     summary = terminal_event["data"][REVIEW_SUMMARY_FIELD]
     return ReviewRunnerLifecycleObservation(
         start_contract_holds=(
@@ -1588,7 +1504,11 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
             and start_paths_exist
             and isinstance(start_payload[REVIEW_START_CHANGED_FILES], list)
         ),
-        namespace_is_preserved=(journal["namespace"] == expected_namespace),
+        namespace_is_preserved=(
+            scoped.returncode == 0
+            and all(result.returncode == 0 for result in appended)
+            and finished.returncode == 0
+        ),
         finish_returns_raw_token=(
             scoped.returncode == 0
             and all(result.returncode == 0 for result in appended)
@@ -1597,16 +1517,7 @@ def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
         ),
         scratch_state_is_removed=state_removed,
         journal_protocol_holds=(
-            journal["sealed"] is True
-            and event_types == expected_event_types
-            and journal["commands"]
-            == [
-                "open",
-                *("append" for _event in expected_event_types[:-1]),
-                "read",
-                "append",
-                "seal",
-            ]
+            append_after_seal.returncode != 0 and event_types == expected_event_types
         ),
         finding_identity_is_preserved=(
             [event["data"]["id"] for event in finding_events]
@@ -1661,15 +1572,30 @@ def review_runner_coverage_observation() -> ReviewRunnerCoverageObservation:
             env=runner.env,
             cwd=runner.repo,
         )
-        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
+        run_token = start_payload[REVIEW_START_RUN_TOKEN]
+        journal = read_review_journal(runner, run_token)
+        append_while_open = run_review_journal(
+            runner,
+            "append",
+            "--type",
+            REVIEW_JOURNAL_TYPE,
+            "--run",
+            run_token,
+            stdin=json.dumps(
+                projection.scope_advanced_event(
+                    missing_file,
+                    now=REVIEW_EVENT_TIME,
+                    attempt=1,
+                )
+            ),
+        )
     return ReviewRunnerCoverageObservation(
         finish_is_rejected=finished.returncode != 0,
         missing_scope_is_named=missing_file in finished.stderr,
         only_scope_entered_is_recorded=(
-            tuple(event["type"] for event in journal["events"])
-            == (projection.SCOPE_ENTERED,)
+            tuple(event["type"] for event in journal) == (projection.SCOPE_ENTERED,)
         ),
-        journal_remains_open=journal["sealed"] is False,
+        journal_remains_open=append_while_open.returncode == 0,
     )
 
 
@@ -1742,7 +1668,7 @@ def review_runner_rename_observation() -> ReviewRunnerRenameObservation:
         both_paths_allow_finish=(
             source_scoped.returncode == 0
             and finished.returncode == 0
-            and finished.stdout == f"{runner.run_token}\n"
+            and finished.stdout == f"{start_payload[REVIEW_START_RUN_TOKEN]}\n"
         ),
     )
 
@@ -2311,30 +2237,21 @@ def review_event_cli_observation() -> ReviewEventCliObservation:
 def review_runner_harness(
     tmp_path: pathlib.Path, *, renamed: bool = False
 ) -> ReviewRunnerHarness:
-    """Create a git repository and namespace-checking fake journal backend."""
+    """Create an isolated Git repository for the real journal backend."""
 
     repo = tmp_path / "repo"
     repo.mkdir()
     base_ref = (
         init_renamed_review_git_repo(repo) if renamed else init_review_git_repo(repo)
     )
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    journal_path = tmp_path / "journal.json"
-    write_fake_spx(bin_dir, journal_path)
-
     env = isolated_review_env(cwd=repo)
     env[REVIEW_ENV_BASE_REF] = base_ref
-    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-    env[FAKE_JOURNAL_PATH_ENV] = str(journal_path)
-    env[FAKE_NAMESPACE_KEYS_ENV] = json.dumps(review_run_journal_env_keys())
     later_env = env.copy()
     for key in review_run_journal_env_keys():
         later_env[key] = CONTAMINATING_JOURNAL_ENV_VALUE
 
     return ReviewRunnerHarness(
         repo=repo,
-        journal_path=journal_path,
         env=env,
         later_env=later_env,
     )
@@ -2676,4 +2593,272 @@ def review_render_observation() -> ReviewRenderObservation:
             "dict[str, str]",
             contracts.journal_emit.render_events(list(prefix)),
         ),
+    )
+
+
+def review_chain_with_finding_contract_holds() -> bool:
+    """Return whether the complete finding-bearing chain matches its contracts."""
+
+    observation = review_chain_with_finding_observation()
+    contracts = review_contract_modules()
+    return (
+        observation.diff_result.returncode == 0
+        and observation.changed_file in observation.diff_result.stdout
+        and observation.metadata_result.returncode == 0
+        and observation.rendered[contracts.journal_emit.RENDER_SURFACE_FIELD]
+        == contracts.journal_projection.render_surface(list(observation.events))
+        and observation.rendered[contracts.journal_emit.RENDER_OVERALL_FIELD]
+        == str(contracts.journal_projection.compute_overall(list(observation.events)))
+    )
+
+
+def clean_review_chain_contract_holds() -> bool:
+    """Return whether a clean review projects zero findings."""
+
+    observation = clean_review_chain_observation()
+    journal_emit = review_contract_modules().journal_emit
+    expected_count = str(len(observation.findings))
+    return (
+        observation.rendered[journal_emit.RENDER_BLOCKING_FIELD] == expected_count
+        and observation.rendered[journal_emit.RENDER_DEBT_FIELD] == expected_count
+    )
+
+
+def malformed_runner_finding_contract_holds() -> bool:
+    """Return whether malformed findings stop before the real journal append."""
+
+    observation = malformed_runner_finding_observation()
+    projection = review_contract_modules().journal_projection
+    return (
+        observation.returncode != 0
+        and observation.missing_field in observation.stderr
+        and observation.event_types == (projection.SCOPE_ENTERED,)
+    )
+
+
+def review_runner_lifecycle_contract_holds() -> bool:
+    """Return whether every real-journal runner lifecycle predicate holds."""
+
+    return all(dataclasses.astuple(review_runner_lifecycle_observation()))
+
+
+def review_runner_coverage_contract_holds() -> bool:
+    """Return whether incomplete scope prevents real-journal sealing."""
+
+    return all(dataclasses.astuple(review_runner_coverage_observation()))
+
+
+def review_runner_rename_contract_holds() -> bool:
+    """Return whether rename scope requires source and destination paths."""
+
+    return all(dataclasses.astuple(review_runner_rename_observation()))
+
+
+def compute_diff_scenario_contract_holds() -> bool:
+    """Return whether every source-owned compute-diff scenario holds."""
+
+    return all(dataclasses.astuple(compute_diff_scenario_observation()))
+
+
+def review_wire_vocabulary_mapping_holds() -> bool:
+    """Return whether both review enums map to their complete wire domains."""
+
+    review_result = load_review_result_module()
+    return {member.value for member in review_result.Severity} == {
+        review_result.SEVERITY_BLOCKING,
+        review_result.SEVERITY_DEBT,
+    } and {member.value for member in review_result.Concern} == {
+        review_result.CONCERN_CONSISTENCY,
+        review_result.CONCERN_SECURITY,
+        review_result.CONCERN_PERFORMANCE,
+        review_result.CONCERN_EVIDENCE,
+        review_result.CONCERN_ARCHITECTURE,
+    }
+
+
+def review_module_surface_contract_holds() -> bool:
+    """Return whether the canonical module exposes only the governed surface."""
+
+    return all(dataclasses.astuple(review_module_surface_observation()))
+
+
+def review_parse_compliance_contract_holds() -> bool:
+    """Return whether conforming and closed rejection cases match the schema."""
+
+    observation = review_parse_compliance_observation()
+    return (
+        observation.conforming_result_type is observation.expected_result_type
+        and not observation.empty_findings
+        and observation.missing_document_field in observation.missing_document_error
+        and observation.unknown_severity in observation.unknown_severity_error
+        and observation.unknown_concern in observation.unknown_concern_error
+        and bool(observation.malformed_error)
+        and observation.missing_finding_field in observation.missing_finding_error
+    )
+
+
+def rule_citation_contract_holds() -> bool:
+    """Return whether inert valid citations pass and a derived malformed one fails."""
+
+    observation = rule_citation_observation()
+    review_result = load_review_result_module()
+    from outcomeeng_testing.generators.reviewing_changes import (
+        valid_rule_citation_cases,
+    )
+
+    return (
+        observation.accepted_rules == observation.expected_rules
+        and observation.malformed_rule in observation.malformed_error
+        and {case.family for case in valid_rule_citation_cases()}
+        == set(review_result.RuleCitationFamily)
+        and all(
+            review_result.rule_citation_family(case.citation) is case.family
+            for case in valid_rule_citation_cases()
+        )
+    )
+
+
+def review_severity_projection_contract_holds() -> bool:
+    """Return whether every review severity maps to the shared projection."""
+
+    observation = review_severity_projection_observation()
+    return (
+        observation.actual_severities == observation.expected_severities
+        and observation.actual_outcomes == observation.expected_outcomes
+    )
+
+
+def review_terminal_branch_identity_contract_holds() -> bool:
+    """Return whether a terminal event preserves branch run identity."""
+
+    contracts = review_contract_modules()
+    metadata = review_run_metadata()
+    event = contracts.journal_emit.run_completed_event(
+        metadata,
+        [],
+        completed_at=REVIEW_COMPLETION_TIME,
+        now=REVIEW_EVENT_TIME,
+        attempt=1,
+    )
+    data = event["data"]
+    projection = contracts.journal_projection
+    return (
+        event["type"] == projection.RUN_COMPLETED
+        and data[projection.RUN_STATE_BRANCH_NAME] == metadata.branch_name
+        and data[projection.RUN_STATE_BRANCH_SLUG] == metadata.branch_slug
+        and data[projection.RUN_STATE_TARGET_KIND]
+        == projection.JournalTargetKind.BRANCH
+        and data[projection.RUN_STATE_HEAD_SHA] == metadata.head_sha
+        and data[projection.RUN_STATE_BASE_REF] == metadata.base_ref
+        and data[projection.RUN_STATE_BASE_SHA] == metadata.base_sha
+        and data[projection.RUN_STATE_CONFIG_DIGEST] == metadata.config_digest
+        and data[projection.RUN_STATE_PARTICIPANTS] == list(metadata.participants)
+        and data[projection.RUN_STATE_SCOPE] == dict(metadata.scope)
+        and data[projection.RUN_STATE_STARTED_AT] == metadata.started_at
+        and data[projection.RUN_STATE_COMPLETED_AT] == REVIEW_COMPLETION_TIME
+        and data[projection.RUN_STATE_STATUS] == projection.JournalRunStatus.APPROVED
+    )
+
+
+def review_terminal_pull_request_identity_contract_holds() -> bool:
+    """Return whether a terminal event preserves pull-request identity."""
+
+    contracts = review_contract_modules()
+    metadata = review_run_metadata(pull_request=True)
+    event = contracts.journal_emit.run_completed_event(
+        metadata,
+        [],
+        completed_at=REVIEW_COMPLETION_TIME,
+        now=REVIEW_EVENT_TIME,
+        attempt=1,
+    )
+    projection = contracts.journal_projection
+    return (
+        event["data"][projection.RUN_STATE_TARGET_KIND]
+        == projection.JournalTargetKind.PULL_REQUEST
+        and event["data"][projection.RUN_STATE_PULL_REQUEST_NUMBER]
+        == metadata.pull_request_number
+    )
+
+
+def review_render_count_mapping_holds() -> bool:
+    """Return whether both finding severities render with the governed counts."""
+
+    contracts = review_contract_modules()
+    events = streamed_review_events(
+        review_run_metadata(),
+        tuple(
+            review_finding(severity=severity)
+            for severity in (
+                contracts.review_result.Severity.BLOCKING,
+                contracts.review_result.Severity.DEBT,
+            )
+        ),
+    )
+    rendered = contracts.journal_emit.render_events(events)
+    return (
+        rendered[contracts.journal_emit.RENDER_BLOCKING_FIELD] == "1"
+        and rendered[contracts.journal_emit.RENDER_DEBT_FIELD] == "1"
+        and rendered[contracts.journal_emit.RENDER_COUNT_LINE_FIELD]
+        == "BLOCKING: 1, DEBT: 1"
+        and rendered[contracts.journal_emit.RENDER_OVERALL_FIELD]
+        == str(contracts.journal_projection.Outcome.REJECTED)
+        and rendered[contracts.journal_emit.RENDER_SURFACE_FIELD]
+        == contracts.journal_projection.render_surface(events)
+    )
+
+
+def missing_terminal_base_identity_is_rejected() -> bool:
+    """Return whether the terminal adapter rejects absent base identity."""
+
+    contracts = review_contract_modules()
+    try:
+        contracts.journal_emit.run_completed_event(
+            review_run_metadata(missing_base_identity=True),
+            [],
+            completed_at=REVIEW_COMPLETION_TIME,
+            now=REVIEW_EVENT_TIME,
+            attempt=1,
+        )
+    except ValueError as exc:
+        return contracts.journal_projection.RUN_STATE_BASE_SHA in str(exc)
+    return False
+
+
+def review_config_digest_contract_holds() -> bool:
+    """Return whether every review configuration identity mapping holds."""
+
+    return all(dataclasses.astuple(review_config_digest_observation()))
+
+
+def review_metadata_contract_holds() -> bool:
+    """Return whether every review metadata mapping holds."""
+
+    return all(dataclasses.astuple(review_metadata_observation()))
+
+
+def review_event_cli_contract_holds() -> bool:
+    """Return whether every event CLI mapping holds."""
+
+    return all(dataclasses.astuple(review_event_cli_observation()))
+
+
+def review_script_set_contract_holds() -> bool:
+    """Return whether the shipped script set has no alternate renderer."""
+
+    observation = review_script_compliance_observation()
+    return not observation.unexpected_scripts and not observation.parallel_scripts
+
+
+def review_render_contract_holds() -> bool:
+    """Return whether render output derives from the shared journal projection."""
+
+    observation = review_render_observation()
+    contracts = review_contract_modules()
+    return observation.rendered[
+        contracts.journal_emit.RENDER_SURFACE_FIELD
+    ] == contracts.journal_projection.render_surface(
+        list(observation.events)
+    ) and observation.rendered[contracts.journal_emit.RENDER_OVERALL_FIELD] == str(
+        contracts.journal_projection.compute_overall(list(observation.events))
     )

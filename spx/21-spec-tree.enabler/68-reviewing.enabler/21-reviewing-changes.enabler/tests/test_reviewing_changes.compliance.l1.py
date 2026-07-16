@@ -1,9 +1,9 @@
 """Compliance evidence for review-changes scripts."""
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    review_contract_modules,
-    review_render_observation,
+    review_render_contract_holds,
     review_script_compliance_observation,
+    review_script_set_contract_holds,
     violating_review_script_fixtures_detected,
 )
 
@@ -37,10 +37,7 @@ def test_compute_diff_has_no_persistence_addressing() -> None:
 
 
 def test_script_set_has_no_parallel_renderer() -> None:
-    observation = review_script_compliance_observation()
-
-    assert not observation.unexpected_scripts
-    assert not observation.parallel_scripts
+    assert review_script_set_contract_holds()
 
 
 def test_no_render_templates_directory() -> None:
@@ -48,12 +45,4 @@ def test_no_render_templates_directory() -> None:
 
 
 def test_render_command_projects_from_journal_events() -> None:
-    observation = review_render_observation()
-    contracts = review_contract_modules()
-
-    assert observation.rendered[contracts.journal_emit.RENDER_SURFACE_FIELD] == (
-        contracts.journal_projection.render_surface(list(observation.events))
-    )
-    assert observation.rendered[contracts.journal_emit.RENDER_OVERALL_FIELD] == str(
-        contracts.journal_projection.compute_overall(list(observation.events))
-    )
+    assert review_render_contract_holds()

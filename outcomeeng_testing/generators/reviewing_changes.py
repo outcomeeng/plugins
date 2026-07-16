@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from hypothesis import strategies as st
@@ -9,8 +10,47 @@ from hypothesis import strategies as st
 from outcomeeng_testing.harnesses.reviewing_changes import (
     load_review_result_module,
     make_finding_dict,
-    review_rule_citations,
 )
+
+
+@dataclass(frozen=True)
+class RuleCitationCase:
+    """One independent citation oracle paired with its source family."""
+
+    family: Any
+    citation: str
+
+
+def valid_rule_citation_cases() -> tuple[RuleCitationCase, ...]:
+    """Return one fixed independent citation for every source-owned family."""
+
+    review_result = load_review_result_module()
+    return (
+        RuleCitationCase(
+            review_result.RuleCitationFamily.SPEC_ASSERTION,
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1",
+        ),
+        RuleCitationCase(
+            review_result.RuleCitationFamily.DECISION,
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
+        ),
+        RuleCitationCase(
+            review_result.RuleCitationFamily.DECISION,
+            "spx/15-agent-tools.pdr.md",
+        ),
+        RuleCitationCase(
+            review_result.RuleCitationFamily.PLUGIN_SKILL,
+            "plugins/spec-tree/skills/review-changes/SKILL.md:objective",
+        ),
+        RuleCitationCase(
+            review_result.RuleCitationFamily.ROOT_GUIDE,
+            "AGENTS.md:spec-tree-instructions",
+        ),
+        RuleCitationCase(
+            review_result.RuleCitationFamily.ROOT_GUIDE,
+            "CLAUDE.md:spec-tree-instructions",
+        ),
+    )
 
 
 def review_findings() -> st.SearchStrategy[Any]:
@@ -27,7 +67,7 @@ def review_findings() -> st.SearchStrategy[Any]:
         severity=st.sampled_from(tuple(review_result.Severity)),
         file=st.text(min_size=1),
         line=st.integers(),
-        rule=st.sampled_from(review_rule_citations()),
+        rule=st.sampled_from(valid_rule_citations()),
         message=st.text(min_size=1),
         action=st.text(min_size=1),
     )
@@ -68,18 +108,18 @@ def unknown_review_concern() -> str:
 
 
 def valid_rule_citations() -> tuple[str, ...]:
-    """Return citations derived from every supported source family."""
+    """Return fixed independent citations spanning every supported family."""
 
-    return review_rule_citations()
+    return tuple(case.citation for case in valid_rule_citation_cases())
 
 
 def malformed_rule_citations() -> st.SearchStrategy[str]:
-    """Generate the open complement of the accepted citation-shape grammar."""
+    """Generate variable malformed extensions of every valid citation family."""
 
-    review_result = load_review_result_module()
-    return st.text(max_size=160).filter(
-        lambda value: not review_result.is_supported_rule_citation_shape(value)
-    )
+    return st.tuples(
+        st.sampled_from(valid_rule_citations()),
+        st.text(min_size=1, max_size=80),
+    ).map(lambda values: f"{values[0]}:{values[1]}")
 
 
 def finding_without_required_field(field: str) -> dict[str, Any]:
