@@ -64,6 +64,7 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
+SKILL_PATH = SKILL_DIR / "SKILL.md"
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
@@ -1410,6 +1411,85 @@ class ReviewRunnerLifecycleObservation:
     terminal_rollup_holds: bool
 
 
+@dataclass(frozen=True)
+class ReviewSkillOutputObservation:
+    """Skill-workflow and runner observations for the caller output contract."""
+
+    workflow_finishes_with_runner: bool
+    final_step_reports_only_raw_token: bool
+    no_post_finish_caller_processing: bool
+    runner_finish_returns_raw_token: bool
+
+
+def _review_skill_workflow_steps() -> tuple[str, ...]:
+    """Read the numbered workflow steps from the authored review skill."""
+
+    skill_source = SKILL_PATH.read_text(encoding="utf-8")
+    workflow_match = re.search(
+        r"<workflow>\s*(?P<body>.*?)\s*</workflow>",
+        skill_source,
+        flags=re.DOTALL,
+    )
+    if workflow_match is None:
+        return ()
+    return tuple(
+        match.group("step").strip()
+        for match in re.finditer(
+            r"^\d+\.\s+(?P<step>.+)$",
+            workflow_match.group("body"),
+            flags=re.MULTILINE,
+        )
+    )
+
+
+def _review_skill_forbidden_caller_actions() -> tuple[str, ...]:
+    """Read the skill-owned caller-action prohibition from its constraints."""
+
+    skill_source = SKILL_PATH.read_text(encoding="utf-8")
+    prohibition = re.search(
+        r"Do not (?P<actions>[^.]+?) for the caller\.",
+        skill_source,
+    )
+    if prohibition is None:
+        return ()
+    return tuple(
+        action.strip()
+        for action in re.split(r",\s*|\s+or\s+", prohibition.group("actions"))
+        if action.strip()
+    )
+
+
+def review_skill_output_observation() -> ReviewSkillOutputObservation:
+    """Exercise the real runner and inspect the authored workflow handoff."""
+
+    workflow_steps = _review_skill_workflow_steps()
+    forbidden_actions = _review_skill_forbidden_caller_actions()
+    finish_index = next(
+        (index for index, step in enumerate(workflow_steps) if "`finish`" in step),
+        -1,
+    )
+    post_finish_steps = workflow_steps[finish_index + 1 :] if finish_index >= 0 else ()
+    final_step = workflow_steps[-1] if workflow_steps else ""
+    lifecycle = review_runner_lifecycle_observation()
+    return ReviewSkillOutputObservation(
+        workflow_finishes_with_runner=finish_index >= 0,
+        final_step_reports_only_raw_token=(
+            bool(post_finish_steps)
+            and final_step == post_finish_steps[-1]
+            and "only the raw `runToken`" in final_step
+        ),
+        no_post_finish_caller_processing=(
+            bool(forbidden_actions)
+            and not any(
+                action in step.casefold()
+                for step in post_finish_steps
+                for action in forbidden_actions
+            )
+        ),
+        runner_finish_returns_raw_token=lifecycle.finish_returns_raw_token,
+    )
+
+
 def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
     """Run start, scope, findings, and finish through the public runner."""
 
@@ -2532,10 +2612,10 @@ def review_chain_with_finding_contract_holds() -> bool:
     )
 
 
-def review_runner_finish_output_contract_holds() -> bool:
-    """Return whether the public finish verb emits only the raw run token."""
+def review_skill_output_contract_holds() -> bool:
+    """Return whether the live skill path emits only the raw run token."""
 
-    return review_runner_lifecycle_observation().finish_returns_raw_token
+    return all(dataclasses.astuple(review_skill_output_observation()))
 
 
 def clean_review_chain_contract_holds() -> bool:
