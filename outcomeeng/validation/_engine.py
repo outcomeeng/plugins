@@ -26,7 +26,7 @@ from typing import Final, TextIO
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
 
-_FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
 _GRACE_SECONDS: Final = 2.0
 _POLL_INTERVAL: Final = 0.05
 _POST_KILL_REAP_ATTEMPTS: Final = 20
@@ -258,7 +258,7 @@ def _recipe_summary(
 
 def _consume_pending_forwarded_signal() -> int | None:
     pending = signal.sigpending()
-    for sig in _FORWARDED_SIGNALS:
+    for sig in FORWARDED_SIGNALS:
         if sig in pending:
             return int(signal.sigwait((sig,)))
     return None
@@ -269,7 +269,7 @@ def _spawn_with_deferred_signal_forwarding(
     step: Step,
     log_path: Path,
 ) -> ProcessHandle:
-    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, _FORWARDED_SIGNALS)
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, FORWARDED_SIGNALS)
     pending_signal: int | None = None
     try:
         handle = spawner.spawn(step.argv, log_path)
@@ -409,7 +409,7 @@ def _execute_recipe(
 
 def _install_signal_handlers() -> dict[signal.Signals, signal._HANDLER]:
     old_handlers: dict[signal.Signals, signal._HANDLER] = {}
-    for sig in _FORWARDED_SIGNALS:
+    for sig in FORWARDED_SIGNALS:
         old_handlers[sig] = signal.signal(sig, _forwarding_signal_handler)
     return old_handlers
 

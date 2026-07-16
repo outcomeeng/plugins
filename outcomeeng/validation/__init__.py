@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from outcomeeng.validation._engine import (
     FAILURE_EXCERPT_LINE_LIMIT,
+    FORWARDED_SIGNALS,
     FULL_LOG_LABEL,
     PHASE_COMPLETE,
     PHASE_PREFLIGHT,
@@ -106,6 +107,7 @@ __all__ = [
     "EVAL_TRIGGER_WORKFLOW",
     "FMT_CHECK_ARGV",
     "FAILURE_EXCERPT_LINE_LIMIT",
+    "FORWARDED_SIGNALS",
     "FULL_LOG_LABEL",
     "GATE_SUMMARY_SCHEMA",
     "HOOK_SAFETY_ARGV",
