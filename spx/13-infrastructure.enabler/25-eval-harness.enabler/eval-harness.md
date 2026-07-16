@@ -16,8 +16,8 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 - ALWAYS: an `owned_paths` entry loads when its body matches the source-owned path alphabet and its only glob is a trailing `/**` ([test](tests/test_definition.conformance.l1.py))
 - ALWAYS: the owned-path alphabet excludes every character the standard library reports as glob magic — evidence drawn from the alphabet proves only that the loader honors it, never that the alphabet is right, so an oracle outside the harness pins the contract the alphabet must keep ([test](tests/test_definition.conformance.l1.py))
 - ALWAYS: the `outcomeeng-evals` CLI exposes `materialize-prompts`, which walks eval definitions under a root, writes generated prompts by default, and supports `--check` for drift detection without modifying files ([test](tests/test_producer_prompt.conformance.l1.py))
-- ALWAYS: every `[eval](path)` link in a marketplace spec markdown resolves to an existing `eval.toml` file under a sibling `evals/{rule}/` directory; the link-integrity walker in `outcomeeng/validation/link_integrity.py` finds and validates every link ([test](tests/test_link_integrity.conformance.l1.py))
-- ALWAYS: every `[test](path)` link in a marketplace spec markdown resolves to an existing pytest collectable (filename starts with `test_`, suffix `.py`) under a sibling `tests/` directory; the link-integrity walker validates this alongside `[eval]` links ([test](tests/test_link_integrity.conformance.l1.py))
+- ALWAYS: link-integrity validation accepts an `[eval](path)` link only when it resolves to an existing `eval.toml` file under the spec's sibling `evals/{rule}/` directory ([test](tests/test_link_integrity.conformance.l1.py))
+- ALWAYS: link-integrity validation accepts a `[test](path)` link only when it resolves to an existing pytest collectable under the spec's sibling `tests/` directory, with a filename beginning with `test_` and ending with `.py` ([test](tests/test_link_integrity.conformance.l1.py))
 
 ### Mappings
 
