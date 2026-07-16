@@ -1,6 +1,6 @@
 # Plan
 
-Governing decision: `spx/15-marketplace-state.adr.md` (marketplace state ownership).
+Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
 Pending re-declaration: make marketplace-install diagnosis product-scoped — derive expected
 plugin state from the checkout's per-runtime project declarations, and remove `expected_plugins`

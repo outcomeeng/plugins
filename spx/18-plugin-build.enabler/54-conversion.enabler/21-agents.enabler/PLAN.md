@@ -1,6 +1,6 @@
 # Plan
 
-Governing decision: `spx/15-marketplace-state.adr.md` (marketplace state ownership).
+Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
 Pending narrowing: this node's compliance assertion names `~/.codex/agents/` (user-scope) as
 a valid install destination for converted Codex custom-agents. Under the ADR, converted

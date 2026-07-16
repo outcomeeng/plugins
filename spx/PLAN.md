@@ -1,6 +1,6 @@
 # Plan
 
-Governing decision: `spx/15-marketplace-state.adr.md` (marketplace state ownership).
+Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
 Pending scope realization: the "What's included" scope item "Repository-scoped marketplace
 synchronization and install verification" names the checkout-bounded model the ADR declares.

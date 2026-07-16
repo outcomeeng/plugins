@@ -1,6 +1,6 @@
 # Plan
 
-Governing decision: `spx/15-marketplace-state.adr.md` (marketplace state ownership).
+Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
 Pending re-declaration: this node's assertions declare the superseded user-scope
 cache-preservation model — Codex cache symlink retargeting, user-scope marketplace
