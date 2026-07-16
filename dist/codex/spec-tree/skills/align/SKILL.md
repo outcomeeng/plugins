@@ -203,6 +203,12 @@ Downstream alignment:
 
 </report_format>
 
+<failure_modes>
+
+**Failure: Checked a changed higher-level declaration in isolation.** Claude reported a product spec, ADR, PDR, or ancestor spec as aligned after checking only that file's structure and language, while no first affected lower spec or node-local `PLAN.md` carried the new truth. The check missed the declaration-to-spec boundary because it treated alignment as per-file linting instead of a changeset relationship. For changeset scope, derive the changed-file set through `/scope-changeset` and apply `<downstream_alignment_conformance>` before reporting.
+
+</failure_modes>
+
 <success_criteria>
 
 - The report accounts for every Markdown file in scope as classified or unrecognized, with no silent omission.
