@@ -226,7 +226,7 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
     """Return whether validation rejects a language-specific wrapper."""
     with _valid_surface() as surface:
         language = _source_language()
-        filename = sorted(language_specific_auditor_filenames(language))[0]
+        filename = min(language_specific_auditor_filenames(language))
         _touch(surface / language / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
@@ -235,7 +235,7 @@ def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
     """Reject a language-specific wrapper without a matching code skill."""
     with _valid_surface() as surface:
         language = f"{_source_language()}-{ImplementationAuditConcern.CODE.value}"
-        filename = sorted(language_specific_auditor_filenames(language))[0]
+        filename = min(language_specific_auditor_filenames(language))
         _touch(surface / language / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
