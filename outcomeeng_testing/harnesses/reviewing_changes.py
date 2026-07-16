@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import ast
 import dataclasses
-import hashlib
 import importlib.util
 import io
 import json
@@ -628,40 +627,6 @@ def write_review_skill_config(root: pathlib.Path, *, prompt: str) -> None:
     (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
 
 
-def write_review_manifest(
-    root: pathlib.Path,
-    *,
-    base_ref: str = "origin/main",
-    head_ref: str = "HEAD",
-    files: list[str] | None = None,
-    diff_sha256: str = "a" * 64,
-) -> pathlib.Path:
-    """Write one source-schema review-input manifest."""
-
-    journal_emit = load_journal_emit_module()
-    manifest = {
-        "schema_version": journal_emit.MANIFEST_SCHEMA_VERSION,
-        "base_ref": base_ref,
-        "head_ref": head_ref,
-        "diff_path": "diff.md",
-        "diff_sha256": diff_sha256,
-        "diff_bytes": 1,
-        "sections": [
-            {
-                "title": "Committed diff",
-                "files": files or ["README.md"],
-                "start_line": 1,
-                "line_count": 1,
-                "byte_start": 0,
-                "byte_length": 1,
-            },
-        ],
-    }
-    path = root / "manifest.json"
-    path.write_text(json.dumps(manifest), encoding="utf-8")
-    return path
-
-
 @dataclass
 class ReviewMetadataHarness:
     """Injected collaborators for deterministic review metadata evidence."""
@@ -670,8 +635,6 @@ class ReviewMetadataHarness:
     base_ref: str | None = None
     head_ref: str | None = None
     branch_name: str | None = None
-    changed_files: list[str] | None = None
-    review_inputs: list[str] | None = None
     config_digest: str | None = None
 
     def deps(
@@ -681,6 +644,7 @@ class ReviewMetadataHarness:
         source_target: bool = False,
         manifest_scope: bool = False,
         fail_scope: bool = False,
+        review_scope_variant: str = "primary",
     ) -> Any:
         """Return production MetadataDeps configured for one evidence boundary."""
 
@@ -688,18 +652,8 @@ class ReviewMetadataHarness:
         base_ref_value = self.base_ref or self.metadata.base_ref
         head_ref_value = self.head_ref or journal_emit.DEFAULT_HEAD_REF
         branch_name_value = self.branch_name or self.metadata.branch_name
-        changed_files = self.changed_files or [
-            file_path
-            for value in self.metadata.scope.values()
-            if isinstance(value, list)
-            for file_path in value
-            if isinstance(file_path, str)
-        ]
-        review_inputs = self.review_inputs or [
-            REVIEW_SPEC_PATH.read_text(encoding="utf-8"),
-            SKILL_FILE.read_text(encoding="utf-8"),
-        ]
         config_digest = self.config_digest or self.metadata.config_digest
+        source_scope = computed_review_scopes()[review_scope_variant]
 
         def review_scope(
             *,
@@ -713,17 +667,10 @@ class ReviewMetadataHarness:
                     128,
                     ["git", "diff", f"{base_ref}...{head_ref}"],
                 )
-            review_input = (
-                review_inputs.pop(0) if len(review_inputs) > 1 else review_inputs[0]
-            )
-            return {
-                journal_emit.SCOPE_BASE_REF_FIELD: base_ref,
-                journal_emit.SCOPE_HEAD_REF_FIELD: head_ref,
-                journal_emit.SCOPE_CHANGED_FILES_FIELD: list(changed_files),
-                journal_emit.SCOPE_REVIEW_INPUT_SHA256_FIELD: hashlib.sha256(
-                    review_input.encode("utf-8"),
-                ).hexdigest(),
-            }
+            scope = dict(source_scope)
+            scope[journal_emit.SCOPE_BASE_REF_FIELD] = base_ref
+            scope[journal_emit.SCOPE_HEAD_REF_FIELD] = head_ref
+            return scope
 
         return journal_emit.MetadataDeps(
             resolve_base_ref=lambda: base_ref_value,
@@ -1127,25 +1074,6 @@ def add_secondary_review_branch(
     run_git("switch", "feature/x", cwd=repo)
 
 
-def review_git_repo(tmp_path: pathlib.Path) -> tuple[pathlib.Path, str]:
-    """Create the standard review repository under a pytest temporary path."""
-
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    return repo, init_review_git_repo(repo)
-
-
-def review_git_repo_with_secondary_head(
-    tmp_path: pathlib.Path,
-) -> tuple[pathlib.Path, str, str]:
-    """Create the standard review repository plus one alternate head."""
-
-    repo, base_ref = review_git_repo(tmp_path)
-    secondary = "feature/y"
-    add_secondary_review_branch(repo, secondary, "SECONDARY.md")
-    return repo, base_ref, secondary
-
-
 def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
     return cast("Callable[[list[str] | None], int]", module.main)
 
@@ -1186,6 +1114,77 @@ def run_compute_diff_in_process(
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
     )
+
+
+def _computed_review_bundle(
+    *,
+    repo: pathlib.Path,
+    root: pathlib.Path,
+    env: dict[str, str],
+    name: str,
+) -> tuple[pathlib.Path, dict[str, object]]:
+    """Produce and parse one real review-input bundle."""
+
+    bundle_dir = root / name
+    result = run_compute_diff_in_process(
+        repo=repo,
+        env=env,
+        args=["--bundle-dir", str(bundle_dir)],
+    )
+    if result.returncode != 0:
+        raise AssertionError(result.stderr)
+    summary = json.loads(result.stdout)
+    manifest_path = pathlib.Path(summary["manifest_path"])
+    scope = load_journal_emit_module()._review_scope_from_manifest(manifest_path)
+    return manifest_path, cast("dict[str, object]", scope)
+
+
+def computed_review_scopes() -> dict[str, dict[str, object]]:
+    """Return source-produced scopes with changed input and changed file variants."""
+
+    with TemporaryDirectory() as temporary_directory:
+        root = pathlib.Path(temporary_directory)
+        repo = root / "repo"
+        repo.mkdir()
+        base_ref = init_review_git_repo(repo)
+        set_origin_head(repo, base_ref)
+        env = isolated_review_env(cwd=repo)
+        env[REVIEW_ENV_BASE_REF] = f"origin/{base_ref}"
+        env[load_journal_emit_module().ENV_HEAD_REF] = (
+            load_journal_emit_module().DEFAULT_HEAD_REF
+        )
+
+        _manifest, primary = _computed_review_bundle(
+            repo=repo,
+            root=root,
+            env=env,
+            name="primary",
+        )
+        (repo / "README.md").write_text(
+            "hello\nworld\nadditional review input\n",
+            encoding="utf-8",
+        )
+        _manifest, changed_input = _computed_review_bundle(
+            repo=repo,
+            root=root,
+            env=env,
+            name="changed-input",
+        )
+        (repo / "ADDITIONAL.md").write_text(
+            "additional changed file\n",
+            encoding="utf-8",
+        )
+        _manifest, expanded_files = _computed_review_bundle(
+            repo=repo,
+            root=root,
+            env=env,
+            name="expanded-files",
+        )
+        return {
+            "primary": primary,
+            "changed-input": changed_input,
+            "expanded-files": expanded_files,
+        }
 
 
 def run_journal_emit_in_process(
@@ -1469,6 +1468,813 @@ def malformed_runner_finding_observation() -> MalformedRunnerFindingObservation:
             missing_field=missing_field,
             event_types=event_types,
         )
+
+
+@dataclass(frozen=True)
+class ReviewRunnerLifecycleObservation:
+    """One complete runner lifecycle compared with production contracts."""
+
+    start_contract_holds: bool
+    namespace_is_preserved: bool
+    finish_returns_raw_token: bool
+    scratch_state_is_removed: bool
+    journal_protocol_holds: bool
+    finding_identity_is_preserved: bool
+    terminal_rollup_holds: bool
+
+
+def review_runner_lifecycle_observation() -> ReviewRunnerLifecycleObservation:
+    """Run start, scope, findings, and finish through the public runner."""
+
+    projection = review_contract_modules().journal_projection
+    review_result = load_review_result_module()
+    with TemporaryDirectory() as temporary_directory:
+        runner = review_runner_harness(pathlib.Path(temporary_directory))
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        start_payload = json.loads(started.stdout)
+        state_path = pathlib.Path(start_payload[REVIEW_START_STATE_PATH])
+        start_paths_exist = (
+            pathlib.Path(start_payload[REVIEW_START_DIFF_PATH]).is_file()
+            and pathlib.Path(start_payload[REVIEW_START_MANIFEST_PATH]).is_file()
+        )
+        expected_namespace = review_run_journal_env_from_state(state_path)
+        scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            str(state_path),
+            start_payload[REVIEW_START_CHANGED_FILES][0],
+            env=runner.later_env,
+            cwd=runner.repo,
+        )
+        findings = review_finding_payloads()
+        appended = tuple(
+            run_script(
+                REVIEW_RUN_SCRIPT,
+                "append-finding",
+                "--state",
+                str(state_path),
+                stdin=json.dumps(finding),
+                env=runner.later_env,
+                cwd=runner.repo,
+            )
+            for finding in findings
+        )
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            str(state_path),
+            env=runner.later_env,
+            cwd=runner.repo,
+        )
+        state_removed = not state_path.exists()
+        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
+
+    expected_event_types = (
+        projection.SCOPE_ENTERED,
+        projection.SCOPE_ADVANCED,
+        *(projection.FINDING_REPORTED for _finding in findings),
+        projection.RUN_COMPLETED,
+    )
+    event_types = tuple(event["type"] for event in journal["events"])
+    finding_events = tuple(
+        event
+        for event in journal["events"]
+        if event["type"] == projection.FINDING_REPORTED
+    )
+    terminal_event = journal["events"][-1]
+    summary = terminal_event["data"][REVIEW_SUMMARY_FIELD]
+    return ReviewRunnerLifecycleObservation(
+        start_contract_holds=(
+            started.returncode == 0
+            and set(start_payload) == set(REVIEW_START_FIELDS)
+            and start_paths_exist
+            and isinstance(start_payload[REVIEW_START_CHANGED_FILES], list)
+        ),
+        namespace_is_preserved=(journal["namespace"] == expected_namespace),
+        finish_returns_raw_token=(
+            scoped.returncode == 0
+            and all(result.returncode == 0 for result in appended)
+            and finished.returncode == 0
+            and finished.stdout == f"{start_payload[REVIEW_START_RUN_TOKEN]}\n"
+        ),
+        scratch_state_is_removed=state_removed,
+        journal_protocol_holds=(
+            journal["sealed"] is True
+            and event_types == expected_event_types
+            and journal["commands"]
+            == [
+                "open",
+                *("append" for _event in expected_event_types[:-1]),
+                "read",
+                "append",
+                "seal",
+            ]
+        ),
+        finding_identity_is_preserved=(
+            [event["data"]["id"] for event in finding_events]
+            == [finding["id"] for finding in findings]
+        ),
+        terminal_rollup_holds=(
+            terminal_event["data"]["status"] == projection.JournalRunStatus.REJECTED
+            and summary[REVIEW_SUMMARY_BLOCKING_FIELD]
+            == sum(
+                finding["severity"] == review_result.Severity.BLOCKING
+                for finding in findings
+            )
+            and summary[REVIEW_SUMMARY_DEBT_FIELD]
+            == sum(
+                finding["severity"] == review_result.Severity.DEBT
+                for finding in findings
+            )
+            and summary[REVIEW_SUMMARY_OVERALL_FIELD] == projection.Outcome.REJECTED
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewRunnerCoverageObservation:
+    """Runner refusal to seal an incompletely examined changeset."""
+
+    finish_is_rejected: bool
+    missing_scope_is_named: bool
+    only_scope_entered_is_recorded: bool
+    journal_remains_open: bool
+
+
+def review_runner_coverage_observation() -> ReviewRunnerCoverageObservation:
+    """Attempt to finish a run before appending its changed-file scope."""
+
+    projection = review_contract_modules().journal_projection
+    with TemporaryDirectory() as temporary_directory:
+        runner = review_runner_harness(pathlib.Path(temporary_directory))
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        start_payload = json.loads(started.stdout)
+        missing_file = start_payload[REVIEW_START_CHANGED_FILES][0]
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
+    return ReviewRunnerCoverageObservation(
+        finish_is_rejected=finished.returncode != 0,
+        missing_scope_is_named=missing_file in finished.stderr,
+        only_scope_entered_is_recorded=(
+            tuple(event["type"] for event in journal["events"])
+            == (projection.SCOPE_ENTERED,)
+        ),
+        journal_remains_open=journal["sealed"] is False,
+    )
+
+
+@dataclass(frozen=True)
+class ReviewRunnerRenameObservation:
+    """Rename source and destination coverage at the runner boundary."""
+
+    both_paths_are_required: bool
+    destination_alone_is_rejected: bool
+    source_is_named_as_missing: bool
+    both_paths_allow_finish: bool
+
+
+def review_runner_rename_observation() -> ReviewRunnerRenameObservation:
+    """Exercise rename coverage through the public runner commands."""
+
+    with TemporaryDirectory() as temporary_directory:
+        runner = review_runner_harness(
+            pathlib.Path(temporary_directory),
+            renamed=True,
+        )
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        start_payload = json.loads(started.stdout)
+        source, destination = start_payload[REVIEW_START_CHANGED_FILES]
+        destination_scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            destination,
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        missing_source = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        source_scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            source,
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            env=runner.env,
+            cwd=runner.repo,
+        )
+    return ReviewRunnerRenameObservation(
+        both_paths_are_required=(source != destination),
+        destination_alone_is_rejected=(
+            destination_scoped.returncode == 0 and missing_source.returncode != 0
+        ),
+        source_is_named_as_missing=source in missing_source.stderr,
+        both_paths_allow_finish=(
+            source_scoped.returncode == 0
+            and finished.returncode == 0
+            and finished.stdout == f"{runner.run_token}\n"
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ComputeDiffScenarioObservation:
+    """All source-declared ref and bundle scenarios for compute-diff."""
+
+    explicit_base_selects_committed_diff: bool
+    all_worktree_sections_are_included: bool
+    bundle_paths_match_contract: bool
+    bundle_summary_matches_content: bool
+    bundle_manifest_identity_matches_source: bool
+    bundle_section_ranges_match_content: bool
+    invalid_bundle_destinations_are_rejected: bool
+    origin_head_supplies_default_base: bool
+    missing_base_sources_are_named: bool
+    explicit_head_selects_alternate_diff: bool
+    literal_head_is_the_default: bool
+    stale_local_base_does_not_widen_diff: bool
+
+
+def compute_diff_scenario_observation() -> ComputeDiffScenarioObservation:
+    """Exercise compute-diff scenarios in isolated real Git repositories."""
+
+    from outcomeeng_testing.harnesses.changeset_scope import (
+        build_stale_local_base_repo,
+    )
+
+    compute_diff = load_compute_diff_module()
+    with TemporaryDirectory() as temporary_directory:
+        root = pathlib.Path(temporary_directory)
+
+        explicit_repo = root / "explicit"
+        explicit_repo.mkdir()
+        explicit_base = init_review_git_repo(explicit_repo)
+        explicit_env = isolated_review_env(cwd=explicit_repo)
+        explicit_env[compute_diff.ENV_BASE_REF] = explicit_base
+        explicit = run_compute_diff_in_process(repo=explicit_repo, env=explicit_env)
+
+        worktree_repo = root / "worktree"
+        worktree_repo.mkdir()
+        worktree_base = init_review_git_repo(worktree_repo)
+        worktree_env = isolated_review_env(cwd=worktree_repo)
+        worktree_env[compute_diff.ENV_BASE_REF] = worktree_base
+        (worktree_repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
+        run_git("add", "STAGED.md", cwd=worktree_repo)
+        (worktree_repo / "README.md").write_text(
+            "hello\nworld\nunstaged\n",
+            encoding="utf-8",
+        )
+        (worktree_repo / "UNTRACKED.md").write_text(
+            "untracked\n",
+            encoding="utf-8",
+        )
+        worktree = run_compute_diff_in_process(
+            repo=worktree_repo,
+            env=worktree_env,
+        )
+        bundle_dir = root / "review-input"
+        bundle = run_compute_diff_in_process(
+            repo=worktree_repo,
+            env=worktree_env,
+            args=["--bundle-dir", str(bundle_dir)],
+        )
+        bundle_summary = json.loads(bundle.stdout)
+        diff_path = pathlib.Path(bundle_summary["diff_path"])
+        manifest_path = pathlib.Path(bundle_summary["manifest_path"])
+        diff_text = diff_path.read_text(encoding="utf-8")
+        diff_bytes = diff_text.encode("utf-8")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected_titles = (
+            compute_diff.DIFF_SECTION_COMMITTED,
+            compute_diff.DIFF_SECTION_STAGED,
+            compute_diff.DIFF_SECTION_UNSTAGED,
+            compute_diff.DIFF_SECTION_UNTRACKED,
+        )
+        section_ranges_match = all(
+            diff_bytes[
+                section["byte_start"] : section["byte_start"] + section["byte_length"]
+            ]
+            .decode("utf-8")
+            .startswith(f"### {section['title']}")
+            and section["start_line"]
+            == diff_bytes[: section["byte_start"]].decode("utf-8").count("\n") + 1
+            for section in manifest["sections"]
+        )
+
+        bundle_file = root / "bundle-file"
+        bundle_file.write_text("not a directory\n", encoding="utf-8")
+        file_rejection = run_compute_diff_in_process(
+            repo=worktree_repo,
+            env=worktree_env,
+            args=["--bundle-dir", str(bundle_file)],
+        )
+        inside_path = worktree_repo / ".review-input"
+        inside_rejection = run_compute_diff_in_process(
+            repo=worktree_repo,
+            env=worktree_env,
+            args=["--bundle-dir", str(inside_path)],
+        )
+
+        origin_repo = root / "origin-head"
+        origin_repo.mkdir()
+        origin_base = init_review_git_repo(origin_repo)
+        set_origin_head(origin_repo, origin_base)
+        origin_env = isolated_review_env(cwd=origin_repo)
+        origin_env.pop(compute_diff.ENV_BASE_REF, None)
+        origin_head = run_compute_diff_in_process(repo=origin_repo, env=origin_env)
+
+        missing_repo = root / "missing-base"
+        missing_repo.mkdir()
+        init_review_git_repo(missing_repo)
+        missing_env = isolated_review_env(cwd=missing_repo)
+        missing_env.pop(compute_diff.ENV_BASE_REF, None)
+        missing_base = run_compute_diff_in_process(
+            repo=missing_repo,
+            env=missing_env,
+        )
+
+        alternate_repo = root / "alternate-head"
+        alternate_repo.mkdir()
+        alternate_base = init_review_git_repo(alternate_repo)
+        alternate_head = "feature/y"
+        add_secondary_review_branch(
+            alternate_repo,
+            alternate_head,
+            "SECONDARY.md",
+        )
+        alternate_env = isolated_review_env(cwd=alternate_repo)
+        alternate_env[compute_diff.ENV_BASE_REF] = alternate_base
+        alternate_env[compute_diff.ENV_HEAD_REF] = alternate_head
+        explicit_head = run_compute_diff_in_process(
+            repo=alternate_repo,
+            env=alternate_env,
+        )
+        alternate_env.pop(compute_diff.ENV_HEAD_REF)
+        default_head = run_compute_diff_in_process(
+            repo=alternate_repo,
+            env=alternate_env,
+        )
+
+        stale_repo_path = root / "stale-base"
+        stale_repo_path.mkdir()
+        stale = build_stale_local_base_repo(stale_repo_path)
+        stale_env = isolated_review_env(cwd=stale.repo)
+        stale_env.pop(compute_diff.ENV_BASE_REF, None)
+        stale_result = run_compute_diff_in_process(
+            repo=stale.repo,
+            env=stale_env,
+        )
+
+    worktree_sections = tuple(f"### {title}" for title in expected_titles)
+    return ComputeDiffScenarioObservation(
+        explicit_base_selects_committed_diff=(
+            explicit.returncode == 0 and "README.md" in explicit.stdout
+        ),
+        all_worktree_sections_are_included=(
+            worktree.returncode == 0
+            and all(section in worktree.stdout for section in worktree_sections)
+            and all(
+                value in worktree.stdout
+                for value in (
+                    "world",
+                    "STAGED.md",
+                    "unstaged",
+                    "UNTRACKED.md",
+                    "untracked",
+                )
+            )
+        ),
+        bundle_paths_match_contract=(
+            bundle.returncode == 0
+            and diff_path
+            == bundle_dir.resolve(strict=False) / compute_diff.BUNDLE_DIFF_FILENAME
+            and manifest_path
+            == bundle_dir.resolve(strict=False) / compute_diff.BUNDLE_MANIFEST_FILENAME
+        ),
+        bundle_summary_matches_content=(
+            bundle_summary["diff_bytes"] == len(diff_bytes)
+            and bundle_summary["section_count"] == len(expected_titles)
+        ),
+        bundle_manifest_identity_matches_source=(
+            manifest["schema_version"] == compute_diff.MANIFEST_SCHEMA_VERSION
+            and manifest["base_ref"] == worktree_base
+            and manifest["head_ref"] == compute_diff.DEFAULT_HEAD_REF
+            and tuple(section["title"] for section in manifest["sections"])
+            == expected_titles
+        ),
+        bundle_section_ranges_match_content=section_ranges_match,
+        invalid_bundle_destinations_are_rejected=(
+            file_rejection.returncode != 0
+            and "--bundle-dir exists and is not a directory" in file_rejection.stderr
+            and inside_rejection.returncode != 0
+            and "--bundle-dir must be outside the git worktree"
+            in inside_rejection.stderr
+            and not inside_path.exists()
+        ),
+        origin_head_supplies_default_base=(
+            origin_head.returncode == 0 and "README.md" in origin_head.stdout
+        ),
+        missing_base_sources_are_named=(
+            missing_base.returncode != 0
+            and compute_diff.ENV_BASE_REF in missing_base.stderr
+            and "origin/HEAD" in missing_base.stderr
+        ),
+        explicit_head_selects_alternate_diff=(
+            explicit_head.returncode == 0
+            and "SECONDARY.md" in explicit_head.stdout
+            and "world" not in explicit_head.stdout
+        ),
+        literal_head_is_the_default=(
+            default_head.returncode == 0
+            and "world" in default_head.stdout
+            and "SECONDARY.md" not in default_head.stdout
+        ),
+        stale_local_base_does_not_widen_diff=(
+            stale_result.returncode == 0
+            and stale.feature_file in stale_result.stdout
+            and stale.merged_file not in stale_result.stdout
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewConfigDigestObservation:
+    """Config identity behavior observed through production digest functions."""
+
+    prompt_change_changes_digest: bool
+    runner_and_adapter_share_digest: bool
+    root_policy_change_preserves_digest: bool
+    metadata_ignores_root_policy: bool
+
+
+def review_config_digest_observation() -> ReviewConfigDigestObservation:
+    """Exercise prompt-owned config identity outside the canonical test file."""
+
+    journal_emit = load_journal_emit_module()
+    projection = review_contract_modules().journal_projection
+    with TemporaryDirectory() as temporary_directory:
+        root = pathlib.Path(temporary_directory)
+        first = root / "first"
+        second = root / "second"
+        write_review_skill_config(first, prompt="review prompt one")
+        write_review_skill_config(second, prompt="review prompt two")
+        prompt_change_changes_digest = journal_emit.review_config_digest(
+            first
+        ) != journal_emit.review_config_digest(second)
+
+        stable_skill = root / "stable-skill"
+        write_review_skill_config(stable_skill, prompt="stable review prompt")
+        review_policy = root / "REVIEW.md"
+        review_policy.write_text("first policy body", encoding="utf-8")
+        first_digest = journal_emit.review_config_digest(stable_skill)
+        review_policy.write_text("second policy body", encoding="utf-8")
+        root_policy_change_preserves_digest = (
+            first_digest == journal_emit.review_config_digest(stable_skill)
+        )
+
+        nested = root / "nested"
+        nested.mkdir()
+        old_cwd = pathlib.Path.cwd()
+        try:
+            os.chdir(nested)
+            harness = ReviewMetadataHarness()
+            metadata = journal_emit.metadata_for_worktree(
+                started_at=harness.metadata.started_at,
+                completed_at=harness.metadata.completed_at,
+                deps=harness.deps(),
+            )
+        finally:
+            os.chdir(old_cwd)
+
+    return ReviewConfigDigestObservation(
+        prompt_change_changes_digest=prompt_change_changes_digest,
+        runner_and_adapter_share_digest=len(set(review_config_digests())) == 1,
+        root_policy_change_preserves_digest=root_policy_change_preserves_digest,
+        metadata_ignores_root_policy=(
+            metadata[projection.RUN_STATE_CONFIG_DIGEST]
+            == harness.metadata.config_digest
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewMetadataObservation:
+    """Metadata behavior observed through source-produced review bundles."""
+
+    changed_file_set_changes_scope_hash: bool
+    manifest_scope_matches_source_bundle: bool
+    pull_request_identity_matches_environment: bool
+    detached_branch_identity_matches_environment: bool
+    changed_review_input_changes_scope_hash: bool
+    metadata_cli_emits_source_identity: bool
+    git_failure_is_reported_without_traceback: bool
+
+
+def review_metadata_observation() -> ReviewMetadataObservation:
+    """Exercise metadata mappings with real compute-diff bundle inputs."""
+
+    contracts = review_contract_modules()
+    journal_emit = contracts.journal_emit
+    projection = contracts.journal_projection
+    harness = ReviewMetadataHarness()
+    pull_request_source = review_run_metadata(pull_request=True)
+    detached_head_ref = f"origin/{harness.metadata.branch_name}"
+    primary = journal_emit.metadata_for_worktree(
+        started_at=harness.metadata.started_at,
+        completed_at=harness.metadata.completed_at,
+        deps=harness.deps(review_scope_variant="primary"),
+    )
+    changed_input = journal_emit.metadata_for_worktree(
+        started_at=harness.metadata.started_at,
+        completed_at=harness.metadata.completed_at,
+        deps=harness.deps(review_scope_variant="changed-input"),
+    )
+    expanded_files = journal_emit.metadata_for_worktree(
+        started_at=harness.metadata.started_at,
+        completed_at=harness.metadata.completed_at,
+        deps=harness.deps(review_scope_variant="expanded-files"),
+    )
+
+    with TemporaryDirectory() as temporary_directory:
+        root = pathlib.Path(temporary_directory)
+        repo = root / "repo"
+        repo.mkdir()
+        base_ref = init_review_git_repo(repo)
+        set_origin_head(repo, base_ref)
+        env = isolated_review_env(cwd=repo)
+        env[REVIEW_ENV_BASE_REF] = f"origin/{base_ref}"
+        manifest_path, source_scope = _computed_review_bundle(
+            repo=repo,
+            root=root,
+            env=env,
+            name="metadata-bundle",
+        )
+        manifest_metadata = journal_emit.metadata_for_worktree(
+            started_at=harness.metadata.started_at,
+            completed_at=harness.metadata.completed_at,
+            review_manifest_path=manifest_path,
+            deps=harness.deps(manifest_scope=True),
+        )
+
+        pull_request_env = {
+            journal_emit.ENV_TARGET_KIND: str(
+                projection.JournalTargetKind.PULL_REQUEST
+            ),
+            journal_emit.ENV_PULL_REQUEST_NUMBER: str(
+                pull_request_source.pull_request_number
+            ),
+        }
+        with patch.dict(os.environ, pull_request_env, clear=False):
+            pull_request_metadata = journal_emit.metadata_for_worktree(
+                started_at=harness.metadata.started_at,
+                completed_at=harness.metadata.completed_at,
+                deps=harness.deps(source_target=True),
+            )
+
+        detached_env = {
+            journal_emit.ENV_BASE_REF: harness.metadata.base_ref,
+            journal_emit.ENV_HEAD_REF: detached_head_ref,
+            journal_emit.ENV_BRANCH: harness.metadata.branch_name,
+            **pull_request_env,
+        }
+        with patch.dict(os.environ, detached_env, clear=False):
+            detached_metadata = journal_emit.metadata_for_worktree(
+                started_at=harness.metadata.started_at,
+                completed_at=harness.metadata.completed_at,
+                deps=harness.deps(source_branch=True, source_target=True),
+            )
+
+        cli_result = run_journal_emit_in_process(
+            "metadata",
+            "--started-at",
+            harness.metadata.started_at,
+            "--completed-at",
+            harness.metadata.completed_at,
+            "--manifest",
+            str(manifest_path),
+            repo=repo,
+            env={
+                journal_emit.ENV_BASE_REF: harness.metadata.base_ref,
+                journal_emit.ENV_HEAD_REF: journal_emit.DEFAULT_HEAD_REF,
+                journal_emit.ENV_BRANCH: harness.metadata.branch_name,
+            },
+            metadata_deps=harness.deps(source_branch=True, manifest_scope=True),
+        )
+        cli_metadata = json.loads(cli_result.stdout)
+
+    failure = run_journal_emit_in_process(
+        "metadata",
+        "--started-at",
+        harness.metadata.started_at,
+        "--completed-at",
+        harness.metadata.completed_at,
+        metadata_deps=ReviewMetadataHarness(base_ref="origin/nope").deps(
+            fail_scope=True
+        ),
+    )
+    primary_scope = cast("dict[str, object]", primary[projection.RUN_STATE_SCOPE])
+    changed_input_scope = cast(
+        "dict[str, object]", changed_input[projection.RUN_STATE_SCOPE]
+    )
+    expanded_scope = cast(
+        "dict[str, object]", expanded_files[projection.RUN_STATE_SCOPE]
+    )
+    return ReviewMetadataObservation(
+        changed_file_set_changes_scope_hash=(
+            primary_scope[journal_emit.SCOPE_CHANGED_FILES_FIELD]
+            != expanded_scope[journal_emit.SCOPE_CHANGED_FILES_FIELD]
+            and primary[projection.RUN_STATE_SCOPE_HASH]
+            != expanded_files[projection.RUN_STATE_SCOPE_HASH]
+        ),
+        manifest_scope_matches_source_bundle=(
+            manifest_metadata[projection.RUN_STATE_SCOPE] == source_scope
+            and manifest_metadata[projection.RUN_STATE_BASE_REF]
+            == source_scope[journal_emit.SCOPE_BASE_REF_FIELD]
+        ),
+        pull_request_identity_matches_environment=(
+            pull_request_metadata[projection.RUN_STATE_TARGET_KIND]
+            == projection.JournalTargetKind.PULL_REQUEST
+            and pull_request_metadata[projection.RUN_STATE_PULL_REQUEST_NUMBER]
+            == pull_request_source.pull_request_number
+        ),
+        detached_branch_identity_matches_environment=(
+            detached_metadata[projection.RUN_STATE_BRANCH_NAME]
+            == harness.metadata.branch_name
+            and detached_metadata[projection.RUN_STATE_BRANCH_SLUG]
+            == journal_emit.changeset_scope.branch_slug(harness.metadata.branch_name)
+        ),
+        changed_review_input_changes_scope_hash=(
+            primary_scope[journal_emit.SCOPE_CHANGED_FILES_FIELD]
+            == changed_input_scope[journal_emit.SCOPE_CHANGED_FILES_FIELD]
+            and primary_scope[journal_emit.SCOPE_REVIEW_INPUT_SHA256_FIELD]
+            != changed_input_scope[journal_emit.SCOPE_REVIEW_INPUT_SHA256_FIELD]
+            and primary[projection.RUN_STATE_SCOPE_HASH]
+            != changed_input[projection.RUN_STATE_SCOPE_HASH]
+        ),
+        metadata_cli_emits_source_identity=(
+            cli_result.returncode == 0
+            and cli_metadata[projection.RUN_STATE_BRANCH_NAME]
+            == harness.metadata.branch_name
+            and cli_metadata[projection.RUN_STATE_HEAD_SHA] == harness.metadata.head_sha
+            and cli_metadata[projection.RUN_STATE_BASE_SHA] == harness.metadata.base_sha
+            and cli_metadata[projection.RUN_STATE_SCOPE] == source_scope
+        ),
+        git_failure_is_reported_without_traceback=(
+            failure.returncode != 0
+            and "returned non-zero exit status 128" in failure.stderr
+            and "Traceback" not in failure.stderr
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewEventCliObservation:
+    """CLI event mappings captured through the adapter entrypoint."""
+
+    scope_entered_matches_contract: bool
+    scope_advanced_matches_contract: bool
+    conforming_finding_maps_to_event: bool
+    malformed_finding_emits_only_error: bool
+    completed_event_rolls_up_prefix: bool
+
+
+def review_event_cli_observation() -> ReviewEventCliObservation:
+    """Exercise every journal event subcommand behind one harness entrypoint."""
+
+    contracts = review_contract_modules()
+    journal_emit = contracts.journal_emit
+    projection = contracts.journal_projection
+    review_result = contracts.review_result
+    metadata_json = review_metadata_wire_json()
+    metadata = json.loads(metadata_json)
+    scope_entered = run_journal_emit_in_process(
+        "scope-entered",
+        "--now",
+        REVIEW_EVENT_TIME,
+        "--metadata",
+        metadata_json,
+    )
+    scope_entered_event = json.loads(scope_entered.stdout)
+    changed_file = next(
+        file_path
+        for value in metadata[projection.RUN_STATE_SCOPE].values()
+        if isinstance(value, list)
+        for file_path in value
+        if isinstance(file_path, str)
+    )
+    scope_advanced = run_journal_emit_in_process(
+        "scope-advanced",
+        "--now",
+        REVIEW_EVENT_TIME,
+        "--unit",
+        changed_file,
+    )
+    scope_advanced_event = json.loads(scope_advanced.stdout)
+    conforming = run_journal_emit_in_process(
+        "finding-reported",
+        "--now",
+        REVIEW_EVENT_TIME,
+        stdin=json.dumps(make_finding_dict()),
+    )
+    conforming_event = json.loads(conforming.stdout)
+    missing_field = review_result.FINDING_ACTION_FIELD
+    malformed_finding = make_finding_dict()
+    del malformed_finding[missing_field]
+    malformed = run_journal_emit_in_process(
+        "finding-reported",
+        "--now",
+        REVIEW_EVENT_TIME,
+        stdin=json.dumps(malformed_finding),
+    )
+    blocking = run_journal_emit_in_process(
+        "finding-reported",
+        "--now",
+        REVIEW_EVENT_TIME,
+        stdin=json.dumps(make_finding_dict(severity=review_result.Severity.BLOCKING)),
+    )
+    completed = run_journal_emit_in_process(
+        "run-completed",
+        "--now",
+        REVIEW_EVENT_TIME,
+        "--completed-at",
+        REVIEW_COMPLETION_TIME,
+        "--metadata",
+        metadata_json,
+        stdin=json.dumps([scope_entered_event, json.loads(blocking.stdout)]),
+    )
+    completed_event = json.loads(completed.stdout)
+    return ReviewEventCliObservation(
+        scope_entered_matches_contract=(
+            scope_entered.returncode == 0
+            and scope_entered_event["type"] == projection.SCOPE_ENTERED
+            and scope_entered_event["data"]["target"] == journal_emit.DEFAULT_TARGET
+            and scope_entered_event["data"][projection.RUN_STATE_HEAD_SHA]
+            == metadata[projection.RUN_STATE_HEAD_SHA]
+        ),
+        scope_advanced_matches_contract=(
+            scope_advanced.returncode == 0
+            and scope_advanced_event["type"] == projection.SCOPE_ADVANCED
+            and scope_advanced_event["data"]["unit"] == changed_file
+        ),
+        conforming_finding_maps_to_event=(
+            conforming.returncode == 0
+            and conforming_event["type"] == projection.FINDING_REPORTED
+        ),
+        malformed_finding_emits_only_error=(
+            malformed.returncode != 0
+            and missing_field in malformed.stderr
+            and malformed.stdout.strip() == ""
+        ),
+        completed_event_rolls_up_prefix=(
+            completed.returncode == 0
+            and completed_event["type"] == projection.RUN_COMPLETED
+            and completed_event["data"][projection.RUN_STATE_STARTED_AT]
+            == metadata[projection.RUN_STATE_STARTED_AT]
+            and completed_event["data"][projection.RUN_STATE_COMPLETED_AT]
+            == REVIEW_COMPLETION_TIME
+            and completed_event["data"][projection.RUN_STATE_STATUS]
+            == projection.JournalRunStatus.REJECTED
+        ),
+    )
 
 
 def review_runner_harness(

@@ -7,9 +7,6 @@ from typing import Any
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
-    REVIEW_SPEC_PATH,
-    REPO_ROOT,
-    SKILL_FILE,
     load_review_result_module,
     make_finding_dict,
     review_rule_citations,
@@ -91,23 +88,3 @@ def finding_without_required_field(field: str) -> dict[str, Any]:
     finding = make_finding_dict()
     del finding[field]
     return finding
-
-
-def changed_review_file_sets() -> tuple[list[str], list[str]]:
-    """Return nested source-relevant changed-file sets for scope hashing."""
-
-    first = [str(REVIEW_SPEC_PATH.relative_to(REPO_ROOT))]
-    second = [
-        *first,
-        str(SKILL_FILE.relative_to(REPO_ROOT)),
-    ]
-    return first, second
-
-
-def distinct_review_inputs() -> tuple[str, str]:
-    """Return equal-scope review inputs with distinct content."""
-
-    return (
-        REVIEW_SPEC_PATH.read_text(encoding="utf-8"),
-        SKILL_FILE.read_text(encoding="utf-8"),
-    )
