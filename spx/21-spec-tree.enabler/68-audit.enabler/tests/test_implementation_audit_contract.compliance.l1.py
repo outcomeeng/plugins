@@ -3,6 +3,7 @@ from __future__ import annotations
 from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     audit_contract_rejects_incomplete_language_trio,
     audit_contract_rejects_language_specific_wrapper,
+    audit_contract_rejects_retired_language_audit_skill,
     audit_contract_rejects_retired_implementation_wrappers,
     audit_contract_rejects_unrecognized_language_specific_wrapper,
     implementation_auditor_is_the_only_implementation_wrapper,
@@ -42,3 +43,7 @@ def test_retired_implementation_wrappers_are_rejected() -> None:
 
 def test_incomplete_language_concern_trio_is_rejected() -> None:
     assert audit_contract_rejects_incomplete_language_trio()
+
+
+def test_retired_language_audit_skill_is_rejected() -> None:
+    assert audit_contract_rejects_retired_language_audit_skill()

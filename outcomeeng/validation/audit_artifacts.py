@@ -29,6 +29,7 @@ RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
 )
 LANGUAGE_CODE_SKILL_TEMPLATE: Final = "code-{language}"
 LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}-{concern}"
+RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE: Final = "audit-{language}"
 LANGUAGE_AUDIT_CONCERNS: Final = ("code", "tests", "architecture")
 RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
     "verdict.py",
@@ -105,6 +106,14 @@ def check_language_concern_surface(surface: Path) -> list[str]:
     """Return language concern-trio violations for one plugin surface."""
     errors: list[str] = []
     for language in implementation_languages(surface):
+        retired_skill = (
+            surface
+            / language
+            / SKILLS_DIR_NAME
+            / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language)
+        )
+        if retired_skill.exists():
+            errors.append(f"{retired_skill}: retired aggregate audit skill exists")
         for concern in LANGUAGE_AUDIT_CONCERNS:
             skill_path = (
                 surface

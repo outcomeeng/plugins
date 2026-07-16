@@ -21,6 +21,7 @@ from outcomeeng.validation.audit_artifacts import (
     PLUGIN_SURFACE_PATHS,
     RETIRED_AUDIT_RUNTIME_FILENAMES,
     RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES,
+    RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
     SPEC_TREE_PLUGIN_NAME,
@@ -82,12 +83,16 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
     integrity = _required_string(release, "dist.integrity")
     tarball = _required_string(release, "dist.tarball")
     help_text = SPX_VERIFICATION_RUN_HELP_FIXTURE.read_text(encoding="utf-8")
+    pinned_version = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
     return (
-        published_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
+        pinned_version is not None
+        and published_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
         and integrity.startswith("sha512-")
         and tarball.endswith(f"spx-{published_version}.tgz")
         and is_satisfied(REQUIRED_SPX_VERSION, published_version)
         and verification_run_floor_is_satisfied(REQUIRED_SPX_VERSION)
+        and verification_run_floor_is_satisfied(pinned_version)
+        and is_satisfied(pinned_version, REQUIRED_SPX_VERSION)
         and all(
             f"  {command}" in help_text
             for command in VERIFICATION_RUN_REQUIRED_COMMANDS
@@ -293,6 +298,20 @@ def audit_contract_rejects_incomplete_language_trio() -> bool:
         language = _source_language()
         concern = LANGUAGE_AUDIT_CONCERNS[-1]
         _language_concern_path(surface, language, concern).unlink()
+        return bool(check_language_concern_surface(surface))
+
+
+def audit_contract_rejects_retired_language_audit_skill() -> bool:
+    """Return whether validation rejects a retired aggregate language audit skill."""
+    with _valid_surface() as surface:
+        language = _source_language()
+        retired_skill = (
+            surface
+            / language
+            / SKILLS_DIR_NAME
+            / RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE.format(language=language)
+        )
+        _touch(retired_skill / SKILL_FILENAME)
         return bool(check_language_concern_surface(surface))
 
 
