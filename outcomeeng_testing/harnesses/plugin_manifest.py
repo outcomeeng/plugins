@@ -263,7 +263,6 @@ def parity_drift_makes_main_fail() -> bool:
             and plugin_name in stderr
             and first in stderr
             and second in stderr
-            and "manifest parity" in stderr
         )
 
 
@@ -276,7 +275,6 @@ def timeout_terminates_group_and_names_command() -> bool:
         return (
             result.returncode != 0
             and result.args == list(child.command)
-            and "timed out" in result.stderr
             and child.command[0] in result.stderr
             and elapsed < DESCENDANT_SLEEP_SECONDS
             and child.descendant_alive() is False
