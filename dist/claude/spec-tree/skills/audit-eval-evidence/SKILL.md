@@ -4,7 +4,6 @@ description: >-
   Eval-evidence audit methodology preloaded by the eval-evidence-auditor agent.
   Dispatch eval-evidence-auditor to audit eval evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -149,9 +148,11 @@ Cannot name a mutation to the producer that changes the eval result -> REJECT â€
 
 **Step 3e: Run evidence**
 
-Read `history.jsonl` and, when available, the referenced run summary. Check that the committed history contains a successful run for the current eval definition, threshold, and case set.
+Read `history.jsonl` and, when available, the referenced run summary. Check that the committed history contains a successful run for the current eval definition, threshold, case set, prompt materialization, and producer set.
 
-Budget-exhausted, timeout, interrupted, or infrastructure-failed runs are operational evidence only. They do not prove behavior. A passing history row for a stale prompt, stale case set, or different producer does not prove the current assertion.
+Treat the passing row's `git_sha` as the run subject, which necessarily precedes the commit that appends the row to `history.jsonl`. Require that SHA to be an ancestor of the audited committed HEAD. Inspect the committed diff from the run SHA through HEAD for every behavior-owning artifact: `eval.toml`, cases, prompt template, materialized prompt, declared prompt-source producers, and any additional producer artifacts named by the audit request. The run is current only when none of those artifacts changed. Changes confined to `history.jsonl` files preserve freshness, regardless of how many suites' history rows were committed together. NEVER require the passing row's SHA to equal HEAD or require its own `history.jsonl` to be the only changed history file; either requirement creates an impossible evidence loop because recording the run changes the commit after the run.
+
+Budget-exhausted, timeout, interrupted, or infrastructure-failed runs are operational evidence only. They do not prove behavior. A passing history row for a stale prompt, stale case set, different producer, or changed eval definition does not prove the current assertion.
 
 Missing or stale run evidence is REJECT â€” "missing run evidence" or "stale run evidence."
 
@@ -234,6 +235,12 @@ How to avoid: Step 3a checks producer coupling first. Prompt-only simulation is 
 Claude read a budget-exhausted eval run and treated the failed suite as evidence the rule was wrong. The run never completed enough cases to prove behavior.
 
 How to avoid: Step 3e separates operational failures from behavioral pass evidence. Budget, timeout, and interruption rows never prove assertion fulfillment.
+
+**Failure 3: Required run history to cite the commit that records it**
+
+Claude rejected a passing row because its `git_sha` preceded HEAD and multiple suites' history rows were committed together. Re-running at the history commit would append another row and create another commit, so exact HEAD equality could never converge.
+
+How to avoid: Step 3e proves freshness from Git ancestry and the behavior-owning path diff. History-only commits preserve the run evidence for every suite they record.
 
 </failure_modes>
 
