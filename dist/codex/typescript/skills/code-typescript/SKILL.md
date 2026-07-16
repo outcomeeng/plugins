@@ -1,7 +1,7 @@
 ---
 name: code-typescript
 description: >-
-  ALWAYS invoke this skill when writing or fixing implementation code for TypeScript, or when remediating TypeScript implementation findings from a reviewer.
+  ALWAYS invoke this skill when writing or fixing implementation code for TypeScript, or when remediating TypeScript implementation findings from a reviewer or auditor.
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(git status:*), Bash(just:*), Bash(make:*), Bash(npm run:*), Bash(npm test:*), Bash(pnpm run:*), Bash(pnpm test:*), Bash(yarn run:*), Bash(yarn test:*), Bash(bun run:*), Bash(bun test:*), Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 

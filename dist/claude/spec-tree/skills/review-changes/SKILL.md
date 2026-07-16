@@ -77,6 +77,34 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 </constraints>
 
+<failure_modes>
+
+**Main conversation invoked the agent-owned review.**
+
+What happened: Claude loaded this skill directly in the authoring conversation instead of dispatching `changes-reviewer`.
+
+Why it failed: The authoring context biased the review and bypassed the typed agent's raw-token output contract.
+
+How to avoid: Dispatch `changes-reviewer` with only the raw review scope and collect its final run token through the harness wait capability.
+
+**Direct journal commands bypassed the bundled runner.**
+
+What happened: Claude called `spx journal` or a helper script to repair or complete review state after a runner command failed.
+
+Why it failed: The bypass could create an invalid or unsealed run whose state did not match the runner's scope and cleanup invariants.
+
+How to avoid: Use only `review_run.py`; stop and surface stderr when any runner verb exits non-zero.
+
+**The review sealed before covering the complete diff.**
+
+What happened: Claude stopped after one obvious defect or omitted `append-scope` for changed files it had not examined.
+
+Why it failed: The sealed result claimed whole-changeset judgment without evidence that every changed file and diff section was inspected.
+
+How to avoid: Examine every changed file and emitted diff section, append scope after each file, and call `finish` only after the runner accepts complete coverage.
+
+</failure_modes>
+
 <success_criteria>
 
 - [ ] The final output is exactly the raw `runToken` returned by `finish`.
