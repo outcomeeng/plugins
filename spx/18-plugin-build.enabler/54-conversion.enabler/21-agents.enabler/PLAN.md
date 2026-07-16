@@ -2,10 +2,10 @@
 
 Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
-Pending narrowing: this node's compliance assertion names `~/.codex/agents/` (user-scope) as
-a valid install destination for converted Codex custom-agents. Under the ADR, converted
-agents live under the checkout's `.codex/agents/`, and the user-scope destination is
-superseded. Narrow the `~/.codex/agents/` clause to the checkout-scoped `.codex/agents/` in
-the same cutover that removes user-scope installation (the production cutover of
-`just sync-marketplace`). The spec re-declaration travels with that impl removal, not with the
+Pending implementation: this node's compliance assertion now declares that converted Codex
+custom-agents install under the checkout's `.codex/agents/`; the user-scope `~/.codex/agents/`
+destination is superseded per the ADR and removed from the spec. The conversion writer and
+`tests/test_agents.compliance.l1.py` must be reconciled to write and verify only the
+checkout-scoped destination, dropping any user-scope install path. That impl and test
+reconciliation travels with the production cutover of `just sync-marketplace`, not with this
 decision-declaration slice.
