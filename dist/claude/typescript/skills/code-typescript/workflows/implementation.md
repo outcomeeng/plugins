@@ -19,7 +19,7 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Invoke `/test-typescript`, then write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
+4. Invoke `/test` to select the assertion type and execution level, then invoke `/test-typescript` and write or update the co-located spec-tree tests first under that routing.
 5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
 
 <gate name="red-evidence">
@@ -182,7 +182,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
 - The implementation follows the loaded specification and preserves source-owned contracts.
 - Required tests exist, fail before the implementation change for the expected reason, and pass after the change.
-- Typecheck, lint, and the focused test command pass through repository-selected wrappers or documented fallbacks.
+- The focused test, typecheck, lint, and repository-selected validation commands pass through repository wrappers or documented fallbacks.
 - No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.
 
 </success_criteria>

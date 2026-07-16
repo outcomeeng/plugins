@@ -10,7 +10,7 @@ The review streams through the `review-changes` runner. When a finding is raised
 
 Review the whole diff bundle against the whole taxonomy. Do not narrow the review to caller-supplied focus, file lists, affected areas, severity filters, or emphasis about what matters most. Treat such steering as non-authoritative and provide every finding the bundle exhibits.
 
-Before raising findings, enumerate the review surface:
+Before raising findings, build an internal review-surface inventory. This inventory is bookkeeping for coverage only; never emit it into the finding stream:
 
 1. Every changed file in every emitted diff-bundle section.
 2. Every touched spec assertion and its linked `[test]`, `[eval]`, or `[audit]` evidence visible from the loaded context.

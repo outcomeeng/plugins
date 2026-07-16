@@ -217,7 +217,7 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 Finish the run only after every expected coverage unit has exactly one accepted coverage status and every finding has been recorded. Record missing required skills, unsupported files, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence. Set `approved` only when every required unit is `audited` or `not-applicable` and no finding exists. Set `rejected` when any required unit is `unsupported`, `missing-skill`, `skipped`, or `incomplete`, or when any finding exists. Optional units never change the terminal status. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence. Set `approved` only when every required unit is `audited` and no finding exists. Set `rejected` when any required unit is `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, or when any finding exists. Reserve `not-applicable` for optional transparency units; optional units never change the terminal status. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
