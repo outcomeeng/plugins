@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 from hypothesis import assume, given, seed, settings
 
-from outcomeeng_evals.cli import EXIT_GENERAL_ERROR, EXIT_SUCCESS
+from outcomeeng_evals.cli import EXIT_GENERAL_ERROR, EXIT_SUCCESS, main
 from outcomeeng_evals.cli.commands.materialize_prompts import (
     materialize_prompts_command,
 )
@@ -780,10 +780,12 @@ def assert_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
     evals_root = workspace.eval_toml.parent.parent
     prompt_path = _prompt_path(workspace)
     runner = CliRunner()
+    command_name = materialize_prompts_command.name
+    assert command_name is not None
 
     write_result = runner.invoke(
-        materialize_prompts_command,
-        [str(evals_root), repo_root_option, str(workspace.repo_root)],
+        main,
+        [command_name, str(evals_root), repo_root_option, str(workspace.repo_root)],
     )
     assert write_result.exit_code == EXIT_SUCCESS
     assert str(prompt_path) in write_result.output
@@ -791,8 +793,9 @@ def assert_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
     materialized_mtime_ns = prompt_path.stat().st_mtime_ns
 
     check_result = runner.invoke(
-        materialize_prompts_command,
+        main,
         [
+            command_name,
             str(evals_root),
             repo_root_option,
             str(workspace.repo_root),
