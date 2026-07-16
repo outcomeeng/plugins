@@ -26,7 +26,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 1 — GATE: Pre-flight.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when `/manage-github-pr` already ran the lifecycle-entry preflight before branch or commit work; the later check guards the checkout state at publication time.
 
-**Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
+**Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. Record `topology=peer` for a peer branch. For a stacked branch, record `topology=stacked` and `stack_base=<previous-stack-branch>` from the classification result.
 
 <step name="verification_readiness_decision">
 
@@ -55,15 +55,22 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If `spx/local/merging.md` defines a custom branch-push command, follow that overlay instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+**Step 5 — GATE: Open the PR in its topology state.** Pipe the curated body to gh on stdin via `--body-file -`. A peer PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3). A stacked PR targets its previous stack branch and remains draft until that base merges. Choose the stdin form by harness.
+
+Bind the topology-specific arguments inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments. A stacked branch targets its previous stack branch and remains draft until that base merges.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc:
 
 ```bash
+topology_args=()
+if [ "$topology" = "stacked" ]; then
+  topology_args=(--base "$stack_base" --draft)
+fi
 GIT_TERMINAL_PROMPT=0 gh pr create \
   --title "<commit-subject under 70 chars per /commit-changes>" \
   --body-file - \
-  --head "$(git branch --show-current)" <<'EOF'
+  --head "$(git branch --show-current)" \
+  "${topology_args[@]}" <<'EOF'
 ## Summary
 
 - <bullet>
@@ -85,7 +92,7 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+topology_args=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
 ```
 
 Flag rationale:
