@@ -121,7 +121,7 @@ Apply `<test_file_declarations>` to each linked TypeScript test file before insp
 | Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                                                                                 | Single example for a claimed mapping                    |
 | Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                                                                                      | Manual `toEqual({...hardcoded...})` with no validator   |
 | Property    | `assertProperty(namedProperty())` — meaningful arbitrary, invariant body, seed, and replay output live in the imported property harness | `fc.constant`, body `return true`, only "doesn't throw" |
-| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit                                                                    | `[test]` with no violating fixture                      |
+| Compliance  | `[test]`: exercises a violating fixture; `[audit]`: skip this audit                                                                     | `[test]` with no violating fixture                      |
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 

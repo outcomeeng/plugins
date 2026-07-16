@@ -92,7 +92,7 @@ Match the Rust evidence method to the assertion type:
 | Mapping     | table-driven cases, `rstest`, or looped fixtures with at least two meaningful cases      | one example stands in for a mapping          |
 | Conformance | parser, schema, protocol harness, CLI contract, or `trybuild` for compile-time contracts | manual shape checks replace the validator    |
 | Property    | `proptest` or `quickcheck` with meaningful generators and invariants                     | examples are wrapped in property syntax      |
-| Compliance  | violating fixture, lint harness, or explicit `[review]` marker                           | no violating input or review evidence exists |
+| Compliance  | violating fixture, lint harness, or explicit `[audit]` marker                            | no violating input or audit evidence exists  |
 
 For property tests, inspect the generator domain. `Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
 </step>
