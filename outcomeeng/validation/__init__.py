@@ -45,6 +45,7 @@ from outcomeeng.validation._engine import (
     run,
     run_check,
     run_recipe,
+    terminate_process_group,
 )
 from outcomeeng.validation._model import (
     ProcessHandle,
@@ -163,6 +164,7 @@ __all__ = [
     "VERIFICATION_TYPE_TESTING",
     "VERIFICATION_TYPE_VALIDATION",
     "test_recipe",
+    "terminate_process_group",
     "ProcessHandle",
     "ProcessSpawner",
     "ProductionSpawner",

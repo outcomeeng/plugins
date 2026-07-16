@@ -18,7 +18,7 @@ import signal
 import tempfile
 import time
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from types import FrameType
 from typing import Final, TextIO
@@ -88,18 +88,28 @@ def _forwarding_signal_handler(signum: int, _frame: FrameType | None) -> None:
         raise _ForwardedSignal(signum, child_handle_available=False)
     if handle.poll() is not None:
         raise _ForwardedSignal(signum, child_handle_available=True)
+    terminate_process_group(handle)
+    raise _ForwardedSignal(signum, child_handle_available=True)
+
+
+def terminate_process_group(
+    handle: ProcessHandle,
+    *,
+    monotonic: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Terminate a child process group with bounded grace and reap waits."""
     handle.send_signal_to_group(signal.SIGTERM)
-    deadline = time.monotonic() + SIGNAL_GRACE_SECONDS
-    while time.monotonic() < deadline:
+    deadline = monotonic() + SIGNAL_GRACE_SECONDS
+    while monotonic() < deadline:
         if handle.poll() is not None:
-            raise _ForwardedSignal(signum, child_handle_available=True)
-        time.sleep(SIGNAL_POLL_INTERVAL_SECONDS)
+            return
+        sleep(SIGNAL_POLL_INTERVAL_SECONDS)
     handle.send_signal_to_group(signal.SIGKILL)
     for _ in range(POST_KILL_REAP_ATTEMPTS):
         if handle.poll() is not None:
             break
-        time.sleep(SIGNAL_POLL_INTERVAL_SECONDS)
-    raise _ForwardedSignal(signum, child_handle_available=True)
+        sleep(SIGNAL_POLL_INTERVAL_SECONDS)
 
 
 def _write_timing_summary(
