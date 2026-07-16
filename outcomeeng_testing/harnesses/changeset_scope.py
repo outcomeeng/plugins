@@ -24,15 +24,15 @@ returned handle.
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 import pathlib
 import subprocess
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
 from types import ModuleType
-from typing import TypedDict, cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHANGESET_SCOPE_SCRIPTS_DIR = (
@@ -76,8 +76,9 @@ def _fixture_relative_path(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).relative_to(scenario / role).as_posix()
 
 
-class StaleBaseFixture(TypedDict):
-    """Typed fields in the inert stale-base whole-scenario manifest."""
+@dataclass(frozen=True)
+class StaleBaseScenario:
+    """Synthetic names and inert payload paths for the stale-base scenario."""
 
     base_branch: str
     feature_branch: str
@@ -87,17 +88,36 @@ class StaleBaseFixture(TypedDict):
     working_file: str
 
 
-STALE_BASE_FIXTURE = cast(
-    "StaleBaseFixture",
-    json.loads((STALE_BASE_FIXTURE_DIR / "fixture.json").read_text(encoding="utf-8")),
+STALE_BASE_SCENARIO = StaleBaseScenario(
+    base_branch="main",
+    feature_branch="feature/x",
+    initial_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "initial"),
+    merged_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "merged"),
+    feature_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "feature"),
+    working_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "working"),
 )
-MERGED_FILE = STALE_BASE_FIXTURE["merged_file"]
-FEATURE_FILE = STALE_BASE_FIXTURE["feature_file"]
-INITIAL_FILE = STALE_BASE_FIXTURE["initial_file"]
-WORKING_FILE = STALE_BASE_FIXTURE["working_file"]
-BASE_BRANCH = STALE_BASE_FIXTURE["base_branch"]
-FEATURE_BRANCH = STALE_BASE_FIXTURE["feature_branch"]
 SPACED_NOTE_PATH = _fixture_relative_path(SPACED_NOTE_FIXTURE_DIR, "committed")
+
+
+@dataclass(frozen=True)
+class TemporaryChangesetScope:
+    """Invocation-unique paths for changeset-scope tests."""
+
+    repo: pathlib.Path
+    empty_state_dir: pathlib.Path
+
+
+@contextmanager
+def temporary_changeset_scope() -> Iterator[TemporaryChangesetScope]:
+    """Yield empty scenario paths and remove their temporary root on exit."""
+    with TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        repo = root / "repo"
+        repo.mkdir()
+        yield TemporaryChangesetScope(
+            repo=repo,
+            empty_state_dir=root / "empty-state",
+        )
 
 
 def load_changeset_scope_module() -> ModuleType:
@@ -199,11 +219,20 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     contains M; add feature commit F; reset the local ``main`` ref back to A so
     it lags ``origin/main`` by the merged commit.
     """
-    _git(repo, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
+    scenario = STALE_BASE_SCENARIO
+    _git(
+        repo,
+        "init",
+        "-q",
+        "-b",
+        scenario.base_branch,
+        str(repo),
+        cwd=pathlib.Path.cwd(),
+    )
     _git(repo, "config", "commit.gpgsign", "false")
     _commit_file(
         repo,
-        INITIAL_FILE,
+        scenario.initial_file,
         _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
         "initial",
     )
@@ -211,39 +240,44 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
 
     _commit_file(
         repo,
-        MERGED_FILE,
+        scenario.merged_file,
         _fixture_text(STALE_BASE_FIXTURE_DIR, "merged"),
         "merge change into base",
     )
     advanced_sha = _git(repo, "rev-parse", "HEAD")
 
     # origin/main (and origin/HEAD) point at the advanced base A+M.
-    _git(repo, "update-ref", f"refs/remotes/origin/{BASE_BRANCH}", advanced_sha)
+    _git(
+        repo,
+        "update-ref",
+        f"refs/remotes/origin/{scenario.base_branch}",
+        advanced_sha,
+    )
     _git(
         repo,
         "symbolic-ref",
         "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{BASE_BRANCH}",
+        f"refs/remotes/origin/{scenario.base_branch}",
     )
 
     # Feature branches off A+M (so it contains the merged commit) and adds F.
-    _git(repo, "switch", "-q", "-c", FEATURE_BRANCH)
+    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
     _commit_file(
         repo,
-        FEATURE_FILE,
+        scenario.feature_file,
         _fixture_text(STALE_BASE_FIXTURE_DIR, "feature"),
         "feature change",
     )
 
     # The local base ref lags origin by the merged commit.
-    _git(repo, "update-ref", f"refs/heads/{BASE_BRANCH}", initial_sha)
+    _git(repo, "update-ref", f"refs/heads/{scenario.base_branch}", initial_sha)
 
     return StaleBaseRepo(
         repo=repo,
-        base_ref=BASE_BRANCH,
-        feature_branch=FEATURE_BRANCH,
-        merged_file=MERGED_FILE,
-        feature_file=FEATURE_FILE,
+        base_ref=scenario.base_branch,
+        feature_branch=scenario.feature_branch,
+        merged_file=scenario.merged_file,
+        feature_file=scenario.feature_file,
     )
 
 
@@ -253,15 +287,24 @@ def build_repo_without_origin(repo: pathlib.Path) -> str:
     Returns the branch name. Exercises the base-ref fallback paths
     (``strict=False`` returns the default, ``strict=True`` raises).
     """
-    _git(repo, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
+    scenario = STALE_BASE_SCENARIO
+    _git(
+        repo,
+        "init",
+        "-q",
+        "-b",
+        scenario.base_branch,
+        str(repo),
+        cwd=pathlib.Path.cwd(),
+    )
     _git(repo, "config", "commit.gpgsign", "false")
     _commit_file(
         repo,
-        INITIAL_FILE,
+        scenario.initial_file,
         _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
         "initial",
     )
-    return BASE_BRANCH
+    return scenario.base_branch
 
 
 @dataclass(frozen=True)
@@ -309,7 +352,7 @@ def assert_merge_classifier_uses_canonical_changeset_scope() -> None:
         repo = pathlib.Path(tmp) / "repo"
         repo.mkdir()
         stale = build_stale_local_base_repo(repo)
-        (stale.repo / WORKING_FILE).write_text(
+        (stale.repo / STALE_BASE_SCENARIO.working_file).write_text(
             _fixture_text(STALE_BASE_FIXTURE_DIR, "working"),
             encoding="utf-8",
         )
@@ -318,7 +361,7 @@ def assert_merge_classifier_uses_canonical_changeset_scope() -> None:
 
         assert stale.feature_file in paths
         assert stale.merged_file not in paths
-        assert WORKING_FILE in paths
+        assert STALE_BASE_SCENARIO.working_file in paths
 
 
 def assert_merge_classifier_handles_spaced_coordination_note() -> None:

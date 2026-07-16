@@ -1,8 +1,0 @@
-{
-  "base_branch": "main",
-  "feature_branch": "feature/x",
-  "initial_file": "README.md",
-  "merged_file": "merged.txt",
-  "feature_file": "feature.txt",
-  "working_file": "working_dirty.py"
-}
