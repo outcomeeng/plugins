@@ -258,7 +258,13 @@ def parity_drift_makes_main_fail() -> bool:
         _write_plugin(root, plugin_name, first, codex_version=second)
         _write_catalogs(root, (plugin_name,))
         exit_code, _, stderr = _captured_main(root, RecordingValidationRunner())
-        return exit_code != 0 and plugin_name in stderr and "manifest parity" in stderr
+        return (
+            exit_code != 0
+            and plugin_name in stderr
+            and first in stderr
+            and second in stderr
+            and "manifest parity" in stderr
+        )
 
 
 def timeout_terminates_group_and_names_command() -> bool:
@@ -356,9 +362,23 @@ def _missing_version_is_reported(
     claude_version: str | None,
     codex_version: str | None,
 ) -> bool:
-    errors = _manifest_parity_errors(claude_version, codex_version)
-    (plugin_name,) = _sample_plugin_names(1)
-    return any(plugin_name in error and "missing" in error for error in errors)
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        (plugin_name,) = _sample_plugin_names(1)
+        _write_plugin(
+            root,
+            plugin_name,
+            claude_version,
+            codex_version=codex_version,
+        )
+        _write_catalogs(root, (plugin_name,))
+        exit_code, _, stderr = _captured_main(root, RecordingValidationRunner())
+        return (
+            exit_code != 0
+            and plugin_name in stderr
+            and PLUGIN_VERSION_FIELD in stderr
+            and "missing" in stderr
+        )
 
 
 def _sample_plugin_names(count: int) -> tuple[str, ...]:
