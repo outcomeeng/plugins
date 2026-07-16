@@ -4,5 +4,8 @@ prompt = "prompt.md"
 
 [prompt_source]
 kind = "producer-files"
-producers = ["dist/claude/spec-tree/skills/audit-adr/SKILL.md", "dist/claude/spec-tree/skills/audit-adr/references/policy.md"]
+producers = [
+  "dist/claude/spec-tree/skills/audit-adr/SKILL.md",
+  "dist/claude/spec-tree/skills/audit-adr/references/policy.md",
+]
 template = "prompt.template.md"

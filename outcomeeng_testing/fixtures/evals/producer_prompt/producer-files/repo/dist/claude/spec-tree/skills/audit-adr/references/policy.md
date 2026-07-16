@@ -6,6 +6,6 @@ The complete secondary producer includes a nested fence:
 fixture payload
 ```
 
-````text
-fixture payload with a longer fence
+`````text
 ````
+`````

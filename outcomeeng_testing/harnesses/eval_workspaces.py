@@ -112,17 +112,51 @@ def _mutate_toml_field(
     ]
     if len(matching) > 1:
         raise ValueError(f"{path}: field {field!r} occurs more than once")
+    value_end = (
+        _toml_field_value_end(
+            lines,
+            start=matching[0],
+            table_end=end,
+            table=table,
+            field=field,
+        )
+        if matching
+        else None
+    )
     if value is None:
-        if len(matching) != 1:
+        if value_end is None:
             raise ValueError(f"{path}: field {field!r} is absent")
-        del lines[matching[0]]
-    elif matching:
-        lines[matching[0]] = f"{field} = {_toml_value(value)}"
+        del lines[matching[0] : value_end]
+    elif value_end is not None:
+        lines[matching[0] : value_end] = [f"{field} = {_toml_value(value)}"]
     else:
         lines.insert(end, f"{field} = {_toml_value(value)}")
     updated = "\n".join(lines) + "\n"
     tomllib.loads(updated)
     path.write_text(updated, encoding=UTF8_ENCODING)
+
+
+def _toml_field_value_end(
+    lines: list[str],
+    *,
+    start: int,
+    table_end: int,
+    table: str | None,
+    field: str,
+) -> int:
+    """Return the exclusive line end of one parser-complete TOML value."""
+
+    header = [] if table is None else [f"[{table}]"]
+    for candidate_end in range(start + 1, table_end + 1):
+        candidate = "\n".join([*header, *lines[start:candidate_end]]) + "\n"
+        try:
+            parsed = tomllib.loads(candidate)
+        except tomllib.TOMLDecodeError:
+            continue
+        owner = parsed if table is None else parsed.get(table)
+        if isinstance(owner, dict) and field in owner:
+            return candidate_end
+    raise ValueError(f"field {field!r} has no complete TOML value")
 
 
 def _toml_table_bounds(lines: list[str], *, table: str | None) -> tuple[int, int]:
