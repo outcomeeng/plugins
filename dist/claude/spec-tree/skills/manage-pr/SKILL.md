@@ -11,6 +11,8 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:
 The pull request merged into the base branch on origin, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
+<workflow>
+
 <step name="pr_wait_and_reentry_policy">
 
 `/manage-pr` is the re-entry point for an open pull request. `$pr_pointer` carries the optional PR number, PR URL, or branch name. Inspect live GitHub and repository state before acting. When `$pr_pointer` is empty, resolve the PR from the current branch with bare `gh pr view`.
@@ -148,6 +150,8 @@ If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standar
 **Exit when:** the PR is closed, Step 9 has returned closeout-ready evidence to `/manage-github-pr`, Step 9 has emitted `AWAIT_DEPLOYMENT_AUTHORIZATION` or `AWAIT_RELEASE_AUTHORIZATION` with branch-state closeout evidence, or Step 9 invoked `/handoff` for a direct invocation. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
 </step>
+
+</workflow>
 
 <script_testing>
 
