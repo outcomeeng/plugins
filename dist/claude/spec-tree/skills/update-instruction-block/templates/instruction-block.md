@@ -1,5 +1,5 @@
 ---
-template_version: "0.24.0"
+template_version: "0.24.1"
 template_source: spec-tree
 ---
 
@@ -81,6 +81,20 @@ Default-branch work is complete only when it reaches the default branch on origi
 - the applicable gates have run or produced concrete failing evidence.
 
 🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint. Create or switch to a local branch preserving the worktree changes, then continue through `/merge` unless the user explicitly limited the task to local-only work.
+
+## Git Safety Protocol
+
+```text
+ALLOW  git checkout -- README.md
+ALLOW  git checkout HEAD -- .
+ALLOW  git restore README.md
+
+DENY   git stash drop
+DENY   git stash drop stash@{3}
+DENY   git stash pop
+DENY   git stash pop stash@{0}
+DENY   git stash clear
+```
 
 ## Mutation Status Updates
 
