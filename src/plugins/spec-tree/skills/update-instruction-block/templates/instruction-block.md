@@ -3,6 +3,14 @@ template_version: "0.25.0"
 template_source: spec-tree
 ---
 
+<!-- harness:codex -->
+
+<operator_is_in_charge>
+**RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
+</operator_is_in_charge>
+
+<!-- /harness:codex -->
+
 # Spec Tree Instructions
 
 These instructions explain WHEN to invoke spec-tree skills for this product. They are a **router** — the skills contain the HOW.
@@ -127,6 +135,30 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 **Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use the runtime's exposed typed-subagent spawn capability (`multi_agent_v1.spawn_agent` when that identifier is available) for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
 
 **Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, and close capabilities and preserve the same fields and result contracts. The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability. Close every spawned agent with the exposed close capability immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
+
+### Subagent lifecycle — preserve every handle and close every thread
+
+Treat every spawned subagent as an owned resource. Maintain a registry in the main conversation containing its exact `agent_id`, role or task, and lifecycle state. Record a successful spawn's returned id before issuing another spawn or making any unrelated tool call. Preserve every unresolved registry entry across interruption and compaction.
+
+**Acquire handles sequentially while agents execute concurrently.** Call `multi_agent_v1.spawn_agent` once per tool call. Several sequential spawn calls may occur within one main-agent tool-call sequence before control returns to the operator, and every agent already spawned may run concurrently while later calls are issued. NEVER place multiple spawn calls in `Promise.all`, another fail-fast combinator, or one parallel tool-call batch: one rejected call can suppress successful sibling results and lose their ids even though those agents remain open. Respect the runtime's configured `agents.max_threads` limit; NEVER hard-code a maximum such as eight and NEVER fill capacity with agents that are not required.
+
+Before each spawn sequence, reconcile the registry: preserve any final results already returned, close their agents, and close work that has been abandoned or superseded. If a spawn fails, stop issuing new spawns, retain every id already acquired, and collect or close those known agents before retrying. A failed individual spawn yields no id for that call and does not erase ids returned by earlier calls.
+
+**Collect, preserve, then close.** Use `multi_agent_v1.wait_agent` with only exact ids from the registry. A timeout with no final status is non-final. When the result remains required, wait again; when the work is explicitly abandoned or superseded, close the agent. For every final status, preserve the complete final message, structured verdict, or journal token first, then immediately call `multi_agent_v1.close_agent` for that id and mark it closed in the registry. A notification, pending handle, or open id is never a final result.
+
+Reconcile every registry entry at these checkpoints:
+
+- immediately after a final result;
+- before another spawn sequence;
+- after any spawn failure;
+- after interruption or compaction;
+- before asking the operator a question;
+- before entering a merge or publication phase; and
+- before yielding control to the operator or ending the turn.
+
+At a checkpoint, wait again for every still-required result and close every abandoned or superseded agent. Before merge, publication, or response end, every known id must be closed and every required result must already be preserved. Do not leave completed agents open; completed agents continue consuming thread capacity until closed.
+
+NEVER invent, shorten, or substitute an agent id, including an all-zero placeholder. NEVER assume `multi_agent_v1.list_agents` exists; if the runtime exposes a listing tool, use it only to reconcile the registry. The interactive `/agent` picker is operator-side recovery when registry reconstruction is impossible, never a substitute for preserving ids. If `multi_agent_v1.close_agent` returns `not_found`, record that exact result and do not call `multi_agent_v1.resume_agent` merely to close the id. Resume only when intentionally continuing a known closed agent's work.
 
 Spawn a typed verifier or reviewer:
 

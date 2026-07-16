@@ -1,4 +1,4 @@
-"""Source-owned implementation-audit payload and projection contracts."""
+"""Source-owned implementation-audit topology, payload, and projection contracts."""
 
 from __future__ import annotations
 
@@ -15,6 +15,16 @@ RUN_SEQUENCE_FIELD: Final = "sequence"
 RUN_TERMINAL_STATUS_FIELD: Final = "terminalStatus"
 RUN_SEALED_FIELD: Final = "sealed"
 RUN_FINDING_COUNT_FIELD: Final = "findingCount"
+RUN_EVENTS_FIELD: Final = "events"
+EVENT_TYPE_FIELD: Final = "type"
+EVENT_DATA_FIELD: Final = "data"
+EVENT_PAYLOAD_FIELD: Final = "payload"
+VERIFICATION_SCOPE_EVENT_TYPE: Final = "sh.spx.verify.scope"
+VERIFICATION_FINDING_EVENT_TYPE: Final = "sh.spx.verify.finding"
+PRIOR_CONTEXT_FIELD: Final = "priorContext"
+SUBJECT_FIELD: Final = "subject"
+COVERAGE_STATUS_FIELD: Final = "coverageStatus"
+UNIT_ID_FIELD: Final = "unitId"
 
 
 class ImplementationAuditConcern(StrEnum):
@@ -23,6 +33,16 @@ class ImplementationAuditConcern(StrEnum):
     CODE = "code"
     TESTS = "tests"
     ARCHITECTURE = "architecture"
+
+
+class RetiredAuditScript(StrEnum):
+    """Plugin-side audit scripts replaced by the SPX verification-run contract."""
+
+    VERDICT = "verdict.py"
+    AGGREGATE_VERDICTS = "aggregate_verdicts.py"
+    PASS_RESULTS = "pass_results.py"
+    JOURNAL_EMIT = "journal_emit.py"
+    AUDIT_ORCHESTRATOR = "audit_orchestrator.py"
 
 
 class AuditCoverageRequirement(StrEnum):
@@ -70,6 +90,23 @@ def implementation_audit_unit_id(
     return f"{IMPLEMENTATION_AUDIT_CLASS}:{language}:{concern.value}"
 
 
+def implementation_audit_subject_unit_id(
+    language: str,
+    concern: ImplementationAuditConcern,
+    subject_path: str,
+) -> str:
+    """Return the stable coverage-unit identity for one inspected path."""
+    return f"{implementation_audit_unit_id(language, concern)}:{subject_path}"
+
+
+def implementation_audit_concern_skill_name(
+    language: str,
+    concern: ImplementationAuditConcern,
+) -> str:
+    """Return the source-owned skill name for one language concern."""
+    return f"audit-{language}-{concern.value}"
+
+
 def implementation_audit_producer_identity(
     language: str,
     concern: ImplementationAuditConcern,
@@ -79,7 +116,7 @@ def implementation_audit_producer_identity(
         "producerKind": "skill",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
         "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
-        "skillName": f"audit-{language}-{concern.value}",
+        "skillName": implementation_audit_concern_skill_name(language, concern),
         "skillOwningPluginName": language,
         "invocationRole": "concern",
     }
@@ -108,16 +145,24 @@ def implementation_audit_input_payload(request_kind: str) -> dict[str, object]:
 def implementation_audit_scope_payload(
     language: str,
     concern: ImplementationAuditConcern,
+    *,
+    subject_path: str,
 ) -> dict[str, object]:
-    """Return one audited implementation coverage unit."""
+    """Return one audited implementation coverage unit for one inspected path."""
+    if not subject_path:
+        raise ValueError("audited implementation scope requires a subject path")
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        UNIT_ID_FIELD: implementation_audit_subject_unit_id(
+            language,
+            concern,
+            subject_path,
+        ),
         "auditClass": IMPLEMENTATION_AUDIT_CLASS,
         "auditKind": concern.value,
-        "subject": f"partition:{language}",
+        SUBJECT_FIELD: subject_path,
         "coverageRequirement": AuditCoverageRequirement.REQUIRED.value,
-        "coverageStatus": AuditCoverageStatus.AUDITED.value,
-        "priorContext": {
+        COVERAGE_STATUS_FIELD: AuditCoverageStatus.AUDITED.value,
+        PRIOR_CONTEXT_FIELD: {
             "changedFilePartition": language,
             "concernPartition": concern.value,
             "languagePartition": language,
@@ -141,8 +186,14 @@ def implementation_audit_finding_payload(
     expected: str,
 ) -> dict[str, object]:
     """Return one valid blocking implementation-audit finding."""
+    if not subject_path:
+        raise ValueError("implementation audit findings require a subject path")
     return {
-        "unitId": implementation_audit_unit_id(language, concern),
+        UNIT_ID_FIELD: implementation_audit_subject_unit_id(
+            language,
+            concern,
+            subject_path,
+        ),
         "producerIdentity": implementation_audit_producer_identity(
             language,
             concern,

@@ -6,7 +6,7 @@ description: >-
   implementation audits; the main conversation reaches this audit only through
   that agent.
 argument-hint: "<implementation audit request>"
-allowed-tools: Read, Bash, Glob, Grep, Skill
+allowed-tools: Read, Glob, Grep, Skill, Bash(spx verification run:*)
 ---
 
 <dispatch_gate>
@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on the requested implementation scope against the installed language concern standards, returned as the raw run token and rendered SPX projection.
+A rendered SPX verification-run verdict for the requested implementation scope, accompanied by its raw run token, with `terminalStatus` set to `approved` or `rejected` and each finding naming the stable producer identity, unit, violated rule, severity, location, message, and observed-versus-expected evidence.
 
 </objective>
 
@@ -28,6 +28,7 @@ A verdict on the requested implementation scope against the installed language c
 - Run no deterministic verification. The main conversation passes validate, test, and evaluate over the changeset before dispatch; CI repeats deterministic verification over the repository.
 - Contain no language-specific file extensions, commands, examples, or evidence patterns beyond the dispatch template `audit-{lang}-{code|tests|architecture}`.
 - Treat the `spx verification run` command exit code as payload validity. Never hand-validate emitted payload JSON after SPX accepts it.
+- Start the verification run immediately after validating the request, before reading changed project files or loading any language concern skill or its standards. Every project inspection and concern result belongs to the open run.
 
 </constraints>
 
@@ -116,14 +117,17 @@ Build an expected coverage inventory before invoking any language concern skill.
 - audit kind: `code`, `tests`, or `architecture`
 - language partition
 - concern partition: `code`, `tests`, or `architecture`
-- subject paths or explicit unsupported-file marker
+- the complete non-empty list of project paths inspected by the concern, or an explicit unsupported-file marker; each path becomes one SPX scope unit whose preserved `subject` field is that exact path
 - stable expected-producer identity: plugin name, skill name, audit class, language, and concern
 - producer provenance: owning plugin version when the concern skill exists; null with reason `missing-skill` or `unsupported` when no executable concern skill can run
 - execution producer identity: the wrapper and SPX command driver that recorded the unit, present for every unit so missing-skill and unsupported classifications still have provenance for the recorder
 - coverage requirement: `required` or `optional`
 - coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
+- concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
-Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation file, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+Plan the complete inventory before dispatch, but NEVER mark a planned unit `audited`. Invoke each concern skill inside the open run. After that concern returns, immediately record one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited` before inspecting the next concern. Record each returned finding immediately after those scope rows and associate it with the matching path-scoped unit. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. When a concern cannot return a complete result, record `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
+
+A missing required concern skill, unsupported implementation file, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
@@ -227,6 +231,14 @@ Why it failed: Prose findings are not durable evidence and cannot appear in the 
 
 How to avoid: Record every finding through `spx verification run finding add`; use the rendered projection as the inspection surface.
 
+**Coverage labels replaced concern execution.**
+
+What happened: Claude inspected changed files before opening the verification run, then emitted three scope rows labeled `audited` with generic partition subjects and no observable concern-skill results.
+
+Why it failed: An `audited` label asserted completion without naming the inspected paths or preserving the concern invocation that produced the judgment. The sealed projection could not distinguish a completed concern audit from orchestration self-certification.
+
+How to avoid: Start the run before project inspection, invoke each concern skill while the run is open, and assign `audited` only after recording that concern's exact `subjectPaths` and completed `concernResult`.
+
 **Deterministic verification ran inside the audit.**
 
 What happened: Claude ran validation, tests, or evals from the dispatched audit context.
@@ -240,9 +252,10 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 <success_criteria>
 
 - The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
-- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A blocked run names the exact failed request field, unavailable skill, or SPX command that prevented a valid completed projection.
+- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A blocked run names the exact failed request field or SPX command that prevented a valid completed projection; a missing concern skill appears as `missing-skill` in a rendered rejected run.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
+- Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
 - The same caller request, live file list, scope, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - A gating run addresses a committed head with no live file list; a run carrying modified or untracked files identifies itself as advisory and is never presented as gate evidence.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or language-specific file pattern can affect the determination outside the SPX-recorded run.

@@ -26,6 +26,10 @@ git, environment, or subprocess access. The CLI edge reads the template, globs t
 extensions, replaces symlinked root instruction files with regular files, removes obsolete
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
+
+Tested with the render, write, check, and reconcile CLI paths, including dirty files, recency
+ties, one-sided and malformed shared regions, symlink and path validation, and language-override
+errors.
 """
 
 from __future__ import annotations
@@ -54,6 +58,7 @@ DEFAULT_TEMPLATE_SOURCE = "spec-tree"
 ROUTER_MARKER_PREFIX = "<!-- SPEC-TREE v"
 ROUTER_BLOCK_END = "<!-- /SPEC-TREE -->"
 ROUTER_LANGS_KEY = "langs:"
+ROUTER_BODY_SEPARATOR = "\n\n"
 # Anchored to a full fence line (``re.MULTILINE``) so an inline marker example in product prose
 # never opens the block: the shipped instruction block teaches the literal marker, so a consumer
 # may quote it in prose, and an unanchored match would replace from that quote through the real
@@ -254,7 +259,12 @@ def _parse_languages(value: str | None) -> tuple[str, ...]:
     """Parse a ``languages`` value (``[a, b]``, ``a, b``, or ``a,b``) into a tuple."""
     if not value:
         return ()
-    inner = value.strip().removeprefix("[").removesuffix("]")
+    stripped = value.strip()
+    inner = (
+        stripped[1:-1]
+        if stripped.startswith("[") and stripped.endswith("]")
+        else stripped
+    )
     return normalize_languages(
         item.strip() for item in inner.split(",") if item.strip()
     )
@@ -371,6 +381,16 @@ def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     return _filter_conditional_blocks(body, "lang", set(languages))
 
 
+def template_languages(template_text: str) -> tuple[str, ...]:
+    """Return the languages declared by opening ``lang:NAME`` template markers."""
+    _, body = _split_frontmatter(template_text)
+    return normalize_languages(
+        name
+        for line in body.splitlines()
+        if (name := _conditional_marker(line, "lang", closing=False)) is not None
+    )
+
+
 def _filter_harness(body: str, harness: str) -> str:
     """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
     return _filter_conditional_blocks(body, "harness", {harness})
@@ -414,9 +434,13 @@ def render(
     body = _filter_languages(template_body, languages)
     body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
+    body = body.lstrip("\n")
 
     marker = router_marker(installed_version, languages)
-    rendered = f"{marker}\n{body.rstrip()}\n\n{ROUTER_BLOCK_END}"
+    rendered = (
+        f"{marker}{ROUTER_BODY_SEPARATOR}{body.rstrip()}"
+        f"{ROUTER_BODY_SEPARATOR}{ROUTER_BLOCK_END}"
+    )
     return rendered.rstrip("\n") + "\n"
 
 
@@ -1230,6 +1254,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
+        allowed_languages = template_languages(template_text)
+        allowed_language_set = set(allowed_languages)
+        unsupported_languages = tuple(
+            language for language in languages if language not in allowed_language_set
+        )
+        if unsupported_languages:
+            print(
+                "error: unsupported --languages token(s): "
+                f"{', '.join(unsupported_languages)}; allowed languages: "
+                f"{', '.join(allowed_languages)}",
+                file=sys.stderr,
+            )
+            return 2
     elif repo_root is not None:
         try:
             languages = detect_languages_from_tree(_spx_dir(repo_root))

@@ -69,8 +69,8 @@ A skill body references a specific product file with the `@` prefix (`@path/to/f
 For skill-bundled files, use the runtime's skill-directory token instead of `@` or a repository path. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`:
 
 ```markdown
-Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
-Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
+Read `${SKILL_DIR}/references/<bundled-reference>.md`
+Run `python3 "${SKILL_DIR}/scripts/<bundled-script>.py" <args>`
 ```
 
 NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
