@@ -387,6 +387,16 @@ def audit_contract_rejects_missing_generated_audit_host() -> bool:
         return bool(check_audit_artifact_contract(root))
 
 
+def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
+    """Reject a lone source surface missing the audit-owning plugin."""
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        surface = root / PLUGIN_SURFACE_PATHS[0]
+        _populate_valid_surface(surface, _source_language())
+        rmtree(surface / SPEC_TREE_PLUGIN_NAME)
+        return bool(check_audit_artifact_contract(root))
+
+
 def audit_contract_rejects_missing_generated_language() -> bool:
     """Reject a generated surface missing an expected language plugin."""
     with _valid_repository_surfaces() as root:

@@ -76,11 +76,7 @@ def audit_contract_surfaces(root: Path) -> tuple[Path, ...]:
         return tuple(
             root / relative_surface for relative_surface in PLUGIN_SURFACE_PATHS
         )
-    return tuple(
-        surface
-        for surface in present_surfaces
-        if (surface / SPEC_TREE_PLUGIN_NAME).is_dir()
-    )
+    return present_surfaces
 
 
 def check_audit_runtime_surface(surface: Path) -> list[str]:
