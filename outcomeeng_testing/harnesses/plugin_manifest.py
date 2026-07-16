@@ -25,7 +25,9 @@ from outcomeeng.validation.audit_artifacts import SPEC_TREE_PLUGIN_NAME
 from outcomeeng.validation.plugins import (
     CATALOGS,
     CATALOG_PLUGINS_FIELD,
+    CLAUDE_PLUGIN_MANIFEST_PATH,
     CLAUDE_PLUGIN_VALIDATE_ARGV,
+    CODEX_PLUGIN_MANIFEST_PATH,
     PLUGIN_NAME_FIELD,
     PLUGIN_VERSION_FIELD,
     VALIDATE_TIMEOUT_SECONDS,
@@ -213,14 +215,18 @@ def absent_codex_manifest_skips_parity() -> bool:
 def absent_claude_version_is_reported() -> bool:
     """Return whether an absent Claude version field is named."""
     return _missing_version_is_reported(
-        claude_version=None, codex_version=_version_pair()[0]
+        claude_version=None,
+        codex_version=_version_pair()[0],
+        expected_missing_manifest_paths=(CLAUDE_PLUGIN_MANIFEST_PATH,),
     )
 
 
 def absent_codex_version_is_reported() -> bool:
     """Return whether an absent Codex version field is named."""
     return _missing_version_is_reported(
-        claude_version=_version_pair()[0], codex_version=None
+        claude_version=_version_pair()[0],
+        codex_version=None,
+        expected_missing_manifest_paths=(CODEX_PLUGIN_MANIFEST_PATH,),
     )
 
 
@@ -229,6 +235,10 @@ def absent_manifest_versions_are_reported() -> bool:
     return _missing_version_is_reported(
         claude_version=None,
         codex_version=None,
+        expected_missing_manifest_paths=(
+            CLAUDE_PLUGIN_MANIFEST_PATH,
+            CODEX_PLUGIN_MANIFEST_PATH,
+        ),
     )
 
 
@@ -367,6 +377,7 @@ def _missing_version_is_reported(
     *,
     claude_version: str | None,
     codex_version: str | None,
+    expected_missing_manifest_paths: tuple[str, ...],
 ) -> bool:
     with TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)
@@ -382,8 +393,12 @@ def _missing_version_is_reported(
         return (
             exit_code != 0
             and plugin_name in stderr
-            and PLUGIN_VERSION_FIELD in stderr
-            and "missing" in stderr
+            and all(
+                manifest_path in stderr
+                for manifest_path in expected_missing_manifest_paths
+            )
+            and stderr.count(f"missing {PLUGIN_VERSION_FIELD} field")
+            == len(expected_missing_manifest_paths)
         )
 
 

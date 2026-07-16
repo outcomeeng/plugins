@@ -47,6 +47,8 @@ CATALOGS = CATALOG_PATHS
 CATALOG_PLUGINS_FIELD: Final = "plugins"
 PLUGIN_NAME_FIELD: Final = "name"
 PLUGIN_VERSION_FIELD: Final = "version"
+CLAUDE_PLUGIN_MANIFEST_PATH: Final = ".claude-plugin/plugin.json"
+CODEX_PLUGIN_MANIFEST_PATH: Final = ".codex-plugin/plugin.json"
 CLAUDE_PLUGIN_VALIDATE_ARGV: Final = ("claude", "plugin", "validate")
 
 
@@ -145,11 +147,13 @@ def check_manifest_parity(root: Path) -> list[str]:
 
         if claude_version is None:
             errors.append(
-                f"{child.name}: .claude-plugin/plugin.json missing version field"
+                f"{child.name}: {CLAUDE_PLUGIN_MANIFEST_PATH} "
+                f"missing {PLUGIN_VERSION_FIELD} field"
             )
         if codex_version is None:
             errors.append(
-                f"{child.name}: .codex-plugin/plugin.json missing version field"
+                f"{child.name}: {CODEX_PLUGIN_MANIFEST_PATH} "
+                f"missing {PLUGIN_VERSION_FIELD} field"
             )
         if claude_version is None or codex_version is None:
             continue
@@ -157,8 +161,8 @@ def check_manifest_parity(root: Path) -> list[str]:
         if claude_version != codex_version:
             errors.append(
                 f"{child.name}: version drift — "
-                f".claude-plugin/plugin.json={claude_version}, "
-                f".codex-plugin/plugin.json={codex_version}"
+                f"{CLAUDE_PLUGIN_MANIFEST_PATH}={claude_version}, "
+                f"{CODEX_PLUGIN_MANIFEST_PATH}={codex_version}"
             )
 
     return errors
