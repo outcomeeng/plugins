@@ -18,5 +18,6 @@ kind = "producer-files"
 producers = [
   "src/plugins/spec-tree/agents/changes-reviewer.md",
   "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+  "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
 ]
 template = "prompt.template.md"
