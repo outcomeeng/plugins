@@ -10,7 +10,8 @@ Complete producer files, ordered complete-producer sets, and named producer sect
 
 ## Invariants
 
-- The same producer text, source kind, optional section selector, prompt template, and case input produce the same rendered prompt.
+- The same producer bytes, source kind, optional section selector, prompt template, and case input produce the same rendered prompt.
+- Complete producers are embedded byte-for-byte within source-owned path boundaries and adaptive Markdown fences whose delimiter exceeds every backtick run in the producer.
 - A change anywhere in a `producer-file` source changes the materialized prompt.
 - A `producer-files` source preserves declaration order, identifies every included path in the rendered prompt, and changes the materialized prompt when any declared producer changes.
 - A change to the selected producer section changes the materialized prompt unless the change is outside the selected section.
@@ -20,12 +21,12 @@ Complete producer files, ordered complete-producer sets, and named producer sect
 ### Testing
 
 - ALWAYS: an eval definition with `prompt_source.kind = "producer-section"` resolves the prompt template relative to the eval directory and resolves the producer path against the repository root, then materializes `prompt.md` from the selected producer section ([conformance])
-- ALWAYS: an eval definition with `prompt_source.kind = "producer-file"` resolves the same paths and materializes `prompt.md` from the complete producer file without parsing it as text ([conformance])
-- ALWAYS: an eval definition with `prompt_source.kind = "producer-files"` resolves a non-empty ordered `producers` list against the repository root and materializes `prompt.md` from every complete producer with stable path boundaries in declaration order ([conformance])
+- ALWAYS: an eval definition with `prompt_source.kind = "producer-file"` resolves the same paths and materializes `prompt.md` from the complete producer bytes inside source-owned path boundaries and an adaptive Markdown fence without parsing the producer ([conformance])
+- ALWAYS: an eval definition with `prompt_source.kind = "producer-files"` resolves a non-empty ordered `producers` list against the repository root and materializes `prompt.md` from every complete producer byte sequence with source-owned path boundaries and adaptive Markdown fences in declaration order ([conformance])
 - ALWAYS: producer-section extraction selects exactly one named XML-like section from the producer text and fails when no matching section or multiple matching sections exist ([mapping])
 - ALWAYS: prompt materialization changes when the selected producer section changes and stays unchanged when unrelated producer text changes ([property])
 - ALWAYS: the `outcomeeng-evals materialize-prompts --check` command fails when a generated `prompt.md` differs from its source-derived rendering and exits successfully when every generated prompt is current ([compliance])
-- NEVER: a producer-coupled eval definition accepts a missing producer path, an empty or duplicate `producer-files` entry, a missing prompt template, a missing section name for `producer-section`, a section name for a complete-file mode, or an unsupported prompt source kind ([conformance])
+- NEVER: a producer-coupled eval definition accepts a missing producer path, an empty or duplicate `producer-files` entry, a missing prompt template, a missing section name for `producer-section`, a section name for a complete-file mode, or an unsupported prompt source kind ([mapping])
 
 ### Audit
 
