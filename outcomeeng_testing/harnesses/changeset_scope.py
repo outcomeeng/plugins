@@ -32,6 +32,7 @@ import sys
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
 from types import ModuleType
+from typing import TypedDict, cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHANGESET_SCOPE_SCRIPTS_DIR = (
@@ -75,8 +76,20 @@ def _fixture_relative_path(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).relative_to(scenario / role).as_posix()
 
 
-STALE_BASE_FIXTURE = json.loads(
-    (STALE_BASE_FIXTURE_DIR / "fixture.json").read_text(encoding="utf-8")
+class StaleBaseFixture(TypedDict):
+    """Typed fields in the inert stale-base whole-scenario manifest."""
+
+    base_branch: str
+    feature_branch: str
+    initial_file: str
+    merged_file: str
+    feature_file: str
+    working_file: str
+
+
+STALE_BASE_FIXTURE = cast(
+    "StaleBaseFixture",
+    json.loads((STALE_BASE_FIXTURE_DIR / "fixture.json").read_text(encoding="utf-8")),
 )
 MERGED_FILE = STALE_BASE_FIXTURE["merged_file"]
 FEATURE_FILE = STALE_BASE_FIXTURE["feature_file"]
