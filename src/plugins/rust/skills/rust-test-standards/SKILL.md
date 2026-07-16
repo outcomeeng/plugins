@@ -157,12 +157,12 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 **Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
 
-| Origin             | What it means                                                 | Where it lives                    |
-| ------------------ | ------------------------------------------------------------- | --------------------------------- |
-| Source-owned       | The production module defines and exports the value           | Import from that module           |
+| Origin             | What it means                                                 | Where it lives                      |
+| ------------------ | ------------------------------------------------------------- | ----------------------------------- |
+| Source-owned       | The production module defines and exports the value           | Import from that module             |
 | Generator-produced | Pure code emits varied values each run                        | `<product>-testing/src/generators/` |
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
-| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file           |
+| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
