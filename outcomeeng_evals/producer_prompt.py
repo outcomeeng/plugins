@@ -14,10 +14,12 @@ from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 PROMPT_SOURCE_TABLE: Final = "prompt_source"
 KIND_FIELD: Final = "kind"
 PRODUCER_FIELD: Final = "producer"
+PRODUCERS_FIELD: Final = "producers"
 SECTION_FIELD: Final = "section"
 TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
 PRODUCER_FILE_KIND: Final = "producer-file"
+PRODUCER_FILES_KIND: Final = "producer-files"
 PROMPT_FIELD: Final = "prompt"
 MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 
@@ -25,6 +27,9 @@ _PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
 _PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
+_PRODUCER_FILES_PLACEHOLDER: Final = "{producer_files}"
+_PRODUCER_BOUNDARY_START: Final = "===== BEGIN PRODUCER: {path} ====="
+_PRODUCER_BOUNDARY_END: Final = "===== END PRODUCER: {path} ====="
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -45,11 +50,31 @@ class ProducerPromptDefinition:
 
     eval_toml_path: Path
     prompt_path: Path
-    producer_path: Path
-    producer_relative_path: str
+    producer_paths: tuple[Path, ...]
+    producer_relative_paths: tuple[str, ...]
     kind: str
     section_name: str | None
     template_path: Path
+
+    @property
+    def producer_path(self) -> Path:
+        """Return the singular producer path for singular source kinds."""
+
+        if len(self.producer_paths) != 1:
+            raise ProducerPromptError(
+                f"{self.kind!r} does not have exactly one producer path"
+            )
+        return self.producer_paths[0]
+
+    @property
+    def producer_relative_path(self) -> str:
+        """Return the singular producer path spelling for singular source kinds."""
+
+        if len(self.producer_relative_paths) != 1:
+            raise ProducerPromptError(
+                f"{self.kind!r} does not have exactly one producer path"
+            )
+        return self.producer_relative_paths[0]
 
 
 def materialize_prompt(eval_toml_path: Path, *, repo_root: Path) -> Path:
@@ -142,6 +167,18 @@ def load_producer_prompt_definition(
 def render_prompt(definition: ProducerPromptDefinition) -> str:
     """Render a prompt template from the declared producer source."""
     template = definition.template_path.read_text(encoding="utf-8")
+    if definition.kind == PRODUCER_FILES_KIND:
+        if _PRODUCER_FILES_PLACEHOLDER not in template:
+            msg = (
+                f"{definition.template_path}: {PRODUCER_FILES_KIND!r} template must "
+                f"contain {_PRODUCER_FILES_PLACEHOLDER}"
+            )
+            raise ProducerPromptError(msg)
+        return _replace_known_placeholders_once(
+            template,
+            {_PRODUCER_FILES_PLACEHOLDER: _render_complete_producer_files(definition)},
+        )
+
     producer_text = definition.producer_path.read_text(encoding="utf-8")
     if definition.kind == PRODUCER_FILE_KIND:
         return _replace_known_placeholders_once(
@@ -165,6 +202,26 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
         _PRODUCER_SECTION_PLACEHOLDER: producer_section,
     }
     return _replace_known_placeholders_once(template, replacements)
+
+
+def _render_complete_producer_files(definition: ProducerPromptDefinition) -> str:
+    blocks: list[str] = []
+    for relative_path, producer_path in zip(
+        definition.producer_relative_paths,
+        definition.producer_paths,
+        strict=True,
+    ):
+        producer_text = producer_path.read_text(encoding="utf-8")
+        separator = "" if producer_text.endswith("\n") else "\n"
+        blocks.append(
+            "\n".join(
+                [
+                    _PRODUCER_BOUNDARY_START.format(path=relative_path),
+                    f"{producer_text}{separator}{_PRODUCER_BOUNDARY_END.format(path=relative_path)}",
+                ]
+            )
+        )
+    return "\n\n".join(blocks)
 
 
 def extract_named_producer_section(
@@ -214,10 +271,15 @@ def _resolve_definition(
     prompt_source: dict[str, Any],
 ) -> ProducerPromptDefinition:
     kind = _required_str(prompt_source, KIND_FIELD, eval_toml_path=eval_toml_path)
-    if kind not in (PRODUCER_SECTION_KIND, PRODUCER_FILE_KIND):
+    supported_kinds = (
+        PRODUCER_SECTION_KIND,
+        PRODUCER_FILE_KIND,
+        PRODUCER_FILES_KIND,
+    )
+    if kind not in supported_kinds:
         msg = (
             f"{eval_toml_path}: unsupported {PROMPT_SOURCE_TABLE}.{KIND_FIELD} "
-            f"{kind!r}; expected {PRODUCER_SECTION_KIND!r} or {PRODUCER_FILE_KIND!r}"
+            f"{kind!r}; expected one of {supported_kinds!r}"
         )
         raise ProducerPromptError(msg)
 
@@ -228,9 +290,9 @@ def _resolve_definition(
             f"{MATERIALIZED_PROMPT_FILENAME!r} for producer-coupled evals"
         )
         raise ProducerPromptError(msg)
-    producer_relative = _required_str(
+    producer_relatives = _producer_relative_paths(
         prompt_source,
-        PRODUCER_FIELD,
+        kind=kind,
         eval_toml_path=eval_toml_path,
     )
     section_name = _optional_section_name(
@@ -244,11 +306,16 @@ def _resolve_definition(
         eval_toml_path=eval_toml_path,
     )
 
-    producer_path = _resolve_repo_relative_path(
-        producer_relative,
-        repo_root=repo_root,
-        eval_toml_path=eval_toml_path,
-        field_name=PRODUCER_FIELD,
+    producer_paths = tuple(
+        _resolve_repo_relative_path(
+            producer_relative,
+            repo_root=repo_root,
+            eval_toml_path=eval_toml_path,
+            field_name=(
+                PRODUCERS_FIELD if kind == PRODUCER_FILES_KIND else PRODUCER_FIELD
+            ),
+        )
+        for producer_relative in producer_relatives
     )
     template_path = _resolve_eval_relative_path(
         template_relative,
@@ -257,9 +324,22 @@ def _resolve_definition(
     )
     prompt_path = eval_toml_path.parent.resolve() / MATERIALIZED_PROMPT_FILENAME
 
-    if not producer_path.is_file():
-        msg = f"{eval_toml_path}: producer file not found: {producer_path}"
+    if len(set(producer_paths)) != len(producer_paths):
+        msg = (
+            f"{eval_toml_path}: {PRODUCERS_FIELD!r} must not resolve to "
+            "duplicate producer files"
+        )
         raise ProducerPromptError(msg)
+    for producer_path in producer_paths:
+        if not producer_path.is_file():
+            field_name = (
+                PRODUCERS_FIELD if kind == PRODUCER_FILES_KIND else PRODUCER_FIELD
+            )
+            msg = (
+                f"{eval_toml_path}: field {field_name!r} producer file not found: "
+                f"{producer_path}"
+            )
+            raise ProducerPromptError(msg)
     if not template_path.is_file():
         msg = f"{eval_toml_path}: prompt template file not found: {template_path}"
         raise ProducerPromptError(msg)
@@ -273,8 +353,8 @@ def _resolve_definition(
     return ProducerPromptDefinition(
         eval_toml_path=eval_toml_path,
         prompt_path=prompt_path,
-        producer_path=producer_path,
-        producer_relative_path=producer_relative,
+        producer_paths=producer_paths,
+        producer_relative_paths=producer_relatives,
         kind=kind,
         section_name=section_name,
         template_path=template_path,
@@ -328,12 +408,52 @@ def _optional_section_name(
             eval_toml_path=eval_toml_path,
         )
     if SECTION_FIELD in prompt_source:
-        msg = (
-            f"{eval_toml_path}: field {SECTION_FIELD!r} is invalid for "
-            f"{PRODUCER_FILE_KIND!r}"
+        field_name = (
+            PRODUCERS_FIELD if kind == PRODUCER_FILES_KIND else PRODUCER_FILE_KIND
         )
+        msg = f"{eval_toml_path}: field {SECTION_FIELD!r} is invalid for {field_name!r}"
         raise ProducerPromptError(msg)
     return None
+
+
+def _producer_relative_paths(
+    prompt_source: dict[str, Any],
+    *,
+    kind: str,
+    eval_toml_path: Path,
+) -> tuple[str, ...]:
+    if kind != PRODUCER_FILES_KIND:
+        if PRODUCERS_FIELD in prompt_source:
+            msg = f"{eval_toml_path}: field {PRODUCERS_FIELD!r} is invalid for {kind!r}"
+            raise ProducerPromptError(msg)
+        return (
+            _required_str(
+                prompt_source,
+                PRODUCER_FIELD,
+                eval_toml_path=eval_toml_path,
+            ),
+        )
+
+    if PRODUCER_FIELD in prompt_source:
+        msg = (
+            f"{eval_toml_path}: field {PRODUCER_FIELD!r} is invalid when "
+            f"{PRODUCERS_FIELD!r} defines {PRODUCER_FILES_KIND!r}"
+        )
+        raise ProducerPromptError(msg)
+    value = prompt_source.get(PRODUCERS_FIELD)
+    if not isinstance(value, list) or not value:
+        msg = (
+            f"{eval_toml_path}: field {PRODUCERS_FIELD!r} must be a non-empty "
+            "list of repository-relative paths"
+        )
+        raise ProducerPromptError(msg)
+    if any(not isinstance(item, str) or not item for item in value):
+        msg = (
+            f"{eval_toml_path}: field {PRODUCERS_FIELD!r} must contain only "
+            "non-empty strings"
+        )
+        raise ProducerPromptError(msg)
+    return tuple(value)
 
 
 def _resolve_repo_relative_path(

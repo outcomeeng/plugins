@@ -18,8 +18,11 @@ from outcomeeng_testing.evals.producer_prompt import (
     assert_materialization_rejects_prompt_template_alias,
     assert_materialized_prompt_changes_only_with_selected_section,
     assert_materializes_prompt_from_named_producer_section,
+    assert_materializes_prompt_from_ordered_complete_producer_files,
     assert_missing_producer_section_is_rejected,
     assert_non_step_tags_do_not_match_section_name,
+    assert_invalid_producer_files_definitions_are_rejected,
+    assert_producer_files_check_detects_each_source_change,
     assert_required_prompt_source_fields_are_rejected_when_missing,
     assert_selected_section_preserves_nested_step_section,
     assert_selected_section_rejects_literal_step_closing_delimiter,
@@ -34,6 +37,18 @@ def test_materializes_prompt_from_named_producer_section() -> None:
 
 def test_materializes_prompt_from_complete_producer_file() -> None:
     assert_materializes_prompt_from_complete_producer_file()
+
+
+def test_materializes_prompt_from_ordered_complete_producer_files() -> None:
+    assert_materializes_prompt_from_ordered_complete_producer_files()
+
+
+def test_producer_files_check_detects_each_source_change() -> None:
+    assert_producer_files_check_detects_each_source_change()
+
+
+def test_invalid_producer_files_definitions_are_rejected() -> None:
+    assert_invalid_producer_files_definitions_are_rejected()
 
 
 def test_producer_file_rejects_section_selector() -> None:

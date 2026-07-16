@@ -6,13 +6,20 @@ owned_paths = [
   "spx/21-spec-tree.enabler/76-merging.enabler/merging.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/evals/transport-selection/**",
   "src/plugins/spec-tree/skills/merge/**",
+  "src/plugins/spec-tree/skills/merging-standards/**",
   "dist/claude/spec-tree/skills/merge/**",
+  "dist/claude/spec-tree/skills/merging-standards/**",
+  "spx/local/merging.md",
 ]
 smoke_cases = ["notes-only-routes-direct-push", "mixed-note-plus-spec-routes-github"]
 threshold = 0.85
 trials = 1
 
 [prompt_source]
-kind = "producer-file"
-producer = "src/plugins/spec-tree/skills/merge/SKILL.md"
+kind = "producer-files"
+producers = [
+  "src/plugins/spec-tree/skills/merge/SKILL.md",
+  "src/plugins/spec-tree/skills/merging-standards/SKILL.md",
+  "spx/local/merging.md",
+]
 template = "prompt.template.md"
