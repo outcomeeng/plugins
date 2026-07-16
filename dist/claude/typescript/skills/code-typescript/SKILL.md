@@ -268,8 +268,11 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 **If NOT working on spec-tree work item**: Proceed directly to implementation mode with provided spec.
 </context_loading>
 
-<two_modes>
-This skill operates in one of two modes depending on the input:
+<intake>
+Classify the input as implementation material or rejection feedback before selecting a workflow.
+</intake>
+
+<routing>
 
 | Input                                         | Mode               | Workflow                                          |
 | --------------------------------------------- | ------------------ | ------------------------------------------------- |
@@ -278,7 +281,7 @@ This skill operates in one of two modes depending on the input:
 | Rejection feedback from a reviewer or auditor | **Remediation**    | `${CLAUDE_SKILL_DIR}/workflows/remediation.md`    |
 
 Determine the mode from the input, then follow the appropriate workflow.
-</two_modes>
+</routing>
 
 <core_principles>
 
