@@ -25,7 +25,7 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the worktree the operator means to update rather than assuming the marketplace-source checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
+1. **Resolve the paths.** Template: `${SKILL_DIR}/templates/instruction-block.md`. Bind `<repo-root>` to `$repo_root` when the argument is non-empty; otherwise bind it to the current working directory. Because `CLAUDE.md` and `AGENTS.md` are worktree-sensitive, confirm `<repo-root>` is the operator-selected worktree rather than assuming the current directory or another checkout. The generator writes the router block into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md`, bootstraps a `shared` region, and removes the retired generated instruction files under `<repo-root>/spx/` when present.
 
 2. **Detect status.** Run:
 
@@ -62,19 +62,19 @@ The canonical template is the skill-owned file at `${SKILL_DIR}/templates/instru
 
    The router block re-renders first in each file, each root file preserves its product-owned content and every `shared` region body, the router is scoped to the detected languages and its own harness, on first encounter the bootstrap pass wraps at most one `shared` region, symlinked root instruction files are replaced by regular file copies, and obsolete `spx/` instruction files are removed. When only one of the two root instruction files exists, the missing file is first seeded with a copy of the existing file's content before its router block is inserted.
 
-5. **Verify, then report.** Re-run the Step 2 `--check` command; it must now print `current` — this closing check confirms the write landed, the router block is at the installed version, and no `shared` region differs between the two files. The root instruction files are git-tracked, so an unexpected change stays recoverable through the product's own version control before commit. Then report the version transition, detected enabled-language list, root instruction files written, any `shared` region reconciled and the side chosen, and whether obsolete `spx/` instruction files were removed.
+5. **Verify, then report.** Re-run the Step 2 `--check` command; it must now print `current` — this closing check confirms the write landed, the router block is at the installed version, and no `shared` region differs between the two files. When a root instruction file is tracked, its prior content remains recoverable through the product's version control before commit; when it is newly created or untracked, report that state and preserve the file for operator inspection. Then report the version transition, detected enabled-language list, root instruction files written, any `shared` region reconciled and the side chosen, and whether obsolete `spx/` instruction files were removed.
 
 </workflow>
 
 <examples>
 
-**Stale router regenerated.** Before, `CLAUDE.md` begins with `<!-- SPEC-TREE v0.23.0 langs:python -->` while the installed template version is `0.24.0`; `AGENTS.md` carries the same stale version and both files share `<!-- SPEC-TREE:shared commands -->`. The opening check prints `stale`, reconcile prints no ambiguity, write replaces both router blocks, and the closing check prints:
+**Stale router regenerated.** Before, `CLAUDE.md` and `AGENTS.md` carry a router version lower than the installed template version and both files share `<!-- SPEC-TREE:shared commands -->`. The opening check prints `stale`, reconcile prints no ambiguity, write replaces both router blocks, and the closing check prints:
 
 ```text
 current
 ```
 
-Afterward, both files begin with `<!-- SPEC-TREE v0.24.0 langs:python -->`, the `commands` region body is unchanged and byte-identical, and independent content remains in its original file.
+Afterward, both files carry the installed router version, the `commands` region body is unchanged and byte-identical, and independent content remains in its original file.
 
 **Recency tie requires one choice.** Before, the `commands` region differs between `CLAUDE.md` and `AGENTS.md`, and both region-touching commits have the same timestamp. Reconcile exits non-zero with:
 
@@ -88,9 +88,9 @@ After the operator selects `claude`, rerun with `--reconcile --from claude`; bot
 
 <failure_modes>
 
-**Wrong checkout updated**
+**Wrong worktree updated**
 
-- **What happened:** Claude updated the marketplace-source checkout instead of the assigned worktree.
+- **What happened:** Claude updated a different checkout instead of the operator-selected worktree.
 - **Why it failed:** The root argument was described but never bound, so an explicit product path could be ignored.
 - **How to avoid:** Bind `<repo-root>` from `$repo_root` and confirm that path before the first check.
 
