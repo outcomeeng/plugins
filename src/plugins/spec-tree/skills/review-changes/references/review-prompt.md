@@ -58,6 +58,8 @@ Every finding carries exactly one `severity`:
 
 Assign `blocking` only when the diff and loaded governing context establish the consequence. A conditional or worst-case finding caused by an omitted fact is `debt`; uncertainty never supplies the deterministic evidence `blocking` requires. In particular, the absence of a test-file change does not prove that existing parameterized or property evidence misses new behavior. Classify that evidence concern as `debt` unless the loaded test evidence directly establishes the coverage gap.
 
+A direct violation of an `ALWAYS` or `NEVER` rule establishes finding validity, not a deterministic merge-safety consequence by itself. Formatting, naming, and style defects are `debt` unless the diff and loaded context also establish a concrete parser, build, test, runtime, security, or data-integrity failure caused by the defect.
+
 Judge validity and severity only. The review consumer applies disposition independently of severity; do not recommend tracking, waiver, merge, or any other disposition, and do not introduce a third, scope-shaped severity.
 
 ## Finding Shape
