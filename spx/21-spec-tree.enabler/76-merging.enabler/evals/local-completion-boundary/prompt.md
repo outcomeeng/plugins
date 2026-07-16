@@ -1,15 +1,12 @@
 <!-- Generated from the complete producer at src/plugins/spec-tree/skills/merge/SKILL.md. -->
 
-Apply the complete merge producer below to the supplied lifecycle state. Return exactly one JSON object with these mandatory fields:
+Apply the complete merge producer below to the supplied lifecycle state. Derive every classification and action sequence exclusively from that producer. Return exactly one JSON object with these mandatory fields:
 
-- `completion_state`: `UNFINISHED`, `LOCAL_SCOPE_COMPLETE`, `GATE_STOP`, or `NO_CHANGES`
-- `next_action`: `ENTER_MERGE`, `ENTER_DEPLOY`, `ENTER_RELEASE`, `ENTER_CLOSE`, `PRESENT_PRE_MUTATION_CONFIRMATION`, `STOP_AT_LIFECYCLE_GATE`, `STOP_LOCAL_SCOPE`, or `NO_MERGE_NEEDED`
-- `confirmation_required`: boolean
+- `flow_state`: `CONTINUE`, `COMPLETE`, `BLOCKED`, or `NO_CHANGE`
+- `next_action`: `INVOKE_MANAGE_GITHUB_PR`, `DRIVE_DIRECT_PUSH`, `RUN_DEPLOY`, `RUN_RELEASE`, `ENTER_CLOSE`, `PRESENT_PRE_MUTATION_CONFIRMATION`, `STOP_AT_LIFECYCLE_GATE`, `STOP_LOCAL_SCOPE`, or `NO_MERGE_NEEDED`
 - `operator_input_required`: boolean
 - `blocking_gate`: the gate label, or `none`
-- `reason`: `branch-ahead`, `terse-followup`, `overlay-confirmation`, `local-only`, `lifecycle-gate`, `no-ahead-commits`, `merge-complete-deploy`, `deploy-complete-release`, or `delivery-complete-close`
-
-`UNFINISHED` means any lifecycle action remains, including presenting an overlay-required confirmation or entering close through `/handoff`. `LOCAL_SCOPE_COMPLETE` is valid only for an explicitly local-only task paired with `STOP_LOCAL_SCOPE`; never pair it with `PRESENT_PRE_MUTATION_CONFIRMATION`, `ENTER_MERGE`, `ENTER_DEPLOY`, `ENTER_RELEASE`, or `ENTER_CLOSE`.
+- `ordered_actions`: an object whose numeric string keys (`1`, `2`, ...) preserve the required action order and whose values use the `next_action` vocabulary; use an empty object when no action remains
 
 ---
 name: merge
@@ -17,7 +14,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, Agent, {{! tool('ask_user') !}}, Read, Write, Edit, Bash, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*)
+allowed-tools: Skill, Agent, {{! tool('ask_user') !}}, Read, Write, Edit, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*)
 ---
 
 <objective>
