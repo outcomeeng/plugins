@@ -13,7 +13,7 @@ This audit runs inside either the dispatched `test-evidence-auditor` context via
 </dispatch_gate>
 
 <objective>
-A verdict on Python test evidence — APPROVED, REJECTED with each finding naming the failed evidence property and gap, or a composition-only NOT_APPLICABLE result for a retired path outside every current evidence chain.
+A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
 </objective>
 
 <constraints>

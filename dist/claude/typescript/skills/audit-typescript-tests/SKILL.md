@@ -400,7 +400,7 @@ How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructur
 
 The TypeScript test verdict is sound when:
 
-- Every in-scope assertion was judged on all eight Gate 1 steps and Gate 2 with none skipped — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
+- Every applicable rule was judged: each in-scope assertion received all eight Gate 1 steps — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering; Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
