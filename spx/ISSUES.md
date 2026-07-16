@@ -26,7 +26,7 @@ Identified during the lean-template migration of the product-level decision reco
 
 ## Replace machine-specific process hygiene with a portable silent load waiter
 
-The root [`## Process hygiene`](../AGENTS.md#process-hygiene) policy grew from a machine-specific failure: the harness expected the macOS `pgrep`, while a Homebrew GNU `pgrep` installation behaved incompatibly and contributed to process-ID and file-descriptor exhaustion. The resulting blanket prohibition on sleeping processes generalized that diagnosis into shipped agent guidance. This repository is the least important consumer; the replacement must work from an installed plugin in consumer repositories with unknown layouts and tooling.
+The deleted root `## Process hygiene` policy grew from a machine-specific failure: the harness expected the macOS `pgrep`, while a Homebrew GNU `pgrep` installation behaved incompatibly and contributed to process-ID and file-descriptor exhaustion. The resulting blanket prohibition on sleeping processes generalized that diagnosis into shipped agent guidance. This repository is the least important consumer; the replacement must work from an installed plugin in consumer repositories with unknown layouts and tooling.
 
 **Resolution shape**: replace agent-owned load arithmetic, timer selection, and repeated checks with one portable, standard-library-only Python process shipped inside the plugin runtime. The agent invokes the helper once and follows its exit status. The helper owns observation, interval selection, sleeping, rechecking, and the readiness decision.
 
@@ -43,4 +43,4 @@ The implementation must establish the governing decision before lower layers ado
 
 Verification covers falling, rising, and persistently high synthetic load sequences; the 60-second minimum; normalization by CPU count; readiness and terminal error exits; complete silence before the final JSON; one-document output; zero subprocess and file creation; and identical generated runtime delivery. The tests use controllable load and clock seams so verification never waits for wall-clock minutes.
 
-After the helper, governing decisions, guidance, tests, and both generated runtime surfaces are verified, remove the entire root [`## Process hygiene`](../AGENTS.md#process-hygiene) section. Its incident-specific rules must not survive beside the replacement contract.
+The root `## Process hygiene` section is absent; the replacement contract owns host-load guidance without retaining its incident-specific rules.
