@@ -44,12 +44,13 @@ Build an expected coverage inventory before invoking any language concern skill.
 - audit kind: `code`, `tests`, or `architecture`
 - language partition
 - concern partition: `code`, `tests`, or `architecture`
-- subject paths or explicit unsupported-file marker
+- the complete non-empty list of project paths inspected by the concern, or an explicit unsupported-file marker; each path becomes one SPX scope unit whose preserved `subject` field is that exact path
 - stable expected-producer identity: plugin name, skill name, audit class, language, and concern
 - producer provenance: owning plugin version when the concern skill exists; null with reason `missing-skill` or `unsupported` when no executable concern skill can run
 - execution producer identity: the wrapper and SPX command driver that recorded the unit, present for every unit so missing-skill and unsupported classifications still have provenance for the recorder
 - coverage requirement: `required` or `optional`
 - coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
+- concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
 Coverage statuses have these complete semantics:
 
@@ -62,7 +63,9 @@ Coverage statuses have these complete semantics:
 | `skipped`        | The unit is required and its producer is available, but dispatch stopped after another required unit was classified `unsupported` or `missing-skill`. |
 | `incomplete`     | The unit is required and dispatch began, but no accepted concern result was recorded.                                                                 |
 
-Record the inventory with `spx verification run scope add` as soon as each unit is planned or classified. A missing required concern skill, unsupported implementation-owned artifact, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
+Plan the complete inventory before dispatch, but NEVER mark a planned unit `audited`. Invoke each concern skill inside the open run. After that concern returns, immediately record one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited` before inspecting the next concern. Record each returned finding immediately after those scope rows and associate it with the matching path-scoped unit. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. When a concern cannot return a complete result, record `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
+
+A missing required concern skill, unsupported implementation-owned artifact, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
 
 When the caller supplied an explicit live file list, build the expected coverage inventory from that list rather than from the committed changeset alone. A live file that receives no concern result is a coverage gap even when it is absent from `<head>`.
 
