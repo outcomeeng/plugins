@@ -17,12 +17,12 @@ This audit runs in the skill-auditor agent's isolated context. When this skill l
 </dispatch_gate>
 
 <objective>
-A verdict on skill content against `/skill-standards` and `/agent-prompt-standards` — APPROVED, or REJECTED with each finding naming the file and line, the violated rule, the evidence, and the required correction. Findings are assessed as keep-these-aspects, worth-improving, or must-fix.
+A verdict on skill content against `/skill-standards` and `/agent-prompt-standards` — APPROVED, or REJECTED with each rejecting finding naming the file and line, the violated rule, the evidence, and the required correction.
 </objective>
 
 <constraints>
 - NEVER modify files during audit - ONLY analyze and report findings
-- NEVER report a score; report contextual judgment across the full skill-authoring surface
+- NEVER report a score or a non-rejecting observation; emit only the terminal verdict and rejecting findings
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
 - NEVER implement, patch, or generate replacement content; each rejecting finding states only the required correction needed to satisfy the violated rule
@@ -57,11 +57,11 @@ During audits, prioritize evaluation of:
 1. Read `/skill-standards` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 2. Read `/agent-prompt-standards` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
-4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
+4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against. When scoped content includes any file under `scripts/`, also read `/skill-standards`'s `references/script-standards.md` and audit every bundled script against its validation-message and pre-inclusion testing rules.
 5. Handle edge cases:
    - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
    - If YAML frontmatter is malformed, flag as critical issue.
-   - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
+   - If the skill references external files that don't exist, emit a rejecting finding naming each broken reference and its required correction.
    - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
    - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
 6. Evaluate the target skill against the standards loaded in steps 1-2.
@@ -213,13 +213,13 @@ Flag these issues:
 - **no_failure_modes**: Skill lacks documentation of what went wrong in practice
 - **abstract_examples**: Examples that show patterns but not concrete values/outputs
 - **orphaned_references**: Files in `references/` not cited from SKILL.md or any workflow file. Verify with `grep -rn "<filename>" <skill-dir>/`. Orphans inflate token cost via speculative reads (Claude tends to open siblings of cited references) and indicate either dead content or a missing cross-reference. Flag as critical: either delete the file or add an explicit `<required_reading>` reference from the workflow that needs it.
-- **heavy_context_block**: `<context>` bash commands that produce verbose or growing output (session lists, full file contents, cache enumerations) without filtering. The `<context>` block fires on every skill load — including false-positive activations from directive descriptions — so heavy commands compound. Flag as recommendation: filter the command (e.g., `--status doing,todo`, `head -N`) or move it to the workflow file that consumes the data.
+- **heavy_context_block**: `<context>` bash commands that produce verbose or growing output (session lists, full file contents, cache enumerations) without filtering. The `<context>` block fires on every skill load — including false-positive activations from directive descriptions — so heavy commands compound. Reject and require a bounded command (e.g., `--status doing,todo`, `head -N`) or relocation to the workflow file that consumes the data.
 - **orphaned_argument**: an argument declared in `arguments` that the body never substitutes, or a `$name` substituted in the body that `arguments` never declares. Flag as critical — the skill takes input it ignores, or substitutes an undefined name.
-- **missing_argument_hint**: the skill takes arguments but omits `argument-hint`, so `/` autocomplete gives the user no signal about expected input. Flag as recommendation.
+- **missing_argument_hint**: the skill takes arguments but omits `argument-hint`, so `/` autocomplete gives the user no signal about expected input. Reject and require an accurate hint.
 - **argument_capture_regression**: a free-form instruction skill replaces `$ARGUMENTS` with a named positional argument or numbered token without proving the replacement captures the same whole input. Flag as critical — the skill can silently drop words from user instructions.
-- **codex_rendering_assumption**: authored source claims Codex directly consumes Claude-only SKILL.md syntax rather than treating Codex output as a generated rendering concern. Flag as recommendation when wording only confuses authors; flag as critical when it causes a broken generated Codex surface.
+- **codex_rendering_assumption**: authored source claims Codex directly consumes Claude-only SKILL.md syntax rather than treating Codex output as a generated rendering concern. Reject when the assumption produces a broken or misleading generated Codex surface; otherwise emit no finding.
 - **overbroad_allowed_tools**: `allowed-tools` grants bare `Bash`, `Bash(git *)`, or a destructive/network tool the skill's task does not need, re-admitting the destructive or exfiltrating commands a narrower grant would bar. Flag as critical for security-sensitive skills.
-- **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Flag as recommendation — it taxes every load without payoff.
+- **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Reject because it taxes every load without payoff.
 - **nonportable_bundled_file_reference**: skill prose references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token. Flag as critical: authored source must use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` for files bundled with the current skill, or describe the owning workflow/capability when the file belongs elsewhere. {!# no-codex-skill-dir-rewrite #!}
 
 </area>
@@ -255,7 +255,7 @@ Apply judgment based on skill complexity and purpose:
 - MUST have verification gates before destructive operations
 - MUST have failure modes from actual usage
 - MUST have concrete examples showing before/after with real values
-- Flag missing operational content as critical, not recommendation
+- Reject missing operational content
 
 Always explain WHY something matters for this specific skill, not just that it violates a rule.
 </contextual_judgment>
@@ -272,7 +272,7 @@ Some skills were created before pure XML structure became the standard. When aud
 <reference_file_guidance>
 Reference files in the `references/` directory should also use pure XML structure (no markdown headings in body). However, be proportionate with reference files:
 
-- If reference files use markdown headings, flag as recommendation (not critical) since they're secondary to SKILL.md
+- Do not reject a reference file solely for markdown headings when its governing structure permits them; emit no non-rejecting style observation
 - Still recommend migration to pure XML
 - Reference files should still be readable and well-structured
 - Table of contents in reference files over 100 lines is acceptable
@@ -291,20 +291,19 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 <verdict_format>
 Emit one terminal verdict as the first line.
 
-- Emit `APPROVED` when no must-fix finding exists.
-- Emit `REJECTED` when one or more must-fix findings exist or the audit cannot complete.
-- After `REJECTED`, list every must-fix finding as `file:line — violated rule: evidence. Required correction: action.`
-- Keep-these-aspects and worth-improving observations may follow the terminal verdict under their category names. They never change `APPROVED` to `REJECTED`.
+- Emit `APPROVED` when no rejecting finding exists.
+- Emit `REJECTED` when one or more rejecting findings exist or the audit cannot complete.
+- After `REJECTED`, list every rejecting finding as `file:line — violated rule: evidence. Required correction: action.`
 - Emit no JSON envelope, numeric score, mutation offer, or prose before the terminal verdict.
   </verdict_format>
 
 <failure_modes>
 
-**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a must-fix the `actor_or_activity_objective` flag exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
+**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a rejecting finding the `actor_or_activity_objective` flag exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
 **Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover all seven areas before issuing the verdict.
 
-**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of grouping findings as keep / worth-improving / must-fix, turning a verdict into a rating the author cannot act on. Each finding names a location, a standard, and a consequence; a score names none of them. Emit findings, never scores.
+**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of issuing a terminal verdict with concrete rejecting findings, turning a verdict into a rating the author cannot act on. Each rejecting finding names a location, a standard, evidence, and a required correction; a score names none of them. Emit the verdict and rejecting findings, never scores.
 
 </failure_modes>
 
@@ -312,8 +311,8 @@ Emit one terminal verdict as the first line.
 The verdict is sound when:
 
 - Every evaluation area was judged with none skipped — YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, command capabilities, prompt craft, and anti-patterns (coverage-complete).
-- The verdict states an overall APPROVED/REJECTED with findings grouped keep-these-aspects / worth-improving / must-fix.
-- Each finding is falsifiable: it names the location (file:line), the standard at issue, and the consequence — every keep names what degrades if removed, every must-fix names the failure it prevents.
+- The verdict states `APPROVED` or `REJECTED`; only a rejected verdict carries findings.
+- Each rejecting finding is falsifiable: it names the location (file:line), the standard at issue, the evidence, and the required correction.
 - The same SKILL.md yields the same verdict.
 
 </success_criteria>
@@ -325,22 +324,21 @@ Before presenting audit findings, verify:
 
 - [ ] All evaluation areas assessed (including operational effectiveness)
 - [ ] Findings have file:line locations
-- [ ] Emitted verdict rows provide a clear summary
-- [ ] Strengths identified
+- [ ] The first output line is exactly `APPROVED` or `REJECTED`
+- [ ] An approved verdict emits no findings; a rejected verdict emits every rejecting finding
 
 **Accuracy checks**:
 
 - [ ] All line numbers verified against actual file
-- [ ] Recommendations match skill complexity level
+- [ ] Rejection thresholds reflect the target skill's complexity and governing standards
 - [ ] Context appropriately considered (simple vs complex skill)
 - [ ] Operational effectiveness evaluated proportionally (critical for complex/migration skills)
 
 **Quality checks**:
 
 - [ ] Findings are specific and actionable
-- [ ] Every "Keep" entry names the concrete consequence of removing the strength
-- [ ] Every "Worth improving" entry names the specific gain, not a generic improvement
-- [ ] Every "Must fix" entry names what specifically breaks if left unfixed
+- [ ] Every rejecting finding names the violated rule, evidence, required correction, and concrete failure it prevents
+- [ ] No non-rejecting observations, strengths, recommendations, or mutation offers appear
 - [ ] No arbitrary rules applied without contextual justification
 
 **Operational effectiveness checks** (for complex skills):
