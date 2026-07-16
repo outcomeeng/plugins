@@ -18,7 +18,7 @@ This is a reference skill. Skills that create, update, or delete a heartbeat or 
 Load `/task-tracking-standards` before any workflow:
 
 - creates or refreshes a heartbeat for a workflow whose governing skill has no foreground wait command
-- schedules a delayed rollout, host-load, or external-convergence re-check
+- schedules a delayed rollout or external-convergence re-check
 - deletes a heartbeat because acceptance is reached, the work item closed, or the only remaining action is operator approval
 - launches local background work the harness tracks — a backgrounded command or a subagent — and must choose between ending the turn for the completion notification and running it in the foreground with an adequate timeout
 
@@ -33,7 +33,7 @@ Load `/task-tracking-standards` before any workflow:
 - On wake-up, reload the named workflow skills, `/task-tracking-standards`, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
 - "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
-- High host load or delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
+- Delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
 - Use one active heartbeat per work item. Refresh it instead of creating duplicates.
 - Delete a heartbeat only when no timer-backed repository action remains.
 
@@ -75,7 +75,7 @@ NEVER copy these into a heartbeat:
 </stale_context_boundary>
 
 <lifecycle>
-Create tracking when active work is blocked only by time, host load, external convergence, or a delayed repository-governed action whose governing skill has no foreground wait command.
+Create tracking when active work is blocked only by time, external convergence, or a delayed repository-governed action whose governing skill has no foreground wait command.
 
 Refresh tracking on a new commit, run id, work-item id, blocker, approval boundary, failure classification, or next repository action. Refreshing re-schedules the next fire and updates the pointer when the work-item id itself changes; it never writes the blocker, approval boundary, or failure classification into the prompt — that state is reconstructed on wake-up, and anything a later fire needs is written to a durable artifact.
 
@@ -101,7 +101,7 @@ Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded
 </runtime_timer>
 
 <local_background_work>
-A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or host-load convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
+A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or service convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
 
 When a backgrounded shell command or a background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
 
@@ -132,7 +132,6 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 
 - Queued, in-progress, and pending states outside the PR-check lifecycle: report material changes, refresh the heartbeat, and continue on the next wake-up.
 - Failed, cancelled, or timed-out external work: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md` (never into the prompt), and keep the work active unless the next step requires operator approval, credentials, or judgment.
-- High host load: record the load condition, schedule the next load-aware checkpoint, and avoid starting heavy validation.
 - Missing approval: stop the work item at the approval boundary, delete heartbeat tracking, and ask with the identifiers, effect, and non-effect required by the owning workflow.
 
 </failure_handling>

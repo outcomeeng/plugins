@@ -369,7 +369,6 @@ An explicit request to inspect, archive, or release identified session documents
 
 <!-- /SPEC-TREE -->
 
-<<<<<<< HEAD
 # Outcome Engineering Plugin Marketplace
 
 This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
@@ -479,38 +478,6 @@ Historical plugin implementations are pruned from this repository. The history t
 - ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
 - ⚠️ **Spec-only validation stays on the spec lane** - When the change only adds or edits specs, decisions, EXCLUDE entries, or Markdown instructions, use the spec-only command pair in this repo's command surface above. Do not run `spx validation all`, install Node dependencies, or run ESLint/TypeScript validation unless JavaScript/TypeScript source, package manager files, validation config, or the validation pipeline changed, or the user explicitly asks for the full gate.
-
-## Process hygiene
-
-This harness spawns helper processes — a periodic `pgrep` to monitor background tasks, plus a shell and its children for every Bash call — and does not reliably reap them. A construct that creates many short-lived children (a poll loop), a long-lived child the monitor keeps polling (`gh run watch`, a backgrounded `sleep`, an idle keep-alive command), or several heavy process trees running at once will exhaust the per-user process limit: `posix_spawn` then returns `EAGAIN`, the monitor's `pgrep` keeps failing, and the agent is force-killed. The leak is not fixable here, so the rules below keep agents from triggering it. They apply with the tool names of the current harness — Codex's `exec_command` is the equivalent of Bash, and so on.
-
-### Waiting and re-checking never use shell polling
-
-No `while`/`until` poll loop. No `gh run watch`, in any form. No `sleep` to wait or pace work — foreground *or* backgrounded, on its own or in a loop. For GitHub PR checks inside the merge lifecycle, the exact wait command is:
-
-```bash
-gh pr checks <pr-number> --watch --fail-fast --interval 30
-```
-
-Run it as the active wait command. Do not append `&`, do not wrap it in a loop, and do not substitute `gh run watch`. After it exits, inspect the terminal check result, then run one full merge-gate inspection before acting: PR state, check rollup, PR-level comments, formal reviews, and review-thread comments. The foreground watcher exception applies only to `gh pr checks` inside the PR lifecycle.
-
-For non-PR waits where no process needs to stay open, use the runtime timer or automation facility instead of shell polling. The scheduled prompt must name the repository, branch or PR, current thread purpose, and exact state to inspect.
-
-If an earlier turn left a `sleep` or a poll loop running, identify it and terminate it by PID before doing anything else.
-
-### Background commands: one at a time, short-lived, never a keep-alive
-
-Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one at a time, only when the work genuinely must continue across a wait, and only when it will exit on its own. Never start a background command whose job is to "stay alive" — a pile of monitored processes (or one that never exits) is the `pgrep` storm itself.
-
-### Heavy subprocess trees: sparingly, serially, load-aware
-
-`just check-full`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime` and compare the sustained loadavg (the 5- and 15-minute figures) to the host's core count (`nproc`, or `sysctl -n hw.ncpu` on macOS): if loadavg exceeds it the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run the targeted local gate first; reserve `just check-full` for CI parity or explicit full-gate requirements.
-
-### Other forks add up
-
-- Don't spawn subagents you don't need — each is its own process tree.
-- Redirect a long-running command's output to a file (`> /tmp/check.log 2>&1`) and read it in a separate call, rather than piping through `grep`/`tail`/`head` — the pipeline holds extra processes and file descriptors open for the command's lifetime.
-- Search patterns that contain backticks, `$()`, `!`, or shell metacharacters must be single-quoted or passed as fixed strings (`rg -F`) so the shell never performs command substitution while composing a read-only search.
 
 ## Plugin Portability Constraints
 
