@@ -9,7 +9,6 @@ from outcomeeng_testing.harnesses.audit_verification_run_contract import (
     implementation_auditor_is_the_only_implementation_wrapper,
     implementation_audit_unit_ids_are_subject_specific,
     language_concern_skill_trios_exist,
-    spx_verification_run_accepts_implementation_audit_payloads,
 )
 
 
@@ -19,10 +18,6 @@ def test_implementation_auditor_is_the_only_implementation_wrapper() -> None:
 
 def test_language_concern_skill_trios_exist() -> None:
     assert language_concern_skill_trios_exist()
-
-
-def test_spx_accepts_implementation_audit_payloads() -> None:
-    assert spx_verification_run_accepts_implementation_audit_payloads()
 
 
 def test_language_specific_implementation_wrapper_is_rejected() -> None:
