@@ -3,6 +3,7 @@ name: audit-adr
 description: >-
   ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
   to audit an ADR; the main conversation reaches this audit only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -139,7 +140,7 @@ Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJE
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
 
 The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `debt`; this binary ADR gate emits `blocking` for every finding that rejects the ADR.
 

@@ -57,3 +57,21 @@ Open gaps:
 - Audit class/kind validation needs a compatibility matrix for `instructions`, `spec`, and `implementation` classes so impossible combinations such as an implementation audit of `skill` or an instructions audit of `code` are rejected by schema validation.
 - Audit terminal rollup is planned, but the public `finish` contract still speaks as caller-supplied terminal status. SPX should decide whether audit `finish` derives status without a caller value or validates a supplied value against the derived rollup, and specify the rejected mismatch behavior.
 - Prior-run selection must distinguish gating runs over committed heads from advisory runs over live modified or untracked files. The run-set selector should expose run purpose directly rather than infer authority from scope payload prose.
+- Finding severity vocabulary is not reconciled across the artifact-type audit skills. `audit-adr` emits the audit-run severities `blocking`/`debt`; `audit-pdr`, `audit-tests`, `audit-specs`, and `audit-eval-evidence` emit `REJECT`/`WARNING`/`INFO`. The governing authority conflicts: `/merging-standards` `<review_classification>` mandates `BLOCKING`/`DEBT` and forbids severity-rank labels, while its `<auditor_verdicts>` references a `REJECT` finding. SPX should define the single canonical finding-severity enum for audit-run verdicts, after which the four non-`blocking`/`debt` skills reconcile to it in one pass. Deferred here to avoid locking a shape before the contract exists.
+
+## Roster coupling remains in language-plugin audit skills
+
+The audit decision, the audit enabler, and the `python`/`typescript`/`rust`
+language enablers name the auditor set by the artifact-type-auditor invariant,
+not by concrete agent name. The language plugins' own audit skills still
+hardcode the roster: `audit-{python,typescript,rust}-architecture` name
+`adr-auditor` and `audit-{python,typescript,rust}-tests` name
+`test-evidence-auditor` (multiple occurrences each). A skill naming the agent
+that composes it is the same dependency-names-dependent coupling the governing
+docs were decoupled to remove.
+
+Deferred by operator decision to keep the current change scoped to the
+governing-doc layer. Follow-up: replace the hardcoded `adr-auditor` /
+`test-evidence-auditor` mentions in those six `SKILL.md` files with the generic
+"artifact-type auditor that governs decision records / test evidence" phrasing
+(keeping the correctly-named `implementation-auditor`), then rebuild `dist/`.

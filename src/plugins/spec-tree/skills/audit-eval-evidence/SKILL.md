@@ -4,6 +4,7 @@ description: >-
   Eval-evidence audit methodology preloaded by the eval-evidence-auditor agent.
   Dispatch eval-evidence-auditor to audit eval evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -168,7 +169,7 @@ Scan all findings across all `[eval]` assertions. If any assertion has a propert
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. Skills never hand-format markdown verdicts.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
 
 The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings, `WARNING` or `INFO` for non-blocking observations.
 

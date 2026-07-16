@@ -3,6 +3,7 @@ name: audit-pdr
 description: >-
   PDR audit methodology preloaded by the pdr-auditor agent. Dispatch pdr-auditor
   to audit a PDR; the main conversation reaches this audit only through that agent.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -177,7 +178,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload returned to the caller.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
 
 The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
 
@@ -188,7 +189,19 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
   "target": "<pdr-file-path>",
   "overall": "APPROVED | REJECTED",
   "rows": [
-    { "name": "content-classification", "status": "PASS | FAIL", "findings": [] },
+    {
+      "name": "content-classification",
+      "status": "PASS | FAIL",
+      "findings": [
+        {
+          "location": "<section or property>",
+          "rule": "<violation pattern>",
+          "evidence": "<quoted artifact evidence>",
+          "message": "<one-line detail>",
+          "severity": "REJECT | WARNING | INFO"
+        }
+      ]
+    },
     { "name": "property-quality", "status": "PASS | FAIL", "findings": [] },
     { "name": "tag-validity", "status": "PASS | FAIL", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
@@ -198,7 +211,7 @@ The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise 
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
+Each finding carries `location` (the section or property the objective requires it to name), `rule` (the violation pattern, e.g., `architecture-content`, `invalid-tag`, `evidence-type-mismatch`, `temporal-language`), `evidence` (the quoted artifact evidence), `message` (the one-line detail), and `severity`.
 
 </verdict_format>
 
