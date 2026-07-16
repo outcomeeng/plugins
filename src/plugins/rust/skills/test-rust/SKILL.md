@@ -30,7 +30,7 @@ Before writing or revising tests, also check:
 3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
 5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
-6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `product-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
+6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `<product>-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
 7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the location prescribed by `/rust-test-standards` and repo-local overlays.
 8. Run the repository's Rust validation commands before reporting the tests complete.
 

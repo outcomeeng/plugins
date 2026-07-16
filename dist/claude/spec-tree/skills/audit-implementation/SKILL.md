@@ -400,7 +400,7 @@ What happened: Claude inspected changed files before opening the verification ru
 
 Why it failed: An `audited` label asserted completion without naming the inspected paths or preserving the concern invocation that produced the judgment. The sealed projection could not distinguish a completed concern audit from orchestration self-certification.
 
-How to avoid: Start the run before project inspection, invoke each concern skill while the run is open, and assign `audited` only after recording that concern's exact `subjectPaths` and completed `concernResult`.
+How to avoid: Start the run before project inspection and invoke each concern skill while the run is open. After a concern returns, record one accepted scope row per inspected path using the exact path in `subject` and `priorContext.changedFilePartition`, then record every finding with the accepted path-scoped `unitId`. Assign `coverageStatus: audited` only to those completed path-scoped rows; never emit custom concern-result fields.
 
 **Scope events were persisted concurrently.**
 

@@ -353,10 +353,11 @@ def audit_contract_rejects_retired_implementation_wrappers() -> bool:
     )
 
 
-def audit_contract_rejects_retired_wrappers_in_language_plugins() -> bool:
-    """Return whether every retired wrapper name is rejected outside spec-tree."""
+def audit_contract_rejects_retired_wrappers_in_every_plugin() -> bool:
+    """Return whether every retired wrapper is rejected in every source plugin."""
     return all(
-        _retired_language_plugin_wrapper_is_rejected(filename)
+        _language_wrapper_filename_is_rejected(plugin_name, filename)
+        for plugin_name in _source_plugin_names()
         for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
     )
 
@@ -412,6 +413,21 @@ def audit_contract_rejects_missing_generated_language() -> bool:
     """Reject a generated surface missing an expected language plugin."""
     with _valid_repository_surfaces() as root:
         rmtree(root / PLUGIN_SURFACE_PATHS[-1] / _source_language())
+        return bool(check_audit_artifact_contract(root))
+
+
+def audit_contract_rejects_missing_single_surface_language() -> bool:
+    """Reject a lone source surface missing one language concern skill."""
+    with TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        surface = root / PLUGIN_SURFACE_PATHS[0]
+        language = _source_language()
+        _populate_valid_surface(surface, language)
+        _language_concern_path(
+            surface,
+            language,
+            LANGUAGE_AUDIT_CONCERNS[-1],
+        ).unlink()
         return bool(check_audit_artifact_contract(root))
 
 
@@ -519,14 +535,15 @@ def _language_wrapper_filename_is_rejected(
         return bool(check_wrapper_surface(surface))
 
 
-def _retired_language_plugin_wrapper_is_rejected(filename: str) -> bool:
-    with _valid_surface() as surface:
-        _touch(surface / _source_language() / AGENTS_DIR_NAME / filename)
-        return bool(check_wrapper_surface(surface))
-
-
 def _source_language() -> str:
     return implementation_languages(REPO_ROOT / PLUGIN_SURFACE_PATHS[0])[0]
+
+
+def _source_plugin_names() -> tuple[str, ...]:
+    source_surface = REPO_ROOT / PLUGIN_SURFACE_PATHS[0]
+    return tuple(
+        sorted(path.name for path in source_surface.iterdir() if path.is_dir())
+    )
 
 
 def _record_implementation_audit_finding(

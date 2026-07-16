@@ -293,7 +293,7 @@ def timeout_terminates_group_and_names_command() -> bool:
         return (
             result.returncode != 0
             and result.args == list(child.command)
-            and child.command[0] in result.stderr
+            and " ".join(child.command).strip() in result.stderr
             and elapsed < DESCENDANT_SLEEP_SECONDS
             and child.descendant_alive() is False
         )
@@ -473,13 +473,13 @@ def _write_plugin(
 ) -> Path:
     plugin_path = root / SOURCE_PLUGINS_DIR / plugin_name
     _write_manifest(
-        plugin_path / ".claude-plugin" / "plugin.json",
+        plugin_path / CLAUDE_PLUGIN_MANIFEST_PATH,
         plugin_name,
         claude_version,
     )
     if codex_version is not ...:
         _write_manifest(
-            plugin_path / ".codex-plugin" / "plugin.json",
+            plugin_path / CODEX_PLUGIN_MANIFEST_PATH,
             plugin_name,
             cast(str | None, codex_version),
         )
