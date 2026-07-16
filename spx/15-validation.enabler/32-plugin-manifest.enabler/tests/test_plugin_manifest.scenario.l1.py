@@ -1,407 +1,99 @@
-"""Level 1 scenario tests for plugin manifest validation.
-
-Tests the validate-plugins.py script against the assertions
-in [plugin-manifest.md](../plugin-manifest.md).
-
-Level 1: discovery logic is pure path computation.
-Subprocess execution of `claude plugin validate` is thin glue tested at
-Level 2 by the pre-commit hook itself.
-"""
+"""Level 1 scenarios for plugin manifest validation."""
 
 from __future__ import annotations
 
-import json
-import os
-import subprocess
-import time
-from pathlib import Path
-
-import pytest
-
-from outcomeeng.validation.plugins import (
-    VALIDATE_TIMEOUT_SECONDS,
-    check_catalog_sync,
-    check_manifest_parity,
-    discover_targets,
-    main,
-    run_validate,
-)
-from outcomeeng_testing.harnesses.capturing_runner import (
-    DESCENDANT_SLEEP_SECONDS,
-    PROMPT_RETURN_CEILING_SECONDS,
-    TEST_TIMEOUT_SECONDS,
-    child_exiting_with_lingering_descendant,
-    never_returning_child,
-)
-
-requires_fork = pytest.mark.skipif(
-    not hasattr(os, "fork"),
-    reason="POSIX-only: the capturing-runner harness uses os.fork and process-group signalling",
+from outcomeeng_testing.harnesses.plugin_manifest import (
+    absent_claude_version_is_reported,
+    absent_codex_manifest_skips_parity,
+    absent_codex_version_is_reported,
+    absent_validation_targets_are_rejected,
+    catalog_entry_without_plugin_is_reported,
+    catalog_mismatch_makes_main_fail,
+    failed_plugin_validation_is_reported,
+    generated_plugins_are_validated,
+    invocation_exit_is_not_blocked_by_descendant,
+    manifest_version_drift_names_both_versions,
+    marketplace_is_validated,
+    matching_catalogs_pass,
+    matching_manifest_versions_pass,
+    parity_drift_makes_main_fail,
+    plugin_absent_from_claude_catalog_is_reported,
+    plugin_absent_from_codex_catalog_is_reported,
+    requires_fork,
+    source_plugins_are_validated,
+    timeout_terminates_group_and_names_command,
 )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+def test_marketplace_is_validated() -> None:
+    assert marketplace_is_validated()
 
 
-def _make_claude_catalog(tmp_path: Path, registered: list[str] | None = None) -> Path:
-    """Create .claude-plugin/marketplace.json listing the given plugin names."""
-    manifest_dir = tmp_path / ".claude-plugin"
-    manifest_dir.mkdir(exist_ok=True)
-    plugins = [{"name": n} for n in (registered or [])]
-    (manifest_dir / "marketplace.json").write_text(json.dumps({"plugins": plugins}))
-    return tmp_path
-
-
-def _make_codex_catalog(tmp_path: Path, registered: list[str] | None = None) -> Path:
-    """Create .agents/plugins/marketplace.json listing the given plugin names."""
-    catalog_dir = tmp_path / ".agents" / "plugins"
-    catalog_dir.mkdir(parents=True, exist_ok=True)
-    plugins = [{"name": n} for n in (registered or [])]
-    (catalog_dir / "marketplace.json").write_text(json.dumps({"plugins": plugins}))
-    return tmp_path
-
+def test_source_plugins_are_validated() -> None:
+    assert source_plugins_are_validated()
 
-def _make_marketplace(tmp_path: Path) -> Path:
-    """Create both marketplace catalogs with no registered plugins."""
-    _make_claude_catalog(tmp_path)
-    _make_codex_catalog(tmp_path)
-    return tmp_path
 
+def test_generated_plugins_are_validated() -> None:
+    assert generated_plugins_are_validated()
 
-def _make_plugin(tmp_path: Path, name: str) -> Path:
-    """Create a plugin directory under tmp_path/src/plugins/<name>/."""
-    plugin_dir = tmp_path / "src" / "plugins" / name
-    manifest_dir = plugin_dir / ".claude-plugin"
-    manifest_dir.mkdir(parents=True)
-    (manifest_dir / "plugin.json").write_text(
-        f'{{"name": "{name}", "version": "0.1.0"}}'
-    )
-    return plugin_dir
 
+def test_failed_plugin_validation_is_reported() -> None:
+    assert failed_plugin_validation_is_reported()
 
-def _add_codex_manifest(plugin_dir: Path, version: str | None) -> Path:
-    """Add a .codex-plugin/plugin.json to an existing plugin dir.
 
-    When ``version`` is None, the file is written without a version field
-    so the parity check can exercise the missing-field branch.
-    """
-    codex_dir = plugin_dir / ".codex-plugin"
-    codex_dir.mkdir(parents=True, exist_ok=True)
-    payload: dict[str, str] = {"name": plugin_dir.name}
-    if version is not None:
-        payload["version"] = version
-    (codex_dir / "plugin.json").write_text(json.dumps(payload))
-    return codex_dir / "plugin.json"
+def test_absent_validation_targets_are_rejected() -> None:
+    assert absent_validation_targets_are_rejected()
 
 
-def _set_claude_version(plugin_dir: Path, version: str | None) -> None:
-    """Rewrite an existing .claude-plugin/plugin.json with a chosen version.
+def test_plugin_absent_from_claude_catalog_is_reported() -> None:
+    assert plugin_absent_from_claude_catalog_is_reported()
 
-    When ``version`` is None, the file is written without a version field
-    so the parity check can exercise the missing-field branch.
-    """
-    payload: dict[str, str] = {"name": plugin_dir.name}
-    if version is not None:
-        payload["version"] = version
-    (plugin_dir / ".claude-plugin" / "plugin.json").write_text(json.dumps(payload))
 
+def test_plugin_absent_from_codex_catalog_is_reported() -> None:
+    assert plugin_absent_from_codex_catalog_is_reported()
 
-# ---------------------------------------------------------------------------
-# Scenario: marketplace discovered and validated
-# ---------------------------------------------------------------------------
 
+def test_matching_catalogs_pass() -> None:
+    assert matching_catalogs_pass()
 
-def test_discovers_marketplace(tmp_path: Path) -> None:
-    _make_marketplace(tmp_path)
-    targets = discover_targets(tmp_path)
-    assert tmp_path in targets
 
+def test_catalog_entry_without_plugin_is_reported() -> None:
+    assert catalog_entry_without_plugin_is_reported()
 
-# ---------------------------------------------------------------------------
-# Scenario: plugin directories discovered and validated
-# ---------------------------------------------------------------------------
 
+def test_catalog_mismatch_makes_main_fail() -> None:
+    assert catalog_mismatch_makes_main_fail()
 
-def test_discovers_plugins(tmp_path: Path) -> None:
-    _make_marketplace(tmp_path)
-    plugin_a = _make_plugin(tmp_path, "alpha")
-    plugin_b = _make_plugin(tmp_path, "beta")
-    targets = discover_targets(tmp_path)
-    assert plugin_a in targets
-    assert plugin_b in targets
 
+def test_matching_manifest_versions_pass() -> None:
+    assert matching_manifest_versions_pass()
 
-# ---------------------------------------------------------------------------
-# Scenario: failed validation exits non-zero and reports which plugin failed
-# ---------------------------------------------------------------------------
 
+def test_manifest_version_drift_names_both_versions() -> None:
+    assert manifest_version_drift_names_both_versions()
 
-def test_failed_validation_exits_nonzero_and_reports(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _make_claude_catalog(tmp_path, registered=["bad-plugin"])
-    _make_codex_catalog(tmp_path, registered=["bad-plugin"])
-    _make_plugin(tmp_path, "bad-plugin")
 
-    def fake_runner(
-        cmd: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        target = cmd[-1]
-        if "bad-plugin" in target:
-            return subprocess.CompletedProcess(
-                cmd, returncode=1, stdout="", stderr="validation failed"
-            )
-        return subprocess.CompletedProcess(cmd, returncode=0, stdout="ok", stderr="")
+def test_absent_codex_manifest_skips_parity() -> None:
+    assert absent_codex_manifest_skips_parity()
 
-    exit_code = main([str(tmp_path)], runner=fake_runner)
 
-    assert exit_code != 0
-    captured = capsys.readouterr()
-    assert "bad-plugin" in captured.err
+def test_absent_claude_version_is_reported() -> None:
+    assert absent_claude_version_is_reported()
 
 
-# ---------------------------------------------------------------------------
-# Scenario: no marketplace or plugins found exits non-zero
-# ---------------------------------------------------------------------------
+def test_absent_codex_version_is_reported() -> None:
+    assert absent_codex_version_is_reported()
 
 
-def test_no_targets_exits_nonzero(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    exit_code = main([str(tmp_path)])
-    assert exit_code != 0
-    captured = capsys.readouterr()
-    assert captured.err  # some error message printed
-
-
-# ---------------------------------------------------------------------------
-# Scenario: catalog sync — plugin directory not registered in a catalog
-# ---------------------------------------------------------------------------
-
-
-def test_sync_plugin_missing_from_claude_catalog(tmp_path: Path) -> None:
-    _make_plugin(tmp_path, "alpha")
-    _make_claude_catalog(tmp_path, registered=[])  # exists but alpha not listed
-    _make_codex_catalog(tmp_path, registered=["alpha"])
-
-    errors = check_catalog_sync(tmp_path)
-
-    assert any("claude" in e and "alpha" in e for e in errors)
-
-
-def test_sync_plugin_missing_from_codex_catalog(tmp_path: Path) -> None:
-    _make_plugin(tmp_path, "alpha")
-    _make_claude_catalog(tmp_path, registered=["alpha"])
-    _make_codex_catalog(tmp_path, registered=[])  # exists but alpha not listed
-
-    errors = check_catalog_sync(tmp_path)
-
-    assert any("codex" in e and "alpha" in e for e in errors)
-
-
-def test_sync_returns_no_errors_when_both_catalogs_match(tmp_path: Path) -> None:
-    _make_plugin(tmp_path, "alpha")
-    _make_plugin(tmp_path, "beta")
-    _make_claude_catalog(tmp_path, registered=["alpha", "beta"])
-    _make_codex_catalog(tmp_path, registered=["alpha", "beta"])
-
-    errors = check_catalog_sync(tmp_path)
-
-    assert errors == []
-
-
-def test_sync_reports_catalog_entry_without_plugin_directory(tmp_path: Path) -> None:
-    _make_claude_catalog(tmp_path, registered=["ghost"])
-    _make_codex_catalog(tmp_path, registered=["ghost"])
-    # No src/plugins/ghost/ directory
-
-    errors = check_catalog_sync(tmp_path)
-
-    assert any("ghost" in e for e in errors)
-
-
-def test_sync_main_exits_nonzero_on_catalog_mismatch(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _make_claude_catalog(tmp_path, registered=[])
-    _make_codex_catalog(tmp_path, registered=[])
-    _make_plugin(tmp_path, "unregistered")
-
-    def fake_runner(
-        cmd: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(cmd, returncode=0, stdout="ok", stderr="")
-
-    exit_code = main([str(tmp_path)], runner=fake_runner)
-
-    assert exit_code != 0
-    captured = capsys.readouterr()
-    assert "unregistered" in captured.err
-
-
-# ---------------------------------------------------------------------------
-# Scenario: manifest parity — versions match across both manifests
-# ---------------------------------------------------------------------------
-
-
-def test_parity_passes_when_both_manifests_agree(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.3")
-    _add_codex_manifest(plugin, "0.27.3")
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert errors == []
-
-
-# ---------------------------------------------------------------------------
-# Scenario: manifest parity — version mismatch reported with both versions
-# ---------------------------------------------------------------------------
-
-
-def test_parity_reports_version_drift_with_both_versions(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.3")
-    _add_codex_manifest(plugin, "0.27.0")
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert len(errors) == 1
-    error = errors[0]
-    assert "alpha" in error
-    assert "0.27.3" in error
-    assert "0.27.0" in error
-    assert "drift" in error.lower()
-
-
-# ---------------------------------------------------------------------------
-# Scenario: manifest parity — Codex manifest absent, parity check skipped
-# ---------------------------------------------------------------------------
-
-
-def test_parity_skipped_when_codex_manifest_absent(tmp_path: Path) -> None:
-    _make_plugin(tmp_path, "alpha")  # only .claude-plugin/plugin.json
-    # No _add_codex_manifest call — Codex coverage is optional.
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert errors == []
-
-
-# ---------------------------------------------------------------------------
-# Scenario: manifest parity — missing version field reported
-# ---------------------------------------------------------------------------
-
-
-def test_parity_reports_missing_claude_version(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, None)
-    _add_codex_manifest(plugin, "0.27.0")
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert any("alpha" in e and "claude-plugin" in e and "missing" in e for e in errors)
-
-
-def test_parity_reports_missing_codex_version(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.3")
-    _add_codex_manifest(plugin, None)
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert any("alpha" in e and "codex-plugin" in e and "missing" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# Property: parity is symmetric — drift in either direction is reported
-# ---------------------------------------------------------------------------
-
-
-def test_parity_drift_reported_when_codex_advanced_past_claude(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.0")
-    _add_codex_manifest(plugin, "0.27.3")
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert len(errors) == 1
-    assert "alpha" in errors[0]
-
-
-def test_parity_drift_reported_when_claude_advanced_past_codex(tmp_path: Path) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.3")
-    _add_codex_manifest(plugin, "0.27.0")
-
-    errors = check_manifest_parity(tmp_path)
-
-    assert len(errors) == 1
-    assert "alpha" in errors[0]
-
-
-# ---------------------------------------------------------------------------
-# Compliance: main() exits non-zero when parity drift exists
-# ---------------------------------------------------------------------------
-
-
-def test_main_exits_nonzero_on_parity_drift(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    plugin = _make_plugin(tmp_path, "alpha")
-    _set_claude_version(plugin, "0.27.3")
-    _add_codex_manifest(plugin, "0.27.0")
-    _make_claude_catalog(tmp_path, registered=["alpha"])
-    _make_codex_catalog(tmp_path, registered=["alpha"])
-
-    def fake_runner(
-        cmd: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(cmd, returncode=0, stdout="ok", stderr="")
-
-    exit_code = main([str(tmp_path)], runner=fake_runner)
-
-    assert exit_code != 0
-    captured = capsys.readouterr()
-    assert "alpha" in captured.err
-    assert "manifest parity" in captured.err
-
-
-# ---------------------------------------------------------------------------
-# Scenario: an invocation that never returns is bounded, group-killed, and named
-# ---------------------------------------------------------------------------
+def test_parity_drift_makes_main_fail() -> None:
+    assert parity_drift_makes_main_fail()
 
 
 @requires_fork
-def test_runner_times_out_terminates_group_and_names_command() -> None:
-    with never_returning_child() as child:
-        start = time.monotonic()
-        result = run_validate(list(child.command), timeout=TEST_TIMEOUT_SECONDS)
-        elapsed = time.monotonic() - start
-
-        assert result.returncode != 0
-        assert result.args == list(child.command)
-        assert "timed out" in result.stderr
-        assert child.command[0] in result.stderr
-        assert elapsed < DESCENDANT_SLEEP_SECONDS
-        assert child.descendant_alive() is False
-
-
-# ---------------------------------------------------------------------------
-# Scenario: an invocation that exits is not blocked by a lingering descendant
-# ---------------------------------------------------------------------------
+def test_timeout_terminates_group_and_names_command() -> None:
+    assert timeout_terminates_group_and_names_command()
 
 
 @requires_fork
-def test_runner_returns_when_invocation_exits_not_when_descendant_exits() -> None:
-    with child_exiting_with_lingering_descendant() as child:
-        start = time.monotonic()
-        result = run_validate(list(child.command), timeout=VALIDATE_TIMEOUT_SECONDS)
-        elapsed = time.monotonic() - start
-
-        assert result.returncode == 0
-        assert result.stdout == "done"
-        assert elapsed < PROMPT_RETURN_CEILING_SECONDS
-        assert child.descendant_alive() is True
+def test_invocation_exit_is_not_blocked_by_descendant() -> None:
+    assert invocation_exit_is_not_blocked_by_descendant()

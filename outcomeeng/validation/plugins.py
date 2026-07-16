@@ -44,6 +44,10 @@ from outcomeeng.validation.audit_artifacts import check_audit_artifact_contract
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
+CATALOG_PLUGINS_FIELD: Final = "plugins"
+PLUGIN_NAME_FIELD: Final = "name"
+PLUGIN_VERSION_FIELD: Final = "version"
+CLAUDE_PLUGIN_VALIDATE_ARGV: Final = ("claude", "plugin", "validate")
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -73,7 +77,7 @@ def discover_targets(root: Path) -> list[Path]:
 def _catalog_plugin_names(path: Path) -> set[str]:
     """Return the set of plugin names listed in a marketplace catalog JSON."""
     data = json.loads(path.read_text())
-    return {p["name"] for p in data.get("plugins", [])}
+    return {plugin[PLUGIN_NAME_FIELD] for plugin in data.get(CATALOG_PLUGINS_FIELD, [])}
 
 
 def check_catalog_sync(root: Path) -> list[str]:
@@ -136,8 +140,8 @@ def check_manifest_parity(root: Path) -> list[str]:
 
         claude_data = json.loads(claude_manifest.read_text())
         codex_data = json.loads(codex_manifest.read_text())
-        claude_version = claude_data.get("version")
-        codex_version = codex_data.get("version")
+        claude_version = claude_data.get(PLUGIN_VERSION_FIELD)
+        codex_version = codex_data.get(PLUGIN_VERSION_FIELD)
 
         if claude_version is None:
             errors.append(
@@ -228,7 +232,7 @@ def _validate_target(
     target: Path,
     runner: Callable[..., subprocess.CompletedProcess[str]],
 ) -> tuple[Path, subprocess.CompletedProcess[str]]:
-    cmd = ["claude", "plugin", "validate", str(target)]
+    cmd = [*CLAUDE_PLUGIN_VALIDATE_ARGV, str(target)]
     return target, runner(cmd)
 
 
