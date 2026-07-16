@@ -18,3 +18,9 @@ Reference: <file:line or governing rule>
 ALWAYS: pseudo-XML sections are rule-bearing surfaces.
 
 </principles>
+
+<constraints>
+
+This section is addressable by tag identity without marker heuristics.
+
+</constraints>

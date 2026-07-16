@@ -93,29 +93,6 @@ def finding_without_required_field(field: str) -> dict[str, Any]:
     return finding
 
 
-def review_severity_projection_cases() -> tuple[tuple[Any, Any, Any], ...]:
-    """Return the complete source severity-to-projection mapping."""
-
-    from outcomeeng_testing.harnesses.journal_projection import (
-        load_journal_projection_module,
-    )
-
-    review_result = load_review_result_module()
-    projection = load_journal_projection_module()
-    return (
-        (
-            review_result.Severity.BLOCKING,
-            projection.Severity.REJECT,
-            projection.Outcome.REJECTED,
-        ),
-        (
-            review_result.Severity.DEBT,
-            projection.Severity.WARNING,
-            projection.Outcome.APPROVED,
-        ),
-    )
-
-
 def changed_review_file_sets() -> tuple[list[str], list[str]]:
     """Return nested source-relevant changed-file sets for scope hashing."""
 

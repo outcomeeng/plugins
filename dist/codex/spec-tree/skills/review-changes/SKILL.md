@@ -31,7 +31,7 @@ python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
 
 `append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
 
-`append-finding` reads one finding JSON object from stdin, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary for this stop-gap implementation.
+`append-finding` reads one finding JSON object from stdin, validates every required field, enum value, identifier, and rule citation through the canonical `review_result.parse_finding_json` contract, then wraps the parsed finding in the journal event envelope and appends it. Invalid input exits non-zero before any journal append.
 
 `finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
 

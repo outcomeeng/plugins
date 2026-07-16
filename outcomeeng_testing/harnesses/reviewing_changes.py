@@ -32,12 +32,15 @@ outside ``spx/``.
 
 from __future__ import annotations
 
+import ast
+import dataclasses
 import hashlib
 import importlib.util
 import io
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -179,6 +182,48 @@ def malformed_rule_citation() -> str:
     return f"{review_rule_citations()[0]}:invalid"
 
 
+@dataclass(frozen=True)
+class RuleCitationObservation:
+    """Accepted and rejected rule-citation parser observations."""
+
+    accepted_rules: tuple[str, ...]
+    expected_rules: tuple[str, ...]
+    malformed_rule: str
+    malformed_error: str
+
+
+def rule_citation_observation() -> RuleCitationObservation:
+    """Exercise every declared citation family and one derived malformed rule."""
+
+    review_result = load_review_result_module()
+    expected_rules = review_rule_citations()
+    accepted_rules = tuple(
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[make_finding_dict(rule=rule)]))
+        )
+        .findings[0]
+        .rule
+        for rule in expected_rules
+    )
+    malformed = malformed_rule_citation()
+    try:
+        review_result.parse_json(
+            json.dumps(
+                make_review_result_dict(findings=[make_finding_dict(rule=malformed)])
+            )
+        )
+    except review_result.ReviewResultValidationError as exc:
+        malformed_error = str(exc)
+    else:
+        malformed_error = ""
+    return RuleCitationObservation(
+        accepted_rules=accepted_rules,
+        expected_rules=expected_rules,
+        malformed_rule=malformed,
+        malformed_error=malformed_error,
+    )
+
+
 def runtime_review_skill_path() -> pathlib.Path:
     """Return the generated runtime skill path used by citation validation."""
 
@@ -315,8 +360,177 @@ def versioned_sibling_plugin_resolution_holds() -> bool:
             "code-typescript",
         )
 
-        assert sibling_skill in candidates
+        return sibling_skill in candidates
+
+
+@dataclass(frozen=True)
+class ReviewModuleSurfaceObservation:
+    """Structural observations for the canonical review-result module."""
+
+    schema_version_is_positive: bool
+    severity_exists: bool
+    concern_exists: bool
+    decision_absent: bool
+    dataclasses_are_frozen: bool
+    validation_error_is_exception: bool
+
+
+def review_module_surface_observation() -> ReviewModuleSurfaceObservation:
+    """Inspect the production review-result module's public schema surface."""
+
+    review_result = load_review_result_module()
+    classes = (review_result.Finding, review_result.ReviewResult)
+    return ReviewModuleSurfaceObservation(
+        schema_version_is_positive=(
+            isinstance(review_result.SCHEMA_VERSION, int)
+            and review_result.SCHEMA_VERSION >= 1
+        ),
+        severity_exists=hasattr(review_result, "Severity"),
+        concern_exists=hasattr(review_result, "Concern"),
+        decision_absent=not hasattr(review_result, "Decision"),
+        dataclasses_are_frozen=all(
+            dataclasses.is_dataclass(cls)
+            and getattr(getattr(cls, "__dataclass_params__", None), "frozen", False)
+            for cls in classes
+        ),
+        validation_error_is_exception=issubclass(
+            review_result.ReviewResultValidationError,
+            Exception,
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewParseComplianceObservation:
+    """Parser results across the complete closed compliance case set."""
+
+    conforming_result_type: type[Any]
+    expected_result_type: type[Any]
+    empty_findings: tuple[Any, ...]
+    missing_document_field: str
+    missing_document_error: str
+    unknown_severity: str
+    unknown_severity_error: str
+    unknown_concern: str
+    unknown_concern_error: str
+    malformed_error: str
+    missing_finding_field: str
+    missing_finding_error: str
+
+
+def _review_validation_error(payload: str) -> str:
+    review_result = load_review_result_module()
+    try:
+        review_result.parse_json(payload)
+    except review_result.ReviewResultValidationError as exc:
+        return str(exc)
+    return ""
+
+
+def review_parse_compliance_observation() -> ReviewParseComplianceObservation:
+    """Exercise conforming and every closed schema-rejection behavior."""
+
+    review_result = load_review_result_module()
+    conforming = review_result.parse_json(json.dumps(make_review_result_dict()))
+    empty = review_result.parse_json(
+        json.dumps(make_review_result_dict(findings=[]))
+    ).findings
+
+    missing_document_field = review_result.DOCUMENT_FINDINGS_FIELD
+    missing_document = make_review_result_dict()
+    del missing_document[missing_document_field]
+
+    unknown_severity = f"{next(iter(review_result.Severity)).value}-unknown"
+    unknown_concern = f"{next(iter(review_result.Concern)).value}-unknown"
+
+    malformed_payload = json.dumps(make_review_result_dict())[:-1]
+
+    missing_finding_field = review_result.FINDING_ACTION_FIELD
+    missing_finding = make_finding_dict()
+    del missing_finding[missing_finding_field]
+    return ReviewParseComplianceObservation(
+        conforming_result_type=type(conforming),
+        expected_result_type=review_result.ReviewResult,
+        empty_findings=empty,
+        missing_document_field=missing_document_field,
+        missing_document_error=_review_validation_error(json.dumps(missing_document)),
+        unknown_severity=unknown_severity,
+        unknown_severity_error=_review_validation_error(
+            json.dumps(
+                make_review_result_dict(
+                    findings=[make_finding_dict(severity=unknown_severity)]
+                )
+            )
+        ),
+        unknown_concern=unknown_concern,
+        unknown_concern_error=_review_validation_error(
+            json.dumps(
+                make_review_result_dict(
+                    findings=[make_finding_dict(concern=unknown_concern)]
+                )
+            )
+        ),
+        malformed_error=_review_validation_error(malformed_payload),
+        missing_finding_field=missing_finding_field,
+        missing_finding_error=_review_validation_error(
+            json.dumps(make_review_result_dict(findings=[missing_finding]))
+        ),
+    )
+
+
+def runtime_skill_rule_resolves() -> bool:
+    """Validate the runtime skill citation against its declared section slug."""
+
+    review_result = load_review_result_module()
+    citation = review_rule_citations()[3]
+    review_result._validate_slug(
+        runtime_review_skill_path(),
+        citation.rsplit(":", maxsplit=1)[1],
+        citation,
+    )
     return True
+
+
+def root_rule_resolves_from_subdirectory() -> bool:
+    """Parse a root-guide citation while cwd is below the repository root."""
+
+    review_result = load_review_result_module()
+    citations = review_rule_citations()
+    subdirectory = (
+        REPO_ROOT / pathlib.Path(citations[0].split(":", maxsplit=1)[0]).parent
+    )
+    previous = pathlib.Path.cwd()
+    try:
+        os.chdir(subdirectory)
+        review_result.parse_json(
+            json.dumps(
+                make_review_result_dict(findings=[make_finding_dict(rule=citations[4])])
+            )
+        )
+    finally:
+        os.chdir(previous)
+    return True
+
+
+def declared_rule_slug_observation() -> frozenset[str]:
+    """Return section identities discovered from the inert markdown corpus."""
+
+    review_result = load_review_result_module()
+    return frozenset(review_result._declared_rule_slugs(rule_slug_document()))
+
+
+def declared_rule_slug_contract_holds() -> bool:
+    """Compare discovered section identities with the inert corpus contract."""
+
+    return declared_rule_slug_observation() == frozenset(
+        {
+            "constraints",
+            "critical-rules",
+            "narrative",
+            "principles",
+            "rules",
+        }
+    )
 
 
 def review_run_metadata(
@@ -628,6 +842,50 @@ def review_config_digests() -> tuple[str, str]:
     return (
         str(contracts.journal_emit.review_config_digest(SKILL_DIR)),
         str(contracts.review_run._review_config_digest()),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewSeverityProjectionObservation:
+    """Observed and declared review-severity projection sequences."""
+
+    actual_severities: tuple[Any, ...]
+    expected_severities: tuple[Any, ...]
+    actual_outcomes: tuple[Any, ...]
+    expected_outcomes: tuple[Any, ...]
+
+
+def review_severity_projection_observation() -> ReviewSeverityProjectionObservation:
+    """Exercise the complete finite review-severity projection mapping."""
+
+    contracts = review_contract_modules()
+    review_result = contracts.review_result
+    projection = contracts.journal_projection
+    cases = (
+        (
+            review_result.Severity.BLOCKING,
+            projection.Severity.REJECT,
+            projection.Outcome.REJECTED,
+        ),
+        (
+            review_result.Severity.DEBT,
+            projection.Severity.WARNING,
+            projection.Outcome.APPROVED,
+        ),
+    )
+    events = tuple(
+        contracts.journal_emit.finding_reported_event(
+            review_finding(severity=severity),
+            now=REVIEW_EVENT_TIME,
+            attempt=1,
+        )
+        for severity, _expected_severity, _expected_outcome in cases
+    )
+    return ReviewSeverityProjectionObservation(
+        actual_severities=tuple(event["data"]["severity"] for event in events),
+        expected_severities=tuple(case[1] for case in cases),
+        actual_outcomes=tuple(projection.compute_overall([event]) for event in events),
+        expected_outcomes=tuple(case[2] for case in cases),
     )
 
 
@@ -1300,3 +1558,285 @@ def make_finding_dict(
         action=(action if action is not None else review_result.FINDING_ACTION_FIELD),
     )
     return cast(dict[str, Any], review_result.finding_to_json_dict(finding))
+
+
+_FORBIDDEN_NAME_CALLS = {"open"}
+_FORBIDDEN_ATTR_CALLS = {
+    ("os", "remove"),
+    ("os", "rename"),
+    ("os", "replace"),
+    ("os", "unlink"),
+    ("shutil", "rmtree"),
+}
+_FORBIDDEN_METHOD_NAMES = {
+    "mkdir",
+    "rename",
+    "replace",
+    "rmdir",
+    "touch",
+    "unlink",
+    "write_bytes",
+    "write_text",
+}
+_COMPUTE_DIFF_ALLOWED_WRITE_CALLS = {
+    ("safe_bundle_dir", "mkdir"),
+    ("diff_path", "write_text"),
+    ("manifest_path", "write_text"),
+}
+_REVIEW_RUN_ALLOWED_WRITE_CALLS = {
+    ("path", "write_text"),
+    ("shutil", "rmtree"),
+}
+_WRITE_MODE_RE = re.compile(r"[wax+]")
+_LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
+    {
+        "compute_diff",
+        "journal_emit",
+        "review_result",
+        "review_run",
+    }
+)
+_EXPECTED_REVIEW_SCRIPT_NAMES = frozenset(
+    {
+        "__init__.py",
+        COMPUTE_DIFF_SCRIPT.name,
+        JOURNAL_EMIT_SCRIPT.name,
+        REVIEW_RESULT_MODULE_PATH.name,
+        REVIEW_RUN_SCRIPT.name,
+    }
+)
+_VIOLATING_SCRIPTS_DIR = REVIEW_FIXTURES_DIR / "violating_scripts"
+
+
+def _review_script_files() -> tuple[pathlib.Path, ...]:
+    return tuple(sorted(SCRIPTS_DIR.glob("*.py")))
+
+
+def _top_level_name(module: str) -> str:
+    return module.split(".", maxsplit=1)[0]
+
+
+def _imported_modules(source: str) -> tuple[str, ...]:
+    modules: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            modules.extend(_top_level_name(alias.name) for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.append(_top_level_name(node.module))
+    return tuple(modules)
+
+
+def _string_literal(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _call_string_argument(
+    node: ast.Call,
+    *,
+    position: int,
+    name: str,
+) -> str | None:
+    if len(node.args) > position:
+        return _string_literal(node.args[position])
+    for keyword in node.keywords:
+        if keyword.arg == name:
+            return _string_literal(keyword.value)
+    return None
+
+
+def _path_open_write_violation(
+    node: ast.Call,
+    func: ast.Attribute,
+) -> str | None:
+    if func.attr != "open":
+        return None
+    mode = _call_string_argument(node, position=0, name="mode") or "r"
+    if _WRITE_MODE_RE.search(mode):
+        return f"Path.open({mode!r}) at line {node.lineno}"
+    return None
+
+
+def _attribute_write_violation(
+    node: ast.Call,
+    func: ast.Attribute,
+    *,
+    allowed_calls: set[tuple[str, str]],
+) -> str | None:
+    if isinstance(func.value, ast.Name):
+        owner = func.value.id
+        call = (owner, func.attr)
+        if call in allowed_calls:
+            return None
+        if call in _FORBIDDEN_ATTR_CALLS or func.attr in _FORBIDDEN_METHOD_NAMES:
+            return f"{owner}.{func.attr} at line {node.lineno}"
+    elif func.attr in _FORBIDDEN_METHOD_NAMES:
+        return f"<expression>.{func.attr} at line {node.lineno}"
+    return _path_open_write_violation(node, func)
+
+
+def _direct_write_violations(script_path: pathlib.Path) -> tuple[str, ...]:
+    allowed_calls: set[tuple[str, str]] = set()
+    if script_path == COMPUTE_DIFF_SCRIPT:
+        allowed_calls = _COMPUTE_DIFF_ALLOWED_WRITE_CALLS
+    elif script_path == REVIEW_RUN_SCRIPT:
+        allowed_calls = _REVIEW_RUN_ALLOWED_WRITE_CALLS
+    violations: list[str] = []
+    for node in ast.walk(ast.parse(script_path.read_text(encoding="utf-8"))):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name) and node.func.id in _FORBIDDEN_NAME_CALLS:
+            mode = _call_string_argument(node, position=1, name="mode") or "r"
+            if _WRITE_MODE_RE.search(mode):
+                violations.append(f"{node.func.id}({mode!r}) at line {node.lineno}")
+        elif isinstance(node.func, ast.Attribute):
+            violation = _attribute_write_violation(
+                node,
+                node.func,
+                allowed_calls=allowed_calls,
+            )
+            if violation:
+                violations.append(violation)
+    return tuple(violations)
+
+
+def _runtime_uv_violations(script_path: pathlib.Path) -> tuple[str, ...]:
+    return tuple(
+        f"runtime reference to 'uv' at line {node.lineno}"
+        for node in ast.walk(ast.parse(script_path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Constant) and node.value == "uv"
+    )
+
+
+@dataclass(frozen=True)
+class ReviewScriptComplianceObservation:
+    """Static compliance findings across the shipped review script set."""
+
+    direct_writes: tuple[str, ...]
+    non_stdlib_imports: tuple[str, ...]
+    product_toolchain_imports: tuple[str, ...]
+    runtime_uv_references: tuple[str, ...]
+    alternate_schema_paths: tuple[str, ...]
+    persistence_arguments: tuple[str, ...]
+    unexpected_scripts: tuple[str, ...]
+    parallel_scripts: tuple[str, ...]
+    render_directory_exists: bool
+
+
+def review_script_compliance_observation() -> ReviewScriptComplianceObservation:
+    """Inspect every shipped review script against the governed boundaries."""
+
+    scripts = _review_script_files()
+    direct_writes = tuple(
+        f"{script.name}: {violation}"
+        for script in scripts
+        for violation in _direct_write_violations(script)
+    )
+    imported = tuple(
+        (script, module)
+        for script in scripts
+        for module in _imported_modules(script.read_text(encoding="utf-8"))
+    )
+    stdlib = set(sys.stdlib_module_names)
+    non_stdlib = tuple(
+        f"{script.name}: import {module!r}"
+        for script, module in imported
+        if module not in stdlib and module not in _LOCAL_REVIEWING_CHANGES_MODULES
+    )
+    product_imports = tuple(
+        f"{script.name}: import {module!r}"
+        for script, module in imported
+        if module == "outcomeeng" or module.startswith("outcomeeng_")
+    )
+    runtime_uv = tuple(
+        f"{script.name}: {violation}"
+        for script in scripts
+        for violation in _runtime_uv_violations(script)
+    )
+    alternate_schema = tuple(
+        str(match.relative_to(SKILL_DIR))
+        for pattern in ("*.schema.json", "*.xsd", "openapi.*", "schema.*")
+        for match in SKILL_DIR.rglob(pattern)
+        if "__pycache__" not in match.parts
+    )
+    compute_source = COMPUTE_DIFF_SCRIPT.read_text(encoding="utf-8")
+    present_names = frozenset(path.name for path in scripts)
+    parallel_names = frozenset({"render_review.py", "validate_review_result.py"})
+    return ReviewScriptComplianceObservation(
+        direct_writes=direct_writes,
+        non_stdlib_imports=non_stdlib,
+        product_toolchain_imports=product_imports,
+        runtime_uv_references=runtime_uv,
+        alternate_schema_paths=alternate_schema,
+        persistence_arguments=tuple(
+            argument for argument in ("--slug",) if argument in compute_source
+        ),
+        unexpected_scripts=tuple(sorted(present_names - _EXPECTED_REVIEW_SCRIPT_NAMES)),
+        parallel_scripts=tuple(sorted(present_names & parallel_names)),
+        render_directory_exists=(REVIEW_PROMPT_PATH.parent / "render").exists(),
+    )
+
+
+def violating_review_script_fixtures_detected() -> tuple[bool, ...]:
+    """Return scanner detections for each inert violating script fixture."""
+
+    direct_writes = _VIOLATING_SCRIPTS_DIR / "direct_writes.txt"
+    non_stdlib = _VIOLATING_SCRIPTS_DIR / "non_stdlib_import.txt"
+    product_import = _VIOLATING_SCRIPTS_DIR / "product_toolchain_import.txt"
+    runtime_uv = _VIOLATING_SCRIPTS_DIR / "runtime_uv.txt"
+    return (
+        bool(_direct_write_violations(direct_writes)),
+        any(
+            module not in sys.stdlib_module_names
+            and module not in _LOCAL_REVIEWING_CHANGES_MODULES
+            for module in _imported_modules(non_stdlib.read_text(encoding="utf-8"))
+        ),
+        any(
+            module == "outcomeeng" or module.startswith("outcomeeng_")
+            for module in _imported_modules(product_import.read_text(encoding="utf-8"))
+        ),
+        bool(_runtime_uv_violations(runtime_uv)),
+    )
+
+
+@dataclass(frozen=True)
+class ReviewRenderObservation:
+    """Source finding and rendered journal projection from one complete prefix."""
+
+    finding: dict[str, Any]
+    finding_event: dict[str, Any]
+    events: tuple[dict[str, Any], ...]
+    rendered: dict[str, str]
+
+
+def review_render_observation() -> ReviewRenderObservation:
+    """Render one source-constructed finding through journal events."""
+
+    contracts = review_contract_modules()
+    metadata = review_run_metadata()
+    finding = make_finding_dict()
+    parsed = contracts.review_result.parse_finding_json(json.dumps(finding))
+    finding_event = contracts.journal_emit.finding_reported_event(
+        parsed,
+        now=REVIEW_EVENT_TIME,
+        attempt=1,
+    )
+    events = (finding_event,)
+    completed = contracts.journal_emit.run_completed_event(
+        metadata,
+        list(events),
+        completed_at=REVIEW_COMPLETION_TIME,
+        now=REVIEW_EVENT_TIME,
+        attempt=1,
+    )
+    prefix = (*events, completed)
+    return ReviewRenderObservation(
+        finding=finding,
+        finding_event=finding_event,
+        events=prefix,
+        rendered=cast(
+            "dict[str, str]",
+            contracts.journal_emit.render_events(list(prefix)),
+        ),
+    )

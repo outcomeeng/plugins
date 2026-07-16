@@ -13,14 +13,11 @@ from __future__ import annotations
 import json
 import pathlib
 
-from typing import Any
-
 import pytest
 from outcomeeng_testing.generators.reviewing_changes import (
     changed_review_file_sets,
     distinct_review_inputs,
     finding_without_required_field,
-    review_severity_projection_cases,
 )
 from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_COMPLETION_TIME,
@@ -32,6 +29,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     review_finding,
     review_metadata_wire_json,
     review_run_metadata,
+    review_severity_projection_observation,
     run_journal_emit_in_process,
     streamed_review_events,
     write_review_manifest,
@@ -39,23 +37,11 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
 )
 
 
-@pytest.mark.parametrize(
-    ("severity", "expected_severity", "expected_overall"),
-    review_severity_projection_cases(),
-)
-def test_adapter_maps_review_severity_to_projection(
-    severity: Any, expected_severity: Any, expected_overall: Any
-) -> None:
-    contracts = review_contract_modules()
-    je = contracts.journal_emit
-    jp = contracts.journal_projection
-    finding = review_finding(severity=severity)
-    event = je.finding_reported_event(finding, now=REVIEW_EVENT_TIME, attempt=1)
+def test_adapter_maps_review_severity_to_projection() -> None:
+    observation = review_severity_projection_observation()
 
-    assert event["type"] == jp.FINDING_REPORTED
-    assert event["data"]["id"] == finding.id
-    assert event["data"]["severity"] == expected_severity
-    assert jp.compute_overall([event]) == expected_overall
+    assert observation.actual_severities == observation.expected_severities
+    assert observation.actual_outcomes == observation.expected_outcomes
 
 
 def test_adapter_terminal_event_carries_core_run_state_identity() -> None:

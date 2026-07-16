@@ -188,13 +188,6 @@ _SECTION_TITLES = {
     "COMPLIANCE": "Compliance",
     "AUDIT": "Audit",
 }
-_RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
-_RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
-    {
-        "api_surface",
-        "principles",
-    }
-)
 
 
 def parse_json(text: str) -> ReviewResult:
@@ -449,65 +442,20 @@ def _declared_rule_slugs(text: str) -> set[str]:
     slugs: set[str] = set()
     lines = text.splitlines()
     in_fence = False
-    for index, line in enumerate(lines):
+    for line in lines:
         if _is_markdown_fence(line):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
         heading = _markdown_heading_text(line)
-        if heading and _heading_section_has_rule_marker(lines, index):
+        if heading:
             slugs.add(_slugify(heading))
             continue
         tag = _pseudo_xml_tag(line)
-        if tag and _pseudo_xml_section_has_rule_marker(lines, index, tag):
+        if tag:
             slugs.add(_slugify(tag))
     return {slug for slug in slugs if slug}
-
-
-def _pseudo_xml_section_has_rule_marker(
-    lines: list[str], tag_index: int, tag: str
-) -> bool:
-    if tag in _RULE_BEARING_PSEUDO_XML_TAGS:
-        return True
-    body: list[str] = []
-    closing_tag = f"</{tag}>"
-    for line in lines[tag_index + 1 :]:
-        if line.strip() == closing_tag:
-            break
-        body.append(line)
-    return any(_is_rule_marker_line(line) for line in body)
-
-
-def _heading_section_has_rule_marker(lines: list[str], heading_index: int) -> bool:
-    body: list[str] = []
-    in_fence = False
-    for line in lines[heading_index + 1 :]:
-        if _is_markdown_fence(line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if _markdown_heading_text(line):
-            break
-        body.append(line)
-    return any(_is_rule_marker_line(line) for line in body)
-
-
-def _is_rule_marker_line(line: str) -> bool:
-    stripped = line.strip()
-    bullet = stripped[2:].lstrip() if stripped.startswith(("- ", "* ")) else stripped
-    while bullet and not (bullet[0].isalnum() or bullet[0] == "*"):
-        bullet = bullet[1:].lstrip()
-    for marker in _RULE_MARKERS:
-        if bullet.startswith(f"{marker}:"):
-            return True
-        if bullet.startswith(f"**{marker}**"):
-            rest = bullet[len(marker) + 4 :].lstrip()
-            return rest.startswith(("-", ":"))
-        if bullet.startswith(f"**{marker} "):
-            return True
-    return False
 
 
 def _markdown_heading_text(line: str) -> str | None:
