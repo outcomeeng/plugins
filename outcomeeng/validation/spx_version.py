@@ -33,7 +33,9 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from shutil import which
 from typing import Final
 
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
@@ -64,6 +66,13 @@ from typing import Final
 # depend on).
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 SPX_PACKAGE_NAME: Final = "@outcomeeng/spx"
+NPX_EXECUTABLE: Final = "npx"
+NPX_COMMAND_PREFIX: Final = (NPX_EXECUTABLE, "--yes")
+MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
+    ("pnpm", ("pnpm", "dlx")),
+    ("bunx", ("bunx", "--bun")),
+    (NPX_EXECUTABLE, NPX_COMMAND_PREFIX),
+)
 VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "start",
     "scope",
@@ -105,6 +114,20 @@ def verification_run_floor_is_satisfied(
 ) -> bool:
     """Return whether the shipped floor includes verification-run support."""
     return is_satisfied(required_version, VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+
+
+def minimum_release_package_command(
+    package_spec: str,
+    executable_finder: Callable[[str], str | None] = which,
+) -> tuple[str, ...]:
+    """Return the first available exact-release package-runner command."""
+    for executable, command_prefix in MINIMUM_RELEASE_PACKAGE_RUNNERS:
+        if executable_finder(executable) is not None:
+            return (*command_prefix, package_spec)
+    raise RuntimeError(
+        "exact minimum-release SPX execution requires pnpm, bunx, or npx when "
+        "the PATH version differs"
+    )
 
 
 def main(workflow_path: Path = WORKFLOW_PATH) -> int:

@@ -49,12 +49,15 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_scope_payload,
 )
 from outcomeeng.validation.spx_version import (
+    NPX_COMMAND_PREFIX,
+    NPX_EXECUTABLE,
     REQUIRED_SPX_VERSION,
     SPX_PACKAGE_NAME,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     VERIFICATION_RUN_REQUIRED_COMMANDS,
     WORKFLOW_PATH,
     is_satisfied,
+    minimum_release_package_command,
     parse_version,
     read_pinned_version,
     verification_run_floor_is_satisfied,
@@ -70,15 +73,6 @@ SPX_RELEASE_FIXTURE: Final = (
 SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
-NPX_EXECUTABLE: Final = "npx"
-NPX_COMMAND_PREFIX: Final = (NPX_EXECUTABLE, "--yes")
-MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
-    ("pnpm", ("pnpm", "dlx")),
-    ("bunx", ("bunx", "--bun")),
-    (NPX_EXECUTABLE, NPX_COMMAND_PREFIX),
-)
-
-
 def spx_floor_provides_verification_run_lifecycle() -> bool:
     """Return whether the repository floor includes verification runs."""
     release = _verification_run_release()
@@ -116,13 +110,13 @@ def implementation_auditor_is_the_only_implementation_wrapper() -> bool:
 
 
 def language_concern_skill_trios_exist() -> bool:
-    """Return whether every live surface satisfies language trio rules."""
-    return _all_live_surfaces_pass(check_language_concern_surface)
+    """Return whether the live repository satisfies cross-surface audit rules."""
+    return not check_audit_artifact_contract(REPO_ROOT)
 
 
 def implementation_audit_runtime_contains_only_skill() -> bool:
-    """Return whether every live surface satisfies runtime shape rules."""
-    return _all_live_surfaces_pass(check_runtime_surface)
+    """Return whether every live audit runtime satisfies artifact rules."""
+    return _all_live_surfaces_pass(check_audit_runtime_surface)
 
 
 def audit_runtime_trees_exclude_retired_artifacts() -> bool:
@@ -258,7 +252,7 @@ def minimum_release_runner_supports_npx_fallback() -> bool:
     """Return whether exact-release selection falls back to standard npm tooling."""
     minimum_version = _required_string(_verification_run_release(), "version")
     package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
-    return _minimum_release_package_command(
+    return minimum_release_package_command(
         package_spec,
         executable_finder=_find_npx_only,
     ) == (*NPX_COMMAND_PREFIX, package_spec)
@@ -699,7 +693,7 @@ def _minimum_release_spx_command() -> tuple[str, ...]:
             return installed_command
 
     package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
-    minimum_command = _minimum_release_package_command(package_spec)
+    minimum_command = minimum_release_package_command(package_spec)
 
     actual_version = _spx_version(minimum_command)
     if actual_version != minimum_version:
@@ -708,19 +702,6 @@ def _minimum_release_spx_command() -> tuple[str, ...]:
             f"{actual_version}, expected {minimum_version}"
         )
     return minimum_command
-
-
-def _minimum_release_package_command(
-    package_spec: str,
-    executable_finder: Callable[[str], str | None] = which,
-) -> tuple[str, ...]:
-    for executable, command_prefix in MINIMUM_RELEASE_PACKAGE_RUNNERS:
-        if executable_finder(executable) is not None:
-            return (*command_prefix, package_spec)
-    raise RuntimeError(
-        "exact minimum-release SPX execution requires pnpm, bunx, or npx when "
-        "the PATH version differs"
-    )
 
 
 def _find_npx_only(executable: str) -> str | None:

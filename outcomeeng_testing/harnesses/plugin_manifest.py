@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import time
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -286,14 +287,32 @@ def parity_drift_makes_main_fail() -> bool:
 
 def timeout_terminates_group_and_names_command() -> bool:
     """Return whether timeout bounds execution and terminates descendants."""
-    with never_returning_child() as child:
+    with TemporaryDirectory() as temporary_directory, never_returning_child() as child:
+        root = Path(temporary_directory)
+        _write_catalogs(root, ())
+
+        def timeout_runner(
+            command: list[str],
+            **_: object,
+        ) -> subprocess.CompletedProcess[str]:
+            result = run_validate(list(child.command), timeout=TEST_TIMEOUT_SECONDS)
+            return subprocess.CompletedProcess(
+                command,
+                result.returncode,
+                result.stdout,
+                result.stderr,
+            )
+
         start = time.monotonic()
-        result = run_validate(list(child.command), timeout=TEST_TIMEOUT_SECONDS)
+        exit_code, _, stderr = _captured_main(root, timeout_runner)
         elapsed = time.monotonic() - start
+        timeout_note = (
+            f"timed out after {TEST_TIMEOUT_SECONDS}s: {' '.join(child.command)}"
+        ).strip()
         return (
-            result.returncode != 0
-            and result.args == list(child.command)
-            and " ".join(child.command).strip() in result.stderr
+            exit_code != 0
+            and f"error: validation failed for {root}" in stderr
+            and timeout_note in stderr
             and elapsed < DESCENDANT_SLEEP_SECONDS
             and child.descendant_alive() is False
         )
@@ -337,7 +356,7 @@ def _plugin_layout_is_validated(
 
 def _captured_main(
     root: Path,
-    runner: RecordingValidationRunner,
+    runner: Callable[..., subprocess.CompletedProcess[str]],
 ) -> tuple[int, str, str]:
     stdout = io.StringIO()
     stderr = io.StringIO()
