@@ -42,7 +42,7 @@ from outcomeeng_testing.harnesses.capturing_runner import (
     PROMPT_RETURN_CEILING_SECONDS,
     TEST_TIMEOUT_SECONDS,
     child_exiting_with_lingering_descendant,
-    never_returning_child,
+    never_returning_executable,
 )
 from outcomeeng_testing.generators.plugin_manifest import distinct_version_pairs
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -287,7 +287,10 @@ def parity_drift_makes_main_fail() -> bool:
 
 def timeout_terminates_group_and_names_command() -> bool:
     """Return whether timeout bounds execution and terminates descendants."""
-    with TemporaryDirectory() as temporary_directory, never_returning_child() as child:
+    with (
+        TemporaryDirectory() as temporary_directory,
+        never_returning_executable(CLAUDE_PLUGIN_VALIDATE_ARGV[0]) as child,
+    ):
         root = Path(temporary_directory)
         _write_catalogs(root, ())
 
@@ -295,20 +298,15 @@ def timeout_terminates_group_and_names_command() -> bool:
             command: list[str],
             **_: object,
         ) -> subprocess.CompletedProcess[str]:
-            result = run_validate(list(child.command), timeout=TEST_TIMEOUT_SECONDS)
-            return subprocess.CompletedProcess(
-                command,
-                result.returncode,
-                result.stdout,
-                result.stderr,
-            )
+            return run_validate(command, timeout=TEST_TIMEOUT_SECONDS)
 
         start = time.monotonic()
         exit_code, _, stderr = _captured_main(root, timeout_runner)
         elapsed = time.monotonic() - start
+        validation_command = _validation_command(root)
         timeout_note = (
-            f"timed out after {TEST_TIMEOUT_SECONDS}s: {' '.join(child.command)}"
-        ).strip()
+            f"timed out after {TEST_TIMEOUT_SECONDS}s: {' '.join(validation_command)}"
+        )
         return (
             exit_code != 0
             and f"error: validation failed for {root}" in stderr

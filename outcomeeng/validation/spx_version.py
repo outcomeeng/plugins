@@ -66,11 +66,15 @@ from typing import Final
 # depend on).
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
 SPX_PACKAGE_NAME: Final = "@outcomeeng/spx"
+PNPM_EXECUTABLE: Final = "pnpm"
+PNPM_COMMAND_PREFIX: Final = (PNPM_EXECUTABLE, "dlx")
+BUNX_EXECUTABLE: Final = "bunx"
+BUNX_COMMAND_PREFIX: Final = (BUNX_EXECUTABLE, "--bun")
 NPX_EXECUTABLE: Final = "npx"
 NPX_COMMAND_PREFIX: Final = (NPX_EXECUTABLE, "--yes")
 MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
-    ("pnpm", ("pnpm", "dlx")),
-    ("bunx", ("bunx", "--bun")),
+    (PNPM_EXECUTABLE, PNPM_COMMAND_PREFIX),
+    (BUNX_EXECUTABLE, BUNX_COMMAND_PREFIX),
     (NPX_EXECUTABLE, NPX_COMMAND_PREFIX),
 )
 VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (

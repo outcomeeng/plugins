@@ -1,7 +1,7 @@
 ---
 name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(cargo test:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo fmt --check:*), Bash(cargo llvm-cov:*), Bash(spx validation:*), Bash(just test:*), Bash(just check:*), Bash(just check-full:*), Bash(just verify:*), Bash(just validate:*)
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -31,7 +31,7 @@ Before writing or revising tests, also check:
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
 5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
 6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `<product>-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
-7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the location prescribed by `/rust-test-standards` and repo-local overlays.
+7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the canonical `<product>-testing` location prescribed by `/rust-test-standards`. A repo-local overlay may route to a governing product spec or decision that explicitly amends this contract; the overlay does not redefine the location itself.
 8. Run the repository's Rust validation commands before reporting the tests complete.
 
 </workflow>

@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from itertools import pairwise
 from pathlib import Path
-from shutil import rmtree, which
+from shutil import rmtree
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
@@ -49,8 +49,12 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_scope_payload,
 )
 from outcomeeng.validation.spx_version import (
+    BUNX_COMMAND_PREFIX,
+    BUNX_EXECUTABLE,
     NPX_COMMAND_PREFIX,
     NPX_EXECUTABLE,
+    PNPM_COMMAND_PREFIX,
+    PNPM_EXECUTABLE,
     REQUIRED_SPX_VERSION,
     SPX_PACKAGE_NAME,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
@@ -128,9 +132,6 @@ def audit_runtime_trees_exclude_retired_artifacts() -> bool:
 
 def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
     """Exercise the SPX lifecycle used by implementation-audit orchestration."""
-    if not spx_floor_provides_verification_run_lifecycle():
-        return False
-
     spx_command = _minimum_release_spx_command()
     rule = spx_verification_run_accepts_implementation_audit_payloads.__name__
     terminal_status = AuditTerminalStatus.REJECTED
@@ -192,9 +193,6 @@ def spx_verification_run_accepts_implementation_audit_payloads() -> bool:
 
 def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
     """Return whether SPX rejects approval after a blocking finding."""
-    if not spx_floor_provides_verification_run_lifecycle():
-        return False
-
     spx_command = _minimum_release_spx_command()
     rule = spx_verification_run_rejects_mismatched_terminal_status.__name__
 
@@ -258,6 +256,33 @@ def minimum_release_runner_supports_npx_fallback() -> bool:
         package_spec,
         executable_finder=_find_npx_only,
     ) == (*NPX_COMMAND_PREFIX, package_spec)
+
+
+def minimum_release_runner_preserves_precedence() -> bool:
+    """Prove each source-owned exact-release package-runner precedence branch."""
+    minimum_version = _required_string(_verification_run_release(), "version")
+    package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
+    cases = (
+        (
+            frozenset((PNPM_EXECUTABLE, BUNX_EXECUTABLE, NPX_EXECUTABLE)),
+            PNPM_COMMAND_PREFIX,
+        ),
+        (
+            frozenset((BUNX_EXECUTABLE, NPX_EXECUTABLE)),
+            BUNX_COMMAND_PREFIX,
+        ),
+        (frozenset((NPX_EXECUTABLE,)), NPX_COMMAND_PREFIX),
+    )
+    return all(
+        minimum_release_package_command(
+            package_spec,
+            executable_finder=lambda executable, available=available: (
+                executable if executable in available else None
+            ),
+        )
+        == (*expected_prefix, package_spec)
+        for available, expected_prefix in cases
+    )
 
 
 def implementation_audit_unit_ids_are_subject_specific() -> bool:
@@ -689,11 +714,6 @@ def _plugin_version(plugin_name: str) -> str:
 
 def _minimum_release_spx_command() -> tuple[str, ...]:
     minimum_version = _required_string(_verification_run_release(), "version")
-    if which("spx") is not None:
-        installed_command = ("spx",)
-        if _spx_version(installed_command) == minimum_version:
-            return installed_command
-
     package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
     minimum_command = minimum_release_package_command(package_spec)
 
