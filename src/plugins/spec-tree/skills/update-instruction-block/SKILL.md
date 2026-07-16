@@ -3,7 +3,7 @@ name: update-instruction-block
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
 argument-hint: "[--repo-root <path>] [--languages <csv>]"
-allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read, Edit, {{! tool('ask_user') !}}
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read,{!% if target == 'claude' %!} Edit,{!% endif %!} {{! tool('ask_user') !}}
 ---
 
 <objective>
