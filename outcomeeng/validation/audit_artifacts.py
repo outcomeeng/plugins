@@ -43,15 +43,20 @@ RETIRED_AUDIT_RUNTIME_FILENAMES: Final = (
 def check_audit_artifact_contract(root: Path) -> list[str]:
     """Return implementation-audit contract violations under ``root``."""
     errors: list[str] = []
-    for relative_surface in PLUGIN_SURFACE_PATHS:
-        surface = root / relative_surface
-        if not surface.is_dir():
-            errors.append(f"{relative_surface}: plugin surface missing")
-            continue
+    for surface in audit_contract_surfaces(root):
         errors.extend(check_audit_runtime_surface(surface))
         errors.extend(check_wrapper_surface(surface))
         errors.extend(check_language_concern_surface(surface))
     return errors
+
+
+def audit_contract_surfaces(root: Path) -> tuple[Path, ...]:
+    """Return present plugin surfaces that expose the audit-owning plugin."""
+    return tuple(
+        root / relative_surface
+        for relative_surface in PLUGIN_SURFACE_PATHS
+        if (root / relative_surface / SPEC_TREE_PLUGIN_NAME).is_dir()
+    )
 
 
 def check_audit_runtime_surface(surface: Path) -> list[str]:
@@ -94,10 +99,20 @@ def check_wrapper_surface(surface: Path) -> list[str]:
         if retired_path.exists():
             errors.append(f"{retired_path}: retired wrapper exists")
 
+    agent_paths = tuple(surface.glob(f"*/{AGENTS_DIR_NAME}/*.md"))
+    language_names = frozenset(
+        (
+            *implementation_languages(surface),
+            *(path.parent.parent.name for path in agent_paths),
+        )
+    )
     errors.extend(
         f"{path}: language-specific auditor exists"
-        for path in surface.glob(f"*/{AGENTS_DIR_NAME}/*.md")
-        if path.name in language_specific_auditor_filenames(path.parent.parent.name)
+        for path in agent_paths
+        if any(
+            path.name in language_specific_auditor_filenames(language)
+            for language in language_names
+        )
     )
     return errors
 

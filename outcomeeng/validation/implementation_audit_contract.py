@@ -116,6 +116,7 @@ def implementation_audit_scope_payload(
     producer_provenance: Mapping[str, object],
 ) -> dict[str, object]:
     """Return one audited implementation coverage unit."""
+    subject_path = _require_subject_path(subject_path)
     return {
         "unitId": implementation_audit_unit_id(
             language,
@@ -153,6 +154,7 @@ def implementation_audit_finding_payload(
     producer_provenance: Mapping[str, object],
 ) -> dict[str, object]:
     """Return one valid blocking implementation-audit finding."""
+    subject_path = _require_subject_path(subject_path)
     return {
         "unitId": implementation_audit_unit_id(
             language,
@@ -202,3 +204,10 @@ def expected_verification_projection(
         True,
         terminal_status.value,
     )
+
+
+def _require_subject_path(subject_path: str) -> str:
+    """Return a concrete audit subject or reject the empty boundary value."""
+    if not subject_path:
+        raise ValueError("implementation audit evidence requires a subject path")
+    return subject_path

@@ -231,6 +231,15 @@ def audit_contract_rejects_language_specific_wrapper() -> bool:
         return bool(check_wrapper_surface(surface))
 
 
+def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
+    """Reject a language wrapper placed under the generic wrapper host."""
+    with _valid_surface() as surface:
+        language = _source_language()
+        filename = min(language_specific_auditor_filenames(language))
+        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        return bool(check_wrapper_surface(surface))
+
+
 def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
     """Reject a language-specific wrapper without a matching code skill."""
     with _valid_surface() as surface:
@@ -282,6 +291,43 @@ def implementation_audit_unit_ids_are_subject_specific() -> bool:
             strict=True,
         )
     )
+
+
+def implementation_audit_payloads_reject_empty_subject() -> bool:
+    """Reject scope and finding payloads without a concrete subject."""
+    language = _source_language()
+    concern = ImplementationAuditConcern.CODE
+    provenance = implementation_audit_provenance(
+        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        language_plugin_version=_plugin_version(language),
+        tool_version=REQUIRED_SPX_VERSION,
+    )
+    try:
+        implementation_audit_scope_payload(
+            language,
+            concern,
+            subject_path="",
+            producer_provenance=provenance,
+        )
+    except ValueError:
+        pass
+    else:
+        return False
+
+    try:
+        implementation_audit_finding_payload(
+            language,
+            concern,
+            rule=implementation_audit_payloads_reject_empty_subject.__name__,
+            subject_path="",
+            message=implementation_audit_payloads_reject_empty_subject.__doc__ or "",
+            observed="",
+            expected=implementation_audit_payloads_reject_empty_subject.__name__,
+            producer_provenance=provenance,
+        )
+    except ValueError:
+        return True
+    return False
 
 
 def audit_contract_rejects_retired_implementation_wrappers() -> bool:
