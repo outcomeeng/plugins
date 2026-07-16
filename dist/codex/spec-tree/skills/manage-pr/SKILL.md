@@ -11,7 +11,7 @@ allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_
 The pull request merged into the base branch on origin, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
-<pr_wait_and_reentry_policy>
+<step name="pr_wait_and_reentry_policy">
 
 `/manage-pr` is the re-entry point for an open pull request. Capture `$pr` before inspection. When `$pr` is non-empty, treat it as the PR number, URL, or branch pointer and inspect that PR. When `$pr` is empty, resolve the PR from the current branch with bare `gh pr view`.
 
@@ -21,9 +21,9 @@ When PR checks or current-head review output are not terminal, `/manage-pr` runs
 
 GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why `/manage-pr` is being re-entered.
 
-</pr_wait_and_reentry_policy>
+</step>
 
-<pr_identity_fields>
+<step name="pr_identity_fields">
 
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
@@ -35,7 +35,7 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
 
 The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate` call.
 
-</pr_identity_fields>
+</step>
 
 <workflow>
 
