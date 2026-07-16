@@ -46,7 +46,7 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 | `mapping`     | Mapping        | Table-driven or parameterized cases over a finite input/output mapping       |
 | `conformance` | Conformance    | Parser, schema, protocol, CLI contract, or `trybuild` compile-time check     |
 | `property`    | Property       | Harness-owned property invariant over a generated domain                     |
-| `compliance`  | Compliance     | Violating fixture, lint harness, or architecture review marker               |
+| `compliance`  | Compliance     | Violating fixture, lint harness, or rule oracle                              |
 
 **Level tokens** — the infrastructure required to run the test:
 
@@ -253,7 +253,7 @@ Match test strategy to assertion type:
 | Mapping        | table-driven tests or `rstest` case matrices                          |
 | Property       | property harness over generated domains with meaningful invariants    |
 | Conformance    | validator tooling, parsers, schema checks, `trybuild` if compile-time |
-| Compliance     | targeted assertions, lint harnesses, or architecture review markers   |
+| Compliance     | targeted assertions, lint harnesses, or rule oracles                  |
 
 Property claims about parsers, serializers, math, ordering, or invariants require property-based tests unless the spec itself narrows the claim to a finite example set.
 

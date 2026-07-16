@@ -350,6 +350,18 @@ Coverage here is execution breadth (does the test reach the assertion-relevant l
 
 This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
+Under implementation-auditor composition, when `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+
+```json
+{
+  "status": "NOT_APPLICABLE",
+  "subjects": ["<retired-repository-relative-path>"],
+  "explanation": "No current [test] assertion or evidence chain references the retired path."
+}
+```
+
+Emit this shape only when every supplied subject is outside current TypeScript test-evidence scope. A current broken `[test]` link remains applicable and produces the inherited `REJECTED` verdict.
+
 </verdict_format>
 
 <failure_modes>
@@ -433,7 +445,8 @@ How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructur
 The TypeScript test verdict is sound when:
 
 - Every applicable rule was judged: each in-scope test received the filename-policy structural reading, and each in-scope assertion received all eight Gate 1 steps — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering; Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
-- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Every deleted TypeScript test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
+- Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
