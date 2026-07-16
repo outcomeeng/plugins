@@ -7,6 +7,9 @@ from typing import Any
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    REVIEW_SPEC_PATH,
+    REPO_ROOT,
+    SKILL_FILE,
     load_review_result_module,
     make_finding_dict,
     review_rule_citations,
@@ -19,14 +22,17 @@ def review_findings() -> st.SearchStrategy[Any]:
     review_result = load_review_result_module()
     return st.builds(
         review_result.Finding,
-        id=st.from_regex(r"F-[0-9]{3}", fullmatch=True),
+        id=st.integers(
+            min_value=1,
+            max_value=(10**review_result.FINDING_ID_DIGITS) - 1,
+        ).map(review_result.format_finding_id),
         concern=st.sampled_from(tuple(review_result.Concern)),
         severity=st.sampled_from(tuple(review_result.Severity)),
-        file=st.from_regex(r"[a-z_]{1,12}\.py", fullmatch=True),
-        line=st.integers(min_value=1),
+        file=st.text(min_size=1),
+        line=st.integers(),
         rule=st.sampled_from(review_rule_citations()),
-        message=st.text(),
-        action=st.text(),
+        message=st.text(min_size=1),
+        action=st.text(min_size=1),
     )
 
 
@@ -113,10 +119,10 @@ def review_severity_projection_cases() -> tuple[tuple[Any, Any, Any], ...]:
 def changed_review_file_sets() -> tuple[list[str], list[str]]:
     """Return nested source-relevant changed-file sets for scope hashing."""
 
-    first = ["README.md"]
+    first = [str(REVIEW_SPEC_PATH.relative_to(REPO_ROOT))]
     second = [
         *first,
-        "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+        str(SKILL_FILE.relative_to(REPO_ROOT)),
     ]
     return first, second
 
@@ -125,6 +131,6 @@ def distinct_review_inputs() -> tuple[str, str]:
     """Return equal-scope review inputs with distinct content."""
 
     return (
-        "### Staged diff\n\nfirst",
-        "### Staged diff\n\nsecond",
+        REVIEW_SPEC_PATH.read_text(encoding="utf-8"),
+        SKILL_FILE.read_text(encoding="utf-8"),
     )

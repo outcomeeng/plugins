@@ -25,7 +25,6 @@ from typing import Any
 _HERE = pathlib.Path(__file__).resolve().parent
 _SKILL_DIR = _HERE.parent
 _SKILLS_DIR = _SKILL_DIR.parent
-_REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
 _STATE_FILENAME = "state.json"
 _REVIEW_TYPE = "review"
 _DEFAULT_TARGET = "working-diff"
@@ -75,6 +74,10 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
 
 
 compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
+journal_emit = _load_module(
+    "review_changes_journal_emit",
+    _HERE / "journal_emit.py",
+)
 jp = _load_module(
     "journal_projection",
     _SKILLS_DIR / "project-run-journal" / "scripts" / "journal_projection.py",
@@ -100,23 +103,8 @@ def _digest(value: object, *, length: int | None = None) -> str:
     return digest[:length]
 
 
-def _file_digest(path: pathlib.Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def _review_config_digest() -> str:
-    prompt_path = _SKILL_DIR / _REVIEW_PROMPT
-    return _digest(
-        {
-            "skill": "review-changes",
-            "runner": "review_run.py",
-            "projection": "journal_projection",
-            "prompt": {
-                "path": str(_REVIEW_PROMPT),
-                "sha256": _file_digest(prompt_path),
-            },
-        }
-    )
+    return str(journal_emit.review_config_digest(_SKILL_DIR))
 
 
 def _read_json_file(path: pathlib.Path, *, name: str) -> dict[str, Any]:
@@ -227,10 +215,12 @@ def _metadata_from_manifest(
     base_ref = _require_manifest_str(manifest, "base_ref")
     head_ref = _require_manifest_str(manifest, "head_ref")
     scope = {
-        "baseRef": base_ref,
-        "headRef": head_ref,
-        "changedFiles": _manifest_changed_files(manifest),
-        "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
+        journal_emit.SCOPE_BASE_REF_FIELD: base_ref,
+        journal_emit.SCOPE_HEAD_REF_FIELD: head_ref,
+        journal_emit.SCOPE_CHANGED_FILES_FIELD: _manifest_changed_files(manifest),
+        journal_emit.SCOPE_REVIEW_INPUT_SHA256_FIELD: _require_manifest_str(
+            manifest, "diff_sha256"
+        ),
     }
     branch_name = os.environ.get(ENV_BRANCH, "").strip() or str(
         changeset_scope.detect_current_branch(repo)
@@ -340,47 +330,13 @@ def _read_state(path: pathlib.Path) -> dict[str, Any]:
     return state
 
 
-def _finding_severity(value: object) -> object:
-    text = str(value)
-    if text == "blocking":
-        return jp.Severity.REJECT
-    if text == "debt":
-        return jp.Severity.WARNING
-    if text in {severity.value for severity in jp.Severity}:
-        return jp.Severity(text)
-    return jp.Severity.UNKNOWN
-
-
-def _optional_str(value: object) -> str | None:
-    if isinstance(value, str) and value:
-        return value
-    return None
-
-
-def _line_number(value: object) -> int | None:
-    if isinstance(value, int):
-        return value
-    return None
-
-
 def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
-    try:
-        raw = json.loads(sys.stdin.read())
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"finding input is invalid JSON: {exc.msg}") from exc
-    if not isinstance(raw, dict):
-        raise ValueError("finding input must be a JSON object")
-    finding = jp.Finding(
-        file=str(raw.get("file", "")),
-        line=_line_number(raw.get("line")),
-        rule=str(raw.get("rule", "")),
-        severity=_finding_severity(raw.get("severity", "")),
-        message=str(raw.get("message", "")),
-        identifier=_optional_str(raw.get("id")),
-        concern=_optional_str(raw.get("concern")),
-        action=_optional_str(raw.get("action")),
+    finding = journal_emit.review_result.parse_finding_json(sys.stdin.read())
+    return journal_emit.finding_reported_event(
+        finding,
+        now=now,
+        attempt=attempt,
     )
-    return jp.finding_reported_event(finding, now=now, attempt=attempt)
 
 
 def _completed_event(
@@ -420,7 +376,7 @@ def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
     scope = metadata.get(jp.RUN_STATE_SCOPE)
     if not isinstance(scope, dict):
         return "review run metadata missing scope"
-    changed_files = scope.get("changedFiles")
+    changed_files = scope.get(journal_emit.SCOPE_CHANGED_FILES_FIELD)
     if not isinstance(changed_files, list) or not all(
         isinstance(item, str) and item for item in changed_files
     ):

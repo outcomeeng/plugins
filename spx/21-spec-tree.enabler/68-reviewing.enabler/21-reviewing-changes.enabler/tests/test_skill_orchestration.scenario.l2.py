@@ -42,10 +42,12 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_SUMMARY_DEBT_FIELD,
     REVIEW_SUMMARY_FIELD,
     REVIEW_SUMMARY_OVERALL_FIELD,
-    init_review_git_repo,
+    clean_review_chain_observation,
     isolated_review_env,
     load_review_result_module,
-    make_review_result_dict,
+    malformed_runner_finding_observation,
+    review_chain_with_finding_observation,
+    review_contract_modules,
     review_git_repo,
     review_git_repo_with_secondary_head,
     review_finding_payloads,
@@ -53,10 +55,8 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     review_run_journal_env_from_state,
     run_git,
     run_compute_diff_in_process,
-    run_journal_emit_in_process,
     run_script,
     set_origin_head,
-    stream_review_prefix,
 )
 
 
@@ -77,87 +77,32 @@ class TestSkillOrchestrationChain:
     surface is rendered only from the sealed event prefix.
     """
 
-    def test_chain_streams_and_renders_review_run(self, tmp_path: pathlib.Path) -> None:
-        # 1. Real git repo with a base branch and a feature branch.
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        base_ref = init_review_git_repo(repo)
+    def test_chain_streams_and_renders_review_run(self) -> None:
+        observation = review_chain_with_finding_observation()
+        contracts = review_contract_modules()
+        journal_emit = contracts.journal_emit
+        projection = contracts.journal_projection
 
-        # 2. compute_diff.py reads the explicit base ref, runs git diff against
-        #    that base, and emits the diff to stdout.
-        env = isolated_review_env(cwd=repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
-        diff_result = run_compute_diff_in_process(repo=repo, env=env)
-        assert diff_result.returncode == 0, diff_result.stderr
-        # The diff must reference the modified file. A truly empty diff
-        # means compute_diff did not pick up the base ref correctly.
-        assert "README.md" in diff_result.stdout
-
-        # 3. Derive run identity once at the start of the run.
-        metadata_result = run_journal_emit_in_process(
-            "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
+        assert observation.diff_result.returncode == 0, observation.diff_result.stderr
+        assert observation.changed_file in observation.diff_result.stdout
+        assert observation.metadata_result.returncode == 0
+        assert observation.rendered[journal_emit.RENDER_SURFACE_FIELD] == (
+            projection.render_surface(list(observation.events))
         )
-        assert metadata_result.returncode == 0, metadata_result.stderr
-
-        # 4. Stream the run: scope-entered, a scope-advanced for the examined
-        #    file, one finding-reported per finding (each through the parse
-        #    gate), and the terminal run-completed. The default fixture carries
-        #    one debt-severity finding under the architecture concern.
-        findings = make_review_result_dict()["findings"]
-        finding = findings[0]
-        review_result = load_review_result_module()
-        sealed_prefix = stream_review_prefix(
-            env, metadata_result.stdout, findings, units=["README.md"]
+        assert observation.rendered[journal_emit.RENDER_OVERALL_FIELD] == str(
+            projection.compute_overall(list(observation.events))
         )
 
-        # 5. The human surface is rendered only from the sealed event prefix.
-        prefix_render = run_journal_emit_in_process(
-            "render", stdin=json.dumps(sealed_prefix), env=env
-        )
-        assert prefix_render.returncode == 0, prefix_render.stderr
-        prefix_surface = json.loads(prefix_render.stdout)
-        assert prefix_surface["countLine"] == "BLOCKING: 0, DEBT: 1"
-        # The surface shows the run advancing: a progress line for the examined
-        # file precedes the finding line.
-        surface = prefix_surface["surface"]
-        assert "- examined README.md" in surface
-        # The finding event carries the full review finding: severity maps to
-        # the audit-shared `warning`, and the concern and action ride along.
-        assert (
-            f"- [warning {finding[review_result.FINDING_CONCERN_FIELD]}] "
-            f"{finding[review_result.FINDING_FILE_FIELD]}:"
-            f"{finding[review_result.FINDING_LINE_FIELD]}"
-        ) in surface
-        assert f"Required: {finding[review_result.FINDING_ACTION_FIELD]}" in surface
-        # No verdict the reviewer decides; the rollup footer is a computed
-        # status, not a `decision` field.
-        assert "decision" not in surface
+    def test_clean_review_streams_a_zero_count(self) -> None:
+        observation = clean_review_chain_observation()
+        journal_emit = review_contract_modules().journal_emit
 
-    def test_clean_review_streams_a_zero_count(self, tmp_path: pathlib.Path) -> None:
-        # A fully-clean review (no findings) streams scope-entered, the examined
-        # file, and run-completed, and renders a zero count line with no finding
-        # body to act on.
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        base_ref = init_review_git_repo(repo)
-        env = isolated_review_env(cwd=repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
-
-        metadata_result = run_journal_emit_in_process(
-            "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
+        assert observation.rendered[journal_emit.RENDER_BLOCKING_FIELD] == str(
+            len(observation.findings)
         )
-        assert metadata_result.returncode == 0, metadata_result.stderr
-        sealed_prefix = stream_review_prefix(
-            env, metadata_result.stdout, [], units=["README.md"]
+        assert observation.rendered[journal_emit.RENDER_DEBT_FIELD] == str(
+            len(observation.findings)
         )
-        prefix_render = run_journal_emit_in_process(
-            "render", stdin=json.dumps(sealed_prefix), env=env
-        )
-        assert prefix_render.returncode == 0, prefix_render.stderr
-        surface = json.loads(prefix_render.stdout)
-        assert surface["countLine"] == "BLOCKING: 0, DEBT: 0"
-        assert surface["blocking"] == "0"
-        assert surface["debt"] == "0"
 
 
 @pytest.mark.skipif(
@@ -260,6 +205,14 @@ class TestReviewRunnerBoundary:
             finding["severity"] == review_result.Severity.DEBT for finding in findings
         )
         assert summary[REVIEW_SUMMARY_OVERALL_FIELD] == projection.Outcome.REJECTED
+
+    def test_runner_rejects_malformed_finding_before_append(self) -> None:
+        observation = malformed_runner_finding_observation()
+        projection = review_contract_modules().journal_projection
+
+        assert observation.returncode != 0
+        assert observation.missing_field in observation.stderr
+        assert observation.event_types == (projection.SCOPE_ENTERED,)
 
     def test_runner_rejects_finish_before_scope_coverage(
         self, tmp_path: pathlib.Path

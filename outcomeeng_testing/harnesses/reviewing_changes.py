@@ -22,10 +22,8 @@ Provides the shared scaffolding consumed by every test file under
 - ``load_review_result_module``. An importlib loader for the
   ``review_result`` policy module.
 - ``run_script``. A thin ``subprocess.run`` wrapper for CLI invocations.
-- ``make_review_result_dict``. Factory that returns a synthetic
-  ``review-result`` JSON-ready dict with every required field populated,
-  ready to be mutated by callers to construct invalid documents for
-  rejection-path tests.
+- ``make_review_result_dict``. Factory that constructs review documents from
+  the production schema module and source-derived finding values.
 
 The harness lives in ``outcomeeng_testing/harnesses/`` because shared test
 scaffolding is production code with its home outside ``tests/`` and
@@ -83,7 +81,6 @@ REVIEW_FIXTURES_DIR = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "reviewing_changes"
 )
 RULE_SLUG_DOCUMENT_FIXTURE = REVIEW_FIXTURES_DIR / "rule_slug_document.md"
-CONFORMING_REVIEW_RESULT_FIXTURE = REVIEW_FIXTURES_DIR / "conforming_review_result.json"
 REVIEW_RUN_METADATA_BRANCH_FIXTURE = (
     REVIEW_FIXTURES_DIR / "review_run_metadata_branch.json"
 )
@@ -94,7 +91,6 @@ FAKE_JOURNAL_PATH_ENV = "SPX_FAKE_JOURNAL_PATH"
 FAKE_NAMESPACE_KEYS_ENV = "SPX_FAKE_NAMESPACE_KEYS"
 FAKE_RUN_TOKEN = "run-001"
 CONTAMINATING_JOURNAL_ENV_VALUE = "contaminating-later-env"
-REVIEW_FINDINGS_FIXTURE = REVIEW_FIXTURES_DIR / "review_findings.jsonl"
 
 
 def load_review_result_module() -> ModuleType:
@@ -349,22 +345,24 @@ def review_run_metadata(
 
 
 def review_finding(*, severity: Any) -> Any:
-    """Return the complete captured finding carrying ``severity``."""
+    """Return a source-constructed finding carrying ``severity``."""
 
     review_result = load_review_result_module()
-    findings = tuple(
-        review_result.parse_finding_json(line)
-        for line in REVIEW_FINDINGS_FIXTURE.read_text(encoding="utf-8").splitlines()
+    return review_result.parse_finding_json(
+        json.dumps(make_finding_dict(severity=severity))
     )
-    return next(finding for finding in findings if finding.severity == severity)
 
 
 def review_finding_payloads() -> tuple[dict[str, Any], ...]:
-    """Return the complete captured review finding payloads."""
+    """Return one source-constructed payload for every review severity."""
 
+    review_result = load_review_result_module()
     return tuple(
-        cast("dict[str, Any]", json.loads(line))
-        for line in REVIEW_FINDINGS_FIXTURE.read_text(encoding="utf-8").splitlines()
+        make_finding_dict(
+            finding_id=review_result.format_finding_id(index),
+            severity=severity,
+        )
+        for index, severity in enumerate(review_result.Severity, start=1)
     )
 
 
@@ -454,14 +452,13 @@ def write_review_manifest(
 class ReviewMetadataHarness:
     """Injected collaborators for deterministic review metadata evidence."""
 
-    base_ref: str = "origin/main"
-    head_ref: str = "HEAD"
-    branch_name: str = "work/example"
-    changed_files: list[str] = field(default_factory=lambda: ["README.md"])
-    review_inputs: list[str] = field(
-        default_factory=lambda: ["### Committed diff\n\nREADME change"],
-    )
-    config_digest: str = "cfg-abc123"
+    metadata: Any = field(default_factory=review_run_metadata)
+    base_ref: str | None = None
+    head_ref: str | None = None
+    branch_name: str | None = None
+    changed_files: list[str] | None = None
+    review_inputs: list[str] | None = None
+    config_digest: str | None = None
 
     def deps(
         self,
@@ -474,6 +471,21 @@ class ReviewMetadataHarness:
         """Return production MetadataDeps configured for one evidence boundary."""
 
         journal_emit = load_journal_emit_module()
+        base_ref_value = self.base_ref or self.metadata.base_ref
+        head_ref_value = self.head_ref or journal_emit.DEFAULT_HEAD_REF
+        branch_name_value = self.branch_name or self.metadata.branch_name
+        changed_files = self.changed_files or [
+            file_path
+            for value in self.metadata.scope.values()
+            if isinstance(value, list)
+            for file_path in value
+            if isinstance(file_path, str)
+        ]
+        review_inputs = self.review_inputs or [
+            REVIEW_SPEC_PATH.read_text(encoding="utf-8"),
+            SKILL_FILE.read_text(encoding="utf-8"),
+        ]
+        config_digest = self.config_digest or self.metadata.config_digest
 
         def review_scope(
             *,
@@ -488,50 +500,52 @@ class ReviewMetadataHarness:
                     ["git", "diff", f"{base_ref}...{head_ref}"],
                 )
             review_input = (
-                self.review_inputs.pop(0)
-                if len(self.review_inputs) > 1
-                else self.review_inputs[0]
+                review_inputs.pop(0) if len(review_inputs) > 1 else review_inputs[0]
             )
             return {
-                "baseRef": base_ref,
-                "headRef": head_ref,
-                "changedFiles": list(self.changed_files),
-                "reviewInputSha256": hashlib.sha256(
+                journal_emit.SCOPE_BASE_REF_FIELD: base_ref,
+                journal_emit.SCOPE_HEAD_REF_FIELD: head_ref,
+                journal_emit.SCOPE_CHANGED_FILES_FIELD: list(changed_files),
+                journal_emit.SCOPE_REVIEW_INPUT_SHA256_FIELD: hashlib.sha256(
                     review_input.encode("utf-8"),
                 ).hexdigest(),
             }
 
         return journal_emit.MetadataDeps(
-            resolve_base_ref=lambda: self.base_ref,
-            resolve_head_ref=lambda: self.head_ref,
+            resolve_base_ref=lambda: base_ref_value,
+            resolve_head_ref=lambda: head_ref_value,
             resolve_branch_name=(
                 journal_emit._resolve_branch_name
                 if source_branch
-                else lambda: self.branch_name
+                else lambda: branch_name_value
             ),
             resolve_target_kind=(
                 journal_emit._resolve_target_kind
                 if source_target
-                else lambda: journal_emit.jp.JournalTargetKind.BRANCH
+                else lambda: self.metadata.target_kind
             ),
             resolve_pull_request_number=(
                 journal_emit._resolve_pull_request_number
                 if source_target
-                else lambda _target: None
+                else lambda _target: self.metadata.pull_request_number
             ),
             review_scope=review_scope,
             review_scope_from_manifest=(
                 journal_emit._review_scope_from_manifest
                 if manifest_scope
                 else lambda _path: review_scope(
-                    base_ref=self.base_ref,
-                    head_ref=self.head_ref,
+                    base_ref=base_ref_value,
+                    head_ref=head_ref_value,
                     repo=pathlib.Path.cwd(),
                 )
             ),
-            branch_slug=lambda _branch: "work__example",
-            commit_oid=lambda ref, *, repo: f"{ref}:sha",
-            config_digest=lambda: self.config_digest,
+            branch_slug=journal_emit.changeset_scope.branch_slug,
+            commit_oid=lambda ref, *, repo: (
+                self.metadata.head_sha
+                if ref == head_ref_value
+                else self.metadata.base_sha
+            ),
+            config_digest=lambda: config_digest,
         )
 
 
@@ -580,6 +594,41 @@ def load_review_run_module() -> ModuleType:
     sys.modules["review_run"] = module
     spec.loader.exec_module(module)
     return module
+
+
+@dataclass(frozen=True)
+class ReviewContractModules:
+    """Production modules exercised by the review evidence files."""
+
+    journal_emit: ModuleType
+    journal_projection: ModuleType
+    review_result: ModuleType
+    review_run: ModuleType
+
+
+def review_contract_modules() -> ReviewContractModules:
+    """Load the production review contracts behind one harness entrypoint."""
+
+    from outcomeeng_testing.harnesses.journal_projection import (
+        load_journal_projection_module,
+    )
+
+    return ReviewContractModules(
+        journal_emit=load_journal_emit_module(),
+        journal_projection=load_journal_projection_module(),
+        review_result=load_review_result_module(),
+        review_run=load_review_run_module(),
+    )
+
+
+def review_config_digests() -> tuple[str, str]:
+    """Return both adapters' config identity for the authored review skill."""
+
+    contracts = review_contract_modules()
+    return (
+        str(contracts.journal_emit.review_config_digest(SKILL_DIR)),
+        str(contracts.review_run._review_config_digest()),
+    )
 
 
 def review_run_journal_env_keys() -> tuple[str, ...]:
@@ -1048,6 +1097,122 @@ class ReviewRunnerHarness:
     run_token: str = FAKE_RUN_TOKEN
 
 
+@dataclass(frozen=True)
+class ReviewChainObservation:
+    """Outputs captured from one complete streaming review chain."""
+
+    diff_result: subprocess.CompletedProcess[str]
+    metadata_result: subprocess.CompletedProcess[str]
+    changed_file: str
+    findings: tuple[dict[str, Any], ...]
+    events: tuple[dict[str, Any], ...]
+    rendered: dict[str, str]
+
+
+def _review_chain_observation(
+    findings: tuple[dict[str, Any], ...],
+) -> ReviewChainObservation:
+    """Run the complete review adapter chain in an isolated git repository."""
+
+    with TemporaryDirectory() as temporary_directory:
+        repo = pathlib.Path(temporary_directory) / "repo"
+        repo.mkdir()
+        base_ref = init_review_git_repo(repo)
+        env = isolated_review_env(cwd=repo)
+        env[REVIEW_ENV_BASE_REF] = base_ref
+        diff_result = run_compute_diff_in_process(repo=repo, env=env)
+        metadata_result = run_journal_emit_in_process(
+            "metadata",
+            "--started-at",
+            review_run_metadata().started_at,
+            repo=repo,
+            env=env,
+        )
+        changed_file = next(
+            file_path
+            for value in review_run_metadata().scope.values()
+            if isinstance(value, list)
+            for file_path in value
+            if isinstance(file_path, str)
+        )
+        events = stream_review_prefix(
+            env,
+            metadata_result.stdout,
+            list(findings),
+            units=[changed_file],
+        )
+        rendered_result = run_journal_emit_in_process(
+            "render",
+            stdin=json.dumps(events),
+            env=env,
+        )
+        return ReviewChainObservation(
+            diff_result=diff_result,
+            metadata_result=metadata_result,
+            changed_file=changed_file,
+            findings=findings,
+            events=tuple(events),
+            rendered=cast("dict[str, str]", json.loads(rendered_result.stdout)),
+        )
+
+
+def review_chain_with_finding_observation() -> ReviewChainObservation:
+    """Capture one complete review carrying the source-constructed finding."""
+
+    return _review_chain_observation((make_finding_dict(),))
+
+
+def clean_review_chain_observation() -> ReviewChainObservation:
+    """Capture one complete review carrying no findings."""
+
+    return _review_chain_observation(())
+
+
+@dataclass(frozen=True)
+class MalformedRunnerFindingObservation:
+    """Runner output and journal state after one malformed finding append."""
+
+    returncode: int
+    stderr: str
+    missing_field: str
+    event_types: tuple[str, ...]
+
+
+def malformed_runner_finding_observation() -> MalformedRunnerFindingObservation:
+    """Attempt one malformed append against an isolated runner journal."""
+
+    review_result = load_review_result_module()
+    with TemporaryDirectory() as temporary_directory:
+        runner = review_runner_harness(pathlib.Path(temporary_directory))
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        start_payload = json.loads(started.stdout)
+        missing_field = review_result.FINDING_ACTION_FIELD
+        malformed = make_finding_dict()
+        del malformed[missing_field]
+        appended = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-finding",
+            "--state",
+            start_payload[REVIEW_START_STATE_PATH],
+            stdin=json.dumps(malformed),
+            env=runner.env,
+            cwd=runner.repo,
+        )
+        journal = json.loads(runner.journal_path.read_text(encoding="utf-8"))
+        event_types = tuple(event["type"] for event in journal["events"])
+        return MalformedRunnerFindingObservation(
+            returncode=appended.returncode,
+            stderr=appended.stderr,
+            missing_field=missing_field,
+            event_types=event_types,
+        )
+
+
 def review_runner_harness(
     tmp_path: pathlib.Path, *, renamed: bool = False
 ) -> ReviewRunnerHarness:
@@ -1085,27 +1250,18 @@ def make_review_result_dict(
     findings: list[dict[str, Any]] | None = None,
     schema_version: int | None = None,
 ) -> dict[str, Any]:
-    """Return a synthetic review-result dict with every required field.
-
-    Default shape: one ``debt``-severity finding under the ``architecture``
-    concern. A review carries findings only — no summary, acknowledgement,
-    decision, or verdict field — so the dict has exactly ``schema_version``
-    and ``findings``. The debt finding carries an ``action`` populated with
-    a required change to satisfy the required-field check. The defaults make
-    the conforming case the trivial caller; rejection-path tests mutate one
-    field on the returned dict to construct each violation.
-
-    ``schema_version`` defaults to the module-level ``SCHEMA_VERSION``
-    from the loaded ``review_result`` module so tests automatically pick
-    up future bumps without re-asserting the version.
-    """
+    """Return a review-result dict built from production field contracts."""
     review_result = load_review_result_module()
-    document = json.loads(CONFORMING_REVIEW_RESULT_FIXTURE.read_text(encoding="utf-8"))
-    if schema_version is not None:
-        document[review_result.DOCUMENT_SCHEMA_VERSION_FIELD] = schema_version
-    if findings is not None:
-        document[review_result.DOCUMENT_FINDINGS_FIELD] = findings
-    return cast(dict[str, Any], document)
+    return {
+        review_result.DOCUMENT_SCHEMA_VERSION_FIELD: (
+            schema_version
+            if schema_version is not None
+            else review_result.SCHEMA_VERSION
+        ),
+        review_result.DOCUMENT_FINDINGS_FIELD: (
+            findings if findings is not None else [make_finding_dict()]
+        ),
+    }
 
 
 def make_finding_dict(
@@ -1119,62 +1275,28 @@ def make_finding_dict(
     message: str | None = None,
     action: str | None = None,
 ) -> dict[str, Any]:
-    """Return one synthetic finding dict with every required field populated.
-
-    The streaming review emits findings one at a time, so the per-finding
-    validity gate (``review_result.parse_finding_json`` /
-    ``journal_emit.py finding-reported``) parses a single finding document.
-    The default is a ``debt``/``architecture`` finding with a valid rule
-    citation; callers pass ``**overrides`` to vary a field or construct a
-    rejection-path document.
-    """
+    """Return one finding serialized through the production contract."""
     review_result = load_review_result_module()
-    document = make_review_result_dict()
-    fixture_finding = document[review_result.DOCUMENT_FINDINGS_FIELD][0]
     finding = review_result.Finding(
         id=(
             finding_id
             if finding_id is not None
-            else fixture_finding[review_result.FINDING_ID_FIELD]
+            else review_result.format_finding_id(review_result.SCHEMA_VERSION)
         ),
-        concern=(
-            concern
-            if concern is not None
-            else review_result.Concern(
-                fixture_finding[review_result.FINDING_CONCERN_FIELD]
-            )
-        ),
+        concern=(concern if concern is not None else tuple(review_result.Concern)[-1]),
         severity=(
-            severity
-            if severity is not None
-            else review_result.Severity(
-                fixture_finding[review_result.FINDING_SEVERITY_FIELD]
-            )
+            severity if severity is not None else tuple(review_result.Severity)[-1]
         ),
         file=(
             file_path
             if file_path is not None
-            else fixture_finding[review_result.FINDING_FILE_FIELD]
+            else str(REVIEW_SPEC_PATH.relative_to(REPO_ROOT))
         ),
-        line=(
-            line
-            if line is not None
-            else fixture_finding[review_result.FINDING_LINE_FIELD]
-        ),
-        rule=(
-            rule
-            if rule is not None
-            else fixture_finding[review_result.FINDING_RULE_FIELD]
-        ),
+        line=(line if line is not None else review_result.SCHEMA_VERSION),
+        rule=(rule if rule is not None else review_rule_citations()[3]),
         message=(
-            message
-            if message is not None
-            else fixture_finding[review_result.FINDING_MESSAGE_FIELD]
+            message if message is not None else review_result.FINDING_MESSAGE_FIELD
         ),
-        action=(
-            action
-            if action is not None
-            else fixture_finding[review_result.FINDING_ACTION_FIELD]
-        ),
+        action=(action if action is not None else review_result.FINDING_ACTION_FIELD),
     )
     return cast(dict[str, Any], review_result.finding_to_json_dict(finding))

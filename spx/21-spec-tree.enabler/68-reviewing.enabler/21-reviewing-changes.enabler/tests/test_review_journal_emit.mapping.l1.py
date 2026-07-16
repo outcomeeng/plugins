@@ -22,16 +22,13 @@ from outcomeeng_testing.generators.reviewing_changes import (
     finding_without_required_field,
     review_severity_projection_cases,
 )
-from outcomeeng_testing.harnesses.journal_projection import (
-    load_journal_projection_module,
-)
 from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_COMPLETION_TIME,
     REVIEW_EVENT_TIME,
     ReviewMetadataHarness,
-    load_journal_emit_module,
-    load_review_result_module,
     make_finding_dict,
+    review_contract_modules,
+    review_config_digests,
     review_finding,
     review_metadata_wire_json,
     review_run_metadata,
@@ -41,10 +38,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     write_review_skill_config,
 )
 
-je = load_journal_emit_module()
-jp = load_journal_projection_module()
-review_result = load_review_result_module()
-
 
 @pytest.mark.parametrize(
     ("severity", "expected_severity", "expected_overall"),
@@ -53,6 +46,9 @@ review_result = load_review_result_module()
 def test_adapter_maps_review_severity_to_projection(
     severity: Any, expected_severity: Any, expected_overall: Any
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     finding = review_finding(severity=severity)
     event = je.finding_reported_event(finding, now=REVIEW_EVENT_TIME, attempt=1)
 
@@ -63,6 +59,9 @@ def test_adapter_maps_review_severity_to_projection(
 
 
 def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     metadata = review_run_metadata()
     event = je.run_completed_event(
         metadata,
@@ -91,6 +90,9 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
 
 
 def test_adapter_terminal_event_carries_pull_request_identity() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     metadata = review_run_metadata(pull_request=True)
     event = je.run_completed_event(
         metadata,
@@ -106,6 +108,10 @@ def test_adapter_terminal_event_carries_pull_request_identity() -> None:
 
 
 def test_render_events_counts_review_findings_by_render_class() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
+    review_result = contracts.review_result
     events = streamed_review_events(
         review_run_metadata(),
         (
@@ -123,6 +129,9 @@ def test_render_events_counts_review_findings_by_render_class() -> None:
 
 
 def test_terminal_event_rejects_missing_base_identity() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     metadata = review_run_metadata(missing_base_identity=True)
 
     with pytest.raises(ValueError, match=jp.RUN_STATE_BASE_SHA):
@@ -136,6 +145,7 @@ def test_terminal_event_rejects_missing_base_identity() -> None:
 
 
 def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
+    je = review_contract_modules().journal_emit
     first = tmp_path / "first"
     second = tmp_path / "second"
     write_review_skill_config(first, prompt="review prompt one")
@@ -144,9 +154,14 @@ def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> Non
     assert je.review_config_digest(first) != je.review_config_digest(second)
 
 
+def test_runner_and_adapter_share_review_config_identity() -> None:
+    assert len(set(review_config_digests())) == 1
+
+
 def test_config_digest_ignores_root_review_policy(
     tmp_path: pathlib.Path,
 ) -> None:
+    je = review_contract_modules().journal_emit
     skill = tmp_path / "skill"
     write_review_skill_config(skill, prompt="same review prompt")
     review_policy = tmp_path / "REVIEW.md"
@@ -162,6 +177,9 @@ def test_metadata_config_digest_ignores_root_review_policy(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     repo_root = tmp_path / "repo"
     subdir = repo_root / "nested"
     subdir.mkdir(parents=True)
@@ -180,6 +198,9 @@ def test_metadata_config_digest_ignores_root_review_policy(
 
 
 def test_metadata_scope_hash_includes_changed_file_set() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     first_files, second_files = changed_review_file_sets()
     harness = ReviewMetadataHarness(changed_files=first_files)
 
@@ -195,17 +216,17 @@ def test_metadata_scope_hash_includes_changed_file_set() -> None:
         deps=harness.deps(),
     )
 
-    assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
-    assert second[jp.RUN_STATE_SCOPE]["changedFiles"] == [
-        "README.md",
-        "src/plugins/spec-tree/skills/review-changes/SKILL.md",
-    ]
+    assert first[jp.RUN_STATE_SCOPE][je.SCOPE_CHANGED_FILES_FIELD] == first_files
+    assert second[jp.RUN_STATE_SCOPE][je.SCOPE_CHANGED_FILES_FIELD] == second_files
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
 
 
 def test_metadata_scope_uses_computed_review_manifest(
     tmp_path: pathlib.Path,
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     manifest_path = write_review_manifest(
         tmp_path,
         base_ref="origin/main",
@@ -229,12 +250,15 @@ def test_metadata_scope_uses_computed_review_manifest(
     ]
     assert metadata[jp.RUN_STATE_SCOPE]["reviewInputSha256"] == "b" * 64
     assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
-    assert metadata[jp.RUN_STATE_HEAD_SHA] == "HEAD:sha"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == harness.metadata.head_sha
 
 
 def test_metadata_for_worktree_records_pull_request_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
     harness = ReviewMetadataHarness(head_ref="origin/work/example")
@@ -252,6 +276,9 @@ def test_metadata_for_worktree_records_pull_request_target(
 def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     monkeypatch.setenv("SPX_VERIFY_BASE_REF", "origin/main")
     monkeypatch.setenv("SPX_VERIFY_HEAD_REF", "origin/work/example")
     monkeypatch.setenv("SPX_VERIFY_BRANCH", "work/example")
@@ -272,6 +299,9 @@ def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
 
 
 def test_metadata_scope_hash_includes_full_review_input() -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     harness = ReviewMetadataHarness(
         review_inputs=list(distinct_review_inputs()),
     )
@@ -299,6 +329,9 @@ def test_metadata_cli_emits_env_derived_run_identity(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
 ) -> None:
+    contracts = review_contract_modules()
+    je = contracts.journal_emit
+    jp = contracts.journal_projection
     harness = ReviewMetadataHarness(
         base_ref="origin/main",
         head_ref="feature/head",
@@ -332,9 +365,9 @@ def test_metadata_cli_emits_env_derived_run_identity(
     metadata = json.loads(result.stdout)
     assert metadata[jp.RUN_STATE_BRANCH_NAME] == "work/example"
     assert metadata[jp.RUN_STATE_BRANCH_SLUG] == "work__example"
-    assert metadata[jp.RUN_STATE_HEAD_SHA] == "feature/head:sha"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == harness.metadata.head_sha
     assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
-    assert metadata[jp.RUN_STATE_BASE_SHA] == "origin/main:sha"
+    assert metadata[jp.RUN_STATE_BASE_SHA] == harness.metadata.base_sha
     assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
     assert metadata[jp.RUN_STATE_SCOPE]["baseRef"] == "origin/main"
     assert metadata[jp.RUN_STATE_SCOPE]["headRef"] == "feature/head"
@@ -346,6 +379,7 @@ def test_metadata_cli_emits_env_derived_run_identity(
 def test_metadata_cli_reports_git_failure_without_traceback(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    je = review_contract_modules().journal_emit
     harness = ReviewMetadataHarness(base_ref="origin/nope")
 
     exit_code = je.main(
@@ -366,6 +400,8 @@ def test_metadata_cli_reports_git_failure_without_traceback(
 
 
 def test_scope_entered_cli_emits_identity_event() -> None:
+    contracts = review_contract_modules()
+    jp = contracts.journal_projection
     result = run_journal_emit_in_process(
         "scope-entered",
         "--now",
@@ -381,6 +417,7 @@ def test_scope_entered_cli_emits_identity_event() -> None:
 
 
 def test_scope_advanced_cli_names_the_unit() -> None:
+    jp = review_contract_modules().journal_projection
     result = run_journal_emit_in_process(
         "scope-advanced", "--now", REVIEW_EVENT_TIME, "--unit", "README.md"
     )
@@ -396,6 +433,7 @@ def test_scope_advanced_cli_names_the_unit() -> None:
 # finite {conforming, malformed} set — the per-finding parse rejection is the
 # live gate before any journal append.
 def test_finding_reported_cli_maps_conforming_finding_to_event() -> None:
+    jp = review_contract_modules().journal_projection
     result = run_journal_emit_in_process(
         "finding-reported",
         "--now",
@@ -418,6 +456,9 @@ def test_finding_reported_cli_maps_malformed_finding_to_error_with_no_event() ->
 
 
 def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
+    contracts = review_contract_modules()
+    jp = contracts.journal_projection
+    review_result = contracts.review_result
     metadata_json = review_metadata_wire_json()
     metadata = json.loads(metadata_json)
     scope_entered = run_journal_emit_in_process(

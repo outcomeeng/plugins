@@ -52,6 +52,8 @@ FINDING_LINE_FIELD = "line"
 FINDING_RULE_FIELD = "rule"
 FINDING_MESSAGE_FIELD = "message"
 FINDING_ACTION_FIELD = "action"
+FINDING_ID_PREFIX = "F-"
+FINDING_ID_DIGITS = 3
 SEVERITY_BLOCKING = "blocking"
 SEVERITY_DEBT = "debt"
 CONCERN_CONSISTENCY = "consistency"
@@ -174,7 +176,10 @@ _PLUGIN_SKILL_RE = re.compile(
 _ROOT_RULE_RE = re.compile(
     r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
-_FINDING_ID_RE = re.compile(r"F-\d{3}", re.ASCII)
+_FINDING_ID_RE = re.compile(
+    rf"{re.escape(FINDING_ID_PREFIX)}\d{{{FINDING_ID_DIGITS}}}",
+    re.ASCII,
+)
 _SECTION_TITLES = {
     "SCENARIO": "Scenarios",
     "MAPPING": "Mappings",
@@ -327,6 +332,15 @@ def _validate_finding_id(finding_id: str) -> None:
 def is_valid_finding_id(finding_id: str) -> bool:
     """Return whether a finding identifier conforms to the wire grammar."""
     return _FINDING_ID_RE.fullmatch(finding_id) is not None
+
+
+def format_finding_id(index: int) -> str:
+    """Return the canonical wire identifier for a positive finding index."""
+    if index < 1 or index >= 10**FINDING_ID_DIGITS:
+        raise ValueError(
+            f"finding index must fit {FINDING_ID_DIGITS} positive digits; got {index}"
+        )
+    return f"{FINDING_ID_PREFIX}{index:0{FINDING_ID_DIGITS}d}"
 
 
 def is_supported_rule_citation_shape(rule: str) -> bool:

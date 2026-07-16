@@ -91,6 +91,10 @@ RENDER_BLOCKING_FIELD = "blocking"
 RENDER_DEBT_FIELD = "debt"
 RENDER_COUNT_LINE_FIELD = "countLine"
 RENDER_SURFACE_FIELD = "surface"
+SCOPE_BASE_REF_FIELD = "baseRef"
+SCOPE_HEAD_REF_FIELD = "headRef"
+SCOPE_CHANGED_FILES_FIELD = "changedFiles"
+SCOPE_REVIEW_INPUT_SHA256_FIELD = "reviewInputSha256"
 
 
 @dataclass(frozen=True)
@@ -234,10 +238,12 @@ def _review_scope(
     changed_files = changeset_scope.expand_diff_range(range_spec, repo=repo)
     review_input = compute_diff.combined_diff(base_ref, head_ref)
     return {
-        "baseRef": base_ref,
-        "headRef": head_ref,
-        "changedFiles": changed_files,
-        "reviewInputSha256": hashlib.sha256(review_input.encode("utf-8")).hexdigest(),
+        SCOPE_BASE_REF_FIELD: base_ref,
+        SCOPE_HEAD_REF_FIELD: head_ref,
+        SCOPE_CHANGED_FILES_FIELD: changed_files,
+        SCOPE_REVIEW_INPUT_SHA256_FIELD: hashlib.sha256(
+            review_input.encode("utf-8")
+        ).hexdigest(),
     }
 
 
@@ -293,10 +299,10 @@ def _manifest_changed_files(manifest: dict[str, object]) -> list[str]:
 def _review_scope_from_manifest(manifest_path: pathlib.Path) -> dict[str, object]:
     manifest = _read_review_manifest(manifest_path)
     return {
-        "baseRef": _require_manifest_str(manifest, "base_ref"),
-        "headRef": _require_manifest_str(manifest, "head_ref"),
-        "changedFiles": _manifest_changed_files(manifest),
-        "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
+        SCOPE_BASE_REF_FIELD: _require_manifest_str(manifest, "base_ref"),
+        SCOPE_HEAD_REF_FIELD: _require_manifest_str(manifest, "head_ref"),
+        SCOPE_CHANGED_FILES_FIELD: _manifest_changed_files(manifest),
+        SCOPE_REVIEW_INPUT_SHA256_FIELD: _require_manifest_str(manifest, "diff_sha256"),
     }
 
 
@@ -361,8 +367,8 @@ def metadata_for_worktree(
         )
     else:
         scope = collaborators.review_scope_from_manifest(review_manifest_path)
-        base_ref = str(scope["baseRef"])
-        head_ref = str(scope["headRef"])
+        base_ref = str(scope[SCOPE_BASE_REF_FIELD])
+        head_ref = str(scope[SCOPE_HEAD_REF_FIELD])
     branch_name = collaborators.resolve_branch_name()
     target_kind = collaborators.resolve_target_kind()
     pull_request_number = collaborators.resolve_pull_request_number(target_kind)
