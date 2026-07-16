@@ -10,17 +10,17 @@ import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import IntEnum, StrEnum
-from typing import Final
+from enum import Enum, IntEnum
+from typing import Final, Optional
 
-type LoadAverages = tuple[float, float, float]
+LoadAverages = tuple[float, float, float]
 
 CAPACITY_RATIO: Final = 1.0
 MINIMUM_WAIT_SECONDS: Final = 60
 LOAD_HORIZONS_SECONDS: Final[LoadAverages] = (60.0, 300.0, 900.0)
 
 
-class Status(StrEnum):
+class Status(str, Enum):
     """Terminal waiter states exposed in the JSON result."""
 
     READY = "ready"
@@ -64,7 +64,7 @@ class Dependencies:
     """Boundaries that make load and time behavior deterministic to exercise."""
 
     read_load_averages: Callable[[], LoadAverages]
-    read_cpu_count: Callable[[], int | None]
+    read_cpu_count: Callable[[], Optional[int]]
     monotonic: Callable[[], float]
     sleep: Callable[[float], None]
 
@@ -75,12 +75,12 @@ class Result:
 
     status: Status
     ready: bool
-    initial: Observation | None
-    final: Observation | None
+    initial: Optional[Observation]
+    final: Optional[Observation]
     wait_cycles: int
     waited_seconds: float
-    error_type: str | None = None
-    error_message: str | None = None
+    error_type: Optional[str] = None
+    error_message: Optional[str] = None
 
     @property
     def exit_code(self) -> ExitCode:
@@ -155,7 +155,6 @@ def wait_seconds(observation: Observation) -> int:
         for value, horizon in zip(
             observation.normalized,
             LOAD_HORIZONS_SECONDS,
-            strict=True,
         )
         if value > CAPACITY_RATIO
     )
@@ -174,10 +173,10 @@ def terminal_result(
     status: Status,
     dependencies: Dependencies,
     started_at: float,
-    initial: Observation | None,
-    final: Observation | None,
+    initial: Optional[Observation],
+    final: Optional[Observation],
     wait_cycles: int,
-    error: BaseException | None = None,
+    error: Optional[BaseException] = None,
 ) -> Result:
     """Build one terminal result without retaining intermediate observations."""
     return Result(
@@ -195,8 +194,8 @@ def terminal_result(
 def wait_until_ready(dependencies: Dependencies) -> Result:
     """Own observation, sleeping, and rechecking until a terminal result exists."""
     started_at = dependencies.monotonic()
-    initial: Observation | None = None
-    final: Observation | None = None
+    initial: Optional[Observation] = None
+    final: Optional[Observation] = None
     wait_cycles = 0
 
     try:

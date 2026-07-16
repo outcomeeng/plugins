@@ -30,7 +30,7 @@ It emits nothing while waiting. Immediately before exit it writes exactly one co
 </input_output>
 
 <dependencies>
-- Python 3.13 or 3.14 from a managed interpreter
+- Python 3.9 or newer
 - `os.getloadavg()` and a positive `os.cpu_count()` result
 - Python standard library only; no repository-local package, subprocess, file, or network dependency
 
@@ -48,15 +48,17 @@ It emits nothing while waiting. Immediately before exit it writes exactly one co
 </error_handling>
 
 <testing>
-Before inclusion, the script exercised these controlled boundaries without wall-clock delay:
+Release verification covers these controlled boundaries without wall-clock delay:
 
 - immediate readiness with zero waits
 - two high-load observations followed by readiness, producing two sleeps of at least 60 seconds
 - unavailable CPU count producing `unsupported` and exit 2
 - interrupted sleep producing `interrupted` and exit 130
 - load-reader failure producing `error` and exit 1
+- complete silence before one terminal JSON document
+- no subprocess or file creation
+- byte-identical generated runtime copies
 
-A real foreground run stayed silent for 1,467.066 seconds across 16 internal wait cycles, then emitted one JSON document with all three final normalized averages below capacity and exited zero. Ruff and strict mypy passed on the authored script, and the generated Claude and Codex copies were byte-identical.
 </testing>
 
 <failure_modes>

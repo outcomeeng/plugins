@@ -90,6 +90,7 @@ Delete tracking when the PR is merged and every declared deploy or release phase
 Use the runtime timer or heartbeat tool when available. Select the tool by runtime:
 
 - **Claude Code:** `{{! tool('schedule_wakeup', 'claude') !}}` for a single delayed re-check, or `/loop` for recurring re-inspection. The prompt names the owning skill and the pointers it handles per `<heartbeat_payload>`; the wake-up reloads the skill and reconstructs state from the durable artifacts and live state. `{{! tool('schedule_wakeup', 'claude') !}}`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive.
+- **Codex:** use a timer or automation capability only when the active harness exposes and documents one. When none is exposed, report the exact external condition and durable work-item pointer, keep the work active, end the turn, and resume only from operator re-entry or an external completion notification. Never manufacture a shell timer.
 
 A scheduled heartbeat is the turn's continuation, not its close. When a scheduled wake-up is the next action, do not append a structured question to close the turn — the wake-up is the continuation. End such a turn by reporting status and the scheduled re-check, with no question and no trailing prose offer.
 
@@ -128,6 +129,14 @@ Resume <owning skill> (+ /task-tracking-standards) for <repo path> <work-item po
 
 Neither form carries the directive, the finding assessments, or the rationale; those are reconstructed, and anything the next fire needs lives in a durable artifact.
 </prompt_template>
+
+<failure_modes>
+**Claude created a heartbeat for a background subagent that already produced a completion notification.** Both continuations fired for one work item, causing duplicate state inspection and competing next actions. Use the harness completion notification for ordinary background work and the required typed wait capability for verifier or reviewer agents.
+
+**Claude copied the current directive, plan, and finding assessments into a heartbeat prompt.** The branch advanced before the wake-up, so the prompt resumed stale conclusions against a new head. Carry only skills and pointers; write any required continuation facts to durable artifacts that the wake-up re-reads.
+
+**Claude polled a local background command with repeated shell sleeps.** Every iteration added another monitored process tree until process and file-descriptor pressure disrupted unrelated work. End the turn for the harness completion notification or run one foreground command with an adequate timeout.
+</failure_modes>
 
 <failure_handling>
 
