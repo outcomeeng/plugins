@@ -9,16 +9,13 @@ allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py")
 A terminal host-readiness result produced by one silent foreground process that owns load observation, interval selection, sleeping, and rechecking.
 </objective>
 
-<quick_start>
+<workflow>
+1. Run this command exactly once before the resource-intensive local command:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/wait_for_load.py"
 ```
 
-</quick_start>
-
-<workflow>
-1. Run the quick-start command exactly once before the resource-intensive local command.
 2. Collect that process's completion. When the harness returns a running-process handle, continue collecting the same process; never re-read host load, calculate another interval, schedule a timer, or start a second waiter.
 3. Read the exit status and the one terminal JSON document:
    - Exit zero with `status: "ready"` and `ready: true` permits the resource-intensive command.

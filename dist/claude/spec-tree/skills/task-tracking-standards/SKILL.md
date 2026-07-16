@@ -89,12 +89,11 @@ Delete tracking when the PR is merged and every declared deploy or release phase
 <runtime_timer>
 Use the runtime timer or heartbeat tool when available. Select the tool by runtime:
 
-- **Claude Code:** `ScheduleWakeup` for a single delayed re-check, or `/loop` for recurring re-inspection. The prompt names the owning skill and the pointers it handles per `<heartbeat_payload>`; the wake-up reloads the skill and reconstructs state from the durable artifacts and live state. `ScheduleWakeup`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive. Default delayed external-convergence cadence to four minutes (240 s) — under the five-minute prompt-cache TTL, so the next wake reuses the warm cache.
-- **Codex:** thread automation, which may open a fresh thread. The prompt names the repository, the skills to reload, and the pointers each handles, so a cold thread can resolve them; it does not carry the directive or the reasoning. Cadence is minute-based, typically every three minutes.
+- **Claude Code:** `ScheduleWakeup` for a single delayed re-check, or `/loop` for recurring re-inspection. The prompt names the owning skill and the pointers it handles per `<heartbeat_payload>`; the wake-up reloads the skill and reconstructs state from the durable artifacts and live state. `ScheduleWakeup`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive.
 
 A scheduled heartbeat is the turn's continuation, not its close. When a scheduled wake-up is the next action, do not append a structured question to close the turn — the wake-up is the continuation. End such a turn by reporting status and the scheduled re-check, with no question and no trailing prose offer.
 
-For any thread heartbeat or automation tool, create or update the one work-item heartbeat — attached to the current thread when the work continues in the same conversation — at the owning workflow cadence above, following `<heartbeat_payload>` for prompt shape and `<lifecycle>` for the create, refresh, and delete triggers.
+For any documented and exposed runtime heartbeat or automation tool, create or update the one work-item heartbeat — attached to the current thread when the work continues in the same conversation — at the cadence supplied by the owning workflow or tool contract, following `<heartbeat_payload>` for prompt shape and `<lifecycle>` for the create, refresh, and delete triggers. This reference defines no runtime-specific default cadence.
 
 Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded watcher, or a background keep-alive as a timer substitute.
 
