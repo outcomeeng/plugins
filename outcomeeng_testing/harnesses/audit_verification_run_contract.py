@@ -73,6 +73,8 @@ SPX_RELEASE_FIXTURE: Final = (
 SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
+
+
 def spx_floor_provides_verification_run_lifecycle() -> bool:
     """Return whether the repository floor includes verification runs."""
     release = _verification_run_release()
