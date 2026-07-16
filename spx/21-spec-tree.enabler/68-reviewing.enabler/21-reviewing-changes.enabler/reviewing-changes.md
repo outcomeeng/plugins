@@ -18,7 +18,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
 - Given one raised finding, `review_run.py append-finding` appends one finding-reported event through the journal and `review_run.py finish` appends a terminal run-completed event carrying review status and finding counts, seals the run, removes runner-owned scratch state, and returns only `runToken` ([test](tests/test_skill_orchestration.scenario.l2.py))
 - Given `review_run.py finish` is called before every changed file has a scope-advanced event, `finish` exits non-zero and names the unexamined files in stderr so an incomplete review cannot be sealed ([test](tests/test_skill_orchestration.scenario.l2.py))
 - Given findings carrying rejecting and warning severities, when `review_run.py finish` seals the run, then the run-completed event counts rejecting findings as `blocking` and warning findings as `debt` ([test](tests/test_skill_orchestration.scenario.l2.py))
-- Given the live `review-changes` path finishes a review, then it returns only the raw run token and performs no caller-facing rendering, summarization, counting, or finding restatement ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given the live `review-changes` path finishes a review, then it returns only the raw `runToken` and performs no caller-facing `render`, `summarize`, `count`, or `restate findings` action ([test](tests/test_skill_orchestration.scenario.l2.py))
 
 ### Mappings
 
