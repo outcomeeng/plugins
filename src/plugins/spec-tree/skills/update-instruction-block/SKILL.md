@@ -3,7 +3,7 @@ name: update-instruction-block
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree instruction surface from the installed spec-tree template, or reconciling a `shared` region that differs between the two files. NEVER hand-edit the router block to a new template version, or hand-merge a `shared` region to reconcile a cross-file difference, without this skill.
 argument-hint: "[--repo-root <path>] [--languages <csv>]"
-allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read,{!% if target == 'claude' %!} Edit,{!% endif %!} {{! tool('ask_user') !}}
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py":*), Bash(git log:*), Read,{!% if target == 'claude' %!} Edit,{!% else %!} apply_patch,{!% endif %!} {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -32,7 +32,7 @@ The canonical runtime template is the rendered, delimiter-free file bundled at `
    python3 "${CLAUDE_SKILL_DIR}/scripts/instruction_block.py" --template "${CLAUDE_SKILL_DIR}/templates/instruction-block.md" --repo-root <repo-root> <languages-option> --check
    ```
 
-   The output is one of `current`, `stale`, or `absent` — the worst status across the two root instruction files, and `stale` also when a `shared` region diverges between the two files, is present in only one, or is malformed (an open fence with no matching close). The enabled-language set is detected from `<repo-root>/spx/**/tests/` extensions unless the optional `$languages` argument supplies the comma-separated override carried by `<languages-option>`. Any invocation that exits non-zero prints an actionable `error: …` line to stderr (missing or non-directory `--repo-root`, a symlink whose target escapes the repository, a template with no `template_version`) — report that exact line and stop rather than continuing.
+   The output is one of `current`, `stale`, or `absent` — the worst status across the two root instruction files, and `stale` also when a `shared` region diverges between the two files, is present in only one, or is malformed (an open fence with no matching close). The enabled-language set is detected from `<repo-root>/spx/**/tests/` extensions unless the optional `--languages` flag supplies the comma-separated override carried by `<languages-option>`. Any invocation that exits non-zero prints an actionable `error: …` line to stderr (missing or non-directory `--repo-root`, a symlink whose target escapes the repository, a template with no `template_version`) — report that exact line and stop rather than continuing.
 
 3. **Reconcile diverged `shared` regions first.** When Step 2 reported `current`, both instruction files are up to date — report and stop. Otherwise reconcile before regenerating: the reconcile operates on committed git state, so it runs before `--write` (Step 4) dirties the working tree — a write-then-reconcile order would leave the files dirty and make the reconcile refuse its own uncommitted output. Run:
 
@@ -87,23 +87,11 @@ After the operator selects `claude`, rerun with `--reconcile --from claude`; bot
 
 <failure_modes>
 
-**Wrong worktree updated**
+**Claude updated a different checkout instead of the requested repository worktree.** The root argument was described but never bound, so an explicit product path could be ignored. Bind `<repo-root>` from the `--repo-root` flag and confirm that path before the first check.
 
-- **What happened:** Claude updated a different checkout instead of the operator-selected worktree.
-- **Why it failed:** The root argument was described but never bound, so an explicit product path could be ignored.
-- **How to avoid:** Bind `<repo-root>` from `$repo_root` and confirm that path before the first check.
+**Claude wrote before reconciling.** The write dirtied both root files, then reconcile refused to choose from uncommitted state. Reconcile the committed regions first, then run `--write`.
 
-**Write before reconciliation**
-
-- **What happened:** Claude wrote before reconciling.
-- **Why it failed:** The write dirtied both root files, then reconcile refused to choose from uncommitted state.
-- **How to avoid:** Reconcile the committed regions first, then run `--write`.
-
-**Template owned by another skill**
-
-- **What happened:** Claude kept the instruction-block template under `understand`.
-- **Why it failed:** The updater depended on another skill's bundled path, which is unavailable through its own `${CLAUDE_SKILL_DIR}`.
-- **How to avoid:** Keep the template in this skill's `templates/` directory and invoke every script and template through this skill's local token.
+**Claude kept the instruction-block template under `understand`.** The updater depended on another skill's bundled path, which is unavailable through its own `${CLAUDE_SKILL_DIR}`. Keep the template in this skill's `templates/` directory and invoke every script and template through this skill's local token.
 
 </failure_modes>
 
