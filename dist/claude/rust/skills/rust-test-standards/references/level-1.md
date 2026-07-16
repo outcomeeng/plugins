@@ -15,10 +15,9 @@ Level 1 covers logic that can run with Rust stdlib, normal developer tooling, an
 </what_belongs_here>
 
 <file_placement>
-Unit evidence usually lives in one of two places:
-
-- inline inside the production module with `#[cfg(test)]`
-- co-located spec evidence in `spx/.../tests/{subject}.{evidence}.l1.rs`
+Level 1 `[test]` evidence lives in co-located spec files at
+`spx/.../tests/{subject}.{evidence}.l1.rs`. Keep the typed assertion file
+there even when the governed production code is pure or module-local.
 
 </file_placement>
 
