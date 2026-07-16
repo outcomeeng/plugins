@@ -226,21 +226,24 @@ def spx_verification_run_rejects_mismatched_terminal_status() -> bool:
 
 
 def audit_contract_rejects_language_specific_wrapper() -> bool:
-    """Return whether validation rejects a language-specific wrapper."""
-    with _valid_surface() as surface:
-        language = _source_language()
-        filename = min(language_specific_auditor_filenames(language))
-        _touch(surface / language / AGENTS_DIR_NAME / filename)
-        return bool(check_wrapper_surface(surface))
+    """Return whether validation rejects every language wrapper filename."""
+    language = _source_language()
+    return all(
+        _language_wrapper_filename_is_rejected(language, filename)
+        for filename in language_specific_auditor_filenames(language)
+    )
 
 
 def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
-    """Reject a language wrapper placed under the generic wrapper host."""
-    with _valid_surface() as surface:
-        language = _source_language()
-        filename = min(language_specific_auditor_filenames(language))
-        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
-        return bool(check_wrapper_surface(surface))
+    """Reject every language wrapper filename under the generic host."""
+    language = _source_language()
+    return all(
+        _language_wrapper_filename_is_rejected(
+            SPEC_TREE_PLUGIN_NAME,
+            filename,
+        )
+        for filename in language_specific_auditor_filenames(language)
+    )
 
 
 def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
@@ -437,6 +440,19 @@ def audit_contract_rejects_retired_artifact_in_other_runtime() -> bool:
         return bool(check_audit_runtime_surface(surface))
 
 
+def audit_contract_rejects_retired_artifact_in_language_runtime() -> bool:
+    """Reject a retired runtime file in a language concern skill."""
+    with _valid_surface() as surface:
+        language = _source_language()
+        runtime_dir = _language_concern_path(
+            surface,
+            language,
+            LANGUAGE_AUDIT_CONCERNS[0],
+        ).parent
+        _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
+        return bool(check_audit_runtime_surface(surface))
+
+
 def _all_live_surfaces_pass(check: Callable[[Path], list[str]]) -> bool:
     return all(not check(REPO_ROOT / relative) for relative in PLUGIN_SURFACE_PATHS)
 
@@ -491,6 +507,15 @@ def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
     with _valid_surface() as surface:
         _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        return bool(check_wrapper_surface(surface))
+
+
+def _language_wrapper_filename_is_rejected(
+    plugin_name: str,
+    filename: str,
+) -> bool:
+    with _valid_surface() as surface:
+        _touch(surface / plugin_name / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 

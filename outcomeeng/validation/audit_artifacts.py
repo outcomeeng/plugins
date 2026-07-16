@@ -187,17 +187,34 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
 
 
 def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
-    """Return spec-tree audit skill runtime directories for ``surface``."""
+    """Return generic and language audit skill runtime directories."""
     skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
-    if not skills_dir.is_dir():
-        return ()
-    return tuple(
-        sorted(
+    runtime_directories = (
+        {
             path
             for path in skills_dir.iterdir()
             if path.is_dir() and path.name.startswith(AUDIT_SKILL_PREFIX)
-        )
+        }
+        if skills_dir.is_dir()
+        else set()
     )
+    runtime_directories.update(
+        skill_dir
+        for language in implementation_languages(surface)
+        for concern in LANGUAGE_AUDIT_CONCERNS
+        if (
+            skill_dir := (
+                surface
+                / language
+                / SKILLS_DIR_NAME
+                / LANGUAGE_AUDIT_SKILL_TEMPLATE.format(
+                    language=language,
+                    concern=concern,
+                )
+            )
+        ).is_dir()
+    )
+    return tuple(sorted(runtime_directories))
 
 
 def implementation_languages(surface: Path) -> tuple[str, ...]:
