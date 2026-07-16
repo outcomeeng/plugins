@@ -59,11 +59,11 @@ During audits, prioritize evaluation of:
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
 4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against. When scoped content includes any file under `scripts/`, also read `/skill-standards`'s `references/script-standards.md` and audit every bundled script against its validation-message and pre-inclusion testing rules.
 5. Handle edge cases:
-   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
-   - If YAML frontmatter is malformed, flag as critical issue.
+   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, emit `REJECTED` with a finding naming the unreadable standard and the incomplete audit coverage.
+   - If YAML frontmatter is malformed, emit a rejecting finding naming the malformed field or delimiter.
    - If the skill references external files that don't exist, emit a rejecting finding naming each broken reference and its required correction.
    - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
-   - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
+   - If the skill is under 100 lines, evaluate it as a simple skill without emitting a classification or context line.
 6. Evaluate the target skill against the standards loaded in steps 1-2.
 
 **Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skills/references/` for standards — that directory is workflow content only.
