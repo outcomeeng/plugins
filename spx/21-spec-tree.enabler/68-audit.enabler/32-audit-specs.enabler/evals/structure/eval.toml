@@ -12,6 +12,8 @@ owned_paths = [
 smoke_cases = [
   "universal-audit-compliance-approved",
   "verification-heading-rejected",
+  "temporal-voice-rejected",
+  "prose-content-test-tag-rejected",
 ]
 threshold = 0.85
 trials = 1
