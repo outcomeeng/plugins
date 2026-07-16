@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash, Bash(gh auth status:*
 ---
 
 <objective>
-A peer pull request opened ready for review, or a stacked pull request opened draft until its base merges.
+A pull request opened ready for review against its resolved peer or stacked base.
 </objective>
 
 <project_specialization>
@@ -15,7 +15,7 @@ After loading this skill, check whether `spx/local/open-pr.md` exists at the rep
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `{{! file('root_guide') !}}` convention, with the overlay allowed to centralize scope and escalation cases.
+Repository-local preflight checks, deterministic verification commands and scope, custom push command, merge command, deployment declarations, and release declarations live in `spx/local/merging.md`, so /merging-standards, /manage-pr, and /open-pr read one lifecycle authority.
 </project_specialization>
 
 <workflow>
@@ -55,7 +55,7 @@ branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
 
-If the product defines a custom branch-push command, follow {{! file('root_guide') !}} instead — the explicit destination ref must remain part of any custom command.
+If `spx/local/merging.md` defines a custom branch-push command, follow that overlay command instead — the explicit destination ref must remain part of the custom command.
 
 **Step 5 — GATE: Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
 
@@ -92,7 +92,7 @@ printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '#
 
 Flag rationale:
 
-- No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready triggers the configured integration-time review checks. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
+- No `--draft` — every PR opens ready per /merging-standards `<authority_gates>` once `VERIFICATION_READINESS` holds against its resolved base, which triggers the configured integration-time review checks.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /commit-changes conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
@@ -176,7 +176,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 **Duplicate PR already exists.** Claude attempted `gh pr create` even though the branch already had an open PR. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
 
-**Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `VERIFICATION_READINESS` against the wrong base.
+**Stacked topology targeted the wrong base.** Claude treated a stacked branch like a peer branch and established readiness against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base`, establish `VERIFICATION_READINESS` against that resolved base, and open the PR ready.
 
 **Convergence stall.** Claude repeated deterministic, evidence-audit, and review fixes without reaching one tree where all predicates held. Stop the loop when the next fix would expand the changeset beyond the requested scope, record the split-out concern in the owning node's coordination note, and run one final deterministic verification, required evidence-auditor predicates, and review on the narrowed branch before opening.
 
@@ -192,7 +192,7 @@ The opening flow has succeeded when:
 - Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /commit-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
-- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
+- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds against its resolved base.
 - The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence, including /merging-standards `<pr_check_wait>`.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /merging-standards.
