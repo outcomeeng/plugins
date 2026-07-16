@@ -7,14 +7,8 @@ owned_paths = [
   "spx/21-spec-tree.enabler/76-merging.enabler/evals/local-completion-boundary/**",
   "src/plugins/spec-tree/skills/merge/**",
   "src/plugins/spec-tree/skills/merging-standards/**",
-  "src/plugins/spec-tree/skills/manage-github-pr/**",
-  "src/plugins/spec-tree/skills/open-pr/**",
-  "src/plugins/spec-tree/skills/manage-pr/**",
   "dist/claude/spec-tree/skills/merge/**",
   "dist/claude/spec-tree/skills/merging-standards/**",
-  "dist/claude/spec-tree/skills/manage-github-pr/**",
-  "dist/claude/spec-tree/skills/open-pr/**",
-  "dist/claude/spec-tree/skills/manage-pr/**",
   "spx/local/merging.md",
 ]
 smoke_cases = ["clean-green-ahead-continues", "terse-followup-continues"]
@@ -26,9 +20,6 @@ kind = "producer-files"
 producers = [
   "src/plugins/spec-tree/skills/merge/SKILL.md",
   "src/plugins/spec-tree/skills/merging-standards/SKILL.md",
-  "src/plugins/spec-tree/skills/manage-github-pr/SKILL.md",
-  "src/plugins/spec-tree/skills/open-pr/SKILL.md",
-  "src/plugins/spec-tree/skills/manage-pr/SKILL.md",
   "spx/local/merging.md",
 ]
 template = "prompt.template.md"
