@@ -154,6 +154,12 @@ _PLUGIN_SKILL_RE = re.compile(
     r"plugins/(?P<plugin>[A-Za-z0-9_-]+)/skills/(?P<skill>[A-Za-z0-9_-]+)/"
     r"SKILL\.md:(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
+_PLUGIN_BUNDLED_FILE_RE = re.compile(
+    r"plugins/(?P<plugin>[A-Za-z0-9_-]+)/skills/(?P<skill>[A-Za-z0-9_-]+)/"
+    r"(?P<relative>(?:references|workflows|templates|scripts)/"
+    r"(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+)"
+    r"(?::(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*))?"
+)
 _ROOT_RULE_RE = re.compile(
     r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
@@ -216,13 +222,12 @@ def parse_json(text: str) -> ReviewResult:
 def parse_finding_json(text: str) -> Finding:
     """Parse and validate one finding JSON object into a :class:`Finding`.
 
-    The streaming review appends a ``finding-reported`` event the instant it
-    raises each finding, so it emits one finding JSON document at a time.
-    This remains available for the legacy ``journal_emit.py finding-reported`` path before the event is appended — the same enum, required-key, and
-    ``rule``-citation checks ``parse_json`` applies to a whole document,
-    scoped to one finding. Every violation raises
-    :class:`ReviewResultValidationError`, so a malformed finding is surfaced
-    before any journal append, never appended.
+    This compatibility entry point is used by the legacy
+    ``journal_emit.py finding-reported`` adapter, which accepts one finding
+    JSON document at a time. It applies the same enum, required-key, and
+    ``rule``-citation checks as ``parse_json``, scoped to one finding. The live
+    ``review_run.py append-finding`` path does not call this compatibility
+    validator; ``spx journal append`` remains that path's event boundary.
     """
     try:
         raw = json.loads(text)
@@ -332,6 +337,16 @@ def _validate_rule_citation(rule: str) -> None:
         )
         _validate_slug(path, match.group("slug"), rule)
         return
+    if match := _PLUGIN_BUNDLED_FILE_RE.fullmatch(rule):
+        path = _resolve_plugin_bundled_file_path(
+            match.group("plugin"),
+            match.group("skill"),
+            match.group("relative"),
+            rule,
+        )
+        if slug := match.group("slug"):
+            _validate_slug(path, slug, rule)
+        return
     if match := _ROOT_RULE_RE.fullmatch(rule):
         _validate_slug(pathlib.Path(match.group("path")), match.group("slug"), rule)
         return
@@ -339,6 +354,7 @@ def _validate_rule_citation(rule: str) -> None:
         "finding 'rule' must be a verifiable citation such as "
         "'spx/<path>.md:ALWAYS:1', "
         "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
+        "'plugins/<plugin>/skills/<skill>/<references|workflows|templates|scripts>/<file>[:<rule-slug>]', "
         "or 'AGENTS.md:<rule-slug>'/'CLAUDE.md:<rule-slug>'; "
         f"got {rule!r}"
     )
@@ -415,6 +431,12 @@ def _declared_rule_slugs(text: str) -> set[str]:
         heading = _markdown_heading_text(line)
         if heading and _heading_section_has_rule_marker(lines, index):
             slugs.add(_slugify(heading))
+            continue
+        inline_section = _inline_pseudo_xml_section(line)
+        if inline_section:
+            tag, body = inline_section
+            if tag in _RULE_BEARING_PSEUDO_XML_TAGS or _is_rule_marker_line(body):
+                slugs.add(_slugify(tag))
             continue
         tag = _pseudo_xml_tag(line)
         if tag and _pseudo_xml_section_has_rule_marker(lines, index, tag):
@@ -493,6 +515,29 @@ def _pseudo_xml_tag(line: str) -> str | None:
     return tag
 
 
+def _inline_pseudo_xml_section(line: str) -> tuple[str, str] | None:
+    stripped = line.strip()
+    if not stripped.startswith("<"):
+        return None
+    opening_end = stripped.find(">")
+    if opening_end <= 1:
+        return None
+    tag = stripped[1:opening_end]
+    if (
+        " " in tag
+        or not tag[0].isalpha()
+        or not all(char.isalnum() or char in "_-" for char in tag)
+    ):
+        return None
+    closing = f"</{tag}>"
+    if not stripped.endswith(closing):
+        return None
+    body = stripped[opening_end + 1 : -len(closing)].strip()
+    if not body:
+        return None
+    return tag, body
+
+
 def _is_slug(text: str) -> bool:
     return bool(text) and all(char.isalnum() or char == "-" for char in text)
 
@@ -502,12 +547,29 @@ def _slugify(text: str) -> str:
 
 
 def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Path:
-    suffix = pathlib.Path(plugin) / "skills" / skill / "SKILL.md"
+    return _resolve_plugin_skill_file_path(plugin, skill, "SKILL.md", rule)
+
+
+def _resolve_plugin_bundled_file_path(
+    plugin: str, skill: str, relative: str, rule: str
+) -> pathlib.Path:
+    relative_path = pathlib.Path(relative)
+    if ".." in relative_path.parts:
+        raise ReviewResultValidationError(
+            f"finding 'rule' must cite a bundled file without traversal: {rule}"
+        )
+    return _resolve_plugin_skill_file_path(plugin, skill, relative_path, rule)
+
+
+def _resolve_plugin_skill_file_path(
+    plugin: str, skill: str, relative: str | pathlib.Path, rule: str
+) -> pathlib.Path:
+    suffix = pathlib.Path(plugin) / "skills" / skill / relative
     candidates = (
         pathlib.Path("src") / "plugins" / suffix,
         pathlib.Path("dist") / "claude" / suffix,
         pathlib.Path("dist") / "codex" / suffix,
-        *_runtime_plugin_skill_candidates(plugin, skill),
+        *_runtime_plugin_skill_candidates(plugin, skill, relative),
         *(ancestor / suffix for ancestor in pathlib.Path(__file__).resolve().parents),
     )
     for candidate in candidates:
@@ -519,7 +581,7 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
 
 
 def _runtime_plugin_skill_candidates(
-    plugin: str, skill: str
+    plugin: str, skill: str, relative: str | pathlib.Path = "SKILL.md"
 ) -> tuple[pathlib.Path, ...]:
     candidates: list[pathlib.Path] = []
     for ancestor in pathlib.Path(__file__).resolve().parents:
@@ -528,7 +590,7 @@ def _runtime_plugin_skill_candidates(
             continue
         if ancestor.name != plugin and ancestor.parent.name != plugin:
             continue
-        candidates.append(skills_dir / skill / "SKILL.md")
+        candidates.append(skills_dir / skill / relative)
     return tuple(candidates)
 
 

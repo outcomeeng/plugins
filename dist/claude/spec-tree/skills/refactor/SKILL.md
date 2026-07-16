@@ -108,6 +108,21 @@ Before applying changes, determine what will be affected:
 
 </step>
 
+<step name="pre_mutation_gate">
+
+**Pre-mutation gate — all checks must pass before Step 4:**
+
+- A live `<SPEC_TREE_CONTEXT>` marker exists for every source node, target node, and affected parent.
+- The operation plan names every source path, destination path, surviving node, removed node, assertion transfer, evidence-file transfer, citation update, and coordination-note transfer.
+- Every source and target exists, every destination parent is valid, and no destination path collides with an existing artifact outside the plan.
+- Every governance change is resolved: moved nodes retain the intended ADR/PDR ancestry, and no assertion crosses a decision boundary without an explicit aligned destination.
+- Any new sibling boundary, consolidation boundary, shared enabler, or index assignment comes from a completed `/decompose` result with ordering evidence.
+- `git status --short` has been inspected; no planned move, edit, or removal overlaps unrelated modified or untracked work.
+- Every node remaining after the operation has at least one coherent assertion, and every removed node has an explicit disposition for all descendants and files.
+- No product-intent question remains unresolved. If any check fails, STOP before mutation and resolve the failed check through the governing skill or the operator decision it requires.
+
+</step>
+
 <step name="apply_move">
 
 **Step 4a: Apply — Move**
@@ -284,14 +299,11 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <success_criteria>
 
-Refactoring is complete when:
-
-- [ ] Operation identified and context loaded
-- [ ] Impact analyzed before applying
-- [ ] Structural composition decisions delegated to `/decompose` when needed
-- [ ] Changes applied (move/re-scope/extract/consolidate)
-- [ ] Validation checklist passes (no broken links, no orphans, no empty nodes)
-- [ ] Summary report with all files created/modified/moved/removed
-- [ ] Follow-up issues noted if any
+- The resulting tree matches the approved move, re-scope, extraction, or consolidation, with no obsolete source path or duplicate node left behind.
+- Every assertion preserves its meaning, evidence type, and evidence link; citations move only to the node whose scope still realizes the cited rule.
+- Every cross-reference resolves through a full `spx/` path, and all governing decisions remain reachable through the resulting ancestry and ordering.
+- Node-local `PLAN.md` and `ISSUES.md` follow their node, while `spx/local/` remains untouched as an overlay directory.
+- The resulting tree contains no orphan directory, empty node, index collision, broken link, or stale reference.
+- The repository's author validation command passes for the restructured tree.
 
 </success_criteria>

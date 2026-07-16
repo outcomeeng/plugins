@@ -310,6 +310,7 @@ class TestRuleCitationForm:
     ``spx/<path>/<n>-<slug>.adr.md``,
     ``spx/<path>/<n>-<slug>.pdr.md``,
     ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
+    ``plugins/<plugin>/skills/<skill>/<bundled-path>[:<rule-slug>]``,
     ``AGENTS.md:<rule-slug>``, and ``CLAUDE.md:<rule-slug>``.
     The parser rejects citations whose file or rule slug cannot be
     verified mechanically.
@@ -332,6 +333,9 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",
             FIXTURE_SKILL_RULE_CITATION,
+            "plugins/spec-tree/skills/merging-standards/SKILL.md:self-reference",
+            "plugins/instructions/skills/create-skills/workflows/audit-skill.md",
+            "plugins/spec-tree/skills/review-changes/scripts/review_result.py",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
         ],
@@ -458,6 +462,17 @@ ALWAYS: pseudo-XML sections are rule-bearing surfaces.
         assert "critical-rules" in slugs
         assert "principles" in slugs
         assert "rules" not in slugs
+
+    def test_rule_slug_discovery_accepts_inline_pseudo_xml_rule(self) -> None:
+        review_result = load_review_result_module()
+        document = """<objective>A rendered artifact.</objective>
+<self_reference>NEVER: include runtime identity strings.</self_reference>
+"""
+
+        slugs = review_result._declared_rule_slugs(document)
+
+        assert "self-reference" in slugs
+        assert "objective" not in slugs
 
     @pytest.mark.parametrize(
         "rule",

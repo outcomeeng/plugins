@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Read
+allowed-tools: Skill, {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Read
 ---
 
 <objective>
@@ -29,7 +29,7 @@ Live repository state for mode detection, read at invocation.
 !`git diff --cached --name-status 2>/dev/null | head -100 || echo '(none)'`
 
 **Commits ahead of base (default branch):**
-!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); echo "base: ${base}"; git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`
+!`base_ref=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); if [ -z "${base_ref}" ]; then echo 'base: (unresolved)'; echo '(unresolved)'; else echo "base: ${base_ref#origin/}"; git log --oneline "${base_ref}..HEAD" 2>/dev/null | head -10 || echo '(none)'; fi`
 
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
@@ -39,6 +39,7 @@ Live repository state for mode detection, read at invocation.
 <mode_detection>
 Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
+- **Unresolved base** — `$ARGUMENTS` is empty, no PR is identified, and the injected base is `(unresolved)`. Resolve the base through `/scope-changeset` before deciding whether the changeset is existing or empty; never substitute a branch name.
 - **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
 - **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
 - **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
@@ -48,7 +49,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 <workflow>
 
-**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per {{! file('root_guide') !}}. `spx/local/merging.md` configures this transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`; whether a PR is the transport at all is `/merge`'s selection, not this skill's.
+**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Per the detected mode, gather what is being shipped. In Unresolved base mode, invoke `/scope-changeset`; use its resolved base and exact ahead count to transition to Existing changeset or Empty, and stop with its reported error when the base remains unresolved. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per {{! file('root_guide') !}}. `spx/local/merging.md` configures this transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`; whether a PR is the transport at all is `/merge`'s selection, not this skill's.
 
 **Step 2 — State the plan; confirm only if the overlay opts in.** Read `spx/local/merging.md` (via `/merging-standards` `<repo_local_overlay>`) for the pre-mutation-confirmation setting. By default — no setting declared — state the plan in prose (the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that same plan through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` on Claude Code, `{{! tool('ask_user', 'codex') !}}` on Codex) and obtain confirmation before the first mutating action — never branch, commit, push, open, or merge before that confirmation. Establishing *what* to ship in Empty mode (Step 1, `/interview`) is requirements work, not this confirmation, and always proceeds.
 

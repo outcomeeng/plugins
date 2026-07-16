@@ -360,22 +360,11 @@ How to avoid: treat ADR/PDR placement as decomposition work when the location de
 
 <success_criteria>
 
-Decomposition is complete when:
-
-- [ ] Target is either `spx/` or a valid node address
-- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
-- [ ] Composition need assessed
-- [ ] Clarity gate completed or `/interview` used
-- [ ] Concern boundaries and node types assigned
-- [ ] Shared enablers extracted only for multi-child dependencies
-- [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
-- [ ] Ordering-evidence matrix recorded
-- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
-- [ ] Sparse indices assigned from ordering evidence and selected horizon
-- [ ] Assertions redistributed without loss
-- [ ] Parent or product spec revised without temporal narration
-- [ ] Child specs written from templates
-- [ ] Full `spx/` paths used for every node, ADR, and PDR reference
-- [ ] Validation checklist passes
+- Every resulting child has one independently validatable concern, the correct enabler or outcome type, and a spec conforming to the template owned by `/understand`.
+- The parent remains an aggregate declaration rather than a child inventory, and any independently valid first concrete behavior remains represented at its own level.
+- Every original assertion remains represented without semantic loss or duplication; shared infrastructure is extracted only where multiple children depend on it.
+- The recorded ordering-evidence matrix proves every differing sibling index and its context-loading consequence; independent peers remain same-index or unordered, and sparse space matches the declared horizon.
+- All node and decision references use full `spx/` paths, and no declaration narrates decomposition history.
+- The repository's author validation command passes with no orphan node, index collision, broken evidence link, or stale cross-reference.
 
 </success_criteria>

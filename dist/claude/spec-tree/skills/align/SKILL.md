@@ -1,7 +1,7 @@
 ---
 name: align
 description: >-
-  ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
+  ALWAYS invoke this skill when reviewing or checking spec file conformance.
   NEVER check spec conformance without this skill.
 argument-hint: "[path|changeset]"
 allowed-tools: Read, Glob, Grep, Skill
@@ -205,14 +205,12 @@ Downstream alignment:
 
 <success_criteria>
 
-- [ ] `<SPEC_TREE_FOUNDATION>` marker verified present
-- [ ] Live `/understand` `<truth_hierarchy>` and `<node_model>` sections applied, with the listed operational reference and templates read
-- [ ] Every `.md` file in scope classified or reported as unrecognized
-- [ ] Structural checks run against correct template per file type
-- [ ] Language checks applied to all files (including unrecognized)
-- [ ] Placement checks applied to all classified files
-- [ ] Changeset checks report higher-level declaration changes that lack lower-spec alignment and `PLAN.md` grounding
-- [ ] Report contains only factual findings — no suggestions, no severity, no "should"
-- [ ] Summary counts emitted
+- The report accounts for every Markdown file in scope as classified or unrecognized, with no silent omission.
+- Every finding names the exact file and location, the governing template or rule, and the observed contradiction, gap, language defect, or placement defect.
+- Structural findings use the template for the classified artifact type; language findings cover every file, and placement findings cover every classified file.
+- For changeset scope, every changed higher-level declaration is accounted for by aligned first affected lower specs or by a finding naming the absent lower-spec and `PLAN.md` grounding.
+- Findings state facts only, with no severity, proposed fix, suggestion, or `should` wording.
+- Per-file and summary counts reconcile exactly; a clean scope renders exactly `0 findings.`
+- Repeating alignment over the same file contents and scope yields the same classifications, findings, and counts.
 
 </success_criteria>

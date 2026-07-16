@@ -1,7 +1,7 @@
 ---
 name: author
 description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -43,11 +43,11 @@ Ask or infer from context:
 
 | Artifact         | When to create                        | Template                                    |
 | ---------------- | ------------------------------------- | ------------------------------------------- |
-| **Product spec** | Bootstrapping a new tree              | `templates/product/product-name.product.md` |
-| **ADR**          | Architecture decision needs recording | `templates/decisions/decision-name.adr.md`  |
-| **PDR**          | Product decision needs recording      | `templates/decisions/decision-name.pdr.md`  |
-| **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
-| **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
+| **Product spec** | Bootstrapping a new tree              | `/understand` product template |
+| **ADR**          | Architecture decision needs recording | `/understand` ADR template     |
+| **PDR**          | Product decision needs recording      | `/understand` PDR template     |
+| **Enabler node** | Shared infrastructure for 2+ siblings | `/understand` enabler template |
+| **Outcome node** | User-facing behavior with hypothesis  | `/understand` outcome template |
 
 If unclear which type, apply the decision table from the live `/understand` `<node_model>`:
 
@@ -370,16 +370,11 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 <success_criteria>
 
-Authoring is complete when:
-
-- [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
-- [ ] Context loaded for placement (or bootstrap mode for empty tree)
-- [ ] Index and placement determined using ordering rules
-- [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
-- [ ] Content gathered from user (operator-owned gaps only)
-- [ ] Template read and filled with atemporal voice
-- [ ] Validation checklist passes
-- [ ] Files created in correct location
-- [ ] Next steps recommended
+- The authored artifact occupies the canonical path for its type and conforms to the corresponding template owned by `/understand`.
+- Its parent placement and index preserve the tree's declared ordering constraints without collisions or invented dependencies.
+- Its declarations are atemporal, align with every governing decision and ancestor spec, and use full `spx/` paths for node and decision references.
+- Every assertion carries the verification type and, under `[test]`, assertion type selected by `/test`; authoring selected none independently.
+- A multi-sibling request leaves durable intent in the target's coordination notes and no pre-shaped child names, indices, or dependency chain for `/decompose` to inherit.
+- The repository's author validation command passes for the resulting artifact set.
 
 </success_criteria>

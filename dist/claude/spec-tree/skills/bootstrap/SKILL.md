@@ -172,16 +172,11 @@ How to avoid: In brownfield, derive top-level intent from consumers, jobs, surfa
 
 <success_criteria>
 
-Bootstrapping is complete when:
-
-- [ ] Existing tree checked (no overwrite of existing product spec); brownfield (existing code) detected if present
-- [ ] User interviewed across consumers, jobs, surfaces, actors/sidedness, constraints, success signals, and top-level intent
-- [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
-- [ ] Root scaffold plan presented and confirmed
-- [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `CLAUDE.md` and `AGENTS.md` carry managed sections created from template, scoped to the project's enabled languages
-- [ ] `spx/PLAN.md` created when top-level intent exists
-- [ ] Top-level structure delegated to `/decompose spx/`
-- [ ] Next steps recommended
+- Exactly one product spec exists at `spx/{product-name}.product.md`, preserving any prior product spec and expressing the confirmed hypothesis, scope, constraints, and success signals in atemporal voice.
+- `CLAUDE.md` and `AGENTS.md` contain current managed Spec Tree sections scoped to the product's enabled languages while preserving independent product instructions.
+- Brownfield vocabulary and top-level intent describe consumers, jobs, surfaces, and actors without reproducing package, module, directory, or file boundaries.
+- When candidate top-level intent exists, `spx/PLAN.md` preserves it with constraints, examples, and unresolved questions.
+- Any top-level nodes produced after bootstrap match `/decompose spx/`'s composition result; bootstrap itself assigns no child boundary, node type, or index.
+- The repository's author validation command passes for the bootstrapped root state.
 
 </success_criteria>
