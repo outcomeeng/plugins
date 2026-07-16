@@ -1,5 +1,5 @@
 ---
-template_version: "0.24.1"
+template_version: "0.25.0"
 template_source: spec-tree
 ---
 
@@ -61,6 +61,12 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 ### When checking consistency -> `/align`
 
 Review, audit, or quality check specs. Find contradictions or gaps.
+
+### Before resource-intensive local work -> `/task-tracking-standards`
+
+Invoke `/task-tracking-standards` before starting a resource-intensive local command. Run its bundled host-load waiter exactly once and collect that process's completion. The waiter owns CPU normalization, all three load-average observations, interval selection, sleeping, and rechecking; it remains silent until one terminal JSON result.
+
+Proceed only when the waiter exits zero with `status: "ready"` and `ready: true`. Never calculate a host-load delay, run repeated load commands, schedule a host-load heartbeat or timer, or substitute shell polling. A nonzero waiter result stops the heavy command and supplies the terminal reason to report.
 
 ### When shipping work to the default branch -> `/merge` (transport dispatcher)
 
