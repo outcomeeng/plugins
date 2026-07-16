@@ -1,7 +1,7 @@
 <required_reading>
 
 - Read the specification completely: node spec, ADR/PDR, design note, ticket, or user request.
-- Read repository-local authority before existing code: root guide, docs, and any spec-tree context already loaded by `spec-tree:contextualize`.
+- Read repository-local authority before existing code: the root guide, present entry documents, docs paths named by the root guide, supplied work item, or already-read entry documents, and any spec-tree context already loaded by `spec-tree:contextualize`.
 - Read `/typescript-standards` and `/typescript-test-standards`; they own TypeScript code and test conventions.
 - Read `package.json`, `tsconfig*`, test configuration, and relevant local overlays or harness guides before selecting commands.
 
@@ -19,7 +19,7 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
+4. Invoke `/test-typescript`, then write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
 5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
 
 <gate name="red-evidence">

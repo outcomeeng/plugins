@@ -6,7 +6,16 @@ description: >-
   implementation audits; the main conversation reaches this audit only through
   that agent.
 argument-hint: "<implementation audit request>"
-allowed-tools: Read, Glob, Grep, Skill, Bash(spx verification run:*)
+allowed-tools:
+  - Bash(spx verification run start:*)
+  - Bash(spx verification run scope add:*)
+  - Bash(spx verification run finding add:*)
+  - Bash(spx verification run finish:*)
+  - Bash(spx verification run render:*)
+  - Glob
+  - Grep
+  - Read
+  - Skill
 ---
 
 <dispatch_gate>
@@ -154,6 +163,17 @@ Build an expected coverage inventory before invoking any language concern skill.
 - coverage status: `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`
 - concern result: completion is represented by every expected path unit carrying `coverageStatus: audited`, and the finding count is the count of accepted finding rows for those path-scoped units
 
+Coverage statuses have these complete semantics:
+
+| Status           | Meaning                                                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audited`        | The executable concern producer completed and every accepted finding was recorded.                                                                    |
+| `not-applicable` | The unit is optional transparency for non-implementation artifacts and requires no concern producer.                                                  |
+| `unsupported`    | The unit is required, but its implementation language or artifact kind has no executable concern producer.                                            |
+| `missing-skill`  | The unit is required and names an expected concern skill that is unavailable.                                                                         |
+| `skipped`        | The unit is required and its producer is available, but dispatch stopped after another required unit was classified `unsupported` or `missing-skill`. |
+| `incomplete`     | The unit is required and dispatch began, but no accepted concern result was recorded.                                                                 |
+
 Plan the complete inventory before dispatch, but NEVER mark a planned unit `audited`. Invoke each concern skill inside the open run. After that concern returns, immediately record one path-scoped row per inspected path with a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited` before inspecting the next concern. Record each returned finding immediately after those scope rows and associate it with the matching path-scoped unit. Derive the concern's finding count from the accepted finding rows; do not emit a custom count SPX discards. When a concern cannot return a complete result, record `incomplete` or the applicable non-audited status; never manufacture a completed result from the orchestration's own inspection.
 
 A missing required concern skill, unsupported implementation-owned artifact, or required unit that receives no concern result rejects the run through accepted coverage status and the evidence-derived terminal rollup. Do not continue concern dispatch after detecting an absent required skill for a language partition; finish and render the rejected run after the complete expected inventory is recorded. An SPX command or payload rejection is a command failure and returns BLOCKED under `<verdict_format>` rather than becoming coverage evidence.
@@ -195,9 +215,9 @@ Finding identity for convergence is content and stable producer identity, not pl
 
 <terminal_model>
 
-Finish the run only after every required coverage unit is `audited`, `not-applicable`, `unsupported`, `missing-skill`, `skipped`, or `incomplete`, and after every finding has been recorded. Record missing required skills, unsupported files, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
+Finish the run only after every expected coverage unit has exactly one accepted coverage status and every finding has been recorded. Record missing required skills, unsupported files, finding counts, and deterministic verification state in accepted scope and finding payload fields instead of terminal metadata.
 
-Compute the terminal status from accepted coverage and finding evidence: `approved` when every required non-gap unit is `audited` or `not-applicable` and no finding exists; `rejected` when a required unit is uncovered or any finding exists. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
+Compute the terminal status from accepted coverage and finding evidence. Set `approved` only when every required unit is `audited` or `not-applicable` and no finding exists. Set `rejected` when any required unit is `unsupported`, `missing-skill`, `skipped`, or `incomplete`, or when any finding exists. Optional units never change the terminal status. Pass that evidence-derived value through `finish --terminal-status`. Do not pass terminal metadata for audit runs; the run's coverage and findings already carry the facts behind the terminal value.
 
 If SPX rejects terminal status, report the rejected command and stderr as the audit result. Do not manufacture a prose fallback.
 
@@ -281,7 +301,7 @@ How to avoid: Stop and return the boundary failure with the deterministic comman
 <success_criteria>
 
 - The verdict covers every required implementation concern for every language partition in the caller's scope: code, tests, and architecture.
-- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A blocked run names the exact failed request field or SPX command that prevented a valid completed projection; a missing concern skill appears as `missing-skill` in a rendered rejected run.
+- A completed run returns the raw run token and rendered projection with no competing prose verdict; the projection's `terminalStatus` is the sole determination (`approved` or `rejected`). A malformed request or rejected SPX command returns BLOCKED with the exact failed field or command; an unavailable required concern skill appears as `missing-skill` in a completed rejected projection.
 - Every rejected finding is falsifiable: it names the stable producer identity, unit, violated rule or principle, severity, location, message, and observed-versus-expected evidence.
 - Every missing-skill, unsupported-file, or coverage-gap unit appears in the rendered projection rather than being hidden in prose.
 - Every audited concern preserves its complete non-empty inspected-path set as path-scoped units whose `subject` fields are the exact paths; every expected unit is audited only after the concern completes, and its finding count derives from accepted finding rows rather than a custom field.
