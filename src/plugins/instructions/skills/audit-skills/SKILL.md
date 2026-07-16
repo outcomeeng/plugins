@@ -296,7 +296,7 @@ Emit one terminal verdict as the first line.
 - After `REJECTED`, list every must-fix finding as `file:line — violated rule: evidence. Required correction: action.`
 - Keep-these-aspects and worth-improving observations may follow the terminal verdict under their category names. They never change `APPROVED` to `REJECTED`.
 - Emit no JSON envelope, numeric score, mutation offer, or prose before the terminal verdict.
-</verdict_format>
+  </verdict_format>
 
 <failure_modes>
 

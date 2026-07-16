@@ -465,11 +465,11 @@ A well-configured {{! term('configured_agent') !}} has:
 - XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
   {!% endif %!}
 - A description whose concrete trigger is distinguishable from neighboring configured agents under the target runtime's selection semantics
-{!% if target == 'codex' %!}
+  {!% if target == 'codex' %!}
 - A passing Codex runtime validation gate: `{{! tool('spawn_agent') !}}` exposes and starts the exact configured `agent_type`, `{{! tool('wait_agent') !}}` returns its final conforming result, `{{! tool('close_agent') !}}` closes it, and the representative read-only invocation causes no repository mutation
-{!% else %!}
+  {!% else %!}
 - A passing Claude runtime validation gate: `/agents` shows the expected configuration, and one representative read-only invocation exhibits the configured role, tool boundary, and output contract without repository mutation
-{!% endif %!}
+  {!% endif %!}
 - A model whose configured value matches the task's documented complexity, cost, and reproducibility requirement
 
 </success_criteria>
