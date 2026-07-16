@@ -18,7 +18,7 @@ The overlay MUST NOT: skip or weaken the local deterministic-verification, evide
 Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
-<the_opening_flow>
+<workflow>
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
@@ -106,7 +106,7 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
-</the_opening_flow>
+</workflow>
 
 <title_format>
 
