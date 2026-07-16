@@ -24,6 +24,7 @@ returned handle.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import pathlib
 import subprocess
@@ -74,17 +75,15 @@ def _fixture_relative_path(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).relative_to(scenario / role).as_posix()
 
 
-def _fixture_branch_name(scenario: pathlib.Path, role: str) -> str:
-    marker = _fixture_file(scenario, role)
-    return marker.parent.relative_to(scenario / role).as_posix()
-
-
-MERGED_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "merged")
-FEATURE_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "feature")
-INITIAL_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "initial")
-WORKING_FILE = _fixture_relative_path(STALE_BASE_FIXTURE_DIR, "working")
-BASE_BRANCH = _fixture_branch_name(STALE_BASE_FIXTURE_DIR, "branches/base")
-FEATURE_BRANCH = _fixture_branch_name(STALE_BASE_FIXTURE_DIR, "branches/feature")
+STALE_BASE_FIXTURE = json.loads(
+    (STALE_BASE_FIXTURE_DIR / "fixture.json").read_text(encoding="utf-8")
+)
+MERGED_FILE = STALE_BASE_FIXTURE["merged_file"]
+FEATURE_FILE = STALE_BASE_FIXTURE["feature_file"]
+INITIAL_FILE = STALE_BASE_FIXTURE["initial_file"]
+WORKING_FILE = STALE_BASE_FIXTURE["working_file"]
+BASE_BRANCH = STALE_BASE_FIXTURE["base_branch"]
+FEATURE_BRANCH = STALE_BASE_FIXTURE["feature_branch"]
 SPACED_NOTE_PATH = _fixture_relative_path(SPACED_NOTE_FIXTURE_DIR, "committed")
 
 
