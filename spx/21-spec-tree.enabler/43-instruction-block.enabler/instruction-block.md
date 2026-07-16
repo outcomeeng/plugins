@@ -36,6 +36,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 ### Mappings
 
 - For every agent harness and enabled-language subset, rendering the canonical instruction-block template maps to a router block with exactly one blank line between its opening marker and first body content ([test](tests/test_router_spacing.mapping.l1.py))
+- Each supported CLI flag maps to a duplicate-flag rejection when it appears more than once in raw arguments, before argument parsing reads a template or repository path ([test](tests/test_instruction_block.mapping.l1.py))
 - Over the languages the template defines blocks for, a language's block appears in a rendered router block when the language is in the detected enabled set and is omitted otherwise ([test](tests/test_instruction_block.mapping.l1.py))
 - A test-file extension present under `spx/**/tests/` maps to the language it denotes, and the detected enabled-language set is the set of those mappings ([test](tests/test_instruction_block.mapping.l1.py))
 - The `--check` verb maps a router-block state to its report: a missing block to `absent`, a version-behind block to `stale`, a version-current block to `current`, and a detected-language set differing from the recorded set to `stale` ([test](tests/test_instruction_block.mapping.l1.py))
