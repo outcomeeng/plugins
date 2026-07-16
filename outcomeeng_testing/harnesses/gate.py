@@ -17,7 +17,6 @@ import inspect
 import io
 import json
 import os
-import signal
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -35,6 +34,7 @@ from outcomeeng.validation import (
     EVAL_TRIGGERS_ARGV,
     FAILURE_EXCERPT_LINE_LIMIT,
     FMT_CHECK_ARGV,
+    FORWARDED_SIGNALS,
     FULL_LOG_LABEL,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
@@ -53,6 +53,7 @@ from outcomeeng.validation import (
     RUFF_CHECK_ARGV,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
+    SIGNAL_GRACE_SECONDS,
     SHELLCHECK_ARGV,
     SPAWN_FAILURE_EXIT_CODE,
     SPX_MARKDOWN_ARGV,
@@ -142,7 +143,7 @@ PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
-FORWARDED_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+DECLARED_SIGNAL_GRACE_SECONDS = 2.0
 SPAWN_FAILURE_MESSAGE = "missing executable"
 HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
 PYTEST_TARGET_ARG = (
@@ -568,12 +569,13 @@ def assert_gate_compliance_contract() -> None:
 
     signal_source = signal_handler_source()
     assert signal_source, "no signal-handling function found in package"
+    assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
     count = monotonic_call_count(signal_source)
     assert 1 <= count <= 2, (
         f"signal handler must use a single bounded deadline; "
         f"found {count} time.monotonic() calls"
     )
-    assert "range(_POST_KILL_REAP_ATTEMPTS)" in signal_source
+    assert "range(POST_KILL_REAP_ATTEMPTS)" in signal_source
 
     source_text = validation_package_source_text()
     assert "gh run watch" not in source_text

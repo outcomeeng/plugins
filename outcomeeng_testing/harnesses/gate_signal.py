@@ -27,20 +27,37 @@ from outcomeeng.validation import (
 ORCHESTRATOR_STARTUP_SECONDS: Final = 8.0
 TERMINATION_DEADLINE_SECONDS: Final = 6.0
 CONTROLLED_CHILD_SLEEP_SECONDS: Final = 60.0
+GROUP_MARKER_WAIT_SECONDS: Final = ORCHESTRATOR_STARTUP_SECONDS
+GROUP_MARKER_POLL_SECONDS: Final = 0.01
 
 
-def _ignore_term_command() -> tuple[str, ...]:
-    """Return a real child command that ignores SIGTERM and stays alive."""
+def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]:
+    """Return a child command with an observable grandchild in its process group."""
+    grandchild_program = (
+        "import os\n"
+        "import pathlib\n"
+        "import signal\n"
+        "import time\n"
+        f"pid_marker = pathlib.Path({str(pid_path)!r})\n"
+        f"signal_marker = pathlib.Path({str(signal_path)!r})\n"
+        "def handle_term(signum, _frame):\n"
+        "    signal_marker.write_text(str(signum), encoding='utf-8')\n"
+        "    raise SystemExit(0)\n"
+        "signal.signal(signal.SIGTERM, handle_term)\n"
+        "pid_marker.write_text(str(os.getpid()), encoding='utf-8')\n"
+        f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})\n"
+    )
     return (
         sys.executable,
         "-c",
-        "import signal, time; "
+        "import pathlib, signal, subprocess, sys, time; "
         "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+        f"grandchild = subprocess.Popen({[sys.executable, '-c', grandchild_program]!r}); "
         f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})",
     )
 
 
-def _wrapper_program() -> str:
+def _wrapper_program(pid_path: Path, signal_path: Path) -> str:
     """Return a wrapper that announces when the orchestrator waits on its child."""
     return f"""
 import sys
@@ -70,15 +87,17 @@ class AnnouncingHandle:
     def send_signal_to_group(self, sig):
         self._inner.send_signal_to_group(sig)
 
-steps = (Step(label="long-sleep", argv={_ignore_term_command()!r}),)
+steps = (Step(label="long-sleep", argv={_process_group_command(pid_path, signal_path)!r}),)
 sys.exit(run(spawner=PidPrintingSpawner(), sink=sys.stdout, steps=steps))
 """
 
 
-def _spawn_signal_wrapper_program(delivered_signal: signal.Signals) -> str:
+def _spawn_signal_wrapper_program(
+    delivered_signal: signal.Signals, pid_path: Path, signal_path: Path
+) -> str:
     """Return a wrapper that raises a forwarded signal during production spawn."""
     return f"""
-import signal, sys
+import pathlib, signal, sys, time
 from outcomeeng.validation import ProductionSpawner, Step, run
 
 class SignalDuringSpawnSpawner:
@@ -88,10 +107,16 @@ class SignalDuringSpawnSpawner:
         handle = self._inner.spawn(argv, output_path)
         sys.stderr.write(f"CHILD_PID={{handle.pid}}\\n")
         sys.stderr.flush()
+        marker = pathlib.Path({str(pid_path)!r})
+        deadline = time.monotonic() + {GROUP_MARKER_WAIT_SECONDS!r}
+        while time.monotonic() < deadline and not marker.exists():
+            time.sleep({GROUP_MARKER_POLL_SECONDS!r})
+        if not marker.exists():
+            raise RuntimeError("grandchild did not become signal-ready")
         signal.raise_signal({int(delivered_signal)})
         return handle
 
-steps = (Step(label="spawn-window-sleep", argv={_ignore_term_command()!r}),)
+steps = (Step(label="spawn-window-sleep", argv={_process_group_command(pid_path, signal_path)!r}),)
 sys.exit(run(spawner=SignalDuringSpawnSpawner(), sink=sys.stdout, steps=steps))
 """
 
@@ -104,6 +129,38 @@ def _process_is_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+def _read_grandchild_pid(pid_path: Path) -> int:
+    deadline = time.monotonic() + GROUP_MARKER_WAIT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            return int(pid_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            time.sleep(GROUP_MARKER_POLL_SECONDS)
+    raise AssertionError("child did not announce grandchild PID in time")
+
+
+def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
+    deadline = time.monotonic() + GROUP_MARKER_WAIT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            delivered_signal = int(signal_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            time.sleep(GROUP_MARKER_POLL_SECONDS)
+            continue
+        assert delivered_signal == int(signal.SIGTERM)
+        return
+    raise AssertionError("grandchild did not receive process-group SIGTERM")
+
+
+def _terminate_child_group(child_pid: int | None) -> None:
+    if child_pid is None:
+        return
+    try:
+        os.killpg(child_pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def _read_child_pid_marker(
@@ -192,40 +249,59 @@ def assert_signals_terminate_process_groups_within_grace() -> None:
     """Exercise every forwarded signal against a real in-flight child group."""
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
+            root = Path(directory)
+            grandchild_pid_path = root / "grandchild.pid"
+            grandchild_signal_path = root / "grandchild.signal"
             orchestrator = _spawn_wrapper(
-                Path(directory) / "wrapper.py", _wrapper_program()
+                root / "wrapper.py",
+                _wrapper_program(grandchild_pid_path, grandchild_signal_path),
             )
+            child_pid: int | None = None
             try:
                 child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=True)
+                grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
                 assert _process_is_alive(child_pid)
+                assert _process_is_alive(grandchild_pid)
                 os.kill(orchestrator.pid, delivered_signal)
                 orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
+                _assert_grandchild_received_group_signal(grandchild_signal_path)
                 assert not _process_is_alive(child_pid), (
                     f"child PID {child_pid} survived signal {delivered_signal}"
                 )
                 _assert_failed_signal_summary(orchestrator, delivered_signal)
             finally:
                 _terminate_wrapper(orchestrator)
+                _terminate_child_group(child_pid)
 
 
 def assert_spawn_window_signals_reach_child_groups() -> None:
     """Exercise every forwarded signal raised during production child spawn."""
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
+            root = Path(directory)
+            grandchild_pid_path = root / "grandchild.pid"
+            grandchild_signal_path = root / "grandchild.signal"
             orchestrator = _spawn_wrapper(
-                Path(directory) / "spawn_signal_wrapper.py",
-                _spawn_signal_wrapper_program(delivered_signal),
+                root / "spawn_signal_wrapper.py",
+                _spawn_signal_wrapper_program(
+                    delivered_signal, grandchild_pid_path, grandchild_signal_path
+                ),
             )
+            child_pid: int | None = None
             try:
                 child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=False)
+                grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
                 assert _process_is_alive(child_pid)
+                assert _process_is_alive(grandchild_pid)
                 orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
+                _assert_grandchild_received_group_signal(grandchild_signal_path)
                 assert not _process_is_alive(child_pid), (
                     f"child PID {child_pid} survived spawn-window signal {delivered_signal}"
                 )
                 _assert_failed_signal_summary(orchestrator, delivered_signal)
             finally:
                 _terminate_wrapper(orchestrator)
+                _terminate_child_group(child_pid)
 
 
 def assert_production_spawner_captures_child_output() -> None:

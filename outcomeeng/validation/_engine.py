@@ -27,9 +27,9 @@ from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, 
 from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
 
 FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
-_GRACE_SECONDS: Final = 2.0
-_POLL_INTERVAL: Final = 0.05
-_POST_KILL_REAP_ATTEMPTS: Final = 20
+SIGNAL_GRACE_SECONDS: Final = 2.0
+SIGNAL_POLL_INTERVAL_SECONDS: Final = 0.05
+POST_KILL_REAP_ATTEMPTS: Final = 20
 LOG_FILE_PREFIX: Final = "outcomeeng-validation-"
 LOG_FILE_SUFFIX: Final = ".log"
 SUMMARY_FILE_PREFIX: Final = "outcomeeng-validation-summary-"
@@ -89,16 +89,16 @@ def _forwarding_signal_handler(signum: int, _frame: FrameType | None) -> None:
     if handle.poll() is not None:
         raise _ForwardedSignal(signum, child_handle_available=True)
     handle.send_signal_to_group(signal.SIGTERM)
-    deadline = time.monotonic() + _GRACE_SECONDS
+    deadline = time.monotonic() + SIGNAL_GRACE_SECONDS
     while time.monotonic() < deadline:
         if handle.poll() is not None:
             raise _ForwardedSignal(signum, child_handle_available=True)
-        time.sleep(_POLL_INTERVAL)
+        time.sleep(SIGNAL_POLL_INTERVAL_SECONDS)
     handle.send_signal_to_group(signal.SIGKILL)
-    for _ in range(_POST_KILL_REAP_ATTEMPTS):
+    for _ in range(POST_KILL_REAP_ATTEMPTS):
         if handle.poll() is not None:
             break
-        time.sleep(_POLL_INTERVAL)
+        time.sleep(SIGNAL_POLL_INTERVAL_SECONDS)
     raise _ForwardedSignal(signum, child_handle_available=True)
 
 
