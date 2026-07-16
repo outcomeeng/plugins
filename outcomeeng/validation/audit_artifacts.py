@@ -114,12 +114,13 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     wrapper_path = agents_dir / IMPLEMENTATION_AUDITOR_FILENAME
     if not wrapper_path.is_file():
         errors.append(f"{wrapper_path}: wrapper missing")
-    for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES:
-        retired_path = agents_dir / filename
-        if retired_path.exists():
-            errors.append(f"{retired_path}: retired wrapper exists")
 
     agent_paths = tuple(surface.glob(f"*/{AGENTS_DIR_NAME}/*.md"))
+    errors.extend(
+        f"{path}: retired wrapper exists"
+        for path in agent_paths
+        if path.name in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+    )
     language_names = frozenset(
         (
             *implementation_languages(surface),

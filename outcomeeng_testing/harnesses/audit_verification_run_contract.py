@@ -350,6 +350,14 @@ def audit_contract_rejects_retired_implementation_wrappers() -> bool:
     )
 
 
+def audit_contract_rejects_retired_wrappers_in_language_plugins() -> bool:
+    """Return whether every retired wrapper name is rejected outside spec-tree."""
+    return all(
+        _retired_language_plugin_wrapper_is_rejected(filename)
+        for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+    )
+
+
 def audit_contract_rejects_incomplete_language_trio() -> bool:
     """Return whether validation rejects a missing language concern skill."""
     with _valid_surface() as surface:
@@ -483,6 +491,12 @@ def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
     with _valid_surface() as surface:
         _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        return bool(check_wrapper_surface(surface))
+
+
+def _retired_language_plugin_wrapper_is_rejected(filename: str) -> bool:
+    with _valid_surface() as surface:
+        _touch(surface / _source_language() / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 
