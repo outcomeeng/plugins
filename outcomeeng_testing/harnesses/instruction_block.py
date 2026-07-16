@@ -438,6 +438,7 @@ def mapping_evidence_contract() -> tuple[str, ...]:
         root_instruction_topology_separate,
     )
     return (
+        *(f"duplicate-flag[{option}]" for option in module.CLI_OPTION_NAMES),
         *(
             f"extension[{extension}]"
             for extension in sorted(module.LANGUAGE_BY_EXTENSION)

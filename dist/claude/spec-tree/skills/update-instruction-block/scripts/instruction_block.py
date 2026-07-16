@@ -48,9 +48,19 @@ from enum import StrEnum
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
 MISSING_TEMPLATE_VERSION_ERROR = "error: template has no template_version"
+DUPLICATE_FLAG_ERROR_PREFIX = "error: duplicate flag: "
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+CLI_OPTION_NAMES = (
+    "--template",
+    "--repo-root",
+    "--check",
+    "--write",
+    "--reconcile",
+    "--from",
+    "--languages",
+)
 UNRESOLVED_BUILD_TEMPLATE_TOKENS = (
     "{" + "{!",
     "!" + "}}",
@@ -286,6 +296,19 @@ def _parse_languages(value: str | None) -> tuple[str, ...]:
 def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
     """Return a canonical enabled-language set for rendering and staleness checks."""
     return tuple(sorted(set(languages)))
+
+
+def duplicate_cli_option(argv: Iterable[str]) -> str | None:
+    """Return the first repeated supported option in raw argv, or None."""
+    seen: set[str] = set()
+    for token in argv:
+        option = token.split("=", maxsplit=1)[0]
+        if option not in CLI_OPTION_NAMES:
+            continue
+        if option in seen:
+            return option
+        seen.add(option)
+    return None
 
 
 def parse_template_frontmatter_version(text: str) -> str | None:
@@ -1225,6 +1248,12 @@ def shared_region_drift(repo_root: pathlib.Path) -> tuple[str, ...]:
 
 def main(argv: list[str] | None = None) -> int:
     """Thin CLI edge: read the template, detect languages, render/write/check/reconcile."""
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    duplicate = duplicate_cli_option(raw_argv)
+    if duplicate is not None:
+        print(f"{DUPLICATE_FLAG_ERROR_PREFIX}{duplicate}", file=sys.stderr)
+        return 2
+
     parser = argparse.ArgumentParser(
         description="Generate and validate the managed Spec Tree instruction surface in root CLAUDE.md and AGENTS.md."
     )
@@ -1260,7 +1289,7 @@ def main(argv: list[str] | None = None) -> int:
         "--languages",
         help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
     )
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
 
     try:
         template_path = _validated_template_path(args.template)
