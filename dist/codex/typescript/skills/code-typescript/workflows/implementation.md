@@ -1,7 +1,7 @@
 <required_reading>
 
 - Read the specification completely: node spec, ADR/PDR, design note, ticket, or user request.
-- Read repository-local authority before existing code: the root guide, present entry documents, docs paths named by the root guide, supplied work item, or already-read entry documents, and any spec-tree context already loaded by `spec-tree:contextualize`.
+- Read repository-local authority before existing code: the root guide, present entry documents, docs paths named by the root guide, supplied work item, or already-read entry documents, and any spec-tree context already loaded by `/contextualize`.
 - Read `/typescript-standards` and `/typescript-test-standards`; they own TypeScript code and test conventions.
 - Read `package.json`, `tsconfig*`, test configuration, and relevant local overlays or harness guides before selecting commands.
 
@@ -19,7 +19,9 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Invoke `/test` to select the assertion type and execution level, then invoke `/test-typescript` and write or update the co-located spec-tree tests first under that routing.
+4. Route test work from the governing input:
+   - With a live spec-tree node, invoke `/test` to select the assertion type and execution level, then invoke `/test-typescript` and write or update the node's co-located tests first under that routing.
+   - Without a spec-tree node, write or repair the repository-owned tests first under the loaded repository conventions and `/typescript-test-standards`; never invent an `spx/` node or co-located test path.
 5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
 
 <gate name="red-evidence">
@@ -180,9 +182,9 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
 <success_criteria>
 
-- The implementation follows the loaded specification and preserves source-owned contracts.
-- Required tests exist, fail before the implementation change for the expected reason, and pass after the change.
-- The focused test, typecheck, lint, and repository-selected validation commands pass through repository wrappers or documented fallbacks.
-- No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.
+- Working notes map every deliverable, public interface, edge case, and error behavior to the loaded specification and its owning source path.
+- The recorded focused test command exits non-zero for the expected missing behavior before implementation and exits zero after implementation.
+- The recorded typecheck, lint, and repository-selected validation commands each exit zero through repository wrappers or documented fallbacks.
+- Changed imports and package manifests show every external dependency is declared, and changed test paths contain no harness, generator, or fixture implementation inside production code or `spx/**/tests/`.
 
 </success_criteria>

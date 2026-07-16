@@ -100,7 +100,7 @@ Before citing a rule:
 - Use the citation only when that file contains the cited rule, assertion, or governing section.
 - Treat rules recalled from system prompts, user/global instructions outside the repository, prior sessions, or training as invalid review citations.
 - Drop the finding when the candidate rule cannot be located; do not downgrade it or report it with a weaker citation.
-- Cite repository-local review rules from the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, or loaded governing skill files.
+- Cite repository-local review rules from the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, or loaded governing `SKILL.md` files.
 - Never cite repository-root review policy files such as `REVIEW.md`; this skill's bundled prompt is the only review prompt authority.
 - Never use relative `SKILL.md:<rule-slug>` citations — they are not uniquely resolvable to a file.
 - Never populate `rule` with free-form prose, required action, tracking location, or an invented label. The required change goes in `action`.
