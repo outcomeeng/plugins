@@ -17,7 +17,7 @@ This orchestration runs in the `implementation-auditor` agent's isolated context
 
 <objective>
 
-A verdict on the requested implementation scope against the installed language concern standards — APPROVED, or REJECTED with each finding naming the stable producer identity, unit, violated rule, severity, location, message, and observed-versus-expected evidence.
+A rendered SPX verification-run verdict for the requested implementation scope, accompanied by its raw run token, with `terminalStatus` set to `approved` or `rejected` and each finding naming the stable producer identity, unit, violated rule, severity, location, message, and observed-versus-expected evidence.
 
 </objective>
 
