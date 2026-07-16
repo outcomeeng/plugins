@@ -30,7 +30,7 @@ It emits nothing while waiting. Immediately before exit it writes exactly one co
 </input_output>
 
 <dependencies>
-- Python 3.9 or newer
+- Python 3.13 or 3.14 as the supported window; syntax remains compatible with Python 3.9 or newer
 - `os.getloadavg()` and a positive `os.cpu_count()` result
 - Python standard library only; no repository-local package, subprocess, file, or network dependency
 
