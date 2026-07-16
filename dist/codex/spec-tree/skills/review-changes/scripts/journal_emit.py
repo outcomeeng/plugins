@@ -86,6 +86,11 @@ DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
 MANIFEST_SCHEMA_VERSION = compute_diff.MANIFEST_SCHEMA_VERSION
+RENDER_OVERALL_FIELD = "overall"
+RENDER_BLOCKING_FIELD = "blocking"
+RENDER_DEBT_FIELD = "debt"
+RENDER_COUNT_LINE_FIELD = "countLine"
+RENDER_SURFACE_FIELD = "surface"
 
 
 @dataclass(frozen=True)
@@ -158,7 +163,7 @@ def run_completed_event(
 
 
 def render_events(events: list[dict[str, object]]) -> dict[str, str]:
-    counts = {"blocking": 0, "debt": 0}
+    counts = {RENDER_BLOCKING_FIELD: 0, RENDER_DEBT_FIELD: 0}
     for event in events:
         if event.get("type") != jp.FINDING_REPORTED:
             continue
@@ -166,15 +171,18 @@ def render_events(events: list[dict[str, object]]) -> dict[str, str]:
         if not isinstance(data, dict):
             continue
         if data.get("severity") == jp.Severity.REJECT:
-            counts["blocking"] += 1
+            counts[RENDER_BLOCKING_FIELD] += 1
         if data.get("severity") == jp.Severity.WARNING:
-            counts["debt"] += 1
+            counts[RENDER_DEBT_FIELD] += 1
     return {
-        "overall": str(jp.compute_overall(events)),
-        "blocking": str(counts["blocking"]),
-        "debt": str(counts["debt"]),
-        "countLine": f"BLOCKING: {counts['blocking']}, DEBT: {counts['debt']}",
-        "surface": str(jp.render_surface(events)),
+        RENDER_OVERALL_FIELD: str(jp.compute_overall(events)),
+        RENDER_BLOCKING_FIELD: str(counts[RENDER_BLOCKING_FIELD]),
+        RENDER_DEBT_FIELD: str(counts[RENDER_DEBT_FIELD]),
+        RENDER_COUNT_LINE_FIELD: (
+            f"BLOCKING: {counts[RENDER_BLOCKING_FIELD]}, "
+            f"DEBT: {counts[RENDER_DEBT_FIELD]}"
+        ),
+        RENDER_SURFACE_FIELD: str(jp.render_surface(events)),
     }
 
 

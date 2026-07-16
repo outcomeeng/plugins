@@ -90,6 +90,10 @@ REVIEW_RUN_METADATA_BRANCH_FIXTURE = (
 REVIEW_RUN_METADATA_PULL_REQUEST_FIXTURE = (
     REVIEW_FIXTURES_DIR / "review_run_metadata_pull_request.json"
 )
+FAKE_JOURNAL_PATH_ENV = "SPX_FAKE_JOURNAL_PATH"
+FAKE_NAMESPACE_KEYS_ENV = "SPX_FAKE_NAMESPACE_KEYS"
+FAKE_RUN_TOKEN = "run-001"
+CONTAMINATING_JOURNAL_ENV_VALUE = "contaminating-later-env"
 REVIEW_FINDINGS_FIXTURE = REVIEW_FIXTURES_DIR / "review_findings.jsonl"
 
 
@@ -604,6 +608,16 @@ def review_run_journal_env_key(name: str) -> str:
     return value
 
 
+def journal_emit_env_key(name: str) -> str:
+    """Return one named environment key from the journal adapter."""
+
+    module = load_journal_emit_module()
+    value = getattr(module, name)
+    if not isinstance(value, str):
+        raise RuntimeError(f"journal_emit.{name} must be a string")
+    return value
+
+
 def review_run_contract_value(name: str) -> str | tuple[str, ...]:
     """Return one public field contract owned by ``review_run``."""
 
@@ -618,6 +632,7 @@ def review_run_contract_value(name: str) -> str | tuple[str, ...]:
 
 REVIEW_EVENT_TIME = "2026-06-23T00:00:06Z"
 REVIEW_COMPLETION_TIME = "2026-06-23T00:00:05Z"
+REVIEW_ENV_BASE_REF = journal_emit_env_key("ENV_BASE_REF")
 REVIEW_ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
 REVIEW_ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
 REVIEW_ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
@@ -984,9 +999,9 @@ current_namespace = namespace()
 state["commands"].append(command)
 if command == "open":
     state["namespace"] = current_namespace
-    state["runToken"] = "run-001"
+    state["runToken"] = "__RUN_TOKEN__"
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"runToken": "run-001"}))
+    print(json.dumps({"runToken": "__RUN_TOKEN__"}))
 elif option_value(args, "--run") != state.get("runToken"):
     path.write_text(json.dumps(state), encoding="utf-8")
     sys.stderr.write("journal run not found; open the run before operating on it\\n")
@@ -1015,11 +1030,54 @@ elif command == "render":
 else:
     sys.stderr.write(f"unknown command {command}\\n")
     raise SystemExit(2)
-""",
+""".replace("__RUN_TOKEN__", FAKE_RUN_TOKEN),
         encoding="utf-8",
     )
     script.chmod(0o755)
     return script
+
+
+@dataclass(frozen=True)
+class ReviewRunnerHarness:
+    """Resources and isolated environments for one review-runner scenario."""
+
+    repo: pathlib.Path
+    journal_path: pathlib.Path
+    env: dict[str, str]
+    later_env: dict[str, str]
+    run_token: str = FAKE_RUN_TOKEN
+
+
+def review_runner_harness(
+    tmp_path: pathlib.Path, *, renamed: bool = False
+) -> ReviewRunnerHarness:
+    """Create a git repository and namespace-checking fake journal backend."""
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    base_ref = (
+        init_renamed_review_git_repo(repo) if renamed else init_review_git_repo(repo)
+    )
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    journal_path = tmp_path / "journal.json"
+    write_fake_spx(bin_dir, journal_path)
+
+    env = isolated_review_env(cwd=repo)
+    env[REVIEW_ENV_BASE_REF] = base_ref
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    env[FAKE_JOURNAL_PATH_ENV] = str(journal_path)
+    env[FAKE_NAMESPACE_KEYS_ENV] = json.dumps(review_run_journal_env_keys())
+    later_env = env.copy()
+    for key in review_run_journal_env_keys():
+        later_env[key] = CONTAMINATING_JOURNAL_ENV_VALUE
+
+    return ReviewRunnerHarness(
+        repo=repo,
+        journal_path=journal_path,
+        env=env,
+        later_env=later_env,
+    )
 
 
 def make_review_result_dict(
