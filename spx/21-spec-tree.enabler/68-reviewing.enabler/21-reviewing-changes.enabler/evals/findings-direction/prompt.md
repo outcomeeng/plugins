@@ -58,6 +58,8 @@ Every finding carries exactly one `severity`:
 - `blocking` — a defect with evidence of a deterministic merge-safety consequence.
 - `debt` — a real defect whose evidence does not establish a deterministic merge-safety consequence.
 
+Assign `blocking` only when the diff and loaded governing context establish the consequence. A conditional or worst-case finding caused by an omitted fact is `debt`; uncertainty never supplies the deterministic evidence `blocking` requires. In particular, the absence of a test-file change does not prove that existing parameterized or property evidence misses new behavior. Classify that evidence concern as `debt` unless the loaded test evidence directly establishes the coverage gap.
+
 Judge validity and severity only. The review consumer applies disposition independently of severity; do not recommend tracking, waiver, merge, or any other disposition, and do not introduce a third, scope-shaped severity.
 
 ## Finding Shape
