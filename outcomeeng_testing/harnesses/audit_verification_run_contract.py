@@ -70,6 +70,13 @@ SPX_RELEASE_FIXTURE: Final = (
 SPX_VERIFICATION_RUN_HELP_FIXTURE: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "spx_verification_run_help.txt"
 )
+NPX_EXECUTABLE: Final = "npx"
+NPX_COMMAND_PREFIX: Final = (NPX_EXECUTABLE, "--yes")
+MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
+    ("pnpm", ("pnpm", "dlx")),
+    ("bunx", ("bunx", "--bun")),
+    (NPX_EXECUTABLE, NPX_COMMAND_PREFIX),
+)
 
 
 def spx_floor_provides_verification_run_lifecycle() -> bool:
@@ -239,10 +246,19 @@ def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
 def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
     """Reject a language-specific wrapper without a matching code skill."""
     with _valid_surface() as surface:
-        language = f"{_source_language()}-{ImplementationAuditConcern.CODE.value}"
-        filename = min(language_specific_auditor_filenames(language))
-        _touch(surface / language / AGENTS_DIR_NAME / filename)
+        filename = f"java-{ImplementationAuditConcern.CODE.value}-auditor.md"
+        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
+
+
+def minimum_release_runner_supports_npx_fallback() -> bool:
+    """Return whether exact-release selection falls back to standard npm tooling."""
+    minimum_version = _required_string(_verification_run_release(), "version")
+    package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
+    return _minimum_release_package_command(
+        package_spec,
+        executable_finder=_find_npx_only,
+    ) == (*NPX_COMMAND_PREFIX, package_spec)
 
 
 def implementation_audit_unit_ids_are_subject_specific() -> bool:
@@ -617,15 +633,7 @@ def _minimum_release_spx_command() -> tuple[str, ...]:
             return installed_command
 
     package_spec = f"{SPX_PACKAGE_NAME}@{minimum_version}"
-    if which("pnpm") is not None:
-        minimum_command = ("pnpm", "dlx", package_spec)
-    elif which("bunx") is not None:
-        minimum_command = ("bunx", "--bun", package_spec)
-    else:
-        raise RuntimeError(
-            "exact minimum-release SPX execution requires pnpm or bunx when "
-            "the PATH version differs"
-        )
+    minimum_command = _minimum_release_package_command(package_spec)
 
     actual_version = _spx_version(minimum_command)
     if actual_version != minimum_version:
@@ -634,6 +642,23 @@ def _minimum_release_spx_command() -> tuple[str, ...]:
             f"{actual_version}, expected {minimum_version}"
         )
     return minimum_command
+
+
+def _minimum_release_package_command(
+    package_spec: str,
+    executable_finder: Callable[[str], str | None] = which,
+) -> tuple[str, ...]:
+    for executable, command_prefix in MINIMUM_RELEASE_PACKAGE_RUNNERS:
+        if executable_finder(executable) is not None:
+            return (*command_prefix, package_spec)
+    raise RuntimeError(
+        "exact minimum-release SPX execution requires pnpm, bunx, or npx when "
+        "the PATH version differs"
+    )
+
+
+def _find_npx_only(executable: str) -> str | None:
+    return executable if executable == NPX_EXECUTABLE else None
 
 
 def _verification_run_release() -> Mapping[str, object]:

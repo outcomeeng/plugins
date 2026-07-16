@@ -133,7 +133,8 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     errors.extend(
         f"{path}: language-specific auditor exists"
         for path in agent_paths
-        if any(
+        if is_language_specific_auditor_filename(path.name)
+        or any(
             path.name in language_specific_auditor_filenames(language)
             for language in language_names
         )
@@ -232,4 +233,21 @@ def language_specific_auditor_filenames(language: str) -> frozenset[str]:
             *(f"{language}-{concern}-auditor.md" for concern in concerns),
             *(f"audit-{language}-{concern}.md" for concern in concerns),
         }
+    )
+
+
+def is_language_specific_auditor_filename(filename: str) -> bool:
+    """Return whether ``filename`` structurally names a concern wrapper."""
+    if not filename.endswith(".md"):
+        return False
+    stem = filename.removesuffix(".md")
+    concerns = (*LANGUAGE_AUDIT_CONCERNS, "test")
+    return any(
+        (stem.endswith(f"-{concern}-auditor") and stem != f"{concern}-auditor")
+        or (
+            stem.startswith("audit-")
+            and stem.endswith(f"-{concern}")
+            and stem != f"audit-{concern}"
+        )
+        for concern in concerns
     )
