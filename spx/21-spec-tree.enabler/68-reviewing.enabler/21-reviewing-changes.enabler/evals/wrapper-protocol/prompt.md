@@ -1,47 +1,208 @@
-<!-- Prompt template for the wrapper-protocol eval.
-     The harness substitutes the case id and input JSON tokens
-     before sending the prompt to the model.
+<!-- Generated from the complete wrapper-agent and review-skill producers. -->
 
-     Probe limitation: the eval harness captures only the final assistant
-     message, not the tool-call trace. This eval therefore asks the model
-     to act as the changes-reviewer wrapper agent and self-report its
-     planned tool-call sequence in a structured "tool_calls" array.
-     Self-report is weaker than observed behavior; the grader checks
-     presence of the runner command calls. -->
+Apply the complete producers below to the supplied diff. Preserve their wrapper-to-skill invocation boundary, runner command surface, immediate finding stream, and caller-output contract. For deterministic grading, return exactly one JSON object with:
 
-You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol invokes the `spec-tree:review-changes` skill, and that skill uses exactly one command surface:
+- `tool_calls`: the ordered `review_run.py` verb labels the wrapper path uses, with each entry exactly one of `start`, `append-scope`, `append-finding`, or `finish` rather than a shell command;
+- `blocking_findings_present`: whether the review would append at least one blocking finding;
+- `caller_output`: `raw-run-token-only` when the wrapper returns the skill's raw run token without rendering, summarizing, counting, or restating findings.
 
-1. Run `review_run.py start`.
-2. Read `${CLAUDE_SKILL_DIR}/references/review-prompt.md` and the returned diff path.
-3. As each changed file is examined, run `review_run.py append-scope`.
-4. The instant a finding is raised, provide that one finding JSON object to `review_run.py append-finding`.
-5. When review is complete, run `review_run.py finish`.
-6. Return only the raw run token from `finish`; do not render, summarize, count, or restate findings for the caller.
+===== BEGIN PRODUCER: "src/plugins/spec-tree/agents/changes-reviewer.md" =====
 
-**The rules under audit in this eval:**
+```markdown
+---
+name: changes-reviewer
+description: >-
+  ALWAYS invoke when reviewing working changes against a base ref. Accepts an optional input naming the scope to review — a PR reference (`#N`, URL, or `owner/repo#N`), a branch reference, a `from...to` git rev range, or nothing (defaults to the current branch vs `origin/HEAD`). NEVER invoke for posting review comments to a GitHub PR thread.
+tools: Bash, Read, Skill
+model: sonnet
+skills:
+  - spec-tree:review-changes
+---
 
-- The wrapper reaches the review implementation only through the `review-changes` skill and the skill's `review_run.py` command surface.
-- Findings are provided immediately as single finding JSON objects and passed to `review_run.py append-finding`; no finding batch is created.
-- Durable review state is recorded only through the journal calls owned by the runner.
-- Caller-facing output is the raw run token only.
+<role>
 
-Case id: substituted by the harness.
+Resolve the input scope into `(from_ref, to_ref, branch_name)`, export the refs, branch identity, and target identity as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.
 
-The scenario the agent is asked to handle (JSON-encoded input payload follows):
+</role>
+
+<input_resolution>
+
+Parse the optional input into `(from_ref, to_ref, branch_name)`:
+
+| Input form            | Recognized by                                                                                           | `from_ref` (base)                            | `to_ref` (head)                             | `branch_name`         |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------- | --------------------- |
+| **Empty / none**      | input omitted                                                                                           | derived by the skill (`origin/HEAD`)         | derived by the skill (`HEAD`)               | derived by the skill  |
+| **PR reference**      | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n>` | `FETCH_HEAD` after fetching `pull/<n>/head` | `<headRefName>`       |
+| **Branch reference**  | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | derived by the skill (`origin/HEAD`)         | the supplied token                          | the supplied token    |
+| **`from...to` range** | contains `...` (three dots) as a delimiter                                                              | the token before `...`                       | the token after `...`                       | the token after `...` |
+
+Disambiguation: a token containing `...` is always a range; a bare `#<digits>` is always a PR reference. For a branch name that collides with a PR number, use `<owner>/<repo>#<n>` to force PR handling.
+
+</input_resolution>
+
+<workflow>
+
+1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
+
+2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
+
+3. **Invoke `spec-tree:review-changes`.** The skill owns diff computation, review execution, journaling, and run sealing. Report only the observable output returned by the skill.
+
+</workflow>
+
+<constraints>
+
+- MUST stay read-only over the repository — NEVER edit code or tests, NEVER push, NEVER invoke `gh pr comment` or any remote write.
+- NEVER `git switch` or `git checkout` — the skill diffs against refs without changing working state.
+- NEVER run validation, tests, evals, coverage, lint, typecheck, or any other deterministic verification command — deterministic verification has already passed before review starts.
+
+</constraints>
+
+<output_format>
+
+The skill reports:
+
+The raw `spx journal --type review` run token.
+
+The sealed review journal prefix is the durable run state.
+
+</output_format>
+
+<success_criteria>
+
+- The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were exported; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were exported; for empty input, none of those vars were set.
+- The skill returned only the raw run token for the requested scope.
+- No internal skill pipeline behavior was asserted unless it appeared in the skill output.
+
+</success_criteria>
+```
+
+===== END PRODUCER: "src/plugins/spec-tree/agents/changes-reviewer.md" =====
+
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/review-changes/SKILL.md" =====
+
+````markdown
+---
+name: review-changes
+user-invocable: false
+description: >-
+  Changeset-review methodology preloaded by the changes-reviewer agent. The main conversation reaches this review only through that agent.
+allowed-tools:
+  - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
+  - Read
+---
+
+<objective>
+A sealed `spx journal --type review` run whose terminal event records review status and finding counts, with the run token returned to the caller.
+</objective>
+
+<inputs>
+
+The skill self-discovers the review scope from the current worktree. Callers that need a non-default range export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` before invoking the skill. Wrapper agents may also export branch and target identity variables.
+
+</inputs>
+
+<api_surface>
+
+Invoke only the bundled runner:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" start
+python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" append-scope --state "<statePath>" "<changed-file>"
+python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>"
+python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>"
+```
+
+`start` computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`.
+
+`append-scope` appends one scope-advanced event for a changed file after Claude has examined that file.
+
+`append-finding` reads one finding JSON object from stdin, validates every required field, enum value, identifier, and rule citation through the canonical `review_result.parse_finding_json` contract, then wraps the parsed finding in the journal event envelope and appends it. Invalid input exits non-zero before any journal append.
+
+`finish` reads the journal prefix, appends the terminal run-completed event with review status and finding counts, seals the run, removes runner-owned scratch storage, and prints the raw run token.
+
+When any runner verb exits non-zero, stop and surface its stderr. Do not repair journal state by calling `spx journal`, `git`, `mktemp`, `rm`, `date`, or helper scripts directly.
+
+</api_surface>
+
+<review_materials>
+
+After `start`, read:
+
+```text
+${CLAUDE_SKILL_DIR}/references/review-prompt.md
+<diffPath>
+```
+
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `{{! file('root_guide', 'codex') !}}` or `{{! file('root_guide', 'claude') !}}`, and loaded governing skill files.
+
+</review_materials>
+
+<workflow>
+
+1. Run `start` and parse the returned JSON.
+2. Load the prompt reference and diff bundle.
+3. Examine every changed file and every emitted diff section. After each changed file has been examined, call `append-scope` for that file.
+4. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
+5. When review is complete, call `finish`.
+6. Report only the raw `runToken` to the caller.
+
+</workflow>
+
+<constraints>
+
+- Never run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
+- Never invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
+- Never write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
+- The prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt must not require changing code.
+- Never read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
+- Findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
+- Do not render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
+
+</constraints>
+
+<failure_modes>
+
+**Main conversation invoked the agent-owned review.**
+
+What happened: Claude loaded this skill directly in the authoring conversation instead of dispatching `changes-reviewer`.
+
+Why it failed: The authoring context biased the review and bypassed the typed agent's raw-token output contract.
+
+How to avoid: Dispatch `changes-reviewer` with only the raw review scope and collect its final run token through the harness wait capability.
+
+**Direct journal commands bypassed the bundled runner.**
+
+What happened: Claude called `spx journal` or a helper script to repair or complete review state after a runner command failed.
+
+Why it failed: The bypass could create an invalid or unsealed run whose state did not match the runner's scope and cleanup invariants.
+
+How to avoid: Use only `review_run.py`; stop and surface stderr when any runner verb exits non-zero.
+
+**The review sealed before covering the complete diff.**
+
+What happened: Claude stopped after one obvious defect or omitted `append-scope` for changed files it had not examined.
+
+Why it failed: The sealed result claimed whole-changeset judgment without evidence that every changed file and diff section was inspected.
+
+How to avoid: Examine every changed file and emitted diff section, append scope after each file, and call `finish` only after the runner accepts complete coverage.
+
+</failure_modes>
+
+<success_criteria>
+
+- [ ] The final output is exactly the raw `runToken` returned by `finish`.
+- [ ] The sealed journal prefix contains a terminal run-completed event.
+- [ ] The terminal run-completed event records review status and finding counts.
+- [ ] The final output contains no rendered findings, count line, verdict, or summary.
+- [ ] A non-zero runner exit is reported with its stderr instead of a partial review result.
+
+</success_criteria>
+````
+
+===== END PRODUCER: "src/plugins/spec-tree/skills/review-changes/SKILL.md" =====
+The diff input (JSON-encoded):
 
 ```json
 {input_json}
 ```
-
-Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
-
-```
-{
-  "tool_calls": [
-    "<one entry per shell command you would execute, in order>"
-  ],
-  "blocking_findings_present": true | false
-}
-```
-
-Each `tool_calls` entry is a short string naming the runner command, for example `"review_run.py start"`, `"review_run.py append-scope"`, `"review_run.py append-finding"`, or `"review_run.py finish"`. Include shell invocations only; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the simulated review would provide at least one `blocking` finding. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded.

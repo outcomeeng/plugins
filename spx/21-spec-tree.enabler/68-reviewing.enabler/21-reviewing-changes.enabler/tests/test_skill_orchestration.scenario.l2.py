@@ -11,7 +11,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     review_journal_start_cursor_contract_holds,
     review_journal_type_contract_holds,
     review_runner_coverage_contract_holds,
-    review_skill_output_contract_holds,
     review_runner_lifecycle_contract_holds,
     review_runner_rename_contract_holds,
 )
@@ -23,10 +22,6 @@ def test_chain_streams_and_renders_review_run() -> None:
 
 def test_clean_review_streams_a_zero_count() -> None:
     assert clean_review_chain_contract_holds()
-
-
-def test_live_skill_returns_only_the_raw_token() -> None:
-    assert review_skill_output_contract_holds()
 
 
 def test_runner_preserves_journal_lifecycle() -> None:

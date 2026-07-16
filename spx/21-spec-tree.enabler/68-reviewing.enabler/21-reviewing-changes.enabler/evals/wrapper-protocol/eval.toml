@@ -12,3 +12,11 @@ owned_paths = [
 smoke_cases = ["clean-diff-protocol-followed"]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-files"
+producers = [
+  "src/plugins/spec-tree/agents/changes-reviewer.md",
+  "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+]
+template = "prompt.template.md"
