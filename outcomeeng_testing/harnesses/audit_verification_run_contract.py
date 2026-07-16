@@ -276,9 +276,7 @@ def minimum_release_runner_preserves_precedence() -> bool:
     return all(
         minimum_release_package_command(
             package_spec,
-            executable_finder=lambda executable, available=available: (
-                executable if executable in available else None
-            ),
+            executable_finder=_available_executable_finder(available),
         )
         == (*expected_prefix, package_spec)
         for available, expected_prefix in cases
@@ -728,6 +726,15 @@ def _minimum_release_spx_command() -> tuple[str, ...]:
 
 def _find_npx_only(executable: str) -> str | None:
     return executable if executable == NPX_EXECUTABLE else None
+
+
+def _available_executable_finder(
+    available: frozenset[str],
+) -> Callable[[str], str | None]:
+    def find(executable: str) -> str | None:
+        return executable if executable in available else None
+
+    return find
 
 
 def _verification_run_release() -> Mapping[str, object]:
