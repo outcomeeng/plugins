@@ -8,7 +8,9 @@ Apply the complete merge producers below to the supplied lifecycle state. Derive
 - `blocking_gate`: the gate label, or `none`
 - `ordered_actions`: an object whose numeric string keys (`1`, `2`, ...) preserve the required action order and whose values use the `next_action` vocabulary; use an empty object when no action remains
 
-===== BEGIN PRODUCER: src/plugins/spec-tree/skills/merge/SKILL.md =====
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/merge/SKILL.md" =====
+
+````markdown
 ---
 name: merge
 description: >-
@@ -122,9 +124,13 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - The changeset reached the default branch on origin through the selected transport's authority, then continued any remaining in-scope work or closed through `/handoff` plain; the flow stopped only at an explicit gate surfaced to the user.
 
 </success_criteria>
-===== END PRODUCER: src/plugins/spec-tree/skills/merge/SKILL.md =====
+````
 
-===== BEGIN PRODUCER: src/plugins/spec-tree/skills/merging-standards/SKILL.md =====
+===== END PRODUCER: "src/plugins/spec-tree/skills/merge/SKILL.md" =====
+
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/merging-standards/SKILL.md" =====
+
+````markdown
 ---
 name: merging-standards
 user-invocable: false
@@ -613,9 +619,13 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - No `<self_reference>` violation appears in any artifact.
 
 </success_criteria>
-===== END PRODUCER: src/plugins/spec-tree/skills/merging-standards/SKILL.md =====
+````
 
-===== BEGIN PRODUCER: spx/local/merging.md =====
+===== END PRODUCER: "src/plugins/spec-tree/skills/merging-standards/SKILL.md" =====
+
+===== BEGIN PRODUCER: "spx/local/merging.md" =====
+
+````markdown
 # Marketplace Merge Rules
 
 Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-specific values the merge skills read; the gates, transport selection, and protocols are injected by those skills.
@@ -735,7 +745,9 @@ git -C "$src" merge --ff-only origin/main   # the source worktree is on main; fa
 ```
 
 `just sync-marketplace` must run from the source worktree: its `validate_install` reads `current_versions` from its own working directory, so a feature worktree behind `origin/main` false-fails against stale versions. A PR that changes no plugin-distribution files leaves `dist/` unchanged, so the refresh is skipped, but the source `main` is still fast-forwarded so it never drifts. If `merge --ff-only` fails, the source worktree carries unexpected local commits — move them onto a feature branch (never `reset --hard`), then re-run.
-===== END PRODUCER: spx/local/merging.md =====
+````
+
+===== END PRODUCER: "spx/local/merging.md" =====
 The lifecycle state (JSON-encoded):
 
 ```json

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from typing import Any, Final
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
 
+UTF8_ENCODING: Final = "utf-8"
 PROMPT_SOURCE_TABLE: Final = "prompt_source"
 KIND_FIELD: Final = "kind"
 PRODUCER_FIELD: Final = "producer"
@@ -20,16 +22,24 @@ TEMPLATE_FIELD: Final = "template"
 PRODUCER_SECTION_KIND: Final = "producer-section"
 PRODUCER_FILE_KIND: Final = "producer-file"
 PRODUCER_FILES_KIND: Final = "producer-files"
+PRODUCER_PROMPT_KINDS: Final = (
+    PRODUCER_SECTION_KIND,
+    PRODUCER_FILE_KIND,
+    PRODUCER_FILES_KIND,
+)
 PROMPT_FIELD: Final = "prompt"
 MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 
-_PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
+PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
-_PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
-_PRODUCER_FILES_PLACEHOLDER: Final = "{producer_files}"
-_PRODUCER_BOUNDARY_START: Final = "===== BEGIN PRODUCER: {path} ====="
-_PRODUCER_BOUNDARY_END: Final = "===== END PRODUCER: {path} ====="
+PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
+PRODUCER_FILES_PLACEHOLDER: Final = "{producer_files}"
+PRODUCER_BOUNDARY_START_TEMPLATE: Final = "===== BEGIN PRODUCER: {path_label} ====="
+PRODUCER_BOUNDARY_END_TEMPLATE: Final = "===== END PRODUCER: {path_label} ====="
+PRODUCER_FENCE_CHARACTER: Final = "`"
+PRODUCER_FENCE_MIN_LENGTH: Final = 3
+PRODUCER_FENCE_INFO_STRING: Final = "markdown"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -87,7 +97,7 @@ def materialize_prompt(eval_toml_path: Path, *, repo_root: Path) -> Path:
         msg = f"{resolved_prompt}: generated prompt resolves outside {resolved_root}"
         raise ProducerPromptError(msg)
     # The resolved containment guard above fixes the sink to this repository.
-    resolved_prompt.write_text(prompt_text, encoding="utf-8")  # NOSONAR
+    resolved_prompt.write_bytes(prompt_text.encode(UTF8_ENCODING))  # NOSONAR
     return resolved_prompt
 
 
@@ -96,7 +106,7 @@ def verify_materialized_prompt(eval_toml_path: Path, *, repo_root: Path) -> None
     definition = load_producer_prompt_definition(eval_toml_path, repo_root=repo_root)
     expected = render_prompt(definition)
     try:
-        actual = definition.prompt_path.read_text(encoding="utf-8")
+        actual = definition.prompt_path.read_bytes().decode(UTF8_ENCODING)
     except FileNotFoundError as exc:
         msg = f"{definition.prompt_path}: generated prompt is missing"
         raise PromptMaterializationDrift(msg) from exc
@@ -122,7 +132,7 @@ def materialize_prompts(
             changed.append(definition.prompt_path)
             continue
         prompt_text = render_prompt(definition)
-        definition.prompt_path.write_text(prompt_text, encoding="utf-8")
+        definition.prompt_path.write_bytes(prompt_text.encode(UTF8_ENCODING))
         changed.append(definition.prompt_path)
     return tuple(changed)
 
@@ -166,27 +176,33 @@ def load_producer_prompt_definition(
 
 def render_prompt(definition: ProducerPromptDefinition) -> str:
     """Render a prompt template from the declared producer source."""
-    template = definition.template_path.read_text(encoding="utf-8")
+    template = definition.template_path.read_bytes().decode(UTF8_ENCODING)
     if definition.kind == PRODUCER_FILES_KIND:
-        if _PRODUCER_FILES_PLACEHOLDER not in template:
-            msg = (
-                f"{definition.template_path}: {PRODUCER_FILES_KIND!r} template must "
-                f"contain {_PRODUCER_FILES_PLACEHOLDER}"
-            )
-            raise ProducerPromptError(msg)
-        return _replace_known_placeholders_once(
+        return _replace_complete_producer_placeholder(
             template,
-            {_PRODUCER_FILES_PLACEHOLDER: _render_complete_producer_files(definition)},
+            placeholder=PRODUCER_FILES_PLACEHOLDER,
+            rendered=_render_complete_producer_files(definition),
+            template_path=definition.template_path,
+            kind=PRODUCER_FILES_KIND,
         )
 
-    producer_text = definition.producer_path.read_text(encoding="utf-8")
+    producer_text = definition.producer_path.read_bytes().decode(UTF8_ENCODING)
     if definition.kind == PRODUCER_FILE_KIND:
-        return _replace_known_placeholders_once(
+        with_path = _replace_known_placeholders_once(
             template,
             {
-                _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
-                _PRODUCER_FILE_PLACEHOLDER: producer_text,
+                PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
             },
+        )
+        return _replace_complete_producer_placeholder(
+            with_path,
+            placeholder=PRODUCER_FILE_PLACEHOLDER,
+            rendered=_render_complete_producer(
+                definition.producer_relative_path,
+                producer_text,
+            ),
+            template_path=definition.template_path,
+            kind=PRODUCER_FILE_KIND,
         )
     if definition.section_name is None:
         msg = "producer-section definition requires a section name"
@@ -197,7 +213,7 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
         producer_path=definition.producer_path,
     )
     replacements = {
-        _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
+        PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
         _PRODUCER_SECTION_NAME_PLACEHOLDER: definition.section_name,
         _PRODUCER_SECTION_PLACEHOLDER: producer_section,
     }
@@ -211,17 +227,64 @@ def _render_complete_producer_files(definition: ProducerPromptDefinition) -> str
         definition.producer_paths,
         strict=True,
     ):
-        producer_text = producer_path.read_text(encoding="utf-8")
-        separator = "" if producer_text.endswith("\n") else "\n"
-        blocks.append(
-            "\n".join(
-                [
-                    _PRODUCER_BOUNDARY_START.format(path=relative_path),
-                    f"{producer_text}{separator}{_PRODUCER_BOUNDARY_END.format(path=relative_path)}",
-                ]
-            )
-        )
+        producer_text = producer_path.read_bytes().decode(UTF8_ENCODING)
+        blocks.append(_render_complete_producer(relative_path, producer_text))
     return "\n\n".join(blocks)
+
+
+def _render_complete_producer(relative_path: str, producer_text: str) -> str:
+    path_label = json.dumps(relative_path)
+    longest_run = max(
+        (len(match.group(0)) for match in re.finditer(r"`+", producer_text)),
+        default=0,
+    )
+    fence = PRODUCER_FENCE_CHARACTER * max(
+        PRODUCER_FENCE_MIN_LENGTH,
+        longest_run + 1,
+    )
+    separator = "" if producer_text.endswith(("\r", "\n")) else "\n"
+    return "\n".join(
+        [
+            PRODUCER_BOUNDARY_START_TEMPLATE.format(path_label=path_label),
+            "",
+            f"{fence}{PRODUCER_FENCE_INFO_STRING}",
+            f"{producer_text}{separator}{fence}",
+            "",
+            PRODUCER_BOUNDARY_END_TEMPLATE.format(path_label=path_label),
+        ]
+    )
+
+
+def _replace_complete_producer_placeholder(
+    template: str,
+    *,
+    placeholder: str,
+    rendered: str,
+    template_path: Path,
+    kind: str,
+) -> str:
+    if template.count(placeholder) != 1:
+        msg = (
+            f"{template_path}: {kind!r} template must contain exactly one "
+            f"{placeholder} placeholder"
+        )
+        raise ProducerPromptError(msg)
+    placeholder_index = template.index(placeholder)
+    line_start = template.rfind("\n", 0, placeholder_index) + 1
+    line_end = template.find("\n", placeholder_index)
+    if line_end == -1:
+        line_end = len(template)
+    if template[line_start:line_end].rstrip("\r") != placeholder:
+        msg = (
+            f"{template_path}: {kind!r} placeholder {placeholder} must appear "
+            "alone on its template line"
+        )
+        raise ProducerPromptError(msg)
+    return (
+        template[:placeholder_index]
+        + rendered
+        + template[placeholder_index + len(placeholder) :]
+    )
 
 
 def extract_named_producer_section(
@@ -271,15 +334,10 @@ def _resolve_definition(
     prompt_source: dict[str, Any],
 ) -> ProducerPromptDefinition:
     kind = _required_str(prompt_source, KIND_FIELD, eval_toml_path=eval_toml_path)
-    supported_kinds = (
-        PRODUCER_SECTION_KIND,
-        PRODUCER_FILE_KIND,
-        PRODUCER_FILES_KIND,
-    )
-    if kind not in supported_kinds:
+    if kind not in PRODUCER_PROMPT_KINDS:
         msg = (
             f"{eval_toml_path}: unsupported {PROMPT_SOURCE_TABLE}.{KIND_FIELD} "
-            f"{kind!r}; expected one of {supported_kinds!r}"
+            f"{kind!r}; expected one of {PRODUCER_PROMPT_KINDS!r}"
         )
         raise ProducerPromptError(msg)
 

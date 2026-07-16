@@ -1,0 +1,8 @@
+title = "producer file fixture"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
+template = "prompt.template.md"

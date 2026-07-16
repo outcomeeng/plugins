@@ -1,0 +1,9 @@
+title = "producer section fixture"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+
+[prompt_source]
+kind = "producer-section"
+producer = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
+section = "audit_tag_validity"
+template = "prompt.template.md"

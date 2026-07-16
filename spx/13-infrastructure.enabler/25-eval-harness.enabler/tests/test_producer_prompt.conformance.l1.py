@@ -7,6 +7,7 @@ from outcomeeng_testing.evals.producer_prompt import (
     assert_check_rejects_stale_materialized_prompt,
     assert_cli_materializes_and_checks_prompt_drift,
     assert_cli_materializes_nested_eval_roots,
+    assert_complete_file_templates_reject_invalid_placeholders,
     assert_duplicate_producer_section_is_rejected,
     assert_materialization_preserves_placeholder_text_inside_producer_section,
     assert_materialization_rejects_noncanonical_prompt_path,
@@ -53,6 +54,10 @@ def test_invalid_producer_files_definitions_are_rejected() -> None:
 
 def test_producer_file_rejects_section_selector() -> None:
     assert_producer_file_rejects_section_selector()
+
+
+def test_complete_file_templates_reject_invalid_placeholders() -> None:
+    assert_complete_file_templates_reject_invalid_placeholders()
 
 
 def test_check_accepts_current_materialized_prompt() -> None:

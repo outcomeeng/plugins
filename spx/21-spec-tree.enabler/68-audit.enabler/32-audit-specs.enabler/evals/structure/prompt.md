@@ -2,6 +2,9 @@
 
 This eval runs in the isolated verifier context required by the producer below. Apply the complete producer to the supplied spec node. When the input carries `context`, treat it as the governing methodology context loaded by the producer's contextualization step. Return only the producer's structured JSON verdict.
 
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/audit-specs/SKILL.md" =====
+
+````markdown
 ---
 name: audit-specs
 description: >-
@@ -209,7 +212,9 @@ The verdict is sound when:
 - The same node spec yields the same verdict.
 
 </success_criteria>
+````
 
+===== END PRODUCER: "src/plugins/spec-tree/skills/audit-specs/SKILL.md" =====
 The spec-node input (JSON-encoded):
 
 ```json

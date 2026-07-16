@@ -22,6 +22,7 @@ from outcomeeng_evals.definition import (
     OWNED_PATH_ALPHABET,
     OWNED_PATH_RECURSIVE_SUFFIX,
 )
+from outcomeeng_evals.producer_prompt import MATERIALIZED_PROMPT_FILENAME
 
 _PATH_ALPHABET = string.ascii_lowercase + string.digits + "-_"
 _CASE_ID_ALPHABET = string.ascii_letters + string.digits + "-_"
@@ -123,3 +124,72 @@ def expected_list_boundary_record(*, over_limit: bool) -> dict[str, Any]:
             ]
         },
     }
+
+
+def producer_rule_texts() -> SearchStrategy[str]:
+    """Generated producer-section prose without XML delimiter characters."""
+
+    return st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cc", "Cs"),
+            blacklist_characters=("<", ">", "\x00"),
+        ),
+        min_size=1,
+        max_size=80,
+    )
+
+
+def distinct_producer_rule_texts() -> SearchStrategy[tuple[str, str, str]]:
+    """Three distinct generated producer-section bodies."""
+
+    return st.tuples(
+        producer_rule_texts(),
+        producer_rule_texts(),
+        producer_rule_texts(),
+    ).filter(lambda values: len(set(values)) == len(values))
+
+
+def noncanonical_prompt_filenames() -> SearchStrategy[str]:
+    """Generated Markdown names outside the source-owned prompt filename."""
+
+    return st.from_regex(
+        r"[a-z][a-z0-9_-]{0,20}\.md",
+        fullmatch=True,
+    ).filter(lambda value: value != MATERIALIZED_PROMPT_FILENAME)
+
+
+def absent_section_name(section_name: str, producer_text: str) -> str:
+    """Derive a section name outside one producer's observed names."""
+
+    candidate = section_name + section_name
+    while candidate in producer_text:
+        candidate += section_name
+    return candidate
+
+
+def unsupported_prompt_source_kind(supported_kinds: tuple[str, ...]) -> str:
+    """Derive a non-empty kind outside the complete source-owned kind set."""
+
+    candidate = "".join(supported_kinds)
+    if candidate in supported_kinds:
+        candidate += candidate
+    return candidate
+
+
+def missing_producer_path(existing_path: str) -> str:
+    """Derive an absent sibling path from one existing producer path."""
+
+    path = Path(existing_path)
+    return str(path.with_name(path.name + path.name))
+
+
+def outside_repository_path(existing_path: str) -> str:
+    """Derive a parent-traversing path from one existing producer path."""
+
+    return str(Path("..") / Path(existing_path).name)
+
+
+def outside_eval_prompt_path(prompt_filename: str) -> str:
+    """Derive a prompt path outside its eval directory."""
+
+    return str(Path("..") / ".." / prompt_filename)

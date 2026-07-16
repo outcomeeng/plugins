@@ -2,6 +2,9 @@
 
 This eval runs in the isolated verifier context required by the producer below. The runner substitutes only the case's `input` object into `{input_json}`; grader expectations remain withheld from the producer. Apply the complete producer to the supplied test-evidence package. The package's `language_composition` field is completed composition evidence governed by the producer's Step 3f input contract. Return only the producer's structured JSON verdict.
 
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/audit-tests/SKILL.md" =====
+
+````markdown
 ---
 name: audit-tests
 description: >-
@@ -457,7 +460,9 @@ The verdict is sound when:
 - Every coverage determination identifies the assertion-relevant source path reached or omitted, and the same evidence package yields the same verdict.
 
 </success_criteria>
+````
 
+===== END PRODUCER: "src/plugins/spec-tree/skills/audit-tests/SKILL.md" =====
 The test-evidence package (JSON-encoded):
 
 ```json

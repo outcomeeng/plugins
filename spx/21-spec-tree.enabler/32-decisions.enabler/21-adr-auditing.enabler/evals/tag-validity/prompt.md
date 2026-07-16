@@ -2,6 +2,9 @@
 
 This eval runs in the isolated verifier context required by the producer below. Apply the complete producer to the supplied ADR. Treat the caller's scope classification as language-neutral. Return only the producer's structured JSON verdict.
 
+===== BEGIN PRODUCER: "src/plugins/spec-tree/skills/audit-adr/SKILL.md" =====
+
+````markdown
 ---
 name: audit-adr
 description: >-
@@ -193,7 +196,9 @@ The verdict is sound when:
 - The same ADR yields the same verdict.
 
 </success_criteria>
+````
 
+===== END PRODUCER: "src/plugins/spec-tree/skills/audit-adr/SKILL.md" =====
 The ADR input (JSON-encoded):
 
 ```json
