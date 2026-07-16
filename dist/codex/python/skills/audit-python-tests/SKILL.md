@@ -13,7 +13,7 @@ This audit runs inside either the dispatched `test-evidence-auditor` context via
 </dispatch_gate>
 
 <objective>
-A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence gap.
+A verdict on Python test evidence — APPROVED, REJECTED with each finding naming the failed evidence property and gap, or a composition-only NOT_APPLICABLE result for a retired path outside every current evidence chain.
 </objective>
 
 <constraints>
@@ -225,6 +225,18 @@ For each finding, include:
 - Required fix
 
 Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECTED` when any property fails.
+
+Under implementation-auditor composition, when `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+
+```json
+{
+  "status": "NOT_APPLICABLE",
+  "subjects": ["<retired-repository-relative-path>"],
+  "explanation": "No current [test] assertion or evidence chain references the retired path."
+}
+```
+
+Emit this shape only when every supplied subject is outside current Python test-evidence scope. A current broken `[test]` link remains applicable and produces the inherited `REJECTED` verdict.
 </verdict_format>
 
 <failure_modes>
@@ -266,7 +278,7 @@ The Python test verdict is sound when:
 
 - Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
 - Every deleted test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
-- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
 - Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
 - The same test node yields the same verdict regardless of run order (reproducible).
 

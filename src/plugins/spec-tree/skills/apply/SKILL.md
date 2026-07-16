@@ -196,7 +196,7 @@ Write tests for all assertions in the spec. Tests come before implementation —
 
 Dispatch `test-evidence-auditor` with the router-owned prompt contract: repository path, governing node, assertion text or spec path plus assertion headings, and linked test files. The auditor detects and composes the applicable `audit-{lang}-tests` concern inside its isolated context.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
+When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose current linked test evidence the change creates, modifies, or invalidates. Dispatch one router-owned singular-node prompt per governed node, in parallel when independent, with that node's assertions and linked test files. Step 6 passes only when every dispatched node audit approves. Never pass a whole changeset as one singular `Governing node` prompt; Step 8a covers the final changed evidence set and Step 9 reviews the whole changeset.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
@@ -216,7 +216,7 @@ Write implementation code. All tests from Step 5 must pass.
 
 Dispatch the `implementation-auditor` agent with the canonical five labeled fields: repository path, exact committed changeset scope, no live file list, governing node paths, and deterministic verification already run. The wrapper and orchestration skill derive language partitions from that scope.
 
-When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
+When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — Step 4 audits the committed scope while Step 6 fans out across every affected governed test-evidence node. Those audit lenses remain necessary but insufficient, so the distinct whole-diff review in Step 9 stays required for cross-cutting effects no single audit lens catches.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`.
 
