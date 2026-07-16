@@ -21,6 +21,8 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 
 ### Mappings
 
+- ALWAYS: producer-section extraction selects exactly one named XML-like section from the producer text and fails when no matching section or multiple matching sections exist ([test](tests/test_producer_prompt.mapping.l1.py))
+- NEVER: a producer-coupled eval definition accepts a missing producer path, an empty or duplicate `producer-files` entry, a missing prompt template, a missing section name for `producer-section`, a section name for a complete-file mode, or an unsupported prompt source kind ([test](tests/test_producer_prompt.mapping.l1.py))
 - ALWAYS: the `run` CLI appends a format-instruction suffix to every rendered prompt before passing it to the model — the suffix declares the grader's two-step JSON-parse contract so the model's structured-output behavior matches what the grader accepts ([test](tests/test_cli.mapping.l1.py))
 - ALWAYS: suite-level pass rate gates an exit-0 result against a configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
 - ALWAYS: the `run` CLI rejects a `--workers` value outside the range `[1, 16]` with a usage error — the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_cli.mapping.l1.py))
@@ -32,11 +34,13 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 
 ### Properties
 
+- ALWAYS: prompt materialization changes when the selected producer section changes and stays unchanged when unrelated producer text changes ([test](tests/test_producer_prompt.property.l1.py))
 - NEVER: an `owned_paths` entry carries any character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs, so a character nobody thought to forbid would otherwise select a suite the CI job never starts ([test](tests/test_definition.property.l1.py))
 - ALWAYS: the derived trigger set is minimal — a pattern a recursive-glob sibling already covers is dropped — and minimization selects exactly the paths the un-minimized set selects ([test](tests/test_ci_triggers.property.l1.py))
 
 ### Compliance
 
+- ALWAYS: the `outcomeeng-evals materialize-prompts --check` command fails when a generated `prompt.md` differs from its source-derived rendering and exits successfully when every generated prompt is current ([test](tests/test_producer_prompt.compliance.l1.py))
 - ALWAYS: each eval case is a JSONL record carrying an `id`, an input payload, and the expected structural verdict fields — the case file is the durable ground truth for the assertion that links to it ([test](tests/test_eval_harness.compliance.l1.py))
 - ALWAYS: the prompt renderer substitutes `{case_id}` and `{input_json}` in a single forward pass, and passes any other `{token}` through as literal text — an identifier-shaped `{token}` that is not a recognized placeholder produces a stderr warning, so a template typo surfaces at render time rather than only as a downstream grading failure ([test](tests/test_eval_harness.compliance.l1.py))
 - ALWAYS: the runner invokes Claude Code through `claude [--bare] --print --output-format json --no-session-persistence --settings '{"advisorModel":""}' --model <model> --plugin-dir <plugin-path>`, reads the assistant message from the parsed JSON envelope, and disables the Advisor server tool at this single model-process boundary so automated eval cost and model identity never inherit a developer's advisor configuration. The operator determines the auth mode by the secrets already provisioned in the inherited environment: when `ANTHROPIC_API_KEY` is set to a non-empty value the runner passes `--bare`, and when `ANTHROPIC_API_KEY` is unset or empty the runner omits `--bare` and preserves the inherited environment, including `CLAUDE_CODE_OAUTH_TOKEN` when present. Callers may force the flag on or off by passing `bare=True` or `bare=False` to the constructor for direct test coverage and explicit embedding use, but the default runner behavior follows the inherited environment ([test](tests/test_runner.compliance.l1.py))
