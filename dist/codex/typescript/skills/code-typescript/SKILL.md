@@ -14,7 +14,7 @@ TypeScript implementation or remediation changes that satisfy the supplied speci
 </objective>
 
 <accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
+The skill invocation provides the base directory in the loading message:
 
 ```
 Base directory for this skill: ${SKILL_DIR}
@@ -342,41 +342,18 @@ if (!API_KEY) throw new Error("API_KEY required");
 
 Before writing any import, ask: *"Is this a module-internal file (same module, moves together), stable production infrastructure (lib/, shared/), or test-only infrastructure used from tests (`testing/harnesses/`)?"*
 
-```typescript
-// WRONG: Deep relatives to stable locations — will REJECT in review
-import { treeBuilder } from "../../../../../../testing/harnesses/tree-builder";
-import { Logger } from "../../../../lib/logging";
-import { Config } from "../../../shared/config";
-
-// RIGHT: Configure path aliases in tsconfig.json
-import { Logger } from "@lib/logging";
-import { Config } from "@shared/config";
-// In tests only:
-import { treeBuilder } from "@testing/harnesses/tree-builder";
-```
-
 **Ownership and depth rules:**
 
 - `./sibling` — ✅ OK (same directory, module-internal)
 - `../parent` — ⚠️ Review (is it truly module-internal?)
-- Deep relative imports to stable shared infrastructure — ❌ REJECT (use a repository-declared path alias)
+- Deep relative imports to stable shared infrastructure — ❌ REJECT (use an alias already declared by the repository)
 - Relative imports inside one module that moves together — ✅ OK
 - Relative imports from checked-in `scripts/` entrypoints — ✅ OK at that boundary
 
-**Configure tsconfig.json:**
-
-```json
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@testing/*": ["testing/*"],
-      "@lib/*": ["lib/*"]
-    }
-  }
-}
-```
+Do not invent an alias or directory mapping from this skill. When the repository
+does not declare an alias for stable shared infrastructure, follow
+`/typescript-standards` and the loaded product architecture before changing its
+module-resolution contract.
 
 </what_not_to_do>
 
