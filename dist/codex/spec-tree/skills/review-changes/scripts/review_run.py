@@ -39,6 +39,13 @@ _STATE_FILENAME = "state.json"
 JOURNAL_COMMAND = ("spx", "journal")
 REVIEW_JOURNAL_TYPE = "review"
 JOURNAL_START_CURSOR = "0"
+REVIEW_SCRIPT_FILENAMES = (
+    "__init__.py",
+    "compute_diff.py",
+    "journal_emit.py",
+    "review_result.py",
+    "review_run.py",
+)
 _DEFAULT_TARGET = "working-diff"
 _PARTICIPANTS = ("review",)
 

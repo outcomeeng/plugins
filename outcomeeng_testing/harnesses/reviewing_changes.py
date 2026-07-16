@@ -51,6 +51,12 @@ from typing import Any, Callable, cast
 
 from hypothesis import given, seed, settings
 
+from outcomeeng_testing.generators.reviewing_changes import (
+    REVIEW_RESULT_MODULE_PATH,
+    load_review_result_module,
+    make_finding_dict,
+    make_review_result_dict,
+)
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 # Two ``parents`` hops land at the repository root: this file lives at
@@ -63,7 +69,6 @@ SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
-REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
@@ -121,35 +126,6 @@ def configured_stdin(stream: io.StringIO) -> Iterator[None]:
         yield
     finally:
         sys.stdin = original
-
-
-def load_review_result_module() -> ModuleType:
-    """Load the ``review_result`` policy module via importlib.
-
-    The review-changes scripts ship under ``src/plugins/`` (the authored
-    plugin source directory) and are not importable as a package.
-    Tests that introspect ``SCHEMA_VERSION``, the ``Severity`` /
-    ``Concern`` enums, the frozen ``Finding`` /
-    ``ReviewResult`` dataclasses, or the ``parse_json`` /
-    ``ReviewResultValidationError`` entry points load the module here.
-
-    Returns the already-loaded module on subsequent calls so the importlib
-    loader runs at most once per test session.
-    """
-    cached = sys.modules.get("review_result")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "review_result", REVIEW_RESULT_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load review_result from {REVIEW_RESULT_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["review_result"] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def review_rule_citations() -> tuple[str, ...]:
@@ -904,6 +880,12 @@ REVIEW_JOURNAL_TYPE = cast("str", review_run_contract_value("REVIEW_JOURNAL_TYPE
 REVIEW_JOURNAL_START_CURSOR = cast(
     "str", review_run_contract_value("JOURNAL_START_CURSOR")
 )
+REVIEW_SCRIPT_FILENAMES = cast(
+    "tuple[str, ...]", review_run_contract_value("REVIEW_SCRIPT_FILENAMES")
+)
+EXPECTED_REVIEW_JOURNAL_COMMAND = ("spx", "journal")
+EXPECTED_REVIEW_JOURNAL_TYPE = "review"
+EXPECTED_REVIEW_JOURNAL_START_CURSOR = "0"
 
 
 def run_git(*args: str, cwd: pathlib.Path) -> subprocess.CompletedProcess[str]:
@@ -960,12 +942,26 @@ def init_renamed_review_git_repo(repo: pathlib.Path) -> str:
 def isolated_review_env(cwd: pathlib.Path) -> dict[str, str]:
     """Return an isolated environment for review git subprocesses."""
 
-    return {
+    env = {
         **os.environ,
         "PWD": str(cwd),
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_SYSTEM": "/dev/null",
     }
+    for key in (
+        *review_run_journal_env_keys(),
+        "GITHUB_ACTIONS",
+        "GITHUB_BASE_REF",
+        "GITHUB_EVENT_NAME",
+        "GITHUB_EVENT_PATH",
+        "GITHUB_HEAD_REF",
+        "GITHUB_REF",
+        "GITHUB_REF_NAME",
+        "GITHUB_REPOSITORY",
+    ):
+        env.pop(key, None)
+    env[REVIEW_ENV_BACKEND] = "local"
+    return env
 
 
 def stream_review_prefix(
@@ -2257,63 +2253,6 @@ def review_runner_harness(
     )
 
 
-def make_review_result_dict(
-    *,
-    findings: list[dict[str, Any]] | None = None,
-    schema_version: int | None = None,
-) -> dict[str, Any]:
-    """Return a review-result dict built from production field contracts."""
-    review_result = load_review_result_module()
-    return {
-        review_result.DOCUMENT_SCHEMA_VERSION_FIELD: (
-            schema_version
-            if schema_version is not None
-            else review_result.SCHEMA_VERSION
-        ),
-        review_result.DOCUMENT_FINDINGS_FIELD: (
-            findings if findings is not None else [make_finding_dict()]
-        ),
-    }
-
-
-def make_finding_dict(
-    *,
-    finding_id: str | None = None,
-    concern: Any | None = None,
-    severity: Any | None = None,
-    file_path: str | None = None,
-    line: int | None = None,
-    rule: str | None = None,
-    message: str | None = None,
-    action: str | None = None,
-) -> dict[str, Any]:
-    """Return one finding serialized through the production contract."""
-    review_result = load_review_result_module()
-    finding = review_result.Finding(
-        id=(
-            finding_id
-            if finding_id is not None
-            else review_result.format_finding_id(review_result.SCHEMA_VERSION)
-        ),
-        concern=(concern if concern is not None else tuple(review_result.Concern)[-1]),
-        severity=(
-            severity if severity is not None else tuple(review_result.Severity)[-1]
-        ),
-        file=(
-            file_path
-            if file_path is not None
-            else str(REVIEW_SPEC_PATH.relative_to(REPO_ROOT))
-        ),
-        line=(line if line is not None else review_result.SCHEMA_VERSION),
-        rule=(rule if rule is not None else review_rule_citations()[3]),
-        message=(
-            message if message is not None else review_result.FINDING_MESSAGE_FIELD
-        ),
-        action=(action if action is not None else review_result.FINDING_ACTION_FIELD),
-    )
-    return cast(dict[str, Any], review_result.finding_to_json_dict(finding))
-
-
 _FORBIDDEN_NAME_CALLS = {"open"}
 _FORBIDDEN_ATTR_CALLS = {
     ("os", "remove"),
@@ -2342,22 +2281,11 @@ _REVIEW_RUN_ALLOWED_WRITE_CALLS = {
     ("shutil", "rmtree"),
 }
 _WRITE_MODE_RE = re.compile(r"[wax+]")
+_EXPECTED_REVIEW_SCRIPT_NAMES = frozenset(REVIEW_SCRIPT_FILENAMES)
 _LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
-    {
-        "compute_diff",
-        "journal_emit",
-        "review_result",
-        "review_run",
-    }
-)
-_EXPECTED_REVIEW_SCRIPT_NAMES = frozenset(
-    {
-        "__init__.py",
-        COMPUTE_DIFF_SCRIPT.name,
-        JOURNAL_EMIT_SCRIPT.name,
-        REVIEW_RESULT_MODULE_PATH.name,
-        REVIEW_RUN_SCRIPT.name,
-    }
+    pathlib.Path(filename).stem
+    for filename in REVIEW_SCRIPT_FILENAMES
+    if filename != "__init__.py"
 )
 _VIOLATING_SCRIPTS_DIR = REVIEW_FIXTURES_DIR / "violating_scripts"
 
@@ -2642,6 +2570,24 @@ def review_runner_lifecycle_contract_holds() -> bool:
     return all(dataclasses.astuple(review_runner_lifecycle_observation()))
 
 
+def review_journal_command_contract_holds() -> bool:
+    """Return whether the runner invokes the independent journal command contract."""
+
+    return REVIEW_JOURNAL_COMMAND == EXPECTED_REVIEW_JOURNAL_COMMAND
+
+
+def review_journal_type_contract_holds() -> bool:
+    """Return whether the runner writes the independent review namespace."""
+
+    return REVIEW_JOURNAL_TYPE == EXPECTED_REVIEW_JOURNAL_TYPE
+
+
+def review_journal_start_cursor_contract_holds() -> bool:
+    """Return whether the runner reads the journal from the first event."""
+
+    return REVIEW_JOURNAL_START_CURSOR == EXPECTED_REVIEW_JOURNAL_START_CURSOR
+
+
 def review_runner_coverage_contract_holds() -> bool:
     """Return whether incomplete scope prevents real-journal sealing."""
 
@@ -2742,7 +2688,7 @@ def review_terminal_branch_identity_contract_holds() -> bool:
     )
     data = event["data"]
     projection = contracts.journal_projection
-    return (
+    return bool(
         event["type"] == projection.RUN_COMPLETED
         and data[projection.RUN_STATE_BRANCH_NAME] == metadata.branch_name
         and data[projection.RUN_STATE_BRANCH_SLUG] == metadata.branch_slug
@@ -2773,7 +2719,7 @@ def review_terminal_pull_request_identity_contract_holds() -> bool:
         attempt=1,
     )
     projection = contracts.journal_projection
-    return (
+    return bool(
         event["data"][projection.RUN_STATE_TARGET_KIND]
         == projection.JournalTargetKind.PULL_REQUEST
         and event["data"][projection.RUN_STATE_PULL_REQUEST_NUMBER]
@@ -2796,7 +2742,7 @@ def review_render_count_mapping_holds() -> bool:
         ),
     )
     rendered = contracts.journal_emit.render_events(events)
-    return (
+    return bool(
         rendered[contracts.journal_emit.RENDER_BLOCKING_FIELD] == "1"
         and rendered[contracts.journal_emit.RENDER_DEBT_FIELD] == "1"
         and rendered[contracts.journal_emit.RENDER_COUNT_LINE_FIELD]

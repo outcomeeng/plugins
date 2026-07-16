@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "family": "spec-assertion",
+      "citation": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
+    },
+    {
+      "family": "decision",
+      "citation": "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md"
+    },
+    {
+      "family": "decision",
+      "citation": "spx/15-agent-tools.pdr.md"
+    },
+    {
+      "family": "plugin-skill",
+      "citation": "plugins/spec-tree/skills/review-changes/SKILL.md:objective"
+    },
+    {
+      "family": "root-guide",
+      "citation": "AGENTS.md:spec-tree-instructions"
+    },
+    {
+      "family": "root-guide",
+      "citation": "CLAUDE.md:spec-tree-instructions"
+    }
+  ]
+}
