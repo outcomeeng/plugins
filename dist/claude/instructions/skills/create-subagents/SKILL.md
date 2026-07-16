@@ -3,6 +3,7 @@ name: create-subagents
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring subagents.
   NEVER create subagents without this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, AskUserQuestion
 ---
 
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -92,12 +93,22 @@ Product-scope subagents override user-scope when names conflict.
 ```yaml
 skills:
   - audit-typescript-code
-  - testing
+  - test-typescript
 ```
 
 </field>
 
 </configuration>
+
+<verification_gate>
+
+After writing or editing a configured agent, validate it before reporting completion.
+
+1. Run `/agents` and verify that the configured agent appears under the intended product or user scope with the authored name, description, tools, model, and skill preload list.
+2. Invoke the configured agent once with a representative read-only prompt. Require the configured role, tool boundary, and output contract to be observable in the result, with no repository mutation.
+3. STOP on either failure, correct the configuration or prompt, and rerun both checks. Do not report a valid configured agent until both pass.
+
+</verification_gate>
 
 <execution_model>
 <critical_constraint>
@@ -312,8 +323,10 @@ A well-configured subagent has:
 - Appropriate tool restrictions (least privilege)
 - XML-structured system prompt with role, approach, and constraints
 
-- Description field matches the target runtime's selection semantics
-- At least one verification run or documented dry-run against the subagent's intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description whose concrete trigger is distinguishable from neighboring configured agents under the target runtime's selection semantics
+
+- A passing Claude runtime validation gate: `/agents` shows the expected configuration, and one representative read-only invocation exhibits the configured role, tool boundary, and output contract without repository mutation
+
+- A model whose configured value matches the task's documented complexity, cost, and reproducibility requirement
 
 </success_criteria>

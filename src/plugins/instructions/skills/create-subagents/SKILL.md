@@ -3,6 +3,7 @@ name: create-subagents
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring {{! term('configured_agents') !}}.
   NEVER create {{! term('configured_agents') !}} without this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {{! tool('ask_user') !}}{!% if target == 'codex' %!}, {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}}{!% endif %!}
 ---
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}
@@ -158,12 +159,33 @@ Product-scope {{! term('configured_agents') !}} override user-scope when names c
 ```yaml
 skills:
   - audit-typescript-code
-  - testing
+  - test-typescript
 ```
 
 </field>
 {!% endif %!}
 </configuration>
+
+<verification_gate>
+
+After writing or editing a configured agent, validate it before reporting completion.
+
+{!% if target == 'codex' %!}
+
+1. Confirm that the typed `{{! tool('spawn_agent') !}}` tool exposes the configured `name` as an `agent_type`. When it does not, reload the product's configured-agent state in a fresh Codex session and check again. A TOML parse failure, unknown field, or absent `agent_type` fails the gate.
+2. Call `{{! tool('spawn_agent') !}}` with `agent_type` equal to that exact name and a representative read-only task in `message`. Omit model and reasoning overrides so the configured file remains the authority.
+3. Collect the final status through `{{! tool('wait_agent') !}}`, verify that the result exhibits the configured role and output contract without repository mutation, then close the agent through `{{! tool('close_agent') !}}`.
+4. STOP on any missing type, spawn error, timeout, non-final result, role mismatch, output-contract mismatch, or repository mutation. Correct the configuration or prompt and rerun the complete gate.
+
+{!% else %!}
+
+1. Run `/agents` and verify that the configured agent appears under the intended product or user scope with the authored name, description, tools, model, and skill preload list.
+2. Invoke the configured agent once with a representative read-only prompt. Require the configured role, tool boundary, and output contract to be observable in the result, with no repository mutation.
+3. STOP on either failure, correct the configuration or prompt, and rerun both checks. Do not report a valid configured agent until both pass.
+
+{!% endif %!}
+
+</verification_gate>
 
 <execution_model>
 <critical_constraint>
@@ -237,7 +259,7 @@ sandbox_mode = "read-only"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
 <role>
-Claude is a senior code reviewer specializing in security.
+A senior code reviewer specializing in security.
 </role>
 
 <focus_areas>
@@ -376,7 +398,6 @@ Edit `.codex/agents/*.toml` or `~/.codex/agents/*.toml` files to:
 - Edit existing custom agents and their configuration
 - Choose project-scoped or user-scoped behavior
 
-Use `/agent` to switch between active agent threads and inspect running custom agents.
 {!% else %!}
 Run `/agents` for an interactive interface to:
 
@@ -443,8 +464,12 @@ A well-configured {{! term('configured_agent') !}} has:
 - Appropriate tool restrictions (least privilege)
 - XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
   {!% endif %!}
-- Description field matches the target runtime's selection semantics
-- At least one verification run or documented dry-run against the {{! term('configured_agent') !}}'s intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description whose concrete trigger is distinguishable from neighboring configured agents under the target runtime's selection semantics
+{!% if target == 'codex' %!}
+- A passing Codex runtime validation gate: `{{! tool('spawn_agent') !}}` exposes and starts the exact configured `agent_type`, `{{! tool('wait_agent') !}}` returns its final conforming result, `{{! tool('close_agent') !}}` closes it, and the representative read-only invocation causes no repository mutation
+{!% else %!}
+- A passing Claude runtime validation gate: `/agents` shows the expected configuration, and one representative read-only invocation exhibits the configured role, tool boundary, and output contract without repository mutation
+{!% endif %!}
+- A model whose configured value matches the task's documented complexity, cost, and reproducibility requirement
 
 </success_criteria>

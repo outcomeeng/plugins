@@ -3,6 +3,7 @@ name: create-subagents
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring custom agents.
   NEVER create custom agents without this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent
 ---
 
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -92,6 +93,17 @@ Product-scope custom agents override user-scope when names conflict.
 
 </configuration>
 
+<verification_gate>
+
+After writing or editing a configured agent, validate it before reporting completion.
+
+1. Confirm that the typed `multi_agent_v1.spawn_agent` tool exposes the configured `name` as an `agent_type`. When it does not, reload the product's configured-agent state in a fresh Codex session and check again. A TOML parse failure, unknown field, or absent `agent_type` fails the gate.
+2. Call `multi_agent_v1.spawn_agent` with `agent_type` equal to that exact name and a representative read-only task in `message`. Omit model and reasoning overrides so the configured file remains the authority.
+3. Collect the final status through `multi_agent_v1.wait_agent`, verify that the result exhibits the configured role and output contract without repository mutation, then close the agent through `multi_agent_v1.close_agent`.
+4. STOP on any missing type, spawn error, timeout, non-final result, role mismatch, output-contract mismatch, or repository mutation. Correct the configuration or prompt and rerun the complete gate.
+
+</verification_gate>
+
 <execution_model>
 <critical_constraint>
 
@@ -157,7 +169,7 @@ sandbox_mode = "read-only"
 model = "gpt-5.4"
 developer_instructions = """
 <role>
-Claude is a senior code reviewer specializing in security.
+A senior code reviewer specializing in security.
 </role>
 
 <focus_areas>
@@ -260,8 +272,6 @@ Edit `.codex/agents/*.toml` or `~/.codex/agents/*.toml` files to:
 - Edit existing custom agents and their configuration
 - Choose project-scoped or user-scoped behavior
 
-Use `/agent` to switch between active agent threads and inspect running custom agents.
-
 </using_agents_command>
 
 <manual_editing>
@@ -306,8 +316,10 @@ A well-configured custom agent has:
 - Appropriate sandbox and tool-surface restrictions
 - XML-structured developer instructions with role, approach, and constraints
 
-- Description field matches the target runtime's selection semantics
-- At least one verification run or documented dry-run against the custom agent's intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description whose concrete trigger is distinguishable from neighboring configured agents under the target runtime's selection semantics
+
+- A passing Codex runtime validation gate: `multi_agent_v1.spawn_agent` exposes and starts the exact configured `agent_type`, `multi_agent_v1.wait_agent` returns its final conforming result, `multi_agent_v1.close_agent` closes it, and the representative read-only invocation causes no repository mutation
+
+- A model whose configured value matches the task's documented complexity, cost, and reproducibility requirement
 
 </success_criteria>

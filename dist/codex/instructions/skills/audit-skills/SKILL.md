@@ -17,7 +17,7 @@ This audit runs in the skill-auditor agent's isolated context. When this skill l
 </dispatch_gate>
 
 <objective>
-A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence.
+A verdict on skill content against `/skill-standards` and `/agent-prompt-standards` — APPROVED, or REJECTED with each finding naming the file and line, the violated rule, the evidence, and the required correction. Findings are assessed as keep-these-aspects, worth-improving, or must-fix.
 </objective>
 
 <constraints>
@@ -25,7 +25,7 @@ A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`
 - NEVER report a score; report contextual judgment across the full skill-authoring surface
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
-- NEVER generate fixes unless explicitly requested by the user
+- NEVER implement, patch, or generate replacement content; each rejecting finding states only the required correction needed to satisfy the violated rule
 - NEVER make assumptions about skill intent - flag ambiguities as findings
 - MUST complete all evaluation areas (YAML, Structure, Content, Anti-patterns)
 - ALWAYS apply contextual judgment - what matters for a simple skill differs from a complex one
@@ -263,19 +263,9 @@ Always explain WHY something matters for this specific skill, not just that it v
 <legacy_skills_guidance>
 Some skills were created before pure XML structure became the standard. When auditing legacy skills:
 
-- Flag markdown headings as critical issues for SKILL.md
-- Include migration guidance in findings: "This skill predates the pure XML standard. Migrate by converting markdown headings to semantic XML tags."
-- Provide specific migration examples in the findings
-- Don't be more lenient just because it's legacy - the standard applies to all skills
-- Suggest incremental migration if the skill is large: SKILL.md first, then references
-
-**Migration pattern**:
-
-```
-Workflow heading → <workflow>
-Success criteria heading → <success_criteria>
-Quick start heading → <quick_start> (only if skill is an on-demand tool)
-```
+- Flag every markdown heading in SKILL.md as a pure-XML violation with its file and line, the governing rule, the observed heading, and the consequence.
+- Apply the current standard without leniency for the skill's age.
+- State the required correction at the rule level; do not write replacement XML, migration examples, sequencing advice, or a remediation plan.
 
 </legacy_skills_guidance>
 
@@ -299,66 +289,14 @@ Read `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotat
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit one terminal verdict as the first line.
 
-The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findings; otherwise it is `REJECTED`. An audit that cannot complete records a `REJECT` finding in `must-fix` and returns `REJECTED`. Worth-improving and keep-these-aspects observations land as `WARNING` and `INFO` findings respectively and do not reject the skill.
-
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-skills",
-  "target": "<skill-path>",
-  "overall": "APPROVED | REJECTED",
-  "rows": [
-    {
-      "name": "keep-these-aspects",
-      "status": "PASS",
-      "findings": [
-        {
-          "id": "f-001",
-          "file": "<skill-file>",
-          "line": 12,
-          "rule": "<strength-name>",
-          "severity": "INFO",
-          "message": "<what it does> — removing this would <specific consequence>"
-        }
-      ]
-    },
-    {
-      "name": "worth-improving",
-      "status": "PASS",
-      "findings": [
-        {
-          "id": "f-002",
-          "file": "<skill-file>",
-          "line": 24,
-          "rule": "<issue-name>",
-          "severity": "WARNING",
-          "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
-        }
-      ]
-    },
-    {
-      "name": "must-fix",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "id": "f-003",
-          "file": "<skill-file>",
-          "line": 36,
-          "rule": "<issue-name>",
-          "severity": "REJECT",
-          "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."
-        }
-      ]
-    }
-  ],
-  "metadata": { "skill_type": "simple | complex | delegation | etc.", "line_count": "<n>" }
-}
-```
-
-Note: While this skill uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
-</verdict_format>
+- Emit `APPROVED` when no must-fix finding exists.
+- Emit `REJECTED` when one or more must-fix findings exist or the audit cannot complete.
+- After `REJECTED`, list every must-fix finding as `file:line — violated rule: evidence. Required correction: action.`
+- Keep-these-aspects and worth-improving observations may follow the terminal verdict under their category names. They never change `APPROVED` to `REJECTED`.
+- Emit no JSON envelope, numeric score, mutation offer, or prose before the terminal verdict.
+  </verdict_format>
 
 <failure_modes>
 

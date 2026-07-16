@@ -6,7 +6,7 @@ Read `/skill-standards` and `/agent-prompt-standards` before running this workfl
 
 <step name="identify_target">
 
-Accept the skill path supplied by the operator. When no path is supplied, list the available skills and ask which one to audit. Resolve the target to its `SKILL.md` plus every cited file under `references/`, `workflows/`, `templates/`, and `scripts/`.
+Accept the skill path supplied by the operator. When no path is supplied, list the available skills and ask which one to audit. Resolve the target to its `SKILL.md` plus every file recursively present under `references/`, `workflows/`, `templates/`, and `scripts/`, including uncited and orphaned bundled files.
 
 </step>
 
@@ -29,7 +29,7 @@ The verdict must evaluate:
 
 <step name="present_verdict">
 
-Present the auditor's complete JSON verdict unchanged, including its `overall` value (`APPROVED` or `REJECTED`) and every `keep-these-aspects`, `worth-improving`, and `must-fix` row with file and line locations. Never convert the verdict into a score or offer mutations as part of the audit workflow. A separate operator request to improve the skill returns to `/create-skills` for authoring after the read-only verdict is complete.
+Present the auditor's terminal `APPROVED` or `REJECTED` verdict unchanged, followed by every finding the auditor returned with its file and line location. Never convert the verdict into a score or offer mutations as part of the audit workflow. A separate operator request to improve the skill returns to `/create-skills` for authoring after the read-only verdict is complete.
 
 </step>
 
@@ -51,7 +51,7 @@ Present the auditor's complete JSON verdict unchanged, including its `overall` v
 
 <success_criteria>
 
-- The target skill and every cited bundled file were included in the audit scope.
+- The target SKILL.md and every file recursively present under its `references/`, `workflows/`, `templates/`, and `scripts/` directories were included in the audit scope, including uncited and orphaned files.
 - The configured `skill-auditor` returned a terminal `APPROVED` or `REJECTED` verdict.
 - Every rejection names a concrete file, line, governing standard, and required correction.
 - The workflow performed no repository mutation and emitted no numeric score.
