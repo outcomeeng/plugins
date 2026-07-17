@@ -22,14 +22,14 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 
 ### Mappings
 
-- ALWAYS: the `run` CLI appends a format-instruction suffix to every rendered prompt before passing it to the model — the suffix declares the grader's two-step JSON-parse contract so the model's structured-output behavior matches what the grader accepts ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: suite-level pass rate gates an exit-0 result against a configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
-- ALWAYS: the `run` CLI rejects a `--workers` value outside the range `[1, 16]` with a usage error — the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the `run` CLI accepts repeatable `--case-id` selectors and runs only the named cases in case-file order, rejecting any selector that does not resolve to a case in the suite ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the `outcomeeng-evals` Click group exposes the `run`, `history`, `view`, `discover`, `plan`, `ci`, `materialize-prompts`, and `materialize-ci-triggers` subcommand names ([test](tests/test_cli.mapping.l1.py))
+- Each rendered prompt maps to that prompt plus the format-instruction suffix declaring the grader's two-step JSON-parse contract before model invocation ([test](tests/test_cli.mapping.l1.py))
+- A suite-level pass rate maps to exit 0 exactly when it meets the configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
+- A `--workers` value in `[1, 16]` maps to an accepted worker count; every value outside that range maps to a usage error, capping concurrent `claude` subprocesses per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_cli.mapping.l1.py))
+- Repeatable `--case-id` selectors map to their named cases in case-file order; an unresolved selector maps to a usage error ([test](tests/test_cli.mapping.l1.py))
+- Each declared command name — `run`, `history`, `view`, `discover`, `plan`, `ci`, `materialize-prompts`, and `materialize-ci-triggers` — maps to a registered `outcomeeng-evals` Click subcommand ([test](tests/test_cli.mapping.l1.py))
 - Version-1 history rows both without and with additive ceiling fields map to complete rendered summaries, and the additive fields retain schema version 1 ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: CI planning maps PR changed paths to suites through each eval's `owned_paths`, runs `smoke_cases` for owned-path changes, runs full suites for eval-definition or harness changes, skips unrelated PR changes, and runs all non-manual suites in full mode ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the CI workflow's trigger paths are derived from the eval definitions — the union of every non-manual suite's `owned_paths` and its own eval directory, plus the universal surfaces that force a full plan — so a suite declaring `ci_policy = "manual"` contributes no trigger path and no suite's owned path is absent from the surface that starts the job ([test](tests/test_ci_triggers.mapping.l1.py))
+- PR changed paths map through each eval's `owned_paths` to smoke-case execution, eval-definition or harness changes map to full-suite execution, unrelated changes map to skipped suites, and non-PR modes map every non-manual suite to full execution ([test](tests/test_cli.mapping.l1.py))
+- Eval definitions map to the CI trigger-path union of every non-manual suite's `owned_paths` and eval directory plus the universal full-plan surfaces; `ci_policy = "manual"` maps to no contributed trigger path ([test](tests/test_ci_triggers.mapping.l1.py))
 
 ### Properties
 
