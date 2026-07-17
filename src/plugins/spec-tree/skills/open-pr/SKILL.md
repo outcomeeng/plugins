@@ -11,18 +11,18 @@ A pull request opened in the review state its topology permits — ready for a p
 </objective>
 
 <project_specialization>
-After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks and additional required body sections).
+Step 0 checks whether `spx/local/open-pr.md` exists at the repository root only after the live foundation gate holds. When present, read it and apply it as a product-specific addition to this flow (extra pre-flight checks and additional required body sections).
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, giving PR publication and management one policy source. The local deterministic-verification commands come from the project's own `{{! file('root_guide') !}}` convention, with the overlay allowed to centralize scope and escalation cases.
+Deployment and release recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, giving PR publication and management one policy source. Step 0 reaches that optional overlay through /merging-standards only after the live foundation gate holds. The local deterministic-verification commands come from the project's own `{{! file('root_guide') !}}` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <workflow>
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
-**Step 0 — Load references.** Invoke /merging-standards (shared vocabulary) and /commit-changes (commit type/scope classification for the title) via the Skill tool.
+**Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
 
 **Step 1 — GATE: Pre-flight.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this complete publication-time preflight immediately before the push so it guards the checkout state the remote receives.
 
