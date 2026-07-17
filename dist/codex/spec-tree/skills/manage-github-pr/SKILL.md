@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, request_user_input, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Read
+allowed-tools: Skill, request_user_input, Bash, Read
 ---
 
 <objective>
@@ -66,6 +66,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 <constraints>
 
 - MUST drive the lifecycle from a determined changeset autonomously by default — state the plan in prose and proceed without a confirmation pause; present the plan through the runtime's structured-question tool and obtain confirmation before the first mutating action — branch creation, commit, push, PR open, or merge — only when the merge overlay opts into a pre-mutation confirmation.
+- MUST use Bash only for built-in lifecycle commands named by the governing skills or commands read verbatim from `spx/local/merging.md`; never synthesize an ungoverned shell command from prose or model judgment.
 - MUST drive every stage by invoking its governing skill — `/commit-changes`, `/open-pr`, `/manage-pr`, and `/apply` or the coding skills — never reimplementing their protocols inline. Drift between a reimplementation and the source skill is the failure this skill exists to prevent.
 - MUST read `spx/local/merging.md` for the GitHub-PR transport's configuration (merge command, deployment and release declarations, pre-flight) through `/open-pr`, `/manage-pr`, and `/merging-standards`. Transport selection — whether a PR is the transport at all — is `/merge`'s, never this skill's.
 - NEVER merge directly — the merge executes only through `/manage-pr`'s `MERGE_READINESS` authority, with any declared deploy or release action handled after merge through `DEPLOYMENT_READINESS` or `RELEASE_READINESS`.

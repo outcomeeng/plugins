@@ -479,11 +479,11 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 
 #### `manage-github-pr`
 
-1. Detect mode from arguments, branch state, working tree, commits ahead of base, and existing PR state.
+1. Detect mode from arguments, branch state, working tree, committed scope derived through `/scope-changeset`, and existing PR state.
 2. Load `understand` when the foundation marker is absent so local lifecycle routing is known.
 3. State the lifecycle plan and proceed autonomously by default; use the runtime's structured-question tool before mutation only when `spx/local/merging.md` opts into confirmation.
 4. Invoke implementation skills when the requested work is not yet in the tree.
-5. Run only after `/merge` selects the GitHub-PR transport, then invoke `commit-changes` and the internal `open-pr` and `manage-pr` protocols.
+5. Enter either by direct invocation or after `/merge` selects the GitHub-PR transport, then invoke `commit-changes` and the internal `open-pr` and `manage-pr` protocols.
 6. Treat merge as transport completion: continue any remaining in-scope work, and invoke `handoff` only when no in-scope work remains or continuation is impossible.
 
 #### `open-pr`

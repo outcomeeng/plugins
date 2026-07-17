@@ -66,7 +66,7 @@ Run the bundled structural validator:
 python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" <skill-path>
 ```
 
-Run the target repository's canonical skill build and deterministic checks. When the runtime exposes the `skill-auditor` role, dispatch it over the complete skill bundle. Otherwise invoke `/audit-skills` over that bundle. Repair every must-fix item from the resulting verdict before publication.
+Identify the target repository's canonical skill build and deterministic-check commands and return them to the caller's repository workflow. Continue after that workflow reports success. When the runtime exposes the `skill-auditor` role, dispatch it over the complete skill bundle. Otherwise invoke `/audit-skills` over that bundle. Repair every must-fix item from the resulting verdict before publication.
 
 </step>
 
