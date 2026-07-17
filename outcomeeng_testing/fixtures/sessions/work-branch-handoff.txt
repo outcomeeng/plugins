@@ -1,0 +1,2 @@
+{"priority":"medium","goal":"Preserve the work branch","next_step":"Resume the work branch","git_ref":null}
+# Session anchored to a work branch

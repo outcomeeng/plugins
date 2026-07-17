@@ -1,0 +1,4 @@
+{"priority":"medium","goal":"Preserve issue coordination","next_step":"Read the issue excerpt"}
+# Session with ISSUES.md
+
+## 12. Repo-wide evidence links still contain legacy test naming

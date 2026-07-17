@@ -1,35 +1,32 @@
-"""Harness for the pickup claim-verification script's ``l1`` tests.
+"""Infrastructure for the pickup claim verifier's ``l1`` evidence.
 
-Provides:
-
-- An importlib loader for ``verify_session_claims.py``. The module ships under a
-  hyphenated skill path that is not importable by package name; tests load it
-  through ``importlib`` (mirroring ``sync_base``).
-- ``RecordingRunner`` -- a dependency-injected ``CommandRunner`` double that runs
-  real ``git`` against a temp repo (Stage 4: git is cheap, deterministic, and
-  observable at ``l1``), returns scripted output for ``spx`` and ``gh`` (Stage 5
-  exceptions: contract probe and failure simulation), and records every command
-  so the read-only / no-mutation rules are inspectable (exception 6).
-- ``session_command_scripts`` -- scripts the ``spx session show`` JSON and prose
-  outputs the verifier consumes.
-
-No framework mocks: the runner is an explicit injected object, and git runs for
-real against a temp repository built by ``git_context``.
+The harness loads the shipped standalone script, arranges source-owned
+claim/relation pairs, runs real git operations in temporary repositories, and
+uses an injected recording runner only for failure simulation, contract probes,
+interaction protocols, and hidden-call observability. Synthetic identifiers are
+generated per invocation; production vocabulary comes from the loaded script.
 """
 
 from __future__ import annotations
 
 import ast
+import hashlib
 import importlib.util
 import inspect
 import json
 import pathlib
 import subprocess
 import sys
-from collections.abc import Callable, Iterable
+import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from types import ModuleType
-from typing import Protocol, TypedDict
+from typing import Protocol
+
+from outcomeeng_testing.harnesses.git_context import (
+    accepted_git_context,
+    handoff_git_env,
+)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 VERIFY_MODULE_PATH = (
@@ -42,49 +39,11 @@ VERIFY_MODULE_PATH = (
     / "scripts"
     / "verify_session_claims.py"
 )
-SESSION_ID = "2026-01-01_00-00-00"
-SINGLE_VERDICT_COUNT = 1
-RUNNER_PARAMETER = "runner"
-EXPECTED_SUBPROCESS_CALL_SITES = (("run", "SubprocessRunner.run"),)
-UNREACHABLE_SHA = "0" * 40
-NODE_SPEC = "spx/21-x.enabler/x.md"
-NODE_PATH = "spx/21-x.enabler"
-CHILD_NODE_PATH = "spx/21-x.enabler/32-y.enabler"
-PRESENT_FILE = "present.md"
-ABSENT_FILE = "absent.md"
-PR_NUMBER = "256"
-PASSING_STATUS = "passing"
-FAILING_STATUS = "failing"
-CLEAN_GIT_STATUS = "clean"
-CLOSED_PR_STATE = "CLOSED"
-MISSING_SESSION_ERROR = "missing session"
-INVALID_JSON_FRAGMENT = "{"
-WRONG_SHAPE_JSON = "[]"
-INVALID_JSON_ERROR = "invalid JSON"
-WRONG_SHAPE_ERROR = "expected one session record"
-MALFORMED_METADATA_ERROR = "malformed metadata"
-REACHABLE_WORK_BRANCH = "work/pickup-claim"
-ABSENT_WORK_BRANCH = "work/never-pushed"
-HEX_LIKE_WORK_BRANCH = "deadbee"
-FULL_HEX_WORK_BRANCH = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
-
 
 type ScriptMap = dict[tuple[str, ...], tuple[int, str, str]]
 
 
-class SessionKwargs(TypedDict, total=False):
-    """Structured claim fields supplied by a mapping case."""
-
-    git_ref: str
-    git_status: str
-    specs: tuple[str, ...]
-    files: tuple[str, ...]
-    pr_numbers: tuple[str, ...]
-
-
 class ClaimVerdictLike(Protocol):
-    """Structural view of the shipped script's verdict record."""
-
     kind: object
     subject: str
     verdict: object
@@ -92,17 +51,37 @@ class ClaimVerdictLike(Protocol):
 
 
 @dataclass(frozen=True)
-class MappingCase:
-    """One finite claim relation and its source-contract verdict."""
+class MappingEvidence:
+    """Observed verdict paired with its source-owned expected relation."""
 
-    id: str
-    build: Callable[[pathlib.Path], tuple[SessionKwargs, ScriptMap]]
     kind: object
-    verdict: object
+    relation: object
+    actual: object
+    expected: object
+
+
+@dataclass
+class RecordingRunner:
+    """Run git for real, script unavailable dependencies, and record calls."""
+
+    repo: pathlib.Path
+    scripted: ScriptMap = field(default_factory=dict)
+    calls: list[list[str]] = field(default_factory=list)
+
+    def run(self, cmd: list[str]) -> tuple[int, str, str]:
+        self.calls.append(list(cmd))
+        command = tuple(cmd)
+        for prefix, response in self.scripted.items():
+            if command == prefix or command[: len(prefix)] == prefix:
+                return response
+        if cmd and cmd[0] == "git":
+            proc = subprocess.run(cmd, cwd=self.repo, capture_output=True, text=True)
+            return proc.returncode, proc.stdout, proc.stderr
+        return (1, "", f"unconfigured command: {' '.join(cmd)}")
 
 
 def load_verify_session_claims_module() -> ModuleType:
-    """Load the ``verify_session_claims`` module via importlib and cache it."""
+    """Load the shipped verifier from its hyphenated skill path."""
     cached = sys.modules.get("verify_session_claims")
     if cached is not None:
         return cached
@@ -119,304 +98,452 @@ def load_verify_session_claims_module() -> ModuleType:
     return module
 
 
-@dataclass
-class RecordingRunner:
-    """Delegates ``git`` to a real temp repo, scripts ``spx``/``gh``, records calls."""
-
-    repo: pathlib.Path
-    scripted: dict[tuple[str, ...], tuple[int, str, str]] = field(default_factory=dict)
-    calls: list[list[str]] = field(default_factory=list)
-
-    def run(self, cmd: list[str]) -> tuple[int, str, str]:
-        self.calls.append(list(cmd))
-        cmd_tuple = tuple(cmd)
-        for prefix, response in self.scripted.items():
-            if cmd_tuple == prefix:
-                return response
-        for prefix, response in self.scripted.items():
-            if cmd_tuple[: len(prefix)] == prefix:
-                return response
-        if cmd and cmd[0] == "git":
-            proc = subprocess.run(cmd, cwd=self.repo, capture_output=True, text=True)
-            return proc.returncode, proc.stdout, proc.stderr
-        return (1, "", f"not scripted: {' '.join(cmd)}")
+def claim_mapping_evidence() -> tuple[MappingEvidence, ...]:
+    """Exercise every source-owned claim-kind/relation pair."""
+    module = load_verify_session_claims_module()
+    return tuple(
+        _exercise_claim_relation(module, kind, relation)
+        for kind, relations in module.CLAIM_KIND_RELATIONS.items()
+        for relation in relations
+    )
 
 
-def head_sha(repo: pathlib.Path) -> str:
-    """Return the repo's current HEAD commit SHA."""
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+def _exercise_claim_relation(
+    module: ModuleType, kind: object, relation: object
+) -> MappingEvidence:
+    with accepted_git_context() as repo:
+        session_id = _generated_token()
+        session_fields: dict[str, object] = {}
+        scripts: ScriptMap = {}
+
+        if kind is module.ClaimKind.SESSION_METADATA:
+            scripts = _metadata_failure_script(module, session_id)
+        elif kind is module.ClaimKind.GIT_REF:
+            git_ref, scripts = _git_ref_arrangement(module, repo, relation)
+            session_fields[module.SESSION_GIT_REF_FIELD] = git_ref
+        elif kind is module.ClaimKind.INJECTED_PATH:
+            relative_path = _generated_relative_path()
+            if relation is module.ClaimRelation.MATCHES:
+                (repo / relative_path).write_text(_generated_token())
+            session_fields[module.SESSION_FILES_FIELD] = (relative_path,)
+        elif kind is module.ClaimKind.NODE_STATUS:
+            spec = _generated_relative_path()
+            session_fields[module.SESSION_SPECS_FIELD] = (spec,)
+            scripts = _node_status_arrangement(module, spec, relation)
+        elif kind is module.ClaimKind.UNCOMMITTED_STATE:
+            session_fields[module.SESSION_GIT_STATUS_LABEL] = module.GitStatus.CLEAN
+            if relation is module.ClaimRelation.DIFFERS:
+                (repo / _generated_relative_path()).write_text(_generated_token())
+            elif relation is module.ClaimRelation.UNAVAILABLE:
+                scripts = {
+                    tuple(module.GIT_STATUS_COMMAND): (
+                        module.COMMAND_UNAVAILABLE_EXIT,
+                        "",
+                        _generated_token(),
+                    )
+                }
+        elif kind is module.ClaimKind.EXTERNAL_ID:
+            number = _generated_number()
+            session_fields["pr_numbers"] = (number,)
+            scripts = _external_arrangement(module, relation)
+        else:
+            raise AssertionError(f"unhandled claim kind: {kind}")
+
+        scripts = (
+            _session_command_scripts(
+                module,
+                session_id,
+                git_ref=session_fields.get(module.SESSION_GIT_REF_FIELD),
+                git_status=session_fields.get(module.SESSION_GIT_STATUS_LABEL),
+                specs=session_fields.get(module.SESSION_SPECS_FIELD, ()),
+                files=session_fields.get(module.SESSION_FILES_FIELD, ()),
+                pr_numbers=session_fields.get("pr_numbers", ()),
+            )
+            | scripts
+        )
+        runner = RecordingRunner(repo=repo, scripted=scripts)
+        verdict = _verdict_for_kind(module.verify(session_id, repo, runner), kind)
+        return MappingEvidence(
+            kind=kind,
+            relation=relation,
+            actual=verdict.verdict,
+            expected=module.verdict_for_relation(relation),
+        )
 
 
-def dirty_tree(repo: pathlib.Path, name: str = "scratch.txt") -> None:
-    """Leave an uncommitted untracked file so ``git status`` reports dirty."""
-    (repo / name).write_text("uncommitted\n")
+def _git_ref_arrangement(
+    module: ModuleType, repo: pathlib.Path, relation: object
+) -> tuple[str, ScriptMap]:
+    if relation is module.ClaimRelation.MATCHES:
+        return _head_sha(repo), {}
+    if relation is module.ClaimRelation.DIFFERS:
+        return _unreachable_sha(repo), {}
+    if relation is module.ClaimRelation.UNAVAILABLE:
+        return _head_sha(repo), {
+            tuple(module.GIT_VERIFY_REF_COMMAND): (
+                module.COMMAND_UNAVAILABLE_EXIT,
+                "",
+                _generated_token(),
+            )
+        }
+    raise AssertionError(f"unhandled git-ref relation: {relation}")
 
 
-def session_command_scripts(
+def _node_status_arrangement(
+    module: ModuleType, spec: str, relation: object
+) -> ScriptMap:
+    if relation is module.ClaimRelation.OBSERVED:
+        return {
+            tuple(module.SPX_SPEC_STATUS_COMMAND): (
+                0,
+                _node_status_json(module, spec),
+                "",
+            )
+        }
+    if relation is module.ClaimRelation.UNAVAILABLE:
+        return {
+            tuple(module.SPX_SPEC_STATUS_COMMAND): (
+                module.COMMAND_UNAVAILABLE_EXIT,
+                "",
+                _generated_token(),
+            )
+        }
+    raise AssertionError(f"unhandled node-status relation: {relation}")
+
+
+def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
+    if relation is module.ClaimRelation.OBSERVED:
+        return {
+            tuple(module.GH_PR_VIEW_COMMAND): (
+                0,
+                json.dumps({module.GH_PR_STATE_FIELD: _generated_token()}),
+                "",
+            )
+        }
+    if relation is module.ClaimRelation.UNAVAILABLE:
+        return {
+            tuple(module.GH_PR_VIEW_COMMAND): (
+                module.COMMAND_UNAVAILABLE_EXIT,
+                "",
+                _generated_token(),
+            )
+        }
+    raise AssertionError(f"unhandled external-id relation: {relation}")
+
+
+def branch_reference_evidence() -> tuple[MappingEvidence, ...]:
+    """Exercise normal, hex-like, full-hex, and absent origin branch refs."""
+    module = load_verify_session_claims_module()
+    evidence: list[MappingEvidence] = []
+    with handoff_git_env() as env:
+        branch_names = (
+            env.push_work_branch(),
+            env.push_work_branch(env.head_sha()[:7]),
+            env.push_work_branch(env.head_sha()),
+        )
+        for branch in branch_names:
+            evidence.append(
+                _git_ref_evidence(
+                    module, env.root, branch, module.ClaimRelation.MATCHES
+                )
+            )
+        absent_branch = f"{env.default_branch}-{_generated_token()}"
+        evidence.append(
+            _git_ref_evidence(
+                module, env.root, absent_branch, module.ClaimRelation.DIFFERS
+            )
+        )
+    return tuple(evidence)
+
+
+def _git_ref_evidence(
+    module: ModuleType,
+    repo: pathlib.Path,
+    git_ref: str,
+    relation: object,
+) -> MappingEvidence:
+    session_id = _generated_token()
+    runner = RecordingRunner(
+        repo=repo,
+        scripted=_session_command_scripts(module, session_id, git_ref=git_ref),
+    )
+    verdict = _verdict_for_kind(
+        module.verify(session_id, repo, runner), module.ClaimKind.GIT_REF
+    )
+    return MappingEvidence(
+        kind=module.ClaimKind.GIT_REF,
+        relation=relation,
+        actual=verdict.verdict,
+        expected=module.verdict_for_relation(relation),
+    )
+
+
+def observed_state_is_surfaced() -> bool:
+    """Check that node and external observations retain generated current values."""
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session_id = _generated_token()
+        spec = _generated_relative_path()
+        number = _generated_number()
+        node_state = _generated_token()
+        external_state = _generated_token()
+        scripts = _session_command_scripts(
+            module,
+            session_id,
+            specs=(spec,),
+            pr_numbers=(number,),
+        ) | {
+            tuple(module.SPX_SPEC_STATUS_COMMAND): (
+                0,
+                _node_status_json(module, spec, status=node_state),
+                "",
+            ),
+            tuple(module.GH_PR_VIEW_COMMAND): (
+                0,
+                json.dumps({module.GH_PR_STATE_FIELD: external_state}),
+                "",
+            ),
+        }
+        verdicts = module.verify(
+            session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
+        )
+        node = _verdict_for_kind(verdicts, module.ClaimKind.NODE_STATUS)
+        external = _verdict_for_kind(verdicts, module.ClaimKind.EXTERNAL_ID)
+        return node_state in node.evidence and external_state in external.evidence
+
+
+def node_status_keeps_source_scalar_fields_only() -> bool:
+    """Check that child and non-scalar data stay outside status evidence."""
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session_id = _generated_token()
+        spec = _generated_relative_path()
+        status = _generated_token()
+        payload = _node_status_payload(module, spec, status=status)
+        generated_child_key = _generated_token()
+        generated_non_scalar_key = _generated_token()
+        payload[generated_child_key] = [{_generated_token(): _generated_token()}]
+        payload[generated_non_scalar_key] = {_generated_token(): _generated_token()}
+        scripts = _session_command_scripts(module, session_id, specs=(spec,)) | {
+            tuple(module.SPX_SPEC_STATUS_COMMAND): (0, json.dumps(payload), "")
+        }
+        verdict = _verdict_for_kind(
+            module.verify(
+                session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
+            ),
+            module.ClaimKind.NODE_STATUS,
+        )
+        evidence = json.loads(verdict.evidence)
+        expected = {
+            key: payload[key]
+            for key in module.NODE_STATUS_SCALAR_FIELDS
+            if key in payload
+        }
+        return evidence == expected
+
+
+def verify_accepts_injected_runner() -> bool:
+    """Check that ``verify`` exposes a parameter typed as ``CommandRunner``."""
+    module = load_verify_session_claims_module()
+    return any(
+        parameter.annotation in {"CommandRunner", module.CommandRunner}
+        for parameter in inspect.signature(module.verify).parameters.values()
+    )
+
+
+def script_imports_are_stdlib_only() -> bool:
+    tree = ast.parse(VERIFY_MODULE_PATH.read_text())
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            roots.add(node.module.split(".")[0])
+    return not (roots - (sys.stdlib_module_names | {"__future__"}))
+
+
+def external_calls_go_through_runner() -> bool:
+    """Check that direct subprocess calls stay inside the source runner adapter."""
+    module = load_verify_session_claims_module()
+    tree = ast.parse(VERIFY_MODULE_PATH.read_text())
+    owners = [
+        _enclosing_method(tree, node)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == subprocess.__name__
+    ]
+    expected_owner = (
+        module.SubprocessRunner.__name__,
+        module.SubprocessRunner.run.__name__,
+    )
+    return bool(owners) and all(owner == expected_owner for owner in owners)
+
+
+def _enclosing_method(tree: ast.AST, target: ast.AST) -> tuple[str, str] | None:
+    for class_node in ast.walk(tree):
+        if not isinstance(class_node, ast.ClassDef):
+            continue
+        for node in class_node.body:
+            if isinstance(node, ast.FunctionDef) and any(
+                child is target for child in ast.walk(node)
+            ):
+                return class_node.name, node.name
+    return None
+
+
+def default_runner_failure_is_unverifiable() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        verdicts = module.verify(
+            _generated_token(),
+            repo,
+            module.SubprocessRunner(repo, env={"PATH": ""}),
+        )
+        expected = module.verdict_for_relation(module.ClaimRelation.UNAVAILABLE)
+        return (
+            len(verdicts) == 1
+            and verdicts[0].kind is module.ClaimKind.SESSION_METADATA
+            and verdicts[0].verdict is expected
+        )
+
+
+def verification_is_read_only_and_uses_source_commands() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session_id = _generated_token()
+        spec = _generated_relative_path()
+        number = _generated_number()
+        before = _git_status(repo)
+        scripts = _session_command_scripts(
+            module,
+            session_id,
+            git_ref=_unreachable_sha(repo),
+            git_status=module.GitStatus.CLEAN,
+            specs=(spec,),
+            pr_numbers=(number,),
+        ) | {
+            tuple(module.SPX_SPEC_STATUS_COMMAND): (
+                0,
+                _node_status_json(module, spec),
+                "",
+            ),
+            tuple(module.GH_PR_VIEW_COMMAND): (
+                0,
+                json.dumps({module.GH_PR_STATE_FIELD: _generated_token()}),
+                "",
+            ),
+        }
+        runner = RecordingRunner(repo=repo, scripted=scripts)
+        module.verify(session_id, repo, runner)
+        return (
+            not _unexpected_runner_calls(module, runner.calls)
+            and _git_status(repo) == before
+        )
+
+
+def metadata_loading_uses_structured_session_api() -> bool:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session_id = _generated_token()
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=_session_command_scripts(
+                module, session_id, git_ref=_head_sha(repo)
+            ),
+        )
+        verdict = _verdict_for_kind(
+            module.verify(session_id, repo, runner), module.ClaimKind.GIT_REF
+        )
+        commands = tuple(tuple(call) for call in runner.calls)
+        return (
+            tuple(_session_show_json_command(module, session_id)) in commands
+            and tuple(_session_show_command(module, session_id)) in commands
+            and verdict.verdict
+            is module.verdict_for_relation(module.ClaimRelation.MATCHES)
+        )
+
+
+def _session_command_scripts(
+    module: ModuleType,
+    session_id: str,
     *,
-    git_ref: str | None = None,
-    git_status: str | None = None,
-    specs: tuple[str, ...] = (),
-    files: tuple[str, ...] = (),
-    pr_numbers: tuple[str, ...] = (),
-) -> dict[tuple[str, ...], tuple[int, str, str]]:
-    """Return ``spx session show`` outputs carrying structured claims."""
-    record: dict[str, object] = {
-        "id": SESSION_ID,
-        "status": "doing",
-        "git_ref": git_ref,
-        "specs": list(specs),
-        "files": list(files),
+    git_ref: object = None,
+    git_status: object = None,
+    specs: object = (),
+    files: object = (),
+    pr_numbers: object = (),
+) -> ScriptMap:
+    record = {
+        module.SESSION_GIT_REF_FIELD: git_ref,
+        module.SESSION_SPECS_FIELD: list(specs),
+        module.SESSION_FILES_FIELD: list(files),
     }
-    front = ["---"]
-    for key, value in record.items():
-        front.append(f'"{key}": {json.dumps(value)}')
-    front.append("---")
-    body = ["<metadata>"]
+    body: list[str] = []
     if git_status is not None:
-        body.append(f"  git_status: {git_status}")
-    body.append("</metadata>")
-    if pr_numbers:
-        body.append("<coordination>")
-        body.extend(f"- shipped PR #{number}" for number in pr_numbers)
-        body.append("</coordination>")
-    raw = "\n".join(front + body) + "\n"
+        body.append(f"{module.SESSION_GIT_STATUS_LABEL}: {git_status}")
+    body.extend(f"{module.PR_REFERENCE_PREFIXES[0]} #{number}" for number in pr_numbers)
     return {
-        ("spx", "session", "show", "--json", SESSION_ID): (
+        tuple(_session_show_json_command(module, session_id)): (
             0,
             json.dumps(record),
             "",
         ),
-        ("spx", "session", "show", SESSION_ID): (0, raw, ""),
+        tuple(_session_show_command(module, session_id)): (0, "\n".join(body), ""),
     }
 
 
-def claim_mapping_cases(module: ModuleType) -> tuple[MappingCase, ...]:
-    """Return the finite ``ClaimKind`` x observed-relation mapping domain."""
-    claim_kind = module.ClaimKind
-    verdict = module.Verdict
-    spx_status = tuple(module.SPX_SPEC_STATUS_COMMAND)
-    gh_view = tuple(module.GH_PR_VIEW_COMMAND)
-    git_verify = tuple(module.GIT_VERIFY_REF_COMMAND)
-    git_status = tuple(module.GIT_STATUS_COMMAND[:2])
-    return (
-        MappingCase(
-            "git_ref-sha-reachable",
-            lambda repo: ({"git_ref": head_sha(repo)}, {}),
-            claim_kind.GIT_REF,
-            verdict.CONFIRMED,
-        ),
-        MappingCase(
-            "git_ref-sha-unreachable",
-            lambda repo: ({"git_ref": "0" * 40}, {}),
-            claim_kind.GIT_REF,
-            verdict.DISCREPANCY,
-        ),
-        MappingCase(
-            "injected-path-present",
-            _present_path,
-            claim_kind.INJECTED_PATH,
-            verdict.CONFIRMED,
-        ),
-        MappingCase(
-            "injected-path-missing",
-            lambda repo: ({"files": (ABSENT_FILE,)}, {}),
-            claim_kind.INJECTED_PATH,
-            verdict.DISCREPANCY,
-        ),
-        MappingCase(
-            "node-status-readable",
-            lambda repo: (
-                {"specs": (NODE_SPEC,)},
-                {spx_status: (0, node_status_json(module, status=PASSING_STATUS), "")},
-            ),
-            claim_kind.NODE_STATUS,
-            verdict.CONFIRMED,
-        ),
-        MappingCase(
-            "node-status-unavailable",
-            lambda repo: (
-                {"specs": (NODE_SPEC,)},
-                {spx_status: (1, "", "spx: command not found")},
-            ),
-            claim_kind.NODE_STATUS,
-            verdict.UNVERIFIABLE,
-        ),
-        MappingCase(
-            "uncommitted-clean-matches",
-            lambda repo: ({"git_status": "clean"}, {}),
-            claim_kind.UNCOMMITTED_STATE,
-            verdict.CONFIRMED,
-        ),
-        MappingCase(
-            "uncommitted-clean-now-dirty",
-            _dirty_but_recorded_clean,
-            claim_kind.UNCOMMITTED_STATE,
-            verdict.DISCREPANCY,
-        ),
-        MappingCase(
-            "external-id-readable",
-            lambda repo: (
-                {"pr_numbers": (PR_NUMBER,)},
-                {gh_view: (0, json.dumps({"state": "MERGED"}), "")},
-            ),
-            claim_kind.EXTERNAL_ID,
-            verdict.CONFIRMED,
-        ),
-        MappingCase(
-            "external-id-unavailable",
-            lambda repo: (
-                {"pr_numbers": (PR_NUMBER,)},
-                {gh_view: (1, "", "gh: not found")},
-            ),
-            claim_kind.EXTERNAL_ID,
-            verdict.UNVERIFIABLE,
-        ),
-        MappingCase(
-            "git_ref-git-unavailable",
-            lambda repo: (
-                {"git_ref": head_sha(repo)},
-                {git_verify: (128, "", "fatal: not a git repository")},
-            ),
-            claim_kind.GIT_REF,
-            verdict.UNVERIFIABLE,
-        ),
-        MappingCase(
-            "git_ref-git-launch-failure",
-            lambda repo: (
-                {"git_ref": head_sha(repo)},
-                {
-                    git_verify: (
-                        module.COMMAND_UNAVAILABLE_EXIT,
-                        "",
-                        "No such file or directory: 'git'",
-                    )
-                },
-            ),
-            claim_kind.GIT_REF,
-            verdict.UNVERIFIABLE,
-        ),
-        MappingCase(
-            "uncommitted-git-unavailable",
-            lambda repo: (
-                {"git_status": "clean"},
-                {git_status: (128, "", "fatal: not a git repository")},
-            ),
-            claim_kind.UNCOMMITTED_STATE,
-            verdict.UNVERIFIABLE,
-        ),
-    )
-
-
-def _present_path(repo: pathlib.Path) -> tuple[SessionKwargs, ScriptMap]:
-    create_present_file(repo)
-    return {"files": (PRESENT_FILE,)}, {}
-
-
-def _dirty_but_recorded_clean(
-    repo: pathlib.Path,
-) -> tuple[SessionKwargs, ScriptMap]:
-    dirty_tree(repo)
-    return {"git_status": "clean"}, {}
-
-
-def verdict_for_kind(
-    verdicts: Iterable[ClaimVerdictLike], kind: object
-) -> ClaimVerdictLike:
-    """Return the sole verdict for ``kind`` or fail with an evidence diagnostic."""
-    matching = [item for item in verdicts if item.kind == kind]
-    if not matching:
-        raise AssertionError(f"no {kind} verdict emitted")
-    return matching[0]
-
-
-def node_status_json(
-    module: ModuleType,
-    *,
-    status: str,
-    include_child: bool = False,
-    include_non_scalar: bool = False,
-) -> str:
-    """Build an SPX status payload from the producer's source-owned field set."""
-    fields = tuple(module.NODE_STATUS_SCALAR_FIELDS)
-    payload: dict[str, object] = {
-        fields[0]: NODE_PATH,
-        fields[1]: NODE_SPEC,
-        fields[2]: NODE_SPEC,
-        fields[3]: status,
-        fields[4]: "Specified",
-        fields[5]: True,
-    }
-    if include_child:
-        payload["children"] = [{fields[0]: CHILD_NODE_PATH, fields[3]: "failing"}]
-    if include_non_scalar:
-        payload["messages"] = ["nested list values are excluded"]
-        payload["metadata"] = {"summary": "nested object values are excluded"}
-    return json.dumps(payload)
-
-
-def node_status_script(
-    module: ModuleType,
-    *,
-    status: str,
-    include_child: bool = False,
-    include_non_scalar: bool = False,
-) -> ScriptMap:
-    """Script one source-owned SPX node-status observation."""
+def _metadata_failure_script(module: ModuleType, session_id: str) -> ScriptMap:
     return {
-        tuple(module.SPX_SPEC_STATUS_COMMAND): (
-            0,
-            node_status_json(
-                module,
-                status=status,
-                include_child=include_child,
-                include_non_scalar=include_non_scalar,
-            ),
+        tuple(_session_show_json_command(module, session_id)): (
+            module.COMMAND_UNAVAILABLE_EXIT,
             "",
+            _generated_token(),
         )
     }
 
 
-def create_present_file(repo: pathlib.Path) -> pathlib.Path:
-    """Create the finite present-path mapping input and return its path."""
-    path = repo / PRESENT_FILE
-    path.write_text("here\n")
-    return path
+def _session_show_json_command(module: ModuleType, session_id: str) -> list[str]:
+    return [*module.SPX_SESSION_SHOW_COMMAND, "--json", session_id]
 
 
-def expected_node_status_evidence(
-    module: ModuleType, *, status: str
+def _session_show_command(module: ModuleType, session_id: str) -> list[str]:
+    return [*module.SPX_SESSION_SHOW_COMMAND, session_id]
+
+
+def _node_status_payload(
+    module: ModuleType, spec: str, *, status: str | None = None
 ) -> dict[str, object]:
-    """Return the scalar evidence shape declared by the source contract."""
-    payload = json.loads(node_status_json(module, status=status))
-    return {key: payload[key] for key in module.NODE_STATUS_SCALAR_FIELDS}
+    fields = tuple(module.NODE_STATUS_SCALAR_FIELDS)
+    return {
+        fields[0]: str(pathlib.PurePosixPath(spec).parent),
+        fields[1]: spec,
+        fields[2]: spec,
+        fields[3]: status if status is not None else _generated_token(),
+        fields[4]: _generated_token(),
+        fields[5]: True,
+    }
 
 
-def session_show_json_command(module: ModuleType) -> list[str]:
-    """Return the exact source-owned session metadata command."""
-    return [*module.SPX_SESSION_SHOW_COMMAND, "--json", SESSION_ID]
+def _node_status_json(
+    module: ModuleType, spec: str, *, status: str | None = None
+) -> str:
+    return json.dumps(_node_status_payload(module, spec, status=status))
 
 
-def session_show_command(module: ModuleType) -> list[str]:
-    """Return the exact source-owned session prose command."""
-    return [*module.SPX_SESSION_SHOW_COMMAND, SESSION_ID]
+def _verdict_for_kind(
+    verdicts: Iterable[ClaimVerdictLike], kind: object
+) -> ClaimVerdictLike:
+    matching = [item for item in verdicts if item.kind == kind]
+    if len(matching) != 1:
+        raise AssertionError(f"expected one {kind} verdict: {matching}")
+    return matching[0]
 
 
-def external_state_script(module: ModuleType, state: str) -> ScriptMap:
-    """Script one source-owned GitHub PR state observation."""
-    return {tuple(module.GH_PR_VIEW_COMMAND): (0, json.dumps({"state": state}), "")}
-
-
-def unexpected_runner_calls(
+def _unexpected_runner_calls(
     module: ModuleType, calls: Iterable[list[str]]
 ) -> tuple[list[str], ...]:
-    """Return calls outside the source-owned read-only command registry."""
     prefixes = (
         tuple(module.SPX_SESSION_SHOW_COMMAND),
         tuple(module.SPX_SPEC_STATUS_COMMAND),
@@ -431,150 +558,58 @@ def unexpected_runner_calls(
     )
 
 
-def non_stdlib_import_roots() -> tuple[str, ...]:
-    """Return shipped-script imports outside Python's standard library."""
-    tree = ast.parse(VERIFY_MODULE_PATH.read_text())
-    roots: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            roots.update(alias.name.split(".")[0] for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module is not None:
-            roots.add(node.module.split(".")[0])
-    allowed = sys.stdlib_module_names | {"__future__"}
-    return tuple(sorted(roots - allowed))
+def _head_sha(repo: pathlib.Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
 
 
-def subprocess_call_sites() -> tuple[tuple[str, str | None], ...]:
-    """Return every direct subprocess call and its enclosing class method."""
-    tree = ast.parse(VERIFY_MODULE_PATH.read_text())
-    calls: list[tuple[str, str | None]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        function = node.func
-        if (
-            isinstance(function, ast.Attribute)
-            and isinstance(function.value, ast.Name)
-            and function.value.id == "subprocess"
-        ):
-            calls.append((function.attr, _enclosing_method(tree, node)))
-    return tuple(calls)
+def _git_status(repo: pathlib.Path) -> str:
+    return subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
 
 
-def _enclosing_method(tree: ast.AST, target: ast.AST) -> str | None:
-    for class_node in ast.walk(tree):
-        if not isinstance(class_node, ast.ClassDef):
-            continue
-        for node in class_node.body:
-            if isinstance(node, ast.FunctionDef) and any(
-                child is target for child in ast.walk(node)
-            ):
-                return f"{class_node.name}.{node.name}"
-    return None
+def _unreachable_sha(repo: pathlib.Path) -> str:
+    current = _head_sha(repo)
+    while True:
+        candidate = hashlib.sha1(uuid.uuid4().bytes, usedforsecurity=False).hexdigest()
+        if candidate != current:
+            return candidate
 
 
-def verify_runner_parameter_name(module: ModuleType) -> str:
-    """Return the dependency parameter exposed by ``verify``."""
-    parameters = inspect.signature(module.verify).parameters
-    return next(name for name in parameters if name == RUNNER_PARAMETER)
+def _generated_relative_path() -> str:
+    return f"{_generated_token()}.md"
 
 
-def empty_path_environment() -> dict[str, str]:
-    """Return an environment that forces command-launch failure."""
-    return {"PATH": ""}
+def _generated_number() -> str:
+    return str(uuid.uuid4().int)
 
 
-def malformed_metadata_payloads(module: ModuleType) -> tuple[dict[str, object], ...]:
-    """Return the finite invalid shapes for the source-owned metadata contract."""
-    git_ref = module.SESSION_GIT_REF_FIELD
-    specs = module.SESSION_SPECS_FIELD
-    files = module.SESSION_FILES_FIELD
-    return (
-        {git_ref: 123, specs: [], files: []},
-        {git_ref: None, specs: NODE_SPEC, files: []},
-        {git_ref: None, specs: [], files: [123]},
-        {git_ref: None, files: []},
-        {git_ref: None, specs: ["/tmp/escape.md"], files: []},
-        {git_ref: None, specs: [], files: ["../escape.md"]},
-        {git_ref: None, specs: [""], files: []},
-    )
-
-
-def metadata_script(
-    module: ModuleType,
-    output: str,
-    *,
-    exit_code: int = 0,
-    stderr: str = "",
-) -> ScriptMap:
-    """Script the source-owned session metadata command."""
-    return {tuple(session_show_json_command(module)): (exit_code, output, stderr)}
-
-
-def metadata_payload_script(module: ModuleType, payload: object) -> ScriptMap:
-    """Script one JSON-serializable session metadata payload."""
-    return metadata_script(module, json.dumps(payload))
-
-
-def missing_session_script(module: ModuleType) -> ScriptMap:
-    """Script an unavailable session metadata lookup."""
-    return metadata_script(
-        module,
-        output="",
-        exit_code=module.COMMAND_UNAVAILABLE_EXIT,
-        stderr=MISSING_SESSION_ERROR,
-    )
+def _generated_token() -> str:
+    return uuid.uuid4().hex
 
 
 __all__ = [
-    "ABSENT_WORK_BRANCH",
-    "CHILD_NODE_PATH",
-    "CLEAN_GIT_STATUS",
-    "CLOSED_PR_STATE",
-    "ClaimVerdictLike",
-    "EXPECTED_SUBPROCESS_CALL_SITES",
-    "FAILING_STATUS",
-    "FULL_HEX_WORK_BRANCH",
-    "HEX_LIKE_WORK_BRANCH",
-    "INVALID_JSON_ERROR",
-    "INVALID_JSON_FRAGMENT",
-    "MALFORMED_METADATA_ERROR",
-    "MISSING_SESSION_ERROR",
-    "MappingCase",
-    "NODE_PATH",
-    "NODE_SPEC",
-    "PASSING_STATUS",
-    "PRESENT_FILE",
-    "PR_NUMBER",
-    "REACHABLE_WORK_BRANCH",
-    "RUNNER_PARAMETER",
+    "MappingEvidence",
     "RecordingRunner",
-    "SESSION_ID",
-    "SINGLE_VERDICT_COUNT",
-    "UNREACHABLE_SHA",
-    "VERIFY_MODULE_PATH",
-    "WRONG_SHAPE_ERROR",
-    "WRONG_SHAPE_JSON",
-    "claim_mapping_cases",
-    "create_present_file",
-    "dirty_tree",
-    "empty_path_environment",
-    "expected_node_status_evidence",
-    "external_state_script",
-    "head_sha",
+    "branch_reference_evidence",
+    "claim_mapping_evidence",
+    "default_runner_failure_is_unverifiable",
+    "external_calls_go_through_runner",
     "load_verify_session_claims_module",
-    "malformed_metadata_payloads",
-    "metadata_payload_script",
-    "metadata_script",
-    "missing_session_script",
-    "node_status_json",
-    "node_status_script",
-    "non_stdlib_import_roots",
-    "session_command_scripts",
-    "session_show_command",
-    "session_show_json_command",
-    "subprocess_call_sites",
-    "unexpected_runner_calls",
-    "verdict_for_kind",
-    "verify_runner_parameter_name",
+    "metadata_loading_uses_structured_session_api",
+    "node_status_keeps_source_scalar_fields_only",
+    "observed_state_is_surfaced",
+    "script_imports_are_stdlib_only",
+    "verification_is_read_only_and_uses_source_commands",
+    "verify_accepts_injected_runner",
 ]

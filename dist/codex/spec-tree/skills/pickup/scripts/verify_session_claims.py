@@ -35,10 +35,14 @@ SPX_SPEC_STATUS_COMMAND: Final = ("spx", "spec", "status")
 GIT_VERIFY_REF_COMMAND: Final = ("git", "rev-parse", "--verify", "--quiet")
 GIT_STATUS_COMMAND: Final = ("git", "status", "--porcelain")
 GH_PR_VIEW_COMMAND: Final = ("gh", "pr", "view")
+GH_PR_STATE_FIELD: Final = "state"
 
 SESSION_GIT_REF_FIELD: Final = "git_ref"
 SESSION_SPECS_FIELD: Final = "specs"
 SESSION_FILES_FIELD: Final = "files"
+SESSION_GIT_STATUS_LABEL: Final = "git_status"
+PR_REFERENCE_PREFIXES: Final = ("PR", "pull request")
+EXTERNAL_ID_SUBJECT_PREFIX: Final = "PR #"
 SESSION_REQUIRED_FIELDS: Final = (
     SESSION_GIT_REF_FIELD,
     SESSION_SPECS_FIELD,
@@ -61,6 +65,23 @@ class Verdict(StrEnum):
     UNVERIFIABLE = "Unverifiable"
 
 
+class ClaimRelation(StrEnum):
+    """Source-owned relation between a recorded claim and observed state."""
+
+    MATCHES = "matches"
+    DIFFERS = "differs"
+    OBSERVED = "observed"
+    UNAVAILABLE = "unavailable"
+
+
+CLAIM_RELATION_VERDICTS: Final[dict[ClaimRelation, Verdict]] = {
+    ClaimRelation.MATCHES: Verdict.CONFIRMED,
+    ClaimRelation.DIFFERS: Verdict.DISCREPANCY,
+    ClaimRelation.OBSERVED: Verdict.CONFIRMED,
+    ClaimRelation.UNAVAILABLE: Verdict.UNVERIFIABLE,
+}
+
+
 class ClaimKind(StrEnum):
     SESSION_METADATA = "session_metadata"
     GIT_REF = "git_ref"
@@ -68,6 +89,45 @@ class ClaimKind(StrEnum):
     NODE_STATUS = "node_status"
     UNCOMMITTED_STATE = "uncommitted_state"
     EXTERNAL_ID = "external_id"
+
+
+CLAIM_KIND_RELATIONS: Final[dict[ClaimKind, tuple[ClaimRelation, ...]]] = {
+    ClaimKind.SESSION_METADATA: (ClaimRelation.UNAVAILABLE,),
+    ClaimKind.GIT_REF: (
+        ClaimRelation.MATCHES,
+        ClaimRelation.DIFFERS,
+        ClaimRelation.UNAVAILABLE,
+    ),
+    ClaimKind.INJECTED_PATH: (ClaimRelation.MATCHES, ClaimRelation.DIFFERS),
+    ClaimKind.NODE_STATUS: (ClaimRelation.OBSERVED, ClaimRelation.UNAVAILABLE),
+    ClaimKind.UNCOMMITTED_STATE: (
+        ClaimRelation.MATCHES,
+        ClaimRelation.DIFFERS,
+        ClaimRelation.UNAVAILABLE,
+    ),
+    ClaimKind.EXTERNAL_ID: (ClaimRelation.OBSERVED, ClaimRelation.UNAVAILABLE),
+}
+
+
+class GitStatus(StrEnum):
+    """Session vocabulary for the recorded working-tree state."""
+
+    CLEAN = "clean"
+    DIRTY = "dirty"
+
+
+GIT_STATUS_PATTERN: Final = re.compile(
+    rf"^\s*{re.escape(SESSION_GIT_STATUS_LABEL)}:\s*({'|'.join(GitStatus)})\s*$",
+    re.MULTILINE,
+)
+PR_REFERENCE_PATTERN: Final = re.compile(
+    rf"(?:{'|'.join(re.escape(prefix) for prefix in PR_REFERENCE_PREFIXES)})\s*#(\d+)"
+)
+
+
+def verdict_for_relation(relation: ClaimRelation) -> Verdict:
+    """Map the finite claim/observation relation domain to its verdict."""
+    return CLAIM_RELATION_VERDICTS[relation]
 
 
 class CommandRunner(Protocol):
@@ -101,10 +161,22 @@ class ClaimVerdict:
     evidence: str
 
 
+def claim_verdict(
+    kind: ClaimKind,
+    subject: str,
+    relation: ClaimRelation,
+    evidence: str,
+) -> ClaimVerdict:
+    """Construct a verdict only for a source-owned claim/relation pair."""
+    if relation not in CLAIM_KIND_RELATIONS[kind]:
+        raise ValueError(f"{relation} is not valid for {kind}")
+    return ClaimVerdict(kind, subject, verdict_for_relation(relation), evidence)
+
+
 @dataclass(frozen=True)
 class Session:
     git_ref: str | None
-    git_status: str | None
+    git_status: GitStatus | None
     specs: tuple[str, ...]
     files: tuple[str, ...]
     pr_numbers: tuple[str, ...]
@@ -153,8 +225,11 @@ def parse_session(record: dict[str, object], text: str) -> Session:
 
 
 def _session_unverifiable(session_id: str, evidence: str) -> ClaimVerdict:
-    return ClaimVerdict(
-        ClaimKind.SESSION_METADATA, session_id, Verdict.UNVERIFIABLE, evidence
+    return claim_verdict(
+        ClaimKind.SESSION_METADATA,
+        session_id,
+        ClaimRelation.UNAVAILABLE,
+        evidence,
     )
 
 
@@ -196,13 +271,13 @@ def _string_tuple(value: object) -> tuple[str, ...]:
     return tuple(item for item in value if isinstance(item, str))
 
 
-def _body_git_status(text: str) -> str | None:
-    meta = re.search(r"^\s*git_status:\s*(clean|dirty)\s*$", text, re.MULTILINE)
-    return meta.group(1) if meta else None
+def _body_git_status(text: str) -> GitStatus | None:
+    meta = GIT_STATUS_PATTERN.search(text)
+    return GitStatus(meta.group(1)) if meta else None
 
 
 def _pr_numbers(text: str) -> tuple[str, ...]:
-    return tuple(re.findall(r"(?:PR|pull request)\s*#(\d+)", text))
+    return tuple(PR_REFERENCE_PATTERN.findall(text))
 
 
 def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | None:
@@ -213,33 +288,39 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
         [*GIT_VERIFY_REF_COMMAND, f"refs/remotes/origin/{ref}"]
     )
     if branch_code == COMMAND_UNAVAILABLE_EXIT or branch_code >= 128:
-        return ClaimVerdict(
-            ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
-        )
-    if branch_code == 0:
-        return ClaimVerdict(
+        return claim_verdict(
             ClaimKind.GIT_REF,
             ref,
-            Verdict.CONFIRMED,
+            ClaimRelation.UNAVAILABLE,
+            "git unavailable",
+        )
+    if branch_code == 0:
+        return claim_verdict(
+            ClaimKind.GIT_REF,
+            ref,
+            ClaimRelation.MATCHES,
             "branch present on origin",
         )
     if not re.fullmatch(r"[0-9a-f]{40}", ref):
-        return ClaimVerdict(
+        return claim_verdict(
             ClaimKind.GIT_REF,
             ref,
-            Verdict.DISCREPANCY,
+            ClaimRelation.DIFFERS,
             "branch absent from origin",
         )
     code, _, _ = runner.run([*GIT_VERIFY_REF_COMMAND, f"{ref}^{{commit}}"])
     if code == COMMAND_UNAVAILABLE_EXIT or code >= 128:
-        return ClaimVerdict(
-            ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
+        return claim_verdict(
+            ClaimKind.GIT_REF,
+            ref,
+            ClaimRelation.UNAVAILABLE,
+            "git unavailable",
         )
     ok = code == 0
-    return ClaimVerdict(
+    return claim_verdict(
         ClaimKind.GIT_REF,
         ref,
-        Verdict.CONFIRMED if ok else Verdict.DISCREPANCY,
+        ClaimRelation.MATCHES if ok else ClaimRelation.DIFFERS,
         "commit reachable" if ok else "commit not in repository",
     )
 
@@ -249,10 +330,10 @@ def check_paths(session: Session, repo: Path) -> list[ClaimVerdict]:
     for path in session.specs + session.files:
         exists = (repo / path).exists()
         verdicts.append(
-            ClaimVerdict(
+            claim_verdict(
                 ClaimKind.INJECTED_PATH,
                 path,
-                Verdict.CONFIRMED if exists else Verdict.DISCREPANCY,
+                ClaimRelation.MATCHES if exists else ClaimRelation.DIFFERS,
                 "path present in the current checkout"
                 if exists
                 else "path missing in the current checkout",
@@ -270,19 +351,19 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
         )
         if code != 0:
             verdicts.append(
-                ClaimVerdict(
+                claim_verdict(
                     ClaimKind.NODE_STATUS,
                     node,
-                    Verdict.UNVERIFIABLE,
+                    ClaimRelation.UNAVAILABLE,
                     f"spx spec status unavailable: {err.strip() or 'non-zero exit'}",
                 )
             )
             continue
         verdicts.append(
-            ClaimVerdict(
+            claim_verdict(
                 ClaimKind.NODE_STATUS,
                 node,
-                Verdict.CONFIRMED,
+                ClaimRelation.OBSERVED,
                 _node_status_evidence(node, out),
             )
         )
@@ -317,18 +398,18 @@ def check_uncommitted(session: Session, runner: CommandRunner) -> ClaimVerdict |
         return None
     code, out, _ = runner.run(list(GIT_STATUS_COMMAND))
     if code != 0:
-        return ClaimVerdict(
+        return claim_verdict(
             ClaimKind.UNCOMMITTED_STATE,
             session.git_status,
-            Verdict.UNVERIFIABLE,
+            ClaimRelation.UNAVAILABLE,
             "git status unavailable",
         )
-    now = "dirty" if out.strip() else "clean"
+    now = GitStatus.DIRTY if out.strip() else GitStatus.CLEAN
     ok = now == session.git_status
-    return ClaimVerdict(
+    return claim_verdict(
         ClaimKind.UNCOMMITTED_STATE,
         session.git_status,
-        Verdict.CONFIRMED if ok else Verdict.DISCREPANCY,
+        ClaimRelation.MATCHES if ok else ClaimRelation.DIFFERS,
         f"working tree is {now}",
     )
 
@@ -336,20 +417,25 @@ def check_uncommitted(session: Session, runner: CommandRunner) -> ClaimVerdict |
 def check_external_ids(session: Session, runner: CommandRunner) -> list[ClaimVerdict]:
     verdicts: list[ClaimVerdict] = []
     for number in session.pr_numbers:
-        code, out, err = runner.run([*GH_PR_VIEW_COMMAND, number, "--json", "state"])
+        code, out, err = runner.run(
+            [*GH_PR_VIEW_COMMAND, number, "--json", GH_PR_STATE_FIELD]
+        )
         if code != 0:
             verdicts.append(
-                ClaimVerdict(
+                claim_verdict(
                     ClaimKind.EXTERNAL_ID,
-                    f"PR #{number}",
-                    Verdict.UNVERIFIABLE,
+                    f"{EXTERNAL_ID_SUBJECT_PREFIX}{number}",
+                    ClaimRelation.UNAVAILABLE,
                     f"gh unavailable: {err.strip() or 'non-zero exit'}",
                 )
             )
             continue
         verdicts.append(
-            ClaimVerdict(
-                ClaimKind.EXTERNAL_ID, f"PR #{number}", Verdict.CONFIRMED, out.strip()
+            claim_verdict(
+                ClaimKind.EXTERNAL_ID,
+                f"{EXTERNAL_ID_SUBJECT_PREFIX}{number}",
+                ClaimRelation.OBSERVED,
+                out.strip(),
             )
         )
     return verdicts

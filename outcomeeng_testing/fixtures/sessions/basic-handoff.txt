@@ -1,0 +1,2 @@
+{"priority":"medium","goal":"Verify handoff behavior","next_step":"Inspect the session file"}
+# Session

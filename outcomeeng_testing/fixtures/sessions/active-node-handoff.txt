@@ -1,0 +1,4 @@
+{"priority":"medium","goal":"Preserve the active node","next_step":"Load the active node"}
+# Session
+
+Active node: spx/21-spec-tree.enabler/76-sessions.enabler/
