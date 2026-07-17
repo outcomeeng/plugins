@@ -24,9 +24,9 @@ Walk these steps in order. Verification, review, push, and open continue without
 
 **Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
 
-**Step 1 — GATE: Pre-flight.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this complete publication-time preflight immediately before the push so it guards the checkout state the remote receives.
+**Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. For a stacked branch, record `topology=stacked`, `stack_base=<previous-stack-branch>`, and `active_base=stack_base` from the classification result.
 
-**Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. Record `topology=peer` for a peer branch. For a stacked branch, record `topology=stacked` and `stack_base=<previous-stack-branch>` from the classification result.
+**Step 2 — GATE: Preliminary branch hygiene.** Run /merging-standards `<branch_hygiene>` with the `active_base` recorded in Step 1. Every condition must hold or the flow stops at the first failed condition. This early pass prevents verification work on an invalid branch; Step 4 repeats hygiene after the verification fixpoint.
 
 <step name="verification_readiness_decision">
 
@@ -46,7 +46,7 @@ The iteration accumulates commits on the branch — the eventual push at Step 4 
 
 </step>
 
-**Step 4 — GATE: Push.** Use the explicit destination ref form from /merging-standards `<push_semantics>`:
+**Step 4 — GATE: Publication preflight and push.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then repeat `<branch_hygiene>` with the Step 1 `active_base` so the complete preflight guards the exact checkout state the remote receives. Use the explicit destination ref form from /merging-standards `<push_semantics>`:
 
 ```bash
 branch=$(git branch --show-current)
