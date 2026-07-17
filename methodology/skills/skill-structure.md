@@ -6,7 +6,7 @@ All skills in this document belong to the `spec-tree` plugin. Skill names have n
 
 ## Design principles
 
-Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/references/durable-map.md`](../../src/plugins/spec-tree/skills/understand/references/durable-map.md) for the authoritative reference.
+Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/SKILL.md`](../../src/plugins/spec-tree/skills/understand/SKILL.md) for the authoritative inline foundation.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
@@ -322,15 +322,8 @@ understand/
 │   ├── outcome-example.md
 │   └── pdr-example.md
 ├── references/
-│   ├── assertion-types.md
-│   ├── durable-map.md
 │   ├── excluded-nodes.md
-│   ├── imperfection-protocol.md
-│   ├── node-types.md
-│   ├── ordering-rules.md
-│   ├── product-domain-shapes.md
-│   ├── verification-kinds.md
-│   └── what-goes-where.md
+│   └── product-domain-shapes.md
 └── templates/
     ├── product/
     │   └── product-name.product.md

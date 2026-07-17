@@ -4,89 +4,487 @@ description: >-
   ALWAYS invoke this skill when the live SPEC_TREE_FOUNDATION marker is absent
   before direct filesystem access under spx/ or before reading, searching,
   listing, or changing source or test files. NEVER access that product content
-  without loading this skill and all its references first.
+  without loading this skill first.
 allowed-tools: Read, Glob, Grep
 ---
 
 <objective>
 
-The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds.
+The complete Spec Tree foundation loaded eagerly in one skill payload and recorded by a live `<SPEC_TREE_FOUNDATION>` marker.
 
 </objective>
 
-<principles>
+<truth_hierarchy>
 
-1. **TRUTH FLOWS DOWN** — Decisions (ADR: `{slug}.adr.md`/PDR: `{slug}.pdr.md`) decide. Specs (`{slug}.md`) declare in alignment with decisions. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never change a decision to match a spec. Never change a spec to match tests. Never change tests to match code. Read `references/durable-map.md`.
-2. **SPEC TREE IS DECLARATIVE** — The Spec Tree is a durable, declarative map. Nothing moves, nothing closes. Specs declare product truth. Any change to what the operator demands is reflected in the Spec Tree first and naturally induces temporary inconsistency while dependent siblings and lower levels and consumers of decisions are brought up to date.
-3. **DETERMINISTIC CONTEXT** — The Spec Tree structure defines what context Claude receives. No keyword search, no heuristics. This is handled by `/contextualize`, whose context marker carries both document context and lifecycle continuation state.
-4. **ATEMPORAL VOICE** — The Spec Tree states product truth. Never narrate history. Immediately flag temporal language and make a proposal how to address it.
-5. **FULL PATHS ONLY** — In every conversation with the operator and in every markdown link, every Spec Tree decision (ADR and PDR) and Spec Tree node reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
-6. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
-7. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertion types derive from PDRs/ADRs and are materialized in specs. Assertions never derive from code or tests.
-8. **VERIFICATION TYPES** — Five verification types establish a node's standing: validate, test, review, audit, evaluate. Two orthogonal axes describe each — verdict mode (deterministic or agentic) and purpose (conformance or correctness). Three of these verification types back the tag an assertion carries: `[test]` indicates the evidence is established via deterministic tests, `[eval]` indicates the evidence is established by a deterministic eval runner scoring the producing skill's structured verdict, `[audit]` indicates the evidence is established by a dedicated audit sub-agent. In contrast, the verification types *validate* and *review* are never used in spec assertions. Instead, validation is based on the product- and language-specific deterministic quality gates like linting and static analysis; review is based on the skill-driven standards executed by a dedicated sub-agent. Read `references/verification-kinds.md`.
-9. **IMPERFECTIONS ARE ADDRESSED** — Claude notices every imperfection and addresses it. Claude researches on its own to find the right fix — never guessing, never assuming a fix is unsafe to make alone when available context could settle it. Only when an imperfection survives that validation does Claude take it to the operator — as options with a clear recommendation that improves the product, naming the skills and instructions behind the recommendation. Read `references/imperfection-protocol.md`.
-10. **COORDINATION NOTES AND SESSION FILES INFORM WHAT TO WORK ON** — Coordination notes are Spec Tree node-aligned PLAN.md and ISSUES.md node-local coordination notes inside the tree. They are committed to git for one reason: future sessions read them on context load through `/contextualize`. They go stale quickly unless acted upon, so verify a coordination note before it steers work — reconcile it against the decisions (ADR/PDR), specs and verify any referenced downstream files (i.e., tests and implementation), and the current user intent, then act only where it still holds and suggest to update or remove any notes that are out of date. A coordination note never declares product truth, product decisions, architecture decisions, assertions, or evidence. `/contextualize` reads them automatically; conformance checks ignore them. Session files are invisible to Claude and only accessible via the `spx` CLI. Session files are the only Spec Tree-governed files that are *not committed to git* — `spx session` shares them across worktrees.
-11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, testing, merge lifecycle and other skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualize`; consumed by the relevant skill.
-12. **NO VALUE IS DELIVERED WITHOUT MERGE** — ALL work only delivers value when merged to the default branch on origin through `/merge`. Local implementation and verification are progress, not completion; a branch with commits ahead of its resolved base is unfinished even when the working tree is clean. A created branch, a local commit, a pushed branch, an opened PR, or a clean worktree is a transport checkpoint, never a completion boundary. After targeted verification (validation, tests / evals, audit, review) pass according to the guidance in CLAUDE.md, continue into `/merge` and follow the selected transport until the change reaches the default branch on origin, or until an explicit lifecycle gate stops with no independent local action remaining without operator input or an external-state change. After committing or pushing a default-branch-destined changeset, invoke `/merge` in the same turn unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work. Do not stop after "implemented", "validated", "tests passed", "committed", or "pushed" when the user asked to make the change. Repository-specific merge behavior belongs in `spx/local/merging.md`, never in a generated guide; never reconstruct the transport from incidental docs when the overlay is absent — invoke `/merge`, the transport dispatcher: it classifies the changeset, selects the merge transport, and delegates to the selected transport's skills. `spx/local/merging.md` is an optional repo-local overlay that may refine the selection and configure transport behavior — a conditional read, read only when present. Its absence is normal and not of interest to the operator; the default lifecycle applies.
+<layer_precedence>
 
-</principles>
+**TRUTH FLOWS DOWN.** The Spec Tree is a durable, declarative map of what the product does. Its four layers depend on the layer above:
+
+```text
+PDR/ADR  →  Spec  →  Test  →  Code
+governs     declares   verifies   complies
+```
+
+- PDRs and ADRs decide product and architecture truth.
+- Specs declare product output in alignment with those decisions.
+- Tests are executable evidence derived from specs.
+- Code complies with tests.
+
+When layers disagree, the lower layer is in violation.
+
+- NEVER: weaken a decision to match a spec, a spec to match tests, or tests to match code.
+
+</layer_precedence>
+
+<future_product_truth>
+
+- ALWAYS: higher-level truth remains authoritative while coherent, even when lower layers have not caught up.
+
+Higher-level truth may lead implementation. A coherent product spec, PDR, ADR, or ancestor spec stays authoritative when lower specs, tests, or code have not caught up. Evaluate declaration validity separately from implementation completeness. Current code shape is evidence about code, never authority over higher layers.
+
+</future_product_truth>
+
+<decision_to_spec_alignment>
+
+- ALWAYS: align every first affected lower spec in the same changeset as a higher-level truth change.
+
+When a higher-level artifact changes, align every first affected lower spec in the same changeset. If tests or code remain, record the concrete next step and governing artifact in `PLAN.md` at the first affected lower node. Use `ISSUES.md` for known defects or contradictions. Use `spx/EXCLUDE` only when a node has specs and tests while implementation is absent; exclusion never resolves a conceptual disagreement or permits lower layers to contradict decisions.
+
+</decision_to_spec_alignment>
+
+<atemporal_voice>
+
+- ALWAYS: specs state atemporal product truth and contain no history or journey language.
+
+Specs declare atemporal truth. Eliminate history and journey language:
+
+| Temporal                           | Atemporal                |
+| ---------------------------------- | ------------------------ |
+| “We discovered that X”             | “X ensures Y”            |
+| “We need to address X”             | “The product provides X” |
+| “Currently, the system…”           | “The system…”            |
+| “After investigating, we decided…” | “The decision governs…”  |
+| “This was introduced because…”     | “The output enables…”    |
+
+Read every spec sentence aloud. If it would sound wrong after the work ships, rewrite it.
+
+</atemporal_voice>
+
+<declarations>
+
+- ALWAYS: derive declaration state from specs, evidence, and implementation rather than hand-maintained status.
+
+Writing a spec makes a declaration. Writing linked evidence makes the declaration verifiable. Removing a spec prunes product truth. The following backlog operations do not exist:
+
+- close, archive, or move a spec to done;
+- assign or store a spec status;
+- mark a declaration complete by hand;
+- weaken a declaration to match its implementation.
+
+</declarations>
+
+<node_states>
+
+- ALWAYS: derive each node state from the presence of its spec, evidence, implementation, and evidence result.
+
+A node's state is derived:
+
+- **Declared** — spec exists, no evidence.
+- **Specified** — spec and evidence exist while implementation is absent; the node is covered by `spx/EXCLUDE`.
+- **Failing** — implementation exists and evidence fails.
+- **Passing** — implementation exists and evidence passes.
+
+Specified and failing are valid states. They expose where lower layers must catch up.
+
+</node_states>
+
+</truth_hierarchy>
+
+<artifact_placement>
+
+- ALWAYS: classify content by the artifact purpose that owns it.
+
+| Artifact                | Purpose                                            | Contains                                             | Verified by                                  |
+| ----------------------- | -------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| ADR                     | Governs how the product is built                   | Architecture decisions, rationale, invariants        | ADR audit                                    |
+| PDR                     | Governs what users can rely on                     | Product decisions and observable properties          | PDR audit                                    |
+| Enabler spec            | Declares infrastructure output                     | `PROVIDES ... SO THAT ... CAN ...` and assertions    | Linked evidence                              |
+| Outcome spec            | Declares an output hypothesis                      | Output, outcome, impact, and assertions              | Linked evidence                              |
+| Test file               | Proves one typed assertion class                   | Executable assertion evidence                        | Test runner                                  |
+| Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
+| Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers      | Tests against violating fixtures             |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known defects          | Stale-prone node-local context                       | Reconciliation on context load               |
+
+ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
+
+<test_artifact_boundaries>
+
+- ALWAYS: keep executable assertion files separate from the production infrastructure they consume.
+
+Files under `spx/<node>/tests/` contain typed assertion evidence only. Harnesses mediate systems, generators produce variable domains, and fixtures are inert whole-payload inputs read by path. These artifacts are governed production code in the location declared by the active language's test standards, outside `spx/` and every `tests/` directory.
+
+Test infrastructure follows normal spec composition. Govern it through the naturally placed node whose assertions or category contract own its behavior. Never fabricate a top-level `infrastructure -> testing -> {harnesses, generators, fixtures}` subtree solely because test infrastructure exists. Avoid the anti-terms “test support,” “test helpers,” “test utilities,” and “test tools,” which hide governed production behavior behind an unowned utility category.
+
+Enforcement rules are production validation code. Their `[test]` evidence runs the rule against violating fixtures and proves detection; a green validation pipeline separately proves registration.
+
+</test_artifact_boundaries>
+
+<common_misplacements>
+
+- NEVER: preserve content in an artifact whose purpose does not own it.
+
+| Content                                 | Wrong location     | Correct location                                              |
+| --------------------------------------- | ------------------ | ------------------------------------------------------------- |
+| Architecture choice                     | Spec               | ADR                                                           |
+| Product decision or user guarantee      | Spec               | PDR                                                           |
+| Outcome hypothesis                      | ADR/PDR            | Outcome spec                                                  |
+| Test reference                          | ADR/PDR            | Spec assertion                                                |
+| Implementation detail                   | Spec               | Code                                                          |
+| How to build something                  | Spec               | ADR or code                                                   |
+| Enforceable static constraint           | `[audit]`          | `[test]` on the enforcement rule                              |
+| Cross-cutting invariant                 | Child spec         | Ancestor spec                                                 |
+| Remaining work                          | Session file       | Node-local `PLAN.md`                                          |
+| Known unresolved defect                 | Session file       | Node-local `ISSUES.md`                                        |
+| Pending work induced by higher truth    | Higher declaration | First affected lower node's `PLAN.md` after lower specs align |
+| Child enumeration                       | Parent spec        | Child specs and `/contextualize` output                       |
+| Harness, generator, or fixture behavior | Executed test file | Language-standard test-infrastructure location                |
+
+Evidence specialization is valid when a child `[test]` rule concretizes an ancestor `[audit]` rule against a narrower source surface. Same-content repetition using the same evidence mechanism is duplication.
+
+</common_misplacements>
+
+</artifact_placement>
+
+<node_model>
+
+The tree contains exactly two recursive node types.
+
+<enabler>
+
+- MUST: classify deterministic shared capability with stable additive assertions as an enabler.
+
+**Enabler**
+
+- Directory suffix: `.enabler`
+- Spec opening: `PROVIDES ... SO THAT ... CAN ...`
+- Purpose: infrastructure removed when all dependents retire.
+- Use for shared infrastructure, deterministic capabilities, and output whose assertions are stable and grow by addition.
+
+</enabler>
+
+<outcome>
+
+- MUST: classify a user-behavior hypothesis with material output uncertainty as an outcome.
+
+**Outcome**
+
+- Directory suffix: `.outcome`
+- Spec opening: `WE BELIEVE THAT ... WILL ... CONTRIBUTING TO ...`
+- Purpose: a bet that one output will produce a measurable user-behavior change contributing to business impact.
+- Assertions specify the output. The outcome and impact remain hypotheses requiring real users.
+- Use when material uncertainty remains about which output achieves the goal and most assertions could change while the hypothesis stays stable.
+
+Apply the forcing question before choosing an outcome: why can this not be written as `PROVIDES X SO THAT Y CAN Z`? A forced hypothesis signals an enabler.
+
+</outcome>
+
+<nesting_rules>
+
+- NEVER: place an outcome beneath an enabler.
+
+Valid node nesting:
+
+| Parent  | Child nodes           |
+| ------- | --------------------- |
+| Outcome | Enablers and outcomes |
+| Enabler | Enablers only         |
+
+An enabler can never contain an outcome. If a proposed child under an enabler carries material output uncertainty, either the parent is mistyped or the child is an enabler whose output is fully determined.
+
+</nesting_rules>
+
+<common_structure>
+
+- ALWAYS: use the canonical node shape and co-locate each evidence lane under its governing node.
+
+Canonical node shape:
+
+```text
+NN-{slug}.{enabler|outcome}/
+├── {slug}.md
+├── tests/                              # when the first [test] file exists
+├── evals/{rule-slug}/                  # when the first [eval] exists
+├── PLAN.md                             # optional
+├── ISSUES.md                           # optional
+└── NN-{child-slug}.{enabler|outcome}/
+```
+
+- The spec file is `{slug}.md`, with no numeric or type suffix.
+- `[test]` evidence is co-located under `tests/`; the directory materializes with the first test file, and its filename encodes one assertion type and execution level according to the product's language convention.
+- `[eval]` evidence is co-located under `evals/{rule-slug}/` with `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl`; full run transcripts stay ignored under `runs/`.
+- `PLAN.md` and `ISSUES.md` are optional coordination notes, never product truth.
+- ADRs and PDRs are files inside a node directory, never child nodes.
+
+</common_structure>
+
+</node_model>
+
+<assertion_model>
+
+Assertions specify locally verifiable product output. They derive from decisions and specs, never from tests or code.
+
+<verification_types>
+
+- ALWAYS: choose exactly one verification type before choosing any test assertion type.
+
+Choose the verification type first:
+
+| Type     | Tag            | Verdict                                                 | Use                                                                                 |
+| -------- | -------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| test     | `[test](path)` | deterministic                                           | Behavior is a deterministic function of inputs.                                     |
+| evaluate | `[eval](path)` | deterministic score over a producer's structured output | LLM-driven behavior emits a parseable verdict scored against cases and a threshold. |
+| audit    | `[audit]`      | agentic                                                 | A semantic constraint has no structural verdict to score.                           |
+
+`[review]` is the legacy spelling of the `[audit]` assertion tag. Review itself is an open-ended changeset gate and backs no assertion tag.
+
+</verification_types>
+
+<assertion_types>
+
+- MUST: assign one assertion type only to `[test]` evidence and derive it from the claim's quantifier.
+
+Only `[test]` assertions carry one of five assertion types, selected from the quantifier:
+
+| Assertion type | Quantifier                       | Test strategy             | Use                                                     |
+| -------------- | -------------------------------- | ------------------------- | ------------------------------------------------------- |
+| Scenario       | There exists                     | Example-based             | One concrete interaction, journey, error, or edge case. |
+| Mapping        | For all over a finite set        | Parameterized             | Known input-output or state correspondence.             |
+| Conformance    | External or internal oracle      | Validator/tool comparison | Schema, protocol, or declared contract.                 |
+| Property       | For all over an open value space | Property-based            | Invariant for every valid input.                        |
+| Compliance     | ALWAYS/NEVER rule                | Violating fixtures        | A deterministic behavioral boundary.                    |
+
+A universal is never a scenario. Under `[test]`, choose mapping for a finite source-owned domain, conformance for an oracle, compliance for a rule exercised against violations, and property for an open domain. Choose scenario only for one existential interaction. Evaluate and audit carry no assertion type.
+
+</assertion_types>
+
+<verification_selection>
+
+- MUST: select test, evaluate, or audit evidence from the verdict the real subject can produce.
+
+Prefer `[test]` when behavior is deterministic. Use `[eval]` when the real LLM-driven producer emits a parseable contract that a runner can score. Use `[audit]` when no deterministic or structural verdict exists.
+
+Structural lint constraints use `[test]` evidence that runs the rule against violating fixtures and proves detection. Pipeline inclusion is a separate operational concern established by the validation gate.
+
+</verification_selection>
+
+<mixing_types>
+
+- ALWAYS: group mixed `[test]` assertions by assertion type and use full `spx/...` citations.
+
+Group mixed `[test]` assertions by type. Each test file carries one assertion type. Every node, test, ADR, or PDR citation uses its full path from `spx/`.
+
+</mixing_types>
+
+</assertion_model>
+
+<ordering_model>
+
+<context_loading_rule>
+
+- ALWAYS: interpret sibling integer prefixes as deterministic context-loading relationships.
+
+All indexed artifacts inside one directory—nodes, ADRs, and PDRs—share one numeric namespace. Prefixes are sibling-local and drive deterministic context loading:
+
+- Lower-index siblings constrain the target and their specs are read.
+- Same-index siblings are independent peers; list them without reading them as constraints.
+- Higher-index siblings may depend on the target; list them without reading them as constraints.
+- A lower-index ADR or PDR constrains higher-index siblings and descendants.
+
+</context_loading_rule>
+
+<assignment_is_the_inverse>
+
+- MUST: assign indices as the inverse of the context-loading rule and prove every ordered dependency.
+
+Index assignment is the inverse of this read rule. Giving a new child a higher index declares that each lower-index sibling must be present in its future context. Giving peers the same index declares independence. `/decompose` owns assignment because it must prove the dependency consequence before choosing an index.
+
+</assignment_is_the_inverse>
+
+<full_paths>
+
+- ALWAYS: cite every node and decision with its complete `spx/...` path.
+
+Always use complete `spx/...` paths. `32-parser.enabler` and `15-build.adr.md` are ambiguous because other directories may reuse both prefixes.
+
+</full_paths>
+
+</ordering_model>
+
+<verification_model>
+
+Verification has five fixed types over two independent axes.
+
+<axes>
+
+- ALWAYS: classify verification independently by verdict mode and purpose.
+
+**Verdict mode**
+
+- **Deterministic** — a command scores fixed expectations and returns pass or fail; no model judges the result.
+- **Agentic** — Claude applies a skill and judges the subject, from checklist audit to open-ended review.
+
+**Purpose**
+
+- **Conformance** — fit to methodology, language standards, and validation configuration.
+- **Correctness** — integrity of the decision → spec → evidence → implementation chain.
+
+</axes>
+
+<types>
+
+- ALWAYS: use exactly the five verification types audit, validate, review, evaluate, and test.
+
+The five types are:
+
+- **audit** — agentic conformance or mechanical correctness judgment; backs `[audit]`.
+- **validate** — deterministic conformance through format, lint, typing, and static-analysis gates; backs no assertion tag.
+- **review** — agentic open-ended correctness judgment over quality, architecture, risk, and layer consistency; backs no assertion tag.
+- **evaluate** — deterministic scoring of structured producer output; backs `[eval]`.
+- **test** — deterministic execution of behavior; backs `[test]`.
+
+Every verification activity declares its type and purpose. A type's verdict mode is fixed. A model never judges a deterministic verdict. The type set and the two verdict modes never expand without amending this foundation and its governing decision.
+
+</types>
+
+<vocabulary_boundaries>
+
+- MUST: resolve overlapping verification vocabulary against this foundation before judging a name defective.
+
+When vocabulary overlaps another grammar, resolve verification vocabulary here first and inspect history before classifying a name as defective. Generated output and implementation names are lower-layer evidence.
+
+</vocabulary_boundaries>
+
+</verification_model>
+
+<imperfection_protocol>
+
+<recording>
+
+- ALWAYS: record every observed defect immediately with its evidence, governing workflow, handling, and classification.
+
+Record every observed defect in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or any other incoherence. Each entry carries:
+
+- the exact imperfection;
+- the path, line, command output, or external state that exposed it;
+- the skill or workflow governing the fix;
+- the proposed handling and current classification.
+
+Apply clear, local, low-risk corrections immediately. Surface a blocking decision through the structured-question tool. Hold a non-blocking decision only until the next natural checkpoint.
+
+</recording>
+
+<no_origin_distinction>
+
+- NEVER: reduce responsibility for a defect because of its age, author, or originating change.
+
+The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss a defect as inherited, already broken, or outside the current change merely because another change created it.
+
+</no_origin_distinction>
+
+<touched_file_debt>
+
+- ALWAYS: fix debt that the current change causes, surfaces, or invalidates.
+
+Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its defect. Location never licenses deferral.
+
+Record and proceed only for work independent of the current change in a surface the change neither touches nor invalidates. Persist that work at the correct tier: decision/spec for durable truth, methodology for reusable workflow, `PLAN.md` for pending node work, and `ISSUES.md` for known node defects. Recording never ends an otherwise actionable session.
+
+</touched_file_debt>
+
+<expense_ceiling>
+
+- NEVER: raise a cost, quota, worker, retry, timeout, or external-capacity ceiling without operator approval in the same turn.
+
+Command defaults are authority for cost-bearing and quota-bearing runs. Never raise an explicit or implicit spend, token, worker, retry, timeout, hosted-runner, paid-provider, or external-capacity ceiling without operator approval in the same turn. When a default ceiling blocks a run, report the exact command, ceiling, proposed increase, expected rerun scope, and pause/inspect option.
+
+</expense_ceiling>
+
+<closing_protocol>
+
+- ALWAYS: continue actionable in-scope work and invoke `/handoff` only when no continuation remains or continuation is impossible.
+
+Apply the closing test at task completion: can the operator reasonably ask “What now?”
+
+- When the stated goal remains actionable, continue the governing workflow.
+- A passing check, merge, clean worktree, or persisted note is a milestone, never permission to stop while do-able work remains.
+- Run `/handoff` only when the goal is met with no continuation remaining or continuation is impossible because the operator halted work, context is exhausted, or an external blocker prevents the next action.
+- Never write `PLAN.md` or a session file to postpone work Claude can perform now.
+- When operator judgment is required, close with the structured-question tool rather than a prose offer.
+
+</closing_protocol>
+
+<spec_tree_integration>
+
+- ALWAYS: keep the live ledger conversation-local and persist unresolved items only at their correct durable or coordination tier.
+
+The ledger is conversation-local. Fixed entries disappear. Unresolved entries persist only through the correct durable or coordination artifact. Session files under `.spx/` carry ephemeral initialization context and remain outside Git.
+
+</spec_tree_integration>
+
+</imperfection_protocol>
+
+<coordination_and_context>
+
+- ALWAYS: `/contextualize` derives deterministic context from tree structure, never keyword search. It loads product truth, ancestry, lower-index constraints, decisions, cited governance, guides, coordination notes, and lifecycle routing for one canonical target.
+
+Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `ISSUES.md` against current decisions, specs, evidence, implementation, and user intent before acting. They never declare product truth or cited governance.
+
+- `PLAN.md` carries concrete pending steps for its node, including lower-layer work induced by a higher declaration.
+- `ISSUES.md` carries known defects, contradictions, gaps, and untestable assertions.
+- Session files remain operational state outside Git; they never replace node-local coordination.
+
+`spx/local/` holds product-specific overlays for coding, architecture, testing, and lifecycle skills. Enumerate overlays during context loading and read each only when its governing skill requires it. `spx/local/merging.md` is the optional lifecycle overlay read by `/merge` and `/contextualize`.
+
+</coordination_and_context>
+
+<delivery_boundary>
+
+- ALWAYS: no value is delivered until the changeset reaches the default branch on origin through `/merge`. Local edits, tests, audits, reviews, commits, pushes, and clean branches are checkpoints.
+
+After verification and any successful commit or push, continue through `/merge` unless the operator explicitly limited the request to proposal, analysis, review, branch-only, or local-only work. A terse “continue,” “ship it,” or “finish” continues the active lifecycle.
+
+A blocker exists only when the immediate next action needs operator input or an external state change, every independent local action is complete, and the applicable gates have run or produced concrete failing evidence.
+
+</delivery_boundary>
 
 <workflow>
 
-1. Load the complete foundation on every invocation. The root router normally invokes `/understand` only when the live `<SPEC_TREE_FOUNDATION>` marker is absent; an explicit invocation still reruns this workflow without an abbreviated path.
-   A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
-   After every compaction, treat the marker as absent until this workflow emits it again.
-   A missing marker blocks direct filesystem access under `spx/` and access to source or test content. It does not block `spx session` operations, `spx worktree status`, `spx diagnose`, or no-patch Git status, history, and topology; invoke this workflow before following any path those commands return into product content.
-2. Read the following references in full and point out any contradictions to the operator immediately:
-   - `references/durable-map.md`
-   - `references/node-types.md`
-   - `references/assertion-types.md`
-   - `references/ordering-rules.md`
-   - `references/verification-kinds.md`
-   - `references/imperfection-protocol.md`
-3. List each operational reference and `spx/local/` overlay by path — evidence each was located this session, not assumed. These load on demand in other skills:
-   - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
-   - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
-   - `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
-   - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualize`, `/handoff`)
-   - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
-
-   Locate the three named references directly and enumerate `spx/local/*.md` with `Glob`.
-4. Check for local lifecycle routing:
-   - Changes destined for the default branch route through `/merge`, the transport dispatcher. It classifies the changeset, selects the merge transport, and delegates to the selected transport's skills, reading `spx/local/merging.md` as an optional overlay when present.
-   - If `spx/local/merging.md` exists at the repository root, read it. Its declarations refine transport selection and lifecycle configuration. Its absence is normal and not a blocker — the default lifecycle applies, and merge behavior is never reconstructed from other docs or changed by editing a generated guide.
-5. Enforce the default-branch completion boundary:
-   - If the work changes files and is destined for the default branch, continue after verification into `/merge`.
-   - After any successful commit or push of a changeset that changes specs, decisions, tests, implementation, or docs, immediately invoke `/merge` unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work.
-   - A request to create a branch, preserve a branch, or push a branch does not by itself scope out `/merge`; it only names the transport state to create before continuing.
-   - A clean working tree is still unfinished when the branch carries committed changes ahead of its resolved base.
-   - Passing validation, tests, review, or audit gates is progress evidence, not completion.
-   - A status assessment may report local evidence, then continue through `/merge` when the branch carries committed changes and the user has not explicitly limited the task.
-   - Terse follow-ups such as "so?", "continue", "ship it", "finish", or "go on" mean continue the already-governed merge lifecycle.
-   - Stop before `/merge` only when the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work.
-   - A blocker exists only after every independent action that does not require operator input is complete: the applicable edits are made, deterministic verification and required local review or audit gates have run or produced concrete failing evidence, and all work that can be committed without the answer is committed on a local branch.
-   - Until no independent work remains, continue doing work that does not depend on the answer or removed blocker. When no independent work remains, report the exact blocker, the evidence, and the next operator decision needed.
-6. List each template and example by path — evidence each was located, not assumed — then read in full immediately when authoring:
-   - `templates/product/product-name.product.md`
-   - `templates/decisions/decision-name.adr.md`
-   - `templates/decisions/decision-name.pdr.md`
-   - `templates/nodes/enabler-name.md`
-   - `templates/nodes/outcome-name.md`
-   - `examples/` — concrete filled specs (read to see what a completed spec looks like)
-
-   Locate the five named templates directly and enumerate `examples/*.md` with `Glob`.
-7. Read the product's root routing guide once, if present — `Read: CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
-8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
+1. Load this complete inline foundation on every invocation. A marker in a compaction summary, session file, handoff note, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
+2. Check internal consistency across `<truth_hierarchy>`, `<artifact_placement>`, `<node_model>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, and `<imperfection_protocol>`. Surface any contradiction immediately. No mandatory foundation reference read follows this step.
+3. Locate these operational references and list their paths without reading them until another skill needs them:
+   - `${CLAUDE_SKILL_DIR}/references/excluded-nodes.md`
+   - `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`
+   - `spx/local/*.md`
+     Node-local `PLAN.md` and `ISSUES.md` discovery belongs to `/contextualize` after a node is in scope; never enumerate coordination notes during `/understand`.
+4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
+5. Locate the five authoring templates and `${CLAUDE_SKILL_DIR}/examples/*.md`; read them only when authoring:
+   - `${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md`
+   - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md`
+   - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md`
+   - `${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md`
+   - `${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md`
+6. Read the complete root `CLAUDE.md` once when present. It routes skill invocation and carries product commands outside the managed router.
+7. Emit the marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>
-Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol, verification-kinds
-Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
-Local lifecycle route: changes route through /merge (classifies the changeset, selects the merge transport, delegates to the selected transport; reads spx/local/merging.md as an optional overlay only when present, and its absence applies the default lifecycle)
-Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
+Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
+Operational references available: excluded-nodes, product-domain-shapes
+Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
+Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
 Routing guide: loaded from CLAUDE.md | absent
 Templates available: product, adr, pdr, enabler, outcome
-Examples available in: examples/
+Examples available: adr, enabler, outcome, pdr
 </SPEC_TREE_FOUNDATION>
 ```
 
@@ -94,20 +492,27 @@ Examples available in: examples/
 
 <failure_modes>
 
-**Failure: Claude reported completion at a pushed branch.**
+**Mandatory references made progressive disclosure fictional.**
 
-What happened: Claude created a branch, validated the change, committed, and pushed it, then reported the task complete without invoking `/merge`.
+Claude loaded `SKILL.md`, then opened six references required on every fresh invocation. One aggregate read truncated, forcing repeat reads and making the nominal overview/reference split slower than one complete payload.
 
-Why it failed: Claude treated the pushed branch as delivered value. In the Spec Tree lifecycle a pushed branch is review-ready state, not delivered value — delivered value is the change merged to the default branch on origin through `/merge`.
+Keep unconditional foundation truth inline and govern the total eager payload. Reserve references for conditional operational detail, templates, and examples.
 
-How to avoid: After a commit or push succeeds, check whether the user explicitly scoped the task to branch-only, local-only, proposal, or review. If not, invoke `/merge` immediately and let it select the transport.
+**Higher-level truth was shaped to current code.**
+
+Claude treated implementation incompleteness as evidence against a coherent decision. Preserve the higher declaration, align the first affected lower specs, and record concrete lower-layer work.
+
+**A pushed branch was reported as complete.**
+
+Claude treated a transport checkpoint as delivered value. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining independent action.
 
 </failure_modes>
 
 <success_criteria>
 
-- [ ] The six references in step 2 are read in full, with any contradictions among them surfaced to the operator
-- [ ] Every operational reference, template, example, and `spx/local/` overlay is listed by path — evidence each was located this session, not assumed
-- [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
+- The foundation domains and artifact-placement taxonomy are present inline and require no secondary file reads.
+- Internal foundation sections contain no contradiction in truth flow, artifact ownership, node grammar, assertion selection, ordering, verification vocabulary, or imperfection handling.
+- Operational references, templates, examples, overlays, and the root guide are located or read according to the workflow.
+- A live `<SPEC_TREE_FOUNDATION>` marker records the inline payload.
 
 </success_criteria>

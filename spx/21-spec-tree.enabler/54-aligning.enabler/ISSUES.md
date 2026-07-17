@@ -18,7 +18,7 @@ The child node `spx/21-spec-tree.enabler/13-infrastructure.enabler/22-github-act
 
 The ADR rule binds marketplace-wide and is verified by audit. The child rule binds the three Python helpers under that node and is verified by automated grep. The child rule is a stronger guarantee at a smaller scope; the ancestor rule is a weaker guarantee at a broader scope. Removing either weakens the verification stack.
 
-The `/align` audit flagged both child rules as cross-cutting duplications of the ADR. That flag is incorrect — `<common_misplacements>` in `what-goes-where.md` governs *where content lives*, not *what evidence verifies it*. Two rules with the same content but different evidence types serve different purposes.
+The `/align` audit flagged both child rules as cross-cutting duplications of the ADR. That flag is incorrect — live `/understand` `<common_misplacements>` governs *where content lives*, not *what evidence verifies it*. Two rules with the same content but different evidence types serve different purposes.
 
 ### What needs to change
 

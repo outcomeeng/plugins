@@ -45,7 +45,7 @@ Evaluate against each criterion:
 
 ### Structure
 
-- [ ] SKILL.md under 500 lines
+- [ ] SKILL.md under 500 lines, or the skill qualifies for `/skill-standards` `<eager_foundation_exception>` and `/audit-skills` records a rendered payload of at most 40,000 Unicode code points
 - [ ] Pure XML structure (no markdown headings # in body)
 - [ ] All XML tags properly closed
 - [ ] Has required tags: `<objective>` or `<essential_principles>`
@@ -115,17 +115,17 @@ If fixing:
 <audit_anti_patterns>
 Common anti-patterns to flag:
 
-| Anti-Pattern         | Description                                             |
-| -------------------- | ------------------------------------------------------- |
-| Skippable principles | Essential principles in separate file instead of inline |
-| Monolithic skill     | Single file over 500 lines                              |
-| Mixed concerns       | Procedures and knowledge in same file                   |
-| Vague steps          | "Handle the error appropriately"                        |
-| Untestable criteria  | "User is satisfied"                                     |
-| Markdown headings    | Using # instead of XML tags in body                     |
-| Missing routing      | Complex skill without intake/routing                    |
-| Broken references    | Files mentioned but don't exist                         |
-| Redundant content    | Same information in multiple places                     |
+| Anti-Pattern         | Description                                                                |
+| -------------------- | -------------------------------------------------------------------------- |
+| Skippable principles | Essential principles in separate file instead of inline                    |
+| Monolithic skill     | Single file over 500 lines without a qualifying eager-foundation exception |
+| Mixed concerns       | Procedures and knowledge in same file                                      |
+| Vague steps          | "Handle the error appropriately"                                           |
+| Untestable criteria  | "User is satisfied"                                                        |
+| Markdown headings    | Using # instead of XML tags in body                                        |
+| Missing routing      | Complex skill without intake/routing                                       |
+| Broken references    | Files mentioned but don't exist                                            |
+| Redundant content    | Same information in multiple places                                        |
 
 </audit_anti_patterns>
 

@@ -84,8 +84,9 @@ validation:
 check-manifests:
     uv run python -m outcomeeng.validation.plugins .
 
-# Check SKILL.md frontmatter in all skills
+# Check skill Markdown formatting and SKILL.md frontmatter
 check-skills:
+    dprint check --config dprint.jsonc "src/plugins/**/skills/**/*.md" "dist/claude/**/skills/**/*.md" "dist/codex/**/skills/**/*.md"
     find src/plugins dist/claude dist/codex -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
 
 # Regenerate committed runtime plugin trees

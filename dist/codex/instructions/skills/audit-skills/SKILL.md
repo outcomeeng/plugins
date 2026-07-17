@@ -3,7 +3,7 @@ name: audit-skills
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
   operational effectiveness, portability, voice, and structure.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Bash(python3 -c:*), Skill
 ---
 
 Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -11,7 +11,7 @@ Invoke the `instructions:skill-standards` skill before proceeding. If that skill
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence.
+An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as keep-these-aspects, worth-improving, and must-fix; every rejected finding names the artifact location, violated rule, and evidence.
 </objective>
 
 <constraints>
@@ -32,7 +32,7 @@ During audits, prioritize evaluation of:
 - YAML compliance (name length, description quality by skill role, `argument-hint` when arguments are used)
 - Command capabilities (argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `@` file references)
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
-- Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
+- Progressive disclosure structure against `/skill-standards`, including deterministic eager-payload measurement when its exception applies
 - Conciseness and signal-to-noise ratio (every word earns its place)
 - Required XML tags (objective, success_criteria)
 - Conditional XML tags (appropriate for complexity level)
@@ -51,14 +51,20 @@ During audits, prioritize evaluation of:
 1. Read `/skill-standards` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 2. Read `/agent-prompt-standards` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
-4. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
-5. Handle edge cases:
+4. When the target uses `/skill-standards`'s eager-foundation exception, run the following deterministic counter against every rendered target `SKILL.md`. Record each command's integer output in verdict metadata, then apply the exception's current threshold and qualitative checks from `/skill-standards`; never estimate the count from model inspection.
+
+   ```bash
+   python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
+   ```
+
+5. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
+6. Handle edge cases:
    - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
    - If YAML frontmatter is malformed, flag as critical issue.
    - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
    - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
    - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
-6. Evaluate the target skill against the standards loaded in steps 1-2.
+7. Evaluate the target skill against the standards loaded in steps 1-2.
 
 **Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skills/references/` for standards — that directory is workflow content only.
 </audit_workflow>
@@ -76,7 +82,7 @@ Check for:
 
 <area name="structure_and_organization">
 Check for:
-- **Progressive disclosure**: SKILL.md is overview (<500 lines), detailed content in reference files, references one level deep
+- **Progressive disclosure**: Apply `/skill-standards`'s complete rule. For an eager-foundation exception, verify the deterministic rendered-payload counts recorded by step 4 together with the exception's effectiveness and internal-consistency conditions.
 - **XML structure quality**:
   - Required tags present (objective, success_criteria)
   - Conditional tags appropriate for skill type (quick_start for on-demand tools only — omit for foundation/gate/validator/reference skills)
@@ -342,9 +348,15 @@ The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findi
       ]
     }
   ],
-  "metadata": { "skill_type": "simple | complex | delegation | etc.", "line_count": "<n>" }
+  "metadata": {
+    "skill_type": "simple | complex | delegation | etc.",
+    "line_count": "<n>",
+    "eager_payload_code_points": { "<rendered-SKILL.md>": "<n>" }
+  }
 }
 ```
+
+Omit `eager_payload_code_points` when the eager-foundation exception does not apply.
 
 Note: While this skill uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
 </verdict_format>
@@ -384,6 +396,7 @@ Before presenting audit findings, verify:
 - [ ] All line numbers verified against actual file
 - [ ] Recommendations match skill complexity level
 - [ ] Context appropriately considered (simple vs complex skill)
+- [ ] Every eager-foundation exception includes deterministic code-point counts for every rendered target
 - [ ] Operational effectiveness evaluated proportionally (critical for complex/migration skills)
 
 **Quality checks**:

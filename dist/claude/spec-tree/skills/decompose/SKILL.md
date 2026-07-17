@@ -15,18 +15,20 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Accept exactly one target:
+**Target:** `$ARGUMENTS`
+
+Accept exactly one target from `$ARGUMENTS`:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$ARGUMENTS` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
-Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
+Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
-- `${CLAUDE_SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
+- Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
+- Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
 - `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
@@ -46,7 +48,7 @@ If the target is `spx/`:
 2. Read `CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per live `/understand` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 
@@ -190,7 +192,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment is the inverse of live `/understand` `<context_loading_rule>`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 
@@ -243,7 +245,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the applicable template under `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.

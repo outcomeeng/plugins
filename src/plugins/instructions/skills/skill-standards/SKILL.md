@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its invoker, and (f) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its invoker, and (f) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -293,6 +293,12 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
 
+<eager_foundation_exception>
+
+When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
+
+</eager_foundation_exception>
+
 {!% if target == 'claude' %!}
 <progressive_disclosure>
 
@@ -300,10 +306,12 @@ SKILL.md is an overview. Reference files carry detail. Claude loads reference fi
 
 **Rules:**
 
-- Keep SKILL.md under 500 lines.
+- Keep SKILL.md under 500 lines unless the eager-foundation exception below applies.
 - References live in `references/` one level deep from SKILL.md. Do not nest references that read other references — Claude may only partially read transitive files.
 - Reference files over 100 lines need a table of contents at the top, so partial reads still see the full scope.
 - Use forward slashes in every path — `references/guide.md`, never `references\guide.md`. Works across platforms.
+
+Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
 **Token efficiency:** simple task loads SKILL.md only (~500 tokens); medium loads SKILL.md + one reference (~1000); complex loads SKILL.md + multiple (~2000+).
 
@@ -324,7 +332,9 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 {!% else %!}
 <progressive_disclosure>
 
-Keep SKILL.md under 500 lines and move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
+Keep SKILL.md under 500 lines unless the eager-foundation exception below applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
+
+Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
 </progressive_disclosure>
 {!% endif %!}
