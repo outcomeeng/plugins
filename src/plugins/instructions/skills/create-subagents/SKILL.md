@@ -446,10 +446,10 @@ A {{! term('configured_agent') !}} is ready when:
 {!% if target == 'codex' %!}
 
 - The runtime loads the TOML file with `name`, `description`, and `{{! field('configured_agent_prompt') !}}` without a configuration error.
-- `subagent-auditor` returns APPROVED for the prompt, model, sandbox, MCP, and tool surface.
+- The Gate 1 verifier returns APPROVED for the prompt, model, sandbox, MCP, and tool surface.
   {!% else %!}
 - The runtime loads the Markdown file with valid YAML frontmatter and no configuration error.
-- `subagent-auditor` returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.
+- The Gate 1 verifier returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.
   {!% endif %!}
 - One bounded probe run reaches completed status and matches the declared output contract.
 - The probe run uses only the intended tools and performs no external mutation.

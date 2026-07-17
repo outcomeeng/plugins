@@ -26,7 +26,7 @@ For an audit-only request, return the auditor's structured verdict without offer
 
 Apply every must-fix item and any explicitly requested recommendation through `/create-skills`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
 
-After repairs, run the bundled validator, identify the product's skill build and deterministic-check commands for the caller's repository workflow, create a clean checkpoint after those checks report success, and dispatch a fresh `skill-auditor` over the new head. Repeat until the verdict is APPROVED or a concrete blocker remains.
+After repairs, run the bundled validator, identify the product's skill build and deterministic-check commands for the caller's repository workflow, and create a clean checkpoint after those checks report success. Repeat the same audit route used above — exposed `skill-auditor` or `/audit-skills` fallback — over the new head until the verdict is APPROVED or a concrete blocker remains.
 
 </step>
 

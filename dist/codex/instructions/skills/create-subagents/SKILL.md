@@ -313,7 +313,7 @@ A custom agent is ready when:
 - The exposed `subagent-auditor` or `/audit-subagents` fallback approves the exact configuration file.
 
 - The runtime loads the TOML file with `name`, `description`, and `developer_instructions` without a configuration error.
-- `subagent-auditor` returns APPROVED for the prompt, model, sandbox, MCP, and tool surface.
+- The Gate 1 verifier returns APPROVED for the prompt, model, sandbox, MCP, and tool surface.
 
 - One bounded probe run reaches completed status and matches the declared output contract.
 - The probe run uses only the intended tools and performs no external mutation.

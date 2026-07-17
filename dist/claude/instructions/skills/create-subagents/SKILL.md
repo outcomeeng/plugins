@@ -320,7 +320,7 @@ A subagent is ready when:
 - The exposed `subagent-auditor` or `/audit-subagents` fallback approves the exact configuration file.
 
 - The runtime loads the Markdown file with valid YAML frontmatter and no configuration error.
-- `subagent-auditor` returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.
+- The Gate 1 verifier returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.
 
 - One bounded probe run reaches completed status and matches the declared output contract.
 - The probe run uses only the intended tools and performs no external mutation.
