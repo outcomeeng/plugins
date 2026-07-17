@@ -59,6 +59,9 @@ CHANGESET_SCOPE_SCRIPTS_DIR = (
     / "scripts"
 )
 CHANGESET_SCOPE_MODULE_PATH = CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope.py"
+CHANGESET_SCOPE_CONTRACT_MODULE_PATH = (
+    CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope_contract.py"
+)
 MERGE_CLASSIFIER_MODULE_PATH = (
     REPO_ROOT
     / "src"
@@ -69,6 +72,7 @@ MERGE_CLASSIFIER_MODULE_PATH = (
     / "scripts"
     / "classify_changeset.py"
 )
+MERGE_CONTRACT_MODULE_PATH = MERGE_CLASSIFIER_MODULE_PATH.with_name("merge_contract.py")
 CHANGESET_SCOPE_FIXTURES_DIR = (
     pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "changeset_scope"
 )
@@ -123,40 +127,40 @@ def temporary_changeset_scope() -> Iterator[TemporaryChangesetScope]:
         )
 
 
-def load_changeset_scope_module() -> ModuleType:
-    """Load the ``changeset_scope`` module via importlib and cache it."""
-    cached = sys.modules.get("changeset_scope")
+def _load_source_module(name: str, path: pathlib.Path) -> ModuleType:
+    """Load one shipped source module through its file boundary and cache it."""
+    cached = sys.modules.get(name)
     if cached is not None:
         return cached
-    spec = importlib.util.spec_from_file_location(
-        "changeset_scope", CHANGESET_SCOPE_MODULE_PATH
-    )
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load changeset_scope from {CHANGESET_SCOPE_MODULE_PATH}"
-        )
+        raise RuntimeError(f"Cannot load {name} from {path}")
     module = importlib.util.module_from_spec(spec)
-    sys.modules["changeset_scope"] = module
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def load_changeset_scope_module() -> ModuleType:
+    """Load the ``changeset_scope`` implementation through its shipped file."""
+    return _load_source_module("changeset_scope", CHANGESET_SCOPE_MODULE_PATH)
+
+
+def load_changeset_scope_contract_module() -> ModuleType:
+    """Load the source-owned changeset contract independently of its implementation."""
+    return _load_source_module(
+        "changeset_scope_contract", CHANGESET_SCOPE_CONTRACT_MODULE_PATH
+    )
 
 
 def load_merge_classifier_module() -> ModuleType:
     """Load the merge changeset classifier through its shipped file boundary."""
-    cached = sys.modules.get("classify_changeset")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "classify_changeset", MERGE_CLASSIFIER_MODULE_PATH
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load merge classifier from {MERGE_CLASSIFIER_MODULE_PATH}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["classify_changeset"] = module
-    spec.loader.exec_module(module)
-    return module
+    return _load_source_module("classify_changeset", MERGE_CLASSIFIER_MODULE_PATH)
+
+
+def load_merge_contract_module() -> ModuleType:
+    """Load the source-owned merge contract independently of its classifier."""
+    return _load_source_module("merge_contract", MERGE_CONTRACT_MODULE_PATH)
 
 
 def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
@@ -487,20 +491,20 @@ def branch_collision_state(
 
 def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
     """Resolve a ref through real Git for an independent commit-OID oracle."""
-    module = load_changeset_scope_module()
+    contract = load_changeset_scope_contract_module()
     return _git(
         repo,
         "rev-parse",
         "--verify",
         "--quiet",
-        f"{ref}{module.COMMIT_PEEL_SUFFIX}",
+        f"{ref}{contract.COMMIT_PEEL_SUFFIX}",
     )
 
 
 def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     """Return Git's merge-base scope for a caller-supplied ref."""
-    module = load_changeset_scope_module()
-    output = _git(repo, "diff", "--name-only", f"{ref}...{module.HEAD_REF}")
+    contract = load_changeset_scope_contract_module()
+    output = _git(repo, "diff", "--name-only", f"{ref}...{contract.HEAD_REF}")
     return tuple(output.splitlines())
 
 
@@ -591,9 +595,10 @@ def _remote_tracking_ref_case(
     scenario: ChangesetScopeCase,
 ) -> EvidenceComparison:
     with stale_local_base_repo(scenario) as stale:
+        contract = load_changeset_scope_contract_module()
         return EvidenceComparison(
             actual=(module.remote_tracking_ref(stale.base_ref),),
-            expected=(module.ORIGIN_REF_PREFIX + stale.base_ref,),
+            expected=(contract.ORIGIN_REF_PREFIX + stale.base_ref,),
         )
 
 
@@ -685,12 +690,13 @@ def _branch_slug_case(
     scenario: ChangesetScopeCase,
 ) -> EvidenceComparison:
     with branch_collision_state(scenario) as collision:
+        contract = load_changeset_scope_contract_module()
         expected_bare = collision.feature_branch.replace("/", "__")
         expected_suffix = hashlib.sha256(
             collision.feature_branch.encode("utf-8")
-        ).hexdigest()[: module.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
+        ).hexdigest()[: contract.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
         expected_collided = (
-            expected_bare + module.BRANCH_SLUG_SUFFIX_SEPARATOR + expected_suffix
+            expected_bare + contract.BRANCH_SLUG_SUFFIX_SEPARATOR + expected_suffix
         )
         collided = module.branch_slug(
             collision.feature_branch,
@@ -749,12 +755,12 @@ def unconfigured_base_comparison() -> EvidenceComparison:
     with repo_without_origin() as repo:
         completed = run_merge_classifier(repo)
         classifier = load_merge_classifier_module()
-        changeset_scope = load_changeset_scope_module()
+        changeset_scope_contract = load_changeset_scope_contract_module()
         return EvidenceComparison(
             actual=(
                 completed.returncode != 0,
                 classifier.BASE_REF_ERROR_PREFIX in completed.stderr,
-                changeset_scope.ORIGIN_HEAD_REF in completed.stderr,
+                changeset_scope_contract.ORIGIN_HEAD_REF in completed.stderr,
                 not contains_python_traceback(completed.stderr),
             ),
             expected=(True, True, True, True),
@@ -764,7 +770,8 @@ def unconfigured_base_comparison() -> EvidenceComparison:
 @cache
 def classification_counts_comparison() -> EvidenceComparison:
     classifier = load_merge_classifier_module()
-    cases = classification_path_cases(classifier.COORDINATION_NOTE_BASENAMES)
+    contract = load_merge_contract_module()
+    cases = classification_path_cases(contract.COORDINATION_NOTE_BASENAMES)
     return EvidenceComparison(
         actual=tuple(classifier.classify(list(case.paths)) for case in cases),
         expected=tuple(
@@ -772,7 +779,7 @@ def classification_counts_comparison() -> EvidenceComparison:
                 len(frozenset(case.paths)),
                 sum(
                     pathlib.PurePosixPath(path).name
-                    not in classifier.COORDINATION_NOTE_BASENAMES
+                    not in contract.COORDINATION_NOTE_BASENAMES
                     for path in frozenset(case.paths)
                 ),
             )
@@ -784,7 +791,8 @@ def classification_counts_comparison() -> EvidenceComparison:
 @cache
 def coordination_note_basename_comparison() -> EvidenceComparison:
     classifier = load_merge_classifier_module()
-    paths = coordination_note_paths(classifier.COORDINATION_NOTE_BASENAMES)
+    contract = load_merge_contract_module()
+    paths = coordination_note_paths(contract.COORDINATION_NOTE_BASENAMES)
     return EvidenceComparison(
         actual=tuple(classifier.is_coordination_note(path) for path in paths),
         expected=tuple(True for _path in paths),
