@@ -602,6 +602,7 @@ def _installed_plugin_cache_candidates(
         try:
             versions = sorted(
                 (path for path in plugin_root.iterdir() if path.is_dir()),
+                key=_cache_version_key,
                 reverse=True,
             )
         except OSError:
@@ -610,6 +611,33 @@ def _installed_plugin_cache_candidates(
             version / "skills" / skill / "SKILL.md" for version in versions
         )
     return tuple(candidates)
+
+
+def _cache_version_key(path: pathlib.Path) -> tuple[object, ...]:
+    match = re.fullmatch(
+        r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+        r"(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?",
+        path.name,
+    )
+    if match is None:
+        return (False, path.name)
+    prerelease = match.group(4)
+    prerelease_key = (
+        tuple(
+            (False, int(identifier)) if identifier.isdigit() else (True, identifier)
+            for identifier in prerelease.split(".")
+        )
+        if prerelease is not None
+        else ()
+    )
+    return (
+        True,
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3)),
+        prerelease is None,
+        prerelease_key,
+    )
 
 
 def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:

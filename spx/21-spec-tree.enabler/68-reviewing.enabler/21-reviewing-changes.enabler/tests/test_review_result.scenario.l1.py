@@ -386,7 +386,7 @@ class TestRuleCitationForm:
         skill_path = (
             marketplace_root
             / "typescript"
-            / "0.22.1"
+            / "0.10.0"
             / "skills"
             / "audit-typescript-architecture"
             / "SKILL.md"
@@ -394,6 +394,19 @@ class TestRuleCitationForm:
         skill_path.parent.mkdir(parents=True)
         skill_path.write_text(
             "<constraints>\n\n- ALWAYS: preserve architecture boundaries.\n\n</constraints>\n",
+            encoding="utf-8",
+        )
+        stale_skill_path = (
+            marketplace_root
+            / "typescript"
+            / "0.9.0"
+            / "skills"
+            / "audit-typescript-architecture"
+            / "SKILL.md"
+        )
+        stale_skill_path.parent.mkdir(parents=True)
+        stale_skill_path.write_text(
+            "<objective>Stale cache entry without the cited rule.</objective>\n",
             encoding="utf-8",
         )
         empty_repo = tmp_path / "empty-repo"
