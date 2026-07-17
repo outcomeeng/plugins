@@ -331,7 +331,7 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",
             FIXTURE_SKILL_RULE_CITATION,
-            "plugins/spec-tree/skills/understand/SKILL.md:principles",
+            "plugins/spec-tree/skills/understand/SKILL.md:artifact-placement",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
         ],
