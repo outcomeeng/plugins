@@ -236,20 +236,20 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Conditional tags** (include when the skill's complexity or purpose calls for them):
 
-| Tag                    | When to include                                                                                                                                                                                             |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point.                                                              |
-| `<context>`            | Background needed before starting.                                                                                                                                                                          |
-| `<workflow>`           | Sequential steps (non-router skills).                                                                                                                                                                       |
-| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                                                                                |
-| `<validation>`         | Verification checks.                                                                                                                                                                                        |
-| `<examples>`           | Input/output pairs.                                                                                                                                                                                         |
-| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                                                                                   |
-| `<security_checklist>` | Skills with security implications.                                                                                                                                                                          |
-| `<testing>`            | Testing workflows or validation steps.                                                                                                                                                                      |
-| `<common_patterns>`    | Reusable recipes.                                                                                                                                                                                           |
-| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                                                                                       |
-| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                                                                                        |
+| Tag                    | When to include                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point. |
+| `<context>`            | Background needed before starting.                                                                                                             |
+| `<workflow>`           | Sequential steps (non-router skills).                                                                                                          |
+| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                   |
+| `<validation>`         | Verification checks.                                                                                                                           |
+| `<examples>`           | Input/output pairs.                                                                                                                            |
+| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                      |
+| `<security_checklist>` | Skills with security implications.                                                                                                             |
+| `<testing>`            | Testing workflows or validation steps.                                                                                                         |
+| `<common_patterns>`    | Reusable recipes.                                                                                                                              |
+| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                          |
+| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                           |
 
 This table is representative, not exhaustive: a skill may add semantically named domain sections beyond it (this file's `<frontmatter>`, `<descriptions>`, and reference-pointer sections such as `<platform_constraints>` and `<script_standards>` are examples).
 
