@@ -22,50 +22,127 @@ dirs are expected on a working machine.
 
 from __future__ import annotations
 
+import hashlib
+
+import pytest
+
 from outcomeeng_testing.harnesses.changeset_scope import (
-    branch_scope_comparison,
-    branch_slug_comparison,
-    commit_oid_comparison,
-    current_branch_comparison,
-    detect_base_ref_comparison,
-    missing_origin_comparison,
-    remote_tracking_ref_comparison,
-    stale_local_base_comparison,
+    base_advanced_after_branch_repo,
+    branch_collision_state,
+    detach_head,
+    generated_changeset_scope_cases,
+    git_commit_oid,
+    git_three_dot_scope,
+    load_changeset_scope_contract_module,
+    load_changeset_scope_module,
+    repo_without_origin,
+    stale_local_base_repo,
 )
+
+CHANGESET_SCOPE = load_changeset_scope_module()
+CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
 
 
 def test_detect_base_ref_returns_bare_base_from_origin_head() -> None:
-    assert detect_base_ref_comparison().actual == detect_base_ref_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with stale_local_base_repo(scenario) as stale:
+            assert CHANGESET_SCOPE.detect_base_ref(stale.repo) == stale.base_ref
 
 
 def test_detect_base_ref_raises_without_origin() -> None:
-    assert missing_origin_comparison().actual == missing_origin_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with repo_without_origin(scenario) as repo:
+            with pytest.raises(CHANGESET_SCOPE.BaseRefNotConfiguredError):
+                CHANGESET_SCOPE.detect_base_ref(repo)
 
 
 def test_remote_tracking_ref_composes_origin_prefix() -> None:
-    assert (
-        remote_tracking_ref_comparison().actual
-        == remote_tracking_ref_comparison().expected
-    )
+    for scenario in generated_changeset_scope_cases():
+        with stale_local_base_repo(scenario) as stale:
+            assert CHANGESET_SCOPE.remote_tracking_ref(stale.base_ref) == (
+                CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + stale.base_ref
+            )
 
 
 def test_branch_scope_returns_feature_change_against_remote_tracking_base() -> None:
-    assert branch_scope_comparison().actual == branch_scope_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with base_advanced_after_branch_repo(scenario) as advanced:
+            assert tuple(
+                CHANGESET_SCOPE.branch_scope(
+                    advanced.base_ref,
+                    repo=advanced.repo,
+                )
+            ) == git_three_dot_scope(
+                advanced.repo,
+                CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + advanced.base_ref,
+            )
 
 
 def test_stale_local_base_ref_does_not_widen_scope() -> None:
-    assert (
-        stale_local_base_comparison().actual == stale_local_base_comparison().expected
-    )
+    for scenario in generated_changeset_scope_cases():
+        with stale_local_base_repo(scenario) as stale:
+            assert tuple(
+                CHANGESET_SCOPE.branch_scope(stale.base_ref, repo=stale.repo)
+            ) == git_three_dot_scope(
+                stale.repo,
+                CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + stale.base_ref,
+            )
+            assert git_three_dot_scope(stale.repo, stale.base_ref) == tuple(
+                sorted((stale.feature_file, stale.merged_file))
+            )
 
 
 def test_detect_current_branch_returns_name_then_raises_on_detached_head() -> None:
-    assert current_branch_comparison().actual == current_branch_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with repo_without_origin(scenario) as repo:
+            assert CHANGESET_SCOPE.detect_current_branch(repo) == scenario.base_branch
+            detach_head(repo)
+            with pytest.raises(CHANGESET_SCOPE.DetachedHeadError):
+                CHANGESET_SCOPE.detect_current_branch(repo)
 
 
 def test_commit_oid_resolves_commit_ref() -> None:
-    assert commit_oid_comparison().actual == commit_oid_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with stale_local_base_repo(scenario) as stale:
+            assert CHANGESET_SCOPE.commit_oid(
+                stale.feature_branch,
+                repo=stale.repo,
+            ) == git_commit_oid(stale.repo, stale.feature_branch)
+            assert CHANGESET_SCOPE.commit_oid(
+                CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + stale.base_ref,
+                repo=stale.repo,
+            ) == git_commit_oid(
+                stale.repo,
+                CHANGESET_SCOPE_CONTRACT.ORIGIN_REF_PREFIX + stale.base_ref,
+            )
 
 
 def test_branch_slug_disambiguates_on_state_dir_collision() -> None:
-    assert branch_slug_comparison().actual == branch_slug_comparison().expected
+    for scenario in generated_changeset_scope_cases():
+        with branch_collision_state(scenario) as collision:
+            assert CHANGESET_SCOPE.branch_slug(collision.feature_branch) == (
+                collision.feature_branch.replace(
+                    CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
+                    CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
+                )
+            )
+            assert CHANGESET_SCOPE.branch_slug(
+                collision.feature_branch,
+                collision.state_dir,
+            ) == (
+                collision.feature_branch.replace(
+                    CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
+                    CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
+                )
+                + CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_SUFFIX_SEPARATOR
+                + hashlib.sha256(collision.feature_branch.encode()).hexdigest()[
+                    : CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
+                ]
+            )
+            assert CHANGESET_SCOPE.branch_slug(
+                collision.feature_branch,
+                collision.empty_state_dir,
+            ) == collision.feature_branch.replace(
+                CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
+                CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
+            )

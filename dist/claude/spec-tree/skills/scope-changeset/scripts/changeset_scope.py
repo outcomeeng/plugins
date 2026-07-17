@@ -39,6 +39,8 @@ BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = cast(
     int, _CONTRACT["BRANCH_SLUG_COLLISION_SUFFIX_LENGTH"]
 )
 BRANCH_SLUG_MAX_LENGTH = cast(int, _CONTRACT["BRANCH_SLUG_MAX_LENGTH"])
+BRANCH_REF_PATH_SEPARATOR = cast(str, _CONTRACT["BRANCH_REF_PATH_SEPARATOR"])
+BRANCH_SLUG_PATH_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_PATH_SUBSTITUTE"])
 BRANCH_SLUG_DOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOT_SUBSTITUTE"])
 BRANCH_SLUG_DOTDOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOTDOT_SUBSTITUTE"])
 ORIGIN_HEAD_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_HEAD_REF_PREFIX"])
@@ -301,7 +303,10 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
     consumers import this contract directly).
     """
     # Stage 1: replace slashes.
-    slashed = branch_name.replace("/", "__")
+    slashed = branch_name.replace(
+        BRANCH_REF_PATH_SEPARATOR,
+        BRANCH_SLUG_PATH_SUBSTITUTE,
+    )
 
     # Stage 2: defuse whole-segment ``.`` / ``..`` values.
     if slashed == ".":

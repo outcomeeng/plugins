@@ -3,21 +3,38 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.changeset_scope import (
-    canonical_merge_comparison,
-    spaced_note_comparison,
-    unconfigured_base_comparison,
+    canonical_merge_changeset,
+    contains_python_traceback,
+    load_changeset_scope_contract_module,
+    load_merge_classifier_module,
+    modified_spaced_note_repo,
+    repo_without_origin,
+    run_merge_classifier,
 )
+
+CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
+MERGE_CLASSIFIER = load_merge_classifier_module()
 
 
 def test_changed_paths_use_the_canonical_changeset_scope() -> None:
-    assert canonical_merge_comparison().actual == canonical_merge_comparison().expected
+    with canonical_merge_changeset() as stale:
+        assert frozenset(MERGE_CLASSIFIER.changed_paths(stale.repo)) == frozenset(
+            (stale.feature_file, stale.working_file)
+        )
 
 
 def test_spaced_coordination_note_path_is_preserved() -> None:
-    assert spaced_note_comparison().actual == spaced_note_comparison().expected
+    with modified_spaced_note_repo() as spaced:
+        assert tuple(MERGE_CLASSIFIER._working_tree_paths(spaced.repo)) == (
+            spaced.note_path,
+        )
+        assert MERGE_CLASSIFIER.is_coordination_note(spaced.note_path)
 
 
 def test_unconfigured_remote_base_is_reported_without_traceback() -> None:
-    assert (
-        unconfigured_base_comparison().actual == unconfigured_base_comparison().expected
-    )
+    with repo_without_origin() as repo:
+        completed = run_merge_classifier(repo)
+        assert completed.returncode
+        assert MERGE_CLASSIFIER.BASE_REF_ERROR_PREFIX in completed.stderr
+        assert CHANGESET_SCOPE_CONTRACT.ORIGIN_HEAD_REF in completed.stderr
+        assert not contains_python_traceback(completed.stderr)
