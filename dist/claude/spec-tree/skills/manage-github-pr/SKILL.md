@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Read
+allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Read
 ---
 
 <objective>
@@ -28,21 +28,18 @@ Live repository state for mode detection, read at invocation.
 **Staged diff (name/status):**
 !`git diff --cached --name-status || echo '(none)'`
 
-**Commits ahead of base (default branch):**
-!`git log --oneline -10 origin/HEAD..HEAD 2>/dev/null || echo '(none)'`
-
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
 
 </context>
 
 <mode_detection>
-Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
+Invoke `/scope-changeset` and derive the committed branch scope through its canonical base resolution. Read `$ARGUMENTS`, the injected state, and that derived scope, then pick exactly one mode:
 
 - **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
 - **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
-- **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
-- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
+- **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the derived committed branch scope is non-empty. The changeset already defines the work; derive intent from the diff and commits.
+- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the derived committed branch scope is empty. Nothing is staged to ship; establish the change through `/interview` before any mutation.
 
 </mode_detection>
 
@@ -88,7 +85,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 <success_criteria>
 
-- The detected mode matches `$ARGUMENTS` and the injected repository state.
+- The detected mode matches `$ARGUMENTS`, the injected repository state, and the committed branch scope derived through `/scope-changeset`.
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The GitHub-PR transport was active for this invocation — either selected by `/merge` or invoked directly by the user — and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
