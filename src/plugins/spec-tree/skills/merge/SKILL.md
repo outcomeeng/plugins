@@ -61,6 +61,18 @@ It prints the total and non-coordination-note counts over the full changed-file 
 
 </workflow>
 
+<script_testing>
+
+`scripts/classify_changeset.py` is covered by the merging node's scenario evidence before release:
+
+- A branch with one base-merged path, one branch path, and one working-tree path reports only the latter two in the complete changed-path set.
+- A coordination note under a path containing spaces remains unquoted and classifies as coordination-only.
+- An unconfigured remote default branch exits nonzero with `error: merge changeset classification failed` and no traceback.
+- Duplicate committed and working-tree paths count once; only exact `PLAN.md` and `ISSUES.md` basenames classify as coordination notes.
+- The classifier writes no files, creates no temporary paths, and leaves cleanup empty; its only subprocess interaction is read-only git inspection.
+
+</script_testing>
+
 <direct_push_lifecycle>
 The direct-push transport publishes a verified changeset straight to the default branch on origin with no pull request, under the same four gates as every transport, with the review predicate bound to the local review since no CI review exists, per /merging-standards `<authority_gates>`. The project's `spx/local/merging.md` direct-push block binds the push command and any declared deploy or release action.
 
