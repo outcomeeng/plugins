@@ -196,7 +196,7 @@ git log --oneline "origin/${base_branch}..HEAD"
 git diff --name-only "origin/${base_branch}...HEAD"
 ```
 
-**Post-merge reconstruction.** Once the stack base merges, repeat the publication protocol to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
+**Post-merge reconstruction.** Once the stack base merges, repeat the publication protocol to re-target the PR at the default branch, replace its body without the complete `## Stack` section or any retired stack-base reference, re-classify it as peer, and mark it ready exactly once. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
 
 </branch_topology>
 
@@ -312,7 +312,7 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 
 **Reviewer-skipped-by-design (self-modifying-PR exception).** When the current-head CI review reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate), no current-head review exists for `MERGE_READINESS`. Post one PR-level comment containing exactly `<trigger-phrase> review` (e.g., `@spec-tree review`) to fire the mention reviewer (which has no identical-content gate), emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run `<pr_check_wait>`, and on the next management pass treat that reviewer's posted findings as the current-head review. This applies to that skip cause only — not path-filter, branch-filter, or manual skips.
 
-**Follow-up pushes.** The PR is ready from open; a follow-up push — fixing a valid CI finding, or a `<base_sync>` rebase — pushes to the ready PR and re-fires CI. There is no draft toggle and no `gh pr ready` step in the loop.
+**Follow-up pushes.** A peer PR is ready from open; a follow-up push — fixing a valid CI finding, or a `<base_sync>` rebase — pushes to the ready PR and re-fires CI with no draft toggle. A stacked PR stays draft while its base is unmerged. The sole transition exception occurs after that base merges: post-merge reconstruction retargets and cleans the PR body, then runs `gh pr ready` exactly once before restarting inspection as a peer. Every later follow-up push uses the ready-peer path with no draft toggle.
 
 </authority_gates>
 
