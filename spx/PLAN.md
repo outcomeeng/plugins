@@ -2,12 +2,12 @@
 
 Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownership).
 
-Spec alignment: `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` is
-aligned — Codex custom-agent installation is scoped to the checkout's `.codex/agents/`, and the
-rule keeps its linked evidence. Alignment remains for
-`spx/13-infrastructure.enabler/32-installation.enabler` and
-`spx/32-distribution.enabler/21-sync.enabler`; both carry their full assertion sets, and each
-node's `PLAN.md` names what the decision supersedes and what it leaves standing. The
+Spec alignment applied: `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler`,
+`spx/13-infrastructure.enabler/32-installation.enabler`, and
+`spx/32-distribution.enabler/21-sync.enabler` are aligned — each node's spec declares only the
+assertions the decision leaves standing, scoped to what their linked evidence verifies, with the
+superseded user-scope assertions removed. Each node's `PLAN.md` names what the decision supersedes,
+what it leaves standing, and the pending implementation cutover. The
 `spx/21-spec-tree.enabler/79-diagnostics.enabler` re-declaration is deferred behind a published
 `@outcomeeng/spx` dependency (see that node's `PLAN.md`).
 

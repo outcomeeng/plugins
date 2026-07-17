@@ -23,3 +23,17 @@ Deferral reason: this branch targets the bounded generated Codex-agent config en
 Revisit condition: when structural work on `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler` is scheduled, decide whether `permission_mode`, `PERMISSION_MODE_MAPPINGS`, and the associated mapping tests belong in the plugin-agent conversion path or should be removed in favor of tool-derived Codex policy config only.
 
 Deferral reason: generated Codex-agent policy enforcement for fields and tool declarations that can appear in the rendered plugin agent source is bounded separately from removing or re-scoping `permissionMode`, which changes the converter's declared frontmatter surface and belongs with the planned agent-conversion boundary split.
+
+## DEBT [evidence]: harness hardcodes the published-manifest path literals
+
+A test-evidence audit surfaced that `outcomeeng_testing/harnesses/agent_conversion.py` declares the
+published Codex plugin manifest's path segments as fresh literals (`CODEX_PLUGIN_MANIFEST_PARTS`,
+`CODEX_PLUGIN_MANIFEST_FILENAME`) rather than importing the production-owned constants
+`CODEX_PLUGIN_SUBDIR_NAME` (`outcomeeng/distribution/contracts.py`) and `CODEX_PLUGIN_MANIFEST`
+(`outcomeeng/distribution/marketplace_sources.py`). The compliance test that verifies generated
+agents stay out of the published manifest builds its simulated target from these literals, so a
+rename of the real manifest subdirectory or filename would leave the test green while it no longer
+protects the real location. The sibling harness `outcomeeng_testing/harnesses/src_tree.py` already
+imports its layout constants from production; this harness follows the same pattern when the test
+infrastructure is next touched. Independent of the marketplace-state assertion alignment, which only
+reduced the node's compliance assertion to the manifest-exclusion claim the test already verifies.
