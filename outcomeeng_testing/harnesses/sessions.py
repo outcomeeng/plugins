@@ -20,7 +20,6 @@ from typing import Final
 
 from outcomeeng_testing.harnesses.git_context import (
     accepted_git_context,
-    handoff_git_env,
 )
 from outcomeeng_testing.harnesses.verify_session_claims import (
     load_verify_session_claims_module,
@@ -37,6 +36,10 @@ WORK_BRANCH_HANDOFF_FIXTURE: Final = FIXTURE_ROOT / "work-branch-handoff.txt"
 OUTPUT_MARKER_PATTERN: Final = re.compile(
     r"<(?P<marker>[A-Z_]+)>(?P<value>.+?)</(?P=marker)>"
 )
+
+
+class SessionHarnessError(RuntimeError):
+    """Report an invalid infrastructure observation or fixture contract."""
 
 
 @dataclass(frozen=True)
@@ -78,6 +81,16 @@ class SessionRecord:
     session_id: str
     initial_path: Path
 
+    @property
+    def todo_path(self) -> Path:
+        """Return the path emitted for the initial todo-queue record."""
+        return self.initial_path
+
+    @property
+    def doing_path(self) -> Path:
+        """Return the corresponding path in the active queue."""
+        return self.initial_path.parent.parent / "doing" / self.initial_path.name
+
 
 @dataclass(frozen=True)
 class SessionCommandHarness:
@@ -106,42 +119,25 @@ class SessionCommandHarness:
         """Move one or more active sessions back to their initial queue."""
         return self._run(("release", *(record.session_id for record in records)))
 
+    def show(self, record: SessionRecord) -> subprocess.CompletedProcess[str]:
+        """Read one session through the CLI's structured session API."""
+        return self._run(("show", "--json", record.session_id))
+
     def created_session(
         self, result: subprocess.CompletedProcess[str]
     ) -> SessionRecord:
         """Resolve the emitted absolute session path and derive its identifier."""
-        self.require_success(result)
         candidates = [
             Path(match.group("value"))
             for match in OUTPUT_MARKER_PATTERN.finditer(result.stdout)
             if Path(match.group("value")).is_absolute()
         ]
         if len(candidates) != 1:
-            raise AssertionError(f"expected one emitted session path: {result.stdout}")
+            raise SessionHarnessError(
+                f"expected one emitted session path, observed: {result.stdout}"
+            )
         path = candidates[0]
         return SessionRecord(session_id=path.stem, initial_path=path)
-
-    def create_and_pickup(self, payload: HandoffPayload | None = None) -> SessionRecord:
-        """Create one session, move it to the active queue, and return its record."""
-        record = self.created_session(self.handoff(payload))
-        self.require_success(self.pickup(record))
-        return record
-
-    def create_picked_up_batch(self) -> tuple[SessionRecord, ...]:
-        """Create a multi-session batch from distinct whole-payload fixtures."""
-        return tuple(
-            self.create_and_pickup(payload)
-            for payload in (basic_handoff_payload(), specific_content_handoff_payload())
-        )
-
-    def locate(self, record: SessionRecord) -> Path:
-        """Locate one session by the filename the CLI emitted at creation."""
-        matches = tuple(self.sessions_dir.rglob(record.initial_path.name))
-        if len(matches) != 1:
-            raise AssertionError(
-                f"expected one current path for {record.session_id}: {matches}"
-            )
-        return matches[0]
 
     def session_files(self) -> tuple[Path, ...]:
         """Return every file the isolated session store contains."""
@@ -149,31 +145,21 @@ class SessionCommandHarness:
             sorted(path for path in self.sessions_dir.rglob("*") if path.is_file())
         )
 
-    def git_ref(self, record: SessionRecord) -> str | None:
-        """Read the recorded git ref through the CLI's structured session API."""
-        result = self._run(("show", "--json", record.session_id))
-        self.require_success(result)
+    @staticmethod
+    def parse_git_ref(result: subprocess.CompletedProcess[str]) -> str | None:
+        """Parse the git ref from a structured session-show observation."""
         payload = json.loads(result.stdout)
         if isinstance(payload, list):
             if len(payload) != 1 or not isinstance(payload[0], dict):
-                raise TypeError("session show returned an unexpected record list")
+                raise SessionHarnessError(
+                    "session show returned an unexpected record list"
+                )
             payload = payload[0]
         if not isinstance(payload, dict):
-            raise TypeError("session show returned an unexpected record")
+            raise SessionHarnessError("session show returned an unexpected record")
         module = load_verify_session_claims_module()
         value = payload.get(module.SESSION_GIT_REF_FIELD)
         return value if isinstance(value, str) else None
-
-    @staticmethod
-    def succeeded(result: subprocess.CompletedProcess[str]) -> bool:
-        """Report whether a command completed successfully."""
-        return result.returncode == 0
-
-    @staticmethod
-    def require_success(result: subprocess.CompletedProcess[str]) -> None:
-        """Raise with the CLI diagnostic when a setup command fails."""
-        if not SessionCommandHarness.succeeded(result):
-            raise AssertionError(result.stderr)
 
     def _run(
         self, args: tuple[str, ...], *, input_text: str | None = None
@@ -236,165 +222,6 @@ def current_branch(repo: Path) -> str:
     ).stdout.strip()
 
 
-def handoff_creates_session_file() -> bool:
-    with accepted_session_commands() as commands:
-        return commands.created_session(commands.handoff()).initial_path.exists()
-
-
-def handoff_preserves_active_node() -> bool:
-    payload = active_node_handoff_payload()
-    with accepted_session_commands() as commands:
-        record = commands.created_session(commands.handoff(payload))
-        return payload.body in record.initial_path.read_text()
-
-
-def handoff_records_current_branch() -> bool:
-    with accepted_git_context() as repo, session_commands(repo) as commands:
-        record = commands.created_session(commands.handoff())
-        return commands.git_ref(record) == current_branch(repo)
-
-
-def pickup_removes_initial_file() -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.created_session(commands.handoff())
-        result = commands.pickup(record)
-        return commands.succeeded(result) and not record.initial_path.exists()
-
-
-def pickup_moves_to_active_queue() -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.created_session(commands.handoff())
-        result = commands.pickup(record)
-        return (
-            commands.succeeded(result)
-            and commands.locate(record).parent != record.initial_path.parent
-        )
-
-
-def pickup_emits_session_body() -> bool:
-    payload = active_node_handoff_payload()
-    with accepted_session_commands() as commands:
-        record = commands.created_session(commands.handoff(payload))
-        result = commands.pickup(record)
-        return commands.succeeded(result) and payload.body in result.stdout
-
-
-def release_removes_active_file() -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.create_and_pickup()
-        active_path = commands.locate(record)
-        result = commands.release(record)
-        return commands.succeeded(result) and not active_path.exists()
-
-
-def release_returns_to_initial_queue() -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.create_and_pickup()
-        result = commands.release(record)
-        return (
-            commands.succeeded(result)
-            and commands.locate(record).parent == record.initial_path.parent
-        )
-
-
-def release_preserves_content() -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.create_and_pickup(specific_content_handoff_payload())
-        content = commands.locate(record).read_text()
-        result = commands.release(record)
-        return (
-            commands.succeeded(result)
-            and commands.locate(record).read_text() == content
-        )
-
-
-def release_batch_returns_to_initial_queue() -> bool:
-    with accepted_session_commands() as commands:
-        records = commands.create_picked_up_batch()
-        active_paths = tuple(commands.locate(record) for record in records)
-        result = commands.release(*records)
-        return (
-            commands.succeeded(result)
-            and all(not path.exists() for path in active_paths)
-            and all(
-                commands.locate(record).parent == record.initial_path.parent
-                for record in records
-            )
-        )
-
-
-def handoff_preserves_plan_content() -> bool:
-    return _handoff_preserves_payload(plan_handoff_payload())
-
-
-def handoff_preserves_issue_content() -> bool:
-    return _handoff_preserves_payload(issues_handoff_payload())
-
-
-def _handoff_preserves_payload(payload: HandoffPayload) -> bool:
-    with accepted_session_commands() as commands:
-        record = commands.created_session(commands.handoff(payload))
-        return payload.body in record.initial_path.read_text()
-
-
-def root_branch_handoff_records_branch() -> bool:
-    with handoff_git_env() as env, session_commands(env.root) as commands:
-        record = commands.created_session(commands.handoff())
-        return commands.git_ref(record) == env.default_branch
-
-
-def detached_root_handoff_records_head() -> bool:
-    with handoff_git_env() as env:
-        env.detach_root()
-        with session_commands(env.root) as commands:
-            record = commands.created_session(commands.handoff())
-            return commands.git_ref(record) == env.head_sha()
-
-
-def linked_tip_handoff_records_tip() -> bool:
-    with handoff_git_env() as env:
-        with session_commands(env.linked_at_origin_tip()) as commands:
-            record = commands.created_session(commands.handoff())
-            return commands.git_ref(record) == env.origin_tip
-
-
-def linked_branch_handoff_is_refused() -> bool:
-    with handoff_git_env() as env:
-        with session_commands(env.linked_on_branch()) as commands:
-            return _handoff_is_refused(commands)
-
-
-def linked_off_tip_handoff_is_refused() -> bool:
-    with handoff_git_env() as env:
-        with session_commands(env.linked_detached_off_tip()) as commands:
-            return _handoff_is_refused(commands)
-
-
-def explicit_work_branch_is_recorded() -> bool:
-    with handoff_git_env() as env:
-        work_branch = env.push_work_branch()
-        with session_commands(env.linked_at_origin_tip()) as commands:
-            record = commands.created_session(commands.handoff(work_branch=work_branch))
-            return commands.git_ref(record) == work_branch
-
-
-def absent_work_branch_is_refused() -> bool:
-    with handoff_git_env() as env:
-        with session_commands(env.linked_at_origin_tip()) as commands:
-            return _handoff_is_refused(commands, work_branch=env.head_sha())
-
-
-def _handoff_is_refused(
-    commands: SessionCommandHarness, *, work_branch: str | None = None
-) -> bool:
-    result = commands.handoff(work_branch=work_branch)
-    return (
-        not commands.succeeded(result)
-        and bool(result.stderr)
-        and not commands.session_files()
-    )
-
-
 @contextmanager
 def accepted_session_commands() -> Iterator[SessionCommandHarness]:
     with accepted_git_context() as repo, session_commands(repo) as commands:
@@ -404,32 +231,15 @@ def accepted_session_commands() -> Iterator[SessionCommandHarness]:
 __all__ = [
     "HandoffPayload",
     "SessionCommandHarness",
+    "SessionHarnessError",
     "SessionRecord",
-    "absent_work_branch_is_refused",
     "accepted_session_commands",
     "active_node_handoff_payload",
     "basic_handoff_payload",
     "current_branch",
-    "detached_root_handoff_records_head",
-    "explicit_work_branch_is_recorded",
-    "handoff_creates_session_file",
-    "handoff_preserves_active_node",
-    "handoff_preserves_issue_content",
-    "handoff_preserves_plan_content",
-    "handoff_records_current_branch",
     "issues_handoff_payload",
-    "linked_branch_handoff_is_refused",
-    "linked_off_tip_handoff_is_refused",
-    "linked_tip_handoff_records_tip",
     "plan_handoff_payload",
-    "pickup_emits_session_body",
-    "pickup_moves_to_active_queue",
-    "pickup_removes_initial_file",
-    "release_batch_returns_to_initial_queue",
-    "release_preserves_content",
-    "release_removes_active_file",
-    "release_returns_to_initial_queue",
-    "root_branch_handoff_records_branch",
     "session_commands",
     "specific_content_handoff_payload",
+    "work_branch_handoff_payload",
 ]

@@ -50,14 +50,62 @@ class ClaimVerdictLike(Protocol):
     evidence: str
 
 
+class ClaimHarnessError(RuntimeError):
+    """Report an invalid source contract or ambiguous harness observation."""
+
+
 @dataclass(frozen=True)
 class MappingEvidence:
-    """Observed verdict paired with its source-owned expected relation."""
+    """Observed verdict for one source-owned claim-kind/relation pair."""
 
     kind: object
     relation: object
-    actual: object
-    expected: object
+    verdict: object
+
+
+@dataclass(frozen=True)
+class BranchReferenceEvidence:
+    """Observed verdict for one generated origin-branch condition."""
+
+    git_ref: str
+    present_on_origin: bool
+    verdict: object
+
+
+@dataclass(frozen=True)
+class ObservedStateEvidence:
+    """Generated live values and the verifier evidence that surfaced them."""
+
+    node_state: str
+    node_evidence: str
+    external_state: str
+    external_evidence: str
+
+
+@dataclass(frozen=True)
+class NodeStatusEvidence:
+    """Raw node-status payload paired with parsed verifier evidence."""
+
+    payload: dict[str, object]
+    evidence: object
+
+
+@dataclass(frozen=True)
+class ReadOnlyVerificationEvidence:
+    """Runner calls and git status observed around one verification pass."""
+
+    calls: tuple[tuple[str, ...], ...]
+    status_before: str
+    status_after: str
+
+
+@dataclass(frozen=True)
+class MetadataLoadingEvidence:
+    """Commands and git-ref verdict observed during session loading."""
+
+    session_id: str
+    calls: tuple[tuple[str, ...], ...]
+    verdict: ClaimVerdictLike
 
 
 @dataclass
@@ -108,13 +156,6 @@ def claim_mapping_evidence() -> tuple[MappingEvidence, ...]:
     )
 
 
-def claim_mappings_hold() -> bool:
-    """Check every source-owned claim-kind/relation pair in one entrypoint."""
-    return all(
-        evidence.actual is evidence.expected for evidence in claim_mapping_evidence()
-    )
-
-
 def _exercise_claim_relation(
     module: ModuleType, kind: object, relation: object
 ) -> MappingEvidence:
@@ -157,7 +198,7 @@ def _exercise_claim_relation(
             pr_numbers = (number,)
             scripts = _external_arrangement(module, relation)
         else:
-            raise AssertionError(f"unhandled claim kind: {kind}")
+            raise ClaimHarnessError(f"unhandled claim kind: {kind}")
 
         scripts = (
             _session_command_scripts(
@@ -176,8 +217,7 @@ def _exercise_claim_relation(
         return MappingEvidence(
             kind=kind,
             relation=relation,
-            actual=verdict.verdict,
-            expected=module.verdict_for_relation(relation),
+            verdict=verdict.verdict,
         )
 
 
@@ -196,7 +236,7 @@ def _git_ref_arrangement(
                 _generated_token(),
             )
         }
-    raise AssertionError(f"unhandled git-ref relation: {relation}")
+    raise ClaimHarnessError(f"unhandled git-ref relation: {relation}")
 
 
 def _node_status_arrangement(
@@ -218,7 +258,7 @@ def _node_status_arrangement(
                 _generated_token(),
             )
         }
-    raise AssertionError(f"unhandled node-status relation: {relation}")
+    raise ClaimHarnessError(f"unhandled node-status relation: {relation}")
 
 
 def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
@@ -238,13 +278,13 @@ def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
                 _generated_token(),
             )
         }
-    raise AssertionError(f"unhandled external-id relation: {relation}")
+    raise ClaimHarnessError(f"unhandled external-id relation: {relation}")
 
 
-def branch_reference_evidence() -> tuple[MappingEvidence, ...]:
+def branch_reference_evidence() -> tuple[BranchReferenceEvidence, ...]:
     """Exercise normal, hex-like, full-hex, and absent origin branch refs."""
     module = load_verify_session_claims_module()
-    evidence: list[MappingEvidence] = []
+    evidence: list[BranchReferenceEvidence] = []
     with handoff_git_env() as env:
         branch_names = (
             env.push_work_branch(),
@@ -254,31 +294,31 @@ def branch_reference_evidence() -> tuple[MappingEvidence, ...]:
         for branch in branch_names:
             evidence.append(
                 _git_ref_evidence(
-                    module, env.root, branch, module.ClaimRelation.MATCHES
+                    module,
+                    env.root,
+                    branch,
+                    present_on_origin=True,
                 )
             )
         absent_branch = f"{env.default_branch}-{_generated_token()}"
         evidence.append(
             _git_ref_evidence(
-                module, env.root, absent_branch, module.ClaimRelation.DIFFERS
+                module,
+                env.root,
+                absent_branch,
+                present_on_origin=False,
             )
         )
     return tuple(evidence)
-
-
-def branch_reference_mappings_hold() -> bool:
-    """Check normal and hex-shaped origin branch reachability mappings."""
-    return all(
-        evidence.actual is evidence.expected for evidence in branch_reference_evidence()
-    )
 
 
 def _git_ref_evidence(
     module: ModuleType,
     repo: pathlib.Path,
     git_ref: str,
-    relation: object,
-) -> MappingEvidence:
+    *,
+    present_on_origin: bool,
+) -> BranchReferenceEvidence:
     session_id = _generated_token()
     runner = RecordingRunner(
         repo=repo,
@@ -287,16 +327,15 @@ def _git_ref_evidence(
     verdict = _verdict_for_kind(
         module.verify(session_id, repo, runner), module.ClaimKind.GIT_REF
     )
-    return MappingEvidence(
-        kind=module.ClaimKind.GIT_REF,
-        relation=relation,
-        actual=verdict.verdict,
-        expected=module.verdict_for_relation(relation),
+    return BranchReferenceEvidence(
+        git_ref=git_ref,
+        present_on_origin=present_on_origin,
+        verdict=verdict.verdict,
     )
 
 
-def observed_state_is_surfaced() -> bool:
-    """Check that node and external observations retain generated current values."""
+def observed_state_evidence() -> ObservedStateEvidence:
+    """Return generated current values and their emitted evidence strings."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = _generated_token()
@@ -326,11 +365,16 @@ def observed_state_is_surfaced() -> bool:
         )
         node = _verdict_for_kind(verdicts, module.ClaimKind.NODE_STATUS)
         external = _verdict_for_kind(verdicts, module.ClaimKind.EXTERNAL_ID)
-        return node_state in node.evidence and external_state in external.evidence
+        return ObservedStateEvidence(
+            node_state=node_state,
+            node_evidence=node.evidence,
+            external_state=external_state,
+            external_evidence=external.evidence,
+        )
 
 
-def node_status_keeps_source_scalar_fields_only() -> bool:
-    """Check that child and non-scalar data stay outside status evidence."""
+def node_status_evidence() -> NodeStatusEvidence:
+    """Return a nested status payload and the verifier's parsed evidence."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = _generated_token()
@@ -350,25 +394,20 @@ def node_status_keeps_source_scalar_fields_only() -> bool:
             ),
             module.ClaimKind.NODE_STATUS,
         )
-        evidence = json.loads(verdict.evidence)
-        expected = {
-            key: payload[key]
-            for key in module.NODE_STATUS_SCALAR_FIELDS
-            if key in payload
-        }
-        return isinstance(evidence, dict) and evidence == expected
+        return NodeStatusEvidence(
+            payload=payload,
+            evidence=json.loads(verdict.evidence),
+        )
 
 
-def verify_accepts_injected_runner() -> bool:
-    """Check that ``verify`` exposes a parameter typed as ``CommandRunner``."""
+def verify_parameters() -> tuple[inspect.Parameter, ...]:
+    """Return the public parameters exposed by ``verify``."""
     module = load_verify_session_claims_module()
-    return any(
-        parameter.annotation in {"CommandRunner", module.CommandRunner}
-        for parameter in inspect.signature(module.verify).parameters.values()
-    )
+    return tuple(inspect.signature(module.verify).parameters.values())
 
 
-def script_imports_are_stdlib_only() -> bool:
+def script_import_roots() -> frozenset[str]:
+    """Return every top-level import root used by the shipped script."""
     tree = ast.parse(VERIFY_MODULE_PATH.read_text())
     roots: set[str] = set()
     for node in ast.walk(tree):
@@ -376,26 +415,20 @@ def script_imports_are_stdlib_only() -> bool:
             roots.update(alias.name.split(".")[0] for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             roots.add(node.module.split(".")[0])
-    return not (roots - (sys.stdlib_module_names | {"__future__"}))
+    return frozenset(roots)
 
 
-def external_calls_go_through_runner() -> bool:
-    """Check that direct subprocess calls stay inside the source runner adapter."""
-    module = load_verify_session_claims_module()
+def subprocess_call_owners() -> tuple[tuple[str, str] | None, ...]:
+    """Return the enclosing class and method for direct subprocess calls."""
     tree = ast.parse(VERIFY_MODULE_PATH.read_text())
-    owners = [
+    return tuple(
         _enclosing_method(tree, node)
         for node in ast.walk(tree)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and isinstance(node.func.value, ast.Name)
         and node.func.value.id == subprocess.__name__
-    ]
-    expected_owner = (
-        module.SubprocessRunner.__name__,
-        module.SubprocessRunner.run.__name__,
     )
-    return bool(owners) and all(owner == expected_owner for owner in owners)
 
 
 def _enclosing_method(tree: ast.AST, target: ast.AST) -> tuple[str, str] | None:
@@ -410,23 +443,21 @@ def _enclosing_method(tree: ast.AST, target: ast.AST) -> tuple[str, str] | None:
     return None
 
 
-def default_runner_failure_is_unverifiable() -> bool:
+def default_runner_failure_verdicts() -> tuple[ClaimVerdictLike, ...]:
+    """Return verdicts observed when the default runner cannot launch commands."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        verdicts = module.verify(
-            _generated_token(),
-            repo,
-            module.SubprocessRunner(repo, env={"PATH": ""}),
-        )
-        expected = module.verdict_for_relation(module.ClaimRelation.UNAVAILABLE)
-        return (
-            len(verdicts) == 1
-            and verdicts[0].kind is module.ClaimKind.SESSION_METADATA
-            and verdicts[0].verdict is expected
+        return tuple(
+            module.verify(
+                _generated_token(),
+                repo,
+                module.SubprocessRunner(repo, env={"PATH": ""}),
+            )
         )
 
 
-def verification_is_read_only_and_uses_source_commands() -> bool:
+def read_only_verification_evidence() -> ReadOnlyVerificationEvidence:
+    """Return runner calls and repository status around one verification pass."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = _generated_token()
@@ -454,13 +485,15 @@ def verification_is_read_only_and_uses_source_commands() -> bool:
         }
         runner = RecordingRunner(repo=repo, scripted=scripts)
         module.verify(session_id, repo, runner)
-        return (
-            not _unexpected_runner_calls(module, runner.calls)
-            and _git_status(repo) == before
+        return ReadOnlyVerificationEvidence(
+            calls=tuple(tuple(call) for call in runner.calls),
+            status_before=before,
+            status_after=_git_status(repo),
         )
 
 
-def metadata_loading_uses_structured_session_api() -> bool:
+def metadata_loading_evidence() -> MetadataLoadingEvidence:
+    """Return session-loading calls and the resulting git-ref verdict."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = _generated_token()
@@ -473,12 +506,10 @@ def metadata_loading_uses_structured_session_api() -> bool:
         verdict = _verdict_for_kind(
             module.verify(session_id, repo, runner), module.ClaimKind.GIT_REF
         )
-        commands = tuple(tuple(call) for call in runner.calls)
-        return (
-            tuple(_session_show_json_command(module, session_id)) in commands
-            and tuple(_session_show_command(module, session_id)) in commands
-            and verdict.verdict
-            is module.verdict_for_relation(module.ClaimRelation.MATCHES)
+        return MetadataLoadingEvidence(
+            session_id=session_id,
+            calls=tuple(tuple(call) for call in runner.calls),
+            verdict=verdict,
         )
 
 
@@ -522,7 +553,11 @@ def _metadata_failure_script(module: ModuleType, session_id: str) -> ScriptMap:
 
 
 def _session_show_json_command(module: ModuleType, session_id: str) -> list[str]:
-    return [*module.SPX_SESSION_SHOW_COMMAND, "--json", session_id]
+    return [
+        *module.SPX_SESSION_SHOW_COMMAND,
+        module.SPX_SESSION_SHOW_JSON_FLAG,
+        session_id,
+    ]
 
 
 def _session_show_command(module: ModuleType, session_id: str) -> list[str]:
@@ -554,25 +589,8 @@ def _verdict_for_kind(
 ) -> ClaimVerdictLike:
     matching = [item for item in verdicts if item.kind == kind]
     if len(matching) != 1:
-        raise AssertionError(f"expected one {kind} verdict: {matching}")
+        raise ClaimHarnessError(f"expected one {kind} verdict, observed: {matching}")
     return matching[0]
-
-
-def _unexpected_runner_calls(
-    module: ModuleType, calls: Iterable[list[str]]
-) -> tuple[list[str], ...]:
-    prefixes = (
-        tuple(module.SPX_SESSION_SHOW_COMMAND),
-        tuple(module.SPX_SPEC_STATUS_COMMAND),
-        tuple(module.GIT_VERIFY_REF_COMMAND),
-        tuple(module.GIT_STATUS_COMMAND),
-        tuple(module.GH_PR_VIEW_COMMAND),
-    )
-    return tuple(
-        call
-        for call in calls
-        if not any(tuple(call[: len(prefix)]) == prefix for prefix in prefixes)
-    )
 
 
 def _head_sha(repo: pathlib.Path) -> str:
@@ -616,19 +634,23 @@ def _generated_token() -> str:
 
 
 __all__ = [
+    "BranchReferenceEvidence",
+    "ClaimHarnessError",
     "MappingEvidence",
+    "MetadataLoadingEvidence",
+    "NodeStatusEvidence",
+    "ObservedStateEvidence",
+    "ReadOnlyVerificationEvidence",
     "RecordingRunner",
     "branch_reference_evidence",
-    "branch_reference_mappings_hold",
     "claim_mapping_evidence",
-    "claim_mappings_hold",
-    "default_runner_failure_is_unverifiable",
-    "external_calls_go_through_runner",
+    "default_runner_failure_verdicts",
     "load_verify_session_claims_module",
-    "metadata_loading_uses_structured_session_api",
-    "node_status_keeps_source_scalar_fields_only",
-    "observed_state_is_surfaced",
-    "script_imports_are_stdlib_only",
-    "verification_is_read_only_and_uses_source_commands",
-    "verify_accepts_injected_runner",
+    "metadata_loading_evidence",
+    "node_status_evidence",
+    "observed_state_evidence",
+    "read_only_verification_evidence",
+    "script_import_roots",
+    "subprocess_call_owners",
+    "verify_parameters",
 ]

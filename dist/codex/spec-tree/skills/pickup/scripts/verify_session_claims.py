@@ -31,6 +31,7 @@ from typing import Final, Protocol, TypeGuard, cast
 
 COMMAND_UNAVAILABLE_EXIT: Final = 127
 SPX_SESSION_SHOW_COMMAND: Final = ("spx", "session", "show")
+SPX_SESSION_SHOW_JSON_FLAG: Final = "--json"
 SPX_SPEC_STATUS_COMMAND: Final = ("spx", "spec", "status")
 GIT_VERIFY_REF_COMMAND: Final = ("git", "rev-parse", "--verify", "--quiet")
 GIT_STATUS_COMMAND: Final = ("git", "status", "--porcelain")
@@ -186,7 +187,9 @@ def load_session(
     session_id: str, runner: CommandRunner
 ) -> tuple[Session | None, ClaimVerdict | None]:
     """Read session claims through the spx session API, never a worktree path."""
-    code, out, err = runner.run([*SPX_SESSION_SHOW_COMMAND, "--json", session_id])
+    code, out, err = runner.run(
+        [*SPX_SESSION_SHOW_COMMAND, SPX_SESSION_SHOW_JSON_FLAG, session_id]
+    )
     if code != 0:
         return None, _session_unverifiable(
             session_id, f"spx session show --json unavailable: {_detail(err)}"

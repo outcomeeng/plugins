@@ -1,44 +1,95 @@
-"""Compliance evidence for pickup claim verification.
+"""Compliance evidence for pickup claim verification."""
 
-Each assertion calls one behavior-level harness entrypoint. Source contracts,
-runner setup, generated payloads, diagnostics, and AST inspection remain behind
-the imported infrastructure boundary.
-"""
+import sys
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
-    default_runner_failure_is_unverifiable,
-    external_calls_go_through_runner,
-    metadata_loading_uses_structured_session_api,
-    node_status_keeps_source_scalar_fields_only,
-    script_imports_are_stdlib_only,
-    verification_is_read_only_and_uses_source_commands,
-    verify_accepts_injected_runner,
+    default_runner_failure_verdicts,
+    load_verify_session_claims_module,
+    metadata_loading_evidence,
+    node_status_evidence,
+    read_only_verification_evidence,
+    script_import_roots,
+    subprocess_call_owners,
+    verify_parameters,
 )
 
 
 def test_verify_accepts_injected_runner() -> None:
-    assert verify_accepts_injected_runner()
+    module = load_verify_session_claims_module()
+
+    assert any(
+        parameter.annotation in (module.CommandRunner, module.CommandRunner.__name__)
+        for parameter in verify_parameters()
+    )
 
 
 def test_script_imports_are_stdlib_only() -> None:
-    assert script_imports_are_stdlib_only()
+    assert script_import_roots() <= sys.stdlib_module_names | {"__future__"}
 
 
 def test_external_calls_go_through_the_runner() -> None:
-    assert external_calls_go_through_runner()
+    module = load_verify_session_claims_module()
+    owners = subprocess_call_owners()
+
+    assert owners
+    assert all(
+        owner
+        == (module.SubprocessRunner.__name__, module.SubprocessRunner.run.__name__)
+        for owner in owners
+    )
 
 
 def test_default_runner_launch_failure_emits_unverifiable() -> None:
-    assert default_runner_failure_is_unverifiable()
+    module = load_verify_session_claims_module()
+    verdicts = default_runner_failure_verdicts()
+
+    assert len(verdicts) == 1
+    assert verdicts[0].kind is module.ClaimKind.SESSION_METADATA
+    assert verdicts[0].verdict is module.Verdict.UNVERIFIABLE
 
 
 def test_verification_is_read_only_and_uses_source_commands() -> None:
-    assert verification_is_read_only_and_uses_source_commands()
+    module = load_verify_session_claims_module()
+    observation = read_only_verification_evidence()
+    allowed_prefixes = (
+        tuple(module.SPX_SESSION_SHOW_COMMAND),
+        tuple(module.SPX_SPEC_STATUS_COMMAND),
+        tuple(module.GIT_VERIFY_REF_COMMAND),
+        tuple(module.GIT_STATUS_COMMAND),
+        tuple(module.GH_PR_VIEW_COMMAND),
+    )
+
+    assert observation.calls
+    for call in observation.calls:
+        assert any(call[: len(prefix)] == prefix for prefix in allowed_prefixes), (
+            f"unexpected command: {call}"
+        )
+    assert observation.status_after == observation.status_before
 
 
 def test_node_status_evidence_keeps_target_node_scalar_fields_only() -> None:
-    assert node_status_keeps_source_scalar_fields_only()
+    module = load_verify_session_claims_module()
+    observation = node_status_evidence()
+
+    assert isinstance(observation.evidence, dict)
+    assert observation.evidence == {
+        field: observation.payload[field]
+        for field in module.NODE_STATUS_SCALAR_FIELDS
+        if field in observation.payload
+    }
 
 
 def test_metadata_loading_does_not_require_local_session_file_body() -> None:
-    assert metadata_loading_uses_structured_session_api()
+    module = load_verify_session_claims_module()
+    observation = metadata_loading_evidence()
+
+    assert (
+        *module.SPX_SESSION_SHOW_COMMAND,
+        module.SPX_SESSION_SHOW_JSON_FLAG,
+        observation.session_id,
+    ) in observation.calls
+    assert (
+        *module.SPX_SESSION_SHOW_COMMAND,
+        observation.session_id,
+    ) in observation.calls
+    assert observation.verdict.verdict is module.Verdict.CONFIRMED
