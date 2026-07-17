@@ -2,7 +2,7 @@
 name: create-skills
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py":*), Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, {{! tool('ask_user') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py":*), Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}
