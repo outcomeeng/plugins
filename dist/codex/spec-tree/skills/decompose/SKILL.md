@@ -2,7 +2,6 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-arguments: target
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -16,12 +15,12 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Treat `$target` as the exact target and accept exactly one value:
+Treat `$ARGUMENTS` as the exact target and accept exactly one value:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `spx/{path-to-node}` — decompose or restructure children under an existing node.
 
-If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$ARGUMENTS` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
 Use the live foundation sections below before composing; no secondary foundation read is required:
 
@@ -41,7 +40,7 @@ Use the live foundation sections below before composing; no secondary foundation
 
 **Step 1: Load tree context**
 
-If `$target` is `spx/`:
+If `$ARGUMENTS` is `spx/`:
 
 1. Read the product spec and product-level ADRs/PDRs.
 2. Read `AGENTS.md` if present.
@@ -49,7 +48,7 @@ If `$target` is `spx/`:
 4. Enumerate existing top-level children.
 5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
-If `$target` is a node address:
+If `$ARGUMENTS` is a node address:
 
 1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
 2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
