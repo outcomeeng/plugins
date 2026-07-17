@@ -11,11 +11,20 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Callable
+from contextlib import redirect_stderr
+from io import StringIO
 from tempfile import TemporaryDirectory
 
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
+
+
+def _assert_duplicate_cli_flag_maps_to_rejection(option: str) -> None:
+    assert MODULE.duplicate_cli_option((option, option)) == option
+    with redirect_stderr(StringIO()) as stderr:
+        assert MODULE.main([option, option]) == 2
+    assert stderr.getvalue().strip() == f"{MODULE.DUPLICATE_FLAG_ERROR_PREFIX}{option}"
 
 
 def _assert_extension_maps_to_language(extension: str, language: str) -> None:
@@ -205,6 +214,11 @@ def mapping_evidence_run() -> harness.EvidenceRun:
     """Run every declared finite source-owned mapping."""
     declared: list[str] = []
     executed: list[str] = []
+    for option in MODULE.CLI_OPTION_NAMES:
+        case_name = f"duplicate-flag[{option}]"
+        declared.append(case_name)
+        _assert_duplicate_cli_flag_maps_to_rejection(option)
+        executed.append(case_name)
     for extension, language in sorted(MODULE.LANGUAGE_BY_EXTENSION.items()):
         case_name = f"extension[{extension}]"
         declared.append(case_name)

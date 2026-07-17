@@ -16,13 +16,14 @@ import ast
 import inspect
 import io
 import json
+import math
 import os
 import signal
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TextIO, cast
+from typing import Final, TextIO, cast
 
 from hypothesis import given, seed, settings
 
@@ -35,12 +36,14 @@ from outcomeeng.validation import (
     EVAL_TRIGGERS_ARGV,
     FAILURE_EXCERPT_LINE_LIMIT,
     FMT_CHECK_ARGV,
+    FORWARDED_SIGNALS,
     FULL_LOG_LABEL,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     PHASE_COMPLETE,
     PHASE_PREFLIGHT,
     PHASE_RECIPE,
+    POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
     PREFLIGHT_STEPS,
@@ -53,6 +56,8 @@ from outcomeeng.validation import (
     RUFF_CHECK_ARGV,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
+    SIGNAL_GRACE_SECONDS,
+    SIGNAL_POLL_INTERVAL_SECONDS,
     SHELLCHECK_ARGV,
     SPAWN_FAILURE_EXIT_CODE,
     SPX_MARKDOWN_ARGV,
@@ -82,6 +87,7 @@ from outcomeeng.validation import (
     run_check,
     run_recipe,
     test_recipe,
+    terminate_process_group,
 )
 from outcomeeng.validation._git import GitCommandResult
 from outcomeeng.validation.selected_gate import (
@@ -142,7 +148,7 @@ PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
-FORWARDED_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+DECLARED_SIGNAL_GRACE_SECONDS: Final = 2.0
 SPAWN_FAILURE_MESSAGE = "missing executable"
 HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
 PYTEST_TARGET_ARG = (
@@ -420,42 +426,6 @@ def validation_subprocess_importers() -> list[Path]:
     return importers
 
 
-def signal_handler_source() -> str:
-    """Return validation source fragments that send signals to child groups."""
-
-    fragments: list[str] = []
-    for module_path in validation_package_modules():
-        tree = ast.parse(module_path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
-                continue
-            calls = [
-                child
-                for child in ast.walk(node)
-                if isinstance(child, ast.Call)
-                and isinstance(child.func, ast.Attribute)
-                and child.func.attr == "send_signal_to_group"
-            ]
-            if calls:
-                fragments.append(ast.unparse(node))
-    return "\n\n".join(fragments)
-
-
-def monotonic_call_count(func_source: str) -> int:
-    """Count time.monotonic calls in a source fragment."""
-
-    tree = ast.parse(func_source)
-    count = 0
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "monotonic"
-        ):
-            count += 1
-    return count
-
-
 def validation_package_source_text() -> str:
     """Return concatenated validation package module source text."""
 
@@ -566,14 +536,7 @@ def assert_gate_compliance_contract() -> None:
         f"(the production adapter); found: {importers}"
     )
 
-    signal_source = signal_handler_source()
-    assert signal_source, "no signal-handling function found in package"
-    count = monotonic_call_count(signal_source)
-    assert 1 <= count <= 2, (
-        f"signal handler must use a single bounded deadline; "
-        f"found {count} time.monotonic() calls"
-    )
-    assert "range(_POST_KILL_REAP_ATTEMPTS)" in signal_source
+    _assert_signal_shutdown_waits_are_bounded()
 
     source_text = validation_package_source_text()
     assert "gh run watch" not in source_text
@@ -1553,9 +1516,11 @@ class HangingHandle:
     pid: int
     exit_on_kill: bool = True
     received_signals: list[int] = field(default_factory=list)
+    poll_calls: int = 0
     _killed: bool = False
 
     def poll(self) -> int | None:
+        self.poll_calls += 1
         if self._killed:
             return 137
         return None
@@ -1570,6 +1535,45 @@ class HangingHandle:
         self.received_signals.append(sig)
         if self.exit_on_kill and sig == 9:
             self._killed = True
+
+
+@dataclass
+class BoundedAdvancingClock:
+    """A clock that advances on sleep and rejects an unbounded wait."""
+
+    max_sleep_calls: int
+    current: float = 0.0
+    monotonic_calls: int = 0
+    sleep_calls: list[float] = field(default_factory=list)
+
+    def monotonic(self) -> float:
+        self.monotonic_calls += 1
+        return self.current
+
+    def sleep(self, seconds: float) -> None:
+        if len(self.sleep_calls) >= self.max_sleep_calls:
+            raise AssertionError("signal shutdown exceeded its bounded sleep budget")
+        self.sleep_calls.append(seconds)
+        self.current += seconds
+
+
+def _assert_signal_shutdown_waits_are_bounded() -> None:
+    assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
+    grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
+    sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
+    clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
+    handle = HangingHandle(pid=10_000, exit_on_kill=False)
+
+    terminate_process_group(
+        handle,
+        monotonic=clock.monotonic,
+        sleep=clock.sleep,
+    )
+
+    assert handle.received_signals == [signal.SIGTERM, signal.SIGKILL]
+    assert len(clock.sleep_calls) == sleep_budget
+    assert clock.monotonic_calls == grace_sleep_calls + 2
+    assert handle.poll_calls == grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
 
 
 __all__ = [

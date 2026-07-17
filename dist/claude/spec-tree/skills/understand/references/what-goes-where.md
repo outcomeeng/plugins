@@ -6,8 +6,8 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | ----------------------- | ---------------------------------------- | -------------------------------------------- | --------------------------------------------------- |
 | **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                                           |
 | **PDR**                 | GOVERNS what (product)                   | Decisions, product properties                | PDR audit                                           |
-| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                                               |
-| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                                               |
+| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | `[test]`, `[eval]`, or `[audit]` evidence           |
+| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | `[test]`, `[eval]`, or `[audit]` evidence           |
 | **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
 | **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, test evidence audit, architecture audit |
 | **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule                                   |
@@ -80,7 +80,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 **Contains:**
 
 - Three-part hypothesis: WE BELIEVE THAT [output] WILL [outcome] CONTRIBUTING TO [impact]
-- Assertions specifying the output — locally verifiable by tests or review
+- Assertions specifying the output — locally verifiable by `[test]`, `[eval]`, or `[audit]` evidence
 
 **Does NOT contain:** Architecture decisions (→ ADR), product decisions (→ PDR), implementation details.
 
@@ -90,13 +90,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Typed assertion files only, one assertion type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
-
-| Level | Suffix shape                | Question                             |
-| ----- | --------------------------- | ------------------------------------ |
-| 1     | `.<evidence>.l1.test.{ext}` | Is our logic correct?                |
-| 2     | `.<evidence>.l2.test.{ext}` | Does it work with real dependencies? |
-| 3     | `.<evidence>.l3.test.{ext}` | Does it work for users?              |
+**Contains:** Typed assertion files only, one assertion type per file. Each filename encodes subject, evidence type, execution level, and an optional runner according to the product's enabled language convention. `/test` selects the evidence type and level; `/test-{language}` binds their canonical order, extension, and runner placement. No single cross-language suffix shape is authoritative.
 
 Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
 
@@ -178,7 +172,7 @@ ADR/PDR ──governs──→ Spec ──┤
 | ------------------------------------ | -------------------------- | ------------------------------------------------------------------------ |
 | Architecture choice                  | Spec                       | ADR                                                                      |
 | Product decision                     | Spec                       | PDR                                                                      |
-| Outcome hypothesis                   | ADR                        | Outcome spec                                                             |
+| Outcome hypothesis                   | ADR/PDR                    | Outcome spec                                                             |
 | Test reference                       | ADR/PDR                    | Spec assertions                                                          |
 | Implementation detail                | Spec                       | Code (not spec)                                                          |
 | "How to build it"                    | Spec                       | ADR or code                                                              |
@@ -189,5 +183,7 @@ ADR/PDR ──governs──→ Spec ──┤
 | Known unresolved issues              | Session file               | ISSUES.md in node                                                        |
 | Pending work from higher-level truth | Higher-level decision/spec | PLAN.md in first affected lower node after lower specs align             |
 | Child-node enumeration               | Parent spec                | Remove — `/contextualize` surfaces children; each child describes itself |
+
+Evidence-mechanism specialization does not duplicate a cross-cutting invariant. A child `[test]` rule that concretizes an ancestor `[audit]` or legacy `[review]` rule against a specific code surface adds deterministic evidence at a narrower scope and remains in the child spec. Same-content repetition with the same evidence mechanism is misplaced duplication; overlapping content with this narrower `[test]` evidence is valid specialization.
 
 </common_misplacements>

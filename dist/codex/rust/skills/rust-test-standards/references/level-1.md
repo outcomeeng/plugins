@@ -15,10 +15,9 @@ Level 1 covers logic that can run with Rust stdlib, normal developer tooling, an
 </what_belongs_here>
 
 <file_placement>
-Unit evidence usually lives in one of two places:
-
-- inline inside the production module with `#[cfg(test)]`
-- co-located spec evidence in `spx/.../tests/{subject}.{evidence}.l1.rs`
+Level 1 `[test]` evidence lives in co-located spec files at
+`spx/.../tests/{subject}.{evidence}.l1.rs`. Keep the typed assertion file
+there even when the governed production code is pure or module-local.
 
 </file_placement>
 
@@ -77,8 +76,8 @@ impl CommandRunner for RecordingRunner {
 <tempdir_pattern>
 
 ```rust
-use product_testing::fixtures::configs::fast_mode_config;
-use product_testing::harnesses::filesystem::assert_loads_config_from_temp_dir;
+use <product>_testing::fixtures::configs::fast_mode_config;
+use <product>_testing::harnesses::filesystem::assert_loads_config_from_temp_dir;
 
 #[test]
 fn loads_config_from_temp_dir() {
@@ -91,8 +90,8 @@ fn loads_config_from_temp_dir() {
 <property_pattern>
 
 ```rust
-use product_testing::generators::keys::canonical_key_strings;
-use product_testing::harnesses::properties::assert_canonical_key_roundtrips;
+use <product>_testing::generators::keys::canonical_key_strings;
+use <product>_testing::harnesses::properties::assert_canonical_key_roundtrips;
 
 #[test]
 fn canonical_key_roundtrips() {

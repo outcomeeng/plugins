@@ -33,20 +33,10 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from shutil import which
 from typing import Final
-
-SPX_COMMAND: Final = ("spx",)
-SPX_NPM_PACKAGE_NAME: Final = "@outcomeeng/spx"
-VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
-VERIFICATION_RUN_MINIMUM_SPX_PACKAGE: Final = (
-    f"{SPX_NPM_PACKAGE_NAME}@{VERIFICATION_RUN_MINIMUM_SPX_VERSION}"
-)
-VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
-    "npx",
-    "--yes",
-    VERIFICATION_RUN_MINIMUM_SPX_PACKAGE,
-)
 
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
@@ -55,8 +45,7 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # provider set include `worktree-pool` and classify a missing, detached, or
 # wrong-branch designated main checkout through that record, which this
 # product's merge overlay uses before merge mutation and after feature-worktree
-# cleanup. spx 0.6.13 introduced `spx verification run` (recorded by
-# `VERIFICATION_RUN_MINIMUM_SPX_VERSION`),
+# cleanup. spx 0.6.13 introduced `spx verification run`,
 # including run start, input replay, scope evidence, finding evidence, finish,
 # status, and render commands used by implementation audits. spx 0.6.10
 # introduced `spx journal
@@ -75,6 +64,26 @@ VERIFICATION_RUN_MINIMUM_SPX_COMMAND: Final = (
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
 # introduced the explicit work-branch git_ref the /handoff and /pickup skills
 # depend on).
+VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"
+SPX_PACKAGE_NAME: Final = "@outcomeeng/spx"
+PNPM_EXECUTABLE: Final = "pnpm"
+PNPM_COMMAND_PREFIX: Final = (PNPM_EXECUTABLE, "dlx")
+BUNX_EXECUTABLE: Final = "bunx"
+BUNX_COMMAND_PREFIX: Final = (BUNX_EXECUTABLE, "--bun")
+NPX_EXECUTABLE: Final = "npx"
+NPX_COMMAND_PREFIX: Final = (NPX_EXECUTABLE, "--yes")
+MINIMUM_RELEASE_PACKAGE_RUNNERS: Final = (
+    (PNPM_EXECUTABLE, PNPM_COMMAND_PREFIX),
+    (BUNX_EXECUTABLE, BUNX_COMMAND_PREFIX),
+    (NPX_EXECUTABLE, NPX_COMMAND_PREFIX),
+)
+VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
+    "start",
+    "scope",
+    "finding",
+    "finish",
+    "render",
+)
 REQUIRED_SPX_VERSION: Final = "0.6.15"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -104,8 +113,38 @@ def is_satisfied(pinned: str, floor: str) -> bool:
     return parse_version(pinned) >= parse_version(floor)
 
 
+def verification_run_floor_is_satisfied(
+    required_version: str = REQUIRED_SPX_VERSION,
+) -> bool:
+    """Return whether the shipped floor includes verification-run support."""
+    return is_satisfied(required_version, VERIFICATION_RUN_MINIMUM_SPX_VERSION)
+
+
+def minimum_release_package_command(
+    package_spec: str,
+    executable_finder: Callable[[str], str | None] = which,
+) -> tuple[str, ...]:
+    """Return the first available exact-release package-runner command."""
+    for executable, command_prefix in MINIMUM_RELEASE_PACKAGE_RUNNERS:
+        if executable_finder(executable) is not None:
+            return (*command_prefix, package_spec)
+    raise RuntimeError(
+        "exact minimum-release SPX execution requires pnpm, bunx, or npx when "
+        "the PATH version differs"
+    )
+
+
 def main(workflow_path: Path = WORKFLOW_PATH) -> int:
     """Read the workflow pin and fail when it is below ``REQUIRED_SPX_VERSION``."""
+    if not verification_run_floor_is_satisfied():
+        print(
+            "error: shipped implementation audits require @outcomeeng/spx >= "
+            f"{VERIFICATION_RUN_MINIMUM_SPX_VERSION} for spx verification run, "
+            f"but the repository floor is {REQUIRED_SPX_VERSION}.",
+            file=sys.stderr,
+        )
+        return 1
+
     if not workflow_path.is_file():
         print(f"error: CI workflow not found at {workflow_path}", file=sys.stderr)
         return 1

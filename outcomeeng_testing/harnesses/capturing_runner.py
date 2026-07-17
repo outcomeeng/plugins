@@ -82,13 +82,13 @@ def _fork_script(pid_path: Path, *, parent_exits: bool) -> str:
 
 
 @contextmanager
-def _controlled_child(*, parent_exits: bool) -> Iterator[ControlledChild]:
+def _controlled_child() -> Iterator[ControlledChild]:
     with TemporaryDirectory() as tmp:
         pid_path = Path(tmp) / "descendant.pid"
         command = (
             sys.executable,
             "-c",
-            _fork_script(pid_path, parent_exits=parent_exits),
+            _fork_script(pid_path, parent_exits=True),
         )
         try:
             yield ControlledChild(command=command, pid_path=pid_path)
@@ -97,16 +97,37 @@ def _controlled_child(*, parent_exits: bool) -> Iterator[ControlledChild]:
 
 
 @contextmanager
-def never_returning_child() -> Iterator[ControlledChild]:
-    """Yield a child whose group stays alive until terminated, holding its output stream."""
-    with _controlled_child(parent_exits=False) as child:
-        yield child
+def never_returning_executable(
+    executable_name: str,
+) -> Iterator[ControlledChild]:
+    """Put a real never-returning executable on PATH for command-level tests."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pid_path = root / "descendant.pid"
+        executable_path = root / executable_name
+        executable_path.write_text(
+            f"#!{sys.executable}\n{_fork_script(pid_path, parent_exits=False)}",
+            encoding="utf-8",
+        )
+        executable_path.chmod(0o755)
+        previous_path = os.environ.get("PATH")
+        os.environ["PATH"] = (
+            str(root) if previous_path is None else f"{root}{os.pathsep}{previous_path}"
+        )
+        try:
+            yield ControlledChild(command=(executable_name,), pid_path=pid_path)
+        finally:
+            if previous_path is None:
+                os.environ.pop("PATH", None)
+            else:
+                os.environ["PATH"] = previous_path
+            _terminate(pid_path)
 
 
 @contextmanager
 def child_exiting_with_lingering_descendant() -> Iterator[ControlledChild]:
     """Yield a child that exits immediately while a descendant keeps the output stream open."""
-    with _controlled_child(parent_exits=True) as child:
+    with _controlled_child() as child:
         yield child
 
 
@@ -129,5 +150,5 @@ __all__ = [
     "TEST_TIMEOUT_SECONDS",
     "ControlledChild",
     "child_exiting_with_lingering_descendant",
-    "never_returning_child",
+    "never_returning_executable",
 ]

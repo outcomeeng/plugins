@@ -38,64 +38,18 @@ from typing import IO, Final
 from outcomeeng.distribution.orchestration import (
     CATALOG_PATHS,
     CLAUDE_DIST_PLUGINS_DIR,
-    CODEX_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
-from outcomeeng.validation.implementation_audit_contract import (
-    IMPLEMENTATION_AUDITOR_AGENT_NAME,
-    LANGUAGE_AUDIT_CONCERNS,
-    RetiredAuditScript,
-    SPEC_TREE_PLUGIN_NAME,
-)
+from outcomeeng.validation.audit_artifacts import check_audit_artifact_contract
 
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS = CATALOG_PATHS
-
-PLUGIN_SURFACE_ROOTS: Final = (
-    SOURCE_PLUGINS_DIR,
-    CLAUDE_DIST_PLUGINS_DIR,
-    CODEX_DIST_PLUGINS_DIR,
-)
-PLUGIN_AGENTS_DIRNAME: Final = "agents"
-PLUGIN_SKILLS_DIRNAME: Final = "skills"
-SKILL_FILENAME: Final = "SKILL.md"
-IMPLEMENTATION_AUDITOR_AGENT_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_AGENT_NAME}.md"
-RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
-    "auditor.md",
-    "audit-orchestrator.md",
-)
-IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH: Final = (
-    Path(SPEC_TREE_PLUGIN_NAME)
-    / PLUGIN_AGENTS_DIRNAME
-    / IMPLEMENTATION_AUDITOR_AGENT_FILENAME
-)
-RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS: Final = tuple(
-    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_AGENTS_DIRNAME / filename
-    for filename in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
-)
-IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH: Final = (
-    Path(SPEC_TREE_PLUGIN_NAME) / PLUGIN_SKILLS_DIRNAME / "audit-implementation"
-)
-
-
-def language_code_skill_relative_path(language: str) -> Path:
-    """Return the source-owned relative path for a language code skill."""
-    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"code-{language}" / SKILL_FILENAME
-
-
-def language_audit_skill_relative_path(language: str, concern: str) -> Path:
-    """Return the source-owned relative path for a language audit concern."""
-    return (
-        Path(language)
-        / PLUGIN_SKILLS_DIRNAME
-        / f"audit-{language}-{concern}"
-        / SKILL_FILENAME
-    )
-
-
-def retired_language_audit_skill_relative_path(language: str) -> Path:
-    """Return the source-owned relative path for a retired language audit skill."""
-    return Path(language) / PLUGIN_SKILLS_DIRNAME / f"audit-{language}"
+CATALOG_PLUGINS_FIELD: Final = "plugins"
+PLUGIN_NAME_FIELD: Final = "name"
+PLUGIN_VERSION_FIELD: Final = "version"
+CLAUDE_PLUGIN_MANIFEST_PATH: Final = ".claude-plugin/plugin.json"
+CODEX_PLUGIN_MANIFEST_PATH: Final = ".codex-plugin/plugin.json"
+CLAUDE_PLUGIN_VALIDATE_ARGV: Final = ("claude", "plugin", "validate")
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -125,7 +79,7 @@ def discover_targets(root: Path) -> list[Path]:
 def _catalog_plugin_names(path: Path) -> set[str]:
     """Return the set of plugin names listed in a marketplace catalog JSON."""
     data = json.loads(path.read_text())
-    return {p["name"] for p in data.get("plugins", [])}
+    return {plugin[PLUGIN_NAME_FIELD] for plugin in data.get(CATALOG_PLUGINS_FIELD, [])}
 
 
 def check_catalog_sync(root: Path) -> list[str]:
@@ -188,16 +142,18 @@ def check_manifest_parity(root: Path) -> list[str]:
 
         claude_data = json.loads(claude_manifest.read_text())
         codex_data = json.loads(codex_manifest.read_text())
-        claude_version = claude_data.get("version")
-        codex_version = codex_data.get("version")
+        claude_version = claude_data.get(PLUGIN_VERSION_FIELD)
+        codex_version = codex_data.get(PLUGIN_VERSION_FIELD)
 
         if claude_version is None:
             errors.append(
-                f"{child.name}: .claude-plugin/plugin.json missing version field"
+                f"{child.name}: {CLAUDE_PLUGIN_MANIFEST_PATH} "
+                f"missing {PLUGIN_VERSION_FIELD} field"
             )
         if codex_version is None:
             errors.append(
-                f"{child.name}: .codex-plugin/plugin.json missing version field"
+                f"{child.name}: {CODEX_PLUGIN_MANIFEST_PATH} "
+                f"missing {PLUGIN_VERSION_FIELD} field"
             )
         if claude_version is None or codex_version is None:
             continue
@@ -205,78 +161,10 @@ def check_manifest_parity(root: Path) -> list[str]:
         if claude_version != codex_version:
             errors.append(
                 f"{child.name}: version drift — "
-                f".claude-plugin/plugin.json={claude_version}, "
-                f".codex-plugin/plugin.json={codex_version}"
+                f"{CLAUDE_PLUGIN_MANIFEST_PATH}={claude_version}, "
+                f"{CODEX_PLUGIN_MANIFEST_PATH}={codex_version}"
             )
 
-    return errors
-
-
-def check_implementation_auditor_wrapper(root: Path) -> list[str]:
-    """Report absent or retired implementation-auditor wrapper agents."""
-    errors: list[str] = []
-    for surface_root in PLUGIN_SURFACE_ROOTS:
-        wrapper = root / surface_root / IMPLEMENTATION_AUDITOR_AGENT_RELATIVE_PATH
-        if not wrapper.is_file():
-            errors.append(f"implementation auditor absent: {wrapper.relative_to(root)}")
-        for retired_relative_path in RETIRED_IMPLEMENTATION_AUDITOR_RELATIVE_PATHS:
-            retired_path = root / surface_root / retired_relative_path
-            if retired_path.exists():
-                errors.append(
-                    f"retired implementation auditor present: "
-                    f"{retired_path.relative_to(root)}"
-                )
-    return errors
-
-
-def check_language_concern_skill_trios(root: Path) -> list[str]:
-    """Report language plugins whose implementation-audit skill trio is incomplete."""
-    errors: list[str] = []
-    for surface_root in PLUGIN_SURFACE_ROOTS:
-        plugins_root = root / surface_root
-        if not plugins_root.is_dir():
-            continue
-        for plugin_dir in plugins_root.iterdir():
-            errors.extend(
-                _language_concern_skill_errors(root, plugins_root, plugin_dir.name)
-            )
-    return errors
-
-
-def _language_concern_skill_errors(
-    root: Path,
-    plugins_root: Path,
-    language: str,
-) -> list[str]:
-    code_skill = plugins_root / language_code_skill_relative_path(language)
-    if not code_skill.is_file():
-        return []
-    errors = [
-        f"language audit concern absent: {skill_path.relative_to(root)}"
-        for concern in LANGUAGE_AUDIT_CONCERNS
-        if not (
-            skill_path := plugins_root
-            / language_audit_skill_relative_path(language, concern)
-        ).is_file()
-    ]
-    retired_skill = plugins_root / retired_language_audit_skill_relative_path(language)
-    if retired_skill.exists():
-        errors.append(
-            f"retired language audit skill present: {retired_skill.relative_to(root)}"
-        )
-    return errors
-
-
-def check_retired_audit_scripts(root: Path) -> list[str]:
-    """Report plugin-side audit scripts whose responsibilities belong to SPX."""
-    errors: list[str] = []
-    for surface_root in PLUGIN_SURFACE_ROOTS:
-        skill_root = root / surface_root / IMPLEMENTATION_AUDIT_SKILL_RELATIVE_PATH
-        for retired_script in RetiredAuditScript:
-            for retired_path in skill_root.rglob(retired_script.value):
-                errors.append(
-                    f"retired audit script present: {retired_path.relative_to(root)}"
-                )
     return errors
 
 
@@ -348,7 +236,7 @@ def _validate_target(
     target: Path,
     runner: Callable[..., subprocess.CompletedProcess[str]],
 ) -> tuple[Path, subprocess.CompletedProcess[str]]:
-    cmd = ["claude", "plugin", "validate", str(target)]
+    cmd = [*CLAUDE_PLUGIN_VALIDATE_ARGV, str(target)]
     return target, runner(cmd)
 
 
@@ -407,17 +295,11 @@ def main(
     parity_errors = check_manifest_parity(root)
     _report_contract_errors("manifest parity", parity_errors)
 
-    audit_contract_errors = (
-        *check_implementation_auditor_wrapper(root),
-        *check_language_concern_skill_trios(root),
-        *check_retired_audit_scripts(root),
-    )
-    _report_contract_errors(
-        "implementation audit contract", list(audit_contract_errors)
-    )
+    audit_artifact_errors = check_audit_artifact_contract(root)
+    _report_contract_errors("audit artifacts", audit_artifact_errors)
 
     return (
-        1 if (failures or sync_errors or parity_errors or audit_contract_errors) else 0
+        1 if (failures or sync_errors or parity_errors or audit_artifact_errors) else 0
     )
 
 

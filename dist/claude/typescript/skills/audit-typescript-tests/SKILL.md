@@ -1,16 +1,10 @@
 ---
 name: audit-typescript-tests
 description: >-
-  TypeScript test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the TypeScript tests in scope.
-  Reached only through those auditor agents, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+  TypeScript test-evidence audit methodology — judges the TypeScript tests in
+  scope against the spec-tree and TypeScript-specific evidence properties.
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
-
-<dispatch_gate>
-
-This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -32,6 +26,8 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
@@ -41,9 +37,23 @@ Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded sk
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The caller brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
+This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. Cross-file literal laundering is judged by reading.
 
 </prerequisites>
+
+<audit_scope>
+
+Begin with the current governing spec and its current evidence links. A deleted TypeScript test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current TypeScript test-evidence scope and return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+
+Use read-only `git diff` only when the supplied changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+
+</audit_scope>
+
+<structural_reading>
+
+Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding. Fold this reading observation into Gate 1 rather than running a naming-convention command.
+
+</structural_reading>
 
 <literal_laundering_by_reading>
 
@@ -119,7 +129,7 @@ Apply `<test_file_declarations>` to each linked TypeScript test file before insp
 | Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                                                                                 | Single example for a claimed mapping                    |
 | Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                                                                                      | Manual `toEqual({...hardcoded...})` with no validator   |
 | Property    | `assertProperty(namedProperty())` — meaningful arbitrary, invariant body, seed, and replay output live in the imported property harness | `fc.constant`, body `return true`, only "doesn't throw" |
-| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit                                                                    | `[test]` with no violating fixture                      |
+| Compliance  | `[test]`: exercises a violating fixture; `[audit]`: skip this audit                                                                     | `[test]` with no violating fixture                      |
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 
@@ -308,7 +318,7 @@ Alignment fails when clauses are collapsed, evidence method mismatches the type,
 
 <supplement property="coverage">
 
-Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. This audit runs no deterministic verification.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -334,61 +344,91 @@ Coverage here is execution breadth (does the test reach the assertion-relevant l
 
 This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
+When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+
+```json
+{
+  "status": "NOT_APPLICABLE",
+  "subjects": ["<retired-repository-relative-path>"],
+  "explanation": "No current [test] assertion or evidence chain references the retired path."
+}
+```
+
+Emit this shape only when every supplied subject is outside current TypeScript test-evidence scope. A current broken `[test]` link remains applicable and produces the inherited `REJECTED` verdict.
+
 </verdict_format>
 
 <failure_modes>
 
 **Failure 1 — Contradiction resolution followed operational guide over canonical standard**
 
-The standard in `/typescript-test-standards` rejects `.e2e.test.ts`, `.unit.test.ts`, `.integration.test.ts`. A prior version of this skill said filename conventions were "deferred as standards issues." Both rules were visible. Claude followed the audit skill because it was the operational guide for *this task*, resolving the contradiction by authority-of-specificity. Five files with legacy suffixes shipped approved.
+What happened: The standard in `/typescript-test-standards` rejects `.e2e.test.ts`, `.unit.test.ts`, `.integration.test.ts`. A prior version of this skill said filename conventions were "deferred as standards issues." Both rules were visible. Claude followed the audit skill because it was the operational guide for *this task*, resolving the contradiction by authority-of-specificity. Five files with legacy suffixes shipped approved.
 
-How to avoid: `/typescript-test-standards` defines the filename convention. Gate 1 step 1 challenges the assertion type; the deferral carveout no longer exists.
+Why it failed: Claude treated a narrower operational prompt as authority over the canonical standards reference.
+
+How to avoid: `/typescript-test-standards` defines the filename convention. `<structural_reading>` rejects every legacy suffix before Gate 1; the deferral carveout no longer exists.
 
 **Failure 2 — Harness coupling camouflage: the mock lives in the harness**
 
-Test imports `import { posthogHarness } from "@testing/harnesses/posthog"` and uses it across scenarios. No `vi.mock` in the test. Claude classified coupling as indirect (harness-wrapped). The harness file itself contained `vi.mock("posthog-js", () => ({ ...fake... }))` at module load. Every test using the harness had coupling severed at the harness level — invisible from the test file alone.
+What happened: A test imported `posthogHarness` from `@testing/harnesses/posthog` and used it across scenarios. No `vi.mock` appeared in the test, so Claude classified coupling as indirect. The harness file contained `vi.mock("posthog-js", () => ({ ...fake... }))` at module load, severing coupling for every consumer.
+
+Why it failed: The audit stopped at the test file and never inspected the imported harness that replaced production behavior.
 
 How to avoid: Gate 1 step 7 opens every imported harness file and traces mock calls one level deep. The test's imports look clean when the mock lives in a harness. Always open the harness.
 
 **Failure 3 — Oracle inside the module under test: self-consistency passes shared bugs**
 
-Test: `expect(encode(decode(value))).toBe(value)` — textbook roundtrip property, `fc.assert`-wrapped, meets alignment for a Property assertion on a serializer. Claude approved. Both `encode` and `decode` lived in the module being audited. A shared bug — both functions stripped trailing whitespace — made the roundtrip hold for every input. The oracle was the module's own output; the test verified self-consistency, not correctness.
+What happened: Claude approved `expect(encode(decode(value))).toBe(value)` as a roundtrip property. Both functions lived in the audited module, and a shared trailing-whitespace bug made the roundtrip hold for every input.
+
+Why it failed: The module under test produced both the observed value and its oracle, allowing shared defects to cancel out.
 
 How to avoid: Gate 1 step 6 requires the expected value to derive from a source the module under test did not produce — a canonical constant imported from a different module, an external standard, or a value hand-computed in the test.
 
 **Failure 4 — Partial alignment through clause collapse**
 
-Spec: "MUST reject expired requests with HTTP 410 and a body conforming to the error schema." Test: `expect(handler(expiredRequest).rejected).toBe(true)`. Claude saw the reject behavior tested and marked alignment as pass. The assertion had three clauses (reject, status 410, body schema). The test covered one. Two uncovered clauses could fail in production while the test passes.
+What happened: The spec required rejection, HTTP 410, and an error-schema body. Claude marked `expect(handler(expiredRequest).rejected).toBe(true)` aligned even though it covered only the first clause.
+
+Why it failed: Claude collapsed a multi-clause assertion into its first observable outcome.
 
 How to avoid: Gate 1 step 2 enumerates clauses from the assertion text *before* matching to test `expect`s. A single `expect` for a three-clause assertion is REJECT, not "close enough."
 
 **Failure 5 — Property-shaped example disguised by fast-check syntax**
 
-Test: `fc.assert(fc.property(fc.constant({ user: "admin", role: "root" }), (x) => validate(x).ok))`. Wrapped in `fc.assert`, structurally a property test, filename `.property.l1.test.ts`. Claude saw the property framework and approved. The arbitrary was `fc.constant` — a single value. The test ran one example and called itself a property.
+What happened: Claude approved `fc.assert(fc.property(fc.constant({ user: "admin", role: "root" }), (x) => validate(x).ok))` because the file and framework looked property-shaped. The arbitrary held one value.
+
+Why it failed: Framework syntax and filename classification replaced inspection of the generated domain.
 
 How to avoid: Gate 1 step 4 inspects the arbitrary's domain. `fc.constant`, small `fc.oneof` over hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT the Property assertion.
 
 **Failure 6 — Literal laundering moved into generator modules**
 
-Test imported `arbitraryAbsentConfig()` from `@testing/generators/config`. The test file contained no literals, so the audit passed. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding ceremony without variability, shrinking, or a stronger oracle. The source module already owned the absent-result protocol.
+What happened: Claude approved a literal-free test importing `arbitraryAbsentConfig()` from `@testing/generators/config`. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding no variability, shrinking, or stronger oracle.
+
+Why it failed: The audit checked literal location rather than whether the generator added a variable evidence domain.
 
 How to avoid: Gate 1 step 7 opens generator modules. Generators whose only behavior is returning a source-owned singleton shape are REJECT. Require a source-owned constructor or registry import.
 
 **Failure 7 — Fixture imported as executable test code**
 
-Test imported `{ VALID_CASES }` from `@testing/fixtures/rule-cases.ts`. The fixture was a valid TypeScript module, so the test runner compiled it and consumed its exports. The file was no longer an inert input artifact; it became shared test-owned data hidden behind a fixture path.
+What happened: An executed test imported `VALID_CASES` from `@testing/fixtures/rule-cases.ts`. The runner compiled the fixture and consumed its exports as shared test-owned data.
+
+Why it failed: File placement was mistaken for fixture semantics even though executed test code imported its exports.
 
 How to avoid: Gate 1 step 7 rejects imports from `@testing/fixtures/*`. Fixture files may be read from disk, copied into temp projects, or passed by path to the code under test. They are never imported by executed test code.
 
 **Failure 8 — Runner configuration hidden in a renamed test variable**
 
-Test declared `const MAPPING_RUNS = 12`, validation complained, and Claude renamed it to `mappingRuns` to bypass a case-based rule. The property run count still lived in the executed test file, so the audit approved configuration in the wrong layer.
+What happened: Validation rejected `const MAPPING_RUNS = 12`, and Claude renamed it to `mappingRuns`. The property run count remained in the executed test file and the audit approved it.
+
+Why it failed: A naming convention was used as a proxy for ownership, allowing configuration to remain in the assertion file.
 
 How to avoid: Gate 1 step 3 rejects test-owned declarations by ownership, not casing. Property run counts, seeds, replay output, and diagnostics belong in a seed-reporting harness or wrapper.
 
 **Failure 9 — Property failure could not be replayed**
 
-Test used `fc.assert(fc.property(arbitraryPath(), predicate))` with a meaningful arbitrary, but no harness owned the seed and the failure output did not tell the developer which seed or replay command reproduced the failing case. The property was real, but debugging evidence was incomplete.
+What happened: A property used a meaningful `arbitraryPath()`, but no harness owned the seed and failure output carried no seed or replay command. Claude approved the incomplete debugging evidence.
+
+Why it failed: Domain quality was judged without checking reproducibility of a generated failure.
 
 How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructure. Approve property evidence only when failure output exposes the seed and replay path.
 
@@ -398,8 +438,9 @@ How to avoid: Gate 1 steps 3 and 7 require seed-reporting property infrastructur
 
 The TypeScript test verdict is sound when:
 
-- Every in-scope assertion was judged on all eight Gate 1 steps and Gate 2 with none skipped — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
-- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Every applicable rule was judged: each in-scope test received the filename-policy structural reading, and each in-scope assertion received all eight Gate 1 steps — test-file declaration ownership, coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering; Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
+- Every deleted TypeScript test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
+- Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
 

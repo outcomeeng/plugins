@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its invoker, and (f) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -39,6 +39,10 @@ For language-specific skill prose that references a foundation, use the unqualif
 3. The parent owns sequencing, validates the returned shape, and merges the child result into its own output contract.
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
+
+**Invoker independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on the agent, skill, or context that invokes it. The dependency runs one way: an invoking surface may know the skill it invokes; the skill never knows its invokers.
+
+Context placement, agent selection, and dispatch policy belong to the invoking surface. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or invoker check to the invoked skill.
 
 </skill_organization>
 
@@ -84,7 +88,7 @@ name: typescript-unit-framework # Wrong order
 
 <descriptions>
 
-Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and route isolated audits through their configured auditor role.
+Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and describe the skill's own subject rather than the invoker that reaches it.
 
 </descriptions>
 
@@ -121,21 +125,20 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Conditional tags** (include when the skill's complexity or purpose calls for them):
 
-| Tag                    | When to include                                                                                                                                                                                             |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point.                                                              |
-| `<dispatch_gate>`      | Agent-preloaded audit skills. A hard stop at the top of the body that halts a main-conversation invocation and directs it to dispatch the corresponding auditor agent. **Omit** for every other skill type. |
-| `<context>`            | Background needed before starting.                                                                                                                                                                          |
-| `<workflow>`           | Sequential steps (non-router skills).                                                                                                                                                                       |
-| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                                                                                |
-| `<validation>`         | Verification checks.                                                                                                                                                                                        |
-| `<examples>`           | Input/output pairs.                                                                                                                                                                                         |
-| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                                                                                   |
-| `<security_checklist>` | Skills with security implications.                                                                                                                                                                          |
-| `<testing>`            | Testing workflows or validation steps.                                                                                                                                                                      |
-| `<common_patterns>`    | Reusable recipes.                                                                                                                                                                                           |
-| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                                                                                       |
-| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                                                                                        |
+| Tag                    | When to include                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point. |
+| `<context>`            | Background needed before starting.                                                                                                             |
+| `<workflow>`           | Sequential steps (non-router skills).                                                                                                          |
+| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                   |
+| `<validation>`         | Verification checks.                                                                                                                           |
+| `<examples>`           | Input/output pairs.                                                                                                                            |
+| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                      |
+| `<security_checklist>` | Skills with security implications.                                                                                                             |
+| `<testing>`            | Testing workflows or validation steps.                                                                                                         |
+| `<common_patterns>`    | Reusable recipes.                                                                                                                              |
+| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                          |
+| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                           |
 
 This table is representative, not exhaustive: a skill may add semantically named domain sections beyond it (this file's `<frontmatter>`, `<descriptions>`, and reference-pointer sections such as `<platform_constraints>` and `<script_standards>` are examples).
 

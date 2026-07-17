@@ -47,9 +47,29 @@ from enum import StrEnum
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
+MISSING_TEMPLATE_VERSION_ERROR = "error: template has no template_version"
+DUPLICATE_FLAG_ERROR_PREFIX = "error: duplicate flag: "
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+READ_ENTIRE_FILE_DIRECTIVE = "**Read this entire file before acting.**"
+CLI_OPTION_NAMES = (
+    "--template",
+    "--repo-root",
+    "--check",
+    "--write",
+    "--reconcile",
+    "--from",
+    "--languages",
+)
+UNRESOLVED_BUILD_TEMPLATE_TOKENS = (
+    "{" + "{!",
+    "!" + "}}",
+    "{" + "!%",
+    "%" + "!}",
+    "{" + "!#",
+    "#" + "!}",
+)
 
 # The router block's compressed marker. The opening marker carries the two fields staleness
 # reads — the dotted template version and the recorded enabled-language list — inline, so no
@@ -132,6 +152,10 @@ INSTRUCTION_STATUS_PRECEDENCE = (
 
 class CliInputError(ValueError):
     """Raised when CLI path input would make instruction-block generation unsafe."""
+
+
+class UnresolvedInstructionTemplateError(ValueError):
+    """Raised when instruction generation receives an authored build template."""
 
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
@@ -275,12 +299,28 @@ def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
     return tuple(sorted(set(languages)))
 
 
-def parse_template_version(text: str) -> str | None:
-    """Return the ``template_version`` value from a document's frontmatter, or None."""
+def duplicate_cli_option(argv: Iterable[str]) -> str | None:
+    """Return the first repeated supported option in raw argv, or None."""
+    seen: set[str] = set()
+    for token in argv:
+        option = token.split("=", maxsplit=1)[0]
+        if option not in CLI_OPTION_NAMES:
+            continue
+        if option in seen:
+            return option
+        seen.add(option)
+    return None
+
+
+def parse_template_frontmatter_version(text: str) -> str | None:
+    """Return the ``template_version`` value from frontmatter only, or None."""
     frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(
-        frontmatter, TEMPLATE_VERSION_KEY
-    ) or parse_instruction_version(text)
+    return _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY)
+
+
+def parse_template_version(text: str) -> str | None:
+    """Return a template or rendered instruction document's version, or None."""
+    return parse_template_frontmatter_version(text) or parse_instruction_version(text)
 
 
 def parse_instruction_version(text: str) -> str | None:
@@ -415,6 +455,16 @@ def detect_languages(extensions: Iterable[str]) -> tuple[str, ...]:
     return normalize_languages(languages)
 
 
+def assert_no_unresolved_build_macros(template_text: str) -> None:
+    """Reject a template that still contains build-time macro delimiters."""
+    for token in UNRESOLVED_BUILD_TEMPLATE_TOKENS:
+        if token in template_text:
+            raise UnresolvedInstructionTemplateError(
+                f"template contains unresolved build macro token {token!r}; "
+                "pass the rendered, delimiter-free template bundled with the installed plugin"
+            )
+
+
 def render(
     template_text: str,
     languages: tuple[str, ...],
@@ -428,6 +478,7 @@ def render(
     tokens pass through unchanged. The opening marker records the version and language list
     inline, so a later update reads both back from the marker without separate metadata lines.
     """
+    assert_no_unresolved_build_macros(template_text)
     languages = normalize_languages(languages)
     _, template_body = _split_frontmatter(template_text)
 
@@ -1198,6 +1249,12 @@ def shared_region_drift(repo_root: pathlib.Path) -> tuple[str, ...]:
 
 def main(argv: list[str] | None = None) -> int:
     """Thin CLI edge: read the template, detect languages, render/write/check/reconcile."""
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    duplicate = duplicate_cli_option(raw_argv)
+    if duplicate is not None:
+        print(f"{DUPLICATE_FLAG_ERROR_PREFIX}{duplicate}", file=sys.stderr)
+        return 2
+
     parser = argparse.ArgumentParser(
         description="Generate and validate the managed Spec Tree instruction surface in root CLAUDE.md and AGENTS.md."
     )
@@ -1233,7 +1290,7 @@ def main(argv: list[str] | None = None) -> int:
         "--languages",
         help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
     )
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
 
     try:
         template_path = _validated_template_path(args.template)
@@ -1241,9 +1298,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     template_text = template_path.read_text(encoding="utf-8")
-    installed = parse_template_version(template_text)
+    installed = parse_template_frontmatter_version(template_text)
     if installed is None:
-        print("error: template has no template_version", file=sys.stderr)
+        print(MISSING_TEMPLATE_VERSION_ERROR, file=sys.stderr)
         return 2
 
     try:
@@ -1334,10 +1391,14 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --write requires --repo-root", file=sys.stderr)
         return 2
 
-    rendered = {
-        harness: render(template_text, languages, installed, harness)
-        for harness in AGENT_HARNESS_INSTRUCTION_FILENAMES
-    }
+    try:
+        rendered = {
+            harness: render(template_text, languages, installed, harness)
+            for harness in AGENT_HARNESS_INSTRUCTION_FILENAMES
+        }
+    except UnresolvedInstructionTemplateError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if args.write and repo_root is not None:
         try:

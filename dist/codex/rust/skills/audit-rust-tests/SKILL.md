@@ -1,16 +1,10 @@
 ---
 name: audit-rust-tests
 description: >-
-  Rust test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Rust tests in scope.
-  Reached only through those auditor agents, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+  Rust test-evidence audit methodology — judges the Rust tests in scope against
+  the spec-tree and Rust-specific evidence properties.
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
-
-<dispatch_gate>
-
-This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
@@ -30,6 +24,8 @@ Invoke the `rust:rust-standards` skill before proceeding. If that skill is unava
 
 Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
@@ -39,17 +35,25 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
+
+<audit_scope>
+
+Begin with the current governing spec and its current evidence links. A deleted Rust test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Rust test-evidence scope and return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+
+Use read-only `git diff` only when the supplied changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+
+</audit_scope>
 
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
 - **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a finding, do not re-validate it.
-- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `product-testing` harness, `product-testing` generator, inert fixture data, or eval case data.
-- **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Fixture reads under `spx/.../tests/` are fine.
-- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. The credentialed `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and is not a defect in `.l3.rs` files; outside `.l3.rs` it is misplaced.
+- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `<product>-testing` harness, `<product>-testing` generator, inert fixture data, or eval case data.
+- **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Inert fixture data is read by path from `<product>-testing/fixtures/`; co-located `spx/.../tests/` remains the home of typed assertion files. When a loaded overlay points to a governing product spec or decision that explicitly amends this contract, follow that declaration; the overlay does not redefine fixture placement itself.
+- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. A reasoned `#[ignore = "..."]` is acceptable in a `.l3.rs` file only when a loaded product spec or decision declares that credentialed Level 3 lane; otherwise disabled evidence rejects. Outside `.l3.rs`, reasoned ignore is misplaced.
 - **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
 
 </structural_reading>
@@ -84,15 +88,17 @@ The linked tests must exercise every clause with an assertion. A single assertio
 <step name="evidence">
 Match the Rust evidence method to the assertion type:
 
-| Type        | Required Rust evidence                                                                   | Reject if                                    |
-| ----------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Scenario    | concrete inputs through the governed function, module, or binary                         | only existence or truthiness is checked      |
-| Mapping     | table-driven cases, `rstest`, or looped fixtures with at least two meaningful cases      | one example stands in for a mapping          |
-| Conformance | parser, schema, protocol harness, CLI contract, or `trybuild` for compile-time contracts | manual shape checks replace the validator    |
-| Property    | `proptest` or `quickcheck` with meaningful generators and invariants                     | examples are wrapped in property syntax      |
-| Compliance  | violating fixture, lint harness, or explicit `[review]` marker                           | no violating input or review evidence exists |
+| Type        | Required Rust evidence                                                                   | Reject if                                 |
+| ----------- | ---------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Scenario    | concrete inputs through the governed function, module, or binary                         | only existence or truthiness is checked   |
+| Mapping     | table-driven cases, `rstest`, or looped fixtures with at least two meaningful cases      | one example stands in for a mapping       |
+| Conformance | parser, schema, protocol harness, CLI contract, or `trybuild` for compile-time contracts | manual shape checks replace the validator |
+| Property    | `proptest` or `quickcheck` with meaningful generators and invariants                     | examples are wrapped in property syntax   |
+| Compliance  | violating fixture or lint harness for a current `[test]` link                            | no violating input or rule oracle exists  |
 
 For property tests, inspect the generator domain. `Just`, one-value ranges, or tiny enumerations reduce the property to examples unless the spec explicitly declares a finite set.
+
+An assertion tagged `[audit]` carries no assertion type and is outside Rust test-evidence scope. Skip it rather than treating the marker as test evidence.
 </step>
 
 <step name="controlled_implementations">
@@ -120,12 +126,12 @@ Reject with an `oracle` finding when the expected value is derived from the modu
 <step name="harness_chain">
 Trace every test-infrastructure import:
 
-- imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
+- imports from the `<product>_testing` workspace-member crate (e.g., `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
 - non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` test-infrastructure modules inside a product crate
 - local functions inside `spx/.../tests/` — these are misplaced infrastructure when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary
 - binary harnesses built around `assert_cmd::Command::cargo_bin(...)`
 
-Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `product-testing` workspace-member crate.
+Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `<product>-testing` workspace-member crate.
 </step>
 
 <step name="four_properties">
@@ -140,7 +146,7 @@ First property failure rejects the assertion.
 </step>
 
 <step name="coverage">
-Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. This audit runs no deterministic verification.
 
 Trace, by reading, whether the test drives execution into the governed source path:
 
@@ -170,7 +176,7 @@ Trigger: two or more in-scope tests share any of these patterns:
 - repeated stdout/stderr/exit-code assertion functions
 - repeated tracing/debug capture setup
 
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `product-testing` workspace-member crate — `product_testing::harnesses::{name}` for shared resource mediators, `product_testing::generators::{name}` for input factories, or `product_testing::fixtures::{name}` for fixture-loading code.
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `<product>-testing` workspace-member crate — `<product>_testing::harnesses::{name}` for shared resource mediators, `<product>_testing::generators::{name}` for input factories, or `<product>_testing::fixtures::{name}` for fixture-loading code.
 
 Gate 2 status:
 
@@ -218,7 +224,7 @@ Reject when the test covers a nearby behavior, collapses clauses, uses one examp
 </supplement>
 
 <supplement property="coverage">
-Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — the caller and CI own coverage measurement.
+Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — this audit establishes coverage by reading.
 
 Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </supplement>
@@ -229,26 +235,44 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `<product>-testing` workspace-member crate, e.g. `<product>_testing::harnesses::{name}`, `<product>_testing::generators::{name}`, or `<product>_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+
+When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+
+```json
+{
+  "status": "NOT_APPLICABLE",
+  "subjects": ["<retired-repository-relative-path>"],
+  "explanation": "No current [test] assertion or evidence chain references the retired path."
+}
+```
+
+Emit this shape only when every supplied subject is outside current Rust test-evidence scope. A current broken `[test]` link remains applicable and produces the inherited `REJECTED` verdict.
 
 </verdict_format>
 
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
 
-Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+What happened: Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture functions. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+
+Why it failed: Claude treated import shape as the only coupling signal and ignored execution through the product binary contract.
 
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 
 **Failure 2: Approved source-text tests**
 
-Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
+What happened: Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
+
+Why it failed: Source-text presence is prose coupling and proves no executable behavior.
 
 How to avoid: `<structural_reading>` reads in-scope tests for production source-file reads; a test asserting on `src/` text is prose-coupling → REJECT in Gate 1.
 
 **Failure 3: Hard-coded a product-specific Level 3 restriction**
 
-Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
+What happened: Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
+
+Why it failed: Product-local execution policy was promoted into a reusable language standard.
 
 How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing product spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
 </failure_modes>
@@ -257,8 +281,9 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 
 The Rust test verdict is sound when:
 
-- Every in-scope assertion was judged on every Gate 1 step and Gate 2 with none skipped — challenge, scope, evidence-method, controlled implementations, oracle independence, harness-chain tracing, the four properties (coupling, falsifiability, alignment, coverage by reading), and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals).
-- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Every applicable rule was judged: each in-scope assertion received every Gate 1 step and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals); Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
+- Every deleted Rust test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
+- Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
 - The same test node yields the same verdict regardless of run order (reproducible).
 

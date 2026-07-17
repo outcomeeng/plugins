@@ -18,7 +18,7 @@ import signal
 import tempfile
 import time
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from types import FrameType
 from typing import Final, TextIO
@@ -26,10 +26,10 @@ from typing import Final, TextIO
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
 
-_FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
-_GRACE_SECONDS: Final = 2.0
-_POLL_INTERVAL: Final = 0.05
-_POST_KILL_REAP_ATTEMPTS: Final = 20
+FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+SIGNAL_GRACE_SECONDS: Final = 2.0
+SIGNAL_POLL_INTERVAL_SECONDS: Final = 0.05
+POST_KILL_REAP_ATTEMPTS: Final = 20
 LOG_FILE_PREFIX: Final = "outcomeeng-validation-"
 LOG_FILE_SUFFIX: Final = ".log"
 SUMMARY_FILE_PREFIX: Final = "outcomeeng-validation-summary-"
@@ -88,18 +88,28 @@ def _forwarding_signal_handler(signum: int, _frame: FrameType | None) -> None:
         raise _ForwardedSignal(signum, child_handle_available=False)
     if handle.poll() is not None:
         raise _ForwardedSignal(signum, child_handle_available=True)
+    terminate_process_group(handle)
+    raise _ForwardedSignal(signum, child_handle_available=True)
+
+
+def terminate_process_group(
+    handle: ProcessHandle,
+    *,
+    monotonic: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Terminate a child process group with bounded grace and reap waits."""
     handle.send_signal_to_group(signal.SIGTERM)
-    deadline = time.monotonic() + _GRACE_SECONDS
-    while time.monotonic() < deadline:
+    deadline = monotonic() + SIGNAL_GRACE_SECONDS
+    while monotonic() < deadline:
         if handle.poll() is not None:
-            raise _ForwardedSignal(signum, child_handle_available=True)
-        time.sleep(_POLL_INTERVAL)
+            return
+        sleep(SIGNAL_POLL_INTERVAL_SECONDS)
     handle.send_signal_to_group(signal.SIGKILL)
-    for _ in range(_POST_KILL_REAP_ATTEMPTS):
+    for _ in range(POST_KILL_REAP_ATTEMPTS):
         if handle.poll() is not None:
             break
-        time.sleep(_POLL_INTERVAL)
-    raise _ForwardedSignal(signum, child_handle_available=True)
+        sleep(SIGNAL_POLL_INTERVAL_SECONDS)
 
 
 def _write_timing_summary(
@@ -258,7 +268,7 @@ def _recipe_summary(
 
 def _consume_pending_forwarded_signal() -> int | None:
     pending = signal.sigpending()
-    for sig in _FORWARDED_SIGNALS:
+    for sig in FORWARDED_SIGNALS:
         if sig in pending:
             return int(signal.sigwait((sig,)))
     return None
@@ -269,7 +279,7 @@ def _spawn_with_deferred_signal_forwarding(
     step: Step,
     log_path: Path,
 ) -> ProcessHandle:
-    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, _FORWARDED_SIGNALS)
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, FORWARDED_SIGNALS)
     pending_signal: int | None = None
     try:
         handle = spawner.spawn(step.argv, log_path)
@@ -409,7 +419,7 @@ def _execute_recipe(
 
 def _install_signal_handlers() -> dict[signal.Signals, signal._HANDLER]:
     old_handlers: dict[signal.Signals, signal._HANDLER] = {}
-    for sig in _FORWARDED_SIGNALS:
+    for sig in FORWARDED_SIGNALS:
         old_handlers[sig] = signal.signal(sig, _forwarding_signal_handler)
     return old_handlers
 

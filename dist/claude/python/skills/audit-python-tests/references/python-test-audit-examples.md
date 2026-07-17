@@ -1,12 +1,14 @@
-# Python Test Audit Examples
+<python_test_audit_examples>
 
-## Contents
+<contents>
 
 - Example 1: Approved
 - Example 2: Rejected, Coupling Severed By @patch
 - Example 3: Rejected, TYPE_CHECKING Import Disguised As Coupling
 
-## Example 1: Approved
+</contents>
+
+<example number="1" verdict="approved">
 
 Auditing `spx/55-example.enabler/21-transmitter.outcome/`
 
@@ -45,24 +47,26 @@ Match: exact behavior tested
 Assertion type: Scenario -> example-based test strategy
 ```
 
-Coverage:
+Coverage trace:
 
 ```text
-Baseline: product/uart_tx.py - 31.0%
-With test: product/uart_tx.py - 72.4%
-Delta: +41.4%
+Source path: product/uart_tx.py
+Test path: tests/test_uart_tx.scenario.l1.py -> UartTx.write
+Judgment: reaches the assertion-relevant write path
 ```
 
 ```text
 Audit: spx/55-example.enabler/21-transmitter.outcome/
 Verdict: APPROVED
 
-| # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage | Verdict |
-|---|----------------|----------|--------------------------|-----------|----------|---------|
-| 1 | 8N1 TX bit seq | Direct   | MSB/LSB swap breaks test | PASS      | +41.4%   | PASS    |
+| # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage trace | Verdict |
+|---|----------------|----------|--------------------------|-----------|----------------|---------|
+| 1 | 8N1 TX bit seq | Direct   | MSB/LSB swap breaks test | PASS      | Reaches write path | PASS |
 ```
 
-## Example 2: Rejected, Coupling Severed By @patch
+</example>
+
+<example number="2" verdict="rejected" reason="coupling-severed-by-patch">
 
 Auditing `spx/55-example.enabler/21-auth.outcome/`
 
@@ -82,7 +86,7 @@ Result: Coupling severed. Real database.query never runs.
 
 ```text
 Audit: spx/55-example.enabler/21-auth.outcome/
-Verdict: REJECT
+Verdict: REJECTED
 
 | # | Assertion     | Property Failed | Finding          | Detail                         |
 |---|---------------|-----------------|------------------|--------------------------------|
@@ -95,7 +99,9 @@ database is invisible. The test verifies behavior against a fake that always
 returns [{"id": 1}].
 ```
 
-## Example 3: Rejected, TYPE_CHECKING Import Disguised As Coupling
+</example>
+
+<example number="3" verdict="rejected" reason="type-checking-import-disguised-as-coupling">
 
 Auditing `spx/55-example.enabler/21-contrast.outcome/`
 
@@ -118,7 +124,7 @@ Zero runtime codebase imports -> no coupling.
 
 ```text
 Audit: spx/55-example.enabler/21-contrast.outcome/
-Verdict: REJECT
+Verdict: REJECTED
 
 | # | Assertion        | Property Failed | Finding     | Detail                                      |
 |---|------------------|-----------------|-------------|---------------------------------------------|
@@ -129,3 +135,7 @@ Test declares its own color tuples and checks contrast math against them.
 The actual theme colors in product/theme.py are never imported at runtime. If
 all theme colors are changed to pure white, this test still passes.
 ```
+
+</example>
+
+</python_test_audit_examples>

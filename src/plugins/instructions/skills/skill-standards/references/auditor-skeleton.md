@@ -11,7 +11,6 @@ Ordered sections of an auditor `SKILL.md`:
 
 | Section              | Content                                                                                                                                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<dispatch_gate>`    | A hard stop that halts a main-conversation invocation and directs it to dispatch the auditor agent. Omit only for auditors that do not dispatch (the prose auditors).                                                                           |
 | `<objective>`        | The verdict as output: the scope, the standard, and the finding categories — APPROVED, or REJECTED with each finding naming the artifact, the violated rule, and the evidence. The full row/field schema lives in `<verdict_format>`, not here. |
 | `<constraints>`      | Read-only; produces a verdict, never fixes or commits.                                                                                                                                                                                          |
 | `<audit_workflow>`   | The ordered steps that arrive at the verdict. The standard name for an auditor's procedure — not `process`, `critical_workflow`, or `workflow`.                                                                                                 |
@@ -48,5 +47,5 @@ The ordered steps ("`/contextualize` invoked", "artifact read", "tests run") bel
 </success_criteria_shape>
 
 <prose_variant>
-The prose auditors (`audit-prose`, `audit-internal-docs`) do not dispatch an agent and run differently; they omit `<dispatch_gate>` and may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
+The prose auditors (`audit-prose`, `audit-internal-docs`) may name their procedure section to fit their domain. They keep the verdict-as-output `<objective>` and the `<success_criteria>` soundness shape.
 </prose_variant>

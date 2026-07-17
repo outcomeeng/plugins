@@ -62,7 +62,7 @@ from outcomeeng_testing.generators.source_and_templating import source_scenarios
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
-REPOSITORY_ROOT = Path(".")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 FORMATTER_FAILURE_DIAGNOSTIC = "formatter failed"
 FORMATTER_VERSION_FAILURE_DIAGNOSTIC = "formatter version failed"
 FORMATTER_TEST_PATH = f"/usr/local/bin/{FORMATTER_COMMAND_NAME}"

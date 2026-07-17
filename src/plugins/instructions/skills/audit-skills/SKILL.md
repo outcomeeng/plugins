@@ -1,20 +1,14 @@
 ---
 name: audit-skills
 description: >-
-  SKILL.md audit methodology preloaded by the skill-auditor agent. The main
-  conversation reaches this audit only through that agent.
+  SKILL.md audit methodology — judges skill content for standards compliance,
+  operational effectiveness, portability, voice, and structure.
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}
-
-<dispatch_gate>
-
-This audit runs in the skill-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the skill-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence.
@@ -75,7 +69,7 @@ Check for:
 
 - **name**: Lowercase letters, numbers, and hyphens only; max 64 chars; matches directory name
 - **description**: Max 1024 chars, no XML tags; directive style for invoked skills; passive style for reference skills and exact-name protocol or loop-body skills
-- **user-invocable**: `false` for reference skills loaded by other skills; default user-invocable for agent-preloaded audit skills with a passive description and `<dispatch_gate>`
+- **user-invocable**: `false` for reference skills loaded by other skills; default user-invocable for audit skills, whose descriptions state their own subject and judgment without routing language
 - **argument-hint**: Present when the skill takes arguments (`$ARGUMENTS`, `$ARGUMENTS[N]`, `$N`, or a declared `$name`); omit for self-contained skills
 
 </area>
@@ -194,7 +188,7 @@ Flag these issues:
 - **actor_or_activity_objective**: `<objective>` opens with an actor ("The skill…", "Claude…") or a bare activity verb ("Audit…", "Evaluate…", "Generate…") instead of naming the observable output it produces
 - **objective_criteria_duplication**: `<objective>` and `<success_criteria>` restate the same content — the objective names the output, success_criteria proves it
 - **objective_bloat**: `<objective>` runs past one sentence (two when the output has two distinct parts) or carries clauses describing when the skill runs, how it runs (steps, gates, orchestration), or what it avoids — content that belongs in `description`/`<workflow>`/`<constraints>`, not the output target
-- **auditor_skeleton_violation**: an `audit-*` skill deviating from `/skill-standards` `references/auditor-skeleton.md` — `<output_format>` instead of `<verdict_format>`, a non-`<audit_workflow>` procedure name, a `<quick_start>` block, or an objective outside the skeleton's verdict forms. The prose auditors (`audit-prose`, `audit-internal-docs`) are exempt from the procedure-name and `<dispatch_gate>` checks per the skeleton's `<prose_variant>`
+- **auditor_skeleton_violation**: an `audit-*` skill deviating from `/skill-standards` `references/auditor-skeleton.md` — `<output_format>` instead of `<verdict_format>`, a non-`<audit_workflow>` procedure name, a `<quick_start>` block, or an objective outside the skeleton's verdict forms. The prose auditors (`audit-prose`, `audit-internal-docs`) are exempt from the procedure-name check per the skeleton's `<prose_variant>`
 - **hybrid_xml_markdown**: Mixing XML tags with markdown headings in body
 - **unclosed_xml_tags**: XML tags not properly closed
 - **vague_descriptions**: "helps with", "processes data"

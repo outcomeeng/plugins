@@ -21,7 +21,7 @@ CAN commit manifest files that the installed Claude Code CLI will accept without
 
 ### Properties
 
-- Manifest version parity is symmetric: drift in either direction (Claude advanced past Codex, or Codex advanced past Claude) is reported ([test](tests/test_plugin_manifest.scenario.l1.py))
+- Manifest version parity is symmetric: drift in either direction (Claude advanced past Codex, or Codex advanced past Claude) is reported ([test](tests/test_plugin_manifest.property.l1.py))
 
 ### Compliance
 
