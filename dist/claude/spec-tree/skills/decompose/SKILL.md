@@ -2,6 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
+arguments: target
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -15,21 +16,21 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Accept exactly one target:
+Treat `$target` as the exact target and accept exactly one value:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
-- `{path-to-node}` — decompose or restructure children under an existing node.
+- `spx/{path-to-node}` — decompose or restructure children under an existing node.
 
-If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$target` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
-Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
+Use the live foundation sections below before composing; no secondary foundation read is required:
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
-- `${CLAUDE_SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `/understand` `<enabler>`, `<outcome>`, and `<nesting_rules>` — node structure and nesting
+- `/understand` `<context_loading_rule>` and `<assignment_is_the_inverse>` — the reading and assignment meanings of an index
+- `/understand` operational reference `what-goes-where` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `/understand` operational reference `product-domain-shapes` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `/understand` template `enabler-name.md`
+- `/understand` template `outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -40,7 +41,7 @@ Read before composing — read these directly each run. A present `<SPEC_TREE_FO
 
 **Step 1: Load tree context**
 
-If the target is `spx/`:
+If `$target` is `spx/`:
 
 1. Read the product spec and product-level ADRs/PDRs.
 2. Read `CLAUDE.md` if present.
@@ -48,7 +49,7 @@ If the target is `spx/`:
 4. Enumerate existing top-level children.
 5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
-If the target is a node address:
+If `$target` is a node address:
 
 1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
 2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
@@ -190,7 +191,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment follows the live `/understand` `<context_loading_rule>` and `<assignment_is_the_inverse>` sections: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 
@@ -243,7 +244,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the enabler or outcome template owned by `/understand`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.
@@ -359,22 +360,11 @@ How to avoid: treat ADR/PDR placement as decomposition work when the location de
 
 <success_criteria>
 
-Decomposition is complete when:
-
-- [ ] Target is either `spx/` or a valid node address
-- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
-- [ ] Composition need assessed
-- [ ] Clarity gate completed or `/interview` used
-- [ ] Concern boundaries and node types assigned
-- [ ] Shared enablers extracted only for multi-child dependencies
-- [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
-- [ ] Ordering-evidence matrix recorded
-- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
-- [ ] Sparse indices assigned from ordering evidence and selected horizon
-- [ ] Assertions redistributed without loss
-- [ ] Parent or product spec revised without temporal narration
-- [ ] Child specs written from templates
-- [ ] Full `spx/` paths used for every node, ADR, and PDR reference
-- [ ] Validation checklist passes
+- Every resulting child has one independently validatable concern, the correct enabler or outcome type, and a spec conforming to the template owned by `/understand`.
+- The parent remains an aggregate declaration rather than a child inventory, and any independently valid first concrete behavior remains represented at its own level.
+- Every original assertion remains represented without semantic loss or duplication; shared infrastructure is extracted only where multiple children depend on it.
+- The recorded ordering-evidence matrix proves every differing sibling index and its context-loading consequence; independent peers remain same-index or unordered, and sparse space matches the declared horizon.
+- All node and decision references use full `spx/` paths, and no declaration narrates decomposition history.
+- The repository's author validation command passes with no orphan node, index collision, broken evidence link, or stale cross-reference.
 
 </success_criteria>

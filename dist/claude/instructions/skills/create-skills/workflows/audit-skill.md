@@ -1,141 +1,53 @@
-# Workflow: Audit a Skill
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards` before evaluating or improving skill content. Read `spx/local/skills.md` when the target repository provides it.
+
 </required_reading>
 
 <process>
-## Step 1: Identify Skill to Audit
 
-**If user provided path**: Read the skill directly
+<step name="resolve_target">
 
-**If user didn't specify**: List available skills:
+Use the target path supplied by the caller. When no path is supplied, ask for the exact `SKILL.md` or skill-directory path; never assume a runtime-specific home directory.
 
-```bash
-ls ~/.claude/skills/
-```
+Read the target `SKILL.md` and every bundled file under its `references/`, `workflows/`, `templates/`, and `scripts/` directories.
 
-Present as numbered list and ask: "Which skill would you like to audit?"
+</step>
 
-## Step 2: Read the Skill
+<step name="dispatch_audit">
 
-Read the full skill structure:
+Dispatch the `skill-auditor` agent with the target paths, governing nodes when known, and current deterministic verification evidence. The main conversation never substitutes its own audit.
 
-```bash
-# Read main file
-cat ~/.claude/skills/{skill-name}/SKILL.md
+For an audit-only request, return the auditor's structured verdict without offering or generating fixes. For an explicit improvement request, use the verdict as the repair input and continue to the next step.
 
-# Check for additional directories
-ls ~/.claude/skills/{skill-name}/
-ls ~/.claude/skills/{skill-name}/workflows/ 2>/dev/null
-ls ~/.claude/skills/{skill-name}/references/ 2>/dev/null
-```
+</step>
 
-## Step 3: Run Audit Checklist
+<step name="apply_requested_improvements">
 
-Evaluate against each criterion:
+Apply every must-fix item and any explicitly requested recommendation through `/create-skills`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
 
-### YAML Frontmatter
+After repairs, run the product's skill build and deterministic checks, create a clean checkpoint, and dispatch a fresh `skill-auditor` over the new head. Repeat until the verdict is APPROVED or a concrete blocker remains.
 
-- [ ] Has `name:` field (lowercase-with-hyphens)
-- [ ] Name matches directory name
-- [ ] Has `description:` field (≤1024 chars)
-- [ ] Description says what it does AND when to use it
-- [ ] Description uses directive style with negative constraint (ALWAYS/NEVER)
-
-### Structure
-
-- [ ] SKILL.md under 500 lines
-- [ ] Pure XML structure (no markdown headings # in body)
-- [ ] All XML tags properly closed
-- [ ] Has required tags: `<objective>` or `<essential_principles>`
-- [ ] Has `<success_criteria>`
-
-### Router Pattern (if complex skill)
-
-- [ ] Essential principles inline in SKILL.md (not in separate file)
-- [ ] Has `<intake>` question
-- [ ] Has `<routing>` table
-- [ ] All referenced workflow files exist
-- [ ] All referenced reference files exist
-
-### Workflows (if present)
-
-- [ ] Each has `<required_reading>` section
-- [ ] Each has `<process>` section
-- [ ] Each has `<success_criteria>` section
-- [ ] Required reading references exist
-
-### Content Quality
-
-- [ ] Principles are actionable (not vague platitudes)
-- [ ] Steps are specific (not "do the thing")
-- [ ] Success criteria are verifiable
-- [ ] No redundant content across files
-
-## Step 4: Generate Report
-
-Present findings as:
-
-```
-## Audit Report: {skill-name}
-
-### Passing
-- [list passing items]
-
-### Issues Found
-1. **[Issue name]**: [Description]
-   → Fix: [Specific action]
-
-2. **[Issue name]**: [Description]
-   → Fix: [Specific action]
-
-### Score: X/Y criteria passing
-```
-
-## Step 5: Offer Fixes
-
-If issues found, ask:
-"Would you like me to fix these issues?"
-
-Options:
-
-1. **Fix all** - Apply all recommended fixes
-2. **Fix one by one** - Review each fix before applying
-3. **Just the report** - No changes needed
-
-If fixing:
-
-- Make each change
-- Verify file validity after each change
-- Report what was fixed
+</step>
 
 </process>
 
 <audit_anti_patterns>
-Common anti-patterns to flag:
 
-| Anti-Pattern         | Description                                             |
-| -------------------- | ------------------------------------------------------- |
-| Skippable principles | Essential principles in separate file instead of inline |
-| Monolithic skill     | Single file over 500 lines                              |
-| Mixed concerns       | Procedures and knowledge in same file                   |
-| Vague steps          | "Handle the error appropriately"                        |
-| Untestable criteria  | "User is satisfied"                                     |
-| Markdown headings    | Using # instead of XML tags in body                     |
-| Missing routing      | Complex skill without intake/routing                    |
-| Broken references    | Files mentioned but don't exist                         |
-| Redundant content    | Same information in multiple places                     |
+| Anti-pattern          | Rejected behavior                                                         |
+| --------------------- | ------------------------------------------------------------------------- |
+| Main-thread audit     | Evaluating the skill instead of dispatching `skill-auditor`               |
+| Runtime-specific path | Assuming a home-directory skill location instead of using the target path |
+| Scored report         | Replacing the structured verdict with a numeric score                     |
+| Automatic fix offer   | Soliciting fixes after an audit-only request                              |
+| Restated standards    | Copying `/skill-standards` rules into this workflow                       |
 
 </audit_anti_patterns>
 
 <success_criteria>
-Audit is complete when:
 
-- [ ] Skill fully read and analyzed
-- [ ] All checklist items evaluated
-- [ ] Report presented to user
-- [ ] Fixes applied (if requested)
-- [ ] User has clear picture of skill health
+- An audit-only request returns the isolated skill-auditor verdict over the complete target bundle.
+- An explicit improvement request produces skill content that passes deterministic checks and a fresh skill audit.
+- Target resolution remains runtime-neutral, and `/skill-standards` remains the single rule source.
 
 </success_criteria>

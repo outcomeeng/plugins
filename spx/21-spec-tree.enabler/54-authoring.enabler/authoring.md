@@ -9,5 +9,5 @@ CAN change durable declarations through one context-complete boundary without du
 ### Compliance
 
 - ALWAYS: operator-driven creation, modification, or removal of durable declarations enters through `/spec`, which owns requirements convergence and delegates decision-ready writes to `/author` ([audit])
-- ALWAYS: `/spec` and `/author` preserve the loaded context, structure ownership, templates, durable-map voice, and downstream alignment rules across every declaration change ([audit])
+- ALWAYS: `/spec` and `/author` preserve the loaded context, structure ownership, templates, and the durable-map voice and downstream alignment rules declared in the inline `/understand` `<truth_hierarchy>` across every declaration change ([audit])
 - NEVER: `/author` acts as a second operator-facing specification workflow — it is an internal protocol invoked with a decision-ready artifact packet ([audit])

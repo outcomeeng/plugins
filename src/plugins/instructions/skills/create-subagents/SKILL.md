@@ -418,13 +418,13 @@ Edit {{! term('configured_agent_files') !}} directly:
 
 <failure_modes>
 
-**Failure: Runtime-specific examples made SKILL.md exceed the line budget**
+**Failure: Runtime-specific examples violated progressive disclosure**
 
-What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source exceeded `/skill-standards`' 500-line cap.
+What happened: Claude added target-specific TOML/YAML examples directly to this SKILL.md until the authored source violated `/skill-standards`'s current progressive-disclosure rule.
 
 Why it failed: The fast path stopped being an overview and absorbed detail that belongs in references.
 
-How to avoid: Keep SKILL.md under 500 lines; move extended examples and configuration matrices to the cited references, then run `wc -l "${CLAUDE_SKILL_DIR}/SKILL.md"` before audit.
+How to avoid: Apply `/skill-standards`'s current progressive-disclosure rule and move conditional examples and configuration matrices to cited references. When a foundation skill qualifies for the eager-foundation exception, use `/audit-skills`'s deterministic code-point measurement instead of estimating size or substituting a line count.
 
 </failure_modes>
 

@@ -1,177 +1,83 @@
-# Workflow: Create a New Skill
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards` before authoring. Read `spx/local/skills.md` when the target repository provides it. Read the matching template and any authoring references selected below before writing the skill.
+
 </required_reading>
 
 <process>
-## Step 1: Adaptive Requirements Gathering
 
-**If user provided context** (e.g., "create a skill for X"):
-→ Analyze what's stated, what can be inferred, what's unclear
-→ Skip to asking about operator-owned gaps only
+<step name="resolve_requirements">
 
-**If user just invoked skill without context:**
-→ Ask what they want to build
+Extract the requested capability, target repository or plugin, activation trigger, output, side effects, and constraints from the caller's instruction. Ask only for operator-owned gaps that materially change the skill's behavior or location.
 
-### Using {{! tool('ask_user') !}}
+Classify the skill as builder, guide, automation, analyzer, validator, or reference using `/skill-standards`. Determine whether it is reached by description matching, exact-name composition, or an auditor agent preload before writing its description.
 
-Ask 2-4 domain-specific questions based on actual gaps:
+</step>
 
-1. **Skill type**: Builder, Guide, Automation, Analyzer, or Validator?
-2. **Domain**: What domain or technology?
-3. **Use case**: What's YOUR specific need? (after domain discovery)
-4. **Constraints**: Any specific requirements?
+<step name="research_domain">
 
-**Decision gate**: Ask "Ready to proceed, or want me to ask more questions?"
+Research domain concepts, current official guidance, failure modes, security constraints, and ecosystem conventions when the skill's subject requires knowledge unavailable in the repository. Prefer primary documentation. Ask the operator only for proprietary product context that research cannot establish.
 
-## Step 2: Domain Discovery (Automatic)
+</step>
 
-Research the domain BEFORE asking user requirements:
+<step name="choose_structure">
 
-| Discover       | How                                   | Example: "Kafka integration"  |
-| -------------- | ------------------------------------- | ----------------------------- |
-| Core concepts  | Official docs                         | Topics, partitions, consumers |
-| Best practices | Search "[domain] best practices 2025" | Partition strategies          |
-| Anti-patterns  | Search "[domain] common mistakes"     | Over-partitioning             |
-| Security       | Search "[domain] security"            | SASL, SSL, ACLs               |
-| Ecosystem      | Search "[domain] tools"               | Schema Registry, Connect      |
+Use a single `SKILL.md` for one cohesive workflow whose complete instructions satisfy `/skill-standards`'s progressive-disclosure rule. Use the router pattern when the capability has distinct user intents, conditional workflows, or reusable references.
 
-**Sources priority**: Official docs → Library docs → GitHub → Community → WebSearch
+Select the matching template:
 
-### Knowledge Sufficiency Check
+| Skill shape | Template                        |
+| ----------- | ------------------------------- |
+| Simple      | `templates/simple-skill.md`     |
+| Router      | `templates/router-skill.md`     |
+| Builder     | `templates/builder-skill.md`    |
+| Guide       | `templates/guide-skill.md`      |
+| Automation  | `templates/automation-skill.md` |
+| Analyzer    | `templates/analyzer-skill.md`   |
+| Validator   | `templates/validator-skill.md`  |
 
-Before proceeding, verify internally:
+</step>
 
-- [ ] Core concepts: Can I explain the fundamentals?
-- [ ] Best practices: Do I know the recommended approaches?
-- [ ] Anti-patterns: Do I know what to avoid?
-- [ ] Security: Do I know the security considerations?
+<step name="resolve_target_path">
 
-If ANY is incomplete → Research more. Only ask user for proprietary/internal info.
+Write to the exact target path supplied by the caller or established by the repository's plugin layout. In this marketplace, authored plugin skills live under `src/plugins/<plugin>/skills/<skill-name>/`. In another repository, inspect its own plugin source layout or request the destination. Never assume a runtime-specific home-directory path.
 
-## Step 3: Decide Structure
+Create only the directories the selected structure needs: `workflows/`, `references/`, `templates/`, or `scripts/`.
 
-**Simple skill** (single workflow, <200 lines):
-→ Single SKILL.md file with all content
-→ Use `templates/simple-skill.md`
+</step>
 
-**Complex skill** (multiple workflows OR domain knowledge):
-→ Router pattern with workflows/ and references/
-→ Use `templates/router-skill.md`
+<step name="author_skill">
 
-Factors favoring router pattern:
+Write YAML frontmatter and the required `<objective>` and `<success_criteria>` sections. A non-router procedure uses `<workflow>` in `SKILL.md`; a router uses `<essential_principles>`, `<intake>`, `<routing>`, `<reference_index>`, and `<workflows_index>` as applicable.
 
-- Multiple distinct user intents
-- Shared domain knowledge across workflows
-- Essential principles that must not be skipped
-- Skill likely to grow over time
+Add `<quick_start>` only when `/skill-standards` permits an abbreviated on-demand path. Foundation, gate, validator, reference, and auditor skills omit it.
 
-## Step 4: Create Directory
+Use `<context>` for runtime inputs the workflow actually consumes. Keep domain detail in cited references one level below `SKILL.md`, and keep each workflow self-contained without nested reference chains.
+
+When adding scripts, follow `/skill-standards`'s script rules, use the repository's required implementation language, and test every script with success and failure inputs before inclusion.
+
+</step>
+
+<step name="validate">
+
+Run the bundled structural validator:
 
 ```bash
-mkdir -p ~/.claude/skills/{skill-name}
-# If complex:
-mkdir -p ~/.claude/skills/{skill-name}/workflows
-mkdir -p ~/.claude/skills/{skill-name}/references
-# If needed:
-mkdir -p ~/.claude/skills/{skill-name}/templates
-mkdir -p ~/.claude/skills/{skill-name}/scripts
+python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" <skill-path>
 ```
 
-## Step 5: Write SKILL.md
+Run the target repository's canonical skill build and deterministic checks. Then dispatch `skill-auditor` over the complete skill bundle and repair every must-fix item before publication.
 
-**Simple skill**: Use `templates/simple-skill.md` as base. Include:
+</step>
 
-- YAML frontmatter (name, description)
-- `<objective>`
-- `<quick_start>`
-- `<workflow>` or `<process>`
-- `<success_criteria>`
-
-**Complex skill**: Use `templates/router-skill.md` as base. Include:
-
-- YAML frontmatter
-- `<essential_principles>` (inline, unavoidable)
-- `<intake>` (question to ask user)
-- `<routing>` (maps answers to workflows)
-- `<reference_index>` and `<workflows_index>`
-
-## Step 6: Write Type-Specific Content
-
-Based on skill type from Step 1:
-
-| Type       | Key Sections                           | Template                        |
-| ---------- | -------------------------------------- | ------------------------------- |
-| Builder    | Clarifications, Output spec, Standards | `templates/builder-skill.md`    |
-| Guide      | Workflow, Examples, Official docs      | `templates/guide-skill.md`      |
-| Automation | Scripts, Dependencies, Error handling  | `templates/automation-skill.md` |
-| Analyzer   | Scope, Criteria, Output format         | `templates/analyzer-skill.md`   |
-| Validator  | Criteria, Scoring, Thresholds          | `templates/validator-skill.md`  |
-
-## Step 7: Embed Domain Knowledge
-
-Put gathered domain expertise into `references/`:
-
-| Gathered Knowledge | Purpose in Skill              |
-| ------------------ | ----------------------------- |
-| Library/API docs   | Enable correct implementation |
-| Best practices     | Guide quality decisions       |
-| Code examples      | Provide reference patterns    |
-| Anti-patterns      | Prevent common mistakes       |
-
-## Step 8: Add "Before Implementation" Section
-
-Every skill should gather context at runtime:
-
-```markdown
-## Before Implementation
-
-| Source               | Gather                                    |
-| -------------------- | ----------------------------------------- |
-| **Codebase**         | Existing structure, patterns, conventions |
-| **Conversation**     | User's specific requirements, constraints |
-| **Skill References** | Domain patterns from `references/`        |
-| **User Guidelines**  | Product-specific conventions              |
-```
-
-## Step 9: Validate Structure
-
-Check:
-
-- [ ] YAML frontmatter valid (name matches directory, description has What + When)
-- [ ] Pure XML structure (no markdown headings in body)
-- [ ] Required tags present: objective, quick_start, success_criteria
-- [ ] All referenced files exist
-- [ ] SKILL.md under 500 lines
-- [ ] XML tags properly closed
-
-Run: `python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" {skill-path}`
-
-## Step 10: Test
-
-Invoke the skill and observe:
-
-- Does it ask the right intake question?
-- Does it load the right workflow?
-- Does the workflow load the right references?
-- Does output match expectations?
-
-Iterate based on real usage, not assumptions.
 </process>
 
 <success_criteria>
-Skill is complete when:
 
-- [ ] Requirements gathered with appropriate questions
-- [ ] Domain discovery done (user NOT asked for domain knowledge)
-- [ ] Directory structure correct
-- [ ] SKILL.md has valid frontmatter
-- [ ] Pure XML structure (no markdown headings)
-- [ ] Type-specific sections included
-- [ ] "Before Implementation" section included
-- [ ] All workflows have required_reading + process + success_criteria
-- [ ] References contain reusable domain knowledge
-- [ ] Tested with real invocation
+- The skill lives at the repository-resolved authored source path and renders for every supported runtime.
+- Frontmatter matches the invocation path, and the body has valid pure-XML structure with output-shaped `<objective>` and `<success_criteria>` sections.
+- The selected structure follows the canonical progressive-disclosure rule, with every bundled file cited and no nested or orphaned references.
+- Tool permissions, arguments, dynamic context, and bundled paths match the runtime capability contract.
+- Bundled scripts pass their success and failure tests, repository checks pass, and the isolated skill audit is APPROVED.
 
 </success_criteria>

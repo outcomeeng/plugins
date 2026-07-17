@@ -328,10 +328,12 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:2",
             "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
+            "spx/outcomeeng.product.md:COMPLIANCE:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",
             FIXTURE_SKILL_RULE_CITATION,
-            "plugins/spec-tree/skills/understand/SKILL.md:principles",
+            "plugins/spec-tree/skills/understand/SKILL.md:layer-precedence",
+            "plugins/typescript/skills/audit-typescript-architecture/SKILL.md:constraints",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
         ],
@@ -364,6 +366,23 @@ class TestRuleCitationForm:
             "api-surface",
             FIXTURE_SKILL_RULE_CITATION,
         )
+
+    def test_inline_foundation_sections_are_citeable(self) -> None:
+        review_result = load_review_result_module()
+        skill_path = REPO_ROOT / "src/plugins/spec-tree/skills/understand/SKILL.md"
+        declared_slugs = review_result._declared_rule_slugs(
+            skill_path.read_text(encoding="utf-8")
+        )
+        expected_slugs = {
+            tag.replace("_", "-") for tag in review_result.INLINE_FOUNDATION_RULE_TAGS
+        }
+        container_slugs = {
+            tag.replace("_", "-")
+            for tag in review_result.INLINE_FOUNDATION_NON_RULE_CONTAINER_TAGS
+        }
+
+        assert expected_slugs <= declared_slugs
+        assert container_slugs.isdisjoint(declared_slugs)
 
     def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
@@ -441,6 +460,40 @@ ALWAYS: pseudo-XML sections are rule-bearing surfaces.
         assert "critical-rules" in slugs
         assert "principles" in slugs
         assert "rules" not in slugs
+
+    def test_rule_slug_discovery_does_not_promote_structural_parents(self) -> None:
+        review_result = load_review_result_module()
+        document = """<workflow>
+
+<examples>
+
+```text
+ALWAYS: fenced examples do not declare rules.
+```
+
+</examples>
+
+<constraints>
+
+Direct imperative constraints are a canonical rule surface.
+
+</constraints>
+
+<critical_rules>
+
+ALWAYS: direct custom rule markers remain citeable.
+
+</critical_rules>
+
+</workflow>
+"""
+
+        slugs = review_result._declared_rule_slugs(document)
+
+        assert "workflow" not in slugs
+        assert "examples" not in slugs
+        assert "constraints" in slugs
+        assert "critical-rules" in slugs
 
     @pytest.mark.parametrize(
         "rule",

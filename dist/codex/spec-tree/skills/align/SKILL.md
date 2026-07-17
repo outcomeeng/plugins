@@ -3,6 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
+argument-hint: "[path|changeset]"
 allowed-tools: Read, Glob, Grep, Skill
 ---
 
@@ -15,7 +16,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 <principles>
 
 1. **FACTS ONLY** — Report what violates which rule. Never suggest how to fix it. Never rate severity. Never say "should", "consider", or "recommend."
-2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
+2. **RULES FROM UNDERSTANDING** — Mandatory conformance rules live in the inline `/understand` foundation sections; operational references and templates supplement them. This skill owns zero rules. Read the required sources at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
@@ -27,17 +28,17 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 **References (conformance rules):**
 
-- `${SKILL_DIR}/../understand/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${SKILL_DIR}/../understand/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- Live `/understand` `<atemporal_voice>` and `<layer_precedence>` — atemporal voice and truth-flow rules
+- `/understand` operational reference `what-goes-where` — `<common_misplacements>` table: content in wrong artifact type
+- Live `/understand` `<enabler>`, `<outcome>`, and `<nesting_rules>` — node classification and nesting
 
 **Templates (structural rules):**
 
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${SKILL_DIR}/../understand/templates/product/product-name.product.md` — required product sections
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md` — required enabler sections
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md` — required outcome sections
+- `/understand` template `decision-name.adr.md` — required ADR sections
+- `/understand` template `decision-name.pdr.md` — required PDR sections
+- `/understand` template `product-name.product.md` — required product sections
+- `/understand` template `enabler-name.md` — required enabler sections
+- `/understand` template `outcome-name.md` — required outcome sections
 
 </required_references>
 
@@ -88,7 +89,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 <language_conformance>
 
-Read the `<atemporal_voice>` section from `durable-map.md`. It provides two checking mechanisms:
+Apply the atemporal-voice rules from the live `/understand` `<atemporal_voice>`. They provide two checking mechanisms:
 
 **A. Temporal markers table** — The left column lists specific phrases to find. Scan every line for matches.
 
@@ -105,7 +106,7 @@ Common temporal patterns caught by the read-aloud test that may not appear in th
 **Report as findings:**
 
 - Line number, the temporal text, which rule it violates (specific marker or read-aloud test)
-- Reference: `(ref: atemporal_voice)`
+- Reference: `(ref: /understand <atemporal_voice>)`
 
 **Do NOT report:**
 
@@ -139,7 +140,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
+Apply the decision-to-spec alignment rules from the live `/understand` `<decision_to_spec_alignment>`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -155,9 +156,9 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
-2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
-3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
-4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
+2. **Load rules**: Apply the live inline `/understand` `<atemporal_voice>`, `<layer_precedence>`, `<decision_to_spec_alignment>`, `<enabler>`, `<outcome>`, and `<nesting_rules>` sections, then read the operational reference and templates listed in `<required_references>`.
+3. **Scope**: Read `$ARGUMENTS` as the requested path or changeset scope. When it is empty, default to `spx/` in the product root. For a branch changeset, invoke `/scope-changeset`, set the scope kind to `changeset`, and retain the complete changed-file set returned by `branch_scope(base, repo)`. For a path, set the scope kind to `path` and retain the path.
+4. **Discover**: For `changeset` scope, iterate the retained changed-file set and keep its Markdown files. For `path` scope, Glob `{scope}/**/*.md`. In both modes, exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
    - If classified: run structural, language, and placement checks
@@ -180,13 +181,13 @@ Structural:
 - {finding}
 
 Language:
-- Line {N}: "{text}" — {rule violated} (ref: atemporal_voice)
+- Line {N}: "{text}" — {rule violated} (ref: /understand <atemporal_voice>)
 
 Placement:
 - {finding} (ref: what-goes-where)
 
 Downstream alignment:
-- {finding} (ref: durable-map decision_to_spec_alignment)
+- {finding} (ref: /understand <decision_to_spec_alignment>)
 
 ---
 
@@ -202,16 +203,20 @@ Downstream alignment:
 
 </report_format>
 
+<failure_modes>
+
+**Failure: Checked a changed higher-level declaration in isolation.** Claude reported a product spec, ADR, PDR, or ancestor spec as aligned after checking only that file's structure and language, while no first affected lower spec or node-local `PLAN.md` carried the new truth. The check missed the declaration-to-spec boundary because it treated alignment as per-file linting instead of a changeset relationship. For changeset scope, derive the changed-file set through `/scope-changeset` and apply `<downstream_alignment_conformance>` before reporting.
+
+</failure_modes>
+
 <success_criteria>
 
-- [ ] `<SPEC_TREE_FOUNDATION>` marker verified present
-- [ ] All references and templates read from understanding skill
-- [ ] Every `.md` file in scope classified or reported as unrecognized
-- [ ] Structural checks run against correct template per file type
-- [ ] Language checks applied to all files (including unrecognized)
-- [ ] Placement checks applied to all classified files
-- [ ] Changeset checks report higher-level declaration changes that lack lower-spec alignment and `PLAN.md` grounding
-- [ ] Report contains only factual findings — no suggestions, no severity, no "should"
-- [ ] Summary counts emitted
+- The report accounts for every Markdown file in scope as classified or unrecognized, with no silent omission.
+- Every finding names the exact file and location, the governing template or rule, and the observed contradiction, gap, language defect, or placement defect.
+- Structural findings use the template for the classified artifact type; language findings cover every file, and placement findings cover every classified file.
+- For changeset scope, every changed higher-level declaration is accounted for by aligned first affected lower specs or by a finding naming the absent lower-spec and `PLAN.md` grounding.
+- Findings state facts only, with no severity, proposed fix, suggestion, or `should` wording.
+- Per-file and summary counts reconcile exactly; a clean scope renders exactly `0 findings.`
+- Repeating alignment over the same file contents and scope yields the same classifications, findings, and counts.
 
 </success_criteria>

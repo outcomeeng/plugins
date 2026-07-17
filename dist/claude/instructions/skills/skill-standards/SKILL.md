@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — and (e) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -276,10 +276,20 @@ SKILL.md is an overview. Reference files carry detail. Claude loads reference fi
 
 **Rules:**
 
-- Keep SKILL.md under 500 lines.
+- Keep SKILL.md under 500 lines unless the eager-foundation exception below applies.
 - References live in `references/` one level deep from SKILL.md. Do not nest references that read other references — Claude may only partially read transitive files.
 - Reference files over 100 lines need a table of contents at the top, so partial reads still see the full scope.
 - Use forward slashes in every path — `references/guide.md`, never `references\guide.md`. Works across platforms.
+
+**Eager-foundation exception.** When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception applies only when all conditions hold:
+
+- every affected reference would otherwise be mandatory on every invocation;
+- inlining removes secondary discovery/read obligations and leaves one canonical copy;
+- repeated summaries, examples, and failure explanations are consolidated before inlining;
+- conditional operational detail, templates, examples, and repository-local overlays remain separate;
+- the rendered eager payload contains at most 40,000 Unicode code points; every audit records the measured count, rejects a larger payload, and checks effectiveness and internal consistency.
+
+Do not use the exception to inline optional detail or avoid routing. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
 **Token efficiency:** simple task loads SKILL.md only (~500 tokens); medium loads SKILL.md + one reference (~1000); complex loads SKILL.md + multiple (~2000+).
 
@@ -416,26 +426,7 @@ Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of 
 
 <xml_tag_formatting>
 
-**Always add a blank line before a closing pseudo-XML tag that follows an unordered list.** Without it, markdown parsers indent the closing tag as part of the last list item.
-
-```text
-# ❌ WRONG
-
-<section>
-
-- Item 1
-- Item 2
-</section>
-
-# ✅ CORRECT
-
-<section>
-
-- Item 1
-- Item 2
-
-</section>
-```
+Always add a blank line before a closing pseudo-XML tag that follows an unordered list; otherwise Markdown parsers indent the closing tag into the last list item.
 
 </xml_tag_formatting>
 

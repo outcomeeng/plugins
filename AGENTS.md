@@ -444,7 +444,7 @@ This file covers repository rules that apply across both agents.
 
 Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
-Spec-tree methodology rules (node types, states, assertion types, ordering) live in `src/plugins/spec-tree/skills/understand/references/` and are authoritative over `methodology/`.
+Spec-tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/spec-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. The sibling `references/` directory carries conditional operational detail.
 
 ## Historical Context
 
@@ -581,7 +581,7 @@ Every skill and thin agent across every plugin is listed in the auto-generated c
 
 ## Spec Tree Methodology
 
-The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `src/plugins/spec-tree/skills/understand/references/durable-map.md` for the authoritative methodology reference.
+The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `src/plugins/spec-tree/skills/understand/SKILL.md` for the authoritative inline foundation.
 
 ### Spec-tree navigation: declaration and inverse
 

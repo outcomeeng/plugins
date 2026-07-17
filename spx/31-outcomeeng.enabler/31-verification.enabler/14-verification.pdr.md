@@ -1,6 +1,6 @@
 # Verification
 
-This product adopts the verification taxonomy declared in the `/understand` foundation's verification-kinds reference: five types — validate, test, review, audit, evaluate — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[audit]` by audit.
+This product adopts the verification taxonomy declared in the inline `/understand` `<verification_model>`: five types — validate, test, review, audit, evaluate — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[audit]` by audit.
 
 ## Rationale
 
@@ -44,7 +44,7 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 - ALWAYS: the author context produces an audit verdict only by dispatching the audit to a separate verifier context — never by grading its own work in place ([audit])
 - NEVER: the author context invokes an audit skill in place to produce a verdict — in-context invocation reintroduces the bias the dispatched verifier's isolated context removes ([audit])
 - ALWAYS: a verifier already isolated from author bias may compose further verification — composition within a verifier context reintroduces no author bias ([audit])
-- NEVER: the type set or the two verdict modes are extended — a new type amends the `/understand` foundation's verification-kinds reference and this decision ([audit])
+- NEVER: the type set or the two verdict modes are extended — a new type amends the inline `/understand` `<verification_model>` → `<types>` and this decision ([audit])
 - ALWAYS: the agent runs each applicable verification type locally over the changeset before any external or CI review — review and audit as well as validate, test, and evaluate ([audit])
 - ALWAYS: deterministic verification runs over the changeset locally and over the whole repository in CI; agentic verification runs over the changeset both locally and in CI ([audit])
 - NEVER: passing deterministic verification on its own authorizes publishing — it establishes nothing about review or audit ([audit])
