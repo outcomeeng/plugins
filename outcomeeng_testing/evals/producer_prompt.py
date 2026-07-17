@@ -44,6 +44,9 @@ PRODUCER_RELATIVE_PATHS = tuple(
     path.relative_to(PROJECT_ROOT).as_posix() for path in PRODUCER_SOURCE_PATHS
 )
 LITERAL_PRODUCER_SECTION_TOKEN = "{producer_section}"
+NESTED_STEP_NAME = "nested_step"
+NESTED_STEP_BODY = "Nested body."
+STALE_PROMPT_SUFFIX = "stale"
 PROPERTY_SEED = 20260706
 PROPERTY_EXAMPLES = 30
 NONCANONICAL_PROMPT_SEED = 20260711
@@ -75,6 +78,30 @@ class ProducerMutation(StrEnum):
     LITERAL_CLOSING_DELIMITER = "literal-closing-delimiter"
     NESTED_STEP = "nested-step"
     PLACEHOLDER_TEXT = "placeholder-text"
+
+
+class ProducerWorkspaceCase(StrEnum):
+    """Source-owned workspace configurations for compliance evidence."""
+
+    DEFAULT = "default"
+    PRODUCER_FILE_WITH_SECTION = "producer-file-with-section"
+    PROMPT_OUTSIDE_EVAL = "prompt-outside-eval"
+    TEMPLATE_ALIASES_PROMPT = "template-aliases-prompt"
+    ABSOLUTE_PRODUCER = "absolute-producer"
+    PRODUCER_OUTSIDE_REPO = "producer-outside-repo"
+    PLACEHOLDER_TEXT = "placeholder-text"
+    MISSING_SECTION = "missing-section"
+    SIMILAR_ATTRIBUTES = "similar-attributes"
+    NON_STEP_TAG = "non-step-tag"
+    DUPLICATE_SECTION = "duplicate-section"
+    LITERAL_CLOSING_DELIMITER = "literal-closing-delimiter"
+    NESTED_STEP = "nested-step"
+    UNSUPPORTED_KIND = "simulation"
+    MISSING_KIND = "missing-kind"
+    MISSING_PRODUCER = "missing-producer"
+    MISSING_SECTION_FIELD = "missing-section-field"
+    MISSING_TEMPLATE = "missing-template"
+    VALID_PRODUCER_FILE = "valid-producer-file"
 
 
 @dataclass(frozen=True)
@@ -119,6 +146,13 @@ class CliMaterializationObservation:
     materialized_mtime_ns: int
     stale_prompt: str
     stale_mtime_ns: int
+
+
+@dataclass(frozen=True)
+class NestedCliObservation:
+    write_result: Result
+    check_result: Result
+    prompt_path: Path
 
 
 def producer_cases() -> tuple[ProducerCase, ...]:
@@ -290,6 +324,23 @@ def materialize_runtime_sections(tmp_path: Path) -> tuple[MaterializedProducer, 
     return tuple(observations)
 
 
+def run_materialized_runtime_files(
+    predicate: Callable[[tuple[MaterializedProducer, ...]], None],
+) -> None:
+    """Deliver the complete whole-file observation mapping to the linked test."""
+    with TemporaryDirectory() as temp_dir:
+        predicate(materialize_runtime_files(Path(temp_dir)))
+
+
+def run_materialized_runtime_sections(
+    predicate: Callable[[MaterializedProducer], None],
+) -> None:
+    """Deliver each section materialization observation to the linked test."""
+    with TemporaryDirectory() as temp_dir:
+        for observation in materialize_runtime_sections(Path(temp_dir)):
+            predicate(observation)
+
+
 def mutate_runtime_producer(
     source: str,
     section_name: str,
@@ -319,7 +370,10 @@ def mutate_runtime_producer(
             1,
         ),
         ProducerMutation.LITERAL_CLOSING_DELIMITER: f"{opening}{body}literal </step> delimiter\n</step>",
-        ProducerMutation.NESTED_STEP: f'{opening}{body}<step name="nested_step">Nested body.</step>\n</step>',
+        ProducerMutation.NESTED_STEP: (
+            f'{opening}{body}<step name="{NESTED_STEP_NAME}">'
+            f"{NESTED_STEP_BODY}</step>\n</step>"
+        ),
         ProducerMutation.PLACEHOLDER_TEXT: f"{opening}\n{LITERAL_PRODUCER_SECTION_TOKEN}\n</step>",
     }
     replacement = replacements.get(mutation)
@@ -413,6 +467,103 @@ def nested_cli_results(tmp_path: Path) -> tuple[Result, Result, ProducerWorkspac
         runner.invoke(main, [*command, "--check"]),
         workspace,
     )
+
+
+def run_cli_materialization_mapping(
+    predicate: Callable[[CliMaterializationObservation], None],
+) -> None:
+    """Deliver write/current/stale CLI observations to the linked test."""
+    with TemporaryDirectory() as temp_dir:
+        predicate(cli_materialization_observation(Path(temp_dir)))
+
+
+def run_nested_cli_mapping(
+    predicate: Callable[[NestedCliObservation], None],
+) -> None:
+    """Deliver nested-root CLI observations to the linked test."""
+    with TemporaryDirectory() as temp_dir:
+        write_result, check_result, workspace = nested_cli_results(Path(temp_dir))
+        predicate(
+            NestedCliObservation(
+                write_result=write_result,
+                check_result=check_result,
+                prompt_path=workspace.prompt_path,
+            )
+        )
+
+
+def run_producer_workspace_case(
+    case: ProducerWorkspaceCase,
+    predicate: Callable[[ProducerWorkspace, str | None], None],
+) -> None:
+    """Build one source-owned workspace case and expose it to a test predicate."""
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        workspace = _workspace_for_case(root, case)
+        original_prompt = (
+            workspace.prompt_path.read_text(encoding="utf-8")
+            if workspace.prompt_path.is_file()
+            else None
+        )
+        predicate(workspace, original_prompt)
+
+
+def _workspace_for_case(
+    root: Path,
+    case: ProducerWorkspaceCase,
+) -> ProducerWorkspace:
+    """Materialize one compliance-case workspace without encoding its verdict."""
+    if case is ProducerWorkspaceCase.PRODUCER_FILE_WITH_SECTION:
+        return write_eval_workspace(root, prompt_source_kind=PRODUCER_FILE_KIND)
+    if case is ProducerWorkspaceCase.PROMPT_OUTSIDE_EVAL:
+        return write_eval_workspace(root, prompt_path="../../prompt.md")
+    if case is ProducerWorkspaceCase.TEMPLATE_ALIASES_PROMPT:
+        return write_eval_workspace(
+            root,
+            prompt_template_path=MATERIALIZED_PROMPT_FILENAME,
+        )
+    if case is ProducerWorkspaceCase.ABSOLUTE_PRODUCER:
+        return write_eval_workspace(root, producer_relative_path=str(root.resolve()))
+    if case is ProducerWorkspaceCase.PRODUCER_OUTSIDE_REPO:
+        return write_eval_workspace(
+            root,
+            producer_relative_path="../outside/SKILL.md",
+        )
+    mutation_by_case = {
+        ProducerWorkspaceCase.PLACEHOLDER_TEXT: ProducerMutation.PLACEHOLDER_TEXT,
+        ProducerWorkspaceCase.MISSING_SECTION: ProducerMutation.MISSING_SECTION,
+        ProducerWorkspaceCase.SIMILAR_ATTRIBUTES: ProducerMutation.SIMILAR_ATTRIBUTES,
+        ProducerWorkspaceCase.NON_STEP_TAG: ProducerMutation.NON_STEP_TAG,
+        ProducerWorkspaceCase.DUPLICATE_SECTION: ProducerMutation.DUPLICATE_SECTION,
+        ProducerWorkspaceCase.LITERAL_CLOSING_DELIMITER: ProducerMutation.LITERAL_CLOSING_DELIMITER,
+        ProducerWorkspaceCase.NESTED_STEP: ProducerMutation.NESTED_STEP,
+    }
+    if case in mutation_by_case:
+        return write_eval_workspace(root, mutation=mutation_by_case[case])
+    if case is ProducerWorkspaceCase.UNSUPPORTED_KIND:
+        return write_eval_workspace(root, prompt_source_kind="simulation")
+    omitted_by_case = {
+        ProducerWorkspaceCase.MISSING_KIND: KIND_FIELD,
+        ProducerWorkspaceCase.MISSING_PRODUCER: PRODUCER_FIELD,
+        ProducerWorkspaceCase.MISSING_SECTION_FIELD: SECTION_FIELD,
+        ProducerWorkspaceCase.MISSING_TEMPLATE: TEMPLATE_FIELD,
+    }
+    if case in omitted_by_case:
+        return write_eval_workspace(root, omitted_fields=(omitted_by_case[case],))
+    if case is ProducerWorkspaceCase.VALID_PRODUCER_FILE:
+        workspace = write_eval_workspace(root, prompt_source_kind=PRODUCER_FILE_KIND)
+        write_prompt_source_definition(
+            workspace.eval_toml,
+            prompt_source_kind=PRODUCER_FILE_KIND,
+            producer_relative_path=workspace.case.relative_path,
+            section_name=workspace.case.section_name,
+            prompt_path=PROMPT_FILENAME,
+            prompt_template_path=PROMPT_TEMPLATE_FILENAME,
+            include_section=False,
+            omitted_fields=(),
+        )
+        return workspace
+    return write_eval_workspace(root)
 
 
 def run_section_mutation_property(
