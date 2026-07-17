@@ -19,9 +19,9 @@ Exposes:
   change is a committed-then-modified coordination note at a path containing a
   space, for the porcelain-quoting case.
 
-The harness owns the scenario's invented payload (the merged-file and
-feature-file names) and the git lifecycle; tests assert behavior against the
-returned handle.
+The harness owns the scenario's invented payload, git lifecycle, runtime
+handles, and evidence entrypoints. Executed tests invoke those entrypoints
+without declaring setup state.
 """
 
 from __future__ import annotations
@@ -505,3 +505,132 @@ def write_branch_state_file(
     path = state_dir / f"{slug}.md"
     path.write_text(f"{delimiter}\nbranch: {branch}\n{delimiter}\n", encoding="utf-8")
     return path
+
+
+def assert_detect_base_ref_returns_bare_base_from_origin_head() -> None:
+    """Prove origin/HEAD resolves to the configured bare base name."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        stale = build_stale_local_base_repo(paths.repo)
+        assert module.detect_base_ref(stale.repo) == stale.base_ref
+
+
+def assert_detect_base_ref_raises_without_origin() -> None:
+    """Prove absent origin/HEAD raises instead of selecting a fallback."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        build_repo_without_origin(paths.repo)
+        try:
+            module.detect_base_ref(paths.repo)
+        except module.BaseRefNotConfiguredError:
+            pass
+        else:
+            raise AssertionError("detect_base_ref accepted an unconfigured base")
+
+
+def assert_remote_tracking_ref_composes_origin_prefix() -> None:
+    """Prove a bare base name composes the source-owned origin prefix."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        stale = build_stale_local_base_repo(paths.repo)
+        assert (
+            module.remote_tracking_ref(stale.base_ref)
+            == f"{module.ORIGIN_REF_PREFIX}{stale.base_ref}"
+        )
+
+
+def assert_branch_scope_uses_merge_base() -> None:
+    """Prove branch scope excludes a base-only commit after divergence."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        advanced = build_base_advanced_after_branch_repo(paths.repo)
+        files = module.branch_scope(advanced.base_ref, repo=advanced.repo)
+        assert advanced.base_file not in files
+        assert advanced.feature_file in files
+
+
+def assert_stale_local_base_ref_does_not_widen_scope() -> None:
+    """Prove remote scoping excludes a commit exposed by the stale local ref."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        stale = build_stale_local_base_repo(paths.repo)
+
+        remote_tracking_scope = module.branch_scope(stale.base_ref, repo=stale.repo)
+        assert stale.merged_file not in remote_tracking_scope
+        assert stale.feature_file in remote_tracking_scope
+
+        local_ref_scope = module.expand_diff_range(
+            f"{stale.base_ref}...HEAD", repo=stale.repo
+        )
+        assert stale.merged_file in local_ref_scope
+
+
+def assert_detect_current_branch_named_and_detached() -> None:
+    """Prove named checkout detection and detached-HEAD rejection."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        branch = build_repo_without_origin(paths.repo)
+        assert module.detect_current_branch(paths.repo) == branch
+
+        detach_head(paths.repo)
+        try:
+            module.detect_current_branch(paths.repo)
+        except module.DetachedHeadError:
+            pass
+        else:
+            raise AssertionError("detect_current_branch accepted a detached HEAD")
+
+
+def assert_commit_oid_resolves_exact_ref() -> None:
+    """Prove each supplied ref resolves to the same commit as real git."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        stale = build_stale_local_base_repo(paths.repo)
+        base_ref = module.remote_tracking_ref(stale.base_ref)
+
+        assert module.commit_oid(stale.feature_branch, repo=stale.repo) == _git(
+            stale.repo,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            f"{stale.feature_branch}{module.COMMIT_PEEL_SUFFIX}",
+        )
+        assert module.commit_oid(base_ref, repo=stale.repo) == _git(
+            stale.repo,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            f"{base_ref}{module.COMMIT_PEEL_SUFFIX}",
+        )
+
+
+def assert_branch_slug_disambiguates_state_collision() -> None:
+    """Prove collision suffixing is deterministic and conditional on state."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        base_slug = module.branch_slug(STALE_BASE_SCENARIO.feature_branch)
+        write_branch_state_file(
+            paths.repo,
+            base_slug,
+            STALE_BASE_SCENARIO.base_branch,
+        )
+
+        collided = module.branch_slug(
+            STALE_BASE_SCENARIO.feature_branch,
+            paths.repo,
+        )
+        assert collided != base_slug
+        assert collided.startswith(f"{base_slug}--")
+        suffix = collided[len(base_slug) + len("--") :]
+        assert len(suffix) == module.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
+        assert (
+            module.branch_slug(STALE_BASE_SCENARIO.feature_branch, paths.repo)
+            == collided
+        )
+        assert (
+            module.branch_slug(
+                STALE_BASE_SCENARIO.feature_branch,
+                paths.empty_state_dir,
+            )
+            == base_slug
+        )
