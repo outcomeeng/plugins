@@ -27,14 +27,16 @@ outcome assertion.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import os
 import pathlib
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import cache
 from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -500,13 +502,6 @@ def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     return tuple(output.splitlines())
 
 
-def git_two_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
-    """Return Git's tip-to-tip scope for a caller-supplied ref."""
-    module = load_changeset_scope_module()
-    output = _git(repo, "diff", "--name-only", f"{ref}..{module.HEAD_REF}")
-    return tuple(output.splitlines())
-
-
 def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
     """Run the shipped merge classifier and return its observable process result."""
     return subprocess.run(
@@ -521,6 +516,248 @@ def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]
 def contains_python_traceback(stderr: str) -> bool:
     """Report whether Python emitted its standard uncaught-exception header."""
     return "Traceback (most recent call last):" in stderr
+
+
+@dataclass(frozen=True)
+class EvidenceComparison:
+    """Actual and independently sourced expected observations for one assertion."""
+
+    actual: tuple[object, ...]
+    expected: tuple[object, ...]
+
+
+def _generated_case_comparison(
+    observe: Callable[[ModuleType, ChangesetScopeCase], EvidenceComparison],
+) -> EvidenceComparison:
+    """Bind generated cases and the production module behind the harness boundary."""
+    module = load_changeset_scope_module()
+    observations = tuple(
+        observe(module, scenario) for scenario in generated_changeset_scope_cases()
+    )
+    return EvidenceComparison(
+        actual=tuple(
+            item for observation in observations for item in observation.actual
+        ),
+        expected=tuple(
+            item for observation in observations for item in observation.expected
+        ),
+    )
+
+
+def _raised_type(action: Callable[[], object]) -> type[Exception] | None:
+    try:
+        action()
+    except Exception as error:  # The exception type is the observation under test.
+        return type(error)
+    return None
+
+
+def _detect_base_ref_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with stale_local_base_repo(scenario) as stale:
+        return EvidenceComparison(
+            actual=(module.detect_base_ref(stale.repo),),
+            expected=(stale.base_ref,),
+        )
+
+
+@cache
+def detect_base_ref_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_detect_base_ref_case)
+
+
+def _missing_origin_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with repo_without_origin(scenario) as repo:
+        return EvidenceComparison(
+            actual=(_raised_type(lambda: module.detect_base_ref(repo)),),
+            expected=(module.BaseRefNotConfiguredError,),
+        )
+
+
+@cache
+def missing_origin_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_missing_origin_case)
+
+
+def _remote_tracking_ref_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with stale_local_base_repo(scenario) as stale:
+        return EvidenceComparison(
+            actual=(module.remote_tracking_ref(stale.base_ref),),
+            expected=(module.ORIGIN_REF_PREFIX + stale.base_ref,),
+        )
+
+
+@cache
+def remote_tracking_ref_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_remote_tracking_ref_case)
+
+
+def _branch_scope_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with base_advanced_after_branch_repo(scenario) as advanced:
+        remote_ref = module.remote_tracking_ref(advanced.base_ref)
+        return EvidenceComparison(
+            actual=(tuple(module.branch_scope(advanced.base_ref, repo=advanced.repo)),),
+            expected=(git_three_dot_scope(advanced.repo, remote_ref),),
+        )
+
+
+@cache
+def branch_scope_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_branch_scope_case)
+
+
+def _stale_local_base_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with stale_local_base_repo(scenario) as stale:
+        remote_ref = module.remote_tracking_ref(stale.base_ref)
+        return EvidenceComparison(
+            actual=(tuple(module.branch_scope(stale.base_ref, repo=stale.repo)),),
+            expected=(git_three_dot_scope(stale.repo, remote_ref),),
+        )
+
+
+@cache
+def stale_local_base_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_stale_local_base_case)
+
+
+def _current_branch_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with repo_without_origin(scenario) as repo:
+        named_branch = module.detect_current_branch(repo)
+        detach_head(repo)
+        return EvidenceComparison(
+            actual=(
+                named_branch,
+                _raised_type(lambda: module.detect_current_branch(repo)),
+            ),
+            expected=(scenario.base_branch, module.DetachedHeadError),
+        )
+
+
+@cache
+def current_branch_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_current_branch_case)
+
+
+def _commit_oid_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with stale_local_base_repo(scenario) as stale:
+        base_ref = module.remote_tracking_ref(stale.base_ref)
+        return EvidenceComparison(
+            actual=(
+                module.commit_oid(stale.feature_branch, repo=stale.repo),
+                module.commit_oid(base_ref, repo=stale.repo),
+            ),
+            expected=(
+                git_commit_oid(stale.repo, stale.feature_branch),
+                git_commit_oid(stale.repo, base_ref),
+            ),
+        )
+
+
+@cache
+def commit_oid_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_commit_oid_case)
+
+
+def _branch_slug_case(
+    module: ModuleType,
+    scenario: ChangesetScopeCase,
+) -> EvidenceComparison:
+    with branch_collision_state(scenario) as collision:
+        expected_bare = collision.feature_branch.replace("/", "__")
+        expected_suffix = hashlib.sha256(
+            collision.feature_branch.encode("utf-8")
+        ).hexdigest()[: module.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
+        expected_collided = (
+            expected_bare + module.BRANCH_SLUG_SUFFIX_SEPARATOR + expected_suffix
+        )
+        collided = module.branch_slug(
+            collision.feature_branch,
+            collision.state_dir,
+        )
+        return EvidenceComparison(
+            actual=(
+                module.branch_slug(collision.feature_branch),
+                collided,
+                module.branch_slug(collision.feature_branch, collision.state_dir),
+                module.branch_slug(collision.feature_branch, collision.empty_state_dir),
+            ),
+            expected=(
+                expected_bare,
+                expected_collided,
+                expected_collided,
+                expected_bare,
+            ),
+        )
+
+
+@cache
+def branch_slug_comparison() -> EvidenceComparison:
+    return _generated_case_comparison(_branch_slug_case)
+
+
+@cache
+def canonical_merge_comparison() -> EvidenceComparison:
+    with canonical_merge_changeset() as stale:
+        return EvidenceComparison(
+            actual=(
+                frozenset(load_merge_classifier_module().changed_paths(stale.repo)),
+            ),
+            expected=(frozenset((stale.feature_file, stale.working_file)),),
+        )
+
+
+@cache
+def spaced_note_comparison() -> EvidenceComparison:
+    with modified_spaced_note_repo() as spaced:
+        classifier = load_merge_classifier_module()
+        return EvidenceComparison(
+            actual=(
+                tuple(classifier._working_tree_paths(spaced.repo)),
+                classifier.is_coordination_note(spaced.note_path),
+            ),
+            expected=(
+                (spaced.note_path,),
+                pathlib.PurePosixPath(spaced.note_path).name
+                in classifier.COORDINATION_NOTE_BASENAMES,
+            ),
+        )
+
+
+@cache
+def unconfigured_base_comparison() -> EvidenceComparison:
+    with repo_without_origin() as repo:
+        completed = run_merge_classifier(repo)
+        classifier = load_merge_classifier_module()
+        changeset_scope = load_changeset_scope_module()
+        return EvidenceComparison(
+            actual=(
+                completed.returncode != 0,
+                classifier.BASE_REF_ERROR_PREFIX in completed.stderr,
+                changeset_scope.ORIGIN_HEAD_REF in completed.stderr,
+                not contains_python_traceback(completed.stderr),
+            ),
+            expected=(True, True, True, True),
+        )
 
 
 def detach_head(repo: pathlib.Path) -> None:
