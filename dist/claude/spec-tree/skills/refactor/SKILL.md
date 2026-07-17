@@ -284,14 +284,13 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <success_criteria>
 
-Refactoring is complete when:
+The refactored tree is sound when:
 
-- [ ] Operation identified and context loaded
-- [ ] Impact analyzed before applying
-- [ ] Structural composition decisions delegated to `/decompose` when needed
-- [ ] Changes applied (move/re-scope/extract/consolidate)
-- [ ] Validation checklist passes (no broken links, no orphans, no empty nodes)
-- [ ] Summary report with all files created/modified/moved/removed
-- [ ] Follow-up issues noted if any
+- [ ] The requested move, re-scope, extraction, or consolidation is reflected completely in the resulting tree
+- [ ] Governing ADR/PDR reach, ancestor assertions, node types, and ordering relationships remain valid
+- [ ] Every evidence link resolves, every evidence file has one owning assertion, and no empty node remains
+- [ ] Node-local `PLAN.md` and `ISSUES.md` files remain attached to their owning node
+- [ ] Every moved or rewritten reference uses its complete new `spx/...` path
+- [ ] The result reports every created, modified, moved, and removed path plus any unresolved defect
 
 </success_criteria>
