@@ -63,3 +63,14 @@ Required handling: classify each remaining `uv run` occurrence by execution envi
 Architect skills must use one objective-subject policy across Python, Rust, and TypeScript. The architect objectives and nearby body prose mix imperative output wording, artifact-shaped objective wording, and architect-skill subject claims across the three language plugins.
 
 Required handling: decide whether objective statements may use the artifact subject `the skill` or must name `Claude` for this output claim, update `skill-standards` / `agent-prompt-standards` if the rule needs clarification, then sweep the architect skills consistently. Gate changed skills with `instructions:skill-auditor`.
+
+## 7. Skill auditor remediation must preserve runtime terminology
+
+`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation is invalid. `configured_agent` is an authoring-time terminology key used only through `{{! term('configured_agent') !}}`; it renders as `subagent` for Claude and `custom agent` for Codex. The literal phrase "configured agent" is not a valid cross-runtime skill term. The governing prompt standard already prefers imperative, subject-free instructions.
+
+Required handling:
+
+- Require auditor remediation for banned-subject findings to prefer imperative, subject-free wording.
+- Never recommend an internal terminology key as literal skill prose.
+- When a runtime-specific noun is necessary in authored plugin source, require the canonical terminology expression rather than its internal key name.
+- Add an auditor eval case where "the agent" is rejected and "the configured agent" is also rejected as its replacement.
