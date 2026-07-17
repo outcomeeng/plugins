@@ -100,20 +100,19 @@ class TestUserValidation:
 **Example**:
 
 ```python
-from hypothesis import given, strategies as st
+from product_testing.generators.users import run_valid_user_record_property
 
 
-@given(st.text())
-def test_parse_user_never_crashes_on_any_name(name: str) -> None:
-    """Confidence: Does parse_user handle ANY string as a name?"""
-    try:
-        result = parse_user({"name": name, "email": "test@test.com"})
-        assert isinstance(result.name, str)
-    except ValidationError:
-        pass  # Rejecting invalid input is fine
+def test_parse_user_preserves_valid_records() -> None:
+    """Every valid record survives parse and serialization."""
+
+    def predicate(record: UserRecord) -> None:
+        assert serialize_user(parse_user(record)) == normalize_user_record(record)
+
+    run_valid_user_record_property(predicate)
 ```
 
-**Key property**: Explores unanticipated inputs. Finds edge cases automatically.
+**Key property**: Explores a generated valid-record domain and fails when parsing loses or changes source-owned data.
 
 ---
 
