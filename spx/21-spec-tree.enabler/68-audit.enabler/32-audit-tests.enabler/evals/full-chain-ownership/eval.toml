@@ -12,6 +12,8 @@ smoke_cases = [
   "approves-source-owned-protocol",
   "rejects-unread-import",
   "rejects-rust-generator-owned-protocol",
+  "rejects-fixture-owned-protocol",
+  "rejects-discovery-owned-protocol",
 ]
 threshold = 0.85
 trials = 1
