@@ -155,9 +155,9 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,reviews,comments
 ```
 
-Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. Return the PR number, URL, full head SHA, head branch, base branch, and draft state to `/manage-github-pr`; this skill never invokes `/manage-pr`.
+Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. Surface the PR number, URL, full head SHA, head branch, base branch, and draft state as this protocol's result. This opening protocol performs no PR-management action.
 
-**Exit.** Surface the opened PR identity to the caller. `/manage-github-pr` owns the single transition into `/manage-pr`.
+**Exit.** End after surfacing the opened PR identity and topology state.
 
 </workflow>
 
