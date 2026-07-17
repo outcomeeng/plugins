@@ -292,6 +292,14 @@ Edit subagent files directly:
 
 </reference>
 
+<validation>
+
+**Gate 1 — configuration and tool surface.** After writing the subagent file, dispatch `subagent-auditor` over that exact file. Stop on any rejected field, prompt structure, tool grant, model setting, skill preload, or output contract. Continue only with an APPROVED verdict.
+
+**Gate 2 — exercised run path.** Spawn the configured agent once with a bounded probe task that requires its declared output shape and no external mutation. Collect the final status through the runtime's native wait capability and close the agent handle. Stop when the configuration fails to load, the run does not reach completed status, the output violates the declared contract, or the agent attempts a tool outside its intended surface.
+
+</validation>
+
 <failure_modes>
 
 **Failure: Runtime-specific examples violated progressive disclosure**
@@ -305,15 +313,12 @@ How to avoid: Apply `/skill-standards`'s current progressive-disclosure rule and
 </failure_modes>
 
 <success_criteria>
-A well-configured subagent has:
+A subagent is ready when:
 
-- Valid YAML frontmatter (name matches file, description includes triggers)
-- Clear role definition in system prompt
-- Appropriate tool restrictions (least privilege)
-- XML-structured system prompt with role, approach, and constraints
+- The runtime loads the Markdown file with valid YAML frontmatter and no configuration error.
+- `subagent-auditor` returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.
 
-- Description field optimized for automatic routing
-- At least one verification run or documented dry-run against the subagent's intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- One bounded probe run reaches completed status and matches the declared output contract.
+- The probe run uses only the intended tools and performs no external mutation.
 
 </success_criteria>

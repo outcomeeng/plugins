@@ -29,7 +29,7 @@ Live repository state for mode detection, read at invocation.
 !`git diff --cached --name-status || echo '(none)'`
 
 **Commits ahead of base (default branch):**
-!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); echo "base: ${base}"; git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`
+!`git log --oneline -10 origin/HEAD..HEAD 2>/dev/null || echo '(none)'`
 
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`

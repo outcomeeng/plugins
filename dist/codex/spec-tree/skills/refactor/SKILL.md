@@ -317,7 +317,6 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <success_criteria>
 
-- Run the product's `author` command declared in the root runtime guide; it exits zero after regenerating any product-owned artifacts.
 - Search `spx/` for every obsolete source path and removed node path; each search returns zero matches, while each planned destination path exists exactly once.
 - Run `spx validation markdown`; it exits zero, proving spec structure, full-path links, and evidence links are valid.
 - Run `spx spec status --format json`; it exits zero and reports no orphan directory, empty node, index collision, broken citation, or invalid ancestry.
