@@ -181,7 +181,7 @@ If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standar
 
 <script_testing>
 
-`scripts/resolve_review_thread.py` has mapping evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
+`${SKILL_DIR}/scripts/resolve_review_thread.py` has mapping evidence in this plugin's source test suite. The covered behavior is the review-thread resolution workflow this skill invokes.
 
 Tested inputs and expected outputs:
 

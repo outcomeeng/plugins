@@ -33,7 +33,7 @@ Live repository state for mode detection, read at invocation.
 <mode_detection>
 Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
-- **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
+- **Open PR** — `$ARGUMENTS` names a PR number or PR URL; `$ARGUMENTS` is one branch-ref token for which `gh pr view "$ARGUMENTS" --json state,url,headRefName` resolves `state == OPEN`; or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
 - **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
 - **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
 - **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
