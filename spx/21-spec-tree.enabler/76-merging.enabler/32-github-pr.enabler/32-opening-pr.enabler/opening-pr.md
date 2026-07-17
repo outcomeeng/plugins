@@ -2,7 +2,7 @@
 
 PROVIDES the pull-request opening protocol — `VERIFICATION_READINESS` evaluation, branch push with an explicit destination ref, topology-aware pull-request creation, and lifecycle handoff
 SO THAT the GitHub-PR transport's `/manage-github-pr` orchestration
-CAN publish a changeset as a ready-for-review pull request the moment `VERIFICATION_READINESS` holds, per `spx/15-merging.pdr.md`
+CAN publish a peer changeset as ready for review when `VERIFICATION_READINESS` holds, or publish a stacked changeset as draft until its stack base merges, per `spx/15-merging.pdr.md`
 
 ## Assertions
 
