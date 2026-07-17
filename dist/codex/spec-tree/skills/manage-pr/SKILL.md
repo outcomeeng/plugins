@@ -28,8 +28,8 @@ GitHub and the local repository are authoritative for PR state. Conversation mem
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
 ```
 
@@ -46,8 +46,8 @@ Walk these steps on each management pass. Routine steps — inspect, classify, r
 **Step 1 — Identify the PR.** Resolve the PR from `$pr` before inspecting state. `$pr` may be a PR number, PR URL, or branch name. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$pr` is empty and the current branch is the intended PR branch.
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 ```
 
 Resolve the repository default branch in the same pass. Classify a PR whose `baseRefName` equals that default as `topology=peer`. Classify a PR whose `baseRefName` differs as `topology=stacked`, record `stack_base=<baseRefName>`, and inspect the PR for that stack-base branch. The PR remains stacked while that base PR is unmerged; a merged base starts the post-merge reconstruction in Step 4.
@@ -76,14 +76,25 @@ For each line-level review thread in the ledger, retain the inspected review-com
 
 Then re-run /merging-standards `<branch_hygiene>` and the active topology gate before the push — hygiene and topology apply on every push, not only at creation. Push via /merging-standards `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form.
 
-A `stack_transition=true` pass is the sole draft follow-up exception. After its reconstructed head passes `VERIFICATION_READINESS` and the peer gate, force-with-lease push that head, retarget the PR to the repository default branch, and move it to ready:
+A `stack_transition=true` pass is the sole draft follow-up exception. After its reconstructed head passes `VERIFICATION_READINESS` and the peer gate, force-with-lease push that head. From the `body` captured in Step 1, remove the complete `## Stack` section — from that heading through the line before the next level-two heading, or through the end of the body when no later level-two heading exists — and remove every remaining reference to the retired stack base. Preserve every other section, its order, and its content. Retarget the PR and replace its body in one `gh pr edit` mutation, then move it to ready.
+
+Interactive Claude Code and Codex sessions use a quoted heredoc carrying the complete preserved body:
 
 ```bash
-gh pr edit <pr-number> --base <default-branch>
+gh pr edit <pr-number> --base <default-branch> --body-file - <<'EOF'
+<complete body from Step 1 with the entire Stack section removed>
+EOF
 gh pr ready <pr-number>
 ```
 
-Discard the pre-transition inspection and return to Step 1. Every later follow-up push goes to the ready peer PR and re-fires CI with no draft toggle. A stacked PR whose base remains unmerged stays draft and never runs either transition command.
+Programmatic Claude Code, Codex, and hosted runners use one physical stdin line for the same complete body:
+
+```bash
+printf '%s\n' '<first preserved body line>' '<next preserved body line>' | gh pr edit <pr-number> --base <default-branch> --body-file -
+gh pr ready <pr-number>
+```
+
+Discard the pre-transition inspection and return to Step 1. Confirm the fresh `body` has no `## Stack` section and no retired stack-base reference. Every later follow-up push goes to the ready peer PR and re-fires CI with no draft toggle. A stacked PR whose base remains unmerged stays draft and never runs either transition command.
 
 <step name="pr_check_wait">
 
@@ -253,7 +264,7 @@ Run consumer-defined commands from `AGENTS.md` or `spx/local/merging.md` through
 
 **Used GitHub mergeability as authority.** Claude merged while current-head PR review/check automation was still running because GitHub reported the PR as mergeable and accepted `gh pr merge`. Host mergeability is not the repository policy gate; it ignores the stricter requirement that current-head review output exists and all required checks are terminal-green. Run the mutation-point guard immediately before merge; if any current-head review/check predicate is absent or non-terminal, emit the wait token and refresh tracking.
 
-**Stacked draft had no peer transition.** Claude opened a stacked PR draft against its previous stack branch, then ran a ready-only management loop after that base merged. The branch stayed based on the retired stack ref and the PR stayed draft, so `MERGE_READINESS` could never hold. Step 4 observes the stack-base PR and reconstructs the branch onto the updated default; Step 6 verifies and pushes that head, retargets the PR, marks it ready, and restarts inspection as a peer.
+**Stacked draft had no complete peer transition.** Claude opened a stacked PR draft against its previous stack branch, then ran a ready-only management loop after that base merged. The branch stayed based on the retired stack ref, the PR stayed draft, and its body continued advertising the retired dependency, so `MERGE_READINESS` could never hold. Step 4 observes the stack-base PR and reconstructs the branch onto the updated default; Step 6 verifies and pushes that head, retargets the PR while removing the complete Stack section, marks it ready, and restarts inspection as a peer.
 
 </failure_modes>
 
