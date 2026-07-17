@@ -4,10 +4,9 @@ Apply the complete producer's semantic classification workflow to the supplied e
 
 ---
 name: audit-changeset-coherence
-user-invocable: false
 description: >-
-  Changeset-coherence audit methodology invoked by its dedicated auditor for an
-  exact committed scope.
+  ALWAYS invoke this skill when deciding whether an exact committed changeset
+  forms one coherent review unit or requires a dependency-ordered split.
 argument-hint: "<branch-or-base...head>"
 allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git rev-parse:*), Bash(git show:*)
 ---
@@ -21,7 +20,7 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 <constraints>
 
 - Read-only — produce one verdict and NEVER edit files, commits, branches, reviews, or pull requests.
-- MUST preserve full base and head commit identities exactly as resolved from the supplied scope.
+- MUST preserve full base and head commit identities exactly as resolved from the supplied scope in every coherence verdict.
 - MUST inspect every changed authored artifact; collapse deterministic generated artifacts onto their producers before judging breadth.
 - NEVER use line count, file count, path breadth, or an uncalibrated review-load score as a verdict rule.
 - NEVER infer missing behavioral, dependency, generated-source, verification, rollback, or calibration evidence; return `UNKNOWN` when the missing evidence can change the classification.
@@ -31,7 +30,7 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 
 <audit_workflow>
 
-1. Require `$ARGUMENTS` to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. Return `UNKNOWN` with a `scope-unresolved` finding when no exact committed scope can be resolved.
+1. Require `$ARGUMENTS` to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. When no exact committed scope can be resolved, return the `BLOCKED` JSON object in `<verdict_format>`; scope failure occurs before a coherence verdict and never fabricates commit identities.
 2. Invoke `spec-tree:scope-changeset` and apply its canonical remote-base, commit-identity, and three-dot diff semantics. Resolve the full base and head commit IDs and preserve them verbatim.
 3. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
 4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. Exclude generated fanout from authored breadth while retaining it in each cluster's `generated_fanout`.
@@ -49,7 +48,9 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 - `REJECTED`: two or more semantic clusters are independently mergeable. `publication_authorized` is `false`; `recommended_pr_sequence` covers every cluster exactly once in dependency order.
 - `UNKNOWN`: missing evidence can change cluster membership, dependency order, generated-source attribution, verification unity, rollback unity, or independent mergeability. `publication_authorized` is `false`.
 
-An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete.
+An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
+
+When an evidence packet supplies already-collected claims, artifact paths, evidence paths, dependencies, or review-load signals, preserve those values verbatim in the projection. Sort claim and path arrays lexicographically. Copy `review_load` without reinterpretation. Every normal verdict carries every field in the schema, using empty arrays or objects when a field has no entries.
 
 Use deterministic identities: `cluster-1`, `cluster-2`, and so on in dependency order; rejected review units are `review-unit-1`, `review-unit-2`, and so on in the same order.
 
@@ -57,7 +58,18 @@ Use deterministic identities: `cluster-1`, `cluster-2`, and so on in dependency 
 
 <verdict_format>
 
-Return one JSON object:
+When scope resolution fails before an exact changeset exists, return only this JSON object:
+
+```json
+{
+  "schema_version": 1,
+  "status": "BLOCKED",
+  "reason": "scope-unresolved",
+  "scope_input": "<caller-supplied scope or empty string>"
+}
+```
+
+For an exact committed changeset, return one coherence-verdict JSON object:
 
 ```json
 {
@@ -103,9 +115,29 @@ Return one JSON object:
 }
 ```
 
-Every changed authored artifact appears in exactly one cluster. Every generated artifact appears under exactly one producer cluster. A rejected sequence covers every cluster exactly once and references only earlier review units in `depends_on`.
+Every changed authored artifact whose behavioral claim is established appears in exactly one cluster. Every generated artifact whose producer relationship is established appears under exactly one producer cluster. An `UNKNOWN` verdict names every unresolved artifact in its findings without inventing cluster membership. A rejected sequence covers every cluster exactly once and references only earlier review units in `depends_on`.
 
 </verdict_format>
+
+<failure_modes>
+
+**Failure 1: Missing rollback evidence received approval.**
+
+What happened: Claude classified a migration packet as coherent even though the packet contained no rollback evidence.
+
+Why it failed: The general missing-evidence rule did not make an empty rollback story an explicit terminal boundary, so semantic cohesion overshadowed reversibility.
+
+How to avoid: Treat every empty cluster rollback story as `UNKNOWN`, prohibit publication, and emit `missing-rollback-evidence` before considering approval.
+
+**Failure 2: Unresolved scope was forced into the verdict schema.**
+
+What happened: Claude was instructed to return `UNKNOWN` for an unresolved scope while the same schema required full base and head commit identities.
+
+Why it failed: Scope resolution failure occurs before an exact changeset exists, so a normal verdict would require fabricated identities or an internally invalid object.
+
+How to avoid: Return the separate `BLOCKED` JSON object for scope resolution failure and emit a coherence verdict only after both full commit identities resolve.
+
+</failure_modes>
 
 <success_criteria>
 

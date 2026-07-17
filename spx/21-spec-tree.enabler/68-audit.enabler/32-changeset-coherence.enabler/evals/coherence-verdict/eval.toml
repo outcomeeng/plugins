@@ -9,7 +9,7 @@ owned_paths = [
   "dist/claude/spec-tree/skills/audit-changeset-coherence/**",
   "dist/claude/spec-tree/agents/changeset-coherence-auditor.md",
   "dist/codex/spec-tree/skills/audit-changeset-coherence/**",
-  "dist/codex/spec-tree/agents/changeset-coherence-auditor.toml",
+  "dist/codex/spec-tree/agents/changeset-coherence-auditor.md",
 ]
 smoke_cases = [
   "coherent-generated-fanout-approved",
