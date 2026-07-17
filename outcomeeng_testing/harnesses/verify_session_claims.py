@@ -113,25 +113,28 @@ def _exercise_claim_relation(
 ) -> MappingEvidence:
     with accepted_git_context() as repo:
         session_id = _generated_token()
-        session_fields: dict[str, object] = {}
+        git_ref: str | None = None
+        git_status: str | None = None
+        specs: tuple[str, ...] = ()
+        files: tuple[str, ...] = ()
+        pr_numbers: tuple[str, ...] = ()
         scripts: ScriptMap = {}
 
         if kind is module.ClaimKind.SESSION_METADATA:
             scripts = _metadata_failure_script(module, session_id)
         elif kind is module.ClaimKind.GIT_REF:
             git_ref, scripts = _git_ref_arrangement(module, repo, relation)
-            session_fields[module.SESSION_GIT_REF_FIELD] = git_ref
         elif kind is module.ClaimKind.INJECTED_PATH:
             relative_path = _generated_relative_path()
             if relation is module.ClaimRelation.MATCHES:
                 (repo / relative_path).write_text(_generated_token())
-            session_fields[module.SESSION_FILES_FIELD] = (relative_path,)
+            files = (relative_path,)
         elif kind is module.ClaimKind.NODE_STATUS:
             spec = _generated_relative_path()
-            session_fields[module.SESSION_SPECS_FIELD] = (spec,)
+            specs = (spec,)
             scripts = _node_status_arrangement(module, spec, relation)
         elif kind is module.ClaimKind.UNCOMMITTED_STATE:
-            session_fields[module.SESSION_GIT_STATUS_LABEL] = module.GitStatus.CLEAN
+            git_status = module.GitStatus.CLEAN
             if relation is module.ClaimRelation.DIFFERS:
                 (repo / _generated_relative_path()).write_text(_generated_token())
             elif relation is module.ClaimRelation.UNAVAILABLE:
@@ -144,7 +147,7 @@ def _exercise_claim_relation(
                 }
         elif kind is module.ClaimKind.EXTERNAL_ID:
             number = _generated_number()
-            session_fields["pr_numbers"] = (number,)
+            pr_numbers = (number,)
             scripts = _external_arrangement(module, relation)
         else:
             raise AssertionError(f"unhandled claim kind: {kind}")
@@ -153,11 +156,11 @@ def _exercise_claim_relation(
             _session_command_scripts(
                 module,
                 session_id,
-                git_ref=session_fields.get(module.SESSION_GIT_REF_FIELD),
-                git_status=session_fields.get(module.SESSION_GIT_STATUS_LABEL),
-                specs=session_fields.get(module.SESSION_SPECS_FIELD, ()),
-                files=session_fields.get(module.SESSION_FILES_FIELD, ()),
-                pr_numbers=session_fields.get("pr_numbers", ()),
+                git_ref=git_ref,
+                git_status=git_status,
+                specs=specs,
+                files=files,
+                pr_numbers=pr_numbers,
             )
             | scripts
         )
@@ -339,7 +342,7 @@ def node_status_keeps_source_scalar_fields_only() -> bool:
             for key in module.NODE_STATUS_SCALAR_FIELDS
             if key in payload
         }
-        return evidence == expected
+        return isinstance(evidence, dict) and evidence == expected
 
 
 def verify_accepts_injected_runner() -> bool:
@@ -469,11 +472,11 @@ def _session_command_scripts(
     module: ModuleType,
     session_id: str,
     *,
-    git_ref: object = None,
-    git_status: object = None,
-    specs: object = (),
-    files: object = (),
-    pr_numbers: object = (),
+    git_ref: str | None = None,
+    git_status: str | None = None,
+    specs: tuple[str, ...] = (),
+    files: tuple[str, ...] = (),
+    pr_numbers: tuple[str, ...] = (),
 ) -> ScriptMap:
     record = {
         module.SESSION_GIT_REF_FIELD: git_ref,
