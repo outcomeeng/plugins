@@ -78,6 +78,10 @@ CODEX_HARNESS: Final = "codex"
 CODEX_OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 CODEX_OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
 CODEX_OPERATOR_QUESTION_REQUIREMENTS: Final = (
+    (
+        "mutation privilege revocation",
+        "Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource",
+    ),
     ("immediate answer", "Codex MUST answer the question immediately"),
     (
         "non-verification process stop",
