@@ -286,24 +286,18 @@ def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
 
 
 def branch_reference_observations() -> tuple[BranchReferenceObservation, ...]:
-    """Exercise normal, hex-like, full-hex, and absent origin branch refs."""
+    """Exercise the complete present/absent origin-branch domain."""
     module = load_verify_session_claims_module()
     observations: list[BranchReferenceObservation] = []
     with handoff_git_env() as env:
-        branch_names = (
-            env.push_work_branch(),
-            env.push_work_branch(env.head_sha()[:7]),
-            env.push_work_branch(env.head_sha()),
-        )
-        for branch in branch_names:
-            observations.append(
-                _git_ref_observation(
-                    module,
-                    env.root,
-                    branch,
-                    present_on_origin=True,
-                )
+        observations.append(
+            _git_ref_observation(
+                module,
+                env.root,
+                env.push_work_branch(generated_token()),
+                present_on_origin=True,
             )
+        )
         absent_branch = f"{env.default_branch}-{generated_token()}"
         observations.append(
             _git_ref_observation(

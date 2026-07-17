@@ -1,5 +1,6 @@
 """Compliance evidence for pickup claim verification."""
 
+import __future__
 import sys
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
@@ -24,7 +25,7 @@ def test_verify_accepts_injected_runner() -> None:
 
 
 def test_script_imports_are_stdlib_only() -> None:
-    assert script_import_roots() <= sys.stdlib_module_names | {"__future__"}
+    assert script_import_roots() <= sys.stdlib_module_names | {__future__.__name__}
 
 
 def test_external_calls_go_through_the_runner() -> None:
