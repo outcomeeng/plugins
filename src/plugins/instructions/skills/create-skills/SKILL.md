@@ -13,7 +13,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash(python3 "${CLAU
 A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.
 </objective>
 
-<reference_loading>
+<essential_principles>
 Before creating, editing, or auditing any skill, read `/skill-standards` — the single source of truth for all skill standards (frontmatter, XML structure, naming, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, script testing). Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 
 Also read `/agent-prompt-standards` for voice, description style, constraint language, and anti-pattern conventions before writing prompt text.
@@ -21,7 +21,7 @@ Also read `/agent-prompt-standards` for voice, description style, constraint lan
 When the skill takes arguments, injects state-dependent context, restricts tools, or references files — the capabilities a slash command also carried — follow the command-capability rules `/skill-standards` carries (its `<frontmatter>` points to the `command-capabilities` reference) for `argument-hint`/`arguments`, `!`-dynamic-context, `allowed-tools`-security, and `@`-file references before authoring that surface.
 
 This skill provides routing, workflows, templates, and domain-workflow references for creating skills. It does not restate standards.
-</reference_loading>
+</essential_principles>
 
 <intake>
 What would you like to do?
