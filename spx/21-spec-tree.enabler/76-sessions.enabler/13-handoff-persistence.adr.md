@@ -16,8 +16,6 @@ The contract spans two repositories. This marketplace repository owns the `/hand
 
 ### Audit
 
-- ALWAYS: executable handoff command orchestration accepts a dependency-injected runner parameter typed as a Protocol for `git` and `spx session handoff` invocations; the production adapter uses `subprocess` with array arguments, and tests inject a controlled recording runner under the `/test` Stage 5 failure-simulation, interaction-protocol, and observability exceptions ([audit])
-- NEVER: handoff orchestration calls `subprocess` directly outside the production runner adapter -- keeps command construction and result handling observable without mocking ([audit])
 - ALWAYS: `/handoff` writes a session document only after confirming the working tree is clean and the work branch's `@{upstream}` exists on origin and is not ahead of it; when that does not hold, it runs `/commit-changes` and pushes the work branch before writing the document ([audit])
 - ALWAYS: `/handoff` passes the work branch to `spx session handoff` as an explicit work-branch ref so the recorded `git_ref` is the work branch, and `/pickup` fetches and checks out the branch `git_ref` names in a pool worktree before reading the spec tree — reading in place when `git_ref` is the default branch or a commit SHA; the session document carries no separate work-branch field ([audit])
 - ALWAYS: the `/handoff` skill frames the persistence precondition by what breaks when it is violated — unpushed work is invisible to a cold agent, and an occupied branch is one `/pickup` cannot claim — so the guarantee is understood, not merely prohibited ([audit])
