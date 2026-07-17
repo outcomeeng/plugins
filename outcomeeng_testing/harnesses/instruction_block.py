@@ -544,6 +544,11 @@ def _language_subsets(languages: tuple[str, ...]) -> tuple[tuple[str, ...], ...]
     )
 
 
+def template_language_subsets() -> tuple[tuple[str, ...], ...]:
+    """Return every enabled-language subset declared by the canonical template."""
+    return _language_subsets(template_declared_languages(read_canonical_template()))
+
+
 def canonical_router_spacing_observations() -> tuple[RouterSpacingObservation, ...]:
     """Observe canonical spacing for every source harness and language subset."""
     module = load_instruction_block_module()
