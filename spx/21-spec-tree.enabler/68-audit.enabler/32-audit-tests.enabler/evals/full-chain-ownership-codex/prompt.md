@@ -5,12 +5,24 @@ The runner substitutes only the case's `input` object into `{input_json}`; grade
 ---
 name: audit-tests
 description: >-
-  Test-evidence audit methodology — judges whether a spec node's tests provide
-  behavior-coupled evidence its assertions are fulfilled, covering source
-  ownership, coupling, falsifiability, and full-chain coverage.
+  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
+  Dispatch test-evidence-auditor to audit test evidence against spec assertions;
+  the main conversation reaches this audit only through that agent.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
+
+<dispatch_gate>
+
+This audit runs in the test-evidence-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the test-evidence-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
+
+<shared_standards>
+
+Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+
+</shared_standards>
 
 <objective>
 
@@ -20,9 +32,9 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 <essential_principles>
 
-**OWNERSHIP SCREEN, THEN COUPLING.**
+**PREDICATE AND OWNERSHIP SCREEN, THEN COUPLING.**
 
-An executed test file that declares variables or constants has already broken the evidence boundary. Screen declarations first, then check imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is not a heuristic — it is a prerequisite.
+The linked test function or callback owns every predicate and assertion API call. Screen the full chain for verdict logic and classify each test-file binding by semantic choice before checking imports. A test that imports nothing from the codebase will pass forever regardless of what any file contains. This is a prerequisite.
 
 **COMPLETE THE EVIDENCE CHAIN.**
 
@@ -32,19 +44,19 @@ Four properties must hold, checked in strict order: coupling (the test exercises
 
 **JUDGE COVERAGE BY READING.**
 
-This audit runs no deterministic verification. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
+A dispatched agentic audit runs no deterministic verification — the caller brings deterministic verification to passing on the changeset before dispatch, and CI re-runs deterministic verification over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
 
 **NO MECHANICAL SUBSTITUTES.**
 
 Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
 
-The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. This audit runs no `spx validation literal` or any other deterministic check.
+The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the caller and the project's configured deterministic workflow own that gate.
 
-**TEST FILES OWN NO DATA OR CONFIGURATION.**
+**TEST FILES OWN PREDICATES AND NO INDEPENDENT DATA OR CONFIGURATION.**
 
-Before coupling, inspect every executed test file for declarations and bindings. Any variable or constant declaration in a test file is an evidence-boundary failure: it owns state in the assertion file, whether that state is test data, expected output, runner settings, property-test configuration, setup policy, reusable cases, fixture path, generator choice, harness handle, diagnostic, or a source-owned singleton shape. Framework-injected fixture parameters and property-generated parameters are test-file bindings too; move them behind harness entrypoints so the assertion file remains a wrapper. Local functions are rejected when they own setup, reusable cases, fixtures, generators, harness behavior, diagnostics, or source-owned vocabulary. Do not classify by naming style or declaration shape: `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same ownership problem when the declaration owns runner policy.
+Before coupling, inspect every executed test and imported infrastructure artifact. Every behavioral predicate and assertion API call remains lexically in the linked test function or callback. Reject a harness, generator, fixture, controlled implementation, or recording collaborator that accepts an expected outcome, returns a verdict, calls an assertion API, or exposes matcher-shaped verdict methods.
 
-The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Runner settings and property seeds belong in harnesses. Variable input domains belong in generators. Test files keep assertion flow.
+Classify bindings by what they choose. Observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
 
 **BINARY VERDICT.**
 
@@ -55,7 +67,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
@@ -108,7 +120,7 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test. The final `metadata.evidence_chain` MUST contain exactly one entry for every artifact used to resolve imports, ownership, or discovery, including an inspected discovery artifact that produces no finding.
 
-If an import cannot be resolved from the supplied evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
+If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
 **Step 3: Testability precondition**
 
@@ -118,22 +130,20 @@ If the source exposes no way to observe or drive that behavior, add a `gate-1-as
 
 **Step 3a: Ownership across the evidence chain**
 
-Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, or property-generated parameter and classify the proper owner:
+Read each linked test file before coupling. Identify every variable, constant, local function, fixture parameter, property-generated parameter, predicate, and assertion API call and classify the proper owner:
 
 Use language syntax while reading to enumerate declarations, then classify ownership by reading the declaration and its evidence role. Do not outsource the verdict to a grep pattern or validation command.
 
-| Declaration                                | Verdict                                   |
-| ------------------------------------------ | ----------------------------------------- |
-| Any variable or constant                   | REJECT — test-file state                  |
-| Framework fixture or property parameter    | REJECT — test-file binding                |
-| Runner settings, seed policy, retries      | REJECT — test-owned configuration         |
-| Test data, boundary bags, expected outputs | REJECT — test-owned data                  |
-| Fixture paths, fixture contents            | REJECT — fixture ownership in test file   |
-| Generator choices, arbitrary domains       | REJECT — generator ownership in test file |
-| Harness setup policy or reusable resources | REJECT — harness ownership in test file   |
-| Source-owned singleton shape or vocabulary | REJECT — source ownership copied to test  |
+| Binding or predicate role                                                                                                              | Verdict                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Actual result, observation, resource handle, generated parameter, callback input, or imported-contract alias that introduces no choice | ACCEPT — assertion flow                  |
+| Behavioral predicate or assertion API call in the linked test function or callback                                                     | ACCEPT — test-owned predicate            |
+| Predicate, matcher, expected-value parameter, assertion call, or verdict helper in infrastructure                                      | REJECT — assertion seam                  |
+| Runner settings, seed policy, retries, setup policy, or lifecycle policy                                                               | REJECT — test-owned configuration        |
+| Hand-picked test data, boundary bags, expected outputs, fixture contents, or generator domains                                         | REJECT — test-owned data                 |
+| Source-owned singleton shape or vocabulary copied into the test                                                                        | REJECT — source ownership copied to test |
 
-Do not treat casing as evidence. Renaming `MAPPING_RUNS` to `mappingRuns` only hides a heuristic trigger; it does not change ownership.
+Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
 
@@ -146,7 +156,7 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
 | Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
 
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source in the inventory. Source-owned values resolve to their production or platform owner. Generated values resolve to a variable generator. Whole-payload samples resolve to an inert fixture. A value with no valid owner produces a finding against the artifact that declares it with `property: "source-ownership"`, rule `source-ownership`, and `remediation_target: "source-contract"`; a harness location never establishes ownership by itself. The finding `file` names the artifact that copied the value, while `remediation_target` names the production contract that must own it — NEVER substitute the artifact role (`harness`, `generator`, or `fixture`) for `source-contract`.
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source and independent oracle in the inventory. Apply the per-assertion-type litmus questions from `/test-evidence-standards`. A value with no valid owner produces a `source-ownership` finding; an expectation derived from the production path under test produces an `oracle-independence` finding. The finding names the artifact that copied or coupled the value and the semantic owner that must replace it.
 
 </step>
 
@@ -260,7 +270,7 @@ Check assertion-type-to-strategy alignment:
 
 **Step 3e: Coverage**
 
-Establish coverage by reading, never by running the project's coverage tooling. This audit runs no deterministic verification.
+Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings deterministic verification to passing on the changeset before dispatch, and CI re-runs deterministic verification over the whole repository. Re-running the coverage command here re-pays a cost already paid.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -286,9 +296,9 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the audit request. When the request omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition with property `unsupported-language` and remediation target `language-partition` instead of guessing.
+Read the detected language or language partitions from the caller's audit request. When the caller omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition with property `unsupported-language` and remediation target `language-partition` instead of guessing.
 
-When the request supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
+When the caller supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
 
 When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, load and apply each skill through the runtime's supported skill mechanism. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
@@ -319,7 +329,7 @@ Scan all findings across all assertions, including any folded in from the compos
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
 
 The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
@@ -409,7 +419,7 @@ How to avoid: Step 3c checks for mocking after confirming coupling. Import + moc
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta. This audit runs no deterministic verification; coverage is established by reading.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying deterministic verification the caller already passed on the changeset before dispatch and CI re-runs over the whole repository. The dispatched audit runs no deterministic verification.
 
 How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
