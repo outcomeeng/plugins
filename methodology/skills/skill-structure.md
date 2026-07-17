@@ -20,7 +20,7 @@ Within these steps:
 - `understand` is the single shared library: methodology, structure, templates.
 - `contextualize` handles deterministic context injection from tree structure.
 - Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
-- `test` and `audit-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
+- `/test` and `/audit-tests` own the spec-tree testing methodology and tree-specific evidence concerns. No cross-plugin dependency exists at runtime.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
 - `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
 - `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
@@ -174,7 +174,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 7a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
 7b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are broken.
-7c. Generate test scaffolds from assertion types, delegating methodology to `test/test` and language patterns to language-specific skills.
+7c. Generate test scaffolds from assertion types, applying `/test` methodology and delegating language patterns to language-specific skills.
 7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
 
 #### 8. Review test evidence against spec assertions
@@ -225,16 +225,16 @@ Action skills do the work. Before starting, they check conversation history for 
 
 ### Spec
 
-Skills for writing tests that make assertions verifiable. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
+Skills for writing tests that make assertions verifiable. The spec-tree plugin owns both surfaces and their tree-specific concerns.
 
-| Skill         | Use case | Scope                                                        | Builds on          | Status      |
-| ------------- | -------- | ------------------------------------------------------------ | ------------------ | ----------- |
-| `test`        | 7        | Write tests driven by spec assertions, evidence gap analysis | `test/test`        | Implemented |
-| `audit-tests` | 8        | Adversarial review of test evidence against spec assertions  | `test/audit-tests` | Implemented |
+| Skill         | Use case | Scope                                                        | Status      |
+| ------------- | -------- | ------------------------------------------------------------ | ----------- |
+| `test`        | 7        | Write tests driven by spec assertions, evidence gap analysis | Implemented |
+| `audit-tests` | 8        | Adversarial review of test evidence against spec assertions  | Implemented |
 
-`spec-tree:test` is a **superset** of `test/test`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:test`; a non-spec-tree user invokes `test/test`. No cross-plugin dependency at runtime.
+`spec-tree:test` incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) with assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree.
 
-`spec-tree:audit-tests` is a **superset** of `test/audit-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
+`spec-tree:audit-tests` incorporates the full adversarial review protocol (4 phases, binary verdict) with tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
 
 ### Apply
 
@@ -268,7 +268,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 ### Spec
 
-- **`test`** owns spec-tree test writing (superset of `test/test`):
+- **`test`** owns spec-tree test writing:
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
   - Extracts typed assertions from spec nodes, determines what evidence is demanded
   - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are broken
@@ -432,7 +432,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 #### `test`
 
-Superset of `test/test`. Incorporates the full methodology, adds tree-specific concerns.
+Owns the full testing methodology and its tree-specific concerns.
 
 1. Load methodology and tree context via foundation skills.
 2. Extract typed assertions from target spec node(s) — Scenario, Property, Mapping, Conformance, Compliance.
@@ -443,10 +443,10 @@ Superset of `test/test`. Incorporates the full methodology, adds tree-specific c
 
 #### `audit-tests`
 
-Superset of `test/audit-tests`. Incorporates the full adversarial review protocol, adds tree-specific concerns.
+Owns the full adversarial review protocol and its tree-specific concerns.
 
 1. Load methodology and tree context via foundation skills.
-2. Execute the 4 foundational review phases from `test/audit-tests` (spec structure, evidentiary integrity, lower-level assumptions, ADR/PDR compliance).
+2. Execute the 4 foundational review phases: spec structure, evidentiary integrity, lower-level assumptions, and ADR/PDR compliance.
 3. Tree-level coverage: walk subtree, verify all assertions across all nodes have test evidence.
 4. Cross-cutting assertion review: for assertions at ancestor nodes, verify evidence is provided at the appropriate place.
 5. Orphan detection: identify test files not linked from any assertion.
