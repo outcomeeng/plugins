@@ -23,7 +23,7 @@ Within these steps:
 - `/test` and `/audit-tests` own the spec-tree testing methodology and tree-specific evidence concerns. No cross-plugin dependency exists at runtime.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
 - `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
-- `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
+- `/merge` dispatches every default-branch delivery through exactly one transport. `/manage-github-pr` implements the GitHub-PR transport and loads the internal `open-pr` and `manage-pr` protocols.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
 
@@ -240,13 +240,14 @@ Skills for writing tests that make assertions verifiable. The spec-tree plugin o
 
 Skills for writing implementation code and committing results. `apply` is an orchestrator that spans all three steps (declare → spec → apply) with audit gates — it exists because Claude skips declaring prerequisites without guardrails.
 
-| Skill              | Use case | Scope                                                                       | Status      |
-| ------------------ | -------- | --------------------------------------------------------------------------- | ----------- |
-| `apply`            | 9        | Orchestrator: declare → spec → apply with audit gates                       | Implemented |
-| `commit-changes`   | 10       | Conventional Commits with selective staging and atomic commits              | Implemented |
-| `manage-github-pr` | 10       | Route shipping intent through commit, PR open, PR management, and merge     | Implemented |
-| `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`                   | Implemented |
-| `manage-pr`        | 10       | Internal open-PR management and merge protocol loaded by `manage-github-pr` | Implemented |
+| Skill              | Use case | Scope                                                          | Status      |
+| ------------------ | -------- | -------------------------------------------------------------- | ----------- |
+| `apply`            | 9        | Orchestrator: declare → spec → apply with audit gates          | Implemented |
+| `commit-changes`   | 10       | Conventional Commits with selective staging and atomic commits | Implemented |
+| `merge`            | 10       | Dispatch default-branch delivery through one transport         | Implemented |
+| `manage-github-pr` | 10       | GitHub-PR transport selected by `merge`                         | Implemented |
+| `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`       | Implemented |
+| `manage-pr`        | 10       | Internal open-PR lifecycle protocol loaded by `manage-github-pr` | Implemented |
 
 ## Ownership model
 
