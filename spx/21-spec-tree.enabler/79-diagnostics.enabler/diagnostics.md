@@ -8,7 +8,7 @@ CAN self-diagnose a misconfigured environment without recalling and typing the u
 
 ### Conformance
 
-- On every shipped target, the plugin-shipped diagnose manifest carries the product's source-of-truth spx-version floor, the outcomeeng marketplace identity, and the selected check set ([test](tests/test_manifest.conformance.l1.py))
+- On every shipped target, the plugin-shipped diagnose manifest carries the product's source-of-truth spx-version floor, the outcomeeng marketplace identity, and the selected check set, and embeds no expected or required plugin set — marketplace-install diagnosis derives expected plugin state from the checkout's per-runtime project declarations, per `spx/12-marketplace-state.adr.md` ([test](tests/test_manifest.conformance.l1.py))
 
 ### Compliance
 
