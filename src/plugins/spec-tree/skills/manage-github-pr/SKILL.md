@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr view:*), Bash(echo:*), Read
+allowed-tools: Skill, {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -20,13 +20,13 @@ Live repository state for mode detection, read at invocation.
 !`git branch --show-current || echo '(not a git repo)'`
 
 **Working tree (empty = clean):**
-!`git status --porcelain || echo '(not a git repo)'`
+!`git status --porcelain 2>&1 | head -40`
 
 **Unstaged diff (name/status):**
-!`git diff --name-status || echo '(none)'`
+!`git diff --name-status 2>&1 | head -40`
 
 **Staged diff (name/status):**
-!`git diff --cached --name-status || echo '(none)'`
+!`git diff --cached --name-status 2>&1 | head -40`
 
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
