@@ -244,7 +244,7 @@ pub struct Service<C: Clock> {
 }
 ```
 
-</test_seams>
+</testing_seams>
 
 <unsafe_and_ffi>
 

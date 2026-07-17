@@ -51,9 +51,9 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 **Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
 ```markdown
-**Verification**
+## Verification
 
-**Audit**
+### Audit
 
 - ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit])
 - ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit])
@@ -64,16 +64,16 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 **What this replaces -- the following does NOT belong in an ADR:**
 
 ```text
-**Testing Strategy                    <-- NOT a valid ADR section**
+## Testing Strategy                    <-- NOT a valid ADR section
 
-**Level Assignments                  <-- downstream concern for /test**
+### Level Assignments                  <-- downstream concern for /test
 
 | Component        | Level | Justification                   |
 | ---------------- | ----- | ------------------------------- |
 | Command building | `l1`  | Pure function, no external deps |
 | Hugo invocation  | `l2`  | Needs real Hugo binary          |
 
-**Escalation Rationale               <-- downstream concern for /test**
+### Escalation Rationale               <-- downstream concern for /test
 
 - `l1` -> `l2`: Hugo binary required for acceptance
 ```
