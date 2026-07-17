@@ -12,7 +12,7 @@ The five verification types and the two axes that classify them — verdict mode
 
 ### Mappings
 
-- Every skill-owning Spec Tree wrapper agent declares a concrete, non-inherited source model ([test](tests/test_agent_model_field.mapping.l1.py))
+- Every skill-owning Spec Tree wrapper agent declares an explicit, non-inherited source model selection ([test](tests/test_agent_model_field.mapping.l1.py))
 
 ### Compliance
 
