@@ -8,6 +8,8 @@
 
 **Impact.** A skill-only or documentation-only slice selected through `/slice` cannot continue through `/apply` without inventing irrelevant architecture, test, and code work or stopping before the artifact-specific authoring workflow.
 
+**Deferral reason.** The fix is a separate larger concern because it changes `/apply`'s routing contract for every language-neutral artifact class, requires declaration and workflow changes under the apply node, and needs its own cross-artifact audit and review evidence. The selected creator-skill slice consumes that future route but does not own the general apply lifecycle.
+
 **Required handling.** Define a language-neutral artifact route that preserves methodology loading, node contextualization, artifact-specific authoring, touched-scope deterministic verification, applicable artifact audits, whole-changeset review, the terminal full gate when required, and `/merge`. The route skips language architecture, language test, and language implementation steps when the selected slice contains no implementation-language surface.
 
 **Revisit condition.** Resolve this entry before the next language-neutral artifact slice enters `/apply`, or in the next change to `/apply` language detection or Steps 3-8, whichever occurs first.
