@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, explicit branch publication, topology-appropriate pull-request state, and lifecycle handoff.
-allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -220,6 +220,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 Run consumer-defined commands from `AGENTS.md` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
 After approval, continue the governed step without introducing a separate lifecycle-confirmation decision.
+When the harness exposes no approval path for a required project command, stop with `MERGE_BLOCKED:project-command-approval-unavailable`; never skip the command or add repository-specific grants to this portable skill.
 
 </shell_scope>
 

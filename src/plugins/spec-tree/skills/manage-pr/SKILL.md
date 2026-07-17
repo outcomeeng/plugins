@@ -254,6 +254,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --r
 
 Run consumer-defined commands from `{{! file('root_guide') !}}` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
 After approval, continue the governed step without introducing a separate lifecycle-confirmation decision.
+When the harness exposes no approval path for a required project command, emit `MERGE_BLOCKED:project-command-approval-unavailable`; never skip the command or add repository-specific grants to this portable skill.
 
 </shell_scope>
 
