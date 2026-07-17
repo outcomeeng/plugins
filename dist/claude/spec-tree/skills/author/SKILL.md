@@ -20,10 +20,14 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Use the template and example paths exposed by `<SPEC_TREE_FOUNDATION>`:
+Templates and examples live in the sibling understanding skill directory:
 
-- Product, ADR, PDR, enabler, and outcome template paths
-- The examples directory path — filled specs for reference
+- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
+- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `${CLAUDE_SKILL_DIR}/../understand/examples/` — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -148,7 +152,7 @@ Use `AskUserQuestion` for operator-owned gaps. Do not ask about information alre
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template path exposed by `<SPEC_TREE_FOUNDATION>`. Fill it using the gathered content.
+Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
 
 **Voice rules** (from live `/understand` `<atemporal_voice>`):
 
@@ -213,7 +217,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Use the `excluded-nodes` path exposed by `<SPEC_TREE_FOUNDATION>`.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Read `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md` for the convention.
 5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**

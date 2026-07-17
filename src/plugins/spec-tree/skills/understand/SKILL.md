@@ -141,6 +141,7 @@ Enforcement rules are production validation code. Their `[test]` evidence runs t
 | Test reference                          | ADR/PDR            | Spec assertion                                                |
 | Implementation detail                   | Spec               | Code                                                          |
 | How to build something                  | Spec               | ADR or code                                                   |
+| Enforceable static constraint           | `[audit]`          | `[test]` on the enforcement rule                              |
 | Cross-cutting invariant                 | Child spec         | Ancestor spec                                                 |
 | Remaining work                          | Session file       | Node-local `PLAN.md`                                          |
 | Known unresolved defect                 | Session file       | Node-local `ISSUES.md`                                        |
@@ -479,13 +480,11 @@ A blocker exists only when the immediate next action needs operator input or an 
 <SPEC_TREE_FOUNDATION>
 Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
 Operational references available: excluded-nodes, product-domain-shapes
-Operational reference paths: excluded-nodes=${CLAUDE_SKILL_DIR}/references/excluded-nodes.md; product-domain-shapes=${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
 Routing guide: loaded from {{! file('root_guide') !}} | absent
 Templates available: product, adr, pdr, enabler, outcome
-Template paths: product=${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md; adr=${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md; pdr=${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.pdr.md; enabler=${CLAUDE_SKILL_DIR}/templates/nodes/enabler-name.md; outcome=${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md
-Examples available in: ${CLAUDE_SKILL_DIR}/examples/
+Examples available: adr, enabler, outcome, pdr
 </SPEC_TREE_FOUNDATION>
 ```
 
