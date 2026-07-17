@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.25.0 langs:python -->
+<!-- SPEC-TREE v0.26.0 langs:python -->
 
 # Spec Tree Instructions
 
