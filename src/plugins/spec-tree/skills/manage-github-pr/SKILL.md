@@ -60,9 +60,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Step 5 — Open.** Invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR ready. Skip this step in Open PR mode.
 
-**Step 6 — Drive to merge.** Invoke `/manage-pr`. It evaluates `MERGE_READINESS`, merges under the gate, and runs any declared deploy and release phases.
-
-**Step 7 — Continue or close.** A merged PR is one step, not necessarily the session's end. Carry forward `/manage-pr`'s branch-state closeout record, including the **Remaining Branches** groups and safe cleanup results. If any in-scope part of the user's stated goal remains — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly; a merge is not a license to stop. Invoke `/handoff` plain only when the session is complete — the goal is met with no in-scope work remaining, or continuation by Claude is impossible (the user halted, context is exhausted, or an external blocker prevents the next action) — per live `/understand` `<closing_protocol>` and the `/handoff` precondition; the skill then decides session-file creation per continuation state and never receives `--no-session` on the user's behalf. The final operator-facing closeout comes from `/handoff` and includes the carried branch-state record. Do not append a separate merge receipt before or after it.
+**Step 6 — Tail-delegate management and closeout.** Invoke `/manage-pr`. It evaluates `MERGE_READINESS`, merges under the gate, runs any declared deploy and release phases, continues remaining in-scope work, and invokes `/handoff` plain when the session is complete. Treat `/manage-pr` as the terminal lifecycle protocol once invoked: do not run a second continuation or closeout path after it returns.
 
 </workflow>
 
@@ -82,7 +80,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Failure 2: Default autonomy became a confirmation prompt.** Claude stated a plan and then asked whether to push, open, or continue even though `spx/local/merging.md` did not opt into pre-mutation confirmation. Signal: an operator question before branch creation, commit, push, PR open, or merge with no overlay opt-in. Avoid: by default, state the plan and proceed; use the structured-question tool only when the overlay explicitly opts into pre-mutation confirmation.
 
-**Failure 3: The lifecycle was reimplemented inline.** Claude opened, managed, merged, or cleaned up the PR by running ad hoc `git` or `gh` commands from this skill instead of invoking the governing lifecycle skills. Signal: inline commit, open, manage, merge, branch cleanup, or closeout logic appears in the main flow after mode detection. Avoid: after intent is established, delegate each lifecycle stage to `/commit-changes`, `/open-pr`, `/manage-pr`, and `/handoff` as specified; this skill owns orchestration, not the stage protocols.
+**Failure 3: The lifecycle was reimplemented inline.** Claude opened, managed, merged, or cleaned up the PR by running ad hoc `git` or `gh` commands from this skill instead of invoking the governing lifecycle skills. Signal: inline commit, open, manage, merge, branch cleanup, or closeout logic appears in the main flow after mode detection. Avoid: after intent is established, delegate commit to `/commit-changes`, opening to `/open-pr`, and the remaining management-through-handoff lifecycle to `/manage-pr`; this skill owns routing, not the stage protocols.
 
 </failure_modes>
 
@@ -92,6 +90,6 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The invocation resolved to the GitHub-PR transport from its arguments and live repository state, and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
-- The PR reached merged state through `/manage-pr`'s gates, `/manage-pr` built the branch-state closeout record and ran safe cleanup, and then, with in-scope goal work remaining, the lifecycle continued to the next part rather than closing; the session closed through `/handoff` plain only when continuation by Claude was impossible (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`), or the flow stopped at an explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
+- `/manage-pr` owned the terminal management lifecycle after delegation: merge, safe cleanup, declared deploy and release phases, continuation of in-scope work, and `/handoff` plain only when the session was complete; or it stopped at an explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
 
 </success_criteria>

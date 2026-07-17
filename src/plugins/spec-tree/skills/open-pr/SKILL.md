@@ -59,18 +59,40 @@ If `spx/local/merging.md` defines a custom branch-push command, follow that over
 
 Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until that base merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base` branch. Replace `<stack-base>` in the body with that recorded branch before executing the command.
 
-Interactive Claude Code and Codex sessions use a quoted heredoc:
+Interactive Claude Code and Codex sessions use a quoted heredoc. Peer PRs use this form and omit the stack section:
 
 ```bash
-topology_args=()
-if [ "$topology" = "stacked" ]; then
-  topology_args=(--base "$stack_base" --draft)
-fi
+GIT_TERMINAL_PROMPT=0 gh pr create \
+  --title "<commit-subject under 70 chars per /commit-changes>" \
+  --body-file - \
+  --head "$(git branch --show-current)" <<'EOF'
+## Summary
+
+- <bullet>
+
+## Background
+
+<prose>
+
+## Test plan
+
+- [ ] <verification step>
+
+## Refs
+
+- <ref>
+EOF
+```
+
+Stacked PRs use this form, replacing `<stack-base>` in the body with the recorded full branch before execution:
+
+```bash
 GIT_TERMINAL_PROMPT=0 gh pr create \
   --title "<commit-subject under 70 chars per /commit-changes>" \
   --body-file - \
   --head "$(git branch --show-current)" \
-  "${topology_args[@]}" <<'EOF'
+  --base "$stack_base" \
+  --draft <<'EOF'
 ## Summary
 
 - <bullet>
