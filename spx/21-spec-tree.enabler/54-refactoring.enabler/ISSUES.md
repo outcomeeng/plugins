@@ -1,5 +1,16 @@
 # Issues: Refactoring Enabler
 
+## Post-mutation validation has no command-backed gate
+
+The skill moves, removes, and consolidates Spec Tree nodes, then closes through a checklist without
+running deterministic validation. A future `/refactor` change must add explicit pass/fail gates using
+the product's author and verify commands, including `spx validation markdown` and
+`spx spec status --format json`, before reporting a refactored tree as successful.
+
+**Trigger to revisit:** the `/refactor` implementation workflow is next changed. **Resolution shape:**
+run the deterministic commands after mutation, stop on either nonzero result, and make their passing
+results part of the skill's success contract.
+
 ## FOLLOW-UP [architecture]: no skill guides a methodology-wide refactor (terms, structure, authority) across this repo's self-describing surfaces
 
 `/refactor` covers moving and re-scoping **spec-tree nodes** — tree surgery. It does not cover refactoring the **spec-tree methodology itself**: a rename of a methodology concept, a restructure of an assertion layout, or a relocation of selection authority, propagated across every surface that *describes* the methodology. The two recent vocabulary PRs (#144 verification-type/assertion-type rename; #145 per-plugin bump fix) each took ~5 local + CI review rounds to converge. That round count is the symptom; the missing skill is the cause.
