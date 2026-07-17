@@ -21,8 +21,7 @@ Live repository state for transport selection, read at invocation.
 
 **Working tree:** inspected by the Step 2 classifier, which owns complete changeset enumeration.
 
-**Transport overlay (selector, if any):**
-!`grep -iE '^transport:' spx/local/merging.md 2>/dev/null || echo '(no explicit transport: selector — default applies)'`
+**Transport overlay:** inspected in Step 1 after the Spec Tree foundation is live.
 
 The changeset classification is computed in Step 2 by the classification script, not in this block — base-ref and committed branch-scope derivation route through the canonical `scope-changeset` primitives rather than inline git.
 
