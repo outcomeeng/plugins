@@ -20,12 +20,11 @@ Gate changed skills with `instructions:skill-auditor`, then `just build-skills`,
 
 ## 2. `<quick_start>` policy enforcement on reference skills
 
-`skill-standards` already requires foundation, gate, validator, reference, and auditor skills to omit `<quick_start>`. The remaining live violation class is reference-skill enforcement: `src/plugins/typescript/skills/typescript-standards/SKILL.md` still carries a `<quick_start>` block.
+`skill-standards` already requires foundation, gate, validator, reference, and auditor skills to omit `<quick_start>`. No reference or standards skill currently carries a `<quick_start>` block; the sweep of authored reference skills is complete. The remaining open work is enforcement mechanization.
 
 Required handling:
 
-- Update `audit-skills` enforcement if reference-skill `<quick_start>` detection is not already mechanical.
-- Sweep reference skills for `<quick_start>` blocks and remove any abbreviated path that contradicts their foundation/reference role.
+- Add a mechanical `audit-skills` flag for a `<quick_start>` block on a foundation, gate, validator, or reference skill, so a reintroduced block is caught the way `auditor_skeleton_violation` catches it on an `audit-*` skill.
 - Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
 
 Gate changed skills with `instructions:skill-auditor`.
