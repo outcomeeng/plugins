@@ -11,7 +11,7 @@ The canonical standards for skill authoring — frontmatter, XML structure, nami
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its invoker, and (f) the skill passes `/audit-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 lines unless it qualifies for the eager-foundation exception in `<progressive_disclosure>`, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description matches the invocation path — directive when description-match activation applies, passive when invoked only by exact name or a parent capability — (e) the skill is independent of its caller, and (f) the skill passes `/audit-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -40,9 +40,9 @@ For language-specific skill prose that references a foundation, use the unqualif
 4. A composition step invokes only capabilities required by the workflow; it never discovers or invokes adjacent skills speculatively.
 5. Reference-only prose may name foundational concepts without invocation, while reference skills are loaded through the runtime's skill-invocation capability when their full standards govern the work.
 
-**Invoker independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on the agent, skill, or context that invokes it. The dependency runs one way: an invoking surface may know the skill it invokes; the skill never knows its invokers.
+**Caller independence:** A skill governs its own behavior and nothing else. It never names, describes, detects, constrains, refuses, branches on, or otherwise depends on the agent, skill, or context that invokes it. The dependency runs one way: a caller may know the skill it invokes; the skill never knows its callers.
 
-Context placement, agent selection, and dispatch policy belong to the invoking surface. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or invoker check to the invoked skill.
+Context placement, agent selection, and dispatch policy belong to the caller. A skill remains independently invocable even when the product normally reaches it through an agent or another skill. Correct an invalid invocation in the router, agent, or composing skill that made the decision; never add a dispatch gate or caller check to the invoked skill.
 
 </skill_organization>
 
@@ -198,7 +198,7 @@ description: >-
 {!% else %!}
 <descriptions>
 
-Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and describe the skill's own subject rather than the invoker that reaches it.
+Descriptions state when Codex selects a skill and distinguish adjacent skills with concrete trigger terms. Use directive wording for description-match entry points and passive wording for references or protocols invoked by exact name. Keep the trigger first, avoid overlapping descriptions, and describe the skill's own subject rather than the caller that reaches it.
 
 </descriptions>
 {!% endif %!}
