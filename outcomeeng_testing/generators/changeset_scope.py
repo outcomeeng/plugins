@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterator
+import pathlib
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 
 
@@ -19,6 +20,13 @@ class ChangesetScopeCase:
     working_file: str
 
 
+@dataclass(frozen=True)
+class ClassificationPathCase:
+    """One finite path collection in the merge classifier's mapping domain."""
+
+    paths: tuple[str, ...]
+
+
 def changeset_scope_cases() -> Iterator[ChangesetScopeCase]:
     """Generate reproducible branch and path alternatives without a fixed case bag."""
     for index in itertools.count():
@@ -31,3 +39,33 @@ def changeset_scope_cases() -> Iterator[ChangesetScopeCase]:
             feature_file=f"feature/{token}.txt",
             working_file=f"working-{token}.py",
         )
+
+
+def classification_path_cases(
+    coordination_note_basenames: Sequence[str],
+) -> tuple[ClassificationPathCase, ...]:
+    """Compose the empty, note-only, mixed, and duplicate mapping cases."""
+    generated_cases = changeset_scope_cases()
+    note_parent = next(generated_cases).feature_branch
+    ordinary_path = next(generated_cases).feature_file
+    note_path = pathlib.PurePosixPath(
+        note_parent,
+        coordination_note_basenames[0],
+    ).as_posix()
+    return (
+        ClassificationPathCase(paths=()),
+        ClassificationPathCase(paths=(note_path,)),
+        ClassificationPathCase(paths=(note_path, ordinary_path)),
+        ClassificationPathCase(paths=(note_path, ordinary_path, ordinary_path)),
+    )
+
+
+def coordination_note_paths(
+    coordination_note_basenames: Sequence[str],
+) -> tuple[str, ...]:
+    """Place every source-owned coordination-note basename at two depths."""
+    generated_parent = next(changeset_scope_cases()).feature_branch
+    return tuple(coordination_note_basenames) + tuple(
+        pathlib.PurePosixPath(generated_parent, basename).as_posix()
+        for basename in coordination_note_basenames
+    )

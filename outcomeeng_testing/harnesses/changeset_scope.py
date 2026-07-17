@@ -43,7 +43,9 @@ from types import ModuleType
 
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
+    classification_path_cases,
     changeset_scope_cases,
+    coordination_note_paths,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -757,6 +759,36 @@ def unconfigured_base_comparison() -> EvidenceComparison:
             ),
             expected=(True, True, True, True),
         )
+
+
+@cache
+def classification_counts_comparison() -> EvidenceComparison:
+    classifier = load_merge_classifier_module()
+    cases = classification_path_cases(classifier.COORDINATION_NOTE_BASENAMES)
+    return EvidenceComparison(
+        actual=tuple(classifier.classify(list(case.paths)) for case in cases),
+        expected=tuple(
+            (
+                len(frozenset(case.paths)),
+                sum(
+                    pathlib.PurePosixPath(path).name
+                    not in classifier.COORDINATION_NOTE_BASENAMES
+                    for path in frozenset(case.paths)
+                ),
+            )
+            for case in cases
+        ),
+    )
+
+
+@cache
+def coordination_note_basename_comparison() -> EvidenceComparison:
+    classifier = load_merge_classifier_module()
+    paths = coordination_note_paths(classifier.COORDINATION_NOTE_BASENAMES)
+    return EvidenceComparison(
+        actual=tuple(classifier.is_coordination_note(path) for path in paths),
+        expected=tuple(True for _path in paths),
+    )
 
 
 def detach_head(repo: pathlib.Path) -> None:
