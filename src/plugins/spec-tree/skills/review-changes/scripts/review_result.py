@@ -1,7 +1,8 @@
-"""Reviewing-changes policy module — canonical schema.
+"""Review-result parser compatibility module — canonical retained schema.
 
-The single source of truth for the ``review-result`` shape that the
-review-changes skill produces. Declares:
+The active review runner streams journal findings through ``review_run.py`` and
+does not use this parser module. This module retains the document and
+per-finding parser APIs exercised by compatibility callers. It declares:
 
 - ``SCHEMA_VERSION`` — the wire-format version constant.
 - ``Severity``, ``Concern`` enums (``StrEnum``) — the wire vocabularies
@@ -11,10 +12,9 @@ review-changes skill produces. Declares:
 - ``ReviewResultValidationError`` — raised on every schema violation.
 - ``parse_json``, ``parse_finding_json``, ``to_json_dict``,
   ``from_json_dict`` — the parser entry points. ``parse_finding_json``
-  validates one streamed finding (legacy compatibility path for
-  ``journal_emit.py finding-reported``); ``parse_json``
-  validates a whole document. Both surface malformed input as exceptions
-  before any journal append.
+  validates one finding for the legacy ``journal_emit.py finding-reported``
+  path; ``parse_json`` validates a whole document. Callers using either entry
+  point receive malformed-input exceptions before their own append operation.
 
 Stdlib-only. Mirrors the marketplace's verdict-toolchain precedent.
 
@@ -235,11 +235,10 @@ def parse_json(text: str) -> ReviewResult:
     3. ``from_json_dict`` — convert to the frozen dataclass, parsing
        enums and findings along the way.
 
-    Validation is enforced inside this function so a caller validating a
-    whole document surfaces violations before use; the streaming review
-    validates one finding at a time through ``parse_finding_json``. The
-    journal channel's append and seal are the durable validity signal for the
-    recorded run.
+    Validation is enforced inside this retained document-level parser so a
+    caller surfaces violations before use. The active streaming runner owns a
+    separate append boundary and calls neither this function nor
+    ``parse_finding_json``.
     """
     try:
         raw = json.loads(text)
@@ -255,13 +254,11 @@ def parse_json(text: str) -> ReviewResult:
 def parse_finding_json(text: str) -> Finding:
     """Parse and validate one finding JSON object into a :class:`Finding`.
 
-    The streaming review appends a ``finding-reported`` event the instant it
-    raises each finding, so it emits one finding JSON document at a time.
-    This remains available for the legacy ``journal_emit.py finding-reported`` path before the event is appended — the same enum, required-key, and
-    ``rule``-citation checks ``parse_json`` applies to a whole document,
-    scoped to one finding. Every violation raises
-    :class:`ReviewResultValidationError`, so a malformed finding is surfaced
-    before any journal append, never appended.
+    This retained entry point supports the legacy
+    ``journal_emit.py finding-reported`` path and direct compatibility callers.
+    It applies the same enum, required-key, and ``rule``-citation checks as
+    ``parse_json``, scoped to one finding. The active ``review_run.py`` append
+    path does not call this function.
     """
     try:
         raw = json.loads(text)
