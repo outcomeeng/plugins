@@ -12,6 +12,6 @@ This directory holds **Claude Code-specific methodology** for building plugins, 
 
 ## Authoritative source of truth
 
-The spec-tree plugin's own references (`plugins/spec-tree/skills/understand/references/`) are authoritative for methodology terms (node types, states, assertion types, ordering). This directory holds the rationale and research behind those rules — read the plugin references for rules, read here for why.
+The spec-tree plugin's inline foundation (`src/plugins/spec-tree/skills/understand/SKILL.md`) is authoritative for methodology terms (node types, states, assertion types, ordering). Its sibling `references/` directory carries conditional operational detail. This directory holds the rationale and research behind those rules — read the inline foundation for rules, read here for why.
 
-When plugin references and these documents disagree, the plugin wins and these documents need updating.
+When the inline plugin foundation and these documents disagree, the plugin wins and these documents need updating.

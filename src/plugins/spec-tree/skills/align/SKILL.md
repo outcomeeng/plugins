@@ -26,12 +26,12 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 <required_references>
 
-Invoke `spec-tree:understand` and use the reference and template paths it exposes. Read these named sources in full before checking conformance:
+Invoke `spec-tree:understand` and use its live inline foundation plus the conditional reference and template paths it exposes. Read the conditional sources in full before checking conformance:
 
-- `durable-map.md` — `<atemporal_voice>` and `<decision_to_spec_alignment>`
-- `assertion-types.md` — the five assertion types and their canonical headings
+- Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
+- Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
 - `what-goes-where.md` — `<common_misplacements>`
-- `node-types.md` — `<enabler>` and `<outcome>`
+- Live `/understand` `<enabler>` and `<outcome>`
 - `decision-name.adr.md`, `decision-name.pdr.md`, `product-name.product.md`, `enabler-name.md`, and `outcome-name.md` — structural rules for each artifact class
 
 </required_references>
@@ -100,7 +100,7 @@ For each classified enabler or outcome spec, invoke `/contextualize` on the spec
 
 <language_conformance>
 
-Read the `<atemporal_voice>` section from `durable-map.md`. It provides two checking mechanisms:
+Use the live `/understand` `<atemporal_voice>` section. It provides two checking mechanisms:
 
 **A. Temporal markers table** — The left column lists specific phrases to find. Scan every line for matches.
 
@@ -143,7 +143,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
+Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 

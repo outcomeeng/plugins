@@ -22,10 +22,10 @@ Accept exactly one target:
 
 If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
-Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
+Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
-- `${SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
-- `${SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
+- Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
+- Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
 - `${SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
 - `${SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
 - `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
