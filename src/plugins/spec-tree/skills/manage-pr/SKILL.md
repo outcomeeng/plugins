@@ -28,8 +28,8 @@ GitHub and the local repository are authoritative for PR state. Conversation mem
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate
 ```
 
@@ -46,8 +46,8 @@ Walk these steps on each management pass. Inspect, classify, rebase, re-review, 
 **Step 1 — Identify the PR.** Resolve the PR from `$pr` before inspecting state. `$pr` may be a PR number, PR URL, or branch name. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$pr` is empty and the current branch is the intended PR branch.
 
 ```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 ```
 
 Resolve the repository default branch in the same pass. Resolve a previous stack branch in the fallback order from /merging-standards `<branch_topology>`: first inspect the captured `body` for the complete `## Stack` section and its merge-order line; when absent, inspect the repository's branch-naming convention; then use an explicit operator instruction already present in the invocation or conversation. Prefer the body note whenever it exists because it preserves stack identity after GitHub auto-retargets the PR. When none of those sources yields a ref for a non-default-base PR, ask the operator through the runtime's structured-question capability rather than guessing; a pass that still has no resolved ref is `MERGE_BLOCKED:stack-topology-unresolved`.
@@ -202,8 +202,8 @@ For pre-flight, branch topology, push semantics, base sync, the authority gates,
 
 ```bash
 # PR identity
-gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,body,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view <pr-number-or-url-or-branch> --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
+gh pr view --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
 
 # Checks snapshot
 gh pr checks <pr-number>
