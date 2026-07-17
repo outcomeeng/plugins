@@ -40,7 +40,7 @@ Select the matching template:
 
 <step name="resolve_target_path">
 
-Write to the exact target path supplied by the caller or established by the repository's plugin layout. In this marketplace, authored plugin skills live under `src/plugins/<plugin>/skills/<skill-name>/`. In another repository, inspect its own plugin source layout or request the destination. Never assume a runtime-specific home-directory path.
+Write to the exact target path supplied by the caller or established by the repository's plugin layout. Inspect the repository's authored plugin source layout or request the destination. Never assume a runtime-specific home-directory path or a marketplace-specific source directory.
 
 Create only the directories the selected structure needs: `workflows/`, `references/`, `templates/`, or `scripts/`.
 
