@@ -30,6 +30,28 @@ from typing import Final, Protocol, TypeGuard, cast
 
 
 COMMAND_UNAVAILABLE_EXIT: Final = 127
+SPX_SESSION_SHOW_COMMAND: Final = ("spx", "session", "show")
+SPX_SPEC_STATUS_COMMAND: Final = ("spx", "spec", "status")
+GIT_VERIFY_REF_COMMAND: Final = ("git", "rev-parse", "--verify", "--quiet")
+GIT_STATUS_COMMAND: Final = ("git", "status", "--porcelain")
+GH_PR_VIEW_COMMAND: Final = ("gh", "pr", "view")
+
+SESSION_GIT_REF_FIELD: Final = "git_ref"
+SESSION_SPECS_FIELD: Final = "specs"
+SESSION_FILES_FIELD: Final = "files"
+SESSION_REQUIRED_FIELDS: Final = (
+    SESSION_GIT_REF_FIELD,
+    SESSION_SPECS_FIELD,
+    SESSION_FILES_FIELD,
+)
+NODE_STATUS_SCALAR_FIELDS: Final = (
+    "node",
+    "path",
+    "spec",
+    "status",
+    "state",
+    "result",
+)
 type JsonScalar = str | int | float | bool | None
 
 
@@ -92,7 +114,7 @@ def load_session(
     session_id: str, runner: CommandRunner
 ) -> tuple[Session | None, ClaimVerdict | None]:
     """Read session claims through the spx session API, never a worktree path."""
-    code, out, err = runner.run(["spx", "session", "show", "--json", session_id])
+    code, out, err = runner.run([*SPX_SESSION_SHOW_COMMAND, "--json", session_id])
     if code != 0:
         return None, _session_unverifiable(
             session_id, f"spx session show --json unavailable: {_detail(err)}"
@@ -109,7 +131,7 @@ def load_session(
             session_id, f"spx session show returned malformed metadata: {shape_error}"
         )
 
-    raw_code, raw_out, raw_err = runner.run(["spx", "session", "show", session_id])
+    raw_code, raw_out, raw_err = runner.run([*SPX_SESSION_SHOW_COMMAND, session_id])
     if raw_code != 0:
         return None, _session_unverifiable(
             session_id, f"spx session show unavailable: {_detail(raw_err)}"
@@ -120,12 +142,12 @@ def load_session(
 def parse_session(record: dict[str, object], text: str) -> Session:
     """Extract structured claims from parsed frontmatter plus session prose."""
     payload = cast("dict[str, object]", record)
-    git_ref = payload["git_ref"]
+    git_ref = payload[SESSION_GIT_REF_FIELD]
     return Session(
         git_ref=git_ref if isinstance(git_ref, str) else None,
         git_status=_body_git_status(text),
-        specs=_string_tuple(payload["specs"]),
-        files=_string_tuple(payload["files"]),
+        specs=_string_tuple(payload[SESSION_SPECS_FIELD]),
+        files=_string_tuple(payload[SESSION_FILES_FIELD]),
         pr_numbers=_pr_numbers(text),
     )
 
@@ -149,13 +171,13 @@ def _single_session_record(data: object) -> dict[str, object]:
 
 
 def _metadata_shape_error(payload: dict[str, object]) -> str | None:
-    for key in ("git_ref", "specs", "files"):
+    for key in SESSION_REQUIRED_FIELDS:
         if key not in payload:
             return f"{key} is absent"
-    git_ref = payload["git_ref"]
+    git_ref = payload[SESSION_GIT_REF_FIELD]
     if git_ref is not None and not isinstance(git_ref, str):
         return "git_ref is not a string or null"
-    for key in ("specs", "files"):
+    for key in (SESSION_SPECS_FIELD, SESSION_FILES_FIELD):
         value = payload[key]
         if not isinstance(value, list) or not all(
             isinstance(item, str) for item in value
@@ -188,7 +210,7 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
         return None
     ref = session.git_ref
     branch_code, _, _ = runner.run(
-        ["git", "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{ref}"]
+        [*GIT_VERIFY_REF_COMMAND, f"refs/remotes/origin/{ref}"]
     )
     if branch_code == COMMAND_UNAVAILABLE_EXIT or branch_code >= 128:
         return ClaimVerdict(
@@ -208,9 +230,7 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
             Verdict.DISCREPANCY,
             "branch absent from origin",
         )
-    code, _, _ = runner.run(
-        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"]
-    )
+    code, _, _ = runner.run([*GIT_VERIFY_REF_COMMAND, f"{ref}^{{commit}}"])
     if code == COMMAND_UNAVAILABLE_EXIT or code >= 128:
         return ClaimVerdict(
             ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
@@ -245,7 +265,9 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
     verdicts: list[ClaimVerdict] = []
     for spec in session.specs:
         node = str(Path(spec).parent)
-        code, out, err = runner.run(["spx", "spec", "status", node, "--format", "json"])
+        code, out, err = runner.run(
+            [*SPX_SPEC_STATUS_COMMAND, node, "--format", "json"]
+        )
         if code != 0:
             verdicts.append(
                 ClaimVerdict(
@@ -275,7 +297,7 @@ def _node_status_evidence(node: str, stdout: str) -> str:
     if not isinstance(payload, dict):
         return stdout.strip()
     summary: dict[str, JsonScalar] = {}
-    for key in ("node", "path", "spec", "status", "state", "result"):
+    for key in NODE_STATUS_SCALAR_FIELDS:
         if key not in payload:
             continue
         value = payload.get(key)
@@ -293,7 +315,7 @@ def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
 def check_uncommitted(session: Session, runner: CommandRunner) -> ClaimVerdict | None:
     if session.git_status is None:
         return None
-    code, out, _ = runner.run(["git", "status", "--porcelain"])
+    code, out, _ = runner.run(list(GIT_STATUS_COMMAND))
     if code != 0:
         return ClaimVerdict(
             ClaimKind.UNCOMMITTED_STATE,
@@ -314,7 +336,7 @@ def check_uncommitted(session: Session, runner: CommandRunner) -> ClaimVerdict |
 def check_external_ids(session: Session, runner: CommandRunner) -> list[ClaimVerdict]:
     verdicts: list[ClaimVerdict] = []
     for number in session.pr_numbers:
-        code, out, err = runner.run(["gh", "pr", "view", number, "--json", "state"])
+        code, out, err = runner.run([*GH_PR_VIEW_COMMAND, number, "--json", "state"])
         if code != 0:
             verdicts.append(
                 ClaimVerdict(

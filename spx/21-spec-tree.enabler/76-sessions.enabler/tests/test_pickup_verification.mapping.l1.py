@@ -1,383 +1,220 @@
-"""Mapping tests for the pickup claim-verification script.
+"""Mapping evidence for pickup claim reconciliation.
 
-Covers the Mapping assertion in ``../sessions.md``: each recorded session
-claim kind maps to ``Confirmed`` when current state matches the recorded claim,
-``Discrepancy`` when it differs, and ``Unverifiable`` when the check cannot run.
-
-The case table parameterizes over the source-owned ``ClaimKind`` x relation
-domain. ``l1`` -- git runs for real against a temp repo from ``git_context``; the
-injected ``RecordingRunner`` scripts ``spx``/``gh`` and records every call. No
-mocking: the runner is an explicit injected double.
+The finite claim-relation domain, source-owned command scripts, and controlled
+runner live in ``outcomeeng_testing.harnesses.verify_session_claims``. The real
+git repository remains the ``l1`` oracle for git behavior.
 """
-
-from __future__ import annotations
-
-import json
-import pathlib
-from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Any, TypedDict
-
-import pytest
 
 from outcomeeng_testing.harnesses.git_context import (
     accepted_git_context,
     handoff_git_env,
 )
 from outcomeeng_testing.harnesses.verify_session_claims import (
+    ABSENT_WORK_BRANCH,
+    CHILD_NODE_PATH,
+    CLOSED_PR_STATE,
+    FAILING_STATUS,
+    FULL_HEX_WORK_BRANCH,
+    HEX_LIKE_WORK_BRANCH,
+    MISSING_SESSION_ERROR,
+    NODE_PATH,
+    NODE_SPEC,
+    PASSING_STATUS,
+    PRESENT_FILE,
+    PR_NUMBER,
+    REACHABLE_WORK_BRANCH,
     RecordingRunner,
     SESSION_ID,
-    dirty_tree,
+    claim_mapping_cases,
+    create_present_file,
+    external_state_script,
     head_sha,
     load_verify_session_claims_module,
+    missing_session_script,
+    node_status_script,
     session_command_scripts,
+    verdict_for_kind,
 )
 
 module = load_verify_session_claims_module()
 Verdict = module.Verdict
 ClaimKind = module.ClaimKind
 
-SpecScripts = dict[tuple[str, ...], tuple[int, str, str]]
 
+def test_claim_maps_to_verdict() -> None:
+    for case in claim_mapping_cases(module):
+        with accepted_git_context() as repo:
+            session_kwargs, scripted = case.build(repo)
+            runner = RecordingRunner(
+                repo=repo,
+                scripted=session_command_scripts(**session_kwargs) | scripted,
+            )
 
-class SessionKwargs(TypedDict, total=False):
-    """The structured claim fields a case feeds to ``spx session show``."""
+            actual = verdict_for_kind(
+                module.verify(SESSION_ID, repo, runner), case.kind
+            )
 
-    git_ref: str
-    git_status: str
-    specs: tuple[str, ...]
-    files: tuple[str, ...]
-    pr_numbers: tuple[str, ...]
-
-
-SPX_STATUS = ("spx", "spec", "status")
-GH_VIEW = ("gh", "pr", "view")
-
-
-@dataclass(frozen=True)
-class Case:
-    """One claim kind under one relation, with the verdict the mapping demands."""
-
-    id: str
-    build: Callable[[pathlib.Path], tuple[SessionKwargs, SpecScripts]]
-    kind: object
-    verdict: object
-
-
-def _present_path(repo: pathlib.Path) -> tuple[SessionKwargs, SpecScripts]:
-    (repo / "present.md").write_text("here\n")
-    return {"files": ("present.md",)}, {}
-
-
-def _node_ok(repo: pathlib.Path) -> tuple[SessionKwargs, SpecScripts]:
-    return {"specs": ("spx/21-x.enabler/x.md",)}, {
-        SPX_STATUS: (0, '{"status": "passing"}', "")
-    }
-
-
-def _node_unavailable(repo: pathlib.Path) -> tuple[SessionKwargs, SpecScripts]:
-    return {"specs": ("spx/21-x.enabler/x.md",)}, {
-        SPX_STATUS: (1, "", "spx: command not found")
-    }
-
-
-def _dirty_but_recorded_clean(
-    repo: pathlib.Path,
-) -> tuple[SessionKwargs, SpecScripts]:
-    dirty_tree(repo)
-    return {"git_status": "clean"}, {}
-
-
-CASES: tuple[Case, ...] = (
-    Case(
-        "git_ref-sha-reachable",
-        lambda repo: ({"git_ref": head_sha(repo)}, {}),
-        ClaimKind.GIT_REF,
-        Verdict.CONFIRMED,
-    ),
-    Case(
-        "git_ref-sha-unreachable",
-        lambda repo: ({"git_ref": "0" * 40}, {}),
-        ClaimKind.GIT_REF,
-        Verdict.DISCREPANCY,
-    ),
-    Case(
-        "injected-path-present",
-        _present_path,
-        ClaimKind.INJECTED_PATH,
-        Verdict.CONFIRMED,
-    ),
-    Case(
-        "injected-path-missing",
-        lambda repo: ({"files": ("absent.md",)}, {}),
-        ClaimKind.INJECTED_PATH,
-        Verdict.DISCREPANCY,
-    ),
-    Case("node-status-readable", _node_ok, ClaimKind.NODE_STATUS, Verdict.CONFIRMED),
-    Case(
-        "node-status-unavailable",
-        _node_unavailable,
-        ClaimKind.NODE_STATUS,
-        Verdict.UNVERIFIABLE,
-    ),
-    Case(
-        "uncommitted-clean-matches",
-        lambda repo: ({"git_status": "clean"}, {}),
-        ClaimKind.UNCOMMITTED_STATE,
-        Verdict.CONFIRMED,
-    ),
-    Case(
-        "uncommitted-clean-now-dirty",
-        _dirty_but_recorded_clean,
-        ClaimKind.UNCOMMITTED_STATE,
-        Verdict.DISCREPANCY,
-    ),
-    Case(
-        "external-id-readable",
-        lambda repo: (
-            {"pr_numbers": ("256",)},
-            {GH_VIEW: (0, '{"state": "MERGED"}', "")},
-        ),
-        ClaimKind.EXTERNAL_ID,
-        Verdict.CONFIRMED,
-    ),
-    Case(
-        "external-id-unavailable",
-        lambda repo: ({"pr_numbers": ("256",)}, {GH_VIEW: (1, "", "gh: not found")}),
-        ClaimKind.EXTERNAL_ID,
-        Verdict.UNVERIFIABLE,
-    ),
-    Case(
-        "git_ref-git-unavailable",
-        lambda repo: (
-            {"git_ref": head_sha(repo)},
-            {("git", "rev-parse"): (128, "", "fatal: not a git repository")},
-        ),
-        ClaimKind.GIT_REF,
-        Verdict.UNVERIFIABLE,
-    ),
-    Case(
-        "git_ref-git-launch-failure",
-        lambda repo: (
-            {"git_ref": head_sha(repo)},
-            {
-                ("git", "rev-parse"): (
-                    module.COMMAND_UNAVAILABLE_EXIT,
-                    "",
-                    "No such file or directory: 'git'",
-                )
-            },
-        ),
-        ClaimKind.GIT_REF,
-        Verdict.UNVERIFIABLE,
-    ),
-    Case(
-        "uncommitted-git-unavailable",
-        lambda repo: (
-            {"git_status": "clean"},
-            {("git", "status"): (128, "", "fatal: not a git repository")},
-        ),
-        ClaimKind.UNCOMMITTED_STATE,
-        Verdict.UNVERIFIABLE,
-    ),
-)
-
-
-@pytest.mark.parametrize("case", CASES, ids=[c.id for c in CASES])
-def test_claim_maps_to_verdict(case: Case) -> None:
-    with accepted_git_context() as repo:
-        session_kwargs, scripted = case.build(repo)
-        runner = RecordingRunner(
-            repo=repo, scripted=session_command_scripts(**session_kwargs) | scripted
-        )
-
-        verdicts = module.verify(SESSION_ID, repo, runner)
-
-        matching = [v for v in verdicts if v.kind == case.kind]
-        assert matching, f"no {case.kind} verdict emitted"
-        assert matching[0].verdict == case.verdict
-
-
-def _only(verdicts: list[Any], kind: object) -> Any:
-    matching = [v for v in verdicts if v.kind == kind]
-    assert matching, f"no {kind} verdict emitted"
-    return matching[0]
+            assert actual.verdict == case.verdict, case.id
 
 
 def test_node_status_surfaces_changed_value() -> None:
-    # An observed status that differs from a 'passing' handoff stays Confirmed:
-    # the script has no parsed baseline to diff, but the live value reaches the
-    # evidence field so the agent can reconcile it against the session prose.
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
-            | {SPX_STATUS: (0, '{"status": "failing"}', "")},
+            scripted=session_command_scripts(specs=(NODE_SPEC,))
+            | node_status_script(module, status=FAILING_STATUS),
         )
 
-        verdict = _only(module.verify(SESSION_ID, repo, runner), ClaimKind.NODE_STATUS)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, repo, runner), ClaimKind.NODE_STATUS
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
-        assert "failing" in verdict.evidence
+        assert FAILING_STATUS in verdict.evidence
 
 
 def test_node_status_evidence_excludes_child_tree() -> None:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
-            | {
-                SPX_STATUS: (
-                    0,
-                    json.dumps(
-                        {
-                            "node": "spx/21-x.enabler",
-                            "status": "passing",
-                            "children": [
-                                {
-                                    "node": "spx/21-x.enabler/32-y.enabler",
-                                    "status": "failing",
-                                }
-                            ],
-                        }
-                    ),
-                    "",
-                )
-            },
+            scripted=session_command_scripts(specs=(NODE_SPEC,))
+            | node_status_script(
+                module,
+                status=PASSING_STATUS,
+                include_child=True,
+            ),
         )
 
-        verdict = _only(module.verify(SESSION_ID, repo, runner), ClaimKind.NODE_STATUS)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, repo, runner), ClaimKind.NODE_STATUS
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
-        assert "passing" in verdict.evidence
-        assert "32-y.enabler" not in verdict.evidence
-        assert "children" not in verdict.evidence
+        assert PASSING_STATUS in verdict.evidence
+        assert CHILD_NODE_PATH not in verdict.evidence
 
 
 def test_external_id_surfaces_changed_state() -> None:
-    # A PR that is no longer MERGED stays Confirmed for the same reason; the live
-    # state is surfaced in evidence rather than silently dropped.
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(pr_numbers=("256",))
-            | {GH_VIEW: (0, '{"state": "CLOSED"}', "")},
+            scripted=session_command_scripts(pr_numbers=(PR_NUMBER,))
+            | external_state_script(module, CLOSED_PR_STATE),
         )
 
-        verdict = _only(module.verify(SESSION_ID, repo, runner), ClaimKind.EXTERNAL_ID)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, repo, runner), ClaimKind.EXTERNAL_ID
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
-        assert "CLOSED" in verdict.evidence
+        assert CLOSED_PR_STATE in verdict.evidence
 
 
 def test_spec_entry_emits_both_path_and_node_status() -> None:
-    # A specs entry is checked twice: as an injected path (filesystem existence)
-    # and as a node (spx spec status). Both verdicts are emitted, the path verdict
-    # keyed on the file and the node verdict on its parent directory.
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
-            | {SPX_STATUS: (0, '{"status": "passing"}', "")},
+            scripted=session_command_scripts(specs=(NODE_SPEC,))
+            | node_status_script(module, status=PASSING_STATUS),
         )
 
         verdicts = module.verify(SESSION_ID, repo, runner)
+        path_verdict = verdict_for_kind(verdicts, ClaimKind.INJECTED_PATH)
+        node_verdict = verdict_for_kind(verdicts, ClaimKind.NODE_STATUS)
 
-        path_verdicts = [v for v in verdicts if v.kind == ClaimKind.INJECTED_PATH]
-        node_verdicts = [v for v in verdicts if v.kind == ClaimKind.NODE_STATUS]
-        assert len(path_verdicts) == 1
-        assert len(node_verdicts) == 1
-        assert path_verdicts[0].subject == "spx/21-x.enabler/x.md"
-        assert node_verdicts[0].subject == "spx/21-x.enabler"
+        assert path_verdict.subject == NODE_SPEC
+        assert node_verdict.subject == NODE_PATH
 
 
 def test_git_ref_branch_on_origin_confirms() -> None:
-    # A git_ref naming a branch present on origin takes check_git_ref's branch
-    # path before any SHA interpretation and confirms via refs/remotes/origin.
     with handoff_git_env() as env:
-        branch = env.push_work_branch("work/pickup-claim")
+        branch = env.push_work_branch(REACHABLE_WORK_BRANCH)
         runner = RecordingRunner(
-            repo=env.root, scripted=session_command_scripts(git_ref=branch)
+            repo=env.root,
+            scripted=session_command_scripts(git_ref=branch),
         )
 
-        verdict = _only(module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
 
 
 def test_hex_like_branch_on_origin_confirms() -> None:
     with handoff_git_env() as env:
-        branch = env.push_work_branch("deadbee")
+        branch = env.push_work_branch(HEX_LIKE_WORK_BRANCH)
         runner = RecordingRunner(
-            repo=env.root, scripted=session_command_scripts(git_ref=branch)
+            repo=env.root,
+            scripted=session_command_scripts(git_ref=branch),
         )
 
-        verdict = _only(module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
 
 
 def test_full_hex_branch_on_origin_confirms() -> None:
     with handoff_git_env() as env:
-        branch = env.push_work_branch("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+        branch = env.push_work_branch(FULL_HEX_WORK_BRANCH)
         runner = RecordingRunner(
-            repo=env.root, scripted=session_command_scripts(git_ref=branch)
+            repo=env.root,
+            scripted=session_command_scripts(git_ref=branch),
         )
 
-        verdict = _only(module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF
+        )
 
         assert verdict.verdict == Verdict.CONFIRMED
 
 
 def test_git_ref_branch_absent_from_origin_is_discrepancy() -> None:
-    # A branch-name git_ref with no remote-tracking ref resolves to Discrepancy.
     with handoff_git_env() as env:
         runner = RecordingRunner(
             repo=env.root,
-            scripted=session_command_scripts(git_ref="work/never-pushed"),
+            scripted=session_command_scripts(git_ref=ABSENT_WORK_BRANCH),
         )
 
-        verdict = _only(module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF)
+        verdict = verdict_for_kind(
+            module.verify(SESSION_ID, env.root, runner), ClaimKind.GIT_REF
+        )
 
         assert verdict.verdict == Verdict.DISCREPANCY
 
 
 def test_current_session_frontmatter_shape_still_emits_claims() -> None:
     with accepted_git_context() as repo:
-        (repo / "present.md").write_text("here\n")
+        create_present_file(repo)
         runner = RecordingRunner(
             repo=repo,
             scripted=session_command_scripts(
                 git_ref=head_sha(repo),
-                files=("present.md",),
+                files=(PRESENT_FILE,),
             ),
         )
 
         verdicts = module.verify(SESSION_ID, repo, runner)
 
-        assert [v.kind for v in verdicts] == [
+        assert [item.kind for item in verdicts] == [
             ClaimKind.GIT_REF,
             ClaimKind.INJECTED_PATH,
         ]
-        assert {v.verdict for v in verdicts} == {Verdict.CONFIRMED}
+        assert {item.verdict for item in verdicts} == {Verdict.CONFIRMED}
 
 
 def test_session_load_failure_is_unverifiable() -> None:
     with accepted_git_context() as repo:
         runner = RecordingRunner(
             repo=repo,
-            scripted={
-                ("spx", "session", "show", "--json", SESSION_ID): (
-                    1,
-                    "",
-                    "missing session",
-                )
-            },
+            scripted=missing_session_script(module),
         )
 
-        verdict = _only(
+        verdict = verdict_for_kind(
             module.verify(SESSION_ID, repo, runner), ClaimKind.SESSION_METADATA
         )
 
         assert verdict.verdict == Verdict.UNVERIFIABLE
-        assert "missing session" in verdict.evidence
+        assert MISSING_SESSION_ERROR in verdict.evidence
