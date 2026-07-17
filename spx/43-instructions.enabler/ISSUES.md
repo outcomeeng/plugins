@@ -43,7 +43,7 @@ Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before edi
 - `actor_or_activity_objective`
 - `objective_criteria_duplication`
 - `auditor_skeleton_violation`
-- `invoker_coupling`
+- `caller_coupling`
 - `orphaned_argument`
 - `missing_argument_hint`
 - `argument_capture_regression`

@@ -10,7 +10,7 @@ The python plugin contains 9 skills following the foundational + language-specif
 
 ### Compliance
 
-- ALWAYS: the `audit-python-{code|tests|architecture}` skills carry no Python-specific auditor agent, name no invoker, and stay invocable on their own; an artifact-type auditor composes them for the Python concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
+- ALWAYS: the `audit-python-{code|tests|architecture}` skills carry no Python-specific auditor agent, name no caller, and stay invocable on their own; an artifact-type auditor composes them for the Python concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - ALWAYS: follow the foundational + language-specific pattern — core principles in `/test`, Python-specific patterns in `/test-python` ([review])
 - ALWAYS: use dependency injection instead of mocking — reality is the oracle ([review])
 - ALWAYS: the Python plugin's standards are grouped under `spx/43-python.enabler/25-python-standards.enabler/`, with architecture standards, test standards, and implementation workflows separated by dependency order ([review])

@@ -10,7 +10,7 @@ The typescript plugin contains 9 skills following the foundational + language-sp
 
 ### Compliance
 
-- ALWAYS: the `audit-typescript-{code|tests|architecture}` skills carry no TypeScript-specific auditor agent, name no invoker, and stay invocable on their own; an artifact-type auditor composes them for the TypeScript concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
+- ALWAYS: the `audit-typescript-{code|tests|architecture}` skills carry no TypeScript-specific auditor agent, name no caller, and stay invocable on their own; an artifact-type auditor composes them for the TypeScript concerns in scope, and the author-context isolation an audit verdict requires binds the author context per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([review])
 - ALWAYS: follow the foundational + language-specific pattern — core principles in `/test`, TypeScript-specific patterns in `/test-typescript` ([review])
 - ALWAYS: use dependency injection instead of mocking — reality is the oracle ([review])
 - ALWAYS: the TypeScript plugin's testing skills (`/typescript-test-standards`, `/test-typescript`, `/audit-typescript-tests`) teach the `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` contract: source contracts come first, test infrastructure lives at the path-mapped `@testing/` root (`@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`), generators vary, fixtures stay inert, harnesses manage resources, and audits inspect the full test-infrastructure chain ([review])

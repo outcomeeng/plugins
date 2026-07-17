@@ -76,7 +76,7 @@ Required handling:
 
 - Decide whether generated-artifact exclusion is a property of the changeset definition (all verification types) or of review scope alone, and amend the governing decision before any lower layer adopts it.
 - Declare the generated roots as a project-supplied property; never hardcode `dist/`.
-- Distinguish reviewer-owned scope derivation from a caller-supplied scope filter in the declaration, so the exclusion does not weaken the invoker-independence rule this node already carries.
+- Distinguish reviewer-owned scope derivation from a caller-supplied scope filter in the declaration, so the exclusion does not weaken the caller-independence rule this node already carries.
 - Keep audit and base-sync scope unaffected unless the amended decision covers them — `branch_scope` serves all three consumers, and base sync needs the real changed-file set.
 
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
