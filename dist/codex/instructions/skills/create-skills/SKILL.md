@@ -1,7 +1,7 @@
 ---
 name: create-skills
 description: >-
-  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
+  ALWAYS invoke this skill when creating, editing, improving, or extending skills, or when learning skill-authoring patterns.
 allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, request_user_input, Bash(python3 "${SKILL_DIR}/scripts/quick_validate.py":*), Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*)
 ---
 
@@ -10,7 +10,7 @@ Invoke the `instructions:skill-standards` skill before proceeding. If that skill
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A skill-authoring request routed to its matching typed workflow.
+A completed skill-authoring or pattern-understanding result produced through the matching typed workflow or reference.
 </objective>
 
 <essential_principles>
@@ -111,5 +111,9 @@ All in `${SKILL_DIR}/scripts/`:
 </scripts_index>
 
 <success_criteria>
-A well-structured skill passes `/audit-skills` with zero must-fix items against the standards in `/skill-standards`.
+
+- [ ] The request routes to exactly one matching workflow or pattern reference.
+- [ ] An authoring result passes `/audit-skills` with zero must-fix items against `/skill-standards`.
+- [ ] A pattern-understanding result cites `/skill-standards` and the relevant authoring reference without changing files unless the user requested a change.
+
 </success_criteria>

@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Bash, Skill
 {!% require_skill 'instructions:agent-prompt-standards' %!}
 
 <objective>
-An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with every finding naming the location, the standard at issue, and the consequence.
+An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`, with findings grouped as `keep-these-aspects`, `worth-improving`, and `must-fix` and every finding naming the location, the standard at issue, and the consequence.
 </objective>
 
 <constraints>

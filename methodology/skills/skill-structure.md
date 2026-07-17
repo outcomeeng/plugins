@@ -248,6 +248,8 @@ Skills for writing implementation code and committing results. `apply` is an orc
 | `manage-github-pr` | 10       | GitHub-PR transport selected by `merge`                         | Implemented |
 | `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`       | Implemented |
 | `manage-pr`        | 10       | Internal open-PR lifecycle protocol loaded by `manage-github-pr` | Implemented |
+| `review-changes`   | 10       | Sealed changeset-review journal protocol                        | Implemented |
+| `handoff`          | 10       | Session and merge-lifecycle closeout                            | Implemented |
 
 ## Ownership model
 
@@ -291,13 +293,17 @@ Skills for writing implementation code and committing results. `apply` is an orc
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
   - Runs product validation before committing
-- **`manage-github-pr`** owns shipping orchestration:
+- **`merge`** owns default-branch transport dispatch:
+  - Classifies the changeset and reads `spx/local/merging.md`
+  - Selects exactly one transport and delegates its lifecycle
+- **`manage-github-pr`** owns the GitHub-PR transport:
   - Detects instructed, existing-changeset, empty, and open-PR modes
-  - Reads local lifecycle routing from `spx/local/merging.md` via `understand`
-  - Invokes the implementation, commit, opening, managing, merge, and closure skills
+  - Invokes commit, PR opening, PR management, merge, and transport cleanup
 - **`open-pr`** and **`manage-pr`** own internal PR lifecycle protocols:
   - `open-pr` evaluates `VERIFICATION_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
   - `manage-pr` inspects reviews/checks, drives follow-up pushes, evaluates merge gates, merges, and runs post-merge cleanup
+- **`review-changes`** owns sealed changeset-review journal production.
+- **`handoff`** owns session persistence, claimed-session accounting, and lifecycle closeout after transport completion.
 
 ## Marker-based state detection
 
@@ -478,6 +484,19 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 5. Write Conventional Commits message (imperative, under 50 chars).
 6. Commit, then repeat from step 4 for remaining concerns.
 
+#### `merge`
+
+1. Classify the current changeset and load the optional `spx/local/merging.md` transport selector.
+2. Select exactly one default-branch transport.
+3. Delegate GitHub-PR delivery to `manage-github-pr` or run the selected alternative transport.
+4. Confirm the changeset reached the default branch on origin, then route lifecycle closeout through `handoff`.
+
+#### `review-changes`
+
+1. Start the bundled review runner and load its diff bundle and prompt.
+2. Examine every changed file, append scope and finding events through the runner, and finish the sealed run.
+3. Return only the raw review run token.
+
 #### `manage-github-pr`
 
 1. Detect mode from arguments, branch state, working tree, committed scope derived through `/scope-changeset`, and existing PR state.
@@ -506,3 +525,9 @@ Internal protocol loaded by `manage-github-pr`.
 3. Re-establish `VERIFICATION_READINESS` before every follow-up push.
 4. Refresh the heartbeat.
 5. Evaluate `MERGE_READINESS`, merge when it holds, then evaluate `DEPLOYMENT_READINESS` and `RELEASE_READINESS` before their declared post-merge actions and cleanup.
+
+#### `handoff`
+
+1. Reflect on completed and remaining work.
+2. Persist continuation state when work remains, or archive claimed-session state when it does not.
+3. Leave the worktree clean with all durable state on origin.

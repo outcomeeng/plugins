@@ -1,6 +1,7 @@
 ---
 name: test
 description: ALWAYS invoke this skill before selecting assertion evidence, writing tests, or learning the testing approach.
+argument-hint: "[spx/target-node | mode: select-evidence with assertion context]"
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(git mv:*), AskUserQuestion
 ---
 
