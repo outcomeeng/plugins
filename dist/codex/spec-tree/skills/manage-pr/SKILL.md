@@ -252,7 +252,7 @@ python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --repo <ow
 
 <shell_scope>
 
-Run consumer-defined commands from `AGENTS.md` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
+The narrow Bash grants in frontmatter authorize approval-free execution; they do not prohibit a consumer-defined command that the harness approves per call. Run commands from `AGENTS.md` or `spx/local/merging.md` through that normal tool-approval path when they fall outside those grants. Never widen `allowed-tools` during execution.
 After approval, continue the governed step without introducing a separate lifecycle-confirmation decision.
 When the harness exposes no approval path for a required project command, emit `MERGE_BLOCKED:project-command-approval-unavailable`; never skip the command or add repository-specific grants to this portable skill.
 
