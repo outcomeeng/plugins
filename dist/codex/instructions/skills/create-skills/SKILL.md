@@ -2,6 +2,7 @@
 name: create-skills
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash(python3 "${SKILL_DIR}/scripts/quick_validate.py":*)
 ---
 
 Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
