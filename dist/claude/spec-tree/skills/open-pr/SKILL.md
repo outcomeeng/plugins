@@ -2,7 +2,7 @@
 name: open-pr
 user-invocable: false
 description: >-
-  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
+  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass.
 allowed-tools: Read, Glob, Grep, Edit, Write, Task, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
@@ -15,7 +15,7 @@ After loading this skill, check whether `spx/local/open-pr.md` exists at the rep
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
+Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, giving PR publication and management one policy source. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <workflow>
@@ -24,7 +24,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 0 — Load references.** Invoke /merging-standards (shared vocabulary) and /commit-changes (commit type/scope classification for the title) via the Skill tool.
 
-**Step 1 — GATE: Pre-flight.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when `/manage-github-pr` already ran the lifecycle-entry preflight before branch or commit work; the later check guards the checkout state at publication time.
+**Step 1 — GATE: Pre-flight.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then run `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this complete publication-time preflight immediately before the push so it guards the checkout state the remote receives.
 
 **Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. Record `topology=peer` for a peer branch. For a stacked branch, record `topology=stacked` and `stack_base=<previous-stack-branch>` from the classification result.
 
