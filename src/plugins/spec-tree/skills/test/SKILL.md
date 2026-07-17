@@ -1,16 +1,16 @@
 ---
 name: test
-description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
+description: ALWAYS invoke this skill before selecting assertion evidence, writing tests, or learning the testing approach.
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
-Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
+Spec-tree assertion evidence that is correctly selected, canonically named, source-contract-coupled when implemented, and reproducible for property failures.
 </objective>
 
 <prerequisite>
 
-**PREREQUISITE**: Read `${CLAUDE_SKILL_DIR}/references/methodology.md` before writing any test.
+**PREREQUISITE**: Read `${CLAUDE_SKILL_DIR}/references/methodology.md` before selecting evidence or writing any test.
 
 That local reference contains:
 
@@ -28,7 +28,47 @@ Then follow the spec-tree workflow below.
 
 </prerequisite>
 
+<selection_only>
+
+When `/author` requests evidence selection, it supplies one assertion at a time in this form:
+
+```text
+mode: select-evidence
+target: spx/<prospective artifact path>
+assertion: <exact assertion or MUST/NEVER rule text>
+language: <product implementation language or languages>
+```
+
+For `select-evidence`:
+
+1. Require live foundation and context markers for the prospective target's parent.
+2. Choose `test`, `eval`, or `audit` from the live `/understand` `<verification_selection>` rules.
+3. For `test`, select the assertion type from the quantifier rules in the methodology reference, then select the lowest execution level justified by the assertion, loaded decisions, and named product boundary. Derive the canonical filename from the target slug, assertion type, level, and language naming rule. If the language, level, or target ownership is unresolved, stop and return that exact unresolved input; never guess.
+4. Return exactly these fields:
+
+```text
+mode: select-evidence
+verification_type: test | eval | audit
+assertion_type: scenario | mapping | conformance | property | compliance | none
+execution_level: l1 | l2 | l3 | none
+evidence_form: <exact Markdown form to copy into the artifact>
+rationale: <one sentence naming the governing selection rule>
+```
+
+The evidence form is artifact-aware:
+
+- A node's deterministic assertion receives `([test](tests/{canonical filename}))`.
+- An ADR/PDR deterministic rule receives `([{assertion type}])` under `### Testing`; decision records do not own test-file paths.
+- An eval receives `([eval](eval.toml))` in a node or `([eval])` in a decision record.
+- An audit receives `([audit])`.
+
+Return after selection. Do not read source code, run Stages 3–5, create a test or eval artifact, edit the target spec, or update a link. The normal workflow performs those actions when `/test` later runs on the authored node.
+
+</selection_only>
+
 <workflow>
+
+The normal workflow below applies when the invocation targets an authored spec node rather than `mode: select-evidence`.
 
 <step name="load_context">
 
@@ -168,6 +208,7 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 Testing output is sound when:
 
+- Every selection-only result uses the declared output fields, contains an artifact-appropriate evidence form, and performs no repository mutation.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
