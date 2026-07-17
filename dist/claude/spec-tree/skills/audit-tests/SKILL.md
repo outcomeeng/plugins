@@ -3,7 +3,6 @@ name: audit-tests
 description: >-
   Test-evidence audit methodology for judging behavior-coupled evidence against
   spec assertions.
-model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
