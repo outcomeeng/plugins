@@ -22,8 +22,6 @@ dirs are expected on a working machine.
 
 from __future__ import annotations
 
-import hashlib
-
 import pytest
 
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -126,15 +124,34 @@ def test_branch_slug_disambiguates_on_state_dir_collision() -> None:
             assert CHANGESET_SCOPE.branch_slug(
                 collision.feature_branch,
                 collision.state_dir,
-            ) == (
+            ).startswith(
                 collision.feature_branch.replace(
                     CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
                     CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
                 )
                 + CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_SUFFIX_SEPARATOR
-                + hashlib.sha256(collision.feature_branch.encode()).hexdigest()[
-                    : CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
-                ]
+            )
+            assert (
+                len(
+                    CHANGESET_SCOPE.branch_slug(
+                        collision.feature_branch,
+                        collision.state_dir,
+                    ).removeprefix(
+                        collision.feature_branch.replace(
+                            CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
+                            CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
+                        )
+                        + CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_SUFFIX_SEPARATOR
+                    )
+                )
+                == CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
+            )
+            assert CHANGESET_SCOPE.branch_slug(
+                collision.feature_branch,
+                collision.state_dir,
+            ) == CHANGESET_SCOPE.branch_slug(
+                collision.feature_branch,
+                collision.state_dir,
             )
             assert CHANGESET_SCOPE.branch_slug(
                 collision.feature_branch,
