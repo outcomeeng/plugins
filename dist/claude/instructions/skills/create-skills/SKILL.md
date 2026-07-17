@@ -2,7 +2,7 @@
 name: create-skills
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py":*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash
 ---
 
 Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -21,6 +21,8 @@ Also read `/agent-prompt-standards` for voice, description style, constraint lan
 When the skill takes arguments, injects state-dependent context, restricts tools, or references files — the capabilities a slash command also carried — follow the command-capability rules `/skill-standards` carries (its `<frontmatter>` points to the `command-capabilities` reference) for `argument-hint`/`arguments`, `!`-dynamic-context, `allowed-tools`-security, and `@`-file references before authoring that surface.
 
 This skill provides routing, workflows, templates, and domain-workflow references for creating skills. It does not restate standards.
+
+Use Bash only for the bundled structural validator, the target repository's declared build and deterministic checks, generated-script success/failure tests, and the clean checkpoint those gates require.
 </essential_principles>
 
 <intake>
