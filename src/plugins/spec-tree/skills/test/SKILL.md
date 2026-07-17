@@ -1,7 +1,7 @@
 ---
 name: test
 description: ALWAYS invoke this skill before selecting assertion evidence, writing tests, or learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(git mv:*), {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -130,7 +130,7 @@ For each assertion:
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
-If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via {{! tool('ask_user') !}} before proceeding.
+If a covered link uses a legacy name, record the imperfection and rename the test immediately with `git mv` when the canonical target is unambiguous. Use {{! tool('ask_user') !}} only when the rename changes ownership, scope, cost, risk, or an unresolved product choice. Update the spec link in Step 6.
 
 Report the evidence gap summary before proceeding.
 
