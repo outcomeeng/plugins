@@ -8,7 +8,7 @@ CAN publish a peer changeset as ready for review when `VERIFICATION_READINESS` h
 
 ### Scenarios
 
-- Given the selected transport's verification predicates hold — deterministic verification passes, required evidence-auditor predicates pass, and the local `changes-reviewer` review has converged when local review is declared — when `/open-pr` evaluates `VERIFICATION_READINESS`, then it creates a peer pull request `ready_for_review`; a stacked pull request targets its previous stack branch and remains draft only until that base merges ([audit])
+- Given the selected transport's verification predicates hold — deterministic verification passes, required evidence-auditor predicates pass, and the local `changes-reviewer` review has converged when local review is declared — when `/open-pr` evaluates `VERIFICATION_READINESS`, then it creates a peer pull request `ready_for_review`; a stacked pull request targets its previous stack branch, records the exact stack-base pull-request URL and branch in its `## Stack` section, and remains draft only until that exact base pull request merges ([audit])
 
 ### Compliance
 
