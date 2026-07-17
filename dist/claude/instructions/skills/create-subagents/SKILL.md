@@ -296,7 +296,7 @@ Edit subagent files directly:
 
 <validation>
 
-**Gate 1 — configuration and tool surface.** After writing the subagent file, dispatch `subagent-auditor` over that exact file. Stop on any rejected field, prompt structure, tool grant, model setting, skill preload, or output contract. Continue only with an APPROVED verdict.
+**Gate 1 — configuration and tool surface.** After writing the subagent file, check whether the runtime exposes the `subagent-auditor` role. When it does not, stop with `BLOCKED: subagent-auditor unavailable in this runtime`; never substitute a main-thread audit or another agent role. When it is exposed, dispatch `subagent-auditor` over that exact file. Stop on any rejected field, prompt structure, tool grant, model setting, skill preload, or output contract. Continue only with an APPROVED verdict.
 
 **Gate 2 — exercised run path.** Spawn the configured agent once with a bounded probe task that requires its declared output shape and no external mutation. Collect the final status through the runtime's native wait capability and close the agent handle. Stop when the configuration fails to load, the run does not reach completed status, the output violates the declared contract, or the agent attempts a tool outside its intended surface.
 
@@ -316,6 +316,8 @@ How to avoid: Apply `/skill-standards`'s current progressive-disclosure rule and
 
 <success_criteria>
 A subagent is ready when:
+
+- The runtime exposes `subagent-auditor`; absence produces the named blocked gate rather than a substitute audit.
 
 - The runtime loads the Markdown file with valid YAML frontmatter and no configuration error.
 - `subagent-auditor` returns APPROVED for the prompt, model, skill preloads, and least-privilege tool surface.

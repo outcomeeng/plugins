@@ -16,7 +16,9 @@ Read the target `SKILL.md` and every bundled file under its `references/`, `work
 
 <step name="dispatch_audit">
 
-Dispatch the `skill-auditor` agent with the target paths, governing nodes when known, and current deterministic verification evidence. The main conversation never substitutes its own audit.
+Check whether the runtime exposes the `skill-auditor` role. When it does not, stop with `BLOCKED: skill-auditor unavailable in this runtime`; never substitute a main-thread audit or another agent role.
+
+When the role is exposed, dispatch `skill-auditor` with the target paths, governing nodes when known, and current deterministic verification evidence. The main conversation never substitutes its own audit.
 
 For an audit-only request, return the auditor's structured verdict without offering or generating fixes. For an explicit improvement request, use the verdict as the repair input and continue to the next step.
 

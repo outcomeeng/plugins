@@ -66,7 +66,7 @@ Run the bundled structural validator:
 python3 "${SKILL_DIR}/scripts/quick_validate.py" <skill-path>
 ```
 
-Run the target repository's canonical skill build and deterministic checks. Then dispatch `skill-auditor` over the complete skill bundle and repair every must-fix item before publication.
+Run the target repository's canonical skill build and deterministic checks. Check whether the runtime exposes the `skill-auditor` role; when it does not, stop with `BLOCKED: skill-auditor unavailable in this runtime` and never substitute a main-thread audit or another agent role. When it is exposed, dispatch `skill-auditor` over the complete skill bundle and repair every must-fix item before publication.
 
 </step>
 
