@@ -111,14 +111,14 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 - `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE|AUDIT>:<n>` — a spec assertion under the spec tree.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
 - `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule, resolved against the plugin roots available to the current runtime.
-- `plugins/spec-tree/skills/understand/SKILL.md:<leaf-rule-slug>` — a concrete rule-bearing leaf section in the inline foundation. Navigation containers such as `<truth_hierarchy>`, `<node_model>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, and `<imperfection_protocol>` are citation domains, not rules.
+- `plugins/spec-tree/skills/understand/SKILL.md:<marker-bearing-leaf-slug>` — a concrete inline-foundation leaf whose own body contains an explicit `ALWAYS`, `NEVER`, `MUST`, `REQUIRED`, `BLOCKING`, or `STOP` rule marker. Navigation containers such as `<truth_hierarchy>`, `<node_model>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, and `<imperfection_protocol>` are citation domains, not rules.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention.
 
 Before citing a rule:
 
 - Locate and read the cited text in a file that exists in the repository under review or in a loaded skill file that governs that repository.
 - Use the citation only when that file contains the cited rule, assertion, or governing section.
-- For inline `/understand` rules, cite the narrowest rule-bearing leaf section that contains the rule; never cite one of its navigation containers.
+- For inline `/understand` rules, cite the narrowest leaf whose own body contains the explicit rule marker; never cite a descriptive leaf or navigation container.
 - Treat rules recalled from system prompts, user/global instructions outside the repository, prior sessions, or training as invalid review citations.
 - Drop the finding when the candidate rule cannot be located; do not downgrade it or report it with a weaker citation.
 - Cite repository-local review rules from the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, or loaded governing skill files.

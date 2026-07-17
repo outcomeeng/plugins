@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or assertion type (scenario / mapping / conformance / property / compliance) by authoring judgment; about to write or edit a test file; about to implement a work item -> STOP. `/author` invokes `/test` solely to obtain the type selection and evidence link for assertion text, then copies that result without substitution. `/apply` owns the later test-writing and implementation flow. Independently choosing a type, authoring a test, or writing implementation code inside this skill is the boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. Leave the assertion text ready for `/test`, which selects the verification type, assertion type, and evidence link when it runs on the authored node. `/apply` owns the later test-writing and implementation flow. Selecting a type, fabricating an evidence link, authoring a test, or writing implementation code inside this skill is the boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -163,8 +163,8 @@ Read the appropriate template owned by `/understand`. Fill it using the gathered
 **Assertion rules** (from the live `/understand` `<verification_types>` and `<assertion_types>`):
 
 - Every outcome must have at least one assertion
-- Before drafting each assertion, invoke `/test` with the assertion text and use the verification type, assertion type when applicable, and evidence link it returns — authoring never selects or substitutes those values
-- Every assertion carries the exact evidence link returned by `/test`; an evidence target does not need to exist yet because the link is the contract for what `/test` will create
+- Write each assertion's text without selecting its verification type, assertion type, or evidence link
+- Leave those selections unresolved until `/test` runs on the authored node and applies the evidence contract
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -192,9 +192,9 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] Every assertion carries the exact evidence link and type selection returned by `/test` (targets don't need to exist yet)
-- [ ] Authoring made no independent verification-type or assertion-type selection
-- [ ] ADR/PDR rules sit under `## Verification` in MUST/NEVER format and use the subsection, type, and evidence link returned by `/test`
+- [ ] Every assertion's text is complete and ready for `/test` to select its verification type, assertion type, and evidence link
+- [ ] Authoring made no verification-type, assertion-type, or evidence-link selection
+- [ ] ADR/PDR rules sit under `## Verification` in MUST/NEVER format; `/test` selects their verification subsection, type, and evidence link when it runs on the authored node
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — record legacy naming in the imperfection ledger and apply a clear local rename immediately; use {{! tool('ask_user') !}} only when the correction changes ownership, scope, cost, risk, or an unresolved product choice
 - [ ] No content misplacement (per `/understand` operational reference `what-goes-where`)
 
@@ -372,8 +372,8 @@ Authored output is sound when:
 
 - The artifact occupies its canonical full `spx/...` path with a sparse index and placement consistent with loaded ordering constraints.
 - The selected product, ADR, PDR, enabler, or outcome template is complete and uses atemporal declarative voice.
-- Decisions govern, specs declare output, and every assertion carries valid `[test]`, `[eval]`, or `[audit]` evidence without lower-layer truth leaking upward.
+- Decisions govern, specs declare output, and each assertion leaves verification-type, assertion-type, and evidence-link selection to `/test` without lower-layer truth leaking upward.
 - A multi-sibling request leaves durable composition intent for `/decompose` rather than pre-shaping child structure in the authored artifact.
-- Product validation accepts the created files; forward evidence links selected by `/test` may remain unresolved until `/test` creates their targets.
+- The created artifact is ready for `/test`, with any unresolved validation limited to verification-type, assertion-type, and evidence-link selection.
 
 </success_criteria>
