@@ -4,47 +4,29 @@ Known follow-ups for the audit node. Coordination note; not spec truth.
 
 ## Implementation audit has incomplete mixed-changeset coverage
 
-During PR 420 local verification, the `auditor` agent rejected audit setup when
-the full changeset scope included `.github/workflows/spec-tree-evals.yml`:
+The implementation auditor has no skill covering workflow YAML, so a changeset
+scope including `.github/workflows/*.yml` rejects audit setup with
+`missing required skill: audit-yaml-kind`. `actionlint` covers workflow syntax,
+and the changeset review gate owns full-diff review of that surface meanwhile.
 
-```text
-missing required skill: audit-yaml-kind
-```
+Open decision: whether workflow YAML receives a dedicated YAML audit skill or
+routes to a workflow-specific audit surface. Once decided,
+`implementation-auditor` reports that coverage without requiring callers to
+split YAML out of an otherwise valid changeset.
 
-Checked facts:
+Two further gaps block a gating implementation audit:
 
-- `actionlint .github/workflows/spec-tree-evals.yml` passed and covered workflow
-  syntax.
-- The `auditor` agent approved the remaining supported Python, test
-  infrastructure, spec-test, and coordination-note scope after the workflow YAML
-  was excluded.
-- The changeset review gate still owns full-diff review, including workflow YAML,
-  because the generic implementation auditor cannot currently judge that surface.
-
-Revisit condition: when the audit-family surface work in `PLAN.md` resumes,
-decide whether workflow YAML receives a dedicated YAML audit skill or routes to a
-workflow-specific audit surface, then make `implementation-auditor` report that
-coverage without requiring callers to split YAML out of an otherwise valid
-changeset.
-
-Run `2026-07-14_05-33-54-020-a9a65f44705b` exposed the broader terminal
-behavior after the typed `implementation-auditor` became available. Its Python
-code, test, and architecture units were audited with zero findings, while one
-required `unsupported` unit collected the remaining workflow, generated,
-fixture, eval, spec, and skill files. SPX sealed the run as `rejected` with an
-authoritative finding count of zero. A gating implementation audit therefore
-depends on how orchestration classifies supported language and artifact
-partitions and distinguishes files outside implementation-audit ownership from
-missing required implementation coverage.
-
-Run `2026-07-14_06-34-22-620-431040668f95` later audited the same branch's
-Python code, test, and architecture partitions, recorded no unsupported unit,
-and sealed as `approved` with zero findings. The different coverage projections
-show that mixed-changeset partitioning is not reproducible across verifier runs.
-That run's terminal projection reported `sealed: true`, while the event
-projection returned in the same verifier result reported `sealed: false` and
-omitted the terminal event. The verifier output contract needs one
-post-completion projection whose seal and event prefix agree.
+- Mixed-changeset partitioning is not reproducible across verifier runs. The
+  same branch yields different coverage projections — one run collecting
+  unsupported files into a required `unsupported` unit and sealing `rejected`
+  with zero findings, another recording no unsupported unit and sealing
+  `approved`. Gating depends on how orchestration classifies supported language
+  and artifact partitions, and on distinguishing files outside
+  implementation-audit ownership from missing required implementation coverage.
+- The verifier output contract needs one post-completion projection whose seal
+  and event prefix agree; a terminal projection reporting `sealed: true`
+  alongside an event projection reporting `sealed: false` and omitting the
+  terminal event leaves no single authoritative read.
 
 ## SPX audit verification contract follow-ups
 
@@ -57,21 +39,4 @@ Open gaps:
 - Audit class/kind validation needs a compatibility matrix for `instructions`, `spec`, and `implementation` classes so impossible combinations such as an implementation audit of `skill` or an instructions audit of `code` are rejected by schema validation.
 - Audit terminal rollup is planned, but the public `finish` contract still speaks as caller-supplied terminal status. SPX should decide whether audit `finish` derives status without a caller value or validates a supplied value against the derived rollup, and specify the rejected mismatch behavior.
 - Prior-run selection must distinguish gating runs over committed heads from advisory runs over live modified or untracked files. The run-set selector should expose run purpose directly rather than infer authority from scope payload prose.
-- Finding severity vocabulary is not reconciled across the artifact-type audit skills. `audit-adr` emits the audit-run severities `blocking`/`debt`; `audit-pdr`, `audit-tests`, `audit-specs`, and `audit-eval-evidence` emit `REJECT`/`WARNING`/`INFO`. The governing authority conflicts: `/merging-standards` `<review_classification>` mandates `BLOCKING`/`DEBT` and forbids severity-rank labels, while its `<auditor_verdicts>` references a `REJECT` finding. SPX should define the single canonical finding-severity enum for audit-run verdicts, after which the four non-`blocking`/`debt` skills reconcile to it in one pass. Deferred here to avoid locking a shape before the contract exists.
-
-## Roster coupling remains in language-plugin audit skills
-
-The audit decision, the audit enabler, and the `python`/`typescript`/`rust`
-language enablers name the auditor set by the artifact-type-auditor invariant,
-not by concrete agent name. The language plugins' own audit skills still
-hardcode the roster: `audit-{python,typescript,rust}-architecture` name
-`adr-auditor` and `audit-{python,typescript,rust}-tests` name
-`test-evidence-auditor` (multiple occurrences each). A skill naming the agent
-that composes it is the same dependency-names-dependent coupling the governing
-docs were decoupled to remove.
-
-Deferred by operator decision to keep the current change scoped to the
-governing-doc layer. Follow-up: replace the hardcoded `adr-auditor` /
-`test-evidence-auditor` mentions in those six `SKILL.md` files with the generic
-"artifact-type auditor that governs decision records / test evidence" phrasing
-(keeping the correctly-named `implementation-auditor`), then rebuild `dist/`.
+- Finding severity vocabulary is not reconciled across the artifact-type audit skills. `audit-adr` emits the audit-run severities `blocking`/`debt`; `audit-pdr`, `audit-tests`, `audit-specs`, and `audit-eval-evidence` emit `REJECT`/`WARNING`/`INFO`. The governing authority conflicts: `/merging-standards` `<review_classification>` mandates `BLOCKING`/`DEBT` and forbids severity-rank labels, while its `<auditor_verdicts>` references a `REJECT` finding. SPX should define the single canonical finding-severity enum for audit-run verdicts, after which the four non-`blocking`/`debt` skills reconcile to it in one pass — a sub-task of the verification-run migration in `PLAN.md`, not independent work, because that migration rewrites the same skills.

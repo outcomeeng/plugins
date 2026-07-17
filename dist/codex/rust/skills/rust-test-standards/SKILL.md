@@ -24,7 +24,7 @@ Rust test guidance follows this standard when:
 </success_criteria>
 
 <reference_note>
-This is a reference skill. `/test-rust` uses it to produce tests and `/audit-rust-tests` uses it to judge their evidence quality.
+This is a reference skill. Composing Rust test skills load these standards explicitly before producing tests or judging their evidence quality. It is not a standalone workflow.
 </reference_note>
 
 <portable_test_crate>

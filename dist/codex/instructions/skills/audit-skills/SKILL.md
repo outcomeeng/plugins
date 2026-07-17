@@ -3,6 +3,7 @@ name: audit-skills
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
   operational effectiveness, portability, voice, and structure.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(python3 -c:*), Skill
 ---
 
@@ -195,6 +196,7 @@ Flag these issues:
 - **objective_criteria_duplication**: `<objective>` and `<success_criteria>` restate the same content — the objective names the output, success_criteria proves it
 - **objective_bloat**: `<objective>` runs past one sentence (two when the output has two distinct parts) or carries clauses describing when the skill runs, how it runs (steps, gates, orchestration), or what it avoids — content that belongs in `description`/`<workflow>`/`<constraints>`, not the output target
 - **auditor_skeleton_violation**: an `audit-*` skill deviating from `/skill-standards` `references/auditor-skeleton.md` — `<output_format>` instead of `<verdict_format>`, a non-`<audit_workflow>` procedure name, a `<quick_start>` block, or an objective outside the skeleton's verdict forms. The prose auditors (`audit-prose`, `audit-internal-docs`) are exempt from the procedure-name check per the skeleton's `<prose_variant>`
+- **caller_coupling**: a skill naming, describing, detecting, constraining, refusing, or branching on the agent, skill, or context that invokes it, or halting because a particular caller loaded it — per `/skill-standards` `<skill_organization>` caller independence. A description that steers the reader to dispatch an agent is this finding in the frontmatter; a `<dispatch_gate>` or equivalent caller check in the body is this finding in the body
 - **hybrid_xml_markdown**: Mixing XML tags with markdown headings in body
 - **unclosed_xml_tags**: XML tags not properly closed
 - **vague_descriptions**: "helps with", "processes data"
@@ -294,7 +296,7 @@ Read `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotat
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff the `must-fix` row has no `REJECT` findings; otherwise it is `REJECTED`. An audit that cannot complete records a `REJECT` finding in `must-fix` and returns `REJECTED`. Worth-improving and keep-these-aspects observations land as `WARNING` and `INFO` findings respectively and do not reject the skill.
 

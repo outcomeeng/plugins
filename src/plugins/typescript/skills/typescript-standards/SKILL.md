@@ -15,7 +15,7 @@ Code follows these standards when tsc strict mode and eslint pass, every manual-
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other TypeScript skills reference these standards. It is not invoked directly—invoke `/code-typescript`, `/test-typescript`, or `/audit-typescript-code` instead.
+This is a reference skill. Composing TypeScript skills load these standards explicitly before writing, testing, or auditing. It is not a standalone workflow.
 
 These standards apply to ALL TypeScript code, including tests and scripts. `/typescript-test-standards` adds stricter rules for test code.
 </reference_note>

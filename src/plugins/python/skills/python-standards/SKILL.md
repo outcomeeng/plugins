@@ -15,7 +15,7 @@ Code follows these standards when ruff and mypy pass, every manual rejection cri
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Python skills load these standards. Do not invoke it directly — invoke `/code-python`, `/test-python`, or `/audit-python-code` instead.
+This is a reference skill. Composing Python skills load these standards explicitly before writing, testing, or auditing. It is not a standalone workflow.
 
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>

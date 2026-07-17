@@ -1,20 +1,16 @@
 ---
 name: audit-rust-code
 description: >-
-  Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by implementation-auditor for the Rust code files in scope.
-  Reached only through the dispatched implementation-auditor agent, never the main conversation.
+  Rust implementation-code audit methodology — judges the Rust code files in
+  scope for design flaws, architecture-decision compliance, and unsafe/FFI
+  soundness.
+model: sonnet
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<dispatch_gate>
-
-This audit runs inside the dispatched `implementation-auditor` verifier context composing this skill for the Rust code files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside `implementation-auditor`, STOP — the audit must run in that verifier context. An already-dispatched implementation-auditor that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on Rust implementation code — `APPROVED`, or `REJECTED` with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.
@@ -27,8 +23,8 @@ Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository 
 <constraints>
 
 - NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
-- NEVER run deterministic validation, formatting, lint, test, or eval commands — the caller passes those before dispatch and CI re-runs them over the repository.
-- NEVER evaluate test evidence quality — the composing implementation auditor invokes `/audit-rust-tests` as a separate concern.
+- NEVER run deterministic validation, formatting, lint, test, or eval commands — this audit reads and judges; it never runs deterministic verification.
+- NEVER evaluate test evidence quality — `/audit-rust-tests` is the separate concern that judges it.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective Rust samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
 - `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails.
@@ -121,7 +117,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 
@@ -148,7 +144,7 @@ Each `NOT_APPLICABLE` row carries `explanation` naming why the concern does not 
 
 <failure_modes>
 
-**Failure 1: Approved code on the strength of green mechanical gates.** The caller's `cargo fmt`, `cargo clippy`, and `cargo test` passed before dispatch, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift — and this audit does not re-run them anyway. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; the green gates are a precondition, not the audit.
+**Failure 1: Approved code on the strength of green mechanical gates.** `cargo fmt`, `cargo clippy`, and `cargo test` were green, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift — and this audit does not run them anyway. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; green gates are not the audit.
 
 **Failure 2: Missed a boundary dependency hidden behind a coherent module.** Claude approved a module whose imports looked organized, while a concrete external client was still imported directly inside business logic. Why it failed: import coherence is separate from boundary design; `crate::` paths can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and FFI boundary to an injected trait or narrow function seam.
 

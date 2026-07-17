@@ -11,8 +11,12 @@ allowed-tools: Read
 The canonical TypeScript ADR conventions — sections, how testability appears in Verification rules, and TypeScript-specific DI patterns.
 </objective>
 
+<success_criteria>
+TypeScript ADR guidance follows this standard when `/typescript-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in TypeScript terms, and test-level references match `/typescript-test-standards`.
+</success_criteria>
+
 <reference_note>
-This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architect-typescript` to write ADRs or `/audit-typescript-architecture` to review them.
+This is a reference skill. Composing TypeScript architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
@@ -47,9 +51,9 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 **Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
 ```markdown
-**Verification**
+## Verification
 
-**Audit**
+### Audit
 
 - ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit])
 - ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit])
@@ -60,16 +64,16 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 **What this replaces -- the following does NOT belong in an ADR:**
 
 ```text
-**Testing Strategy                    <-- NOT a valid ADR section**
+## Testing Strategy                    <-- NOT a valid ADR section
 
-**Level Assignments                  <-- downstream concern for /test**
+### Level Assignments                  <-- downstream concern for /test
 
 | Component        | Level | Justification                   |
 | ---------------- | ----- | ------------------------------- |
 | Command building | `l1`  | Pure function, no external deps |
 | Hugo invocation  | `l2`  | Needs real Hugo binary          |
 
-**Escalation Rationale               <-- downstream concern for /test**
+### Escalation Rationale               <-- downstream concern for /test
 
 - `l1` -> `l2`: Hugo binary required for acceptance
 ```

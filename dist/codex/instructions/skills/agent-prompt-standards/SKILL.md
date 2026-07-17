@@ -11,7 +11,7 @@ The agent-prompt writing conventions — voice, description style, constraint la
 </objective>
 
 <reference_note>
-This is a reference skill governing prompt *craft* (how to write the text); prompt *structure* (which XML tags, file organization) is governed by the creator skills themselves. Creator and auditor skills load these conventions automatically. Invoke `/create-skills` or `/create-subagents` to author; invoke `/audit-skills` or `/audit-subagents` to review.
+This is a reference skill governing prompt *craft* (how to write the text); prompt *structure* (which XML tags, file organization) is governed by the creator skills themselves. Composing skills load these conventions explicitly before authoring or reviewing. It is not a standalone workflow.
 </reference_note>
 
 <voice>

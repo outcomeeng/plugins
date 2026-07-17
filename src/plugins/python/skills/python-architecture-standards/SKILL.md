@@ -11,8 +11,12 @@ allowed-tools: Read
 The canonical Python ADR conventions — sections, how testability appears in Verification rules, and Python-specific DI patterns using Protocols.
 </objective>
 
+<success_criteria>
+Python ADR guidance follows this standard when `/python-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Python terms as Protocols, and test-level references match `/python-test-standards`.
+</success_criteria>
+
 <reference_note>
-This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architect-python` to write ADRs or `/audit-python-architecture` to review them.
+This is a reference skill. Composing Python architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>

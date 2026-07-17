@@ -3,6 +3,7 @@ name: audit-typescript-tests
 description: >-
   TypeScript test-evidence audit methodology — judges the TypeScript tests in
   scope against the spec-tree and TypeScript-specific evidence properties.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
 

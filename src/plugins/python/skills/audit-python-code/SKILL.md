@@ -1,18 +1,13 @@
 ---
 name: audit-python-code
 description: >-
-  Python implementation-code audit methodology — design flaws and ADR compliance — composed by implementation-auditor for the Python code files in scope.
-  Reached only through the dispatched implementation-auditor agent, never the main conversation.
+  Python implementation-code audit methodology — judges the Python code files in
+  scope for design flaws and architecture-decision compliance.
+model: sonnet
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 {!% require_skill 'python:python-standards' %!}
-
-<dispatch_gate>
-
-This audit runs inside the dispatched `implementation-auditor` verifier context composing this skill for the Python code files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside `implementation-auditor`, STOP — the audit must run in that verifier context. An already-dispatched implementation-auditor that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -23,8 +18,8 @@ A verdict on Python implementation code — `APPROVED`, or `REJECTED` with each 
 <constraints>
 
 - NEVER modify files, generate fixes, write replacement code, commit changes, or change project state — this audit produces a verdict only.
-- NEVER run deterministic validation, lint, type-check, test, or eval commands — the caller passes those before dispatch and CI re-runs them over the repository.
-- NEVER evaluate test evidence quality — the composing implementation auditor invokes `/audit-python-tests` as a separate concern.
+- NEVER run deterministic validation, lint, type-check, test, or eval commands — this audit reads and judges; it never runs deterministic verification.
+- NEVER evaluate test evidence quality — `/audit-python-tests` is the separate concern that judges it.
 - ALWAYS keep findings to artifact, violated rule, evidence, and why the cited code violates the rule.
 - NEVER include corrective code samples, implementation patches, prescribed refactors, or required-change summaries in the verdict.
 - `APPROVED` means every concern row passes or is explicitly not applicable. `REJECTED` means at least one concern row fails. `APPROVED` output contains no notes, warnings, or suggestions sections.
@@ -39,7 +34,7 @@ Standards are pre-loaded above. Check for `spx/local/python.md` at the repositor
 
 **Comprehension is the whole job.**
 
-This audit reads and judges Python implementation code; it runs no deterministic verification of its own. The caller brings the project's linters, type-checker, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository — so do NOT run or re-check what those gates already verified. Spend the whole audit on comprehension.
+This audit reads and judges Python implementation code; it runs no deterministic verification. Do NOT run or re-check the project's linters, type-checker, or tests. Spend the whole audit on comprehension.
 
 **Comprehension is the core value.**
 
@@ -47,7 +42,7 @@ Automated tools catch syntax errors, type mismatches, and lint violations. Claud
 
 **Test evidence is out of scope.**
 
-`/audit-python-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence — and it does not run the test suite; the caller already passed it before dispatch. Do not duplicate that work.
+`/audit-python-tests` evaluates whether tests provide behavior-coupled evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill judges implementation design, not test evidence, and never runs the test suite. Do not duplicate that work.
 
 **Binary verdict, no caveats.**
 
@@ -57,7 +52,7 @@ The verdict is the only output. Findings prove violations; they do not prescribe
 
 <audit_workflow>
 
-Execute phases IN ORDER. Do not skip. This audit runs no deterministic verification — no linter, type-checker, or test run. The caller brought the project's validation and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository; re-running them here only re-pays a cost already paid.
+Execute phases IN ORDER. Do not skip. This audit runs no deterministic verification — no linter, type-checker, or test run.
 
 **Phase 0: Scope and Product Config**
 
@@ -142,11 +137,11 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed ruff+mypy but had a design flaw.** Claude trusted the green linters (run by the caller before dispatch) and skimmed comprehension. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
+**Approved code that passed ruff+mypy but had a design flaw.** Claude trusted the green linters and skimmed comprehension. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
 
 **Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
 
-**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-tests`' job, and running the test suite is the caller's before dispatch — not this audit's. Claude should have moved straight to comprehending the implementation code.
+**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/audit-python-tests`' job, and this audit never runs the test suite. Claude should have moved straight to comprehending the implementation code.
 
 **Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
 
@@ -156,7 +151,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 
@@ -182,8 +177,8 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 
 <what_to_avoid>
 
-- Do NOT run or re-check the project's linters, type-checker, or tests — the caller passed them on the changeset before dispatch, and CI re-runs them over the whole repository
-- Do NOT evaluate test evidence quality; the composing implementation auditor invokes `/audit-python-tests` separately
+- Do NOT run or re-check the project's linters, type-checker, or tests — this audit runs no deterministic verification
+- Do NOT evaluate test evidence quality; `/audit-python-tests` is the separate concern that judges it
 - Do NOT commit or modify code (this skill is read-only)
 - Do NOT generate fixes, replacement code, refactors, or required-change summaries
 - Do NOT approve with caveats (binary verdict only)

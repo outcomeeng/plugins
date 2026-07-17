@@ -96,7 +96,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 - ALWAYS: given successful required language-concern composition, the language-neutral `/audit-tests` methodology inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and identifies the transitive artifact and required ownership target in its structured verdict ([eval](evals/full-chain-ownership/eval.toml))
 - ALWAYS: the Codex runtime rendering of `/audit-tests` satisfies the same non-Python full-chain ownership verdict contract as the shared authored skill ([eval](evals/full-chain-ownership-codex/eval.toml))
-- ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
+- ALWAYS: `/audit-tests` names no caller and stays invocable on its own; the author context produces a verdict by dispatching the audit to a separate verifier context rather than grading its own work in place, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
 - ALWAYS: `/audit-tests` invokes `/contextualize` on the target spec node before any audit phase ([audit])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([audit])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([audit])

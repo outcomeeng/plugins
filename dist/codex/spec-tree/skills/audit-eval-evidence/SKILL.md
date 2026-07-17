@@ -1,18 +1,12 @@
 ---
 name: audit-eval-evidence
 description: >-
-  Eval-evidence audit methodology preloaded by the eval-evidence-auditor agent.
-  Dispatch eval-evidence-auditor to audit eval evidence against spec assertions;
-  the main conversation reaches this audit only through that agent.
+  Eval-evidence audit methodology — judges whether a spec node's eval suite
+  provides evidence its `[eval]` assertions are fulfilled, covering case
+  quality, verdict schema fit, and producer coupling.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the eval-evidence-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the eval-evidence-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -30,7 +24,7 @@ Five properties must hold, checked in strict order: producer coupling, oracle in
 
 **JUDGE BY READING.**
 
-A dispatched audit context runs no deterministic verification. The main conversation brings the eval to passing on the changeset before dispatch when eval execution is required, and CI re-runs deterministic verification over the whole repository. Establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
+This audit runs no deterministic verification. Establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
 
 **SCHEMA VERDICT.**
 
@@ -41,7 +35,7 @@ PASS, FAIL, or UNKNOWN. If any required evidence property is missing for any `[e
 <constraints>
 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — the main conversation and CI own those commands.
+- NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
@@ -169,7 +163,7 @@ Scan all findings across all `[eval]` assertions. If any assertion has a propert
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
 The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings, `WARNING` or `INFO` for non-blocking observations.
 

@@ -1,22 +1,16 @@
 <!-- Generated from the complete producer at src/plugins/spec-tree/skills/audit-specs/SKILL.md. -->
 
-This eval runs in the isolated verifier context required by the producer below. Apply the complete producer to the supplied spec node. When the input carries `context`, treat it as the governing methodology context loaded by the producer's contextualization step. Return only the producer's structured JSON verdict.
+Apply the complete producer below to the supplied spec node. When the input carries `context`, treat it as the governing methodology context loaded by the producer's contextualization step. Return only the producer's structured JSON verdict.
 
 ---
 name: audit-specs
 description: >-
-  Spec-node audit methodology preloaded by the spec-auditor agent. Dispatch
-  spec-auditor to audit a spec node; the main conversation reaches this audit
-  only through that agent.
+  Spec-node audit methodology — judges one enabler or outcome spec against the
+  node-spec form, covering section structure, atemporal voice, and per-assertion
+  tag fitness.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the spec-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the spec-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -136,7 +130,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
 The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 

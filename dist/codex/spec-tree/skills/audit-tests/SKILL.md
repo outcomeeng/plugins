@@ -1,18 +1,12 @@
 ---
 name: audit-tests
 description: >-
-  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
-  Dispatch test-evidence-auditor to audit test evidence against spec assertions;
-  the main conversation reaches this audit only through that agent.
+  Test-evidence audit methodology — judges whether a spec node's tests provide
+  behavior-coupled evidence its assertions are fulfilled, covering source
+  ownership, coupling, falsifiability, and full-chain coverage.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the test-evidence-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the test-evidence-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -34,13 +28,13 @@ Four properties must hold, checked in strict order: coupling (the test exercises
 
 **JUDGE COVERAGE BY READING.**
 
-A dispatched agentic audit runs no deterministic verification — the caller brings deterministic verification to passing on the changeset before dispatch, and CI re-runs deterministic verification over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
+This audit runs no deterministic verification. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
 
 **NO MECHANICAL SUBSTITUTES.**
 
 Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals. The declaration screen is a read step: identify declarations in the test file, then judge ownership from their evidence role.
 
-The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the caller and the project's configured deterministic workflow own that gate.
+The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. This audit runs no `spx validation literal` or any other deterministic check.
 
 **TEST FILES OWN NO DATA OR CONFIGURATION.**
 
@@ -57,7 +51,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
@@ -110,7 +104,7 @@ Starting from the test links mapped in Step 2, follow each repository import rec
 
 Read every resolved artifact before continuing. A referenced fixture is inventoried even when consumed only by path. Include every `conftest.py` or equivalent discovery file that applies to the linked test. The final `metadata.evidence_chain` MUST contain exactly one entry for every artifact used to resolve imports, ownership, or discovery, including an inspected discovery artifact that produces no finding.
 
-If an import cannot be resolved from the caller's evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
+If an import cannot be resolved from the supplied evidence package or repository, add a `gate-1-assertion` REJECT finding against the unresolved repository-relative path with rule `incomplete-evidence-chain` and `remediation_target: "test-infrastructure"`. Do not attribute the finding to the thin test file. Stop evidence-property judgment for that assertion because the chain is incomplete.
 
 **Step 3: Testability precondition**
 
@@ -262,7 +256,7 @@ Check assertion-type-to-strategy alignment:
 
 **Step 3e: Coverage**
 
-Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the caller brings deterministic verification to passing on the changeset before dispatch, and CI re-runs deterministic verification over the whole repository. Re-running the coverage command here re-pays a cost already paid.
+Establish coverage by reading, never by running the project's coverage tooling. This audit runs no deterministic verification.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -288,9 +282,9 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Read the detected language or language partitions from the caller's audit request. When the caller omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition with property `unsupported-language` and remediation target `language-partition` instead of guessing.
+Read the detected language or language partitions from the audit request. When the request omits them, derive partitions from the mapped linked-test extensions using the explicit supported mapping: `.py` to Python, `.ts` or `.tsx` to TypeScript, and `.rs` to Rust. Reject an unknown extension or an ambiguous partition with property `unsupported-language` and remediation target `language-partition` instead of guessing.
 
-When the caller supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
+When the request supplies a completed `language_composition` result, validate its `status` and `findings` fields and consume it without dispatching the same concern again. A `PASS` result with no `REJECT` finding satisfies composition; merge any non-blocking findings into matching rows. A `FAIL` result or malformed composition evidence appends a `gate-1-assertion` `REJECT` finding with property `language-composition` and returns REJECTED.
 
 When completed composition evidence is absent and an `audit-<lang>-tests` skill exists for each language in scope, load and apply each skill through the runtime's supported skill mechanism. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When a required `audit-<lang>-tests` skill is absent or unavailable, append a `FAIL` row with a `REJECT` finding naming the missing skill, property `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
@@ -321,7 +315,7 @@ Scan all findings across all assertions, including any folded in from the compos
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
 The skill's `overall` is `APPROVED` iff every applicable gate row is `PASS`; otherwise it is `REJECTED`. A required gate that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations. Every finding MUST include every field shown in its row schema: `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target`; omission of any field is an invalid verdict.
 
@@ -411,7 +405,7 @@ How to avoid: Step 3c checks for mocking after confirming coupling. Import + moc
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying deterministic verification the caller already passed on the changeset before dispatch and CI re-runs over the whole repository. The dispatched audit runs no deterministic verification.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta. This audit runs no deterministic verification; coverage is established by reading.
 
 How to avoid: Step 3e traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 

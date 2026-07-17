@@ -1,20 +1,16 @@
 ---
 name: audit-rust-architecture
 description: >-
-  Rust-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the Rust concerns in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  Rust-specific architecture audit — judges the Rust architecture target in
+  scope for dependency injection, mocking prohibition, execution-level accuracy,
+  Rust anti-patterns, and ancestor consistency.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<dispatch_gate>
-
-This audit runs inside a dispatched artifact-type auditor's verifier context — `implementation-auditor` composing this skill for Rust implementation architecture scope, or `adr-auditor` composing it for a Rust ADR's language-specific architecture concerns — isolated from the author context that produced the work under audit. This skill judges only Rust-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, Rust anti-patterns, and ancestor consistency. Generic decision-record structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` when the target is an ADR and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
-
-</dispatch_gate>
 
 <objective>
 A JSON verdict on a Rust architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, Rust anti-patterns, and ancestor consistency.
@@ -24,20 +20,20 @@ A JSON verdict on a Rust architecture scope — `APPROVED`, or `REJECTED` with c
 
 - Read-only over the audited repository. Never edit files, stage changes, commit, or open pull requests.
 - Produce only the JSON verdict described in `<verdict_format>`; finding messages state the violated rule and consequence, while corrective examples remain in references and standards.
-- Judge only Rust-specific architecture concerns. Generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
-- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
+- Judge only Rust-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, Rust anti-patterns, and ancestor consistency. Generic decision-record section structure, atemporal voice, and per-rule tag validity are outside this subject — a structural, voice, or tag finding is out of scope even when the target is an ADR.
+- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill.
 
 </constraints>
 
 <audit_workflow>
-When this skill is composed for a spec-tree work item, the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` and loaded the full governing context; review the target implementation architecture scope or ADR's Rust concerns against that hierarchy.
+This audit judges the target it is given — an implementation architecture scope or an ADR's Rust concerns — against the governing decision hierarchy already loaded when it runs.
 
 After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
 **Procedure:**
 
 1. Read repo-local Rust overlays when present (`spx/local/rust.md`, `spx/local/rust-architecture.md`, `spx/local/rust-tests.md`)
-2. Read the architecture target completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition
+2. Read the architecture target completely — the implementation files or the ADR supplied as the target
 3. Check testability constraints — ADR targets express them in `## Verification` / `### Audit`; implementation targets must conform to the loaded architecture decisions' DI and no-mocking constraints
 4. Check for mocking language or invalid DI claims
 5. Verify level accuracy when testing levels are mentioned
@@ -57,7 +53,7 @@ This skill checks only the Rust-specific concerns:
 4. Rust anti-patterns
 5. Ancestor consistency for spec-tree work
 
-Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
+Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — they are judged against the canonical decision template, outside this Rust-architecture subject.
 
 </principles_to_enforce>
 
@@ -69,13 +65,13 @@ Section structure, atemporal voice, and per-rule tag validity are NOT this skill
 
 **Claude accepted "dependency injection" paired with a generated mock.** The ADR injected a `mockall` double as the controlled implementation. Why it failed: DI is the delivery mechanism, but a generated mock is still a mock. How to avoid: require DI to inject a controlled real implementation (a simple struct or function), not a mock framework double.
 
-**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns belong to the composing `adr-auditor` reading the canonical template, not this skill. How to avoid: drop any structural, voice, or tag finding — this skill judges only Rust-specific concerns.
+**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns are judged against the canonical decision template, outside this skill's subject. How to avoid: drop any structural, voice, or tag finding — this skill judges only Rust-specific concerns.
 
 </failure_modes>
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. Every `NOT_APPLICABLE` row explains why its concern does not apply. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 

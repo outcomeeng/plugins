@@ -64,4 +64,19 @@ Required handling:
 - Distinguish total inspection attempts from unique covered units when both are useful.
 - Restore prior-run context without copying prior scope events into the new run's authoritative coverage count.
 
+## 7. Review scope carries deterministically generated artifacts
+
+Review scope is the raw changed-file set, so a changeset that edits authored plugin sources reviews each generated mirror as an independent unit. A run over a 128-file scope drew 38 units from `src/plugins`, 38 from `dist/claude`, 38 from `dist/codex`, 13 from `spx`, and 1 from `README.md`: the 76 `dist/` units are 59% of the scope and carry no information the `src/` units do not, because `spx/18-plugin-build.enabler/plugin-build.md` declares build determinism (`same src/ content always produces byte-identical dist/claude/ and dist/codex/ outputs`) and generated-artifact provenance (`every committed file under dist/ traces to a src/ ancestor through the build`), both `[test]`-backed, and the gate's `dist-diff` step fails the build on any divergence. A finding raised against a generated file is also unfixable at its own location — its fix belongs to the `src/` ancestor — so the scope admits findings the cited site has no authority to satisfy.
+
+`compute_diff.py` applies no path classification; the reviewer receives every changed path.
+
+This is a separate larger concern rather than a bounded fix: the changeset definition is declared at product level in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` as `the files changed between the base ref and HEAD`, governing all five verification types, so narrowing review scope amends a decision above this node rather than a script inside it. It also runs against `spx/15-merging.pdr.md` and this node's own rule that the reviewer resolves its own scope and treats caller-supplied scope as non-authoritative — a generated-path exclusion must be established as the reviewer's own derivation, never a caller filter, and the two must be told apart in the declaration. `dist/` is this repository's generated root; a consumer's differs, so the exclusion has to be a declared property of the project rather than a hardcoded path, and `spx/12-shipped-scripting.adr.md` sends test-bearing derivation logic to the SPX CLI rather than a shipped script.
+
+Required handling:
+
+- Decide whether generated-artifact exclusion is a property of the changeset definition (all verification types) or of review scope alone, and amend the governing decision before any lower layer adopts it.
+- Declare the generated roots as a project-supplied property; never hardcode `dist/`.
+- Distinguish reviewer-owned scope derivation from a caller-supplied scope filter in the declaration, so the exclusion does not weaken the caller-independence rule this node already carries.
+- Keep audit and base-sync scope unaffected unless the amended decision covers them — `branch_scope` serves all three consumers, and base sync needs the real changed-file set.
+
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.

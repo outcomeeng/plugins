@@ -2,20 +2,25 @@
 
 Coordination note; not spec truth.
 
-## Refresh producer-coupled eval run evidence
-
-The `structure` eval suite embeds the producer skill
-`src/plugins/spec-tree/skills/audit-specs/SKILL.md` verbatim in its `prompt.md`.
-A verdict-format wording change to that producer — removing the JSON-consumer
-fiction and requiring a single JSON verdict — re-materialized the prompt, so the
-committed `history.jsonl` rows predate the current prompt content.
+## Build out the declared eval suites and refresh run evidence
 
 This node is listed in `spx/EXCLUDE`: its `voice`, `tag-validity`, and
-`prose-coupling` `[eval]` assertions are declared but not yet built, so the node
-is already in a Specified-incomplete state. Refreshing the `structure` run
-evidence is deferred by operator decision alongside that pending build-out.
+`prose-coupling` `[eval]` assertions are declared but not built, so the node is
+Specified-incomplete.
 
-Next step: when the node's eval build-out resumes, run
+The `structure` eval suite embeds the producer skill
+`src/plugins/spec-tree/skills/audit-specs/SKILL.md` verbatim in its `prompt.md`,
+so every edit to that producer re-materializes the prompt and leaves the
+committed `history.jsonl` rows scoring prompt content the suite no longer
+carries.
+
+Do both in one pass, after the producer stops moving: the verification-run
+migration in `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md` rewrites this
+producer's verdict contract, so suites authored and run evidence recorded before
+it lands are paid for again.
+
+Next step, once that migration lands: author the declared `voice`,
+`tag-validity`, and `prose-coupling` eval suites, run
 `just eval-node spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler`
-at the default budget and commit the fresh `history.jsonl` rows, and author the
-declared-but-missing `voice`, `tag-validity`, and `prose-coupling` eval suites.
+at the default budget, commit the fresh `history.jsonl` rows, and remove this
+node's `spx/EXCLUDE` entry once the suites pass.

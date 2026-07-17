@@ -14,7 +14,7 @@ Rust ADR guidance follows this standard when `/rust-standards` is loaded first, 
 </success_criteria>
 
 <reference_note>
-This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architect-rust` to write ADRs or `/audit-rust-architecture` to review them.
+This is a reference skill. Composing Rust architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>
