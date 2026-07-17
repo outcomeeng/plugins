@@ -390,11 +390,125 @@ def _assert_reconcile_replaces_the_losing_region_whole() -> None:
     assert harness.SHARED_REGION_BODY_ALT not in reconciled
 
 
-def _render_shipped_instruction_blocks() -> dict[str, str]:
-    """Render the shipped harness templates through the production entrypoint."""
+def _render_shipped_instruction_blocks(
+    enabled_languages: tuple[str, ...] = harness.TEMPLATE_LANGUAGES,
+) -> dict[str, str]:
+    """Render shipped harness templates for one source-declared language subset."""
     templates = dist.load_harness_templates(_distribution_module())
     return dist.render_instruction_blocks_from_harness_templates(
-        _distribution_module(), templates, harness.TEMPLATE_LANGUAGES
+        _distribution_module(), templates, enabled_languages
+    )
+
+
+def _assert_codex_router_enforces_operator_question_interrupt() -> None:
+    """Challenge question policy across every declared language subset."""
+    for enabled_languages in harness.template_language_subsets():
+        document = _render_shipped_instruction_blocks(enabled_languages)[
+            harness.HARNESS_CODEX
+        ]
+        router = dist.managed_router_block(document)
+        policy = dist.operator_question_policy_block(router)
+        assert policy is not None
+        dist.validate_operator_question_policy({dist.CODEX_HARNESS: document})
+
+        for _, required_text in dist.CODEX_OPERATOR_QUESTION_REQUIREMENTS:
+            invalid_document = document.replace(
+                policy, policy.replace(required_text, "", 1), 1
+            )
+            try:
+                dist.validate_operator_question_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.OperatorQuestionPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    f"incomplete operator-question policy was accepted: {required_text}"
+                )
+
+        for (
+            contradiction_name,
+            contradiction_text,
+        ) in dist.CODEX_OPERATOR_QUESTION_CONTRADICTIONS:
+            invalid_policy = policy.replace(
+                dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE,
+                f"{contradiction_text}\n\n{dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE}",
+                1,
+            )
+            invalid_document = document.replace(policy, invalid_policy, 1)
+            try:
+                dist.validate_operator_question_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.OperatorQuestionPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    f"contradictory operator-question policy was accepted: {contradiction_name}"
+                )
+
+
+def _assert_codex_router_bounds_dispatched_verifiers() -> None:
+    """Challenge verifier policy across every declared language subset."""
+    for enabled_languages in harness.template_language_subsets():
+        document = _render_shipped_instruction_blocks(enabled_languages)[
+            harness.HARNESS_CODEX
+        ]
+        router = dist.managed_router_block(document)
+        policy = dist.verifier_dispatch_policy_paragraph(router)
+        assert policy is not None
+        dist.validate_verifier_dispatch_policy({dist.CODEX_HARNESS: document})
+
+        for _, required_text in dist.CODEX_VERIFIER_DISPATCH_REQUIREMENTS:
+            invalid_document = document.replace(
+                policy, policy.replace(required_text, "", 1), 1
+            )
+            try:
+                dist.validate_verifier_dispatch_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.VerifierDispatchPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    f"incomplete verifier dispatch policy was accepted: {required_text}"
+                )
+
+        for contradiction in dist.CODEX_VERIFIER_DISPATCH_CONTRADICTIONS:
+            invalid_document = document.replace(
+                MODULE.ROUTER_BLOCK_END,
+                f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
+                1,
+            )
+            try:
+                dist.validate_verifier_dispatch_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.VerifierDispatchPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    f"contradictory verifier directive was accepted: {contradiction.name}"
+                )
+
+
+def codex_router_policy_evidence_run() -> harness.EvidenceRun:
+    """Run every source-declared Codex router-policy evidence obligation."""
+    assertions = {
+        dist.CODEX_ROUTER_POLICY_NAMES[0]: (
+            _assert_codex_router_enforces_operator_question_interrupt
+        ),
+        dist.CODEX_ROUTER_POLICY_NAMES[1]: (
+            _assert_codex_router_bounds_dispatched_verifiers
+        ),
+    }
+    executed: list[str] = []
+    for policy_name in dist.CODEX_ROUTER_POLICY_NAMES:
+        assertions[policy_name]()
+        executed.append(policy_name)
+    return harness.EvidenceRun(
+        declared=dist.CODEX_ROUTER_POLICY_NAMES,
+        executed=tuple(executed),
     )
 
 

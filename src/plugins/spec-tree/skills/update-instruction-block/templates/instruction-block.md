@@ -1,5 +1,5 @@
 ---
-template_version: "0.25.0"
+template_version: "0.26.0"
 template_source: spec-tree
 ---
 
@@ -8,6 +8,14 @@ template_source: spec-tree
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
 </operator_is_in_charge>
+
+<operator_question_interrupt>
+**OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource. Codex MUST answer the question immediately.
+
+- ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state.
+- NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it.
+
+</operator_question_interrupt>
 
 <!-- /harness:codex -->
 
@@ -132,7 +140,9 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 - ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
 - NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use the runtime's exposed typed-subagent spawn capability (`multi_agent_v1.spawn_agent` when that identifier is available) for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use the runtime's exposed typed-subagent spawn capability (`multi_agent_v1.spawn_agent` when that identifier is available) for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. The main Codex conversation must NEVER run a verification skill (audit or review) itself to avoid biasing the result. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+
+**Already-dispatched verifier boundary.** Apply the typed-spawn rules above only in the main authoring conversation. Once running as a named verifier or reviewer, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-verifier tools is expected inside the dispatched verifier and does not block direct execution.
 
 **Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, and close capabilities and preserve the same fields and result contracts. The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability. Close every spawned agent with the exposed close capability immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
 

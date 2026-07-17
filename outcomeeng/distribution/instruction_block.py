@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import re
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
@@ -73,6 +74,96 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
+CODEX_HARNESS: Final = "codex"
+CODEX_ROUTER_POLICY_NAMES: Final = (
+    "operator-question-interrupt",
+    "verifier-dispatch",
+)
+CODEX_OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
+CODEX_OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
+CODEX_OPERATOR_QUESTION_REQUIREMENTS: Final = (
+    (
+        "mutation privilege revocation",
+        "Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource",
+    ),
+    ("immediate answer", "Codex MUST answer the question immediately"),
+    (
+        "non-verification process stop",
+        "ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state",
+    ),
+    (
+        "verification process preservation",
+        "NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it",
+    ),
+)
+CODEX_OPERATOR_QUESTION_CONTRADICTIONS: Final = (
+    (
+        "unqualified state-changing process stop",
+        "ALWAYS: stop any running process that is destructive or modifies files, external resources, or state",
+    ),
+)
+CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
+    "**Already-dispatched verifier boundary.**"
+)
+CODEX_VERIFIER_DISPATCH_REQUIREMENTS: Final = (
+    ("boundary heading", "Already-dispatched verifier boundary"),
+    ("main-conversation scope", "only in the main authoring conversation"),
+    ("existing isolation", "treat the current context as the required isolation"),
+    ("direct methodology", "execute the configured audit or review skill directly"),
+    ("no nested verifier", "NEVER search for or spawn another verifier"),
+    ("no tool discovery", "`tool_search`"),
+    ("no agent CLI", "`codex exec`"),
+    ("missing nested tools expected", "Missing nested-verifier tools is expected"),
+)
+
+
+@dataclass(frozen=True)
+class VerifierDispatchContradiction:
+    """A prohibited positive directive and a representative router violation."""
+
+    name: str
+    pattern: re.Pattern[str]
+    violating_directive: str
+
+
+CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
+    VerifierDispatchContradiction(
+        name="recursive verifier spawn",
+        pattern=re.compile(
+            r"^.*already-dispatched verifier.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*spawn another verifier",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "Although nested tools are not obvious, an already-dispatched verifier can "
+            "spawn another verifier before auditing."
+        ),
+    ),
+    VerifierDispatchContradiction(
+        name="nested tool discovery",
+        pattern=re.compile(
+            r"^.*running as a named verifier.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*tool_search",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "When discovery is not documented, once running as a named verifier, it may "
+            "use `tool_search` to discover another verifier."
+        ),
+    ),
+    VerifierDispatchContradiction(
+        name="nested agent CLI",
+        pattern=re.compile(
+            r"^.*verifier context.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*(?:codex exec|claude|pi)",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "If isolation is not obvious, a verifier context may invoke `codex exec` to "
+            "create fresh isolation."
+        ),
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -127,6 +218,14 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
 
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
+
+
+class OperatorQuestionPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router weakens or contradicts question-interrupt policy."""
+
+
+class VerifierDispatchPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router weakens or contradicts verifier dispatch policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -334,6 +433,91 @@ def validate_foundation_access_policy(
             )
 
 
+def operator_question_policy_block(router: str) -> str | None:
+    """Return the Codex operator-question policy block from a complete router."""
+    start = router.find(CODEX_OPERATOR_QUESTION_POLICY_OPEN)
+    if start == -1:
+        return None
+    end = router.find(CODEX_OPERATOR_QUESTION_POLICY_CLOSE, start)
+    if end == -1:
+        return None
+    return router[start : end + len(CODEX_OPERATOR_QUESTION_POLICY_CLOSE)]
+
+
+def validate_operator_question_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits or contradicts question-interrupt policy."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise OperatorQuestionPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = operator_question_policy_block(router) or ""
+    missing = [
+        name
+        for name, required_text in CODEX_OPERATOR_QUESTION_REQUIREMENTS
+        if required_text not in policy
+    ]
+    if missing:
+        details = ", ".join(missing)
+        raise OperatorQuestionPolicyError(
+            f"Codex operator-question policy is incomplete: {details}"
+        )
+    contradictions = [
+        name
+        for name, forbidden_text in CODEX_OPERATOR_QUESTION_CONTRADICTIONS
+        if forbidden_text in policy
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise OperatorQuestionPolicyError(
+            f"Codex operator-question policy is contradictory: {details}"
+        )
+
+
+def verifier_dispatch_policy_paragraph(router: str) -> str | None:
+    """Return the Codex verifier-boundary paragraph from a complete router."""
+    return next(
+        (
+            paragraph
+            for paragraph in router.split("\n\n")
+            if CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR in paragraph
+        ),
+        None,
+    )
+
+
+def validate_verifier_dispatch_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits or contradicts the verifier boundary."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise VerifierDispatchPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = verifier_dispatch_policy_paragraph(router) or ""
+    missing = [
+        name
+        for name, required_text in CODEX_VERIFIER_DISPATCH_REQUIREMENTS
+        if required_text not in policy
+    ]
+    if missing:
+        details = ", ".join(missing)
+        raise VerifierDispatchPolicyError(
+            f"Codex verifier dispatch policy is incomplete: {details}"
+        )
+    contradictions = [
+        rule.name
+        for rule in CODEX_VERIFIER_DISPATCH_CONTRADICTIONS
+        if rule.pattern.search(router)
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise VerifierDispatchPolicyError(
+            f"Codex verifier dispatch policy is contradictory: {details}"
+        )
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -350,6 +534,8 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
+    validate_operator_question_policy(rendered)
+    validate_verifier_dispatch_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 
