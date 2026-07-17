@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or assertion type (scenario / mapping / conformance / property / compliance) by authoring judgment; about to write or edit a test file; about to implement a work item -> STOP. `/author` invokes `/test` solely to obtain the type selection and evidence link for assertion text, then copies that result without substitution. `/apply` owns the later test-writing and implementation flow. Independently choosing a type, authoring a test, or writing implementation code inside this skill is the boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
