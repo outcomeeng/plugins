@@ -26,16 +26,6 @@ from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
 WORKFLOW = dist.REFRESH_WORKFLOW
-CODEX_VERIFIER_DISPATCH_REQUIREMENTS = (
-    "Already-dispatched verifier boundary",
-    "only in the main authoring conversation",
-    "treat the current context as the required isolation",
-    "execute the configured audit or review skill directly",
-    "NEVER search for or spawn another verifier",
-    "`tool_search`",
-    "`codex exec`",
-    "Missing nested-verifier tools is expected",
-)
 
 
 def _distribution_module() -> dist.InstructionBlockModule:
@@ -409,12 +399,44 @@ def _render_shipped_instruction_blocks() -> dict[str, str]:
 
 
 def _assert_codex_router_bounds_dispatched_verifiers() -> None:
-    """Assert a dispatched verifier cannot recursively manufacture isolation."""
-    router = dist.managed_router_block(
-        _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
-    )
-    for requirement in CODEX_VERIFIER_DISPATCH_REQUIREMENTS:
-        assert requirement in router
+    """Challenge the complete Codex router with missing and contradictory policy."""
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
+    router = dist.managed_router_block(document)
+    policy = dist.verifier_dispatch_policy_paragraph(router)
+    assert policy is not None
+    dist.validate_verifier_dispatch_policy({dist.CODEX_HARNESS: document})
+
+    for _, required_text in dist.CODEX_VERIFIER_DISPATCH_REQUIREMENTS:
+        invalid_document = document.replace(
+            policy, policy.replace(required_text, "", 1), 1
+        )
+        try:
+            dist.validate_verifier_dispatch_policy(
+                {dist.CODEX_HARNESS: invalid_document}
+            )
+        except dist.VerifierDispatchPolicyError:
+            pass
+        else:
+            raise AssertionError(
+                f"incomplete verifier dispatch policy was accepted: {required_text}"
+            )
+
+    for contradiction in dist.CODEX_VERIFIER_DISPATCH_CONTRADICTIONS:
+        invalid_document = document.replace(
+            MODULE.ROUTER_BLOCK_END,
+            f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
+            1,
+        )
+        try:
+            dist.validate_verifier_dispatch_policy(
+                {dist.CODEX_HARNESS: invalid_document}
+            )
+        except dist.VerifierDispatchPolicyError:
+            pass
+        else:
+            raise AssertionError(
+                f"contradictory verifier directive was accepted: {contradiction.name}"
+            )
 
 
 def _assert_rendered_router_omits_forbidden_session_tokens() -> None:

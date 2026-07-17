@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import re
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
@@ -73,6 +74,69 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
+CODEX_HARNESS: Final = "codex"
+CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
+    "**Already-dispatched verifier boundary.**"
+)
+CODEX_VERIFIER_DISPATCH_REQUIREMENTS: Final = (
+    ("boundary heading", "Already-dispatched verifier boundary"),
+    ("main-conversation scope", "only in the main authoring conversation"),
+    ("existing isolation", "treat the current context as the required isolation"),
+    ("direct methodology", "execute the configured audit or review skill directly"),
+    ("no nested verifier", "NEVER search for or spawn another verifier"),
+    ("no tool discovery", "`tool_search`"),
+    ("no agent CLI", "`codex exec`"),
+    ("missing nested tools expected", "Missing nested-verifier tools is expected"),
+)
+
+
+@dataclass(frozen=True)
+class VerifierDispatchContradiction:
+    """A prohibited positive directive and a representative router violation."""
+
+    name: str
+    pattern: re.Pattern[str]
+    violating_directive: str
+
+
+CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
+    VerifierDispatchContradiction(
+        name="recursive verifier spawn",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
+            r"already-dispatched verifier.*\b(?:must|may|should|can)\b.*"
+            r"spawn another verifier",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "An already-dispatched verifier must spawn another verifier before auditing."
+        ),
+    ),
+    VerifierDispatchContradiction(
+        name="nested tool discovery",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
+            r"running as a named verifier.*\b(?:must|may|should|can|use)\b.*"
+            r"tool_search",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "Once running as a named verifier, use `tool_search` to discover another verifier."
+        ),
+    ),
+    VerifierDispatchContradiction(
+        name="nested agent CLI",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
+            r"verifier context.*\b(?:must|may|should|can|invoke)\b.*"
+            r"(?:codex exec|claude|pi)",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "A verifier context may invoke `codex exec` to create fresh isolation."
+        ),
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -127,6 +191,10 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
 
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
+
+
+class VerifierDispatchPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router weakens or contradicts verifier dispatch policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -334,6 +402,49 @@ def validate_foundation_access_policy(
             )
 
 
+def verifier_dispatch_policy_paragraph(router: str) -> str | None:
+    """Return the Codex verifier-boundary paragraph from a complete router."""
+    return next(
+        (
+            paragraph
+            for paragraph in router.split("\n\n")
+            if CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR in paragraph
+        ),
+        None,
+    )
+
+
+def validate_verifier_dispatch_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits or contradicts the verifier boundary."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise VerifierDispatchPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = verifier_dispatch_policy_paragraph(router) or ""
+    missing = [
+        name
+        for name, required_text in CODEX_VERIFIER_DISPATCH_REQUIREMENTS
+        if required_text not in policy
+    ]
+    if missing:
+        details = ", ".join(missing)
+        raise VerifierDispatchPolicyError(
+            f"Codex verifier dispatch policy is incomplete: {details}"
+        )
+    contradictions = [
+        rule.name
+        for rule in CODEX_VERIFIER_DISPATCH_CONTRADICTIONS
+        if rule.pattern.search(router)
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise VerifierDispatchPolicyError(
+            f"Codex verifier dispatch policy is contradictory: {details}"
+        )
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -350,6 +461,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
+    validate_verifier_dispatch_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 
