@@ -2,19 +2,18 @@
 name: merging-standards
 user-invocable: false
 description: >-
-  Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, authority gates, review classification, integration review surfaces, action tokens, delivered-value boundary, closeout, and repo-local overlay topics.
-  Loaded by /merge, /manage-github-pr, /open-pr, and /manage-pr.
+  Merge-lifecycle standards for pre-flight predicates, branch topology, push commands, authority gates, review classification, integration review surfaces, action tokens, delivered-value boundaries, closeout, and repo-local overlays.
 allowed-tools: Read
 ---
 
 <objective>
-The shared merge-lifecycle vocabulary — the concepts, predicates, gates, commands, and tokens that `/merge`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` all read.
+The shared merge-lifecycle vocabulary — transport-neutral concepts, predicates, gates, commands, and tokens for delivery through closeout.
 </objective>
 
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
-`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, preview actions, deployment actions, and release actions) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`AGENTS.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
+`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, preview actions, deployment actions, and release actions) belongs. When the overlay is absent, NEVER reconstruct transport or merge behavior from incidental repository docs; apply the defaults. NEVER edit a generated guide (`AGENTS.md`) to change merge behavior; authored lifecycle skills and this overlay are the governing surfaces.
 
 Topics the overlay MAY refine:
 
@@ -24,9 +23,9 @@ Topics the overlay MAY refine:
 - Push command overrides — the explicit destination ref form must be preserved.
 - **Preview declarations** — pre-merge publication, generated preview, dry-run, or inspection actions and their predicates after `VERIFICATION_READINESS` publication and before `MERGE_READINESS`. Absence means `PREVIEW` is a no-op and never blocks merge, deploy, release, or close.
 - **Deployment and release declarations** — environment mutation actions and predicates under `DEPLOYMENT_READINESS`, plus consumer-visible publication or refresh actions and predicates under `RELEASE_READINESS`. Absence means `DEPLOY` and `RELEASE` are no-op phases and never block later phases.
-- **Pre-mutation confirmation** — whether Claude pauses for operator confirmation before the first mutating action of the lifecycle (branch, commit, push, PR open, direct-push). A project whose operators want to confirm intent before any mutation opts in here; Claude then presents — through the runtime's structured-question tool — the change to make, the branch, the commit shape, and the end-to-end scope from intent through merge, and waits before mutating. A project that wants none declares no setting, and Claude drives the determined changeset from intent to merge autonomously, stating the plan in prose with no structured-question pause. This is an opt-in touch-point ahead of the lifecycle, never a gate; it leaves `VERIFICATION_READINESS`, `MERGE_READINESS`, `DEPLOYMENT_READINESS`, `RELEASE_READINESS`, and the finding-disposition rule unchanged. Establishing *what* to ship when no changeset is determined (the `/manage-github-pr` Empty-mode interview) is requirements work, not this confirmation.
+- **Pre-mutation confirmation** — whether Claude pauses for operator confirmation before the first mutating action of the lifecycle (branch, commit, push, PR open, direct-push). A project whose operators want to confirm intent before any mutation opts in here; Claude then presents — through the runtime's structured-question tool — the change to make, the branch, the commit shape, and the end-to-end scope from intent through merge, and waits before mutating. A project that wants none declares no setting, and Claude drives the determined changeset from intent to merge autonomously, stating the plan in prose with no structured-question pause. This is an opt-in touch-point ahead of the lifecycle, never a gate; it leaves `VERIFICATION_READINESS`, `MERGE_READINESS`, `DEPLOYMENT_READINESS`, `RELEASE_READINESS`, and the finding-disposition rule unchanged. Establishing *what* to ship when no changeset is determined is requirements work, not this confirmation.
 - **Merge command** — rebase merge followed by a worktree-safe manual branch deletion is the universal default; the merge flow runs it unless the overlay opts in to a different command. The merge runs with explicit `--delete-branch=false` (`gh pr merge <pr-number> --rebase --delete-branch=false`), then this worktree detaches onto the refreshed base tip and the local and remote branches are deleted by separate commands — the sequence and its rationale are in `<merge_cleanup>`. The overlay may opt in to merge commit (`--merge`) or squash (`--squash`); merge commits and squashes are not Claude's choice to make from the gate alone. The overlay should document its rationale for human reviewers of the overlay change itself, but rationale is not a runtime predicate Claude enforces — the overlay's declaration is Claude's signal. The overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for projects that are always single-worktree, where `gh`'s post-merge switch-to-base never collides.
-- **Mention-reviewer trigger phrase** — the leading phrase Claude posts as a PR-level comment to fire the mention-triggered reviewer when the auto-review job reports `conclusion: skipped` (see `<authority_gates>` reviewer-skipped-by-design exception). The full comment body is `<trigger-phrase> review`; the `review` suffix is the keyword the mention reviewer matches on. Default: `@spec-tree` (the upstream reviewer action's default `trigger_phrase`). Each consuming project that configures a non-default `trigger_phrase` in its reviewer caller workflow declares the matching phrase here.
+- **Mention-reviewer trigger phrase** — the leading phrase Claude posts as a PR-level comment to fire the mention-triggered reviewer when the auto-review job reports `conclusion: skipped` (see `<authority_gates>` reviewer-skipped-by-design exception). The full comment body is `<trigger-phrase> review`; the `review` suffix is the keyword the mention reviewer matches on. Default: `@spec-tree` (the upstream reviewer action's default `trigger_phrase`). A project that configures a non-default `trigger_phrase` in its review workflow declares the matching phrase here.
 
 If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. Absent preview, deployment, and release declarations make `PREVIEW`, `DEPLOY`, and `RELEASE` no-op phases; `MERGE_READINESS` still requires current-head CI review with no unresolved valid `BLOCKING` or `DEBT` finding, every other required check terminal-green, branch hygiene, and PR state. **Absence of a pre-mutation-confirmation setting means Claude drives the lifecycle autonomously**, with no up-front confirmation pause before the first mutation.
 
@@ -34,7 +33,7 @@ The overlay cannot override the open-ready mandate — once `VERIFICATION_READIN
 </repo_local_overlay>
 
 <overlay_safety_checks>
-When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry. `/manage-github-pr` and the direct-push transport run them before branch or commit work, `/open-pr` before push, direct-push runs them again before its default-branch push, `/manage-pr` runs them after its initial read-only inspection and before base sync, finding repair, commit, push, or merge work, and `/handoff` runs them before every detach. `<merge_cleanup>` repeats the checks immediately before the merge command. A failed check stops before mutation with its output preserved.
+When `spx/local/merging.md` declares preflight checks, run all of them immediately before the first checkout-sensitive mutation owned by each lifecycle entry: orchestration before branch or commit work, publication before push, direct-push again before default-branch publication, open-PR management after initial read-only inspection and before base sync, finding repair, commit, push, or merge work, and handoff before every detach. `<merge_cleanup>` repeats the checks immediately before the merge command. A failed check stops before mutation with its output preserved.
 
 When the overlay declares post-cleanup checks, run all of them immediately after every detach-based cleanup and before branch deletion, session persistence, deploy, release, or closeout. This applies both to `<merge_cleanup>` and whenever `/handoff` detaches a checkout. A failed post-cleanup check stops the remaining cleanup and preserves the detached checkout for inspection.
 </overlay_safety_checks>
@@ -60,7 +59,7 @@ The `/handoff` invocation supplies the operator-useful product summary, verifica
 
 <branch_state_closeout>
 
-After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR transport builds the full branch-state closeout record in `/manage-pr` Step 9, continues remaining in-scope work, and passes the record into `/handoff` when the session is complete. The direct-push transport preserves merge-time facts and delegates full record construction to `/handoff`, which computes the record from this section using its own closeout tool surface. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
+After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR transport builds the full branch-state closeout record during post-merge management, continues remaining in-scope work, and passes the record into `/handoff` when the session is complete. The direct-push transport preserves merge-time facts and delegates full record construction to `/handoff`, which computes the record from this section using its own closeout tool surface. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
 
 The closeout record includes:
 
@@ -124,7 +123,7 @@ Claude NEVER stops with blocked-by-worktree, cannot-use-other-worktree, or canno
 
 <branch_hygiene>
 
-Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the calling flow until resolved.
+Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the lifecycle until resolved.
 
 | Condition (must hold)                                        | Failure response                                                                                                                   |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -156,7 +155,7 @@ existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null)
 [ -n "$existing_url" ] && echo "PR already exists: $existing_url"
 ```
 
-The `exit 1` inside the upstream-safety check is a STOP for the calling flow.
+The `exit 1` inside the upstream-safety check is a STOP for the lifecycle.
 
 </branch_hygiene>
 
@@ -187,7 +186,7 @@ git diff --name-only "origin/${base}...HEAD"
 
 **Stacked-gate** (all must hold): the PR base is the previous stack branch (named in the PR body's `Stack` or `Merge order` note); the branch remains draft while the base is unmerged; after the base merges, the branch is rebased onto the updated default branch before final merge.
 
-Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, the consuming workflow asks the operator through its own structured-question tool grant rather than guessing.
+Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, ask the operator through the active structured-question capability rather than guessing.
 
 ```bash
 base_branch="<previous-stack-branch>"
@@ -197,7 +196,7 @@ git log --oneline "origin/${base_branch}..HEAD"
 git diff --name-only "origin/${base_branch}...HEAD"
 ```
 
-**Post-merge reconstruction.** Once the stack base merges, re-invoke /open-pr (or rebase manually) to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
+**Post-merge reconstruction.** Once the stack base merges, repeat the publication protocol to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
 
 </branch_topology>
 
@@ -228,7 +227,7 @@ Base drift is checked on the same checkpoint that inspects reviews — every man
 
 Rebase on drift, not at merge time. A branch behind base is superseded by a rebase before it can merge, so every check run and every review posted against the un-rebased head is wasted effort. Rebasing the moment drift appears aims CI and reviewers at the head that will actually merge, and surfaces a conflicted ("nasty") rebase early during review/check convergence instead of at merge time, where an unexpected conflict or an integration regression costs a full extra review round on the critical path.
 
-Invoke `/sync-base` with the calling flow's base passed as `--base ${base}` rather than letting it re-derive one — /manage-pr Step 1 captures `${base}` from `gh pr view --json baseRefName` (which returns the PR's actual base for both peer and stacked topologies), and /open-pr's `<branch_hygiene>` sets it from `gh repo view --json defaultBranchRef` before any PR exists. The block runs identically in both contexts.
+Invoke `/sync-base` with the active lifecycle base passed as `--base ${base}` rather than letting it re-derive one. After a PR exists, capture `${base}` from `gh pr view --json baseRefName`, which returns the actual base for peer and stacked topologies. Before a PR exists, set it from `gh repo view --json defaultBranchRef` during branch hygiene.
 
 When `/sync-base` reports `rebased`, the rebased tree is a fresh integration — this branch replayed on newly merged work — and the consuming flow re-establishes all `VERIFICATION_READINESS` predicates on it before the `--force-with-lease` push from `<push_semantics>`, fixing any failure or unaddressed valid finding in the same pass. The `preservation` proof in the `/sync-base` result scopes how much of that work the base movement actually invalidated, so a rebase that moved an unrelated part of the tree does not force a full re-run:
 
@@ -246,20 +245,20 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 The local `changes-reviewer` gate is the author-side, pre-push instance of the same review kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
 
-- **Let the review resolve its own scope.** `changes-reviewer` self-discovers the worktree it runs in and computes the diff itself. The caller makes the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and passes nothing else — no file list, no changed-area summary, no "the important part is …".
+- **Let the review resolve its own scope.** `changes-reviewer` self-discovers the worktree it runs in and computes the diff itself. Make the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and pass nothing else — no file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (AGENTS.md and the standards skills) and the shared taxonomy itself.
 
 Run it via the `changes-reviewer` agent. The isolated context keeps the verdict from being biased by what the operator's main context has been doing. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 
-This is the review predicate `VERIFICATION_READINESS` reads, and it runs before every push — the opening push (`/open-pr`) and every follow-up push (`/manage-pr`), against the diff that push would publish. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
+This is the review predicate `VERIFICATION_READINESS` reads, and it runs against the diff before every opening and follow-up push. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `VERIFICATION_READINESS` claims it means.
 
 </local_review_invocation>
 
 <authority_gates>
 
-The delivery lifecycle runs `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` with four gates, evaluated in order: `VERIFICATION_READINESS`, `MERGE_READINESS`, `DEPLOYMENT_READINESS`, and `RELEASE_READINESS`. A **gate** is a named authorization over one lifecycle step, decided from defined predicates; a **predicate** is a condition a gate reads — predicates are never themselves gates. `/open-pr` evaluates the GitHub-PR transport's `VERIFICATION_READINESS` predicates before publishing; `/manage-pr` evaluates `MERGE_READINESS` for the current head, then continues through declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases after merge.
+The delivery lifecycle runs `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` with four gates, evaluated in order: `VERIFICATION_READINESS`, `MERGE_READINESS`, `DEPLOYMENT_READINESS`, and `RELEASE_READINESS`. A **gate** is a named authorization over one lifecycle step, decided from defined predicates; a **predicate** is a condition a gate reads — predicates are never themselves gates. GitHub-PR publication evaluates `VERIFICATION_READINESS` before pushing; open-PR management evaluates `MERGE_READINESS` for the current head, then continues through declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases after merge.
 
 **`VERIFICATION_READINESS`** authorizes publishing the verified changeset to the selected transport. For the GitHub-PR transport, it authorizes opening the PR. It holds when all predicates hold:
 
@@ -281,7 +280,7 @@ All `VERIFICATION_READINESS` predicates are re-established before every push, no
 
 `MERGE_READINESS` carries no time-based settle: a clean review arriving two minutes after open makes the gate hold two minutes after open.
 
-**Mutation-point guard.** Immediately before any `gh pr merge` command, /manage-pr re-reads live PR state and recomputes `MERGE_READINESS`; it never relies on earlier inspection, conversation memory, or a prior `gh pr view` result. The guard reads PR state, `statusCheckRollup`, PR-level comments, formal reviews, review-thread comments, the fetched remote branch head, and the fetched base branch. It produces `MERGE_READY:<head-sha>` only when the freshly inspected head SHA, fetched remote branch head, and inspected status-check SHA match and every `MERGE_READINESS` predicate above still holds for that same head.
+**Mutation-point guard.** Immediately before any `gh pr merge` command, re-read live PR state and recompute `MERGE_READINESS`; never rely on earlier inspection, conversation memory, or a prior `gh pr view` result. The guard reads PR state, `statusCheckRollup`, PR-level comments, formal reviews, review-thread comments, the fetched remote branch head, and the fetched base branch. It produces `MERGE_READY:<head-sha>` only when the freshly inspected head SHA, fetched remote branch head, and inspected status-check SHA match and every `MERGE_READINESS` predicate above still holds for that same head.
 
 The guard withholds the merge command and emits the existing action token when any predicate fails:
 
@@ -352,7 +351,7 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --paginate \
 
 **NEVER drop `comments` from the `gh pr view --json` argument list.** The `comments` field carries PR-level issue comments — a distinct surface from `reviews` (formal review submissions) and from `gh api repos/<owner>/<repo>/pulls/<n>/comments` (review-thread comments tied to specific lines). Dropping `comments` to "trim the JSON" silently loses that third surface; a valid `BLOCKING` or `DEBT` finding posted there is invisible to the inspection, and `MERGE_READINESS` evaluates against a partial view.
 
-Completeness is checked per invocation. Every `gh pr view --json` invocation that participates in a management pass or re-inspection MUST include both `reviews` and `comments` in its field list, even when the same pass also runs another broader `gh pr view` command. Classify a pass by scanning each field list independently: if any participating field list omits `comments`, the PR-level issue-comment surface is missing for that pass and the inspection is incomplete; if any participating field list omits `reviews`, the formal-review surface is missing for that pass and the inspection is incomplete. A pass with one complete `reviews,comments,...` list followed by a later `reviews,...` list missing `comments` is incomplete with missing surface `comments-field`; the earlier complete call never repairs the later narrower call. Whatever field list a calling flow constructs — it may add `statusCheckRollup`, `headRefOid`, `baseRefName`, `mergeable`, `mergeStateStatus`, or others for the merge-state predicates — `reviews` and `comments` remain mandatory. Construct the field list explicitly per pass; do not omit fields from an abbreviated re-creation between turns.
+Completeness is checked per invocation. Every `gh pr view --json` invocation that participates in a management pass or re-inspection MUST include both `reviews` and `comments` in its field list, even when the same pass also runs another broader `gh pr view` command. Classify a pass by scanning each field list independently: if any participating field list omits `comments`, the PR-level issue-comment surface is missing for that pass and the inspection is incomplete; if any participating field list omits `reviews`, the formal-review surface is missing for that pass and the inspection is incomplete. A pass with one complete `reviews,comments,...` list followed by a later `reviews,...` list missing `comments` is incomplete with missing surface `comments-field`; the earlier complete call never repairs the later narrower call. Whatever field list the management pass constructs — it may add `statusCheckRollup`, `headRefOid`, `baseRefName`, `mergeable`, `mergeStateStatus`, or others for the merge-state predicates — `reviews` and `comments` remain mandatory. Construct the field list explicitly per pass; do not omit fields from an abbreviated re-creation between turns.
 
 Compare timestamps against the most recent push. Entries after that push are re-reviews of the latest state — read them in full.
 
