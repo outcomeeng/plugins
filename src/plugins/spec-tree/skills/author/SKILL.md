@@ -163,7 +163,7 @@ Read the appropriate template owned by `/understand`. Fill it using the gathered
 **Assertion rules** (from the live `/understand` `<verification_types>` and `<assertion_types>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{evidence}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval](evals/{rule-slug}/eval.toml))` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- Each assertion must link to evidence: `([test](tests/{language-canonical-test-filename}))` for tests, with `{subject}`, `{evidence}`, and `{level}` encoded according to the product's language convention (including tests that exercise a lint rule); `([eval](evals/{rule-slug}/eval.toml))` for graded LLM behavior; or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
