@@ -163,7 +163,7 @@ Read the appropriate template owned by `/understand`. Fill it using the gathered
 **Assertion rules** (from the live `/understand` `<verification_types>` and `<assertion_types>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval](evals/{rule-slug}/eval.toml))` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
@@ -193,10 +193,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
+- [ ] All assertions have evidence links: `[test]`, `[eval](evals/{rule-slug}/eval.toml)`, or `[audit]` (targets don't need to exist yet)
 - [ ] Verification type and assertion type are left to `/test` — authoring does not select them
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
-- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
+- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval](evals/{rule-slug}/eval.toml)` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via request_user_input before proceeding
 - [ ] No content misplacement (per `/understand` operational reference `what-goes-where`)
 
