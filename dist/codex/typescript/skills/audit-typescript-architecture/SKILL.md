@@ -1,18 +1,14 @@
 ---
 name: audit-typescript-architecture
 description: >-
-  TypeScript-specific architecture audit — dependency injection, no-mocking, level accuracy — composed by generic artifact-type auditors for the TypeScript concerns in scope.
-  Reached only through a dispatched auditor agent, never the main conversation.
+  TypeScript-specific architecture audit — judges the TypeScript architecture
+  target in scope for dependency injection, mocking prohibition, execution-level
+  accuracy, TypeScript anti-patterns, and ancestor consistency.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<dispatch_gate>
-
-This audit runs inside a dispatched artifact-type auditor's verifier context — `implementation-auditor` composing this skill for TypeScript implementation architecture scope, or `adr-auditor` composing it for a TypeScript ADR's language-specific architecture concerns — isolated from the author context that produced the work under audit. This skill judges only TypeScript-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency. Generic decision-record structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` when the target is an ADR and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
-
-</dispatch_gate>
 
 <objective>
 A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` with concern rows for dependency injection testability, mocking prohibition, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency.
@@ -22,19 +18,17 @@ A JSON verdict on a TypeScript architecture scope — `APPROVED`, or `REJECTED` 
 
 - Read-only over the audited repository. Never edit files, stage changes, commit, or open pull requests.
 - Produce only the JSON verdict described in `<verdict_format>`; finding messages state the violated rule and consequence, while corrective examples remain in references and standards.
-- Judge only TypeScript-specific architecture concerns. Generic decision-record section structure, atemporal voice, and per-rule tag validity are owned by the composing artifact-type auditor when the target is an ADR.
-- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill. The composing verification workflow maps the JSON verdict into the enclosing `spx verification run` projection.
+- Judge only TypeScript-specific architecture concerns: dependency injection, no-mocking, execution-level accuracy, TypeScript anti-patterns, and ancestor consistency. Generic decision-record section structure, atemporal voice, and per-rule tag validity are outside this subject — a structural, voice, or tag finding is out of scope even when the target is an ADR.
+- Treat `PASS | FAIL | NOT_APPLICABLE` as the only row vocabulary for this skill.
 
 </constraints>
 
 <audit_workflow>
-**For spec-tree work items: the composing auditor has already loaded the governing context.**
-
-When this skill is composed for a spec-tree work item (enabler/outcome), the dispatching artifact-type auditor has already invoked `spec-tree:contextualize` on the node and loaded the complete governing context. Use that loaded context:
+**Inputs.** This audit judges the target it is given, against the governing context already loaded when it runs:
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Target node spec with typed assertions
-- Implementation files, changed-file partition, or ADR path supplied by the composing auditor
+- The architecture target: implementation files, a changed-file partition, or an ADR path
 
 **TypeScript review focus:**
 
@@ -48,7 +42,7 @@ When this skill is composed for a spec-tree work item (enabler/outcome), the dis
 
 1. **Read `/typescript-architecture-standards`**, then `spx/local/typescript-architecture.md` if present, for canonical conventions
 2. **Read repo-local test overlay** `spx/local/typescript-tests.md` if present before judging level references or test-double exception cases.
-3. **Read the architecture target** completely: implementation files for implementation-auditor composition, or the ADR for adr-auditor composition
+3. **Read the architecture target** completely — the implementation files or the ADR supplied as the target
 4. **Check testability constraints** — ADR targets express them in `## Verification` / `### Audit`; implementation targets must conform to the loaded architecture decisions' DI and no-mocking constraints
 5. **Check for mocking and unjustified test-double language** — reject `vi.mock()`, `jest.mock()`, "mock at boundary", or "stub"/"fake" without a `/test` exception case in any section, prose AND code examples
 6. **Verify level accuracy** — SaaS services jump `l1` to `l3` (no `l2`)
@@ -70,7 +64,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 **Claude accepted `l2` for a SaaS service.** Why it failed: SaaS services cannot run locally — there is no `l2`; they jump `l1` to `l3`. How to avoid: reject `l2` whenever the dependency is a SaaS API.
 
-**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns belong to the composing `adr-auditor` reading the canonical template, not this skill. How to avoid: drop any structural, voice, or tag finding — this skill judges only TypeScript-specific concerns.
+**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns are judged against the canonical decision template, outside this skill's subject. How to avoid: drop any structural, voice, or tag finding — this skill judges only TypeScript-specific concerns.
 
 </failure_modes>
 
@@ -86,13 +80,13 @@ All canonical conventions are in `/typescript-architecture-standards`. Read it f
 
 **4. TypeScript anti-patterns** — Check for TypeScript-specific architecture anti-patterns. See `<anti_patterns>` in `/typescript-architecture-standards` for the full table.
 
-Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
+Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — they are judged against the canonical decision template, outside this TypeScript-architecture subject.
 
 </principles_to_enforce>
 
 <verdict_format>
 
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff every concern row is `PASS` or `NOT_APPLICABLE`; it is `REJECTED` if any concern is `FAIL`. Every `NOT_APPLICABLE` row explains why its concern does not apply. An unavailable required inspection is `FAIL`, never `NOT_APPLICABLE`. Findings use severity `blocking` or `debt`.
 
@@ -121,7 +115,7 @@ Each finding's `rule` field carries the violation pattern (e.g., `missing-testab
 
 **Don't:**
 
-- Judge section structure, atemporal voice, or per-rule tag validity — those belong to the composing `adr-auditor`
+- Judge section structure, atemporal voice, or per-rule tag validity — those are outside this skill's TypeScript-architecture subject
 - Reference specific line numbers (they change) — use section names or quoted text
 - Provide grep commands — focus on principles, not tooling
 - Approve an architecture target just because a Protocol is defined — check that an ALWAYS rule mandates it for ADR targets or that implementation code follows the loaded architecture constraint

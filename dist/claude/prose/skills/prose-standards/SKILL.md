@@ -10,8 +10,12 @@ allowed-tools: Read
 The catalog of 30+ prose anti-patterns across 6 categories.
 </objective>
 
+<success_criteria>
+Prose follows these standards when no anti-pattern in this catalog survives in it — word choice, sentence structure, paragraph structure, tone, formatting, and composition each evaluated against the prose rather than assumed clean, and every match either rewritten to carry the same meaning without the pattern or kept for a reason the prose itself makes evident.
+</success_criteria>
+
 <reference_note>
-This is a reference skill. Other prose skills reference these patterns. You typically don't invoke this directly -- invoke `/write-prose` (to write) or `/audit-prose` (to review) instead.
+This is a reference skill. Composing prose skills load these patterns explicitly before writing or reviewing. It is not a standalone workflow.
 </reference_note>
 
 <word_choice>

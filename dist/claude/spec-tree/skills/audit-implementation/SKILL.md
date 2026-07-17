@@ -5,6 +5,7 @@ description: >-
   languages, composes code, test, and architecture concern audits, and records
   one audit verification run.
 argument-hint: "<implementation audit request>"
+model: sonnet
 allowed-tools: Read, Bash(spx verification run:*), Bash(printf:*), Glob, Grep, Skill
 ---
 

@@ -1,17 +1,12 @@
 ---
 name: audit-pdr
 description: >-
-  PDR audit methodology preloaded by the pdr-auditor agent. Dispatch pdr-auditor
-  to audit a PDR; the main conversation reaches this audit only through that agent.
+  PDR audit methodology — judges one PDR against the PDR evidence model,
+  covering content classification, property quality, per-rule tag validity,
+  atemporal voice, and consistency with ancestor decisions.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the pdr-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the pdr-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -178,7 +173,7 @@ Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
 The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `REJECT` finding naming the missing evidence. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
 

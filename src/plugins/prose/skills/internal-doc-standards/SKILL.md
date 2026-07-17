@@ -11,7 +11,7 @@ The catalog of conventions for internal team documents, extending `/prose-standa
 </objective>
 
 <reference_note>
-This is a reference skill. Other skills load it. Don't invoke it directly. Use `/write-internal-docs` to write, or `/audit-internal-docs` to review.
+This is a reference skill. Composing internal-doc skills load these standards explicitly before writing or auditing. It is not a standalone workflow.
 </reference_note>
 
 <scope>

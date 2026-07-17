@@ -3,6 +3,7 @@ name: audit-python-tests
 description: >-
   Python test-evidence audit methodology — judges the Python tests in scope
   against the spec-tree and Python-specific evidence properties.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
 

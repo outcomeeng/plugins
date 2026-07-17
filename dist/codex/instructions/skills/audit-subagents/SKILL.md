@@ -1,23 +1,18 @@
 ---
 name: audit-subagents
 description: >-
-  Custom agent-configuration audit methodology preloaded by the subagent-auditor agent.
-  Dispatch subagent-auditor to audit custom agent configuration files; the main
-  conversation reaches this audit only through that agent.
+  Custom agent-configuration audit methodology — judges a custom agent
+  configuration file against the agent-prompt standards, covering frontmatter,
+  role framing, constraints, and output contract.
 argument-hint: <configured-agent-path>
 arguments: configured_agent_path
+model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `instructions:create-subagents` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
-
-<dispatch_gate>
-
-This audit runs in the subagent-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the subagent-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on one custom agent configuration file (`.codex/agents/*.toml` or `~/.codex/agents/*.toml`) against the create-subagents and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
@@ -224,7 +219,7 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 </anti_patterns>
 
 <verdict_format>
-Emit a structured verdict consumed by the composing verification workflow. The skill's entire output is the verdict payload. The composing workflow records findings, terminal state, and rendered projection through `spx verification run`.
+Emit a structured verdict. The skill's entire output is the verdict payload.
 
 The skill's `overall` is `APPROVED` iff the `critical-issues` row has no findings with severity `REJECT`; otherwise it is `REJECTED`. A missing or unreadable subagent file, or an audit that cannot complete, records a `REJECT` critical issue and returns `REJECTED`. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
 

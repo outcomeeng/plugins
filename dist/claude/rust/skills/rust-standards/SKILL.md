@@ -14,7 +14,7 @@ Rust work follows this standard when compiler, lint, test, and review evidence s
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Rust skills load these standards automatically. Invoke `/code-rust`, `/test-rust`, `/audit-rust-code`, or related Rust skills rather than invoking this directly.
+This is a reference skill. Composing Rust skills load these standards explicitly before writing, testing, or auditing. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>

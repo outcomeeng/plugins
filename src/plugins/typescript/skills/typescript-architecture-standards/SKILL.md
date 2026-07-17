@@ -11,8 +11,12 @@ allowed-tools: Read
 The canonical TypeScript ADR conventions — sections, how testability appears in Verification rules, and TypeScript-specific DI patterns.
 </objective>
 
+<success_criteria>
+TypeScript ADR guidance follows this standard when `/typescript-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in TypeScript terms, and test-level references match `/typescript-test-standards`.
+</success_criteria>
+
 <reference_note>
-This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architect-typescript` to write ADRs or `/audit-typescript-architecture` to review them.
+This is a reference skill. Composing TypeScript architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>

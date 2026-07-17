@@ -15,7 +15,7 @@ Skills conform to these standards when, at minimum: (a) SKILL.md is under 500 li
 </success_criteria>
 
 <reference_note>
-This is a reference skill. `/create-skills` and `/audit-skills` explicitly invoke these standards before authoring or auditing. Users do not invoke it as a standalone workflow.
+This is a reference skill. Composing skills invoke these standards explicitly before authoring or auditing. It is not a standalone workflow.
 </reference_note>
 
 <repo_local_overlay>

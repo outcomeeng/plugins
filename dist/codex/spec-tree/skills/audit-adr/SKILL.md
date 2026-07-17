@@ -1,17 +1,11 @@
 ---
 name: audit-adr
 description: >-
-  ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
-  to audit an ADR; the main conversation reaches this audit only through that agent.
+  ADR audit methodology — judges one ADR against the ADR evidence model,
+  covering section structure, atemporal voice, and per-rule tag validity.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the adr-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the adr-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -124,7 +118,7 @@ A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subse
 
 This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
 
-Read the caller-provided scope classification first. When it classifies the ADR as language-neutral, skip composition. For every declared implementation-language partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage.
+Read the supplied scope classification first. When it classifies the ADR as language-neutral, skip composition. For every declared implementation-language partition, require the matching `audit-<lang>-architecture` skill and invoke it through the Skill tool. Append its distinct rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) to this verdict's `rows` array; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When a language-specific ADR has no reliable partition or the required skill cannot load, append a `FAIL` row named `language-routing-unavailable` or `language-skill-unavailable` with a blocking finding instead of guessing or approving incomplete coverage.
 
 </step>
 
@@ -140,7 +134,7 @@ Scan all findings and native or composed rows. If any row is `FAIL`, issue `REJE
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output, relayed unchanged by the auditor agent to the dispatching conversation; never a prose or markdown verdict.
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
 The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_APPLICABLE`; otherwise it is `REJECTED`. Every `NOT_APPLICABLE` row explains why its concern does not apply. A required property that cannot be evaluated is a `FAIL` row with a blocking finding naming the unavailable inspection. Findings use the audit-run severities `blocking` or `debt`; this binary ADR gate emits `blocking` for every finding that rejects the ADR.
 
