@@ -68,7 +68,6 @@ It prints the total and non-coordination-note counts over the full changed-file 
 - A coordination note under a path containing spaces remains unquoted and classifies as coordination-only.
 - An unconfigured remote default branch exits nonzero with `error: merge changeset classification failed` and no traceback.
 - Duplicate committed and working-tree paths count once; only exact `PLAN.md` and `ISSUES.md` basenames classify as coordination notes.
-- The classifier writes no files, creates no temporary paths, and leaves cleanup empty; its only subprocess interaction is read-only git inspection.
 
 </script_testing>
 
