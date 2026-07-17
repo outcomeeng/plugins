@@ -74,6 +74,10 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 <prose>
 
+## Changes
+
+- <change>
+
 ## Test plan
 
 - [ ] <verification step>
@@ -101,6 +105,10 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 <prose>
 
+## Changes
+
+- <change>
+
 ## Stack
 
 - Merge after `<stack-base>`.
@@ -118,7 +126,7 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-topology_args=(); stack_body=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); stack_body=('' '## Stack' '' "- Merge after $stack_base."); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' "${stack_body[@]}" '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
+topology_args=(); stack_body=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); stack_body=('' '## Stack' '' "- Merge after $stack_base."); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' "${stack_body[@]}" '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
 ```
 
 Flag rationale:
