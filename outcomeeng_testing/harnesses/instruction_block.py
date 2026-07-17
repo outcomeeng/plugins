@@ -479,6 +479,7 @@ def property_evidence_contract() -> tuple[str, ...]:
 def compliance_evidence_contract() -> tuple[str, ...]:
     """Return the independent case manifest required by compliance evidence."""
     return (
+        "codex_router_bounds_dispatched_verifiers",
         "drift_gate_marks_untracked_root_file_intent_to_add",
         "drift_gate_reports_a_missing_root_instruction_file",
         "drift_gate_skips_missing_obsolete_spx_file",
