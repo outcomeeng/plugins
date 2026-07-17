@@ -12,7 +12,7 @@ Three methodology steps drive all work. Audit gates operate within each step. Se
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
 3. **Apply** — write implementation code that makes tests pass. Node becomes Passing.
 
-Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not durable artifacts.
+`PLAN.md` is git-tracked node-local coordination that authoring, decomposition, application, and handoff workflows may persist; it coordinates work without becoming product truth.
 
 Within these steps:
 
@@ -109,7 +109,7 @@ i_k = 10 + floor(k * 89 / (N + 1))
 
 For N=7: sequence 21, 32, 43, 54, 65, 76, 87.
 
-Fractional indexing (e.g., `20.5-slug`) is the escape hatch when integer gaps are exhausted.
+When integer gaps are exhausted, `/decompose` reassigns sparse integer indices from ordering evidence. Fractional prefixes are invalid.
 
 ### Node states
 
@@ -148,7 +148,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 #### 2. Bootstrap a new Spec Tree
 
 2a. Interview user for product identity, hypothesis, and scope.
-2b. Scaffold `spx/` with product spec, CLAUDE.md, and top-level node stubs.
+2b. Scaffold `spx/` with the product spec, runtime root guide (`AGENTS.md` or `CLAUDE.md`), and top-level node stubs.
 
 #### 3. Author Spec Tree artifacts
 
@@ -392,7 +392,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 2. Interview user for product identity, hypothesis, and scope.
 3. Identify top-level nodes (3–7 concerns), classify as enabler or outcome.
 4. Present scaffold plan and wait for confirmation.
-5. Create `spx/` with product spec, CLAUDE.md, and top-level node stubs.
+5. Create `spx/` with the product spec, runtime root guide (`AGENTS.md` or `CLAUDE.md`), and top-level node stubs.
 6. Recommend next steps (fill assertions with `author`, decompose with `decompose`).
 
 #### `author`
