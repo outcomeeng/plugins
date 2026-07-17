@@ -66,11 +66,11 @@ Required handling: decide whether objective statements may use the artifact subj
 
 ## 7. Skill auditor remediation must preserve runtime terminology
 
-`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation is invalid. `configured_agent` is an authoring-time terminology key used only through `{{! term('configured_agent') !}}`; it renders as `subagent` for Claude and `custom agent` for Codex. The literal phrase "configured agent" is not a valid cross-runtime skill term. The governing prompt standard already prefers imperative, subject-free instructions.
+`skill-auditor` rejected the phrase "the agent" under the prompt-voice rule, then prescribed "the configured agent" as an acceptable replacement. That remediation bypasses the runtime terminology layer: `configured_agent` is an authoring-time key used through `{{! term('configured_agent') !}}`, which renders as `subagent` for Claude and `custom agent` for Codex. The governing prompt standard prefers imperative, subject-free instructions but does not yet forbid the literal phrase "configured agent", and `src/plugins/instructions/skills/audit-subagents/SKILL.md:65,68` still uses that literal phrase. The auditor recommendation and those existing occurrences expose the same unresolved cross-runtime terminology rule.
 
 Required handling:
 
-- Require auditor remediation for banned-subject findings to prefer imperative, subject-free wording.
-- Never recommend an internal terminology key as literal skill prose.
-- When a runtime-specific noun is necessary in authored plugin source, require the canonical terminology expression rather than its internal key name.
+- Declare that cross-runtime skill prose uses imperative, subject-free wording or the canonical terminology expression; the literal internal key name is forbidden.
+- Require auditor remediation for banned-subject findings to follow that rule instead of recommending an internal terminology key as prose.
+- Sweep the existing literal occurrences in `src/plugins/instructions/skills/audit-subagents/SKILL.md` onto imperative wording or `{{! term('configured_agent') !}}` as appropriate.
 - Add an auditor eval case where "the agent" is rejected and "the configured agent" is also rejected as its replacement.
