@@ -6,7 +6,7 @@ All skills in this document belong to the `spec-tree` plugin. Skill names have n
 
 ## Design principles
 
-Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/SKILL.md`](../../src/plugins/spec-tree/skills/understand/SKILL.md) for the authoritative inline foundation.
+Three methodology steps drive all work. Audit gates operate within each step. See `/understand` for the authoritative inline foundation.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
