@@ -147,7 +147,7 @@ Apply category-specific ownership checks to every imported test-infrastructure a
 | Fixture       | Inert whole payload consumed by path or bytes                                          | Isolated tokens, values, expected outputs, or executable exports                                            |
 | Discovery     | Test collection and registration policy                                                | Fixture bodies, domain values, generated cases, or hidden setup policy                                      |
 
-For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source and independent oracle in the inventory. Apply the per-assertion-type litmus questions from `/test-evidence-standards`. A value with no valid owner produces a `source-ownership` finding; an expectation derived from the production path under test produces an `oracle-independence` finding. The finding names the artifact that copied or coupled the value and the semantic owner that must replace it.
+For every case input, expected value, protocol key, command token, status value, rule identifier, and payload member, name its source and independent oracle in the inventory. Apply the per-assertion-type litmus questions from `/test-evidence-standards`. A value with no valid owner produces a `source-ownership` finding; an expectation derived from the production path under test produces an `oracle-independence` finding. The finding's `file` names the artifact that copied or coupled the value. Every `source-ownership` finding sets `remediation_target` to `source-contract`, even when the copied value appears in a harness, generator, fixture, discovery file, or test; the defect location never becomes the semantic owner.
 
 </step>
 
@@ -443,6 +443,12 @@ How to avoid: Step 2b inventories and reads the complete evidence chain before j
 Claude rejected a temporary-directory fixture parameter and a local `observations` binding even though both only received values selected by their owning infrastructure. The proposed remediation moved those handles into the harness, obscuring assertion flow without changing any semantic owner.
 
 How to avoid: Step 3a asks what each binding chooses. Accept parameters and locals that only receive resource handles, observations, source contracts, or generated inputs; reject only bindings that independently choose data, policy, expectations, configuration, or verdict rules.
+
+**Failure 9: Used the defect location as the remediation owner**
+
+Claude correctly found copied protocol fields in a harness and emitted `source-ownership`, then set `remediation_target` to `harness` because that file contained the defect. The verdict failed its structural contract: copied domain truth belongs to a source contract regardless of where the copy appears.
+
+How to avoid: Keep location and ownership separate. Set `file` to the artifact containing the copy and set every `source-ownership` finding's `remediation_target` to `source-contract`.
 
 </failure_modes>
 
