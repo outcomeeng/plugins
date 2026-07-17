@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass.
-allowed-tools: Read, Glob, Grep, Edit, Write, Task, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -57,7 +57,7 @@ If `spx/local/merging.md` defines a custom branch-push command, follow that over
 
 **Step 5 — GATE: Open the PR in its topology state.** Pipe the curated body to gh on stdin via `--body-file -`. A peer PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3). A stacked PR targets its previous stack branch and remains draft until that base merges. Choose the stdin form by harness.
 
-Bind the topology-specific arguments inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments. A stacked branch targets its previous stack branch and remains draft until that base merges.
+Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until that base merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base` branch. Replace `<stack-base>` in the body with that recorded branch before executing the command.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc:
 
@@ -79,6 +79,10 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 <prose>
 
+## Stack
+
+- Merge after `<stack-base>`.
+
 ## Test plan
 
 - [ ] <verification step>
@@ -92,7 +96,7 @@ EOF
 Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
 
 ```bash
-topology_args=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
+topology_args=(); stack_body=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); stack_body=('' '## Stack' '' "- Merge after $stack_base."); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' "${stack_body[@]}" '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
 ```
 
 Flag rationale:
@@ -168,6 +172,7 @@ Adapt by change type:
 | Refactor    | State the no-behavior-change invariant. Test plan: "existing tests still pass".           |
 | Spec        | Link the spec nodes affected; describe what is now declared.                              |
 | Docs        | Drop Test plan; describe what readers gain.                                               |
+| Stacked PR  | Add `## Stack` with a merge-order line naming the full previous stack branch.             |
 
 Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec nodes by full path from `spx/`. No `<self_reference>` violations per /merging-standards.
 

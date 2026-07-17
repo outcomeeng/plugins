@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill,{!% if target == 'claude' %!} Task,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
+allowed-tools: Skill,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -68,7 +68,6 @@ It prints the total and non-coordination-note counts over the full changed-file 
 - A coordination note under a path containing spaces remains unquoted and classifies as coordination-only.
 - An unconfigured remote default branch exits nonzero with `error: merge changeset classification failed` and no traceback.
 - Duplicate committed and working-tree paths count once; only exact `PLAN.md` and `ISSUES.md` basenames classify as coordination notes.
-- The classifier writes no files, creates no temporary paths, and leaves cleanup empty; its only subprocess interaction is read-only git inspection.
 
 </script_testing>
 
