@@ -2,7 +2,7 @@
 name: open-pr
 user-invocable: false
 description: >-
-  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and first management pass.
+  PR opening protocol for VERIFICATION_READINESS, explicit branch publication, topology-appropriate pull-request state, and lifecycle handoff.
 allowed-tools: Read, Glob, Grep, Edit, Write,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
