@@ -1,24 +1,11 @@
 ---
 name: audit-tests
 description: >-
-  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
-  Dispatch test-evidence-auditor to audit test evidence against spec assertions;
-  the main conversation reaches this audit only through that agent.
+  Test-evidence audit methodology for judging behavior-coupled evidence against
+  spec assertions.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
-
-<dispatch_gate>
-
-This audit runs in the test-evidence-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the test-evidence-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
-
-</dispatch_gate>
-
-<shared_standards>
-
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
-
-</shared_standards>
 
 <objective>
 
@@ -26,7 +13,25 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 </objective>
 
-<essential_principles>
+<constraints>
+
+- NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
+- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
+- ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
+- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
+
+</constraints>
+
+<audit_workflow>
+
+<step name="load_standards">
+
+**Step 0: Load shared test-evidence standards**
+
+Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+
+</step>
 
 **PREDICATE AND OWNERSHIP SCREEN, THEN COUPLING.**
 
@@ -52,25 +57,11 @@ The literal rule is applied by reading the test's literals against their sources
 
 Before coupling, inspect every executed test and imported infrastructure artifact. Every behavioral predicate and assertion API call remains lexically in the linked test function or callback. Reject a harness, generator, fixture, controlled implementation, or recording collaborator that accepts an expected outcome, returns a verdict, calls an assertion API, or exposes matcher-shaped verdict methods.
 
-Classify bindings by what they choose. Observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
+Classify bindings by what they choose. Observation aliases, actual-result bindings, imported source-contract aliases, generated parameters, callback inputs, and resource handles are valid when they introduce no data or policy. A framework-provided temporary-directory handle, a local binding that receives a harness observation, and an assertion-local projection over observations are therefore valid. NEVER reject a binding merely because it is a parameter, assignment, alias, or local expression; moving those values into a harness would hide assertion flow and can move the predicate across the seam. Reject bindings that choose cases, expectations, runner settings, property configuration, setup policy, reusable data, generator domains, fixture payloads, or verdict rules. The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independent oracle, or curated eval case data when generation is wasteful and not tractable.
 
 **BINARY VERDICT.**
 
 APPROVED or REJECTED. No middle ground. If any property is missing for any assertion, REJECTED.
-
-</essential_principles>
-
-<constraints>
-
-- NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the caller passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository; establish coverage by reading whether the test drives execution into the assertion-relevant path.
-- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
-- ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
-- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
-
-</constraints>
-
-<audit_workflow>
 
 <step name="load_context">
 
@@ -442,6 +433,12 @@ How to avoid: Step 3a reads declarations before coupling and classifies ownershi
 Claude inspected a linked Python test that imported a harness, then reviewed only three repeated `file.txt` values in the harness and approved them as harness-owned synthetic vocabulary. The harness also declared SPX payload keys, command tokens, producer identities, status values, and expected projection fields. The verdict omitted the imported-artifact inventory and never classified most values.
 
 How to avoid: Step 2b inventories and reads the complete evidence chain before judgment. Step 3a names the source of every protocol value and rejects harness-declared domain truth with `source-ownership`. Approval requires the inventory in verdict metadata.
+
+**Failure 8: Rejected observation and resource bindings by syntax**
+
+Claude rejected a temporary-directory fixture parameter and a local `observations` binding even though both only received values selected by their owning infrastructure. The proposed remediation moved those handles into the harness, obscuring assertion flow without changing any semantic owner.
+
+How to avoid: Step 3a asks what each binding chooses. Accept parameters and locals that only receive resource handles, observations, source contracts, or generated inputs; reject only bindings that independently choose data, policy, expectations, configuration, or verdict rules.
 
 </failure_modes>
 

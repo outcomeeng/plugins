@@ -165,13 +165,17 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define those doubles in `@testing/harnesses/*`; the executed test file imports the harness assertion.
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define controlled implementations and recording collaborators in `@testing/harnesses/*`; the linked test imports their observations and owns the assertion.
 
 ```typescript
-import { assertPaymentGatewayRecordsCharge } from "@testing/harnesses/payments";
+import { createPaymentRecordingContext } from "@testing/harnesses/payments";
 
 test("records charge requests", async () => {
-  await assertPaymentGatewayRecordsCharge(PaymentProcessor);
+  const { processor, request, recordingGateway } = createPaymentRecordingContext(PaymentProcessor);
+
+  await processor.charge(request);
+
+  expect(recordingGateway.recordedCharges).toContainEqual(request);
 });
 ```
 

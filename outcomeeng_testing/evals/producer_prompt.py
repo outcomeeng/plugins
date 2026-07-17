@@ -13,6 +13,7 @@ from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, Target
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
@@ -31,7 +32,13 @@ PROMPT_FILENAME = MATERIALIZED_PROMPT_FILENAME
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PRODUCER_SOURCE_PATHS = tuple(
-    sorted(PROJECT_ROOT.glob("dist/claude/*/skills/audit*tests/SKILL.md"))
+    sorted(
+        producer_path
+        for target in Target
+        for producer_path in PROJECT_ROOT.glob(
+            f"{DIST_DIR_NAME}/{target.value}/*/skills/audit*tests/SKILL.md"
+        )
+    )
 )
 PRODUCER_RELATIVE_PATHS = tuple(
     path.relative_to(PROJECT_ROOT).as_posix() for path in PRODUCER_SOURCE_PATHS

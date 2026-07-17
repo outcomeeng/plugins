@@ -1,7 +1,7 @@
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, AskUserQuestion
 ---
 
 Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.

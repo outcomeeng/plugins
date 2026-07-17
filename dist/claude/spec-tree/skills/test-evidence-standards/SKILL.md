@@ -49,6 +49,8 @@ Rejected bindings choose data or policy inside the assertion file:
 
 Fixture parameters, generated parameters, destructuring, aliases, local variables, and constants can be valid or invalid. Their semantic ownership decides.
 
+A framework-provided temporary-directory handle, a local that receives a harness observation, and a projection written directly inside the linked assertion are valid because they choose no data or policy. NEVER reject a binding because it is local syntax or require moving an observation alias into infrastructure; that move can obscure the predicate seam without changing ownership.
+
 </semantic_binding_ownership>
 
 <case_provenance_and_oracles>
@@ -78,6 +80,7 @@ Apply every question while authoring and auditing:
 5. Can the same harness support two tests making opposite claims about the same observation?
 6. Does infrastructure raise only setup, dependency, lifecycle, or execution errors rather than assertion failures?
 7. Does mutating the assertion-relevant production behavior make the test fail?
+8. What semantic choice does each test-file binding make? If it only receives or projects an owned observation or handle, rejecting it is syntax-based rather than ownership-based.
 
 </common_litmus_questions>
 
