@@ -8,9 +8,8 @@ reconciliation, canonical default-branch-worktree source resolution, and the fil
 single-flight lock coordination that serialized user-scope cache repair. The surviving guards are
 preserved: the change probe compares `base_ref` against the working tree rather than `HEAD`; no
 validation step is skipped when plugin distribution paths change; tool availability is checked
-before any orchestration step, with the tool list narrowed to drop `ps` (which served only the
-removed lock's zombie-owner check). The `codex_cache_preserve` prohibition cites the governing
-decision directly.
+before any orchestration step for `claude`, `codex`, `ps`, and `uv`. The `codex_cache_preserve`
+prohibition cites the governing decision directly.
 
 Pending implementation (production cutover of `just sync-marketplace`):
 
@@ -18,6 +17,10 @@ Pending implementation (production cutover of `just sync-marketplace`):
   marketplace-registration reconciliation, plugin-cache reconciliation, and
   compatibility-symlink handling, and updating `tests/test_sync.scenario.l1.py` and
   `tests/test_sync.compliance.l1.py` to the reduced orchestration.
+- Drop `ps` from `outcomeeng/distribution/sync.py`'s `REQUIRED_TOOLS` and the
+  `tests/test_sync.compliance.l1.py` tool-availability parametrization when the rewrite removes the
+  file-backed single-flight lock, whose zombie-owner check is the only consumer of `ps`; the
+  tool-availability assertion narrows to `claude`, `codex`, and `uv` at that point.
 - Resolve the release-path contradiction: the post-merge "Release marketplace sync" in
   `spx/local/merging.md` invokes `just sync-marketplace`, which under the superseded model
   refreshes the maintainer's live user-scope installation. Move the release path to the
