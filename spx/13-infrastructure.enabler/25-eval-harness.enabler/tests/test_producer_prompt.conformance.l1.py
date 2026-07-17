@@ -2,115 +2,285 @@
 
 from __future__ import annotations
 
-from outcomeeng_testing.evals.producer_prompt import (
-    assert_check_accepts_current_materialized_prompt,
-    assert_check_rejects_stale_materialized_prompt,
-    assert_cli_materializes_and_checks_prompt_drift,
-    assert_cli_materializes_nested_eval_roots,
-    assert_duplicate_producer_section_is_rejected,
-    assert_materialization_preserves_placeholder_text_inside_producer_section,
-    assert_materialization_rejects_noncanonical_prompt_path,
-    assert_materializes_prompt_from_complete_producer_file,
-    assert_producer_file_rejects_section_selector,
-    assert_materialization_rejects_absolute_producer_path,
-    assert_materialization_rejects_producer_path_outside_repo,
-    assert_materialization_rejects_prompt_path_outside_eval_dir,
-    assert_materialization_rejects_prompt_template_alias,
-    assert_materialized_prompt_changes_only_with_selected_section,
-    assert_materializes_prompt_from_named_producer_section,
-    assert_missing_producer_section_is_rejected,
-    assert_non_step_tags_do_not_match_section_name,
-    assert_required_prompt_source_fields_are_rejected_when_missing,
-    assert_selected_section_preserves_nested_step_section,
-    assert_selected_section_rejects_literal_step_closing_delimiter,
-    assert_similar_attribute_names_do_not_match_section_name,
-    assert_unsupported_prompt_source_kind_is_rejected,
+import os
+from pathlib import Path
+
+import pytest
+
+from outcomeeng_evals.producer_prompt import (
+    KIND_FIELD,
+    MATERIALIZED_PROMPT_FILENAME,
+    PRODUCER_FIELD,
+    PRODUCER_FILE_KIND,
+    PROMPT_SOURCE_TABLE,
+    SECTION_FIELD,
+    TEMPLATE_FIELD,
+    PromptMaterializationDrift,
+    ProducerPromptError,
+    materialize_prompt,
+    verify_materialized_prompt,
 )
+from outcomeeng_testing.evals.producer_prompt import (
+    LITERAL_PRODUCER_SECTION_TOKEN,
+    PROMPT_FILENAME,
+    PROMPT_TEMPLATE_FILENAME,
+    ProducerMutation,
+    cli_materialization_observation,
+    materialize_runtime_sections,
+    nested_cli_results,
+    write_eval_workspace,
+    write_prompt_source_definition,
+)
+from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
 
 
-def test_materializes_prompt_from_named_producer_section() -> None:
-    assert_materializes_prompt_from_named_producer_section()
+@with_temp_workspace
+def test_materializes_prompt_from_named_producer_sections(tmp_path: Path) -> None:
+    for observation in materialize_runtime_sections(tmp_path):
+        assert observation.selected_section in observation.prompt_text
+        assert observation.case.relative_path in observation.prompt_text
+        assert observation.case.section_name in observation.prompt_text
 
 
-def test_materializes_prompt_from_complete_producer_file() -> None:
-    assert_materializes_prompt_from_complete_producer_file()
+@with_temp_workspace
+def test_producer_file_rejects_section_selector(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, prompt_source_kind=PRODUCER_FILE_KIND)
+
+    with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_producer_file_rejects_section_selector() -> None:
-    assert_producer_file_rejects_section_selector()
+@with_temp_workspace
+def test_check_accepts_current_materialized_prompt(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path)
+    materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+
+    verify_materialized_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_check_accepts_current_materialized_prompt() -> None:
-    assert_check_accepts_current_materialized_prompt()
+@with_temp_workspace
+def test_check_rejects_stale_materialized_prompt(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path)
+    materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+    workspace.prompt_path.write_text(
+        f"{workspace.prompt_path.read_text(encoding='utf-8')}stale",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PromptMaterializationDrift, match=PROMPT_FILENAME):
+        verify_materialized_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_materialized_prompt_changes_only_with_selected_section() -> None:
-    assert_materialized_prompt_changes_only_with_selected_section()
+@with_temp_workspace
+def test_rejects_prompt_path_outside_eval_dir(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, prompt_path="../../prompt.md")
+
+    with pytest.raises(ProducerPromptError, match="prompt"):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_check_rejects_stale_materialized_prompt() -> None:
-    assert_check_rejects_stale_materialized_prompt()
+@with_temp_workspace
+def test_rejects_prompt_template_alias(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        prompt_template_path=MATERIALIZED_PROMPT_FILENAME,
+    )
+    original_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+
+    with pytest.raises(ProducerPromptError, match=TEMPLATE_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+
+    assert workspace.prompt_path.read_text(encoding="utf-8") == original_prompt
 
 
-def test_materialization_rejects_prompt_path_outside_eval_dir() -> None:
-    assert_materialization_rejects_prompt_path_outside_eval_dir()
+@with_temp_workspace
+def test_rejects_absolute_producer_path(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        producer_relative_path=str(tmp_path.resolve()),
+    )
+
+    with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_materialization_rejects_noncanonical_prompt_path() -> None:
-    assert_materialization_rejects_noncanonical_prompt_path()
+@with_temp_workspace
+def test_rejects_producer_path_outside_repo(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        producer_relative_path="../outside/SKILL.md",
+    )
+
+    with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+
+    assert workspace.repo_root.is_dir()
 
 
-def test_materialization_rejects_prompt_template_alias() -> None:
-    assert_materialization_rejects_prompt_template_alias()
+@with_temp_workspace
+def test_preserves_placeholder_text_inside_selected_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.PLACEHOLDER_TEXT,
+    )
+
+    materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+
+    assert (
+        workspace.prompt_path.read_text(encoding="utf-8").count(
+            LITERAL_PRODUCER_SECTION_TOKEN
+        )
+        == 1
+    )
 
 
-def test_materialization_rejects_absolute_producer_path() -> None:
-    assert_materialization_rejects_absolute_producer_path()
+@with_temp_workspace
+def test_rejects_missing_selected_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.MISSING_SECTION,
+    )
+
+    with pytest.raises(ProducerPromptError, match=workspace.case.section_name):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_materialization_rejects_producer_path_outside_repo() -> None:
-    assert_materialization_rejects_producer_path_outside_repo()
+@with_temp_workspace
+def test_similar_attributes_do_not_select_a_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.SIMILAR_ATTRIBUTES,
+    )
+
+    with pytest.raises(ProducerPromptError, match=workspace.case.section_name):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_materialization_preserves_placeholder_text_inside_producer_section() -> None:
-    assert_materialization_preserves_placeholder_text_inside_producer_section()
+@with_temp_workspace
+def test_non_step_tags_do_not_select_a_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.NON_STEP_TAG,
+    )
+
+    with pytest.raises(ProducerPromptError, match=workspace.case.section_name):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_missing_producer_section_is_rejected() -> None:
-    assert_missing_producer_section_is_rejected()
+@with_temp_workspace
+def test_rejects_duplicate_selected_sections(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.DUPLICATE_SECTION,
+    )
+
+    with pytest.raises(ProducerPromptError, match=workspace.case.section_name):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_similar_attribute_names_do_not_match_section_name() -> None:
-    assert_similar_attribute_names_do_not_match_section_name()
+@with_temp_workspace
+def test_rejects_literal_step_closing_delimiter(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(
+        tmp_path,
+        mutation=ProducerMutation.LITERAL_CLOSING_DELIMITER,
+    )
+
+    with pytest.raises(ProducerPromptError, match="step closing delimiter"):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_non_step_tags_do_not_match_section_name() -> None:
-    assert_non_step_tags_do_not_match_section_name()
+@with_temp_workspace
+def test_preserves_nested_step_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, mutation=ProducerMutation.NESTED_STEP)
+
+    materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+    prompt = workspace.prompt_path.read_text(encoding="utf-8")
+
+    assert f'name="{workspace.case.section_name}"' in prompt
+    assert 'name="nested_step"' in prompt
+    assert "Nested body." in prompt
 
 
-def test_selected_section_rejects_literal_step_closing_delimiter() -> None:
-    assert_selected_section_rejects_literal_step_closing_delimiter()
+@with_temp_workspace
+def test_rejects_unsupported_prompt_source_kind(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, prompt_source_kind="simulation")
+
+    with pytest.raises(ProducerPromptError, match="simulation"):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_selected_section_preserves_nested_step_section() -> None:
-    assert_selected_section_preserves_nested_step_section()
+@with_temp_workspace
+def test_rejects_missing_prompt_source_kind(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, omitted_fields=(KIND_FIELD,))
+
+    with pytest.raises(ProducerPromptError, match=KIND_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_duplicate_producer_section_is_rejected() -> None:
-    assert_duplicate_producer_section_is_rejected()
+@with_temp_workspace
+def test_rejects_missing_prompt_source_producer(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, omitted_fields=(PRODUCER_FIELD,))
+
+    with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_unsupported_prompt_source_kind_is_rejected() -> None:
-    assert_unsupported_prompt_source_kind_is_rejected()
+@with_temp_workspace
+def test_rejects_missing_prompt_source_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, omitted_fields=(SECTION_FIELD,))
+
+    with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_missing_prompt_source_fields_are_rejected() -> None:
-    assert_required_prompt_source_fields_are_rejected_when_missing()
+@with_temp_workspace
+def test_rejects_missing_prompt_source_template(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, omitted_fields=(TEMPLATE_FIELD,))
+
+    with pytest.raises(ProducerPromptError, match=TEMPLATE_FIELD):
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
 
 
-def test_cli_materializes_and_checks_prompt_drift() -> None:
-    assert_cli_materializes_and_checks_prompt_drift()
+@with_temp_workspace
+def test_cli_materializes_and_checks_prompt_drift(tmp_path: Path) -> None:
+    observation = cli_materialization_observation(tmp_path)
+
+    assert observation.write_result.exit_code == os.EX_OK
+    assert PROMPT_FILENAME in observation.write_result.output
+    assert observation.check_result.exit_code == os.EX_OK
+    assert observation.stale_result.exit_code != os.EX_OK
+    assert PROMPT_FILENAME in observation.stale_result.output
+    assert (
+        observation.prompt_path.read_text(encoding="utf-8") == observation.stale_prompt
+    )
+    assert observation.prompt_path.stat().st_mtime_ns == observation.stale_mtime_ns
 
 
-def test_cli_materializes_nested_eval_roots() -> None:
-    assert_cli_materializes_nested_eval_roots()
+@with_temp_workspace
+def test_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
+    write_result, check_result, workspace = nested_cli_results(tmp_path)
+
+    assert write_result.exit_code == os.EX_OK
+    assert check_result.exit_code == os.EX_OK
+    assert str(workspace.prompt_path) in write_result.output
+    assert str(workspace.prompt_path) in check_result.output
+
+
+@with_temp_workspace
+def test_producer_file_definition_omits_section(tmp_path: Path) -> None:
+    workspace = write_eval_workspace(tmp_path, prompt_source_kind=PRODUCER_FILE_KIND)
+    write_prompt_source_definition(
+        workspace.eval_toml,
+        prompt_source_kind=PRODUCER_FILE_KIND,
+        producer_relative_path=workspace.case.relative_path,
+        section_name=workspace.case.section_name,
+        prompt_path=PROMPT_FILENAME,
+        prompt_template_path=PROMPT_TEMPLATE_FILENAME,
+        include_section=False,
+        omitted_fields=(),
+    )
+
+    materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+
+    assert workspace.prompt_path.is_file()
+    assert PROMPT_SOURCE_TABLE in workspace.eval_toml.read_text(encoding="utf-8")

@@ -61,9 +61,9 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or mock away behavior the assertion claims to verify.
 
-## Test files own assertions, not data or configuration
+## Test files own predicates, not data or configuration
 
-An executed test file is a typed assertion file. It owns the assertion flow: arrange the behavior through imported source contracts or infrastructure, execute the behavior, and assert the outcome. It does not own reusable values or execution policy.
+An executed test file is a typed assertion file. Its test function or callback owns every behavioral predicate and assertion API call. It arranges behavior through imported source contracts or infrastructure, executes the behavior, receives observations, and asserts the outcome. Infrastructure owns no expected outcome or verdict logic. The shared `/test-evidence-standards` reference carries the mandatory seam, semantic-binding, case-provenance, oracle-independence, and per-assertion-type litmus questions.
 
 Use these ownership rules before writing the test:
 
@@ -75,7 +75,7 @@ Use these ownership rules before writing the test:
 | Whole-payload samples            | Inert fixtures read, copied, or passed by path when the complete payload shape matters                                     |
 | Curated LLM/eval cases           | Eval case data when generating the case set as JSONL would be wasteful and not tractable                                   |
 
-Do not create variables, constants, fixture parameters, or property-generated parameters in the executed test file. Every value or configuration choice those bindings would carry belongs in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Local functions are rejected when they own runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, harness behavior, or source-owned singleton shapes. Naming a value or wrapping it in a local function does not make it evidence. A renamed test-local declaration is still owned by the wrong layer.
+Judge variables, constants, fixture parameters, property-generated parameters, aliases, and local callbacks by semantic ownership. A binding may receive or rename an imported source contract, generated value, resource handle, callback input, actual result, or harness observation when it introduces no data or policy. Every case, expected result, configuration choice, setup policy, or verdict rule belongs in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independently owned oracle, or curated eval case data when generation is wasteful and not tractable. Naming or wrapping a choice never changes its owner.
 
 Property-based tests need reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
 
@@ -272,7 +272,7 @@ Only now may a test double be used. Match a specific exception.
 | 6. Observability         | The required signal is hidden by the real dependency                                | Spy that records boundary details      |
 | 7. Contract probes       | Need controlled verification at a contract boundary                                 | Contract stub                          |
 
-If no exception applies, do not use a double. Move outward to the lowest real level that can prove the behavior.
+If no exception applies, do not use a double. Move outward to the lowest real level that can prove the behavior. Any permitted controlled implementation or recording collaborator exposes observations only; the linked test owns the predicate.
 
 ## Test double taxonomy
 
@@ -283,7 +283,7 @@ If no exception applies, do not use a double. Move outward to the lowest real le
 | **Fake**    | Simplified working implementation | Time control, combinatorial cost            |
 | **Dummy**   | Placeholder that is never called  | Satisfying type requirements                |
 
-Framework mocks stay forbidden. If call recording is required, supply a spy through dependency injection.
+Framework mocks stay forbidden. If call recording is required, supply a recording collaborator through dependency injection and assert against its recorded observations in the linked test.
 
 ## Trust the library when it already owns the problem
 

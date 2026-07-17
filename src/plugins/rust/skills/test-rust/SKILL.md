@@ -30,7 +30,7 @@ Before writing or revising tests, also check:
 3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
 4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
 5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
-6. Do not declare `const`, `static`, `let`, framework fixture parameters, or property-generated parameters in executed test files; source contracts, `<product>-testing` harnesses, generators, inert fixtures, or eval case data own the values those bindings would hold.
+6. Keep every predicate and assertion macro in the linked test function or callback. Permit `const`, `static`, `let`, framework fixture parameters, and property-generated parameters that only receive actual results, source contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths; reject bindings that choose data, expectations, configuration, setup policy, generator domains, fixture contents, or verdict rules.
 7. Keep test infrastructure — harnesses, generators, and inert fixtures — in the canonical `<product>-testing` location prescribed by `/rust-test-standards`. A repo-local overlay may route to a governing product spec or decision that explicitly amends this contract; the overlay does not redefine the location itself.
 8. Run the repository's Rust validation commands before reporting the tests complete.
 
@@ -72,7 +72,8 @@ Rust test work is complete when:
 - the source-contract-first gate was applied before test predicates were written or repaired
 - `/rust-standards` and `/rust-test-standards` were loaded before test code was written
 - the test shape follows the canonical Rust test standard and repo-local overlays
-- executed test files declare no `const`, `static`, `let`, fixture parameters, or property-generated parameters
+- executed test functions and callbacks own every predicate and assertion macro
+- test-file bindings introduce no case data, expectation, configuration, setup policy, generator domain, fixture content, or verdict rule
 - controlled implementations preserve coupling to the real seam
 - property claims use property-based testing
 - compile-time claims use compile-fail evidence

@@ -4,6 +4,8 @@ description: ALWAYS invoke this skill before writing tests or when learning the 
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
+Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.
+
 <objective>
 Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
 </objective>
@@ -11,6 +13,8 @@ Spec-tree assertion tests that are canonically named, evidence-routed, source-co
 <prerequisite>
 
 **PREREQUISITE**: Read `${CLAUDE_SKILL_DIR}/references/methodology.md` before writing any test.
+
+Apply the complete predicate-seam, semantic-binding, case-provenance, oracle-independence, and assertion-type litmus rules loaded from `/test-evidence-standards`.
 
 That local reference contains:
 
@@ -169,7 +173,9 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 Testing output is sound when:
 
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
-- Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every test keeps all predicates and assertion API calls in the linked test function or callback; infrastructure exposes observations without verdict logic.
+- Every test-file binding introduces no test-owned data, expectation, configuration, setup policy, or verdict rule.
+- Every case and oracle passes the assertion-type litmus questions from `/test-evidence-standards`.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.

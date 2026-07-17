@@ -200,7 +200,7 @@ If a test can only be written by copying source literals, pinning arbitrary exam
 <data_ownership_decision>
 Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
-Executed TypeScript test files do not declare `const`, `let`, or `var` bindings, framework fixture parameters, or property-generated parameters. Every value or configuration choice those bindings would carry belongs in a source contract, `@testing/harnesses/*`, `@testing/generators/*`, an inert fixture read by path, or justified eval case data.
+Executed TypeScript test functions and callbacks own every predicate and assertion API call. A `const`, `let`, `var`, framework fixture parameter, or property-generated parameter may receive an actual result, source-owned contract, generated value, harness observation, callback input, resource handle, or fixture path when it introduces no data or policy. Bindings that choose cases, expected results, configuration, setup policy, generator domains, fixture contents, or verdict rules belong in their semantic owner.
 
 1. **Data that the source imports or should import**
    ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
@@ -452,7 +452,8 @@ TypeScript test guidance follows this standard when:
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
-- Executed test files declare no `const`, `let`, or `var` bindings, fixture parameters, or property-generated parameters
+- Executed test functions and callbacks own every predicate and assertion API call
+- Test-file bindings introduce no case data, expectation, configuration, setup policy, generator domain, fixture content, or verdict rule
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
 - Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - Source-owned values come from the owning production module

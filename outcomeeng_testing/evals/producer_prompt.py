@@ -1,12 +1,15 @@
-"""Marketplace-owned fixtures for producer-derived prompt tests."""
+"""Workspace and observation infrastructure for producer-prompt evidence."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
+from shutil import copy2
 from tempfile import TemporaryDirectory
 
-import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
@@ -21,32 +24,28 @@ from outcomeeng_evals.producer_prompt import (
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
-    PromptMaterializationDrift,
-    ProducerPromptError,
     materialize_prompt,
-    verify_materialized_prompt,
 )
-from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
 
 PROMPT_FILENAME = MATERIALIZED_PROMPT_FILENAME
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
-PRODUCER_RELATIVE_PATH = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
-SECTION_NAME = "audit_tag_validity"
-SELECTED_RULE = "Evidence type must match the claim."
-UNRELATED_RULE = "This surrounding section is not selected."
-LITERAL_PRODUCER_SECTION_TOKEN = "{producer_section}"
-EXIT_SUCCESS = 0
-EXIT_GENERAL_ERROR = 1
-PRODUCER_PROMPT_PROPERTY_SEED = 20260706
-PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
-NONCANONICAL_PROMPT_PROPERTY_SEED = 20260711
-PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
-    "just test "
-    "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.conformance.l1.py::"
-    "test_materialized_prompt_changes_only_with_selected_section"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PRODUCER_SOURCE_PATHS = tuple(
+    sorted(PROJECT_ROOT.glob("dist/claude/*/skills/audit*tests/SKILL.md"))
 )
-RULE_TEXT = st.text(
+PRODUCER_RELATIVE_PATHS = tuple(
+    path.relative_to(PROJECT_ROOT).as_posix() for path in PRODUCER_SOURCE_PATHS
+)
+LITERAL_PRODUCER_SECTION_TOKEN = "{producer_section}"
+PROPERTY_SEED = 20260706
+PROPERTY_EXAMPLES = 30
+NONCANONICAL_PROMPT_SEED = 20260711
+SECTION_TOKEN_SUFFIXES = st.text(
+    alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd")),
+    min_size=1,
+    max_size=32,
+)
+SECTION_BODY_TEXT = st.text(
     alphabet=st.characters(
         blacklist_categories=("Cc", "Cs"),
         blacklist_characters=["<", ">", "\x00"],
@@ -54,535 +53,289 @@ RULE_TEXT = st.text(
     min_size=1,
     max_size=80,
 )
-RULE_TOKEN_SUFFIX = st.text(
-    alphabet=st.characters(
-        whitelist_categories=("Ll", "Lu", "Nd"),
-    ),
-    min_size=1,
-    max_size=32,
-)
 NONCANONICAL_PROMPT_FILENAMES = st.from_regex(
     r"[a-z][a-z0-9_-]{0,20}\.md",
     fullmatch=True,
 ).filter(lambda value: value != MATERIALIZED_PROMPT_FILENAME)
 
 
-@with_temp_workspace
-def assert_materializes_prompt_from_named_producer_section(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path)
-
-    materialize_prompt(eval_toml, repo_root=repo_root)
-
-    prompt_text = (eval_toml.parent / PROMPT_FILENAME).read_text(encoding="utf-8")
-    assert SELECTED_RULE in prompt_text
-    assert UNRELATED_RULE not in prompt_text
-    assert PRODUCER_RELATIVE_PATH in prompt_text
-    assert SECTION_NAME in prompt_text
-
-
-@with_temp_workspace
-def assert_materializes_prompt_from_complete_producer_file(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_source_kind=PRODUCER_FILE_KIND,
-    )
-    eval_dir = eval_toml.parent
-    producer_text = (repo_root / PRODUCER_RELATIVE_PATH).read_text(encoding="utf-8")
-    (eval_dir / PROMPT_TEMPLATE_FILENAME).write_text(
-        "Producer: {producer_path}\n\n{producer_file}\n",
-        encoding="utf-8",
-    )
-    write_prompt_source_definition(
-        eval_toml,
-        prompt_source_kind=PRODUCER_FILE_KIND,
-        include_section=False,
-    )
-
-    materialize_prompt(eval_toml, repo_root=repo_root)
-
-    prompt_text = (eval_dir / PROMPT_FILENAME).read_text(encoding="utf-8")
-    assert producer_text in prompt_text
-    assert PRODUCER_RELATIVE_PATH in prompt_text
-
-
-@with_temp_workspace
-def assert_producer_file_rejects_section_selector(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_source_kind=PRODUCER_FILE_KIND,
-    )
-
-    with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_check_accepts_current_materialized_prompt(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path)
-    materialize_prompt(eval_toml, repo_root=repo_root)
-
-    verify_materialized_prompt(eval_toml, repo_root=repo_root)
-
-
-def assert_materialized_prompt_changes_only_with_selected_section() -> None:
-    @seed(PRODUCER_PROMPT_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
-    @given(
-        rule_suffix=RULE_TOKEN_SUFFIX,
-        unrelated_rule=RULE_TEXT,
-        updated_unrelated_rule=RULE_TEXT,
-    )
-    def assertion(
-        rule_suffix: str,
-        unrelated_rule: str,
-        updated_unrelated_rule: str,
-    ) -> None:
-        materialized_prompt_changes_only_with_selected_section(
-            rule_suffix=rule_suffix,
-            unrelated_rule=unrelated_rule,
-            updated_unrelated_rule=updated_unrelated_rule,
-        )
-
-    try:
-        assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {PRODUCER_PROMPT_PROPERTY_SEED}")
-        error.add_note(f"Replay path: {PRODUCER_PROMPT_PROPERTY_REPLAY_PATH}")
-        raise
-
-
-def materialized_prompt_changes_only_with_selected_section(
-    *,
-    rule_suffix: str,
-    unrelated_rule: str,
-    updated_unrelated_rule: str,
-) -> None:
-    selected_rule = f"selected-token-{rule_suffix}-end"
-    updated_selected_rule = f"updated-token-{rule_suffix}-end"
-    with TemporaryDirectory() as temp_dir:
-        repo_root, eval_toml = write_eval_fixture(Path(temp_dir))
-        producer_path = repo_root / PRODUCER_RELATIVE_PATH
-        prompt_path = eval_toml.parent / PROMPT_FILENAME
-        producer_path.write_text(
-            "\n".join(
-                [
-                    producer_section("other_section", unrelated_rule),
-                    producer_section(SECTION_NAME, selected_rule),
-                ]
-            ),
-            encoding="utf-8",
-        )
-        materialize_prompt(eval_toml, repo_root=repo_root)
-        original_prompt = prompt_path.read_text(encoding="utf-8")
-
-        producer_path.write_text(
-            "\n".join(
-                [
-                    producer_section("other_section", updated_unrelated_rule),
-                    producer_section(SECTION_NAME, selected_rule),
-                ]
-            ),
-            encoding="utf-8",
-        )
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-        assert prompt_path.read_text(encoding="utf-8") == original_prompt
-
-        producer_path.write_text(
-            "\n".join(
-                [
-                    producer_section("other_section", updated_unrelated_rule),
-                    producer_section(SECTION_NAME, updated_selected_rule),
-                ]
-            ),
-            encoding="utf-8",
-        )
-        materialize_prompt(eval_toml, repo_root=repo_root)
-        updated_prompt = prompt_path.read_text(encoding="utf-8")
-
-        assert updated_prompt != original_prompt
-        assert updated_selected_rule in updated_prompt
-        assert selected_rule not in updated_prompt
-
-
-@with_temp_workspace
-def assert_check_rejects_stale_materialized_prompt(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path)
-    (eval_toml.parent / PROMPT_FILENAME).write_text("stale prompt\n", encoding="utf-8")
-
-    with pytest.raises(PromptMaterializationDrift, match=PROMPT_FILENAME):
-        verify_materialized_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_materialization_rejects_prompt_path_outside_eval_dir(
-    tmp_path: Path,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path, prompt_path="../../prompt.md")
-
-    with pytest.raises(ProducerPromptError, match="prompt"):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_materialization_rejects_prompt_template_alias(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_template_path=PROMPT_FILENAME,
-    )
-    original_prompt = (eval_toml.parent / PROMPT_FILENAME).read_text(encoding="utf-8")
-
-    with pytest.raises(ProducerPromptError, match=TEMPLATE_FIELD):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-    assert (eval_toml.parent / PROMPT_FILENAME).read_text(
-        encoding="utf-8"
-    ) == original_prompt
-
-
-@with_temp_workspace
-def assert_materialization_rejects_absolute_producer_path(tmp_path: Path) -> None:
-    absolute_path = tmp_path / "repo" / PRODUCER_RELATIVE_PATH
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        producer_relative_path=str(absolute_path),
-    )
-
-    with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_materialization_rejects_producer_path_outside_repo(
-    tmp_path: Path,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        producer_relative_path="../outside/SKILL.md",
-    )
-
-    with pytest.raises(ProducerPromptError, match=PRODUCER_FIELD):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-    assert repo_root.is_dir()
-
-
-def assert_materialization_rejects_noncanonical_prompt_path() -> None:
-    @seed(NONCANONICAL_PROMPT_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
-    @given(prompt_path=NONCANONICAL_PROMPT_FILENAMES)
-    def assertion(prompt_path: str) -> None:
-        materialization_rejects_noncanonical_prompt_path(prompt_path=prompt_path)
-
-    try:
-        assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {NONCANONICAL_PROMPT_PROPERTY_SEED}")
-        error.add_note(
-            "Replay path: just test "
-            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-            "test_producer_prompt.conformance.l1.py::"
-            "test_materialization_rejects_noncanonical_prompt_path"
-        )
-        raise
-
-
-def materialization_rejects_noncanonical_prompt_path(
-    *,
-    prompt_path: str,
-) -> None:
-    with TemporaryDirectory() as tmp:
-        repo_root, eval_toml = write_eval_fixture(
-            Path(tmp),
-            prompt_path=prompt_path,
-        )
-
-        with pytest.raises(
-            ProducerPromptError,
-            match=MATERIALIZED_PROMPT_FILENAME,
-        ):
-            materialize_prompt(eval_toml, repo_root=repo_root)
-        assert not (eval_toml.parent / prompt_path).exists()
-
-
-@with_temp_workspace
-def assert_materialization_preserves_placeholder_text_inside_producer_section(
-    tmp_path: Path,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        selected_rule=LITERAL_PRODUCER_SECTION_TOKEN,
-    )
-
-    materialize_prompt(eval_toml, repo_root=repo_root)
-
-    prompt_text = (eval_toml.parent / PROMPT_FILENAME).read_text(encoding="utf-8")
-    assert prompt_text.count(LITERAL_PRODUCER_SECTION_TOKEN) == 1
-
-
-@with_temp_workspace
-def assert_missing_producer_section_is_rejected(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path, section_name="missing")
-
-    with pytest.raises(ProducerPromptError, match="missing"):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_similar_attribute_names_do_not_match_section_name(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        include_named_section=False,
-        include_false_positive_attributes=True,
-    )
-
-    with pytest.raises(ProducerPromptError, match=SECTION_NAME):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_non_step_tags_do_not_match_section_name(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        include_named_section=False,
-        include_non_step_named_tag=True,
-    )
-
-    with pytest.raises(ProducerPromptError, match=SECTION_NAME):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_selected_section_rejects_literal_step_closing_delimiter(
-    tmp_path: Path,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        selected_rule="Literal </step> delimiter in prose.",
-    )
-
-    with pytest.raises(ProducerPromptError, match="step closing delimiter"):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_selected_section_preserves_nested_step_section(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        selected_rule=producer_section("nested_step", "Nested body."),
-    )
-
-    prompt_path = materialize_prompt(eval_toml, repo_root=repo_root)
-
-    prompt = prompt_path.read_text(encoding="utf-8")
-    assert f'name="{SECTION_NAME}"' in prompt
-    assert 'name="nested_step"' in prompt
-    assert "Nested body." in prompt
-
-
-@with_temp_workspace
-def assert_duplicate_producer_section_is_rejected(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path, duplicate_section=True)
-
-    with pytest.raises(ProducerPromptError, match=SECTION_NAME):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_unsupported_prompt_source_kind_is_rejected(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_source_kind="simulation",
-    )
-
-    with pytest.raises(ProducerPromptError, match="simulation"):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-def assert_missing_prompt_source_fields_are_rejected(
-    tmp_path: Path,
-    omitted_field: str,
-) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        omitted_prompt_source_fields=(omitted_field,),
-    )
-
-    with pytest.raises(ProducerPromptError, match=omitted_field):
-        materialize_prompt(eval_toml, repo_root=repo_root)
-
-
-@with_temp_workspace
-def assert_required_prompt_source_fields_are_rejected_when_missing(
-    tmp_path: Path,
-) -> None:
-    for omitted_field in (KIND_FIELD, PRODUCER_FIELD, SECTION_FIELD, TEMPLATE_FIELD):
-        assert_missing_prompt_source_fields_are_rejected(
-            tmp_path / omitted_field,
-            omitted_field,
-        )
-
-
-@with_temp_workspace
-def assert_cli_materializes_and_checks_prompt_drift(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path)
-    runner = CliRunner()
-
-    write_result = runner.invoke(
-        main,
-        [
-            "materialize-prompts",
-            str(eval_toml.parent),
-            "--repo-root",
-            str(repo_root),
-        ],
-    )
-
-    assert write_result.exit_code == EXIT_SUCCESS
-    assert PROMPT_FILENAME in write_result.output
-
-    prompt_path = eval_toml.parent / PROMPT_FILENAME
-    materialized_prompt = prompt_path.read_text(encoding="utf-8")
-    materialized_mtime_ns = prompt_path.stat().st_mtime_ns
-
-    check_result = runner.invoke(
-        main,
-        [
-            "materialize-prompts",
-            str(eval_toml.parent),
-            "--repo-root",
-            str(repo_root),
-            "--check",
-        ],
-    )
-
-    assert check_result.exit_code == EXIT_SUCCESS
-    assert prompt_path.read_text(encoding="utf-8") == materialized_prompt
-    assert prompt_path.stat().st_mtime_ns == materialized_mtime_ns
-
-    prompt_path.write_text("stale prompt\n", encoding="utf-8")
-    stale_mtime_ns = prompt_path.stat().st_mtime_ns
-
-    stale_result = runner.invoke(
-        main,
-        [
-            "materialize-prompts",
-            str(eval_toml.parent),
-            "--repo-root",
-            str(repo_root),
-            "--check",
-        ],
-    )
-
-    assert stale_result.exit_code == EXIT_GENERAL_ERROR
-    assert PROMPT_FILENAME in stale_result.output
-    assert prompt_path.read_text(encoding="utf-8") == "stale prompt\n"
-    assert prompt_path.stat().st_mtime_ns == stale_mtime_ns
-
-
-@with_temp_workspace
-def assert_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(tmp_path)
-    evals_root = repo_root / "spx" / "node" / "evals"
-    prompt_path = eval_toml.parent / PROMPT_FILENAME
-    runner = CliRunner()
-
-    write_result = runner.invoke(
-        main,
-        [
-            "materialize-prompts",
-            str(evals_root),
-            "--repo-root",
-            str(repo_root),
-        ],
-    )
-
-    assert write_result.exit_code == EXIT_SUCCESS
-    assert str(prompt_path) in write_result.output
-    materialized_prompt = prompt_path.read_text(encoding="utf-8")
-    materialized_mtime_ns = prompt_path.stat().st_mtime_ns
-
-    check_result = runner.invoke(
-        main,
-        [
-            "materialize-prompts",
-            str(evals_root),
-            "--repo-root",
-            str(repo_root),
-            "--check",
-        ],
-    )
-
-    assert check_result.exit_code == EXIT_SUCCESS
-    assert str(prompt_path) in check_result.output
-    assert prompt_path.read_text(encoding="utf-8") == materialized_prompt
-    assert prompt_path.stat().st_mtime_ns == materialized_mtime_ns
-
-
-def write_eval_fixture(
+class ProducerMutation(StrEnum):
+    NONE = "none"
+    MISSING_SECTION = "missing-section"
+    DUPLICATE_SECTION = "duplicate-section"
+    SIMILAR_ATTRIBUTES = "similar-attributes"
+    NON_STEP_TAG = "non-step-tag"
+    LITERAL_CLOSING_DELIMITER = "literal-closing-delimiter"
+    NESTED_STEP = "nested-step"
+    PLACEHOLDER_TEXT = "placeholder-text"
+
+
+@dataclass(frozen=True)
+class ProducerCase:
+    relative_path: str
+    section_name: str
+
+
+@dataclass(frozen=True)
+class ProducerWorkspace:
+    repo_root: Path
+    eval_toml: Path
+    producer_path: Path
+    prompt_path: Path
+    case: ProducerCase
+
+
+@dataclass(frozen=True)
+class MaterializedProducer:
+    case: ProducerCase
+    producer_text: str
+    selected_section: str
+    prompt_text: str
+
+
+@dataclass(frozen=True)
+class SectionMutationObservation:
+    original_prompt: str
+    unrelated_prompt: str
+    selected_prompt: str
+    original_token: str
+    updated_token: str
+
+
+@dataclass(frozen=True)
+class CliMaterializationObservation:
+    write_result: Result
+    check_result: Result
+    stale_result: Result
+    prompt_path: Path
+    materialized_prompt: str
+    materialized_mtime_ns: int
+    stale_prompt: str
+    stale_mtime_ns: int
+
+
+def producer_cases() -> tuple[ProducerCase, ...]:
+    """Return runtime producers that expose at least one named step section."""
+    cases: list[ProducerCase] = []
+    for relative_path, source_path in zip(
+        PRODUCER_RELATIVE_PATHS,
+        PRODUCER_SOURCE_PATHS,
+        strict=True,
+    ):
+        source = source_path.read_text(encoding="utf-8")
+        section_name = first_named_step(source)
+        if section_name is not None:
+            cases.append(ProducerCase(relative_path, section_name))
+    return tuple(cases)
+
+
+def first_named_step(source: str) -> str | None:
+    """Read the first exact ``<step name=...>`` opening from runtime text."""
+    marker = '<step name="'
+    start = source.find(marker)
+    if start < 0:
+        return None
+    name_start = start + len(marker)
+    name_end = source.find('"', name_start)
+    if name_end < 0:
+        return None
+    return source[name_start:name_end]
+
+
+def selected_section_text(source: str, section_name: str) -> str:
+    """Extract one runtime step with a deliberately simple independent oracle."""
+    opening = f'<step name="{section_name}">'
+    start = source.index(opening)
+    end = source.index("</step>", start) + len("</step>")
+    return source[start:end]
+
+
+def write_eval_workspace(
     tmp_path: Path,
     *,
-    section_name: str = SECTION_NAME,
-    selected_rule: str = SELECTED_RULE,
-    duplicate_section: bool = False,
-    include_named_section: bool = True,
-    include_false_positive_attributes: bool = False,
-    include_non_step_named_tag: bool = False,
+    case: ProducerCase | None = None,
     prompt_source_kind: str = PRODUCER_SECTION_KIND,
     prompt_path: str = PROMPT_FILENAME,
     prompt_template_path: str = PROMPT_TEMPLATE_FILENAME,
-    producer_relative_path: str = PRODUCER_RELATIVE_PATH,
-    omitted_prompt_source_fields: tuple[str, ...] = (),
-) -> tuple[Path, Path]:
+    producer_relative_path: str | None = None,
+    section_name: str | None = None,
+    include_section: bool = True,
+    omitted_fields: tuple[str, ...] = (),
+    mutation: ProducerMutation = ProducerMutation.NONE,
+) -> ProducerWorkspace:
+    """Create an isolated eval workspace from shipped runtime producer files."""
+    selected_case = case or first_producer_case()
     repo_root = tmp_path / "repo"
     eval_dir = repo_root / "spx" / "node" / "evals" / "rule"
-    producer_path = repo_root / PRODUCER_RELATIVE_PATH
     eval_dir.mkdir(parents=True)
-    producer_path.parent.mkdir(parents=True)
+    copy_runtime_producer_corpus(repo_root)
 
-    producer_sections = [producer_section("other_section", UNRELATED_RULE)]
-    if include_false_positive_attributes:
-        producer_sections.extend(
-            [
-                producer_section_with_attribute(
-                    attribute_name="data-name",
-                    attribute_value=SECTION_NAME,
-                    body=UNRELATED_RULE,
-                ),
-                producer_section_with_attribute(
-                    attribute_name="noname",
-                    attribute_value=SECTION_NAME,
-                    body=UNRELATED_RULE,
-                ),
-            ]
+    selected_relative_path = producer_relative_path or selected_case.relative_path
+    producer_path = repo_root / selected_case.relative_path
+    if mutation is not ProducerMutation.NONE:
+        producer_path.write_text(
+            mutate_runtime_producer(
+                producer_path.read_text(encoding="utf-8"),
+                selected_case.section_name,
+                mutation,
+            ),
+            encoding="utf-8",
         )
-    if include_non_step_named_tag:
-        producer_sections.append(producer_example(SECTION_NAME, UNRELATED_RULE))
-    if include_named_section:
-        producer_sections.append(producer_section(SECTION_NAME, selected_rule))
-    if duplicate_section:
-        producer_sections.append(producer_section(SECTION_NAME, selected_rule))
-    producer_path.write_text("\n".join(producer_sections), encoding="utf-8")
 
-    (eval_dir / prompt_template_path).write_text(
-        "\n".join(
-            [
-                "Producer: {producer_path}",
-                "Section: {producer_section_name}",
-                "",
-                "{producer_section}",
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    template_text = (
+        "Producer: {producer_path}\n\n{producer_file}\n"
+        if prompt_source_kind == PRODUCER_FILE_KIND
+        else "Producer: {producer_path}\nSection: {producer_section_name}\n\n"
+        "{producer_section}\n"
     )
+    (eval_dir / prompt_template_path).write_text(template_text, encoding="utf-8")
+    write_prompt_source_definition(
+        eval_dir / EVAL_TOML_FILENAME,
+        prompt_source_kind=prompt_source_kind,
+        producer_relative_path=selected_relative_path,
+        section_name=section_name or selected_case.section_name,
+        prompt_path=prompt_path,
+        prompt_template_path=prompt_template_path,
+        include_section=include_section,
+        omitted_fields=omitted_fields,
+    )
+    (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
+    return ProducerWorkspace(
+        repo_root=repo_root,
+        eval_toml=eval_dir / EVAL_TOML_FILENAME,
+        producer_path=producer_path,
+        prompt_path=eval_dir / PROMPT_FILENAME,
+        case=selected_case,
+    )
+
+
+def first_producer_case() -> ProducerCase:
+    """Return one source-derived section case or report an unusable runtime corpus."""
+    cases = producer_cases()
+    if not cases:
+        raise RuntimeError(
+            "runtime audit-test producer corpus has no named step sections"
+        )
+    return cases[0]
+
+
+def copy_runtime_producer_corpus(repo_root: Path) -> None:
+    """Copy all shipped audit-test skills with repository-relative paths intact."""
+    if not PRODUCER_SOURCE_PATHS:
+        raise RuntimeError("runtime audit-test producer corpus is empty")
+    for source_path, relative_path in zip(
+        PRODUCER_SOURCE_PATHS,
+        PRODUCER_RELATIVE_PATHS,
+        strict=True,
+    ):
+        destination = repo_root / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        copy2(source_path, destination)
+
+
+def materialize_runtime_files(tmp_path: Path) -> tuple[MaterializedProducer, ...]:
+    """Materialize every shipped audit-test skill as a whole-file producer."""
+    observations: list[MaterializedProducer] = []
+    for index, relative_path in enumerate(PRODUCER_RELATIVE_PATHS):
+        case = ProducerCase(relative_path, first_producer_case().section_name)
+        workspace = write_eval_workspace(
+            tmp_path / f"producer-{index}",
+            case=case,
+            prompt_source_kind=PRODUCER_FILE_KIND,
+            include_section=False,
+        )
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+        producer_text = workspace.producer_path.read_text(encoding="utf-8")
+        observations.append(
+            MaterializedProducer(
+                case=case,
+                producer_text=producer_text,
+                selected_section="",
+                prompt_text=workspace.prompt_path.read_text(encoding="utf-8"),
+            )
+        )
+    return tuple(observations)
+
+
+def materialize_runtime_sections(tmp_path: Path) -> tuple[MaterializedProducer, ...]:
+    """Materialize one source-derived named section from each eligible producer."""
+    observations: list[MaterializedProducer] = []
+    for index, case in enumerate(producer_cases()):
+        workspace = write_eval_workspace(tmp_path / f"section-{index}", case=case)
+        producer_text = workspace.producer_path.read_text(encoding="utf-8")
+        materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+        observations.append(
+            MaterializedProducer(
+                case=case,
+                producer_text=producer_text,
+                selected_section=selected_section_text(
+                    producer_text, case.section_name
+                ),
+                prompt_text=workspace.prompt_path.read_text(encoding="utf-8"),
+            )
+        )
+    return tuple(observations)
+
+
+def mutate_runtime_producer(
+    source: str,
+    section_name: str,
+    mutation: ProducerMutation,
+) -> str:
+    """Apply one contract-derived mutation to a copied runtime producer."""
+    section = selected_section_text(source, section_name)
+    opening = f'<step name="{section_name}">'
+    body = section.removeprefix(opening).removesuffix("</step>")
+    replacements = {
+        ProducerMutation.MISSING_SECTION: section.replace(
+            opening,
+            '<step name="missing-runtime-section">',
+            1,
+        ),
+        ProducerMutation.DUPLICATE_SECTION: f"{section}\n{section}",
+        ProducerMutation.SIMILAR_ATTRIBUTES: section.replace(
+            opening,
+            f'<step data-name="{section_name}" noname="{section_name}">',
+            1,
+        ),
+        ProducerMutation.NON_STEP_TAG: section.replace(
+            opening, f'<example name="{section_name}">', 1
+        ).replace(
+            "</step>",
+            "</example>",
+            1,
+        ),
+        ProducerMutation.LITERAL_CLOSING_DELIMITER: f"{opening}{body}literal </step> delimiter\n</step>",
+        ProducerMutation.NESTED_STEP: f'{opening}{body}<step name="nested_step">Nested body.</step>\n</step>',
+        ProducerMutation.PLACEHOLDER_TEXT: f"{opening}\n{LITERAL_PRODUCER_SECTION_TOKEN}\n</step>",
+    }
+    replacement = replacements.get(mutation)
+    if replacement is None:
+        return source
+    return source.replace(section, replacement, 1)
+
+
+def write_prompt_source_definition(
+    eval_toml: Path,
+    *,
+    prompt_source_kind: str,
+    producer_relative_path: str,
+    section_name: str,
+    prompt_path: str,
+    prompt_template_path: str,
+    include_section: bool,
+    omitted_fields: tuple[str, ...],
+) -> None:
+    """Write one eval definition from source-owned prompt field names."""
     prompt_source_lines = [
         f'{KIND_FIELD} = "{prompt_source_kind}"',
         f'{PRODUCER_FIELD} = "{producer_relative_path}"',
-        f'{SECTION_FIELD} = "{section_name}"',
-        f'{TEMPLATE_FIELD} = "{prompt_template_path}"',
     ]
-    omitted = set(omitted_prompt_source_fields)
-    (eval_dir / EVAL_TOML_FILENAME).write_text(
+    if include_section:
+        prompt_source_lines.append(f'{SECTION_FIELD} = "{section_name}"')
+    prompt_source_lines.append(f'{TEMPLATE_FIELD} = "{prompt_template_path}"')
+    omitted = set(omitted_fields)
+    eval_toml.write_text(
         "\n".join(
             [
                 'title = "producer prompt"',
@@ -600,75 +353,145 @@ def write_eval_fixture(
         ),
         encoding="utf-8",
     )
-    (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
-    return repo_root, eval_dir / EVAL_TOML_FILENAME
 
 
-def write_prompt_source_definition(
-    eval_toml: Path,
-    *,
-    prompt_source_kind: str,
-    include_section: bool,
-) -> None:
-    prompt_source_lines = [
-        f'{KIND_FIELD} = "{prompt_source_kind}"',
-        f'{PRODUCER_FIELD} = "{PRODUCER_RELATIVE_PATH}"',
+def cli_materialization_observation(tmp_path: Path) -> CliMaterializationObservation:
+    """Run write, current-check, and stale-check CLI paths and return observations."""
+    workspace = write_eval_workspace(tmp_path)
+    runner = CliRunner()
+    command = [
+        "materialize-prompts",
+        str(workspace.eval_toml.parent),
+        "--repo-root",
+        str(workspace.repo_root),
     ]
-    if include_section:
-        prompt_source_lines.append(f'{SECTION_FIELD} = "{SECTION_NAME}"')
-    prompt_source_lines.append(f'{TEMPLATE_FIELD} = "{PROMPT_TEMPLATE_FILENAME}"')
-    eval_toml.write_text(
-        "\n".join(
-            [
-                'title = "producer prompt"',
-                'cases = "cases.jsonl"',
-                f'prompt = "{PROMPT_FILENAME}"',
-                "",
-                f"[{PROMPT_SOURCE_TABLE}]",
-                *prompt_source_lines,
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    write_result = runner.invoke(main, command)
+    materialized_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+    materialized_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
+    check_result = runner.invoke(main, [*command, "--check"])
+    stale_prompt = f"{materialized_prompt}\nstale\n"
+    workspace.prompt_path.write_text(stale_prompt, encoding="utf-8")
+    stale_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
+    stale_result = runner.invoke(main, [*command, "--check"])
+    return CliMaterializationObservation(
+        write_result=write_result,
+        check_result=check_result,
+        stale_result=stale_result,
+        prompt_path=workspace.prompt_path,
+        materialized_prompt=materialized_prompt,
+        materialized_mtime_ns=materialized_mtime_ns,
+        stale_prompt=stale_prompt,
+        stale_mtime_ns=stale_mtime_ns,
     )
 
 
-def producer_section(name: str, body: str) -> str:
-    return "\n".join(
-        [
-            f'<step name="{name}">',
-            "",
-            body,
-            "",
-            "</step>",
-        ]
+def nested_cli_results(tmp_path: Path) -> tuple[Result, Result, ProducerWorkspace]:
+    """Run write and check from the evals ancestor rather than the rule directory."""
+    workspace = write_eval_workspace(tmp_path)
+    runner = CliRunner()
+    command = [
+        "materialize-prompts",
+        str(workspace.repo_root / "spx" / "node" / "evals"),
+        "--repo-root",
+        str(workspace.repo_root),
+    ]
+    return (
+        runner.invoke(main, command),
+        runner.invoke(main, [*command, "--check"]),
+        workspace,
     )
 
 
-def producer_section_with_attribute(
-    *,
-    attribute_name: str,
-    attribute_value: str,
-    body: str,
-) -> str:
-    return "\n".join(
-        [
-            f'<step {attribute_name}="{attribute_value}">',
-            "",
-            body,
-            "",
-            "</step>",
-        ]
+def run_section_mutation_property(
+    predicate: Callable[[SectionMutationObservation], None],
+) -> None:
+    """Generate section mutations while leaving the predicate in the linked test."""
+
+    @seed(PROPERTY_SEED)
+    @settings(max_examples=PROPERTY_EXAMPLES)
+    @given(
+        token_suffix=SECTION_TOKEN_SUFFIXES,
+        unrelated_body=SECTION_BODY_TEXT,
+        updated_unrelated_body=SECTION_BODY_TEXT,
     )
+    def exercise(
+        token_suffix: str,
+        unrelated_body: str,
+        updated_unrelated_body: str,
+    ) -> None:
+        with TemporaryDirectory() as temp_dir:
+            workspace = write_eval_workspace(Path(temp_dir))
+            source = workspace.producer_path.read_text(encoding="utf-8")
+            selected = selected_section_text(source, workspace.case.section_name)
+            original_token = f"selected-token-{token_suffix}-end"
+            updated_token = f"updated-token-{token_suffix}-end"
+            selected_with_token = selected.replace(
+                f'<step name="{workspace.case.section_name}">',
+                f'<step name="{workspace.case.section_name}">\n{original_token}',
+                1,
+            )
+            source_with_token = source.replace(selected, selected_with_token, 1)
+            workspace.producer_path.write_text(
+                f"{unrelated_body}\n{source_with_token}",
+                encoding="utf-8",
+            )
+            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+            original_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+            workspace.producer_path.write_text(
+                f"{updated_unrelated_body}\n{source_with_token}",
+                encoding="utf-8",
+            )
+            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+            unrelated_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+            workspace.producer_path.write_text(
+                f"{updated_unrelated_body}\n{source_with_token.replace(original_token, updated_token, 1)}",
+                encoding="utf-8",
+            )
+            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+            predicate(
+                SectionMutationObservation(
+                    original_prompt=original_prompt,
+                    unrelated_prompt=unrelated_prompt,
+                    selected_prompt=workspace.prompt_path.read_text(encoding="utf-8"),
+                    original_token=original_token,
+                    updated_token=updated_token,
+                )
+            )
+
+    try:
+        exercise()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {PROPERTY_SEED}")
+        error.add_note(
+            "Replay path: just test "
+            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
+            "test_producer_prompt.property.l1.py"
+        )
+        raise
 
 
-def producer_example(name: str, body: str) -> str:
-    return "\n".join(
-        [
-            f'<example name="{name}">',
-            "",
-            body,
-            "",
-            "</example>",
-        ]
-    )
+def run_noncanonical_prompt_property(
+    predicate: Callable[[ProducerWorkspace, str], None],
+) -> None:
+    """Generate noncanonical prompt names and pass each workspace to the test."""
+
+    @seed(NONCANONICAL_PROMPT_SEED)
+    @settings(max_examples=PROPERTY_EXAMPLES)
+    @given(prompt_path=NONCANONICAL_PROMPT_FILENAMES)
+    def exercise(prompt_path: str) -> None:
+        with TemporaryDirectory() as temp_dir:
+            predicate(
+                write_eval_workspace(Path(temp_dir), prompt_path=prompt_path),
+                prompt_path,
+            )
+
+    try:
+        exercise()
+    except AssertionError as error:
+        error.add_note(f"Hypothesis seed: {NONCANONICAL_PROMPT_SEED}")
+        error.add_note(
+            "Replay path: just test "
+            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
+            "test_producer_prompt.property.l1.py"
+        )
+        raise

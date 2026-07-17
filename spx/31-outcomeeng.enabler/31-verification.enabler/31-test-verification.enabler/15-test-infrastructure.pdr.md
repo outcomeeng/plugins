@@ -24,13 +24,17 @@ For Rust, Cargo normalizes hyphens to underscores in import paths: package `<pro
 
 Each language plugin declares its normative path in this table or in a PDR amendment that extends this table. Language ADRs govern implementation mechanics such as `tsconfig` path mapping, Python package discovery, Cargo workspace configuration, or Go module and `internal/` placement.
 
-The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares one evidence type per test file, so the contents of `spx/<node>/tests/` are typed assertion files only; harnesses, generators, and inert fixtures carry no assertions of their own and live elsewhere. Test infrastructure is production code for the methodology — it implements behavior, exposes interfaces that tests depend on, and can invalidate downstream evidence when it drifts — differing from product code only in purpose: it enables test assertions instead of shipping product behavior.
+The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares one evidence type per test file, so the contents of `spx/<node>/tests/` are typed assertion files only. The executed test owns every behavioral predicate and assertion API call. Harnesses, generators, and inert fixtures carry no predicates or assertions of their own and live elsewhere. Test infrastructure is production code for the methodology — it implements behavior, exposes interfaces that tests depend on, and can invalidate downstream evidence when it drifts — differing from product code only in purpose: it enables test assertions instead of shipping product behavior.
 
 ## Category Semantics
 
 **Source contracts come first.** Source modules expose the domain contracts tests need: protocol values, command names, status values, rule identifiers, message identifiers, schemas, registries, constructors, typed factories, or other observable source-owned APIs. When a test for existing behavior can only pass by copying source literals, pinning arbitrary example objects, mocking away the behavior under test, or hiding values in test infrastructure, the source code under test is improved first.
 
 **Harnesses manage context and resources.** A harness mediates access to real behavior or real local/remote infrastructure. It owns setup, teardown, lifecycle, cleanup, mandatory dependency checks, and diagnostics for resources such as temporary filesystems, browsers, product binaries, local services, APIs, databases, Docker containers, and remote credentialed endpoints. It does not own arbitrary domain data and does not replace the behavior an assertion claims to verify.
+
+Harnesses expose observations, resource handles, or callback inputs to the executed test. They never call an assertion API, return a pass/fail verdict, accept an expected outcome, or expose verdict-shaped helpers such as `*_succeeds`, `is_valid`, `was_called_with`, or `assert_called`. Controlled implementations and recording collaborators preserve the real dependency boundary and expose observations; the linked test states what those observations mean.
+
+**Bindings are judged by semantic ownership.** A variable, parameter, destructuring binding, or local alias in an executed test is valid when it only receives or renames an observation, source-owned contract, generated value, or resource handle selected elsewhere and introduces no data, expected result, setup policy, runner configuration, or verdict rule. A binding is invalid when it chooses a domain member, case, expected result, seed, retry count, fixture payload, setup policy, or assertion policy. Syntax never decides ownership by itself.
 
 Property-based test harnesses own execution configuration: seed selection, run counts, replay input, and failure diagnostics. A failing property run reports enough replay data for the same generated case to run again, and the executed test file does not own those settings through local variables, constants, or framework options.
 
@@ -77,6 +81,16 @@ Test infrastructure cannot make a weaker evidence shape impersonate a stronger o
 - A Scenario assertion requires a behavior-relevant case whose inputs and expected outputs are owned by source contracts, generated domains, or whole-payload fixtures; arbitrary example bags do not establish domain truth.
 - A Compliance assertion with `[test]` evidence exercises a real violating case or rule oracle; a passing-only example does not prove enforcement.
 
+The case source and oracle remain independent of the implementation author and the code path under test:
+
+- A Scenario case is the concrete interaction declared by the spec or a real whole-payload fixture; an implementation-derived example bag is invalid.
+- A Mapping case set is the complete finite source-owned domain, with expectations derived independently from the implementation mapping.
+- A Property case set comes from a generator over the declared domain, while the invariant lives in the executed test and the generator does not reuse the production acceptance function.
+- A Conformance oracle is external to the implementation under test: a schema, reference implementation, standard tool, or separately owned contract.
+- A Compliance case follows the governing rule and includes a real violating input; disabling the enforcement makes the linked test fail.
+
+Two mutation checks expose invalid seams and oracles. Inverting the predicate changes only the linked test; any required harness change means the harness encodes the assertion. Mutating or disabling the production behavior makes the evidence fail; continued success means the case source, oracle, or execution path is not independent.
+
 ## Spec Traceability
 
 A test-infrastructure artifact is traceable to the spec tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
@@ -118,8 +132,8 @@ The decision accepts these trade-offs:
 ## Product properties
 
 - **Placement and derivability**: every test-infrastructure artifact lives at the language's normative path outside `spx/` and outside any `tests/` directory, and every such artifact is governed by a naturally placed spec node — so a methodology user derives the category from the implementation home or artifact behavior, derives the governing node from the evidence chain, and scans a test's imports to know whether each imported artifact is governed by this PDR.
-- **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, and harnesses manage resources, access to behavior, property-run configuration, replay, and diagnostics; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
-- **Full-chain audit**: test audits inspect the complete test-infrastructure chain before approving evidence, naming the exact artifact that weakens evidence and the evidence property affected — not only the visible test file.
+- **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, harnesses manage resources and expose observations, and the linked test alone owns predicates and assertion calls; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
+- **Full-chain audit**: test audits inspect the complete test-infrastructure chain, semantic binding ownership, case provenance, and oracle independence before approving evidence, naming the exact artifact that weakens evidence and the evidence property affected — not only the visible test file.
 
 ## Verification
 
@@ -129,10 +143,13 @@ The decision accepts these trade-offs:
 - ALWAYS: test harness, generator, and fixture implementations live at the language's normative path, outside `spx/` and outside any `tests/` directory ([audit])
 - ALWAYS: source modules expose the protocol values, registries, constructors, schemas, typed factories, or other observable contracts that tests need; tests and test infrastructure consume those source contracts instead of recreating them ([audit])
 - ALWAYS: harnesses manage setup, teardown, cleanup, resource lifecycle, dependency checks, and access to real behavior, preserving coupling to the behavior an assertion claims to verify ([audit])
+- ALWAYS: the linked executed test owns every behavioral predicate and assertion API call; harnesses expose observations or resource handles and never accept expected outcomes, return verdicts, call assertion APIs, or expose verdict-shaped helpers ([audit])
+- ALWAYS: test-file bindings are judged by what they choose — observation and handle aliases are valid when they introduce no data or policy, while bindings that choose cases, expectations, configuration, setup policy, or verdict rules belong to their semantic owner ([audit])
 - ALWAYS: property-based tests route seed selection, run counts, replay input, and failure diagnostics through spec-governed harnesses; executed test files do not own property-run configuration ([audit])
 - ALWAYS: generators represent variable input domains with meaningful variation, composition, shrinking, or systematic exploration; source-owned singleton shapes come from source constructors, registries, or typed factories ([audit])
 - ALWAYS: fixtures are inert whole-payload inputs read from disk, copied into temporary products, or passed by path to the code or tool under test; executed tests do not consume fixture exports ([audit])
 - ALWAYS: test audits inspect imported harnesses, generators, and fixture references before approving evidence, and findings name the exact test-infrastructure artifact plus the evidence property affected ([audit])
+- ALWAYS: every scenario, mapping, property, conformance, and compliance case has assertion-type-appropriate provenance and an oracle independent of the implementation path under test; inverting the predicate changes only the linked test, and mutating the production behavior makes the evidence fail ([audit])
 - ALWAYS: spec assertions for test-infrastructure artifacts pass the same code audit, test evidence audit, and architecture audit as any other production-code node ([audit])
 - ALWAYS: language test, standards, and audit skills teach the path, ownership, generator, fixture, harness, and full-chain audit rules from this decision for their language surface ([audit])
 - ALWAYS: the methodology — across skills, references, templates, examples, and audit findings — uses the term "infrastructure" for this category and never "support" as the category name ([audit])
@@ -145,4 +162,5 @@ The decision accepts these trade-offs:
 - NEVER: a fixture file stores isolated strings, numbers, protocol tokens, expected outputs, command names, status values, rule identifiers, message identifiers, or edge-case sets as test data ([audit])
 - NEVER: an executed test imports, requires, or consumes exports from fixture modules; fixtures are read, copied, or passed by path as inert input artifacts ([audit])
 - NEVER: a harness replaces the behavior under test with a mock, fake, stub, monkeypatch, intercepted network response, or equivalent mechanism while the assertion claims to verify that behavior ([audit])
+- NEVER: a harness or controlled collaborator encodes the linked test's predicate through a boolean verdict, expected-value parameter, assertion call, matcher, or verdict-shaped observation method ([audit])
 - NEVER: a property, mapping, scenario, or compliance assertion relies on test infrastructure that weakens the evidence type it names; framework syntax or directory placement cannot upgrade example evidence into property, mapping, or compliance evidence ([audit])

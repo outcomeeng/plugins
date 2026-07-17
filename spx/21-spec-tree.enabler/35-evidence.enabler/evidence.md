@@ -22,5 +22,7 @@ Every assertion is classified through three nested levels:
 - ALWAYS: select the verification type by fallback — test when a deterministic test can verify the assertion, else evaluate when the producer emits a parseable structured verdict, else audit ([audit])
 - ALWAYS: under the test verification type, select the assertion type from the assertion's quantifier — a universal (ALWAYS/NEVER/for-all) takes mapping, conformance, compliance, or property; an existential (one specific interaction) takes scenario ([audit])
 - ALWAYS: check four evidence properties in order (coupling, falsifiability, alignment, coverage) — a test missing any property has zero evidentiary value ([audit])
+- ALWAYS: `/test` and `/audit-tests` load one shared test-evidence standard for predicate ownership, semantic binding ownership, assertion-type case provenance, and oracle independence, so authored tests and audits apply identical rules ([audit])
+- ALWAYS: the linked executed test alone owns behavioral predicates and assertion API calls; test infrastructure exposes observations and resources without encoding the expected verdict ([audit])
 - NEVER: infer an assertion type from the section or heading a rule sits under — a MUST/NEVER rule under a `## Compliance` heading does not imply the compliance assertion type; the type follows the assertion's quantifier ([audit])
 - NEVER: exclude specified nodes from linting — style is checked regardless of implementation existence ([audit])
