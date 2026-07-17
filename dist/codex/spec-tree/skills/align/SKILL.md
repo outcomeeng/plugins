@@ -72,7 +72,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 - **Missing section**: Template has `## Purpose` but file does not
 - **Name mismatch**: File has `## Problem` where template expects `## Purpose`
-- **Unrecognized assertion type**: Assertion heading not in the five types defined by `assertion-types.md` (Scenarios, Mappings, Conformance, Properties, Compliance)
+- **Unrecognized assertion type**: Assertion heading not in the five types defined by live `/understand` `<assertion_types>` (Scenarios, Mappings, Conformance, Properties, Compliance)
 
 **Do NOT report:**
 
@@ -199,7 +199,7 @@ Placement:
 - {finding} (ref: what-goes-where)
 
 Downstream alignment:
-- {finding} (ref: durable-map decision_to_spec_alignment)
+- {finding} (ref: /understand decision_to_spec_alignment)
 
 ---
 

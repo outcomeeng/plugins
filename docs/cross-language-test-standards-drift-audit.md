@@ -57,7 +57,7 @@ The active Python, TypeScript, and Rust test-standard skills mostly share the sa
 
 1. Author a shared credentialed-evidence rule, or author a Rust execution-level child node that mirrors the Python and TypeScript fail-loud `l3` rule.
 2. Decide whether source-owned-value and source-testability detail should remain per-language or move into a shared PDR with language appendices.
-3. Clarify the verification vocabulary so `reviewing` is not presented as a standards-conformance activity and so the active `review-changes` prompt does not imply that unloaded `standardizing-*` skills are in scope. Reconcile `verification-kinds.md`, the reviewing node, `review-changes`, and the review taxonomy surfaces that feed it.
+3. Clarify the verification vocabulary so `reviewing` is not presented as a standards-conformance activity and so the active `review-changes` prompt does not imply that unloaded `standardizing-*` skills are in scope. Reconcile inline `/understand` `<verification_model>`, the reviewing node, `review-changes`, and the review taxonomy surfaces that feed it.
 
 **Python skill fixes.**
 

@@ -10,7 +10,7 @@ Verification ownership spans all five types, not only the deterministic ones a C
 
 ## Scope
 
-**The changeset** is the files changed between the base ref and HEAD (`git diff <base>...<head>`) and the spec-tree node(s) that govern them — resolved by inverse navigation (a changed file → the tests that import it → the assertions linking those tests → the containing node), taking the lowest common ancestor when the change spans several nodes.
+**The changeset** is the files changed between the base ref and HEAD (`git diff <base>...<head>`) and the spec-tree node(s) that govern them. When changed files span several nodes, their lowest common ancestor governs the combined verification scope.
 
 Verification runs over the changeset. The verdict mode determines whether CI widens that scope:
 
@@ -30,7 +30,7 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 5. Deterministic verification (validate, test, evaluate) runs over the changeset locally and over the whole repository in CI; agentic verification (review, audit) runs over the changeset both locally and in CI, per the Scope table.
 6. Passing deterministic verification is the floor: it shows the changed code meets the deterministic checks that exist, establishes nothing about review or audit, and never on its own authorizes publishing.
 7. A valid review or audit finding is a defect class: the agent fixes every same-class instance across the touched node(s), and a single-site fix stands only when a sweep shows no parallel instance.
-8. An agentic verification gate confirms an artifact the agent has already stabilized by reading it; it is not the loop that discovers the design.
+8. An agentic verification gate receives an exact committed changeset after applicable deterministic verification passes; any later change invalidates that verdict.
 9. The main agent brings the deterministic types (validate, test, evaluate) to passing on the changeset before it dispatches an agentic type (review, audit); an agentic verification run reads and judges the already-passing changeset and never re-runs deterministic verification. Each deterministic check runs to passing once on the changeset, not once per verifier — repeating it during every audit and review only multiplies cost. CI re-runs all verification over the whole repository, so a deterministic regression the local changeset run missed is still caught.
 
 ## Verification
@@ -51,6 +51,6 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 - ALWAYS: deterministic verification runs over the changeset locally and over the whole repository in CI; agentic verification runs over the changeset both locally and in CI ([audit])
 - NEVER: passing deterministic verification on its own authorizes publishing — it establishes nothing about review or audit ([audit])
 - ALWAYS: a valid review or audit finding is fixed as a defect class across the touched node(s), a single-site fix standing only when a sweep shows no parallel instance ([audit])
-- ALWAYS: an agentic verification gate confirms an artifact already stabilized by the agent's reading, not the loop that discovers the design ([audit])
+- ALWAYS: an agentic verification gate receives an exact committed changeset after applicable deterministic verification passes, and any later change invalidates that verdict ([audit])
 - ALWAYS: the main agent brings deterministic verification (validate, test, evaluate) to passing on the changeset before dispatching an agentic verification (review, audit) ([audit])
 - NEVER: an agentic verification run (review, audit) runs deterministic verification (validate, test, evaluate) — the main agent passes it on the changeset before dispatch, and CI re-runs all verification over the whole repository; repeating it during each agentic verification only multiplies cost ([audit])

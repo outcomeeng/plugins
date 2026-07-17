@@ -20,14 +20,10 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Templates and examples live in the understanding skill's directory (`${CLAUDE_SKILL_DIR}/../understand/`):
+Use the template and example paths exposed by `<SPEC_TREE_FOUNDATION>`:
 
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/examples/` — filled specs for reference
+- Product, ADR, PDR, enabler, and outcome template paths
+- The examples directory path — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -152,7 +148,7 @@ Use `AskUserQuestion` for operator-owned gaps. Do not ask about information alre
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
+Read the appropriate template path exposed by `<SPEC_TREE_FOUNDATION>`. Fill it using the gathered content.
 
 **Voice rules** (from live `/understand` `<atemporal_voice>`):
 
@@ -198,7 +194,7 @@ Before writing files, check:
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
 - [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
-- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per the `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>`)
 
 </step>
 
@@ -217,7 +213,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md`.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Use the `excluded-nodes` path exposed by `<SPEC_TREE_FOUNDATION>`.
 5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**
@@ -290,7 +286,7 @@ How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verifie
 
 Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
-How to avoid: Apply the decision table from `node-types.md` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
+How to avoid: Apply live `/understand` `<node_model>` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
 
 **Failure 4: Index collision with existing sibling**
 

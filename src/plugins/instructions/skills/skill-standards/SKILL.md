@@ -293,6 +293,12 @@ Don't over-engineer simple skills. Don't under-specify complex ones.
 
 </xml_structure>
 
+<eager_foundation_exception>
+
+When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception requires the same material on every invocation, removal of mandatory secondary reads, separate conditional detail, internal consistency, improved effectiveness, and a rendered payload of at most 40,000 Unicode code points measured by every audit. Never use it to inline optional detail or avoid routing.
+
+</eager_foundation_exception>
+
 {!% if target == 'claude' %!}
 <progressive_disclosure>
 
@@ -305,15 +311,7 @@ SKILL.md is an overview. Reference files carry detail. Claude loads reference fi
 - Reference files over 100 lines need a table of contents at the top, so partial reads still see the full scope.
 - Use forward slashes in every path — `references/guide.md`, never `references\guide.md`. Works across platforms.
 
-**Eager-foundation exception.** When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception applies only when all conditions hold:
-
-- the same material is required on every fresh invocation;
-- inlining removes mandatory secondary reads rather than adding optional detail;
-- conditional operational detail, templates, examples, and overlays remain separate;
-- the inlined sections are internally consistent and materially improve invocation effectiveness; and
-- the rendered eager payload contains at most 40,000 Unicode code points; every audit records the measured count, rejects a larger payload, and checks effectiveness and internal consistency.
-
-Do not use the exception to inline optional detail or avoid routing. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
+Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
 **Token efficiency:** simple task loads SKILL.md only (~500 tokens); medium loads SKILL.md + one reference (~1000); complex loads SKILL.md + multiple (~2000+).
 
@@ -336,15 +334,7 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 
 Keep SKILL.md under 500 lines unless the eager-foundation exception below applies. Move detailed patterns into descriptively named files one level below `references/`. Cite every bundled reference from the skill or the workflow that requires it. Avoid nested reference chains, orphaned files, and duplicated standards.
 
-**Eager-foundation exception.** When a foundation skill requires the same material on every fresh invocation, inline that canonical material and govern the total eager payload instead of the SKILL.md line count. The exception applies only when all conditions hold:
-
-- the same material is required on every fresh invocation;
-- inlining removes mandatory secondary reads rather than adding optional detail;
-- conditional operational detail, templates, examples, and overlays remain separate;
-- the inlined sections are internally consistent and materially improve invocation effectiveness; and
-- the rendered eager payload contains at most 40,000 Unicode code points; every audit records the measured count, rejects a larger payload, and checks effectiveness and internal consistency.
-
-Do not use the exception to inline optional detail or avoid routing. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
+Apply `<eager_foundation_exception>`. A 500-line overview followed immediately by mandatory references is not progressive disclosure; total eagerly loaded content is the relevant cost.
 
 </progressive_disclosure>
 {!% endif %!}

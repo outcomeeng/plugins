@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared enablers. NEVER restructure the spec tree without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Skill
 ---
 
 <objective>
@@ -16,7 +16,7 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 
 References and workflows:
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — content taxonomy (what belongs where)
+- The `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>` — content taxonomy (what belongs where)
 - Live `/understand` `<node_model>` — enabler vs outcome
 - `/decompose` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
@@ -182,7 +182,7 @@ After applying any operation:
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per the `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>`)
 
 </step>
 

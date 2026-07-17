@@ -26,10 +26,9 @@ Read the conditional operational sources below before composing. Use the live in
 
 - Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
-- `${SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- `${SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- The `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- The `product-domain-shapes` path exposed by `<SPEC_TREE_FOUNDATION>` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- The enabler and outcome template paths exposed by `<SPEC_TREE_FOUNDATION>`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -190,7 +189,7 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
-**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+**What an index encodes.** Index assignment is the inverse of live `/understand` `<context_loading_rule>`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
 
 **Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
 
@@ -243,7 +242,7 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the enabler or outcome template from `${SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the enabler or outcome template path exposed by `<SPEC_TREE_FOUNDATION>`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.
