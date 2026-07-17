@@ -1,3 +1,19 @@
+<table_of_contents>
+
+- `<overview>` — artifact taxonomy and ADR/PDR distinction
+- `<adr>` — architecture decision content
+- `<pdr>` — product decision content
+- `<enabler_spec>` — infrastructure declarations
+- `<outcome_spec>` — hypothesis declarations
+- `<test_files>` — assertion evidence files
+- `<test_infrastructure>` — harness, generator, and fixture placement
+- `<enforcement>` — structural rule implementation
+- `<coordination_notes>` — PLAN.md and ISSUES.md boundaries
+- `<flow>` — truth and execution flow
+- `<common_misplacements>` — placement failure patterns
+
+</table_of_contents>
+
 <overview>
 
 Every artifact in the Spec Tree has a specific purpose. Content placed in the wrong artifact creates confusion and duplication.
