@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Bash(spx diagnose:*), Bash(just marketplace-source-root:*), Read
+allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -42,7 +42,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 <workflow>
 
-**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Then invoke `/merging-standards` before reading or applying any merge-overlay confirmation, preflight, gate, deployment, or release policy. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per CLAUDE.md. `spx/local/merging.md` configures the GitHub-PR transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`.
+**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Then invoke `/merging-standards` before reading or applying any merge-overlay confirmation, preflight, gate, deployment, or release policy. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the explicit PR number, URL, or branch pointer, record it verbatim as `pr_pointer`, and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per CLAUDE.md. `spx/local/merging.md` configures the GitHub-PR transport (merge command, deployment and release declarations, pre-flight) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`.
 
 **Step 2 — State the plan; confirm only if the overlay opts in.** Read `spx/local/merging.md` (via `/merging-standards` `<repo_local_overlay>`) for the pre-mutation-confirmation setting. By default — no setting declared — state the plan in prose (the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise) and proceed autonomously. Normal harness approval for a consumer-defined command remains a tool-security boundary and resumes the same governed step after approval. Only when the overlay opts into a pre-mutation confirmation, present that same plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before the first mutating action — never branch, commit, push, open, or merge before that confirmation. Establishing *what* to ship in Empty mode (Step 1, `/interview`) is requirements work, not this confirmation, and always proceeds.
 
@@ -52,9 +52,9 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Step 4 — Commit.** Invoke `/commit-changes`. Branch off the base first when the work sits on the base branch.
 
-**Step 5 — Open.** Invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR in the review state its topology permits — ready for a peer branch, or draft for a stacked branch awaiting its base. Skip this step in Open PR mode.
+**Step 5 — Open.** Invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR in the review state its topology permits — ready for a peer branch, or draft for a stacked branch awaiting its base. Record the returned full PR number as `pr_pointer`. Skip this step in Open PR mode.
 
-**Step 6 — Tail-delegate management and closeout.** Invoke `/manage-pr`. It evaluates `MERGE_READINESS`, merges under the gate, runs any declared deploy and release phases, continues remaining in-scope work, and invokes `/handoff` plain when the session is complete. Treat `/manage-pr` as the terminal lifecycle protocol once invoked: do not run a second continuation or closeout path after it returns.
+**Step 6 — Tail-delegate management and closeout.** Invoke `/manage-pr <pr_pointer>` with the exact pointer recorded by Step 1 or Step 5. It evaluates `MERGE_READINESS`, merges under the gate, runs any declared deploy and release phases, continues remaining in-scope work, and invokes `/handoff` plain when the session is complete. Treat `/manage-pr` as the terminal lifecycle protocol once invoked: do not run a second continuation or closeout path after it returns.
 
 </workflow>
 
@@ -84,6 +84,6 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The invocation resolved to the GitHub-PR transport from its arguments and live repository state, and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
-- `/manage-pr` owned the terminal management lifecycle after delegation: merge, safe cleanup, declared deploy and release phases, continuation of in-scope work, and `/handoff` plain only when the session was complete; or it stopped at an explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
+- `/manage-pr` received the exact `pr_pointer` resolved or returned earlier and owned the terminal management lifecycle after delegation: merge, safe cleanup, declared deploy and release phases, continuation of in-scope work, and `/handoff` plain only when the session was complete; or it stopped at an explicit gate — an unmet `VERIFICATION_READINESS` or `MERGE_READINESS` predicate, or a withheld `DEPLOYMENT_READINESS` or `RELEASE_READINESS` — surfaced to the user.
 
 </success_criteria>
