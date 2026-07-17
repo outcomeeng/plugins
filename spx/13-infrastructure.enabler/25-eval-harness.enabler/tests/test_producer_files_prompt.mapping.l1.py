@@ -37,6 +37,7 @@ def test_whole_file_materialization_uses_shipped_runtime_producers() -> None:
             )
         )
         for observation in observations:
+            assert observation.case.section_name == ""
             assert observation.producer_text in observation.prompt_text
             assert observation.case.relative_path in observation.prompt_text
 

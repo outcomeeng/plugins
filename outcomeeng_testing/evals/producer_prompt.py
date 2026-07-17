@@ -284,7 +284,7 @@ def materialize_runtime_files(tmp_path: Path) -> tuple[MaterializedProducer, ...
     """Materialize every shipped audit-test skill as a whole-file producer."""
     observations: list[MaterializedProducer] = []
     for index, relative_path in enumerate(PRODUCER_RELATIVE_PATHS):
-        case = ProducerCase(relative_path, first_producer_case().section_name)
+        case = ProducerCase(relative_path, "")
         workspace = write_eval_workspace(
             tmp_path / f"producer-{index}",
             case=case,
