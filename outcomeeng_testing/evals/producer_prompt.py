@@ -122,7 +122,7 @@ class CliMaterializationObservation:
 
 
 def producer_cases() -> tuple[ProducerCase, ...]:
-    """Return runtime producers that expose at least one named step section."""
+    """Return every named step section from every runtime producer."""
     cases: list[ProducerCase] = []
     for relative_path, source_path in zip(
         PRODUCER_RELATIVE_PATHS,
@@ -130,23 +130,29 @@ def producer_cases() -> tuple[ProducerCase, ...]:
         strict=True,
     ):
         source = source_path.read_text(encoding="utf-8")
-        section_name = first_named_step(source)
-        if section_name is not None:
+        for section_name in named_steps(source):
             cases.append(ProducerCase(relative_path, section_name))
     return tuple(cases)
 
 
+def named_steps(source: str) -> tuple[str, ...]:
+    """Read every exact ``<step name=...>`` opening from runtime text."""
+    marker = '<step name="'
+    names: list[str] = []
+    cursor = 0
+    while (start := source.find(marker, cursor)) >= 0:
+        name_start = start + len(marker)
+        name_end = source.find('"', name_start)
+        if name_end < 0:
+            break
+        names.append(source[name_start:name_end])
+        cursor = name_end + 1
+    return tuple(names)
+
+
 def first_named_step(source: str) -> str | None:
     """Read the first exact ``<step name=...>`` opening from runtime text."""
-    marker = '<step name="'
-    start = source.find(marker)
-    if start < 0:
-        return None
-    name_start = start + len(marker)
-    name_end = source.find('"', name_start)
-    if name_end < 0:
-        return None
-    return source[name_start:name_end]
+    return next(iter(named_steps(source)), None)
 
 
 def selected_section_text(source: str, section_name: str) -> str:
@@ -413,68 +419,80 @@ def run_section_mutation_property(
     predicate: Callable[[SectionMutationObservation], None],
 ) -> None:
     """Generate section mutations while leaving the predicate in the linked test."""
+    cases = producer_cases()
+    if not cases:
+        raise RuntimeError("runtime audit-test producer corpus has no named sections")
+    examples_per_case = max(1, PROPERTY_EXAMPLES // len(cases))
 
-    @seed(PROPERTY_SEED)
-    @settings(max_examples=PROPERTY_EXAMPLES)
-    @given(
-        token_suffix=SECTION_TOKEN_SUFFIXES,
-        unrelated_body=SECTION_BODY_TEXT,
-        updated_unrelated_body=SECTION_BODY_TEXT,
-    )
-    def exercise(
-        token_suffix: str,
-        unrelated_body: str,
-        updated_unrelated_body: str,
-    ) -> None:
+    for index, case in enumerate(cases):
         with TemporaryDirectory() as temp_dir:
-            workspace = write_eval_workspace(Path(temp_dir))
+            workspace = write_eval_workspace(
+                Path(temp_dir) / f"section-{index}",
+                case=case,
+            )
             source = workspace.producer_path.read_text(encoding="utf-8")
-            selected = selected_section_text(source, workspace.case.section_name)
-            original_token = f"selected-token-{token_suffix}-end"
-            updated_token = f"updated-token-{token_suffix}-end"
-            selected_with_token = selected.replace(
-                f'<step name="{workspace.case.section_name}">',
-                f'<step name="{workspace.case.section_name}">\n{original_token}',
-                1,
-            )
-            source_with_token = source.replace(selected, selected_with_token, 1)
-            workspace.producer_path.write_text(
-                f"{unrelated_body}\n{source_with_token}",
-                encoding="utf-8",
-            )
-            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
-            original_prompt = workspace.prompt_path.read_text(encoding="utf-8")
-            workspace.producer_path.write_text(
-                f"{updated_unrelated_body}\n{source_with_token}",
-                encoding="utf-8",
-            )
-            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
-            unrelated_prompt = workspace.prompt_path.read_text(encoding="utf-8")
-            workspace.producer_path.write_text(
-                f"{updated_unrelated_body}\n{source_with_token.replace(original_token, updated_token, 1)}",
-                encoding="utf-8",
-            )
-            materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
-            predicate(
-                SectionMutationObservation(
-                    original_prompt=original_prompt,
-                    unrelated_prompt=unrelated_prompt,
-                    selected_prompt=workspace.prompt_path.read_text(encoding="utf-8"),
-                    original_token=original_token,
-                    updated_token=updated_token,
-                )
-            )
 
-    try:
-        exercise()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {PROPERTY_SEED}")
-        error.add_note(
-            "Replay path: just test "
-            "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-            "test_producer_prompt.property.l1.py"
-        )
-        raise
+            @seed(PROPERTY_SEED + index)
+            @settings(max_examples=examples_per_case)
+            @given(
+                token_suffix=SECTION_TOKEN_SUFFIXES,
+                unrelated_body=SECTION_BODY_TEXT,
+                updated_unrelated_body=SECTION_BODY_TEXT,
+            )
+            def exercise(
+                token_suffix: str,
+                unrelated_body: str,
+                updated_unrelated_body: str,
+            ) -> None:
+                selected = selected_section_text(source, workspace.case.section_name)
+                original_token = f"selected-token-{token_suffix}-end"
+                updated_token = f"updated-token-{token_suffix}-end"
+                selected_with_token = selected.replace(
+                    f'<step name="{workspace.case.section_name}">',
+                    f'<step name="{workspace.case.section_name}">\n{original_token}',
+                    1,
+                )
+                source_with_token = source.replace(selected, selected_with_token, 1)
+                workspace.producer_path.write_text(
+                    f"{unrelated_body}\n{source_with_token}",
+                    encoding="utf-8",
+                )
+                materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+                original_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+                workspace.producer_path.write_text(
+                    f"{updated_unrelated_body}\n{source_with_token}",
+                    encoding="utf-8",
+                )
+                materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+                unrelated_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+                workspace.producer_path.write_text(
+                    f"{updated_unrelated_body}\n{source_with_token.replace(original_token, updated_token, 1)}",
+                    encoding="utf-8",
+                )
+                materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
+                predicate(
+                    SectionMutationObservation(
+                        original_prompt=original_prompt,
+                        unrelated_prompt=unrelated_prompt,
+                        selected_prompt=workspace.prompt_path.read_text(
+                            encoding="utf-8"
+                        ),
+                        original_token=original_token,
+                        updated_token=updated_token,
+                    )
+                )
+
+            try:
+                exercise()
+            except AssertionError as error:
+                error.add_note(f"Producer: {case.relative_path}#{case.section_name}")
+                error.add_note(f"Hypothesis seed: {PROPERTY_SEED + index}")
+                error.add_note(
+                    "Replay path: just test "
+                    "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
+                    "test_producer_prompt.property.l1.py"
+                )
+                raise
 
 
 def run_noncanonical_prompt_property(

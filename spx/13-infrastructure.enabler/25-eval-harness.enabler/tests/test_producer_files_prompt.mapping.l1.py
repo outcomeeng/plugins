@@ -1,4 +1,4 @@
-"""Conformance evidence over the shipped runtime producer corpus."""
+"""Mapping evidence over the shipped runtime producer corpus."""
 
 from pathlib import Path
 

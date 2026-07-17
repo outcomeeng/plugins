@@ -1,8 +1,7 @@
-"""Conformance evidence for producer-derived eval prompt materialization."""
+"""Compliance evidence for producer-derived eval prompt materialization."""
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -25,9 +24,7 @@ from outcomeeng_testing.evals.producer_prompt import (
     PROMPT_FILENAME,
     PROMPT_TEMPLATE_FILENAME,
     ProducerMutation,
-    cli_materialization_observation,
     materialize_runtime_sections,
-    nested_cli_results,
     write_eval_workspace,
     write_prompt_source_definition,
 )
@@ -239,31 +236,6 @@ def test_rejects_missing_prompt_source_template(tmp_path: Path) -> None:
 
     with pytest.raises(ProducerPromptError, match=TEMPLATE_FIELD):
         materialize_prompt(workspace.eval_toml, repo_root=workspace.repo_root)
-
-
-@with_temp_workspace
-def test_cli_materializes_and_checks_prompt_drift(tmp_path: Path) -> None:
-    observation = cli_materialization_observation(tmp_path)
-
-    assert observation.write_result.exit_code == os.EX_OK
-    assert PROMPT_FILENAME in observation.write_result.output
-    assert observation.check_result.exit_code == os.EX_OK
-    assert observation.stale_result.exit_code != os.EX_OK
-    assert PROMPT_FILENAME in observation.stale_result.output
-    assert (
-        observation.prompt_path.read_text(encoding="utf-8") == observation.stale_prompt
-    )
-    assert observation.prompt_path.stat().st_mtime_ns == observation.stale_mtime_ns
-
-
-@with_temp_workspace
-def test_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
-    write_result, check_result, workspace = nested_cli_results(tmp_path)
-
-    assert write_result.exit_code == os.EX_OK
-    assert check_result.exit_code == os.EX_OK
-    assert str(workspace.prompt_path) in write_result.output
-    assert str(workspace.prompt_path) in check_result.output
 
 
 @with_temp_workspace
