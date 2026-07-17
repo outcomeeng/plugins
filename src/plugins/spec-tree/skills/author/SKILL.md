@@ -1,7 +1,7 @@
 ---
 name: author
 description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, {{! tool('ask_user') !}}
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(spx validation markdown:*), Bash(spx spec status:*), {{! tool('ask_user') !}}
 ---
 
 <objective>
