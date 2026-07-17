@@ -20,7 +20,7 @@ Deployment and release recognition, merge command, and local deterministic verif
 
 <workflow>
 
-Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
+Walk these steps in order. Verification, review, push, and open continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step; harness approval and the overlay's pre-mutation confirmation are distinct boundaries.
 
 **Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
 
@@ -123,10 +123,18 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 ```
 
-Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
+Programmatic runners that require one physical command line use `printf` with one argument per output line. Select the peer or stacked form after topology classification. Each command may wrap visually in a rendered view; keep each as one physical shell line, with `<branch>` resolved before composing it.
+
+Peer PR:
 
 ```bash
-topology_args=(); stack_body=(); if [ "$topology" = "stacked" ]; then topology_args=(--base "$stack_base" --draft); stack_body=('' '## Stack' '' "- Merge after $stack_base."); fi; printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' "${stack_body[@]}" '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" "${topology_args[@]}"
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+```
+
+Stacked PR:
+
+```bash
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' "- Merge after $stack_base." '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "$stack_base" --draft
 ```
 
 Flag rationale:
@@ -211,6 +219,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 <shell_scope>
 
 Run consumer-defined commands from `{{! file('root_guide') !}}` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
+After approval, continue the governed step without introducing a separate lifecycle-confirmation decision.
 
 </shell_scope>
 

@@ -39,7 +39,7 @@ The `reviews` field carries formal review submissions. The `comments` field carr
 
 <workflow>
 
-Walk these steps on each management pass. Routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. The only pauses are the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`, plus the action-token emissions when a gate withholds.
+Walk these steps on each management pass. Inspect, classify, rebase, re-review, push, and foreground PR-check wait continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step. The only lifecycle pauses are the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`, plus the action-token emissions when a gate withholds.
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. Then invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool.
 
@@ -251,6 +251,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --r
 <shell_scope>
 
 Run consumer-defined commands from `{{! file('root_guide') !}}` or `spx/local/merging.md` through normal tool approval when they fall outside the narrow Bash grants in frontmatter. Never widen `allowed-tools` during execution.
+After approval, continue the governed step without introducing a separate lifecycle-confirmation decision.
 
 </shell_scope>
 
