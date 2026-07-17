@@ -133,7 +133,7 @@ For each assertion:
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
-If a covered link uses a legacy name, record the imperfection and rename the test immediately with `git mv` when the canonical target is unambiguous. Use request_user_input only when the rename changes ownership, scope, cost, risk, or an unresolved product choice. Update the spec link in Step 6.
+If a covered link uses a legacy name, record the imperfection and its planned canonical target. Use request_user_input when the rename changes ownership, scope, cost, risk, or an unresolved product choice. Execute an unambiguous rename only in Step 6 after GATE A passes, then update the spec link in Step 8.
 
 Report the evidence gap summary before proceeding.
 
@@ -154,9 +154,21 @@ Document the routing decision for each assertion.
 
 </step>
 
+<step name="gate_before_file_creation">
+
+**Step 5 / GATE A — Evidence plan before file creation**
+
+For every planned test file, record `assertion_type`, `execution_level`, `canonical_filename`, `source_contract`, `boundary_or_exception`, and `owner_node`. Pass only when all six values are resolved, the assertion type and level are valid enum values, the filename exactly matches the language's canonical pattern, the owner node determines one unambiguous `tests/` path, and that path does not conflict with an unrelated existing file.
+
+If any check fails, report the failed field and STOP. Do not call Write, Edit, or `git mv` before this gate passes for that file.
+
+</step>
+
 <step name="generate_scaffolds">
 
-**Step 5: Generate test scaffolds**
+**Step 6: Generate test scaffolds**
+
+Execute each GATE A-approved legacy rename with `git mv` before creating new files.
 
 For each assertion needing a new test:
 
@@ -172,9 +184,19 @@ Delegate language-specific structure to `/test-python` or `/test-rust` or `/test
 
 </step>
 
+<step name="gate_before_link_mutation">
+
+**Step 7 / GATE B — Evidence target before spec-link mutation**
+
+For every created or renamed test, require all of these checks to pass: Read succeeds at the recorded path; its basename equals `canonical_filename`; `tests/{canonical_filename}` resolves from the owning spec directory; the file exercises the recorded assertion and source contract; and the delegated language test workflow reports its own required checks complete.
+
+If any check fails, report the failed path or contract and STOP before editing the spec. Never add a link to a missing, misnamed, or unverified target.
+
+</step>
+
 <step name="update_links">
 
-**Step 6: Update spec assertion links**
+**Step 8: Update spec assertion links**
 
 After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification, `[eval]` for LLM-driven behavior that emits a parseable structured verdict, or `[audit]` for semantic constraints requiring agent judgment (`[review]` is the legacy spelling of `[audit]`).
 
@@ -182,7 +204,7 @@ After creating test files, update the spec to add `([test](tests/{filename}))` l
 
 <step name="report">
 
-**Step 7: Report evidence summary**
+**Step 9: Report evidence summary**
 
 Report which assertions have tests, which do not, and which are stale:
 
@@ -207,15 +229,42 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 </cross_cutting_assertions>
 
+<failure_modes>
+
+<unresolved_routing>
+What: A test is created after guessing source ownership, execution level, or boundary viability.
+Why: The evidence can pass while proving a different contract or exercising the wrong system boundary.
+Avoid: Require every GATE A field and stop on the first unresolved value.
+</unresolved_routing>
+
+<ambiguous_legacy_rename>
+What: A legacy test is renamed even though its owner or canonical target is ambiguous.
+Why: The move can break another node's evidence link or silently change assertion ownership.
+Avoid: Use `git mv` only after GATE A identifies one owner and one collision-free target; ask the user when ownership or scope remains a product choice.
+</ambiguous_legacy_rename>
+
+<selection_only_mutation>
+What: `mode: select-evidence` creates an artifact or edits the prospective target.
+Why: Authoring-time selection becomes a hidden repository mutation before the artifact exists.
+Avoid: Return immediately after the six declared output fields and never enter the normal workflow in selection-only mode.
+</selection_only_mutation>
+
+<unreproducible_property_failure>
+What: A property test reports a failing case without both its seed and replay path.
+Why: The failure cannot be reproduced after shrinking or in another environment.
+Avoid: Require non-empty seed and replay fields in the delegated language workflow before GATE B passes.
+</unreproducible_property_failure>
+
+</failure_modes>
+
 <success_criteria>
 
-Testing output is sound when:
-
-- Every selection-only result uses the declared output fields, contains an artifact-appropriate evidence form, and performs no repository mutation.
-- Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
-- Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
-- Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
-- Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
-- Every spec assertion that receives test evidence links to the evidence file that verifies it.
+- [ ] A selection-only result contains exactly `mode`, `verification_type`, `assertion_type`, `execution_level`, `evidence_form`, and `rationale`; every enum value is valid, the evidence form matches the artifact kind, and the invocation made zero Write, Edit, or `git mv` calls.
+- [ ] Every created or renamed basename equals the `canonical_filename` recorded at GATE A and matches the language's canonical pattern.
+- [ ] Read succeeds for every evidence path added to a spec, resolved relative to that spec's directory.
+- [ ] Every generated test exercises the source contract recorded at GATE A with no test-owned protocol data or configuration in the assertion file.
+- [ ] Every property-test failure report exposes non-empty seed and replay fields, and the delegated language workflow confirms both paths.
+- [ ] Every test double names one of the seven exception cases and preserves the recorded behavior boundary.
+- [ ] Every spec-link edit changes only the intended assertion's evidence form and points to the GATE B path.
 
 </success_criteria>
