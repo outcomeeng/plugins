@@ -3,11 +3,11 @@
 import sys
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
-    default_runner_failure_verdicts,
+    default_runner_failure_observations,
     load_verify_session_claims_module,
-    metadata_loading_evidence,
-    node_status_evidence,
-    read_only_verification_evidence,
+    metadata_loading_observation,
+    node_status_observation,
+    read_only_verification_observation,
     script_import_roots,
     subprocess_call_owners,
     verify_parameters,
@@ -41,16 +41,16 @@ def test_external_calls_go_through_the_runner() -> None:
 
 def test_default_runner_launch_failure_emits_unverifiable() -> None:
     module = load_verify_session_claims_module()
-    verdicts = default_runner_failure_verdicts()
+    observations = default_runner_failure_observations()
 
-    assert len(verdicts) == 1
-    assert verdicts[0].kind is module.ClaimKind.SESSION_METADATA
-    assert verdicts[0].verdict is module.Verdict.UNVERIFIABLE
+    assert len(observations) == 1
+    assert observations[0].kind is module.ClaimKind.SESSION_METADATA
+    assert observations[0].verdict is module.Verdict.UNVERIFIABLE
 
 
 def test_verification_is_read_only_and_uses_source_commands() -> None:
     module = load_verify_session_claims_module()
-    observation = read_only_verification_evidence()
+    observation = read_only_verification_observation()
 
     assert observation.calls
     for call in observation.calls:
@@ -69,7 +69,7 @@ def test_verification_is_read_only_and_uses_source_commands() -> None:
 
 def test_node_status_evidence_keeps_target_node_scalar_fields_only() -> None:
     module = load_verify_session_claims_module()
-    observation = node_status_evidence()
+    observation = node_status_observation()
 
     assert isinstance(observation.evidence, dict)
     assert observation.evidence == {
@@ -81,7 +81,7 @@ def test_node_status_evidence_keeps_target_node_scalar_fields_only() -> None:
 
 def test_metadata_loading_does_not_require_local_session_file_body() -> None:
     module = load_verify_session_claims_module()
-    observation = metadata_loading_evidence()
+    observation = metadata_loading_observation()
 
     assert (
         *module.SPX_SESSION_SHOW_COMMAND,
@@ -92,4 +92,4 @@ def test_metadata_loading_does_not_require_local_session_file_body() -> None:
         *module.SPX_SESSION_SHOW_COMMAND,
         observation.session_id,
     ) in observation.calls
-    assert observation.verdict.verdict is module.Verdict.CONFIRMED
+    assert observation.actual.verdict is module.Verdict.CONFIRMED
