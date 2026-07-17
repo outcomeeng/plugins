@@ -159,6 +159,12 @@ def load_merge_contract_module() -> ModuleType:
     return _load_source_module("merge_contract", MERGE_CONTRACT_MODULE_PATH)
 
 
+CHANGESET_SCOPE = load_changeset_scope_module()
+CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
+MERGE_CLASSIFIER = load_merge_classifier_module()
+MERGE_CONTRACT = load_merge_contract_module()
+
+
 def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
     """Run a git command with isolated config, returning stripped stdout.
 
@@ -366,8 +372,8 @@ def build_repo_without_origin(
 ) -> str:
     """Build a repo with a branch and a commit but no origin/HEAD symbolic ref.
 
-    Returns the branch name. Exercises the base-ref fallback paths
-    (``strict=False`` returns the default, ``strict=True`` raises).
+    Returns the generated branch name while leaving ``origin/HEAD`` absent so
+    callers can exercise the production error path.
     """
     scenario = _initialize_changeset_repo(repo, scenario)
     return scenario.base_branch
@@ -474,11 +480,10 @@ def branch_collision_state(
 ) -> Iterator[BranchCollisionState]:
     """Yield generated branches with a conflicting state file already present."""
     with temporary_changeset_scope() as paths:
-        contract = load_changeset_scope_contract_module()
         scenario = scenario or _first_changeset_scope_case()
         base_slug = scenario.feature_branch.replace(
-            contract.BRANCH_REF_PATH_SEPARATOR,
-            contract.BRANCH_SLUG_PATH_SUBSTITUTE,
+            CHANGESET_SCOPE_CONTRACT.BRANCH_REF_PATH_SEPARATOR,
+            CHANGESET_SCOPE_CONTRACT.BRANCH_SLUG_PATH_SUBSTITUTE,
         )
         write_branch_state_file(paths.repo, base_slug, scenario.base_branch)
         yield BranchCollisionState(

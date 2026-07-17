@@ -9,12 +9,9 @@ from outcomeeng_testing.generators.changeset_scope import (
     coordination_note_recognition_cases,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
-    load_merge_classifier_module,
-    load_merge_contract_module,
+    MERGE_CLASSIFIER,
+    MERGE_CONTRACT,
 )
-
-MERGE_CLASSIFIER = load_merge_classifier_module()
-MERGE_CONTRACT = load_merge_contract_module()
 
 
 def test_classifier_counts_unique_change_kinds() -> None:

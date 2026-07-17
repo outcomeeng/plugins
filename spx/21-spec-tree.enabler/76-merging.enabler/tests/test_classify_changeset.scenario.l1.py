@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.changeset_scope import (
+    CHANGESET_SCOPE_CONTRACT,
+    MERGE_CLASSIFIER,
     canonical_merge_changeset,
     contains_python_traceback,
-    load_changeset_scope_contract_module,
-    load_merge_classifier_module,
     modified_spaced_note_repo,
     repo_without_origin,
     run_merge_classifier,
 )
-
-CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
-MERGE_CLASSIFIER = load_merge_classifier_module()
 
 
 def test_changed_paths_use_the_canonical_changeset_scope() -> None:

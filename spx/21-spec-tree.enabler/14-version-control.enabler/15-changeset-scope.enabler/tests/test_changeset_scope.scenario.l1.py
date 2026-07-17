@@ -27,20 +27,17 @@ import hashlib
 import pytest
 
 from outcomeeng_testing.harnesses.changeset_scope import (
+    CHANGESET_SCOPE,
+    CHANGESET_SCOPE_CONTRACT,
     base_advanced_after_branch_repo,
     branch_collision_state,
     detach_head,
     generated_changeset_scope_cases,
     git_commit_oid,
     git_three_dot_scope,
-    load_changeset_scope_contract_module,
-    load_changeset_scope_module,
     repo_without_origin,
     stale_local_base_repo,
 )
-
-CHANGESET_SCOPE = load_changeset_scope_module()
-CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
 
 
 def test_detect_base_ref_returns_bare_base_from_origin_head() -> None:
