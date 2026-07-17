@@ -20,7 +20,7 @@ These patterns span the **entire** audit-skill family — every `audit-*` SKILL.
 
 ## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
 
-The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). Two of the three rules under `### Audit` in that ADR mirror assertions whose implementing lanes in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/review-changes.md` are not `[audit]`:
+The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). Two of the three rules under `### Audit` in that ADR mirror assertions whose implementing lanes in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` are not `[audit]`:
 
 - ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
 - ADR "wrapper agent never hand-validates emitted JSON" (`[audit]`) mirrors spec line tagged `[eval](evals/wrapper-protocol/eval.toml)`.
