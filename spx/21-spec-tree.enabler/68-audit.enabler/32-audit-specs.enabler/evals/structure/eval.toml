@@ -6,6 +6,7 @@ owned_paths = [
   "spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md",
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/audit-specs.md",
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-specs.enabler/evals/structure/**",
+  "spx/31-outcomeeng.enabler/31-verification.enabler/31-audit-verification.enabler/54-audit-specs.enabler/audit-specs.md",
   "src/plugins/spec-tree/skills/audit-specs/**",
   "dist/claude/spec-tree/skills/audit-specs/**",
 ]
