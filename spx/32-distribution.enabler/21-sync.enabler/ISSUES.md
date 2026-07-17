@@ -24,3 +24,19 @@ start timestamp reported by `ps -p <pid> -o lstart=`, whose whole-second resolut
 reused within the same wall-clock second produce the same lock-owner identity string. The
 checkout-bounded model removes the lock entirely, dissolving the PID-reuse window rather than
 bounding it.
+
+## DEBT [evidence]: test-infrastructure quality in the sync test files
+
+A test-evidence audit surfaced two pre-existing test-infrastructure defects in the node's test
+files. Both are independent of the marketplace-state assertion alignment — the audit confirmed
+every remaining assertion still resolves to a test that exercises its claimed behavior — and both
+live in files the checkout-bounded cutover already rewrites, so they are addressed as part of that
+cutover rather than in the spec-only alignment.
+
+- `tests/test_sync.compliance.l1.py` hardcodes the production step-name literal
+  `INITIAL_CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"`, which `outcomeeng/distribution/sync.py`
+  does not export. The cutover exposes the step name from production and imports it, or removes the
+  guard when the step is dropped.
+- `tests/test_sync.scenario.l1.py` embeds a git-repo bootstrap helper (`_git`) directly in the test
+  file, duplicated across the change-probe tests. The cutover moves git-repo bootstrap into a harness
+  under `outcomeeng_testing/harnesses/` consumed by both tests.
