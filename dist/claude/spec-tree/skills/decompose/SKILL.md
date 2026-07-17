@@ -360,13 +360,22 @@ How to avoid: treat ADR/PDR placement as decomposition work when the location de
 
 <success_criteria>
 
-The resulting structure is sound when:
+Decomposition is complete when:
 
-- [ ] Every child represents one coherent, independently validatable concern with the correct enabler or outcome type
-- [ ] Shared enablers exist only for concrete multi-child dependencies, while aggregate parents retain cross-child behavior
-- [ ] Every different-index relationship has ordering evidence and every independent peer uses the same index
-- [ ] Assertions are preserved exactly once across the parent and children, with no loss or same-evidence duplication
-- [ ] Parent and child specs use atemporal declarations, canonical templates, and complete `spx/...` references
-- [ ] Node nesting, paths, filenames, evidence links, and structural validation all pass
+- [ ] Target is either `spx/` or a valid node address
+- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
+- [ ] Composition need assessed
+- [ ] Clarity gate completed or `/interview` used
+- [ ] Concern boundaries and node types assigned
+- [ ] Shared enablers extracted only for multi-child dependencies
+- [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
+- [ ] Ordering-evidence matrix recorded
+- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
+- [ ] Sparse indices assigned from ordering evidence and selected horizon
+- [ ] Assertions redistributed without loss
+- [ ] Parent or product spec revised without temporal narration
+- [ ] Child specs written from templates
+- [ ] Full `spx/` paths used for every node, ADR, and PDR reference
+- [ ] Validation checklist passes
 
 </success_criteria>

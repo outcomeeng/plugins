@@ -159,8 +159,8 @@ Read the appropriate template path exposed by `<SPEC_TREE_FOUNDATION>`. Fill it 
 **Assertion rules** (from live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must carry the evidence tag and canonical path supplied by `/test`; authoring never selects a verification type, assertion type, or test filename
-- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
+- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
@@ -367,13 +367,16 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 <success_criteria>
 
-Authored artifacts are sound when:
+Authoring is complete when:
 
-- [ ] Every artifact uses the correct template, canonical path, filename, and node type for its settled content
-- [ ] Every index and placement conforms to loaded ordering context or a settled `/decompose` result
-- [ ] Content is atemporal, uses complete `spx/...` references, and remains within the owning artifact's purpose
-- [ ] Assertion text is preserved without authoring selecting its verification type, assertion type, or test filename
-- [ ] `spx validation markdown` and `spx spec status --format json` pass for the changed artifact set
-- [ ] The result reports every changed artifact path and validation result
+- [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
+- [ ] Context loaded for placement (or bootstrap mode for empty tree)
+- [ ] Index and placement determined using ordering rules
+- [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
+- [ ] Content gathered from user (operator-owned gaps only)
+- [ ] Template read and filled with atemporal voice
+- [ ] Validation checklist passes
+- [ ] Files created in correct location
+- [ ] Next steps recommended
 
 </success_criteria>
