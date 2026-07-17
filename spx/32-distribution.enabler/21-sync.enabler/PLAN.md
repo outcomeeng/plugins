@@ -6,10 +6,12 @@ Spec alignment applied: `sync.md` now declares the checkout-bounded model. The s
 assertions are removed — Codex cache-topology inspection, user-scope marketplace-registration
 reconciliation, canonical default-branch-worktree source resolution, and the file-backed
 single-flight lock coordination that serialized user-scope cache repair. The surviving guards are
-preserved: the change probe compares `base_ref` against the working tree rather than `HEAD`; no
-validation step is skipped when plugin distribution paths change; tool availability is checked
-before any orchestration step for `claude`, `codex`, `ps`, and `uv`. The `codex_cache_preserve`
-prohibition cites the governing decision directly.
+preserved: the change probe compares `base_ref` against the working tree rather than `HEAD`;
+converted Codex custom-agent files install before installed-plugin validation runs; no validation
+step is skipped when plugin distribution paths change; tool availability is checked before any
+orchestration step for `claude`, `codex`, `ps`, and `uv`. The `codex_cache_preserve` prohibition
+cites the governing decision directly. These guards are orchestration and tool-availability
+contracts the decision — which governs user-scope state ownership — does not reach.
 
 Pending implementation (production cutover of `just sync-marketplace`):
 

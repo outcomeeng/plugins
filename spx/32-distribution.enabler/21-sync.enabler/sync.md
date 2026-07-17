@@ -11,6 +11,7 @@ Sync accepts an optional base reference and detects whether the checkout's plugi
 ### Scenarios
 
 - Given uncommitted plugin distribution changes in the working tree since `base_ref`, when sync runs before commit, then it detects the distribution change because the change probe compares `base_ref` against the working tree rather than `HEAD` ([test](tests/test_sync.scenario.l1.py))
+- Given plugin distribution changes since `base_ref` and rendered Claude agents exist, when sync runs, then it installs the converted Codex custom-agent files before installed-plugin validation runs ([test](tests/test_sync.scenario.l1.py))
 
 ### Compliance
 
