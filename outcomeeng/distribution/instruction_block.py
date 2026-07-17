@@ -75,6 +75,25 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("product-path follow guard", "Never follow paths from their output"),
 )
 CODEX_HARNESS: Final = "codex"
+CODEX_OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
+CODEX_OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
+CODEX_OPERATOR_QUESTION_REQUIREMENTS: Final = (
+    ("immediate answer", "Codex MUST answer the question immediately"),
+    (
+        "non-verification process stop",
+        "ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state",
+    ),
+    (
+        "verification process preservation",
+        "NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it",
+    ),
+)
+CODEX_OPERATOR_QUESTION_CONTRADICTIONS: Final = (
+    (
+        "unqualified state-changing process stop",
+        "ALWAYS: stop any running process that is destructive or modifies files, external resources, or state",
+    ),
+)
 CODEX_VERIFIER_DISPATCH_POLICY_ANCHOR: Final = (
     "**Already-dispatched verifier boundary.**"
 )
@@ -103,37 +122,37 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
     VerifierDispatchContradiction(
         name="recursive verifier spawn",
         pattern=re.compile(
-            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
-            r"already-dispatched verifier.*\b(?:must|may|should|can)\b.*"
-            r"spawn another verifier",
+            r"^.*already-dispatched verifier.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*spawn another verifier",
             re.IGNORECASE | re.MULTILINE,
         ),
         violating_directive=(
-            "An already-dispatched verifier must spawn another verifier before auditing."
+            "Although nested tools are not obvious, an already-dispatched verifier can "
+            "spawn another verifier before auditing."
         ),
     ),
     VerifierDispatchContradiction(
         name="nested tool discovery",
         pattern=re.compile(
-            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
-            r"running as a named verifier.*\b(?:must|may|should|can|use)\b.*"
-            r"tool_search",
+            r"^.*running as a named verifier.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*tool_search",
             re.IGNORECASE | re.MULTILINE,
         ),
         violating_directive=(
-            "Once running as a named verifier, use `tool_search` to discover another verifier."
+            "When discovery is not documented, once running as a named verifier, it may "
+            "use `tool_search` to discover another verifier."
         ),
     ),
     VerifierDispatchContradiction(
         name="nested agent CLI",
         pattern=re.compile(
-            r"^(?!.*\b(?:never|not|do not|must not)\b).*"
-            r"verifier context.*\b(?:must|may|should|can|invoke)\b.*"
-            r"(?:codex exec|claude|pi)",
+            r"^.*verifier context.*\b(?:must|may|should|can)\s+"
+            r"(?!(?:not|never)\b).*(?:codex exec|claude|pi)",
             re.IGNORECASE | re.MULTILINE,
         ),
         violating_directive=(
-            "A verifier context may invoke `codex exec` to create fresh isolation."
+            "If isolation is not obvious, a verifier context may invoke `codex exec` to "
+            "create fresh isolation."
         ),
     ),
 )
@@ -191,6 +210,10 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
 
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
+
+
+class OperatorQuestionPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router weakens or contradicts question-interrupt policy."""
 
 
 class VerifierDispatchPolicyError(InstructionBlockRenderError):
@@ -402,6 +425,48 @@ def validate_foundation_access_policy(
             )
 
 
+def operator_question_policy_block(router: str) -> str | None:
+    """Return the Codex operator-question policy block from a complete router."""
+    start = router.find(CODEX_OPERATOR_QUESTION_POLICY_OPEN)
+    if start == -1:
+        return None
+    end = router.find(CODEX_OPERATOR_QUESTION_POLICY_CLOSE, start)
+    if end == -1:
+        return None
+    return router[start : end + len(CODEX_OPERATOR_QUESTION_POLICY_CLOSE)]
+
+
+def validate_operator_question_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits or contradicts question-interrupt policy."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise OperatorQuestionPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = operator_question_policy_block(router) or ""
+    missing = [
+        name
+        for name, required_text in CODEX_OPERATOR_QUESTION_REQUIREMENTS
+        if required_text not in policy
+    ]
+    if missing:
+        details = ", ".join(missing)
+        raise OperatorQuestionPolicyError(
+            f"Codex operator-question policy is incomplete: {details}"
+        )
+    contradictions = [
+        name
+        for name, forbidden_text in CODEX_OPERATOR_QUESTION_CONTRADICTIONS
+        if forbidden_text in policy
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise OperatorQuestionPolicyError(
+            f"Codex operator-question policy is contradictory: {details}"
+        )
+
+
 def verifier_dispatch_policy_paragraph(router: str) -> str | None:
     """Return the Codex verifier-boundary paragraph from a complete router."""
     return next(
@@ -461,6 +526,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
+    validate_operator_question_policy(rendered)
     validate_verifier_dispatch_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)

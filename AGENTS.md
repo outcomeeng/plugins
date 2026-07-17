@@ -7,7 +7,7 @@
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource. Codex MUST answer the question immediately.
 
-- ALWAYS: stop any running process that is destructive or modifies files, external resources, or state.
+- ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state.
 - NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it.
 
 </operator_question_interrupt>
@@ -452,7 +452,7 @@ When these instructions say `AskUserQuestion`, Codex must use `request_user_inpu
 
 This file covers repository rules that apply across both agents.
 
-Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/AGENTS.md). Read [`methodology/AGENTS.md`](methodology/AGENTS.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
+Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
 Spec-tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/spec-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. The sibling `references/` directory carries conditional operational detail.
 

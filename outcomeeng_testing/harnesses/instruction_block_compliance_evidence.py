@@ -398,6 +398,51 @@ def _render_shipped_instruction_blocks() -> dict[str, str]:
     )
 
 
+def _assert_codex_router_enforces_operator_question_interrupt() -> None:
+    """Challenge the Codex router with incomplete and contradictory question policy."""
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
+    router = dist.managed_router_block(document)
+    policy = dist.operator_question_policy_block(router)
+    assert policy is not None
+    dist.validate_operator_question_policy({dist.CODEX_HARNESS: document})
+
+    for _, required_text in dist.CODEX_OPERATOR_QUESTION_REQUIREMENTS:
+        invalid_document = document.replace(
+            policy, policy.replace(required_text, "", 1), 1
+        )
+        try:
+            dist.validate_operator_question_policy(
+                {dist.CODEX_HARNESS: invalid_document}
+            )
+        except dist.OperatorQuestionPolicyError:
+            pass
+        else:
+            raise AssertionError(
+                f"incomplete operator-question policy was accepted: {required_text}"
+            )
+
+    for (
+        contradiction_name,
+        contradiction_text,
+    ) in dist.CODEX_OPERATOR_QUESTION_CONTRADICTIONS:
+        invalid_policy = policy.replace(
+            dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE,
+            f"{contradiction_text}\n\n{dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE}",
+            1,
+        )
+        invalid_document = document.replace(policy, invalid_policy, 1)
+        try:
+            dist.validate_operator_question_policy(
+                {dist.CODEX_HARNESS: invalid_document}
+            )
+        except dist.OperatorQuestionPolicyError:
+            pass
+        else:
+            raise AssertionError(
+                f"contradictory operator-question policy was accepted: {contradiction_name}"
+            )
+
+
 def _assert_codex_router_bounds_dispatched_verifiers() -> None:
     """Challenge the complete Codex router with missing and contradictory policy."""
     document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]

@@ -12,7 +12,7 @@ template_source: spec-tree
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource. Codex MUST answer the question immediately.
 
-- ALWAYS: stop any running process that is destructive or modifies files, external resources, or state.
+- ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state.
 - NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it.
 
 </operator_question_interrupt>
