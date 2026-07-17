@@ -200,7 +200,7 @@ The opened pull request is sound when:
 - Its URL, number, head branch, head SHA, base branch, and draft state are observable from the host and match the published branch.
 - A peer PR targets the repository default branch and is ready for review; a stacked PR targets its declared stack base and is draft.
 - The published head is the exact clean committed tree for which every `VERIFICATION_READINESS` predicate holds.
-- The title is one Conventional Commit subject under 70 characters, and the body contains Summary, Background, Test plan, Refs, and version rationale with real newlines.
+- The title is one Conventional Commit subject under 70 characters, and the body contains every section required by `<body_template>` and the active project overlay; conditional sections appear only when their applicability rules require them, with real newlines throughout.
 - The remote branch was published through an explicit `HEAD:refs/heads/<branch>` destination.
 - The surfaced result contains the PR URL and no identity string prohibited by /merging-standards `<self_reference>`.
 
