@@ -167,12 +167,6 @@ _SECTION_TITLES = {
     "AUDIT": "Audit",
 }
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
-_RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
-    {
-        "api_surface",
-        "principles",
-    }
-)
 
 
 def parse_json(text: str) -> ReviewResult:
@@ -413,8 +407,6 @@ def _declared_rule_slugs(text: str) -> set[str]:
 def _pseudo_xml_section_has_rule_marker(
     lines: list[str], tag_index: int, tag: str
 ) -> bool:
-    if tag in _RULE_BEARING_PSEUDO_XML_TAGS:
-        return True
     closing_tag = f"</{tag}>"
     nested_tags: list[str] = []
     in_fence = False

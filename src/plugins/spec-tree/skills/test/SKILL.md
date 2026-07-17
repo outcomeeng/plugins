@@ -37,18 +37,20 @@ mode: select-evidence
 target: spx/<prospective artifact path>
 assertion: <exact assertion or MUST/NEVER rule text>
 language: <product implementation language or languages>
+source_context: <existing source paths or the planned source contract>
+boundary_context: <dependencies, execution environment, and loaded decision constraints>
 ```
 
 For `select-evidence`:
 
 1. Require live foundation and context markers for the prospective target's parent.
-2. Choose `test`, `eval`, or `audit` from the live `/understand` `<verification_selection>` rules.
-3. For `test`, select the assertion type from the quantifier rules in the methodology reference, then select the lowest execution level justified by the assertion, loaded decisions, and named product boundary. Derive the canonical filename from the target slug, assertion type, level, and language naming rule. If the language, level, or target ownership is unresolved, stop and return that exact unresolved input; never guess.
+2. Choose `test`, `evaluate`, or `audit` from the live `/understand` `<verification_selection>` rules.
+3. For `test`, run all five methodology stages against the assertion, supplied source context, boundary context, and loaded decisions. Select the assertion type from Stage 1 and the lowest justified execution level only after Stages 2–5 establish real-system viability or a named exception. Derive the canonical filename from the target slug, assertion type, level, and language naming rule. If source ownership, language, level, target ownership, or boundary context is unresolved, stop and return that exact unresolved input; never guess.
 4. Return exactly these fields:
 
 ```text
 mode: select-evidence
-verification_type: test | eval | audit
+verification_type: test | evaluate | audit
 assertion_type: scenario | mapping | conformance | property | compliance | none
 execution_level: l1 | l2 | l3 | none
 evidence_form: <exact Markdown form to copy into the artifact>
@@ -59,10 +61,10 @@ The evidence form is artifact-aware:
 
 - A node's deterministic assertion receives `([test](tests/{canonical filename}))`.
 - An ADR/PDR deterministic rule receives `([{assertion type}])` under `### Testing`; decision records do not own test-file paths.
-- An eval receives `([eval](evals/{rule-slug}/eval.toml))` in a node or `([eval])` in a decision record.
+- An evaluate result receives `([eval](evals/{rule-slug}/eval.toml))` in a node or `([eval])` in a decision record.
 - An audit receives `([audit])`.
 
-Return after selection. Do not read source code, run Stages 3–5, create a test or eval artifact, edit the target spec, or update a link. The normal workflow performs those actions when `/test` later runs on the authored node.
+Return after selection. Source reads and all five routing stages are part of selection, but repository mutation is not: do not create a test or eval artifact, edit the target spec, or update a link. The normal workflow performs those mutations when `/test` later runs on the authored node.
 
 </selection_only>
 

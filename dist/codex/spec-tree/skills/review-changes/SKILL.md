@@ -18,7 +18,7 @@ The skill self-discovers the review scope from the current worktree. Callers tha
 
 <api_surface>
 
-Invoke only the bundled runner:
+- MUST: invoke only the bundled runner through one of these commands:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/review_run.py" start

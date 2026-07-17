@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or assertion type (scenario / mapping / conformance / property / compliance) by authoring judgment; about to write or edit a test file; about to implement a work item -> STOP. Invoke `/test` in `select-evidence` mode with the target artifact path, exact assertion text, and product language, then copy its evidence form without substitution. `/apply` owns the later test-writing and implementation flow. Independently choosing a type, fabricating an evidence link, authoring a test, or writing implementation code inside this skill is the boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or assertion type (scenario / mapping / conformance / property / compliance) by authoring judgment; about to write or edit a test file; about to implement a work item -> STOP. Invoke `/test` in `select-evidence` mode with the target artifact path, exact assertion text, product language, existing source paths or planned source contract, and execution-boundary context, then copy its evidence form without substitution. `/apply` owns the later test-writing and implementation flow. Independently choosing a type, fabricating an evidence link, authoring a test, or writing implementation code inside this skill is the boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -163,7 +163,7 @@ Read the appropriate template owned by `/understand`. Fill it using the gathered
 **Assertion rules** (from the live `/understand` `<verification_types>` and `<assertion_types>`):
 
 - Every outcome must have at least one assertion
-- Before drafting each assertion, invoke `/test` with `mode: select-evidence`, the prospective full `spx/...` artifact path, exact assertion text, and product language
+- Before drafting each assertion, invoke `/test` with `mode: select-evidence`, the prospective full `spx/...` artifact path, exact assertion text, product language, existing source paths or planned source contract, and execution-boundary context from loaded decisions
 - Use the returned verification type, assertion type when applicable, and evidence form exactly; authoring never selects or substitutes those values
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
