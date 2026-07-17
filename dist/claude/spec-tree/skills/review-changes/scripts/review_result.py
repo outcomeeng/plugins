@@ -167,59 +167,12 @@ _SECTION_TITLES = {
     "AUDIT": "Audit",
 }
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
-INLINE_FOUNDATION_RULE_TAGS = frozenset(
+_RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
     {
-        "assertion_types",
-        "assignment_is_the_inverse",
-        "atemporal_voice",
-        "axes",
-        "closing_protocol",
-        "common_structure",
-        "context_loading_rule",
-        "coordination_and_context",
-        "decision_to_spec_alignment",
-        "declarations",
-        "delivery_boundary",
-        "enabler",
-        "expense_ceiling",
-        "full_paths",
-        "future_product_truth",
-        "layer_precedence",
-        "mixing_types",
-        "nesting_rules",
-        "no_origin_distinction",
-        "node_states",
-        "outcome",
-        "recording",
-        "spec_tree_integration",
-        "touched_file_debt",
-        "types",
-        "verification_selection",
-        "verification_types",
-        "vocabulary_boundaries",
+        "api_surface",
+        "constraints",
+        "principles",
     }
-)
-# Foundation containers are navigation domains, not concrete Finding.rule
-# targets. Findings cite the rule-bearing leaf sections nested inside them.
-INLINE_FOUNDATION_NON_RULE_CONTAINER_TAGS = frozenset(
-    {
-        "assertion_model",
-        "imperfection_protocol",
-        "node_model",
-        "ordering_model",
-        "truth_hierarchy",
-        "verification_model",
-    }
-)
-_RULE_BEARING_PSEUDO_XML_TAGS = (
-    frozenset(
-        {
-            "api_surface",
-            "constraints",
-            "principles",
-        }
-    )
-    | INLINE_FOUNDATION_RULE_TAGS
 )
 
 

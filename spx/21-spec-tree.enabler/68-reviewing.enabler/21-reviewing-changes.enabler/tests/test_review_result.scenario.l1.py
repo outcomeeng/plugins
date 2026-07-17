@@ -432,22 +432,16 @@ class TestRuleCitationForm:
             json.dumps(make_review_result_dict(findings=[finding]))
         )
 
-    def test_inline_foundation_sections_are_citeable(self) -> None:
+    def test_inline_foundation_citations_require_a_rule_marker(self) -> None:
         review_result = load_review_result_module()
         skill_path = REPO_ROOT / "src/plugins/spec-tree/skills/understand/SKILL.md"
         declared_slugs = review_result._declared_rule_slugs(
             skill_path.read_text(encoding="utf-8")
         )
-        expected_slugs = {
-            tag.replace("_", "-") for tag in review_result.INLINE_FOUNDATION_RULE_TAGS
-        }
-        container_slugs = {
-            tag.replace("_", "-")
-            for tag in review_result.INLINE_FOUNDATION_NON_RULE_CONTAINER_TAGS
-        }
 
-        assert expected_slugs <= declared_slugs
-        assert container_slugs.isdisjoint(declared_slugs)
+        assert "layer-precedence" in declared_slugs
+        assert "future-product-truth" not in declared_slugs
+        assert "truth-hierarchy" not in declared_slugs
 
     def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch

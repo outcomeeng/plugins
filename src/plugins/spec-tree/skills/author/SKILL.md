@@ -374,6 +374,6 @@ Authored output is sound when:
 - The selected product, ADR, PDR, enabler, or outcome template is complete and uses atemporal declarative voice.
 - Decisions govern, specs declare output, and every assertion carries valid `[test]`, `[eval]`, or `[audit]` evidence without lower-layer truth leaking upward.
 - A multi-sibling request leaves durable composition intent for `/decompose` rather than pre-shaping child structure in the authored artifact.
-- Product validation accepts the created files and every referenced path resolves.
+- Product validation accepts the created files; forward evidence links selected by `/test` may remain unresolved until `/test` creates their targets.
 
 </success_criteria>
