@@ -323,8 +323,7 @@ understand/
 │   └── pdr-example.md
 ├── references/
 │   ├── excluded-nodes.md
-│   ├── product-domain-shapes.md
-│   └── what-goes-where.md
+│   └── product-domain-shapes.md
 └── templates/
     ├── product/
     │   └── product-name.product.md

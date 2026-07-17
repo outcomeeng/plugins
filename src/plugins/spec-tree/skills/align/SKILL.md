@@ -16,7 +16,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 <principles>
 
 1. **FACTS AND REQUIRED REWRITES ONLY** — Report what violates which rule. Include the atemporal rewrite required for each temporal-language finding; suggest no other fix. Never rate severity. Never say "should", "consider", or "recommend."
-2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
+2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's inline foundation and templates. This skill owns zero rules. Read them at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, invoke `spec-tree:understand` before continuing.
@@ -30,7 +30,7 @@ Invoke `spec-tree:understand` and use its live inline foundation plus the condit
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
 - Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
-- `what-goes-where.md` — `<common_misplacements>`
+- Live `/understand` `<common_misplacements>`
 - Live `/understand` `<enabler>` and `<outcome>`
 - `decision-name.adr.md`, `decision-name.pdr.md`, `product-name.product.md`, `enabler-name.md`, and `outcome-name.md` — structural rules for each artifact class
 
@@ -121,7 +121,7 @@ Use the live `/understand` `<atemporal_voice>` section. It provides two checking
 
 <placement_conformance>
 
-Read the `<common_misplacements>` table from `what-goes-where.md`. For each row, check whether the file contains content that belongs elsewhere.
+Read the live `/understand` `<common_misplacements>` table. For each row, check whether the file contains content that belongs elsewhere.
 
 **Key signals:**
 
@@ -137,7 +137,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 **Report as findings:**
 
 - File, approximate location, what content was found, where it belongs per the table
-- Reference: `(ref: what-goes-where)`
+- Reference: `(ref: common_misplacements)`
 
 </placement_conformance>
 
@@ -196,7 +196,7 @@ Language:
 - Line {N}: "{text}" — {rule violated} (ref: atemporal_voice) → Atemporal: "{rewrite}"
 
 Placement:
-- {finding} (ref: what-goes-where)
+- {finding} (ref: common_misplacements)
 
 Downstream alignment:
 - {finding} (ref: /understand decision_to_spec_alignment)
@@ -221,7 +221,7 @@ Downstream alignment:
 - [ ] Every finding names the full file path, artifact classification or failure, violated authoritative rule, and applicable conformance dimension
 - [ ] Every classified node spec is checked against all applicable governing ADRs/PDRs, and every contradiction finding names the full decision path
 - [ ] Every temporal-language finding includes the source line, temporal text, governing atemporal-voice rule, and a concrete atemporal rewrite
-- [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under `what-goes-where.md`
+- [ ] Placement findings preserve valid evidence-mechanism specialization and report only content misplaced under live `/understand` `<common_misplacements>`
 - [ ] A changeset report identifies every changed higher-level declaration lacking both first-affected lower-spec alignment and first-affected-node `PLAN.md` grounding
 - [ ] Finding and file counts in the summary equal the report body
 - [ ] The report contains no severity, prioritization, or repair guidance beyond required atemporal rewrites

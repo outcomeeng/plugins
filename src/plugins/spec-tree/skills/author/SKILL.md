@@ -194,7 +194,7 @@ Before writing files, check:
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
 - [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via {{! tool('ask_user') !}} before proceeding
-- [ ] No content misplacement (per the `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>`)
+- [ ] No content misplacement (per live `/understand` `<common_misplacements>`)
 
 </step>
 

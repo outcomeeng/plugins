@@ -28,7 +28,7 @@ Read the conditional operational sources below before composing. Use the live in
 
 - Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
-- The `what-goes-where` path exposed by `<SPEC_TREE_FOUNDATION>` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
 - The `product-domain-shapes` path exposed by `<SPEC_TREE_FOUNDATION>` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
 - The enabler and outcome template paths exposed by `<SPEC_TREE_FOUNDATION>`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
@@ -47,7 +47,7 @@ If the target is `spx/`:
 2. Read `CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per live `/understand` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 

@@ -100,6 +100,60 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 </truth_hierarchy>
 
+<artifact_placement>
+
+- ALWAYS: classify content by the artifact purpose that owns it.
+
+| Artifact | Purpose | Contains | Verified by |
+| --- | --- | --- | --- |
+| ADR | Governs how the product is built | Architecture decisions, rationale, invariants | ADR audit |
+| PDR | Governs what users can rely on | Product decisions and observable properties | PDR audit |
+| Enabler spec | Declares infrastructure output | `PROVIDES ... SO THAT ... CAN ...` and assertions | Linked evidence |
+| Outcome spec | Declares an output hypothesis | Output, outcome, impact, and assertions | Linked evidence |
+| Test file | Proves one typed assertion class | Executable assertion evidence | Test runner |
+| Test infrastructure | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
+| Enforcement | Constrains source structure | Lint rules, AST selectors, and pattern matchers | Tests against violating fixtures |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known defects | Stale-prone node-local context | Reconciliation on context load |
+
+ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
+
+<test_artifact_boundaries>
+
+- ALWAYS: keep executable assertion files separate from the production infrastructure they consume.
+
+Files under `spx/<node>/tests/` contain typed assertion evidence only. Harnesses mediate systems, generators produce variable domains, and fixtures are inert whole-payload inputs read by path. These artifacts are governed production code in the location declared by the active language's test standards, outside `spx/` and every `tests/` directory.
+
+Test infrastructure follows normal spec composition. Govern it through the naturally placed node whose assertions or category contract own its behavior. Never fabricate a top-level `infrastructure -> testing -> {harnesses, generators, fixtures}` subtree solely because test infrastructure exists. Avoid the anti-terms “test support,” “test helpers,” “test utilities,” and “test tools,” which hide governed production behavior behind an unowned utility category.
+
+Enforcement rules are production validation code. Their `[test]` evidence runs the rule against violating fixtures and proves detection; a green validation pipeline separately proves registration.
+
+</test_artifact_boundaries>
+
+<common_misplacements>
+
+- NEVER: preserve content in an artifact whose purpose does not own it.
+
+| Content | Wrong location | Correct location |
+| --- | --- | --- |
+| Architecture choice | Spec | ADR |
+| Product decision or user guarantee | Spec | PDR |
+| Outcome hypothesis | ADR/PDR | Outcome spec |
+| Test reference | ADR/PDR | Spec assertion |
+| Implementation detail | Spec | Code |
+| How to build something | Spec | ADR or code |
+| Cross-cutting invariant | Child spec | Ancestor spec |
+| Remaining work | Session file | Node-local `PLAN.md` |
+| Known unresolved defect | Session file | Node-local `ISSUES.md` |
+| Pending work induced by higher truth | Higher declaration | First affected lower node's `PLAN.md` after lower specs align |
+| Child enumeration | Parent spec | Child specs and `/contextualize` output |
+| Harness, generator, or fixture behavior | Executed test file | Language-standard test-infrastructure location |
+
+Evidence specialization is valid when a child `[test]` rule concretizes an ancestor `[audit]` rule against a narrower source surface. Same-content repetition using the same evidence mechanism is duplication.
+
+</common_misplacements>
+
+</artifact_placement>
+
 <node_model>
 
 The tree contains exactly two recursive node types.
@@ -384,6 +438,10 @@ The ledger is conversation-local. Fixed entries disappear. Unresolved entries pe
 
 Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `ISSUES.md` against current decisions, specs, evidence, implementation, and user intent before acting. They never declare product truth or cited governance.
 
+- `PLAN.md` carries concrete pending steps for its node, including lower-layer work induced by a higher declaration.
+- `ISSUES.md` carries known defects, contradictions, gaps, and untestable assertions.
+- Session files remain operational state outside Git; they never replace node-local coordination.
+
 `spx/local/` holds product-specific overlays for coding, architecture, testing, and lifecycle skills. Enumerate overlays during context loading and read each only when its governing skill requires it. `spx/local/merging.md` is the optional lifecycle overlay read by `/merge` and `/contextualize`.
 
 </coordination_and_context>
@@ -401,9 +459,8 @@ A blocker exists only when the immediate next action needs operator input or an 
 <workflow>
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, session file, handoff note, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
-2. Check internal consistency across `<truth_hierarchy>`, `<node_model>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, and `<imperfection_protocol>`. Surface any contradiction immediately. No mandatory foundation reference read follows this step.
+2. Check internal consistency across `<truth_hierarchy>`, `<artifact_placement>`, `<node_model>`, `<assertion_model>`, `<ordering_model>`, `<verification_model>`, and `<imperfection_protocol>`. Surface any contradiction immediately. No mandatory foundation reference read follows this step.
 3. Locate these operational references and list their paths without reading them until another skill needs them:
-   - `${CLAUDE_SKILL_DIR}/references/what-goes-where.md`
    - `${CLAUDE_SKILL_DIR}/references/excluded-nodes.md`
    - `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`
    - `spx/local/*.md`
@@ -420,9 +477,9 @@ A blocker exists only when the immediate next action needs operator input or an 
 
 ```text
 <SPEC_TREE_FOUNDATION>
-Loaded inline: truth-hierarchy, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
-Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
-Operational reference paths: what-goes-where=${CLAUDE_SKILL_DIR}/references/what-goes-where.md; excluded-nodes=${CLAUDE_SKILL_DIR}/references/excluded-nodes.md; product-domain-shapes=${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md
+Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
+Operational references available: excluded-nodes, product-domain-shapes
+Operational reference paths: excluded-nodes=${CLAUDE_SKILL_DIR}/references/excluded-nodes.md; product-domain-shapes=${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
 Routing guide: loaded from {{! file('root_guide') !}} | absent
@@ -454,8 +511,8 @@ Claude treated a transport checkpoint as delivered value. Continue through `/mer
 
 <success_criteria>
 
-- The six foundation domains are present inline and require no secondary file reads.
-- Internal foundation sections contain no contradiction in truth flow, node grammar, assertion selection, ordering, verification vocabulary, or imperfection handling.
+- The foundation domains and artifact-placement taxonomy are present inline and require no secondary file reads.
+- Internal foundation sections contain no contradiction in truth flow, artifact ownership, node grammar, assertion selection, ordering, verification vocabulary, or imperfection handling.
 - Operational references, templates, examples, overlays, and the root guide are located or read according to the workflow.
 - A live `<SPEC_TREE_FOUNDATION>` marker records the inline payload.
 
