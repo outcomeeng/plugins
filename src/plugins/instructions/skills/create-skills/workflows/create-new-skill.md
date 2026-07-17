@@ -143,7 +143,7 @@ Check:
 - [ ] Pure XML structure (no markdown headings in body)
 - [ ] Required tags present: objective, quick_start, success_criteria
 - [ ] All referenced files exist
-- [ ] SKILL.md under 500 lines
+- [ ] SKILL.md under 500 lines, or the skill qualifies for `/skill-standards` `<eager_foundation_exception>` and `/audit-skills` records a rendered payload of at most 40,000 Unicode code points
 - [ ] XML tags properly closed
 
 Run: `python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" {skill-path}`
