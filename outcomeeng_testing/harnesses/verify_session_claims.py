@@ -10,19 +10,23 @@ generated per invocation; production vocabulary comes from the loaded script.
 from __future__ import annotations
 
 import ast
-import hashlib
 import importlib.util
 import inspect
 import json
 import pathlib
 import subprocess
 import sys
-import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Protocol
 
+from outcomeeng_testing.generators.sessions import (
+    generated_number,
+    generated_relative_path,
+    generated_sha,
+    generated_token,
+)
 from outcomeeng_testing.harnesses.git_context import (
     accepted_git_context,
     handoff_git_env,
@@ -160,7 +164,7 @@ def _exercise_claim_relation(
     module: ModuleType, kind: object, relation: object
 ) -> MappingEvidence:
     with accepted_git_context() as repo:
-        session_id = _generated_token()
+        session_id = generated_token()
         git_ref: str | None = None
         git_status: str | None = None
         specs: tuple[str, ...] = ()
@@ -173,28 +177,28 @@ def _exercise_claim_relation(
         elif kind is module.ClaimKind.GIT_REF:
             git_ref, scripts = _git_ref_arrangement(module, repo, relation)
         elif kind is module.ClaimKind.INJECTED_PATH:
-            relative_path = _generated_relative_path()
+            relative_path = generated_relative_path()
             if relation is module.ClaimRelation.MATCHES:
-                (repo / relative_path).write_text(_generated_token())
+                (repo / relative_path).write_text(generated_token())
             files = (relative_path,)
         elif kind is module.ClaimKind.NODE_STATUS:
-            spec = _generated_relative_path()
+            spec = generated_relative_path()
             specs = (spec,)
             scripts = _node_status_arrangement(module, spec, relation)
         elif kind is module.ClaimKind.UNCOMMITTED_STATE:
             git_status = module.GitStatus.CLEAN
             if relation is module.ClaimRelation.DIFFERS:
-                (repo / _generated_relative_path()).write_text(_generated_token())
+                (repo / generated_relative_path()).write_text(generated_token())
             elif relation is module.ClaimRelation.UNAVAILABLE:
                 scripts = {
                     tuple(module.GIT_STATUS_COMMAND): (
                         module.COMMAND_UNAVAILABLE_EXIT,
                         "",
-                        _generated_token(),
+                        generated_token(),
                     )
                 }
         elif kind is module.ClaimKind.EXTERNAL_ID:
-            number = _generated_number()
+            number = generated_number()
             pr_numbers = (number,)
             scripts = _external_arrangement(module, relation)
         else:
@@ -233,7 +237,7 @@ def _git_ref_arrangement(
             tuple(module.GIT_VERIFY_REF_COMMAND): (
                 module.COMMAND_UNAVAILABLE_EXIT,
                 "",
-                _generated_token(),
+                generated_token(),
             )
         }
     raise ClaimHarnessError(f"unhandled git-ref relation: {relation}")
@@ -255,7 +259,7 @@ def _node_status_arrangement(
             tuple(module.SPX_SPEC_STATUS_COMMAND): (
                 module.COMMAND_UNAVAILABLE_EXIT,
                 "",
-                _generated_token(),
+                generated_token(),
             )
         }
     raise ClaimHarnessError(f"unhandled node-status relation: {relation}")
@@ -266,7 +270,7 @@ def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
         return {
             tuple(module.GH_PR_VIEW_COMMAND): (
                 0,
-                json.dumps({module.GH_PR_STATE_FIELD: _generated_token()}),
+                json.dumps({module.GH_PR_STATE_FIELD: generated_token()}),
                 "",
             )
         }
@@ -275,7 +279,7 @@ def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
             tuple(module.GH_PR_VIEW_COMMAND): (
                 module.COMMAND_UNAVAILABLE_EXIT,
                 "",
-                _generated_token(),
+                generated_token(),
             )
         }
     raise ClaimHarnessError(f"unhandled external-id relation: {relation}")
@@ -300,7 +304,7 @@ def branch_reference_evidence() -> tuple[BranchReferenceEvidence, ...]:
                     present_on_origin=True,
                 )
             )
-        absent_branch = f"{env.default_branch}-{_generated_token()}"
+        absent_branch = f"{env.default_branch}-{generated_token()}"
         evidence.append(
             _git_ref_evidence(
                 module,
@@ -319,7 +323,7 @@ def _git_ref_evidence(
     *,
     present_on_origin: bool,
 ) -> BranchReferenceEvidence:
-    session_id = _generated_token()
+    session_id = generated_token()
     runner = RecordingRunner(
         repo=repo,
         scripted=_session_command_scripts(module, session_id, git_ref=git_ref),
@@ -338,11 +342,11 @@ def observed_state_evidence() -> ObservedStateEvidence:
     """Return generated current values and their emitted evidence strings."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session_id = _generated_token()
-        spec = _generated_relative_path()
-        number = _generated_number()
-        node_state = _generated_token()
-        external_state = _generated_token()
+        session_id = generated_token()
+        spec = generated_relative_path()
+        number = generated_number()
+        node_state = generated_token()
+        external_state = generated_token()
         scripts = _session_command_scripts(
             module,
             session_id,
@@ -377,14 +381,14 @@ def node_status_evidence() -> NodeStatusEvidence:
     """Return a nested status payload and the verifier's parsed evidence."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session_id = _generated_token()
-        spec = _generated_relative_path()
-        status = _generated_token()
+        session_id = generated_token()
+        spec = generated_relative_path()
+        status = generated_token()
         payload = _node_status_payload(module, spec, status=status)
-        generated_child_key = _generated_token()
-        generated_non_scalar_key = _generated_token()
-        payload[generated_child_key] = [{_generated_token(): _generated_token()}]
-        payload[generated_non_scalar_key] = {_generated_token(): _generated_token()}
+        generated_child_key = generated_token()
+        generated_non_scalar_key = generated_token()
+        payload[generated_child_key] = [{generated_token(): generated_token()}]
+        payload[generated_non_scalar_key] = {generated_token(): generated_token()}
         scripts = _session_command_scripts(module, session_id, specs=(spec,)) | {
             tuple(module.SPX_SPEC_STATUS_COMMAND): (0, json.dumps(payload), "")
         }
@@ -449,7 +453,7 @@ def default_runner_failure_verdicts() -> tuple[ClaimVerdictLike, ...]:
     with accepted_git_context() as repo:
         return tuple(
             module.verify(
-                _generated_token(),
+                generated_token(),
                 repo,
                 module.SubprocessRunner(repo, env={"PATH": ""}),
             )
@@ -460,9 +464,9 @@ def read_only_verification_evidence() -> ReadOnlyVerificationEvidence:
     """Return runner calls and repository status around one verification pass."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session_id = _generated_token()
-        spec = _generated_relative_path()
-        number = _generated_number()
+        session_id = generated_token()
+        spec = generated_relative_path()
+        number = generated_number()
         before = _git_status(repo)
         scripts = _session_command_scripts(
             module,
@@ -479,7 +483,7 @@ def read_only_verification_evidence() -> ReadOnlyVerificationEvidence:
             ),
             tuple(module.GH_PR_VIEW_COMMAND): (
                 0,
-                json.dumps({module.GH_PR_STATE_FIELD: _generated_token()}),
+                json.dumps({module.GH_PR_STATE_FIELD: generated_token()}),
                 "",
             ),
         }
@@ -496,7 +500,7 @@ def metadata_loading_evidence() -> MetadataLoadingEvidence:
     """Return session-loading calls and the resulting git-ref verdict."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session_id = _generated_token()
+        session_id = generated_token()
         runner = RecordingRunner(
             repo=repo,
             scripted=_session_command_scripts(
@@ -547,7 +551,7 @@ def _metadata_failure_script(module: ModuleType, session_id: str) -> ScriptMap:
         tuple(_session_show_json_command(module, session_id)): (
             module.COMMAND_UNAVAILABLE_EXIT,
             "",
-            _generated_token(),
+            generated_token(),
         )
     }
 
@@ -572,8 +576,8 @@ def _node_status_payload(
         fields[0]: str(pathlib.PurePosixPath(spec).parent),
         fields[1]: spec,
         fields[2]: spec,
-        fields[3]: status if status is not None else _generated_token(),
-        fields[4]: _generated_token(),
+        fields[3]: status if status is not None else generated_token(),
+        fields[4]: generated_token(),
         fields[5]: True,
     }
 
@@ -616,21 +620,9 @@ def _git_status(repo: pathlib.Path) -> str:
 def _unreachable_sha(repo: pathlib.Path) -> str:
     current = _head_sha(repo)
     while True:
-        candidate = hashlib.sha1(uuid.uuid4().bytes, usedforsecurity=False).hexdigest()
+        candidate = generated_sha()
         if candidate != current:
             return candidate
-
-
-def _generated_relative_path() -> str:
-    return f"{_generated_token()}.md"
-
-
-def _generated_number() -> str:
-    return str(uuid.uuid4().int)
-
-
-def _generated_token() -> str:
-    return uuid.uuid4().hex
 
 
 __all__ = [

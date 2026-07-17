@@ -1,4 +1,0 @@
-{"priority":"medium","goal":"Preserve exact content","next_step":"Compare the stored body"}
-# Session with specific content
-
-Keep this intact.

@@ -1,4 +1,0 @@
-{"priority":"medium","goal":"Preserve plan coordination","next_step":"Read the plan excerpt"}
-# Session with PLAN.md
-
-## PLAN: Wire the spx CLI half of the session-scope accumulator

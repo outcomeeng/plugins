@@ -51,19 +51,19 @@ def test_default_runner_launch_failure_emits_unverifiable() -> None:
 def test_verification_is_read_only_and_uses_source_commands() -> None:
     module = load_verify_session_claims_module()
     observation = read_only_verification_evidence()
-    allowed_prefixes = (
-        tuple(module.SPX_SESSION_SHOW_COMMAND),
-        tuple(module.SPX_SPEC_STATUS_COMMAND),
-        tuple(module.GIT_VERIFY_REF_COMMAND),
-        tuple(module.GIT_STATUS_COMMAND),
-        tuple(module.GH_PR_VIEW_COMMAND),
-    )
 
     assert observation.calls
     for call in observation.calls:
-        assert any(call[: len(prefix)] == prefix for prefix in allowed_prefixes), (
-            f"unexpected command: {call}"
-        )
+        assert any(
+            call[: len(prefix)] == prefix
+            for prefix in (
+                tuple(module.SPX_SESSION_SHOW_COMMAND),
+                tuple(module.SPX_SPEC_STATUS_COMMAND),
+                tuple(module.GIT_VERIFY_REF_COMMAND),
+                tuple(module.GIT_STATUS_COMMAND),
+                tuple(module.GH_PR_VIEW_COMMAND),
+            )
+        ), f"unexpected command: {call}"
     assert observation.status_after == observation.status_before
 
 
