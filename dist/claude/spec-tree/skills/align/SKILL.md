@@ -16,7 +16,7 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 <principles>
 
 1. **FACTS AND REQUIRED REWRITES ONLY** — Report what violates which rule. Include the atemporal rewrite required for each temporal-language finding; suggest no other fix. Never rate severity. Never say "should", "consider", or "recommend."
-2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
+2. **RULES FROM UNDERSTANDING** — Mandatory conformance rules live in the inline `/understand` foundation sections; operational references and templates supplement them. This skill owns zero rules. Read the required sources at check time.
 3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, invoke `spec-tree:understand` before continuing.
@@ -28,10 +28,10 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 Invoke `spec-tree:understand` and use the reference and template paths it exposes. Read these named sources in full before checking conformance:
 
-- `durable-map.md` — `<atemporal_voice>` and `<decision_to_spec_alignment>`
-- `assertion-types.md` — the five assertion types and their canonical headings
+- Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>` — atemporal voice and declaration alignment
+- Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
 - `what-goes-where.md` — `<common_misplacements>`
-- `node-types.md` — `<enabler>` and `<outcome>`
+- Live `/understand` `<enabler>`, `<outcome>`, and `<nesting_rules>` — node classification and nesting
 - `decision-name.adr.md`, `decision-name.pdr.md`, `product-name.product.md`, `enabler-name.md`, and `outcome-name.md` — structural rules for each artifact class
 
 </required_references>
@@ -100,7 +100,7 @@ For each classified enabler or outcome spec, invoke `/contextualize` on the spec
 
 <language_conformance>
 
-Read the `<atemporal_voice>` section from `durable-map.md`. It provides two checking mechanisms:
+Apply the atemporal-voice rules from the live `/understand` `<atemporal_voice>`. They provide two checking mechanisms:
 
 **A. Temporal markers table** — The left column lists specific phrases to find. Scan every line for matches.
 
@@ -143,7 +143,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 <downstream_alignment_conformance>
 
-Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
+Apply the decision-to-spec alignment rules from the live `/understand` `<decision_to_spec_alignment>`. For changeset checks, use the exact changed-file set derived through `/scope-changeset`. Stop and request that derived set when it is absent; never derive git scope inside `/align`.
 
 For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
@@ -165,7 +165,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <workflow>
 
 1. **Gate**: Check the conversation for a live `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `spec-tree:understand` and resume only after it emits the marker.
-2. **Load rules**: Use the paths exposed by the loaded understanding foundation to read every named reference and template in `<required_references>`.
+2. **Load rules**: Apply the live inline `/understand` sections, then read the operational reference and templates listed in `<required_references>`.
 3. **Scope**: Read `$ARGUMENTS` as the complete scope input. When it names one Markdown file, use that file directly; when it names a directory, use that directory; when it is empty, default to `spx/` in the product root. For a branch changeset, consume the exact changed-file set supplied in `$ARGUMENTS` after derivation through `/scope-changeset`; stop with that requirement when the set is absent.
 4. **Discover**: For a file scope, use that file directly. For a directory scope, glob `{scope}/**/*.md`. For a changeset scope, use every Markdown path in the supplied changed-file set directly. In every mode, exclude `CLAUDE.md` and `AGENTS.md`, `PLAN.md`, `ISSUES.md`, files inside `tests/`, and files inside `spx/local/`.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
@@ -193,13 +193,13 @@ Decision alignment:
 - {finding} (ref: {full decision path})
 
 Language:
-- Line {N}: "{text}" — {rule violated} (ref: atemporal_voice) → Atemporal: "{rewrite}"
+- Line {N}: "{text}" — {rule violated} (ref: /understand <atemporal_voice>) → Atemporal: "{rewrite}"
 
 Placement:
 - {finding} (ref: what-goes-where)
 
 Downstream alignment:
-- {finding} (ref: durable-map decision_to_spec_alignment)
+- {finding} (ref: /understand <decision_to_spec_alignment>)
 
 ---
 

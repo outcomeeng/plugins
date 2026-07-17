@@ -1,7 +1,7 @@
 ---
 name: refactor
-description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared enablers. NEVER restructure the spec tree without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash, Skill
+description: ALWAYS invoke this skill when moving nodes, re-scoping content, extracting shared enablers, or consolidating or merging spec-tree nodes. NEVER restructure the spec tree without this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm:*), Bash(spx validation:*), Bash(spx spec status:*), Skill
 ---
 
 <objective>
@@ -16,8 +16,8 @@ A restructured Spec Tree — nodes moved between parents, content re-scoped, sha
 
 References and workflows:
 
-- `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — content taxonomy (what belongs where)
-- `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler vs outcome
+- `/understand` operational reference `what-goes-where` — content taxonomy (what belongs where)
+- Live `/understand` `<node_model>` — node classification and nesting through its `<enabler>`, `<outcome>`, and `<nesting_rules>` sections
 - `/decompose` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
 </quick_start>
@@ -108,6 +108,21 @@ Before applying changes, determine what will be affected:
 
 </step>
 
+<step name="pre_mutation_gate">
+
+**Pre-mutation gate — all checks must pass before Step 4:**
+
+- A live `<SPEC_TREE_CONTEXT>` marker exists for every source node, target node, and affected parent.
+- The operation plan names every source path, destination path, surviving node, removed node, assertion transfer, evidence-file transfer, citation update, and coordination-note transfer.
+- Every source and target exists, every destination parent is valid, and no destination path collides with an existing artifact outside the plan.
+- Every governance change is resolved: moved nodes retain the intended ADR/PDR ancestry, and no assertion crosses a decision boundary without an explicit aligned destination.
+- Any new sibling boundary, consolidation boundary, shared enabler, or index assignment comes from a completed `/decompose` result with ordering evidence.
+- `git status --short` has been inspected; no planned move, edit, or removal overlaps unrelated modified or untracked work.
+- Every node remaining after the operation has at least one coherent assertion, and every removed node has an explicit disposition for all descendants and files.
+- No product-intent question remains unresolved. If any check fails, STOP before mutation and resolve the failed check through the governing skill or the operator decision it requires.
+
+</step>
+
 <step name="apply_move">
 
 **Step 4a: Apply — Move**
@@ -182,7 +197,7 @@ After applying any operation:
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md`)
+- [ ] No content misplacement (per `/understand` operational reference `what-goes-where`)
 
 </step>
 
@@ -217,6 +232,24 @@ If the refactoring revealed further issues (nodes with too many assertions, orph
 </step>
 
 </workflow>
+
+<examples>
+
+**Move an enabler while preserving its evidence chain**
+
+Before:
+
+- `spx/{checkout-index}-checkout.outcome/{validation-index}-validation.enabler/validation.md` links `tests/test_validation.mapping.l1.py`.
+- `spx/{checkout-index}-checkout.outcome/{validation-index}-validation.enabler/PLAN.md` records pending validation work.
+
+After `/decompose` assigns index `32` under the destination parent:
+
+- `git mv` relocates the complete node to `spx/{commerce-index}-commerce.enabler/{new-validation-index}-validation.enabler/`.
+- The validation assertion and `tests/test_validation.mapping.l1.py` move together, and their relative evidence link remains valid.
+- `PLAN.md` moves with the node; every citation to the old full path changes to the new full path.
+- Searching `spx/` for the resolved old full path returns zero matches, `spx validation markdown` exits zero, and `spx spec status --format json` reports no structural error.
+
+</examples>
 
 <failure_modes>
 
@@ -284,14 +317,12 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 <success_criteria>
 
-Refactoring is complete when:
-
-- [ ] Operation identified and context loaded
-- [ ] Impact analyzed before applying
-- [ ] Structural composition decisions delegated to `/decompose` when needed
-- [ ] Changes applied (move/re-scope/extract/consolidate)
-- [ ] Validation checklist passes (no broken links, no orphans, no empty nodes)
-- [ ] Summary report with all files created/modified/moved/removed
-- [ ] Follow-up issues noted if any
+- Run the product's `author` command declared in the root runtime guide; it exits zero after regenerating any product-owned artifacts.
+- Search `spx/` for every obsolete source path and removed node path; each search returns zero matches, while each planned destination path exists exactly once.
+- Run `spx validation markdown`; it exits zero, proving spec structure, full-path links, and evidence links are valid.
+- Run `spx spec status --format json`; it exits zero and reports no orphan directory, empty node, index collision, broken citation, or invalid ancestry.
+- Compare every transferred assertion and evidence link before and after the operation; assertion meaning and verification type are unchanged, and each evidence target exists at the path the assertion names.
+- Inspect the resulting ancestry and ordering for each moved node; every governing ADR/PDR remains in scope, and any changed index matches the completed `/decompose` result.
+- Inspect `git status --short`; every planned move is represented, node-local `PLAN.md` and `ISSUES.md` moved with their node, and `spx/local/` has no change.
 
 </success_criteria>

@@ -146,7 +146,7 @@ _REQUIRED_FINDING_KEYS = (
 # the cited assertion/rule slug where the citation carries one.
 _SPEC_ASSERTION_RE = re.compile(
     r"(?P<path>spx/[^\s:]+\.md):"
-    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT):"
+    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE|AUDIT):"
     r"(?P<index>[1-9][0-9]*)"
 )
 _DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
@@ -163,14 +163,63 @@ _SECTION_TITLES = {
     "MAPPING": "Mappings",
     "CONFORMANCE": "Conformance",
     "PROPERTY": "Properties",
+    "COMPLIANCE": "Compliance",
     "AUDIT": "Audit",
 }
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
-_RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
+INLINE_FOUNDATION_RULE_TAGS = frozenset(
     {
-        "api_surface",
-        "principles",
+        "assertion_types",
+        "assignment_is_the_inverse",
+        "atemporal_voice",
+        "axes",
+        "closing_protocol",
+        "common_structure",
+        "context_loading_rule",
+        "coordination_and_context",
+        "decision_to_spec_alignment",
+        "declarations",
+        "delivery_boundary",
+        "enabler",
+        "expense_ceiling",
+        "full_paths",
+        "future_product_truth",
+        "layer_precedence",
+        "mixing_types",
+        "nesting_rules",
+        "no_origin_distinction",
+        "node_states",
+        "outcome",
+        "recording",
+        "spec_tree_integration",
+        "touched_file_debt",
+        "types",
+        "verification_selection",
+        "verification_types",
+        "vocabulary_boundaries",
     }
+)
+# Foundation containers are navigation domains, not concrete Finding.rule
+# targets. Findings cite the rule-bearing leaf sections nested inside them.
+INLINE_FOUNDATION_NON_RULE_CONTAINER_TAGS = frozenset(
+    {
+        "assertion_model",
+        "imperfection_protocol",
+        "node_model",
+        "ordering_model",
+        "truth_hierarchy",
+        "verification_model",
+    }
+)
+_RULE_BEARING_PSEUDO_XML_TAGS = (
+    frozenset(
+        {
+            "api_surface",
+            "constraints",
+            "principles",
+        }
+    )
+    | INLINE_FOUNDATION_RULE_TAGS
 )
 
 
@@ -417,13 +466,33 @@ def _pseudo_xml_section_has_rule_marker(
 ) -> bool:
     if tag in _RULE_BEARING_PSEUDO_XML_TAGS:
         return True
-    body: list[str] = []
     closing_tag = f"</{tag}>"
+    nested_tags: list[str] = []
+    in_fence = False
     for line in lines[tag_index + 1 :]:
-        if line.strip() == closing_tag:
+        if _is_markdown_fence(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        stripped = line.strip()
+        if nested_tags:
+            if stripped == f"</{nested_tags[-1]}>":
+                nested_tags.pop()
+                continue
+            nested_tag = _pseudo_xml_tag(line)
+            if nested_tag:
+                nested_tags.append(nested_tag)
+            continue
+        if stripped == closing_tag:
             break
-        body.append(line)
-    return any(_is_rule_marker_line(line) for line in body)
+        nested_tag = _pseudo_xml_tag(line)
+        if nested_tag:
+            nested_tags.append(nested_tag)
+            continue
+        if _is_rule_marker_line(line):
+            return True
+    return False
 
 
 def _heading_section_has_rule_marker(lines: list[str], heading_index: int) -> bool:

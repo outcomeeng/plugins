@@ -36,7 +36,7 @@ Product specs (`/contextualize` the node, then edit):
 Authored skills + methodology under `src/plugins/` (run `instructions:skill-auditor` after):
 
 - `spec-tree/skills/understand/references/excluded-nodes.md` — replace with a "specified via committed `spx.status.json`" reference.
-- `spec-tree/skills/understand/references/durable-map.md` and `imperfection-protocol.md`; `understand/SKILL.md` reference list.
+- `spec-tree/skills/understand/SKILL.md` `<truth_hierarchy>`, `<imperfection_protocol>`, and operational-reference list.
 - `spec-tree/skills/{apply,author,test,handoff,manage-github-pr,merging-standards}` and `handoff/workflows/02-reflect.md`.
 - `typescript/skills/test-typescript/SKILL.md`; sweep `methodology/skills/skill-structure.md`.
 
