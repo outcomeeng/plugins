@@ -30,7 +30,7 @@ Then follow the spec-tree workflow below.
 
 <selection_only>
 
-When `/author` requests evidence selection, it supplies one assertion at a time in this form:
+When the invocation uses `mode: select-evidence`, supply one assertion at a time in this form:
 
 ```text
 mode: select-evidence
@@ -59,7 +59,7 @@ The evidence form is artifact-aware:
 
 - A node's deterministic assertion receives `([test](tests/{canonical filename}))`.
 - An ADR/PDR deterministic rule receives `([{assertion type}])` under `### Testing`; decision records do not own test-file paths.
-- An eval receives `([eval](eval.toml))` in a node or `([eval])` in a decision record.
+- An eval receives `([eval](evals/{rule-slug}/eval.toml))` in a node or `([eval])` in a decision record.
 - An audit receives `([audit])`.
 
 Return after selection. Do not read source code, run Stages 3–5, create a test or eval artifact, edit the target spec, or update a link. The normal workflow performs those actions when `/test` later runs on the authored node.

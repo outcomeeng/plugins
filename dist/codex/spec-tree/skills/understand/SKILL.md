@@ -372,10 +372,12 @@ A blocker exists only when the immediate next action needs operator input or an 
 <SPEC_TREE_FOUNDATION>
 Loaded inline: truth-hierarchy, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
 Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
+Operational reference paths: what-goes-where=${SKILL_DIR}/references/what-goes-where.md; excluded-nodes=${SKILL_DIR}/references/excluded-nodes.md; product-domain-shapes=${SKILL_DIR}/references/product-domain-shapes.md
 Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
 Routing guide: loaded from AGENTS.md | absent
 Templates available: product, adr, pdr, enabler, outcome
+Template paths: product=${SKILL_DIR}/templates/product/product-name.product.md; adr=${SKILL_DIR}/templates/decisions/decision-name.adr.md; pdr=${SKILL_DIR}/templates/decisions/decision-name.pdr.md; enabler=${SKILL_DIR}/templates/nodes/enabler-name.md; outcome=${SKILL_DIR}/templates/nodes/outcome-name.md
 Examples available in: ${SKILL_DIR}/examples/
 </SPEC_TREE_FOUNDATION>
 ```

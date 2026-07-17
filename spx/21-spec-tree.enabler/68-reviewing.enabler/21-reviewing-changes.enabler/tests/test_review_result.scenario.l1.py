@@ -333,7 +333,6 @@ class TestRuleCitationForm:
             "spx/15-merging.pdr.md",
             FIXTURE_SKILL_RULE_CITATION,
             "plugins/spec-tree/skills/understand/SKILL.md:layer-precedence",
-            "plugins/typescript/skills/audit-typescript-architecture/SKILL.md:constraints",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
         ],
@@ -534,7 +533,7 @@ ALWAYS: fenced examples do not declare rules.
 
 <constraints>
 
-Direct imperative constraints are a canonical rule surface.
+ALWAYS: direct imperative constraints remain citeable when explicitly marked.
 
 </constraints>
 

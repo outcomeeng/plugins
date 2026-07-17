@@ -82,12 +82,12 @@ This loads:
 
 **For product specs:** Place at `spx/{product-name}.product.md`. No index.
 
-**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign the index from the decision's constraining scope:
+**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign the index from proven ordering evidence:
 
 - Lower-index decisions constrain higher-index siblings
 - An ADR/PDR at index N constrains all siblings at N+1 and above
-- Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
-- Use midpoint insertion between existing indices
+- Existing siblings are not precedents. A new independent decision shares a sibling's index unless concrete ordering evidence proves that one constrains the other.
+- Never distribute or midpoint-insert a new decision from sibling count or chronology. If the exact index is not already established by loaded ordering evidence, record the placement question as intent and invoke `/decompose <node-address>`.
 - Refer to ADRs/PDRs by full path from `spx/`; never write a bare decision filename such as `15-build.adr.md`
 - Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question as intent in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decompose <node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
 
