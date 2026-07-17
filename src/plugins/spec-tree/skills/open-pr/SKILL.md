@@ -149,9 +149,15 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Start the first management pass.** Resolve the PR number, then invoke /manage-pr on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
+**Step 6 — Capture the opened PR identity.** Read the host-observed identity after creation:
 
-**Exit.** Surface the PR URL. The managing flow takes over.
+```bash
+gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,reviews,comments
+```
+
+Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. Return the PR number, URL, full head SHA, head branch, base branch, and draft state to `/manage-github-pr`; this skill never invokes `/manage-pr`.
+
+**Exit.** Surface the opened PR identity to the caller. `/manage-github-pr` owns the single transition into `/manage-pr`.
 
 </workflow>
 
@@ -247,6 +253,6 @@ The opened pull request is sound when:
 - The published head is the exact clean committed tree for which every `VERIFICATION_READINESS` predicate holds.
 - The title is one Conventional Commit subject under 70 characters, and the body contains every section required by `<body_template>` and the active project overlay; conditional sections appear only when their applicability rules require them, with real newlines throughout.
 - The remote branch was published through an explicit `HEAD:refs/heads/<branch>` destination.
-- The surfaced result contains the PR URL and no identity string prohibited by /merging-standards `<self_reference>`.
+- The surfaced result contains the PR number, URL, full `headRefOid`, head branch, base branch, and draft state, and no identity string prohibited by /merging-standards `<self_reference>`.
 
 </success_criteria>
