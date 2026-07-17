@@ -108,6 +108,13 @@ def claim_mapping_evidence() -> tuple[MappingEvidence, ...]:
     )
 
 
+def claim_mappings_hold() -> bool:
+    """Check every source-owned claim-kind/relation pair in one entrypoint."""
+    return all(
+        evidence.actual is evidence.expected for evidence in claim_mapping_evidence()
+    )
+
+
 def _exercise_claim_relation(
     module: ModuleType, kind: object, relation: object
 ) -> MappingEvidence:
@@ -257,6 +264,13 @@ def branch_reference_evidence() -> tuple[MappingEvidence, ...]:
             )
         )
     return tuple(evidence)
+
+
+def branch_reference_mappings_hold() -> bool:
+    """Check normal and hex-shaped origin branch reachability mappings."""
+    return all(
+        evidence.actual is evidence.expected for evidence in branch_reference_evidence()
+    )
 
 
 def _git_ref_evidence(
@@ -605,7 +619,9 @@ __all__ = [
     "MappingEvidence",
     "RecordingRunner",
     "branch_reference_evidence",
+    "branch_reference_mappings_hold",
     "claim_mapping_evidence",
+    "claim_mappings_hold",
     "default_runner_failure_is_unverifiable",
     "external_calls_go_through_runner",
     "load_verify_session_claims_module",

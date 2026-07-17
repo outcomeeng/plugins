@@ -1,27 +1,18 @@
-"""Mapping evidence for pickup claim reconciliation.
-
-The finite claim/relation domain comes from the shipped verifier. The harness
-arranges each source-owned pair through generated inputs and real git state.
-"""
+"""Mapping evidence for pickup claim reconciliation."""
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
-    branch_reference_evidence,
-    claim_mapping_evidence,
+    branch_reference_mappings_hold,
+    claim_mappings_hold,
     observed_state_is_surfaced,
 )
 
 
 def test_claim_maps_to_verdict() -> None:
-    for evidence in claim_mapping_evidence():
-        assert evidence.actual is evidence.expected, (
-            evidence.kind,
-            evidence.relation,
-        )
+    assert claim_mappings_hold()
 
 
 def test_git_branch_reachability_maps_to_verdict() -> None:
-    for evidence in branch_reference_evidence():
-        assert evidence.actual is evidence.expected, evidence.relation
+    assert branch_reference_mappings_hold()
 
 
 def test_observed_claims_surface_current_values() -> None:
