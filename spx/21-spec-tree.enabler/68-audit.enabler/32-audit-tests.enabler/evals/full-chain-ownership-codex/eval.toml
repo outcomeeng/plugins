@@ -4,7 +4,7 @@ prompt = "prompt.md"
 plugin_dir = "dist/codex/spec-tree"
 owned_paths = [
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
-  "spx/31-outcomeeng.enabler/31-verification.enabler/31-audit-verification.enabler/54-audit-tests.enabler/audit-tests.md",
+  "spx/31-outcomeeng.enabler/31-verification.enabler/**",
   "dist/codex/spec-tree/skills/audit-tests/SKILL.md",
 ]
 smoke_cases = [
