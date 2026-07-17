@@ -545,23 +545,30 @@ def _installed_plugin_cache_candidates(
     plugin: str, skill: str
 ) -> tuple[pathlib.Path, ...]:
     candidates: list[pathlib.Path] = []
-    for marketplace_root in pathlib.Path(__file__).resolve().parents:
-        if marketplace_root.parent.name != "cache":
-            continue
-        plugin_root = marketplace_root / plugin
-        if not plugin_root.is_dir():
+    for cache_root in pathlib.Path(__file__).resolve().parents:
+        if cache_root.name != "cache":
             continue
         try:
-            versions = sorted(
-                (path for path in plugin_root.iterdir() if path.is_dir()),
-                key=_cache_version_key,
-                reverse=True,
+            marketplace_roots = sorted(
+                path for path in cache_root.iterdir() if path.is_dir()
             )
         except OSError:
             continue
-        candidates.extend(
-            version / "skills" / skill / "SKILL.md" for version in versions
-        )
+        for marketplace_root in marketplace_roots:
+            plugin_root = marketplace_root / plugin
+            if not plugin_root.is_dir():
+                continue
+            try:
+                versions = sorted(
+                    (path for path in plugin_root.iterdir() if path.is_dir()),
+                    key=_cache_version_key,
+                    reverse=True,
+                )
+            except OSError:
+                continue
+            candidates.extend(
+                version / "skills" / skill / "SKILL.md" for version in versions
+            )
     return tuple(candidates)
 
 

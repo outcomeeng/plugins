@@ -371,6 +371,7 @@ class TestRuleCitationForm:
     ) -> None:
         review_result = load_review_result_module()
         marketplace_root = tmp_path / "cache" / "outcomeeng"
+        cited_marketplace_root = tmp_path / "cache" / "external-marketplace"
         fake_script = (
             marketplace_root
             / "spec-tree"
@@ -383,7 +384,7 @@ class TestRuleCitationForm:
         fake_script.parent.mkdir(parents=True)
         fake_script.touch()
         skill_path = (
-            marketplace_root
+            cited_marketplace_root
             / "typescript"
             / "0.10.0"
             / "skills"
@@ -396,7 +397,7 @@ class TestRuleCitationForm:
             encoding="utf-8",
         )
         stale_skill_path = (
-            marketplace_root
+            cited_marketplace_root
             / "typescript"
             / "0.9.0"
             / "skills"
