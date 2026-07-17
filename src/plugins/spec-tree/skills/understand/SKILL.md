@@ -104,16 +104,16 @@ Specified and failing are valid states. They expose where lower layers must catc
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-| Artifact | Purpose | Contains | Verified by |
-| --- | --- | --- | --- |
-| ADR | Governs how the product is built | Architecture decisions, rationale, invariants | ADR audit |
-| PDR | Governs what users can rely on | Product decisions and observable properties | PDR audit |
-| Enabler spec | Declares infrastructure output | `PROVIDES ... SO THAT ... CAN ...` and assertions | Linked evidence |
-| Outcome spec | Declares an output hypothesis | Output, outcome, impact, and assertions | Linked evidence |
-| Test file | Proves one typed assertion class | Executable assertion evidence | Test runner |
-| Test infrastructure | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
-| Enforcement | Constrains source structure | Lint rules, AST selectors, and pattern matchers | Tests against violating fixtures |
-| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known defects | Stale-prone node-local context | Reconciliation on context load |
+| Artifact                | Purpose                                            | Contains                                             | Verified by                                  |
+| ----------------------- | -------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| ADR                     | Governs how the product is built                   | Architecture decisions, rationale, invariants        | ADR audit                                    |
+| PDR                     | Governs what users can rely on                     | Product decisions and observable properties          | PDR audit                                    |
+| Enabler spec            | Declares infrastructure output                     | `PROVIDES ... SO THAT ... CAN ...` and assertions    | Linked evidence                              |
+| Outcome spec            | Declares an output hypothesis                      | Output, outcome, impact, and assertions              | Linked evidence                              |
+| Test file               | Proves one typed assertion class                   | Executable assertion evidence                        | Test runner                                  |
+| Test infrastructure     | Provides harnesses, generators, and inert fixtures | Governed production code outside `spx/` and `tests/` | Code, architecture, and test-evidence audits |
+| Enforcement             | Constrains source structure                        | Lint rules, AST selectors, and pattern matchers      | Tests against violating fixtures             |
+| `PLAN.md` / `ISSUES.md` | Coordinates pending work or known defects          | Stale-prone node-local context                       | Reconciliation on context load               |
 
 ADR versus PDR is decided by content. An ADR governs architecture invisible to the product's users; a PDR governs behavior those users observe. Tree position and numeric prefix determine a decision's reach, so broad or foundational reach never determines its type. Product users differ by product: test-infrastructure layout can be product behavior for a methodology and architecture for an application.
 
@@ -133,20 +133,20 @@ Enforcement rules are production validation code. Their `[test]` evidence runs t
 
 - NEVER: preserve content in an artifact whose purpose does not own it.
 
-| Content | Wrong location | Correct location |
-| --- | --- | --- |
-| Architecture choice | Spec | ADR |
-| Product decision or user guarantee | Spec | PDR |
-| Outcome hypothesis | ADR/PDR | Outcome spec |
-| Test reference | ADR/PDR | Spec assertion |
-| Implementation detail | Spec | Code |
-| How to build something | Spec | ADR or code |
-| Cross-cutting invariant | Child spec | Ancestor spec |
-| Remaining work | Session file | Node-local `PLAN.md` |
-| Known unresolved defect | Session file | Node-local `ISSUES.md` |
-| Pending work induced by higher truth | Higher declaration | First affected lower node's `PLAN.md` after lower specs align |
-| Child enumeration | Parent spec | Child specs and `/contextualize` output |
-| Harness, generator, or fixture behavior | Executed test file | Language-standard test-infrastructure location |
+| Content                                 | Wrong location     | Correct location                                              |
+| --------------------------------------- | ------------------ | ------------------------------------------------------------- |
+| Architecture choice                     | Spec               | ADR                                                           |
+| Product decision or user guarantee      | Spec               | PDR                                                           |
+| Outcome hypothesis                      | ADR/PDR            | Outcome spec                                                  |
+| Test reference                          | ADR/PDR            | Spec assertion                                                |
+| Implementation detail                   | Spec               | Code                                                          |
+| How to build something                  | Spec               | ADR or code                                                   |
+| Cross-cutting invariant                 | Child spec         | Ancestor spec                                                 |
+| Remaining work                          | Session file       | Node-local `PLAN.md`                                          |
+| Known unresolved defect                 | Session file       | Node-local `ISSUES.md`                                        |
+| Pending work induced by higher truth    | Higher declaration | First affected lower node's `PLAN.md` after lower specs align |
+| Child enumeration                       | Parent spec        | Child specs and `/contextualize` output                       |
+| Harness, generator, or fixture behavior | Executed test file | Language-standard test-infrastructure location                |
 
 Evidence specialization is valid when a child `[test]` rule concretizes an ancestor `[audit]` rule against a narrower source surface. Same-content repetition using the same evidence mechanism is duplication.
 
