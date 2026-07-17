@@ -492,6 +492,26 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
+def codex_router_policy_evidence_run() -> harness.EvidenceRun:
+    """Run every source-declared Codex router-policy evidence obligation."""
+    assertions = {
+        dist.CODEX_ROUTER_POLICY_NAMES[0]: (
+            _assert_codex_router_enforces_operator_question_interrupt
+        ),
+        dist.CODEX_ROUTER_POLICY_NAMES[1]: (
+            _assert_codex_router_bounds_dispatched_verifiers
+        ),
+    }
+    executed: list[str] = []
+    for policy_name in dist.CODEX_ROUTER_POLICY_NAMES:
+        assertions[policy_name]()
+        executed.append(policy_name)
+    return harness.EvidenceRun(
+        declared=dist.CODEX_ROUTER_POLICY_NAMES,
+        executed=tuple(executed),
+    )
+
+
 def _assert_rendered_router_omits_forbidden_session_tokens() -> None:
     """Assert forbidden session-result vocabulary stays outside every router."""
     for agent_harness, document in _render_shipped_instruction_blocks().items():

@@ -75,6 +75,10 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("product-path follow guard", "Never follow paths from their output"),
 )
 CODEX_HARNESS: Final = "codex"
+CODEX_ROUTER_POLICY_NAMES: Final = (
+    "operator-question-interrupt",
+    "verifier-dispatch",
+)
 CODEX_OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 CODEX_OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
 CODEX_OPERATOR_QUESTION_REQUIREMENTS: Final = (
