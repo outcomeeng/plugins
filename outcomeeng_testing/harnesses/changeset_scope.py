@@ -10,6 +10,9 @@ Exposes:
   been merged into ``origin/<base>`` while the local base branch ref lags behind
   it. Scoping against the local ref re-includes the merged commit; scoping
   against the remote-tracking ref excludes it.
+- ``build_base_advanced_after_branch_repo``. Constructs a diverged repository
+  where the base gains a commit after the feature branches, distinguishing a
+  merge-base three-dot diff from a two-dot tip-to-tip diff.
 - ``build_repo_without_origin``. A repository with a branch and a commit but no
   ``refs/remotes/origin/HEAD`` symbolic ref, for the base-ref fallback paths.
 - ``build_repo_with_modified_spaced_note``. A repository whose only working-tree
@@ -192,6 +195,48 @@ def _fixture_text(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).read_text(encoding="utf-8")
 
 
+def _initialize_changeset_repo(repo: pathlib.Path) -> StaleBaseScenario:
+    """Create the shared initial commit for a changeset-scope scenario."""
+    scenario = STALE_BASE_SCENARIO
+    _git(
+        repo,
+        "init",
+        "-q",
+        "-b",
+        scenario.base_branch,
+        str(repo),
+        cwd=pathlib.Path.cwd(),
+    )
+    _git(repo, "config", "commit.gpgsign", "false")
+    _commit_file(
+        repo,
+        scenario.initial_file,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
+        "initial",
+    )
+    return scenario
+
+
+def _publish_origin_base(
+    repo: pathlib.Path,
+    scenario: StaleBaseScenario,
+    commit_oid: str,
+) -> None:
+    """Point the synthetic origin base and origin/HEAD refs at a commit."""
+    _git(
+        repo,
+        "update-ref",
+        f"refs/remotes/origin/{scenario.base_branch}",
+        commit_oid,
+    )
+    _git(
+        repo,
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        f"refs/remotes/origin/{scenario.base_branch}",
+    )
+
+
 @dataclass(frozen=True)
 class StaleBaseRepo:
     """A repo where the feature branch holds a commit already merged to origin.
@@ -211,6 +256,17 @@ class StaleBaseRepo:
     feature_file: str
 
 
+@dataclass(frozen=True)
+class BaseAdvancedRepo:
+    """A repo whose base gains a commit after the feature branches."""
+
+    repo: pathlib.Path
+    base_ref: str
+    feature_branch: str
+    base_file: str
+    feature_file: str
+
+
 def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     """Build the staleness scenario and return its handle.
 
@@ -219,23 +275,7 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     contains M; add feature commit F; reset the local ``main`` ref back to A so
     it lags ``origin/main`` by the merged commit.
     """
-    scenario = STALE_BASE_SCENARIO
-    _git(
-        repo,
-        "init",
-        "-q",
-        "-b",
-        scenario.base_branch,
-        str(repo),
-        cwd=pathlib.Path.cwd(),
-    )
-    _git(repo, "config", "commit.gpgsign", "false")
-    _commit_file(
-        repo,
-        scenario.initial_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
-        "initial",
-    )
+    scenario = _initialize_changeset_repo(repo)
     initial_sha = _git(repo, "rev-parse", "HEAD")
 
     _commit_file(
@@ -247,18 +287,7 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     advanced_sha = _git(repo, "rev-parse", "HEAD")
 
     # origin/main (and origin/HEAD) point at the advanced base A+M.
-    _git(
-        repo,
-        "update-ref",
-        f"refs/remotes/origin/{scenario.base_branch}",
-        advanced_sha,
-    )
-    _git(
-        repo,
-        "symbolic-ref",
-        "refs/remotes/origin/HEAD",
-        f"refs/remotes/origin/{scenario.base_branch}",
-    )
+    _publish_origin_base(repo, scenario, advanced_sha)
 
     # Feature branches off A+M (so it contains the merged commit) and adds F.
     _git(repo, "switch", "-q", "-c", scenario.feature_branch)
@@ -281,29 +310,50 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     )
 
 
+def build_base_advanced_after_branch_repo(repo: pathlib.Path) -> BaseAdvancedRepo:
+    """Build a topology that distinguishes three-dot from two-dot diff scope.
+
+    Sequence: initial commit A on the base; branch the feature from A and add F;
+    return to the base and add M; point ``origin/<base>`` at A+M; switch back to
+    the feature at A+F. A three-dot diff starts from merge base A and contains F
+    only, while a two-dot diff between A+M and A+F also contains M.
+    """
+    scenario = _initialize_changeset_repo(repo)
+
+    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    _commit_file(
+        repo,
+        scenario.feature_file,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "feature"),
+        "feature change",
+    )
+
+    _git(repo, "switch", "-q", scenario.base_branch)
+    _commit_file(
+        repo,
+        scenario.merged_file,
+        _fixture_text(STALE_BASE_FIXTURE_DIR, "merged"),
+        "advance base",
+    )
+    _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
+    _git(repo, "switch", "-q", scenario.feature_branch)
+
+    return BaseAdvancedRepo(
+        repo=repo,
+        base_ref=scenario.base_branch,
+        feature_branch=scenario.feature_branch,
+        base_file=scenario.merged_file,
+        feature_file=scenario.feature_file,
+    )
+
+
 def build_repo_without_origin(repo: pathlib.Path) -> str:
     """Build a repo with a branch and a commit but no origin/HEAD symbolic ref.
 
     Returns the branch name. Exercises the base-ref fallback paths
     (``strict=False`` returns the default, ``strict=True`` raises).
     """
-    scenario = STALE_BASE_SCENARIO
-    _git(
-        repo,
-        "init",
-        "-q",
-        "-b",
-        scenario.base_branch,
-        str(repo),
-        cwd=pathlib.Path.cwd(),
-    )
-    _git(repo, "config", "commit.gpgsign", "false")
-    _commit_file(
-        repo,
-        scenario.initial_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
-        "initial",
-    )
+    scenario = _initialize_changeset_repo(repo)
     return scenario.base_branch
 
 

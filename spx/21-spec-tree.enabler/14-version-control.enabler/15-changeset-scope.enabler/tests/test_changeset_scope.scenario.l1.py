@@ -27,6 +27,7 @@ import subprocess
 import pytest
 from outcomeeng_testing.harnesses.changeset_scope import (
     STALE_BASE_SCENARIO,
+    build_base_advanced_after_branch_repo,
     build_repo_without_origin,
     build_stale_local_base_repo,
     detach_head,
@@ -64,9 +65,10 @@ def test_remote_tracking_ref_composes_origin_prefix() -> None:
 def test_branch_scope_returns_feature_change_against_remote_tracking_base() -> None:
     with temporary_changeset_scope() as paths:
         module = load_changeset_scope_module()
-        stale = build_stale_local_base_repo(paths.repo)
-        files = module.branch_scope(stale.base_ref, repo=stale.repo)
-        assert stale.feature_file in files
+        advanced = build_base_advanced_after_branch_repo(paths.repo)
+        files = module.branch_scope(advanced.base_ref, repo=advanced.repo)
+        assert advanced.base_file not in files
+        assert advanced.feature_file in files
 
 
 def test_stale_local_base_ref_does_not_widen_scope() -> None:
