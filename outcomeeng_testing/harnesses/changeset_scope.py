@@ -737,8 +737,7 @@ def spaced_note_comparison() -> EvidenceComparison:
             ),
             expected=(
                 (spaced.note_path,),
-                pathlib.PurePosixPath(spaced.note_path).name
-                in classifier.COORDINATION_NOTE_BASENAMES,
+                True,
             ),
         )
 
