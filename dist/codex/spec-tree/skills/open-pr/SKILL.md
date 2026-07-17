@@ -24,7 +24,7 @@ Walk these steps in order. Verification, review, push, and open continue without
 
 **Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
 
-**Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. For a stacked branch, record `topology=stacked`, `stack_base=<previous-stack-branch>`, and `active_base=stack_base` from the classification result.
+**Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. For a stacked branch, record `topology=stacked`, `stack_base=<previous-stack-branch>`, and `active_base=stack_base` from the classification result. Resolve that branch's exact open pull request with `gh pr view "$stack_base" --json number,url,state,headRefName,headRefOid,baseRefName`; require `state == OPEN` and `headRefName == stack_base`, then record the returned full URL as `stack_base_pr_url`. A missing or mismatched base PR fails topology classification before verification.
 
 **Step 2 — GATE: Preliminary branch hygiene.** Run /merging-standards `<branch_hygiene>` with the `active_base` recorded in Step 1. Every condition must hold or the flow stops at the first failed condition. This early pass prevents verification work on an invalid branch; Step 4 repeats hygiene after the verification fixpoint.
 
@@ -57,7 +57,7 @@ If `spx/local/merging.md` defines a custom branch-push command, follow that over
 
 **Step 5 — GATE: Open the PR in its topology state.** Pipe the curated body to gh on stdin via `--body-file -`. A peer PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3). A stacked PR targets its previous stack branch and remains draft until that base merges. Choose the stdin form by harness.
 
-Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until that base merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base` branch. Replace `<stack-base>` in the body with that recorded branch before executing the command.
+Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until the exact base PR merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base_pr_url` and `stack_base` branch. Replace both placeholders in the body with those host-observed values before executing the command.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc. Peer PRs use this form and omit the stack section:
 
@@ -88,7 +88,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 ```
 
-Stacked PRs use this form, replacing `<stack-base>` in the body with the recorded full branch before execution:
+Stacked PRs use this form, replacing `<stack-base-pr-url>` and `<stack-base>` in the body with the recorded host-observed values before execution:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 gh pr create \
@@ -111,7 +111,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 ## Stack
 
-- Merge after `<stack-base>`.
+- Merge after <stack-base-pr-url> (branch: <stack-base>).
 
 ## Test plan
 
@@ -134,7 +134,7 @@ printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '#
 Stacked PR:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' "- Merge after $stack_base." '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "$stack_base" --draft
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' "- Merge after $stack_base_pr_url (branch: $stack_base)." '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "$stack_base" --draft
 ```
 
 Flag rationale:
@@ -216,7 +216,7 @@ Adapt by change type:
 | Refactor    | State the no-behavior-change invariant. Test plan: "existing tests still pass".           |
 | Spec        | Link the spec nodes affected; describe what is now declared.                              |
 | Docs        | Drop Test plan; describe what readers gain.                                               |
-| Stacked PR  | Add `## Stack` with a merge-order line naming the full previous stack branch.             |
+| Stacked PR  | Add `## Stack` with a merge-order line naming the exact base PR URL and full branch.      |
 
 Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec nodes by full path from `spx/`. No `<self_reference>` violations per /merging-standards.
 
@@ -249,7 +249,7 @@ When the harness exposes no approval path for a required project command, stop w
 The opened pull request is sound when:
 
 - Its URL, number, head branch, head SHA, base branch, and draft state are observable from the host and match the published branch.
-- A peer PR targets the repository default branch and is ready for review; a stacked PR targets its declared stack base and is draft.
+- A peer PR targets the repository default branch and is ready for review; a stacked PR targets its declared stack base, is draft, and records the host-observed base PR URL and branch in `## Stack`.
 - The published head is the exact clean committed tree for which every `VERIFICATION_READINESS` predicate holds.
 - The title is one Conventional Commit subject under 70 characters, and the body contains every section required by `<body_template>` and the active project overlay; conditional sections appear only when their applicability rules require them, with real newlines throughout.
 - The remote branch was published through an explicit `HEAD:refs/heads/<branch>` destination.

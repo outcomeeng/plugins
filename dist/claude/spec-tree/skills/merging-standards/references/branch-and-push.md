@@ -106,10 +106,10 @@ The `exit 1` inside the upstream-safety check is a STOP for the lifecycle.
 
 Every PR branch is one of two shapes:
 
-| Shape   | Meaning                                                                               | Required handling                                                                                                        |
-| ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Peer    | Targets the repository default branch and contains only its own review payload.       | Create from the current default branch. Refuse stale sibling merge commits.                                              |
-| Stacked | Intentionally depends on another unmerged branch and targets that branch as its base. | Name the dependency in the PR body. Keep draft until the base merges, then reconstruct onto default base and open ready. |
+| Shape   | Meaning                                                                               | Required handling                                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Peer    | Targets the repository default branch and contains only its own review payload.       | Create from the current default branch. Refuse stale sibling merge commits.                                                               |
+| Stacked | Intentionally depends on another unmerged branch and targets that branch as its base. | Name the exact base PR URL and branch in the PR body. Keep draft until that PR merges, then reconstruct onto default base and open ready. |
 
 **Peer-gate** (all must hold): `origin/${base}` is an ancestor of `HEAD`; the commit list contains only the intended payload; the changed file list matches the PR scope; no merge commits from sibling work.
 
@@ -127,19 +127,20 @@ git diff --name-only "origin/${base}...HEAD"
 1. **Repair as peer** — divergence unintentional. Rebase onto `origin/${base}`, drop sibling merge commits, re-run the gate.
 2. **Reclassify as stacked** — dependency on an unmerged base is intentional. Identify the actual base branch, update the `<base>` argument used at `gh pr create` time, and run the stacked gate against it.
 
-**Stacked-gate** (all must hold): the PR base is the previous stack branch (named in the PR body's `Stack` or `Merge order` note); the branch remains draft while the base is unmerged; after the base merges, the branch is rebased onto the updated default branch before final merge.
+**Stacked-gate** (all must hold): the PR base is the previous stack branch; the PR body's `## Stack` section names the exact stack-base PR URL and branch; the URL resolves to that branch's pull request; the branch remains draft while that exact PR is unmerged; after the base PR merges, the branch is rebased onto the updated default branch before final merge.
 
-Identify the previous stack branch from context: the PR description's `Stack` / `Merge order` note, the branch-naming convention, or an explicit user instruction. If none of those yields a ref, ask the operator through the active structured-question capability rather than guessing.
+Identify stack topology from the PR description's `## Stack` section. When the section is absent for a non-default-base or draft PR, ask the operator for the exact stack-base PR pointer through the active structured-question capability; resolve its host-observed URL and `headRefName`, and use those values rather than a branch-naming convention. Never reconstruct merged-PR identity from a branch label.
 
 ```bash
 base_branch="<previous-stack-branch>"
+gh pr view "<stack-base-pr-url>" --json number,url,state,mergedAt,headRefName,headRefOid,baseRefName
 git fetch origin "${base_branch}"
 git merge-base --is-ancestor "origin/${base_branch}" HEAD
 git log --oneline "origin/${base_branch}..HEAD"
 git diff --name-only "origin/${base_branch}...HEAD"
 ```
 
-**Post-merge reconstruction.** Once the stack base merges, repeat the publication protocol to re-target the PR at the default branch, replace its body without the complete `## Stack` section or any retired stack-base reference, re-classify it as peer, and mark it ready exactly once. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
+**Post-merge reconstruction.** Once the exact stack-base PR URL reports merged, repeat the publication protocol to re-target the PR at the default branch, replace its body without the complete `## Stack` section or any retired stack-base reference, re-classify it as peer, and mark it ready exactly once. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
 
 </branch_topology>
 
