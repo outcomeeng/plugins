@@ -43,6 +43,7 @@ Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before edi
 - `actor_or_activity_objective`
 - `objective_criteria_duplication`
 - `auditor_skeleton_violation`
+- `invoker_coupling`
 - `orphaned_argument`
 - `missing_argument_hint`
 - `argument_capture_regression`
@@ -74,3 +75,17 @@ Required handling:
 - Require auditor remediation for banned-subject findings to follow that rule instead of recommending an internal terminology key as prose.
 - Sweep the existing literal occurrences in `src/plugins/instructions/skills/audit-subagents/SKILL.md` onto imperative wording or `{{! term('configured_agent') !}}` as appropriate.
 - Add an auditor eval case where "the agent" is rejected and "the configured agent" is also rejected as its replacement.
+
+## 8. Auditor agent model declaration convention
+
+The auditor agents declare their model two ways. `src/plugins/instructions/agents/skill-auditor.md`, `src/plugins/instructions/agents/subagent-auditor.md`, and `src/plugins/spec-tree/agents/implementation-auditor.md` use the build-time term `model: "{{! term('configured_agent_auditor_model') !}}"`, which renders `sonnet` for Claude and the Codex standard model for Codex. The five remaining spec-tree auditor agents hardcode `model: sonnet`, which reaches Codex as the literal `sonnet` and is translated to the Codex standard model at install time by `MODEL_MAPPINGS` in `outcomeeng/distribution/agents.py`. Both forms select the same model on both runtimes, so neither is broken; the divergence is which layer owns the per-runtime mapping — the build or the install-time converter.
+
+The divergence is invisible in the authored files: an author copying a hardcoded auditor as a template gets the literal form, and an author copying a term-form auditor gets the term form, with nothing naming either as canonical.
+
+Required handling: decide which layer owns per-runtime model selection for agent frontmatter, record it in the agent-authoring standards, then sweep the eight auditor agents onto the chosen form. Deciding one agent at a time reproduces the divergence, so this is not a per-file edit. Gate changed agents with `instructions:subagent-auditor`.
+
+## 9. Audit-skill target-argument declaration convention
+
+The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagents/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skills/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
+
+Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skills`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
