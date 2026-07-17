@@ -4,7 +4,7 @@ Governing decision: `spx/12-marketplace-state.adr.md` (marketplace state ownersh
 
 Decision and spec aligned: `spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md`
 re-declares the diagnose contract — marketplace-install diagnosis derives expected plugin state
-from the checkout's per-runtime project declarations, and the shipped manifest embeds no plugin
+from the checkout's committed per-agent agent-harness configuration, and the shipped manifest embeds no plugin
 set — and the node's `diagnostics.md` conformance assertion is aligned to that contract in the same
 change. Neither carries an unpublished-dependency gate.
 
@@ -15,7 +15,7 @@ node's `[test]` evidence trails the aligned assertion until the cutover below re
 
 Pending implementation — BLOCKING dependency: a published `@outcomeeng/spx` release must first
 provide the revised diagnose manifest schema and the marketplace-install classification that reads
-the checkout's per-runtime project declarations. The currently published `spx diagnose` reads
+the checkout's committed per-agent agent-harness configuration. The currently published `spx diagnose` reads
 `expected_plugins` from the manifest, so removing it before the CLI reads the checkout declarations
 breaks diagnosis. When the release is published, land these together so the test and the shipped
 artifact rejoin the already-aligned decision and spec:
