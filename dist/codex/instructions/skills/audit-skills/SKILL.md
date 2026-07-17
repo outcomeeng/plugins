@@ -3,7 +3,7 @@ name: audit-skills
 description: >-
   SKILL.md audit methodology — judges skill content for standards compliance,
   operational effectiveness, portability, voice, and structure.
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Bash(python3 -c:*), Skill
 ---
 
 Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
