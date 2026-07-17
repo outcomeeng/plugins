@@ -33,7 +33,7 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 1. Require `$ARGUMENTS` to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. When no exact committed scope can be resolved, return the `BLOCKED` JSON object in `<verdict_format>`; scope failure occurs before a coherence verdict and never fabricates commit identities.
 2. Invoke `spec-tree:scope-changeset` and apply its canonical remote-base, commit-identity, and three-dot diff semantics. Resolve the full base and head commit IDs and preserve them verbatim.
 3. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
-4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. Exclude generated fanout from authored breadth while retaining it in each cluster's `generated_fanout`.
+4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. In an already-collected evidence packet, `role: generated` classifies the artifact kind only; it never establishes provenance. Require `generated_from`, a declared relationship record, or equivalent explicit evidence. When `generated_relationship_evidence.status` is `missing`, return `UNKNOWN` with `missing-generated-source-evidence` before clustering the unresolved artifact. Exclude resolved generated fanout from authored breadth while retaining it in each producer cluster's `generated_fanout`.
 5. Extract behavioral claims from the changed declarations and observable implementation/evidence. Use commit messages only as supporting evidence; they never override changed artifacts.
 6. Build the smallest semantic clusters whose artifacts realize one claim. Record each cluster's authored artifacts, generated fanout, verification story, rollback story, dependencies, and independent-mergeability judgment.
 7. Collapse dependency cycles and clusters that cannot be verified or rolled back separately into one inseparable cluster. Order remaining clusters topologically, breaking independent ties by the lexicographically first authored path.
@@ -49,6 +49,8 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 - `UNKNOWN`: missing evidence can change cluster membership, dependency order, generated-source attribution, verification unity, rollback unity, or independent mergeability. `publication_authorized` is `false`.
 
 An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
+
+For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. Every artifact classified as generated MUST resolve through an explicit repository-declared relationship or a `generated_from` field in an already-collected evidence packet. NEVER infer a generated artifact's producer from path similarity, artifact count, or the presence of only one authored artifact; unresolved attribution yields `UNKNOWN` with `missing-generated-source-evidence`.
 
 When an evidence packet supplies already-collected claims, artifact paths, evidence paths, dependencies, or review-load signals, preserve those values verbatim in the projection. Sort claim and path arrays lexicographically. Copy `review_load` without reinterpretation. Every normal verdict carries every field in the schema, using empty arrays or objects when a field has no entries.
 
@@ -136,6 +138,22 @@ What happened: Claude was instructed to return `UNKNOWN` for an unresolved scope
 Why it failed: Scope resolution failure occurs before an exact changeset exists, so a normal verdict would require fabricated identities or an internally invalid object.
 
 How to avoid: Return the separate `BLOCKED` JSON object for scope resolution failure and emit a coherence verdict only after both full commit identities resolve.
+
+**Failure 3: A null dependency set was treated as an empty set.**
+
+What happened: Claude rejected two independently understandable clusters and ordered them as unrelated review units even though the evidence packet supplied `dependencies: null`.
+
+Why it failed: Claude collapsed “dependency evidence unavailable” into “dependency evidence establishes no relationships,” producing a split without a defensible order.
+
+How to avoid: Distinguish absent or `null` dependency evidence from an explicit empty array and return `UNKNOWN` whenever the unavailable evidence can change a multi-cluster classification or order.
+
+**Failure 4: A generated artifact was attached by proximity.**
+
+What happened: Claude attached one generated artifact to the only authored artifact and approved the changeset even though no repository relationship or `generated_from` field established that producer.
+
+Why it failed: Artifact count and nearby paths were treated as provenance, inventing the relationship the audit was required to verify.
+
+How to avoid: Require an explicit repository-declared generated-source relationship and return `UNKNOWN` with `missing-generated-source-evidence` when attribution cannot be established.
 
 </failure_modes>
 
