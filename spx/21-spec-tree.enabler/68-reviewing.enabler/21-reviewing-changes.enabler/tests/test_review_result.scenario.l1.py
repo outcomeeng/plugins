@@ -367,6 +367,58 @@ class TestRuleCitationForm:
             FIXTURE_SKILL_RULE_CITATION,
         )
 
+    def test_cross_plugin_rule_resolves_from_installed_cache_without_repo(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        review_result = load_review_result_module()
+        marketplace_root = tmp_path / "cache" / "outcomeeng"
+        fake_script = (
+            marketplace_root
+            / "spec-tree"
+            / "0.78.2"
+            / "skills"
+            / "review-changes"
+            / "scripts"
+            / "review_result.py"
+        )
+        fake_script.parent.mkdir(parents=True)
+        fake_script.touch()
+        skill_path = (
+            marketplace_root
+            / "typescript"
+            / "0.22.1"
+            / "skills"
+            / "audit-typescript-architecture"
+            / "SKILL.md"
+        )
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text(
+            "<constraints>\n\n- ALWAYS: preserve architecture boundaries.\n\n</constraints>\n",
+            encoding="utf-8",
+        )
+        empty_repo = tmp_path / "empty-repo"
+        empty_repo.mkdir()
+        monkeypatch.chdir(empty_repo)
+        monkeypatch.setattr(review_result, "__file__", str(fake_script))
+        rule = (
+            "plugins/typescript/skills/audit-typescript-architecture/"
+            "SKILL.md:constraints"
+        )
+        finding = {
+            "id": "F-001",
+            "concern": "architecture",
+            "severity": "debt",
+            "file": "x.ts",
+            "line": 1,
+            "rule": rule,
+            "message": "m",
+            "action": "a",
+        }
+
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[finding]))
+        )
+
     def test_inline_foundation_sections_are_citeable(self) -> None:
         review_result = load_review_result_module()
         skill_path = REPO_ROOT / "src/plugins/spec-tree/skills/understand/SKILL.md"

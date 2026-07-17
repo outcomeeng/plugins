@@ -564,6 +564,7 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
         pathlib.Path("dist") / "claude" / suffix,
         pathlib.Path("dist") / "codex" / suffix,
         *_runtime_plugin_skill_candidates(plugin, skill),
+        *_installed_plugin_cache_candidates(plugin, skill),
         *(ancestor / suffix for ancestor in pathlib.Path(__file__).resolve().parents),
     )
     for candidate in candidates:
@@ -585,6 +586,29 @@ def _runtime_plugin_skill_candidates(
         if ancestor.name != plugin and ancestor.parent.name != plugin:
             continue
         candidates.append(skills_dir / skill / "SKILL.md")
+    return tuple(candidates)
+
+
+def _installed_plugin_cache_candidates(
+    plugin: str, skill: str
+) -> tuple[pathlib.Path, ...]:
+    candidates: list[pathlib.Path] = []
+    for marketplace_root in pathlib.Path(__file__).resolve().parents:
+        if marketplace_root.parent.name != "cache":
+            continue
+        plugin_root = marketplace_root / plugin
+        if not plugin_root.is_dir():
+            continue
+        try:
+            versions = sorted(
+                (path for path in plugin_root.iterdir() if path.is_dir()),
+                reverse=True,
+            )
+        except OSError:
+            continue
+        candidates.extend(
+            version / "skills" / skill / "SKILL.md" for version in versions
+        )
     return tuple(candidates)
 
 
