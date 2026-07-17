@@ -29,7 +29,7 @@ Topics the overlay MAY refine:
 
 If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. Absent preview, deployment, and release declarations make `PREVIEW`, `DEPLOY`, and `RELEASE` no-op phases; `MERGE_READINESS` still requires current-head CI review with no unresolved valid `BLOCKING` or `DEBT` finding, every other required check terminal-green, branch hygiene, and PR state. **Absence of a pre-mutation-confirmation setting means Claude drives the lifecycle autonomously**, with no up-front confirmation pause before the first mutation.
 
-The overlay cannot override the open-ready mandate — once `VERIFICATION_READINESS` holds the PR is created `ready_for_review`. There is no draft phase and no gated draft-to-ready promotion; a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges.
+The overlay cannot override the topology state. Once `VERIFICATION_READINESS` holds, a peer PR is created `ready_for_review`; a stacked PR is created draft and stays draft per `<branch_topology>` until its base merges. No other draft phase or gated draft-to-ready promotion exists.
 </repo_local_overlay>
 
 <overlay_safety_checks>
