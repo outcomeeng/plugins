@@ -15,12 +15,14 @@ Spec Tree structure composed from a target node address, durable spec content, a
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Accept exactly one target:
+**Target:** `$ARGUMENTS`
+
+Accept exactly one target from `$ARGUMENTS`:
 
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+If `$ARGUMENTS` is empty, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
 
 Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
