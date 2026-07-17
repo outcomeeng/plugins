@@ -19,9 +19,10 @@ Exposes:
   change is a committed-then-modified coordination note at a path containing a
   space, for the porcelain-quoting case.
 
-The harness owns the scenario's invented payload, git lifecycle, runtime
-handles, and evidence entrypoints. Executed tests invoke those entrypoints
-without declaring setup state.
+The harness owns Git lifecycle, temporary resources, process isolation, and
+runtime handles. Generated branch and path inputs come from the changeset-scope
+generator, while executed test files call production behavior and own every
+outcome assertion.
 """
 
 from __future__ import annotations
@@ -34,8 +35,14 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
+
+from outcomeeng_testing.generators.changeset_scope import (
+    ChangesetScopeCase,
+    changeset_scope_cases,
+)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHANGESET_SCOPE_SCRIPTS_DIR = (
@@ -61,8 +68,8 @@ MERGE_CLASSIFIER_MODULE_PATH = (
 CHANGESET_SCOPE_FIXTURES_DIR = (
     pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "changeset_scope"
 )
-STALE_BASE_FIXTURE_DIR = CHANGESET_SCOPE_FIXTURES_DIR / "stale-base"
 SPACED_NOTE_FIXTURE_DIR = CHANGESET_SCOPE_FIXTURES_DIR / "spaced-note"
+CHANGESET_SCOPE_CASE_COUNT = 3
 
 
 def _fixture_file(scenario: pathlib.Path, role: str) -> pathlib.Path:
@@ -79,27 +86,16 @@ def _fixture_relative_path(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).relative_to(scenario / role).as_posix()
 
 
-@dataclass(frozen=True)
-class StaleBaseScenario:
-    """Synthetic names and inert payload paths for the stale-base scenario."""
-
-    base_branch: str
-    feature_branch: str
-    initial_file: str
-    merged_file: str
-    feature_file: str
-    working_file: str
-
-
-STALE_BASE_SCENARIO = StaleBaseScenario(
-    base_branch="main",
-    feature_branch="feature/x",
-    initial_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "initial"),
-    merged_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "merged"),
-    feature_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "feature"),
-    working_file=_fixture_relative_path(STALE_BASE_FIXTURE_DIR, "working"),
-)
 SPACED_NOTE_PATH = _fixture_relative_path(SPACED_NOTE_FIXTURE_DIR, "committed")
+
+
+def generated_changeset_scope_cases() -> tuple[ChangesetScopeCase, ...]:
+    """Return the harness-configured number of reproducible generated cases."""
+    return tuple(islice(changeset_scope_cases(), CHANGESET_SCOPE_CASE_COUNT))
+
+
+def _first_changeset_scope_case() -> ChangesetScopeCase:
+    return next(changeset_scope_cases())
 
 
 @dataclass(frozen=True)
@@ -186,7 +182,9 @@ def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str
 
 
 def _commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> None:
-    (repo / name).write_text(content, encoding="utf-8")
+    path = repo / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
     _git(repo, "add", name)
     _git(repo, "commit", "-q", "-m", message)
 
@@ -195,9 +193,12 @@ def _fixture_text(scenario: pathlib.Path, role: str) -> str:
     return _fixture_file(scenario, role).read_text(encoding="utf-8")
 
 
-def _initialize_changeset_repo(repo: pathlib.Path) -> StaleBaseScenario:
+def _initialize_changeset_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> ChangesetScopeCase:
     """Create the shared initial commit for a changeset-scope scenario."""
-    scenario = STALE_BASE_SCENARIO
+    scenario = scenario or _first_changeset_scope_case()
     _git(
         repo,
         "init",
@@ -211,15 +212,15 @@ def _initialize_changeset_repo(repo: pathlib.Path) -> StaleBaseScenario:
     _commit_file(
         repo,
         scenario.initial_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "initial"),
-        "initial",
+        scenario.initial_file,
+        scenario.initial_file,
     )
     return scenario
 
 
 def _publish_origin_base(
     repo: pathlib.Path,
-    scenario: StaleBaseScenario,
+    scenario: ChangesetScopeCase,
     commit_oid: str,
 ) -> None:
     """Point the synthetic origin base and origin/HEAD refs at a commit."""
@@ -254,6 +255,7 @@ class StaleBaseRepo:
     feature_branch: str
     merged_file: str
     feature_file: str
+    working_file: str
 
 
 @dataclass(frozen=True)
@@ -267,7 +269,10 @@ class BaseAdvancedRepo:
     feature_file: str
 
 
-def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
+def build_stale_local_base_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> StaleBaseRepo:
     """Build the staleness scenario and return its handle.
 
     Sequence: initial commit A on ``main``; merged commit M on ``main``; point
@@ -275,14 +280,14 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     contains M; add feature commit F; reset the local ``main`` ref back to A so
     it lags ``origin/main`` by the merged commit.
     """
-    scenario = _initialize_changeset_repo(repo)
+    scenario = _initialize_changeset_repo(repo, scenario)
     initial_sha = _git(repo, "rev-parse", "HEAD")
 
     _commit_file(
         repo,
         scenario.merged_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "merged"),
-        "merge change into base",
+        scenario.merged_file,
+        scenario.merged_file,
     )
     advanced_sha = _git(repo, "rev-parse", "HEAD")
 
@@ -294,8 +299,8 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
     _commit_file(
         repo,
         scenario.feature_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "feature"),
-        "feature change",
+        scenario.feature_file,
+        scenario.feature_file,
     )
 
     # The local base ref lags origin by the merged commit.
@@ -307,10 +312,14 @@ def build_stale_local_base_repo(repo: pathlib.Path) -> StaleBaseRepo:
         feature_branch=scenario.feature_branch,
         merged_file=scenario.merged_file,
         feature_file=scenario.feature_file,
+        working_file=scenario.working_file,
     )
 
 
-def build_base_advanced_after_branch_repo(repo: pathlib.Path) -> BaseAdvancedRepo:
+def build_base_advanced_after_branch_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> BaseAdvancedRepo:
     """Build a topology that distinguishes three-dot from two-dot diff scope.
 
     Sequence: initial commit A on the base; branch the feature from A and add F;
@@ -318,22 +327,22 @@ def build_base_advanced_after_branch_repo(repo: pathlib.Path) -> BaseAdvancedRep
     the feature at A+F. A three-dot diff starts from merge base A and contains F
     only, while a two-dot diff between A+M and A+F also contains M.
     """
-    scenario = _initialize_changeset_repo(repo)
+    scenario = _initialize_changeset_repo(repo, scenario)
 
     _git(repo, "switch", "-q", "-c", scenario.feature_branch)
     _commit_file(
         repo,
         scenario.feature_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "feature"),
-        "feature change",
+        scenario.feature_file,
+        scenario.feature_file,
     )
 
     _git(repo, "switch", "-q", scenario.base_branch)
     _commit_file(
         repo,
         scenario.merged_file,
-        _fixture_text(STALE_BASE_FIXTURE_DIR, "merged"),
-        "advance base",
+        scenario.merged_file,
+        scenario.merged_file,
     )
     _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
     _git(repo, "switch", "-q", scenario.feature_branch)
@@ -347,13 +356,16 @@ def build_base_advanced_after_branch_repo(repo: pathlib.Path) -> BaseAdvancedRep
     )
 
 
-def build_repo_without_origin(repo: pathlib.Path) -> str:
+def build_repo_without_origin(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> str:
     """Build a repo with a branch and a commit but no origin/HEAD symbolic ref.
 
     Returns the branch name. Exercises the base-ref fallback paths
     (``strict=False`` returns the default, ``strict=True`` raises).
     """
-    scenario = _initialize_changeset_repo(repo)
+    scenario = _initialize_changeset_repo(repo, scenario)
     return scenario.base_branch
 
 
@@ -396,89 +408,119 @@ def build_repo_with_modified_spaced_note(repo: pathlib.Path) -> SpacedNoteRepo:
     return SpacedNoteRepo(repo=repo, note_path=SPACED_NOTE_PATH)
 
 
-def assert_merge_classifier_uses_canonical_changeset_scope() -> None:
-    """Prove committed and working paths come from the canonical scope model."""
-    with TemporaryDirectory() as tmp:
-        repo = pathlib.Path(tmp) / "repo"
-        repo.mkdir()
-        stale = build_stale_local_base_repo(repo)
-        (stale.repo / STALE_BASE_SCENARIO.working_file).write_text(
-            _fixture_text(STALE_BASE_FIXTURE_DIR, "working"),
-            encoding="utf-8",
+@contextmanager
+def stale_local_base_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[StaleBaseRepo]:
+    """Yield a generated stale-base repository and clean it up on exit."""
+    with temporary_changeset_scope() as paths:
+        yield build_stale_local_base_repo(paths.repo, scenario)
+
+
+@contextmanager
+def base_advanced_after_branch_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[BaseAdvancedRepo]:
+    """Yield a generated diverged repository and clean it up on exit."""
+    with temporary_changeset_scope() as paths:
+        yield build_base_advanced_after_branch_repo(paths.repo, scenario)
+
+
+@contextmanager
+def repo_without_origin(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[pathlib.Path]:
+    """Yield a generated repository with no remote default ref."""
+    with temporary_changeset_scope() as paths:
+        build_repo_without_origin(paths.repo, scenario)
+        yield paths.repo
+
+
+@contextmanager
+def modified_spaced_note_repo() -> Iterator[SpacedNoteRepo]:
+    """Yield a repository containing one modified spaced-path coordination note."""
+    with temporary_changeset_scope() as paths:
+        yield build_repo_with_modified_spaced_note(paths.repo)
+
+
+@contextmanager
+def canonical_merge_changeset(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[StaleBaseRepo]:
+    """Yield a stale-base repo with an additional working-tree change."""
+    with stale_local_base_repo(scenario) as stale:
+        working_path = stale.repo / stale.working_file
+        working_path.parent.mkdir(parents=True, exist_ok=True)
+        working_path.write_text(stale.working_file, encoding="utf-8")
+        yield stale
+
+
+@dataclass(frozen=True)
+class BranchCollisionState:
+    """Generated branch inputs and state directories for slug assertions."""
+
+    feature_branch: str
+    state_dir: pathlib.Path
+    empty_state_dir: pathlib.Path
+
+
+@contextmanager
+def branch_collision_state(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[BranchCollisionState]:
+    """Yield generated branches with a conflicting state file already present."""
+    with temporary_changeset_scope() as paths:
+        module = load_changeset_scope_module()
+        scenario = scenario or _first_changeset_scope_case()
+        base_slug = module.branch_slug(scenario.feature_branch)
+        write_branch_state_file(paths.repo, base_slug, scenario.base_branch)
+        yield BranchCollisionState(
+            feature_branch=scenario.feature_branch,
+            state_dir=paths.repo,
+            empty_state_dir=paths.empty_state_dir,
         )
 
-        paths = set(load_merge_classifier_module().changed_paths(stale.repo))
 
-        assert stale.feature_file in paths
-        assert stale.merged_file not in paths
-        assert STALE_BASE_SCENARIO.working_file in paths
-
-
-def assert_merge_classifier_handles_spaced_coordination_note() -> None:
-    """Prove porcelain output preserves a spaced coordination-note path."""
-    with TemporaryDirectory() as tmp:
-        repo = pathlib.Path(tmp) / "repo"
-        repo.mkdir()
-        spaced = build_repo_with_modified_spaced_note(repo)
-        classifier = load_merge_classifier_module()
-
-        working = classifier._working_tree_paths(spaced.repo)
-
-        assert spaced.note_path in working
-        assert classifier.is_coordination_note(spaced.note_path)
+def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
+    """Resolve a ref through real Git for an independent commit-OID oracle."""
+    module = load_changeset_scope_module()
+    return _git(
+        repo,
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        f"{ref}{module.COMMIT_PEEL_SUFFIX}",
+    )
 
 
-def assert_merge_classifier_counts_unique_change_kinds() -> None:
-    """Prove transport counts cover empty, note-only, mixed, and duplicate paths."""
-    classifier = load_merge_classifier_module()
-    note_path = f"spx/example/{classifier.COORDINATION_NOTE_BASENAMES[0]}"
-    source_path = "src/example.py"
-
-    assert classifier.classify(()) == (0, 0)
-    assert classifier.classify((note_path,)) == (1, 0)
-    assert classifier.classify((note_path, source_path)) == (2, 1)
-    assert classifier.classify((note_path, source_path, source_path)) == (2, 1)
+def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
+    """Return Git's merge-base scope for a caller-supplied ref."""
+    module = load_changeset_scope_module()
+    output = _git(repo, "diff", "--name-only", f"{ref}...{module.HEAD_REF}")
+    return tuple(output.splitlines())
 
 
-def assert_merge_classifier_matches_only_coordination_note_basenames() -> None:
-    """Prove basename matching accepts the source vocabulary and rejects variants."""
-    classifier = load_merge_classifier_module()
-
-    for basename in classifier.COORDINATION_NOTE_BASENAMES:
-        assert classifier.is_coordination_note(basename)
-        assert classifier.is_coordination_note(f"spx/example/{basename}")
-        assert not classifier.is_coordination_note(basename.lower())
-        assert not classifier.is_coordination_note(f"{basename}.bak")
-        assert not classifier.is_coordination_note(f"{basename[:-3]}S.md")
+def git_two_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
+    """Return Git's tip-to-tip scope for a caller-supplied ref."""
+    module = load_changeset_scope_module()
+    output = _git(repo, "diff", "--name-only", f"{ref}..{module.HEAD_REF}")
+    return tuple(output.splitlines())
 
 
-def assert_merge_classifier_reports_unconfigured_base() -> None:
-    """Prove the merge classifier translates an absent remote default branch."""
-    with TemporaryDirectory() as tmp:
-        repo = pathlib.Path(tmp) / "repo"
-        repo.mkdir()
-        build_repo_without_origin(repo)
-        classifier = load_merge_classifier_module()
-        changeset_scope = load_changeset_scope_module()
-        try:
-            changeset_scope.detect_base_ref(repo)
-        except changeset_scope.BaseRefNotConfiguredError:
-            pass
-        else:
-            raise AssertionError("detect_base_ref should reject an unconfigured base")
+def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
+    """Run the shipped merge classifier and return its observable process result."""
+    return subprocess.run(
+        (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
-        completed = subprocess.run(
-            (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
-            cwd=repo,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
 
-        assert completed.returncode != 0
-        assert classifier.BASE_REF_ERROR_PREFIX in completed.stderr
-        assert changeset_scope.ORIGIN_HEAD_REF in completed.stderr
-        assert "Traceback" not in completed.stderr
+def contains_python_traceback(stderr: str) -> bool:
+    """Report whether Python emitted its standard uncaught-exception header."""
+    return "Traceback (most recent call last):" in stderr
 
 
 def detach_head(repo: pathlib.Path) -> None:
@@ -505,132 +547,3 @@ def write_branch_state_file(
     path = state_dir / f"{slug}.md"
     path.write_text(f"{delimiter}\nbranch: {branch}\n{delimiter}\n", encoding="utf-8")
     return path
-
-
-def assert_detect_base_ref_returns_bare_base_from_origin_head() -> None:
-    """Prove origin/HEAD resolves to the configured bare base name."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        stale = build_stale_local_base_repo(paths.repo)
-        assert module.detect_base_ref(stale.repo) == stale.base_ref
-
-
-def assert_detect_base_ref_raises_without_origin() -> None:
-    """Prove absent origin/HEAD raises instead of selecting a fallback."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        build_repo_without_origin(paths.repo)
-        try:
-            module.detect_base_ref(paths.repo)
-        except module.BaseRefNotConfiguredError:
-            pass
-        else:
-            raise AssertionError("detect_base_ref accepted an unconfigured base")
-
-
-def assert_remote_tracking_ref_composes_origin_prefix() -> None:
-    """Prove a bare base name composes the source-owned origin prefix."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        stale = build_stale_local_base_repo(paths.repo)
-        assert (
-            module.remote_tracking_ref(stale.base_ref)
-            == f"{module.ORIGIN_REF_PREFIX}{stale.base_ref}"
-        )
-
-
-def assert_branch_scope_uses_merge_base() -> None:
-    """Prove branch scope excludes a base-only commit after divergence."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        advanced = build_base_advanced_after_branch_repo(paths.repo)
-        files = module.branch_scope(advanced.base_ref, repo=advanced.repo)
-        assert advanced.base_file not in files
-        assert advanced.feature_file in files
-
-
-def assert_stale_local_base_ref_does_not_widen_scope() -> None:
-    """Prove remote scoping excludes a commit exposed by the stale local ref."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        stale = build_stale_local_base_repo(paths.repo)
-
-        remote_tracking_scope = module.branch_scope(stale.base_ref, repo=stale.repo)
-        assert stale.merged_file not in remote_tracking_scope
-        assert stale.feature_file in remote_tracking_scope
-
-        local_ref_scope = module.expand_diff_range(
-            f"{stale.base_ref}...HEAD", repo=stale.repo
-        )
-        assert stale.merged_file in local_ref_scope
-
-
-def assert_detect_current_branch_named_and_detached() -> None:
-    """Prove named checkout detection and detached-HEAD rejection."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        branch = build_repo_without_origin(paths.repo)
-        assert module.detect_current_branch(paths.repo) == branch
-
-        detach_head(paths.repo)
-        try:
-            module.detect_current_branch(paths.repo)
-        except module.DetachedHeadError:
-            pass
-        else:
-            raise AssertionError("detect_current_branch accepted a detached HEAD")
-
-
-def assert_commit_oid_resolves_exact_ref() -> None:
-    """Prove each supplied ref resolves to the same commit as real git."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        stale = build_stale_local_base_repo(paths.repo)
-        base_ref = module.remote_tracking_ref(stale.base_ref)
-
-        assert module.commit_oid(stale.feature_branch, repo=stale.repo) == _git(
-            stale.repo,
-            "rev-parse",
-            "--verify",
-            "--quiet",
-            f"{stale.feature_branch}{module.COMMIT_PEEL_SUFFIX}",
-        )
-        assert module.commit_oid(base_ref, repo=stale.repo) == _git(
-            stale.repo,
-            "rev-parse",
-            "--verify",
-            "--quiet",
-            f"{base_ref}{module.COMMIT_PEEL_SUFFIX}",
-        )
-
-
-def assert_branch_slug_disambiguates_state_collision() -> None:
-    """Prove collision suffixing is deterministic and conditional on state."""
-    with temporary_changeset_scope() as paths:
-        module = load_changeset_scope_module()
-        base_slug = module.branch_slug(STALE_BASE_SCENARIO.feature_branch)
-        write_branch_state_file(
-            paths.repo,
-            base_slug,
-            STALE_BASE_SCENARIO.base_branch,
-        )
-
-        collided = module.branch_slug(
-            STALE_BASE_SCENARIO.feature_branch,
-            paths.repo,
-        )
-        assert collided != base_slug
-        assert collided.startswith(f"{base_slug}--")
-        suffix = collided[len(base_slug) + len("--") :]
-        assert len(suffix) == module.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
-        assert (
-            module.branch_slug(STALE_BASE_SCENARIO.feature_branch, paths.repo)
-            == collided
-        )
-        assert (
-            module.branch_slug(
-                STALE_BASE_SCENARIO.feature_branch,
-                paths.empty_state_dir,
-            )
-            == base_slug
-        )

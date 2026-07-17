@@ -16,11 +16,10 @@ imports. This script ships into consumer plugin trees where only the standard
 library is available.
 
 Tested inputs and error cases: `test_classify_changeset.scenario.l1.py`
-exercises coordination-note-only, mixed, empty, and duplicate path sets;
-positive and negative `PLAN.md` / `ISSUES.md` basename recognition; importlib
-loading of the co-located `changeset_scope.py`; end-to-end changed-path
-delegation through `detect_base_ref` and `branch_scope`; and git porcelain
-records for paths containing spaces before this script is bundled.
+exercises importlib loading of the co-located `changeset_scope.py`, end-to-end
+changed-path delegation through `detect_base_ref` and `branch_scope`, git
+porcelain records for paths containing spaces, and unconfigured remote-default
+diagnostics before this script is bundled.
 """
 
 from __future__ import annotations

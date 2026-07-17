@@ -38,9 +38,11 @@ BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
 ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
 ORIGIN_HEAD_REF = f"{ORIGIN_HEAD_REF_PREFIX}HEAD"
 ORIGIN_REF_PREFIX = "origin/"
-BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
+HEAD_REF = "HEAD"
+BRANCH_SCOPE_RANGE_TEMPLATE = f"{{origin_ref}}...{HEAD_REF}"
 FRONTMATTER_DELIMITER = "---"
 COMMIT_PEEL_SUFFIX = "^{commit}"
+BRANCH_SLUG_SUFFIX_SEPARATOR = "--"
 
 
 class Runner(Protocol):
@@ -305,7 +307,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
 
     digest = hashlib.sha256(branch_name.encode("utf-8")).hexdigest()
     suffix = digest[:BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
-    suffix_with_separator = f"--{suffix}"
+    suffix_with_separator = f"{BRANCH_SLUG_SUFFIX_SEPARATOR}{suffix}"
 
     # Stage 3: bound the length.
     if len(base_slug) > BRANCH_SLUG_MAX_LENGTH:
