@@ -66,7 +66,7 @@ Run the bundled structural validator:
 python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" <skill-path>
 ```
 
-Run the target repository's canonical skill build and deterministic checks. Check whether the runtime exposes the `skill-auditor` role; when it does not, stop with `BLOCKED: skill-auditor unavailable in this runtime` and never substitute a main-thread audit or another agent role. When it is exposed, dispatch `skill-auditor` over the complete skill bundle and repair every must-fix item before publication.
+Run the target repository's canonical skill build and deterministic checks. When the runtime exposes the `skill-auditor` role, dispatch it over the complete skill bundle. Otherwise invoke `/audit-skills` over that bundle. Repair every must-fix item from the resulting verdict before publication.
 
 </step>
 
@@ -78,6 +78,6 @@ Run the target repository's canonical skill build and deterministic checks. Chec
 - Frontmatter matches the invocation path, and the body has valid pure-XML structure with output-shaped `<objective>` and `<success_criteria>` sections.
 - The selected structure follows the canonical progressive-disclosure rule, with every bundled file cited and no nested or orphaned references.
 - Tool permissions, arguments, dynamic context, and bundled paths match the runtime capability contract.
-- Bundled scripts pass their success and failure tests, repository checks pass, and the isolated skill audit is APPROVED.
+- Bundled scripts pass their success and failure tests, repository checks pass, and the exposed typed audit or `/audit-skills` fallback is APPROVED.
 
 </success_criteria>

@@ -545,8 +545,8 @@ def _installed_plugin_cache_candidates(
     plugin: str, skill: str
 ) -> tuple[pathlib.Path, ...]:
     candidates: list[pathlib.Path] = []
-    for cache_root in pathlib.Path(__file__).resolve().parents:
-        if cache_root.name != "cache":
+    for cache_root in _installed_plugin_cache_roots():
+        if not cache_root.is_dir():
             continue
         try:
             marketplace_roots = sorted(
@@ -570,6 +570,22 @@ def _installed_plugin_cache_candidates(
                 version / "skills" / skill / "SKILL.md" for version in versions
             )
     return tuple(candidates)
+
+
+def _installed_plugin_cache_roots() -> tuple[pathlib.Path, ...]:
+    roots = [
+        ancestor
+        for ancestor in pathlib.Path(__file__).resolve().parents
+        if ancestor.name == "cache"
+    ]
+    home = pathlib.Path.home()
+    roots.extend(
+        (
+            home / ".claude" / "plugins" / "cache",
+            home / ".codex" / "plugins" / "cache",
+        )
+    )
+    return tuple(dict.fromkeys(roots))
 
 
 def _cache_version_key(path: pathlib.Path) -> tuple[object, ...]:

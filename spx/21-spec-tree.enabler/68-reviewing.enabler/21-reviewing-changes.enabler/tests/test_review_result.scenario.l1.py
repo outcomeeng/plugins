@@ -443,6 +443,51 @@ class TestRuleCitationForm:
         assert "future-product-truth" not in declared_slugs
         assert "truth-hierarchy" not in declared_slugs
 
+    def test_installed_cache_resolves_when_module_is_in_source_tree(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        review_result = load_review_result_module()
+        home = tmp_path / "home"
+        skill_path = (
+            home
+            / ".codex"
+            / "plugins"
+            / "cache"
+            / "external-marketplace"
+            / "third-party"
+            / "1.0.0"
+            / "skills"
+            / "governance"
+            / "SKILL.md"
+        )
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text(
+            "<constraints>\n\n- ALWAYS: preserve the external contract.\n\n</constraints>\n",
+            encoding="utf-8",
+        )
+        empty_repo = tmp_path / "empty-repo"
+        empty_repo.mkdir()
+        monkeypatch.chdir(empty_repo)
+        monkeypatch.setattr(
+            review_result.pathlib.Path,
+            "home",
+            classmethod(lambda cls: home),
+        )
+        finding = {
+            "id": "F-001",
+            "concern": "architecture",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": "plugins/third-party/skills/governance/SKILL.md:constraints",
+            "message": "m",
+            "action": "a",
+        }
+
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[finding]))
+        )
+
     def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

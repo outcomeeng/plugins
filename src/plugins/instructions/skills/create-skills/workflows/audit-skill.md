@@ -16,9 +16,7 @@ Read the target `SKILL.md` and every bundled file under its `references/`, `work
 
 <step name="dispatch_audit">
 
-Check whether the runtime exposes the `skill-auditor` role. When it does not, stop with `BLOCKED: skill-auditor unavailable in this runtime`; never substitute a main-thread audit or another agent role.
-
-When the role is exposed, dispatch `skill-auditor` with the target paths, governing nodes when known, and current deterministic verification evidence. The main conversation never substitutes its own audit.
+Check whether the runtime exposes the `skill-auditor` role. When it does, dispatch `skill-auditor` with the target paths, governing nodes when known, and current deterministic verification evidence. When it does not, invoke `/audit-skills` over the same complete target bundle and use that verdict; absence of the optional typed role does not block authoring.
 
 For an audit-only request, return the auditor's structured verdict without offering or generating fixes. For an explicit improvement request, use the verdict as the repair input and continue to the next step.
 
@@ -36,19 +34,19 @@ After repairs, run the product's skill build and deterministic checks, create a 
 
 <audit_anti_patterns>
 
-| Anti-pattern          | Rejected behavior                                                         |
-| --------------------- | ------------------------------------------------------------------------- |
-| Main-thread audit     | Evaluating the skill instead of dispatching `skill-auditor`               |
-| Runtime-specific path | Assuming a home-directory skill location instead of using the target path |
-| Scored report         | Replacing the structured verdict with a numeric score                     |
-| Automatic fix offer   | Soliciting fixes after an audit-only request                              |
-| Restated standards    | Copying `/skill-standards` rules into this workflow                       |
+| Anti-pattern          | Rejected behavior                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| Ad hoc audit          | Evaluating the skill without the exposed `skill-auditor` or `/audit-skills` fallback |
+| Runtime-specific path | Assuming a home-directory skill location instead of using the target path            |
+| Scored report         | Replacing the structured verdict with a numeric score                                |
+| Automatic fix offer   | Soliciting fixes after an audit-only request                                         |
+| Restated standards    | Copying `/skill-standards` rules into this workflow                                  |
 
 </audit_anti_patterns>
 
 <success_criteria>
 
-- An audit-only request returns the isolated skill-auditor verdict over the complete target bundle.
+- An audit-only request returns the exposed skill-auditor verdict or `/audit-skills` fallback verdict over the complete target bundle.
 - An explicit improvement request produces skill content that passes deterministic checks and a fresh skill audit.
 - Target resolution remains runtime-neutral, and `/skill-standards` remains the single rule source.
 
