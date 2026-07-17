@@ -1,16 +1,10 @@
 ---
 name: audit-typescript-tests
 description: >-
-  TypeScript test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the TypeScript tests in scope.
-  Reached only through those auditor agents, never the main conversation.
+  TypeScript test-evidence audit methodology — judges the TypeScript tests in
+  scope against the spec-tree and TypeScript-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
-
-<dispatch_gate>
-
-This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
-
-</dispatch_gate>
 
 <objective>
 
@@ -43,15 +37,15 @@ Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded sk
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The caller brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
+This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. Cross-file literal laundering is judged by reading.
 
 </prerequisites>
 
 <audit_scope>
 
-Begin with the current governing spec and its current evidence links. A deleted TypeScript test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current TypeScript test-evidence scope; under implementation-auditor composition, return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+Begin with the current governing spec and its current evidence links. A deleted TypeScript test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current TypeScript test-evidence scope and return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
 
-Use read-only `git diff` only when the caller's changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+Use read-only `git diff` only when the supplied changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
 
 </audit_scope>
 
@@ -324,7 +318,7 @@ Alignment fails when clauses are collapsed, evidence method mismatches the type,
 
 <supplement property="coverage">
 
-Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. This audit runs no deterministic verification.
 
 Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -350,7 +344,7 @@ Coverage here is execution breadth (does the test reach the assertion-relevant l
 
 This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
-Under implementation-auditor composition, when `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
 
 ```json
 {

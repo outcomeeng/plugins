@@ -1,16 +1,10 @@
 ---
 name: audit-rust-tests
 description: >-
-  Rust test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Rust tests in scope.
-  Reached only through those auditor agents, never the main conversation.
+  Rust test-evidence audit methodology — judges the Rust tests in scope against
+  the spec-tree and Rust-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
-
-<dispatch_gate>
-
-This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence gap.
@@ -41,15 +35,15 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
 
-This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The caller brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
 
 <audit_scope>
 
-Begin with the current governing spec and its current evidence links. A deleted Rust test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Rust test-evidence scope; under implementation-auditor composition, return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+Begin with the current governing spec and its current evidence links. A deleted Rust test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Rust test-evidence scope and return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
 
-Use read-only `git diff` only when the caller's changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+Use read-only `git diff` only when the supplied changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
 
 </audit_scope>
 
@@ -152,7 +146,7 @@ First property failure rejects the assertion.
 </step>
 
 <step name="coverage">
-Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the caller passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
+Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. This audit runs no deterministic verification.
 
 Trace, by reading, whether the test drives execution into the governed source path:
 
@@ -230,7 +224,7 @@ Reject when the test covers a nearby behavior, collapses clauses, uses one examp
 </supplement>
 
 <supplement property="coverage">
-Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — the caller and CI own coverage measurement.
+Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — this audit establishes coverage by reading.
 
 Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </supplement>
@@ -243,7 +237,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `<product>-testing` workspace-member crate, e.g. `<product>_testing::harnesses::{name}`, `<product>_testing::generators::{name}`, or `<product>_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
-Under implementation-auditor composition, when `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
 
 ```json
 {

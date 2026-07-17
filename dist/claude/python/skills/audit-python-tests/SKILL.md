@@ -1,16 +1,10 @@
 ---
 name: audit-python-tests
 description: >-
-  Python test-evidence audit methodology composed by a dispatched test-evidence-auditor or implementation-auditor for the Python tests in scope.
-  Reached only through those auditor agents, never the main conversation.
+  Python test-evidence audit methodology — judges the Python tests in scope
+  against the spec-tree and Python-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
-
-<dispatch_gate>
-
-This audit runs inside either the dispatched `test-evidence-auditor` context via `audit-tests` or the dispatched `implementation-auditor` context via `audit-implementation`, isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation instead, STOP — dispatch the auditor matching the requested verification surface. An already-dispatched matching auditor that loaded this skill proceeds.
-
-</dispatch_gate>
 
 <objective>
 A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
@@ -41,9 +35,9 @@ Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` m
 </prerequisites>
 
 <audit_scope>
-Begin with the current governing spec and its current evidence links. A deleted test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Python test-evidence scope; under implementation-auditor composition, return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
+Begin with the current governing spec and its current evidence links. A deleted test or test-infrastructure path belongs to this audit only when a current `[test]` assertion still links it or a current linked test still imports it. When the current spec carries no `[test]` link to the deleted path and no current evidence chain references it, classify the retired path as outside current Python test-evidence scope and return `NOT_APPLICABLE` for that path. Never demand restoration of deterministic evidence solely because the base revision or changeset deletion names the retired path. When a current `[test]` assertion still links a missing path, report missing evidence against that current assertion.
 
-Use read-only `git diff` only when the caller's changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
+Use read-only `git diff` only when the supplied changeset scope requires confirming whether an evidence path was deleted. Run no other shell command from this concern skill.
 
 For every in-scope test assertion, inspect the full evidence chain:
 
@@ -59,7 +53,7 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 </audit_scope>
 
 <no_deterministic_verification>
-This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The caller brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the caller owns, not a step this audit re-pays.
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. Spend the whole audit on reading the evidence chain.
 </no_deterministic_verification>
 
 <test_file_declarations>
@@ -228,7 +222,7 @@ For each finding, include:
 
 Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECTED` when any property fails.
 
-Under implementation-auditor composition, when `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
+When `<audit_scope>` finds that a retired path has no current `[test]` assertion or current evidence-chain owner, emit this alternate concern result instead of the inherited rows:
 
 ```json
 {
