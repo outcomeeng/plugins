@@ -2,7 +2,7 @@
 name: create-skills
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
-allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, Skill, Bash(python3:*), Bash(just build-skills:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 Invoke the `instructions:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -10,7 +10,7 @@ Invoke the `instructions:skill-standards` skill before proceeding. If that skill
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.
+A skill-authoring request routed to its matching typed workflow.
 </objective>
 
 <essential_principles>
