@@ -10,10 +10,6 @@ The five verification types and the two axes that classify them — verdict mode
 
 ## Assertions
 
-### Mappings
-
-- Every skill-owning Spec Tree wrapper agent declares an explicit, non-inherited source model selection ([test](tests/test_agent_model_field.mapping.l1.py))
-
 ### Compliance
 
 Each rule enforces a guarantee of `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`.
