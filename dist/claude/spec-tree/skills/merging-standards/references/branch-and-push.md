@@ -66,18 +66,18 @@ Claude NEVER stops with blocked-by-worktree, cannot-use-other-worktree, or canno
 
 <branch_hygiene>
 
-Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the lifecycle until resolved.
+Conditions that must hold before every push (initial or follow-up). The consuming flow MUST set `active_base` from the classified topology before applying this gate: the repository default for a peer, the previous stack branch while a stacked PR's base remains unmerged, and the repository default after stack reconstruction. Branch hygiene consumes that value and never re-derives a default base. A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the lifecycle until resolved.
 
-| Condition (must hold)                                        | Failure response                                                                                                                   |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Current branch is not `main`, `master`, or detached HEAD     | Create a fresh task branch in the assigned worktree from the resolved base and continue, per `<assigned_cwd_worktree_discipline>`. |
-| Working tree is clean (no uncommitted changes)               | Commit via /commit-changes before pushing — never stash.                                                                           |
-| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.                                                                            |
-| Branch is not behind the resolved base (no upstream commits) | Rebase onto `origin/<base>` per `<base_sync>`, then re-run this gate.                                                              |
-| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.                                                                                 |
-| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                                                                                         |
-| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.                                                                     |
-| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                                                                                              |
+| Condition (must hold)                                    | Failure response                                                                                                                   |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Current branch is not `main`, `master`, or detached HEAD | Create a fresh task branch in the assigned worktree from the resolved base and continue, per `<assigned_cwd_worktree_discipline>`. |
+| Working tree is clean (no uncommitted changes)           | Commit via /commit-changes before pushing — never stash.                                                                           |
+| Branch is at least one commit ahead of `active_base`     | STOP. Confirm the active topology base — there is nothing to PR.                                                                   |
+| Branch is not behind `active_base` (no upstream commits) | Rebase onto `origin/<active-base>` per `<base_sync>`, then re-run this gate.                                                       |
+| Branch topology is classified as peer or stacked         | STOP. Apply `<branch_topology>` before continuing.                                                                                 |
+| Work branch is not tracking `active_base`                | STOP. Replace the upstream before pushing.                                                                                         |
+| No PR already exists for this branch (initial push only) | STOP. Surface the existing PR URL via `gh pr view --json url`.                                                                     |
+| `gh auth status` reports an authenticated token          | STOP. Resolve auth before continuing.                                                                                              |
 
 Commands:
 
@@ -85,13 +85,13 @@ Commands:
 gh auth status
 git branch --show-current
 git status --porcelain
-base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
-git fetch origin "${base}"
-git log --oneline "origin/${base}..HEAD"
-git diff "origin/${base}...HEAD" --stat
+: "${active_base:?active lifecycle base must be set before branch hygiene}"
+git fetch origin "${active_base}"
+git log --oneline "origin/${active_base}..HEAD"
+git diff "origin/${active_base}...HEAD" --stat
 upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
-if [ "${upstream}" = "origin/${base}" ]; then
-  echo "STOP: work branch tracks the default branch" >&2
+if [ "${upstream}" = "origin/${active_base}" ]; then
+  echo "STOP: work branch tracks the active lifecycle base" >&2
   exit 1
 fi
 existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null)
