@@ -27,6 +27,14 @@ class ClassificationPathCase:
     paths: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CoordinationNoteRecognitionCase:
+    """One source-derived path and its coordination-note recognition result."""
+
+    path: str
+    expected: bool
+
+
 def changeset_scope_cases() -> Iterator[ChangesetScopeCase]:
     """Generate reproducible branch and path alternatives without a fixed case bag."""
     for index in itertools.count():
@@ -60,12 +68,33 @@ def classification_path_cases(
     )
 
 
-def coordination_note_paths(
+def coordination_note_recognition_cases(
     coordination_note_basenames: Sequence[str],
-) -> tuple[str, ...]:
-    """Place every source-owned coordination-note basename at two depths."""
+) -> tuple[CoordinationNoteRecognitionCase, ...]:
+    """Derive positive paths and near misses from every source-owned basename."""
     generated_parent = next(changeset_scope_cases()).feature_branch
-    return tuple(coordination_note_basenames) + tuple(
-        pathlib.PurePosixPath(generated_parent, basename).as_posix()
-        for basename in coordination_note_basenames
-    )
+    cases: list[CoordinationNoteRecognitionCase] = []
+    for basename in coordination_note_basenames:
+        suffix = pathlib.PurePosixPath(basename).suffix
+        stem = basename.removesuffix(suffix)
+        near_misses = (
+            basename.lower(),
+            basename + suffix,
+            stem[:-1] + stem[:1] + suffix,
+        )
+        paths = (
+            basename,
+            pathlib.PurePosixPath(generated_parent, basename).as_posix(),
+        )
+        cases.extend(
+            CoordinationNoteRecognitionCase(path=path, expected=True) for path in paths
+        )
+        cases.extend(
+            CoordinationNoteRecognitionCase(path=path, expected=False)
+            for near_miss in near_misses
+            for path in (
+                near_miss,
+                pathlib.PurePosixPath(generated_parent, near_miss).as_posix(),
+            )
+        )
+    return tuple(cases)

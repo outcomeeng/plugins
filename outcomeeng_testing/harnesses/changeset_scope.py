@@ -45,7 +45,7 @@ from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
     classification_path_cases,
     changeset_scope_cases,
-    coordination_note_paths,
+    coordination_note_recognition_cases,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -629,10 +629,17 @@ def _stale_local_base_case(
     scenario: ChangesetScopeCase,
 ) -> EvidenceComparison:
     with stale_local_base_repo(scenario) as stale:
-        remote_ref = module.remote_tracking_ref(stale.base_ref)
+        contract = load_changeset_scope_contract_module()
+        remote_ref = contract.ORIGIN_REF_PREFIX + stale.base_ref
         return EvidenceComparison(
-            actual=(tuple(module.branch_scope(stale.base_ref, repo=stale.repo)),),
-            expected=(git_three_dot_scope(stale.repo, remote_ref),),
+            actual=(
+                tuple(module.branch_scope(stale.base_ref, repo=stale.repo)),
+                git_three_dot_scope(stale.repo, stale.base_ref),
+            ),
+            expected=(
+                git_three_dot_scope(stale.repo, remote_ref),
+                tuple(sorted((stale.feature_file, stale.merged_file))),
+            ),
         )
 
 
@@ -792,10 +799,10 @@ def classification_counts_comparison() -> EvidenceComparison:
 def coordination_note_basename_comparison() -> EvidenceComparison:
     classifier = load_merge_classifier_module()
     contract = load_merge_contract_module()
-    paths = coordination_note_paths(contract.COORDINATION_NOTE_BASENAMES)
+    cases = coordination_note_recognition_cases(contract.COORDINATION_NOTE_BASENAMES)
     return EvidenceComparison(
-        actual=tuple(classifier.is_coordination_note(path) for path in paths),
-        expected=tuple(True for _path in paths),
+        actual=tuple(classifier.is_coordination_note(case.path) for case in cases),
+        expected=tuple(case.expected for case in cases),
     )
 
 
