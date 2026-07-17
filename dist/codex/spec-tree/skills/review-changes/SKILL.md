@@ -1,5 +1,6 @@
 ---
 name: review-changes
+user-invocable: false
 description: Protocol for reviewing branch changes against a base ref and recording the result as a sealed review-journal run.
 allowed-tools:
   - Bash(python3 "${SKILL_DIR}/scripts/review_run.py":*)
