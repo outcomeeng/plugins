@@ -181,9 +181,9 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 <report_format>
 
 ```text
-## Alignment Report: {scope}
+Alignment Report: {scope}
 
-### {file path}
+File: {file path}
 Classification: {type}
 
 Structural:
