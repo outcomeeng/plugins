@@ -438,10 +438,47 @@ class TestRuleCitationForm:
         declared_slugs = review_result._declared_rule_slugs(
             skill_path.read_text(encoding="utf-8")
         )
+        expected_slugs = {
+            "assertion-types",
+            "assignment-is-the-inverse",
+            "atemporal-voice",
+            "axes",
+            "closing-protocol",
+            "common-structure",
+            "context-loading-rule",
+            "coordination-and-context",
+            "decision-to-spec-alignment",
+            "declarations",
+            "delivery-boundary",
+            "enabler",
+            "expense-ceiling",
+            "full-paths",
+            "future-product-truth",
+            "layer-precedence",
+            "mixing-types",
+            "nesting-rules",
+            "no-origin-distinction",
+            "node-states",
+            "outcome",
+            "recording",
+            "spec-tree-integration",
+            "touched-file-debt",
+            "types",
+            "verification-selection",
+            "verification-types",
+            "vocabulary-boundaries",
+        }
+        container_slugs = {
+            "assertion-model",
+            "imperfection-protocol",
+            "node-model",
+            "ordering-model",
+            "truth-hierarchy",
+            "verification-model",
+        }
 
-        assert "layer-precedence" in declared_slugs
-        assert "future-product-truth" not in declared_slugs
-        assert "truth-hierarchy" not in declared_slugs
+        assert expected_slugs <= declared_slugs
+        assert container_slugs.isdisjoint(declared_slugs)
 
     def test_installed_cache_resolves_when_module_is_in_source_tree(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch

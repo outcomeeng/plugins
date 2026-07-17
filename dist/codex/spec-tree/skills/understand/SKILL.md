@@ -38,17 +38,23 @@ When layers disagree, the lower layer is in violation.
 
 <future_product_truth>
 
+- ALWAYS: higher-level truth remains authoritative while coherent, even when lower layers have not caught up.
+
 Higher-level truth may lead implementation. A coherent product spec, PDR, ADR, or ancestor spec stays authoritative when lower specs, tests, or code have not caught up. Evaluate declaration validity separately from implementation completeness. Current code shape is evidence about code, never authority over higher layers.
 
 </future_product_truth>
 
 <decision_to_spec_alignment>
 
+- ALWAYS: align every first affected lower spec in the same changeset as a higher-level truth change.
+
 When a higher-level artifact changes, align every first affected lower spec in the same changeset. If tests or code remain, record the concrete next step and governing artifact in `PLAN.md` at the first affected lower node. Use `ISSUES.md` for known defects or contradictions. Use `spx/EXCLUDE` only when a node has specs and tests while implementation is absent; exclusion never resolves a conceptual disagreement or permits lower layers to contradict decisions.
 
 </decision_to_spec_alignment>
 
 <atemporal_voice>
+
+- ALWAYS: specs state atemporal product truth and contain no history or journey language.
 
 Specs declare atemporal truth. Eliminate history and journey language:
 
@@ -66,6 +72,8 @@ Read every spec sentence aloud. If it would sound wrong after the work ships, re
 
 <declarations>
 
+- ALWAYS: derive declaration state from specs, evidence, and implementation rather than hand-maintained status.
+
 Writing a spec makes a declaration. Writing linked evidence makes the declaration verifiable. Removing a spec prunes product truth. The following backlog operations do not exist:
 
 - close, archive, or move a spec to done;
@@ -76,6 +84,8 @@ Writing a spec makes a declaration. Writing linked evidence makes the declaratio
 </declarations>
 
 <node_states>
+
+- ALWAYS: derive each node state from the presence of its spec, evidence, implementation, and evidence result.
 
 A node's state is derived:
 
@@ -96,6 +106,8 @@ The tree contains exactly two recursive node types.
 
 <enabler>
 
+- MUST: classify deterministic shared capability with stable additive assertions as an enabler.
+
 **Enabler**
 
 - Directory suffix: `.enabler`
@@ -106,6 +118,8 @@ The tree contains exactly two recursive node types.
 </enabler>
 
 <outcome>
+
+- MUST: classify a user-behavior hypothesis with material output uncertainty as an outcome.
 
 **Outcome**
 
@@ -121,6 +135,8 @@ Apply the forcing question before choosing an outcome: why can this not be writt
 
 <nesting_rules>
 
+- NEVER: place an outcome beneath an enabler.
+
 Valid node nesting:
 
 | Parent  | Child nodes           |
@@ -133,6 +149,8 @@ An enabler can never contain an outcome. If a proposed child under an enabler ca
 </nesting_rules>
 
 <common_structure>
+
+- ALWAYS: use the canonical node shape and co-locate each evidence lane under its governing node.
 
 Canonical node shape:
 
@@ -162,6 +180,8 @@ Assertions specify locally verifiable product output. They derive from decisions
 
 <verification_types>
 
+- ALWAYS: choose exactly one verification type before choosing any test assertion type.
+
 Choose the verification type first:
 
 | Type     | Tag            | Verdict                                                 | Use                                                                                 |
@@ -175,6 +195,8 @@ Choose the verification type first:
 </verification_types>
 
 <assertion_types>
+
+- MUST: assign one assertion type only to `[test]` evidence and derive it from the claim's quantifier.
 
 Only `[test]` assertions carry one of five assertion types, selected from the quantifier:
 
@@ -192,6 +214,8 @@ A universal is never a scenario. Under `[test]`, choose mapping for a finite sou
 
 <verification_selection>
 
+- MUST: select test, evaluate, or audit evidence from the verdict the real subject can produce.
+
 Prefer `[test]` when behavior is deterministic. Use `[eval]` when the real LLM-driven producer emits a parseable contract that a runner can score. Use `[audit]` when no deterministic or structural verdict exists.
 
 Structural lint constraints use `[test]` evidence that runs the rule against violating fixtures and proves detection. Pipeline inclusion is a separate operational concern established by the validation gate.
@@ -199,6 +223,8 @@ Structural lint constraints use `[test]` evidence that runs the rule against vio
 </verification_selection>
 
 <mixing_types>
+
+- ALWAYS: group mixed `[test]` assertions by assertion type and use full `spx/...` citations.
 
 Group mixed `[test]` assertions by type. Each test file carries one assertion type. Every node, test, ADR, or PDR citation uses its full path from `spx/`.
 
@@ -209,6 +235,8 @@ Group mixed `[test]` assertions by type. Each test file carries one assertion ty
 <ordering_model>
 
 <context_loading_rule>
+
+- ALWAYS: interpret sibling integer prefixes as deterministic context-loading relationships.
 
 All indexed artifacts inside one directory—nodes, ADRs, and PDRs—share one numeric namespace. Prefixes are sibling-local and drive deterministic context loading:
 
@@ -221,11 +249,15 @@ All indexed artifacts inside one directory—nodes, ADRs, and PDRs—share one n
 
 <assignment_is_the_inverse>
 
+- MUST: assign indices as the inverse of the context-loading rule and prove every ordered dependency.
+
 Index assignment is the inverse of this read rule. Giving a new child a higher index declares that each lower-index sibling must be present in its future context. Giving peers the same index declares independence. `/decompose` owns assignment because it must prove the dependency consequence before choosing an index.
 
 </assignment_is_the_inverse>
 
 <full_paths>
+
+- ALWAYS: cite every node and decision with its complete `spx/...` path.
 
 Always use complete `spx/...` paths. `32-parser.enabler` and `15-build.adr.md` are ambiguous because other directories may reuse both prefixes.
 
@@ -238,6 +270,8 @@ Always use complete `spx/...` paths. `32-parser.enabler` and `15-build.adr.md` a
 Verification has five fixed types over two independent axes.
 
 <axes>
+
+- ALWAYS: classify verification independently by verdict mode and purpose.
 
 **Verdict mode**
 
@@ -253,6 +287,8 @@ Verification has five fixed types over two independent axes.
 
 <types>
 
+- ALWAYS: use exactly the five verification types audit, validate, review, evaluate, and test.
+
 The five types are:
 
 - **audit** — agentic conformance or mechanical correctness judgment; backs `[audit]`.
@@ -267,6 +303,8 @@ Every verification activity declares its type and purpose. A type's verdict mode
 
 <vocabulary_boundaries>
 
+- MUST: resolve overlapping verification vocabulary against this foundation before judging a name defective.
+
 When vocabulary overlaps another grammar, resolve verification vocabulary here first and inspect history before classifying a name as defective. Generated output and implementation names are lower-layer evidence.
 
 </vocabulary_boundaries>
@@ -276,6 +314,8 @@ When vocabulary overlaps another grammar, resolve verification vocabulary here f
 <imperfection_protocol>
 
 <recording>
+
+- ALWAYS: record every observed defect immediately with its evidence, governing workflow, handling, and classification.
 
 Record every observed defect in the current-turn ledger immediately: failing validation, broken link, stale reference, dead code, lint violation, missing evidence, inconsistent naming, misplaced file, wrong index, harmful warning, or any other incoherence. Each entry carries:
 
@@ -290,11 +330,15 @@ Apply clear, local, low-risk corrections immediately. Surface a blocking decisio
 
 <no_origin_distinction>
 
+- NEVER: reduce responsibility for a defect because of its age, author, or originating change.
+
 The ledger has no origin distinction. Age and authorship never reduce responsibility. Never dismiss a defect as inherited, already broken, or outside the current change merely because another change created it.
 
 </no_origin_distinction>
 
 <touched_file_debt>
+
+- ALWAYS: fix debt that the current change causes, surfaces, or invalidates.
 
 Debt the current change causes, surfaces, or invalidates is fix-now wherever it lives. A change invalidates another file when it removes a symbol that file references, enforces a rule it violates, falsifies its guidance, or causes a gate, audit, or review to expose its defect. Location never licenses deferral.
 
@@ -304,11 +348,15 @@ Record and proceed only for work independent of the current change in a surface 
 
 <expense_ceiling>
 
+- NEVER: raise a cost, quota, worker, retry, timeout, or external-capacity ceiling without operator approval in the same turn.
+
 Command defaults are authority for cost-bearing and quota-bearing runs. Never raise an explicit or implicit spend, token, worker, retry, timeout, hosted-runner, paid-provider, or external-capacity ceiling without operator approval in the same turn. When a default ceiling blocks a run, report the exact command, ceiling, proposed increase, expected rerun scope, and pause/inspect option.
 
 </expense_ceiling>
 
 <closing_protocol>
+
+- ALWAYS: continue actionable in-scope work and invoke `/handoff` only when no continuation remains or continuation is impossible.
 
 Apply the closing test at task completion: can the operator reasonably ask “What now?”
 
@@ -321,6 +369,8 @@ Apply the closing test at task completion: can the operator reasonably ask “Wh
 </closing_protocol>
 
 <spec_tree_integration>
+
+- ALWAYS: keep the live ledger conversation-local and persist unresolved items only at their correct durable or coordination tier.
 
 The ledger is conversation-local. Fixed entries disappear. Unresolved entries persist only through the correct durable or coordination artifact. Session files under `.spx/` carry ephemeral initialization context and remain outside Git.
 
