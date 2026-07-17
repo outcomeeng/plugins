@@ -195,17 +195,13 @@ Run consumer-defined commands from `{{! file('root_guide') !}}` or `spx/local/me
 
 <success_criteria>
 
-The opening flow has succeeded when:
+The opened pull request is sound when:
 
-- /merging-standards and /commit-changes are loaded before the flow begins.
-- /merging-standards `<branch_hygiene>` and `<branch_topology>` gates pass before push.
-- `VERIFICATION_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, every required evidence-auditor predicate passed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
-- Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
-- Title is one commit-subject line under 70 chars per /commit-changes.
-- Body is delivered to gh via `--body-file -` on stdin (real newlines).
-- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence, including /merging-standards `<pr_check_wait>`.
-- PR URL is surfaced to the user.
-- No `<self_reference>` violation per /merging-standards.
+- Its URL, number, head branch, head SHA, base branch, and draft state are observable from the host and match the published branch.
+- A peer PR targets the repository default branch and is ready for review; a stacked PR targets its declared stack base and is draft.
+- The published head is the exact clean committed tree for which every `VERIFICATION_READINESS` predicate holds.
+- The title is one Conventional Commit subject under 70 characters, and the body contains Summary, Background, Test plan, Refs, and version rationale with real newlines.
+- The remote branch was published through an explicit `HEAD:refs/heads/<branch>` destination.
+- The surfaced result contains the PR URL and no identity string prohibited by /merging-standards `<self_reference>`.
 
 </success_criteria>

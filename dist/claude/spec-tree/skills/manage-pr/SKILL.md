@@ -257,22 +257,12 @@ Run consumer-defined commands from `CLAUDE.md` or `spx/local/merging.md` through
 
 <success_criteria>
 
-The managing flow satisfies its contract when, at minimum:
+The management result is sound when exactly one of these observable outputs exists:
 
-- /merging-standards and /commit-changes are loaded before any inspection or push.
-- Each pass inspects all three surfaces from /merging-standards `<review_inspection>`.
-- Each pass checks base drift in the same checkpoint as review inspection; a branch behind `origin/<base>` is rebased per /merging-standards `<base_sync>` before the queue is driven, regardless of whether a review has landed or carries findings.
-- Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
-- The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.
-- Every follow-up push re-establishes `VERIFICATION_READINESS` on the diff it would publish — local deterministic verification passes per /merging-standards `<local_deterministic_scope>` (or, for a push that only rebased onto an advanced base, the preservation-proof-scoped lane per /merging-standards `<base_sync>`), every required evidence-auditor predicate has passed, and the local `changes-reviewer` review (invoked at parity per /merging-standards `<local_review_invocation>`, with no caller narrowing) has converged with no valid finding unaddressed — then re-runs /merging-standards `<branch_hygiene>` and the active topology gate. Ordinary follow-up pushes go to a ready peer PR with no draft toggle; the sole draft follow-up is a stacked branch reconstructed after its base merges, which is force-with-lease pushed, retargeted to the default branch, moved to ready, and re-entered from Step 1 before the normal peer loop.
-- Pending PR checks or current-head CI review use exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` per /merging-standards `<pr_check_wait>`.
-- Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, `/manage-pr` re-enters from the PR pointer and re-inspects live GitHub and repository state before waiting, merging, or closing.
-- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, and the inspected head SHA matches the fetched remote branch head and status-check head.
-- After merge and declared deploy or release handling, the skill returns one caller-independent closeout-ready evidence packet; the branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built, safe cleanup has run, and a merge receipt or cleanup receipt alone is never the terminal response.
-- A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `MERGE_BLOCKED:review-check-skipped` — the exception is scoped to the self-modifying-PR case only.
-- The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
-- `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
-- Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
-- No `<self_reference>` violation per /merging-standards.
+- A withholding result contains one current-pass action token from /merging-standards `<action_tokens>`, the full inspected head SHA, and the concrete predicate that failed; deployment or release authorization tokens also carry the branch-state closeout record.
+- A merged result contains the PR URL, merged head SHA, merge commit when available, cleanup state, any deploy or release result, and the complete /merging-standards `<branch_state_closeout>` record with **Remaining Branches** groups.
+- A merge occurs only for the head named by a fresh `MERGE_READY:<head-sha>` guard, with a present clean current-head review, every required check terminal-green, matching inspected/remote/check head identity, open ready PR state, and current base ancestry.
+- A reconstructed stack targets the repository default branch, is ready for review, and contains no dependency on the retired stack ref before it can produce a merged result.
+- Every surfaced branch, repository, run, PR, and commit identity is copied in full, and no artifact violates /merging-standards `<self_reference>`.
 
 </success_criteria>
