@@ -33,7 +33,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PRODUCER_FIXTURE_DIRECTORY = (
     Path(__file__).parent.parent / "fixtures" / "producer_prompt"
 )
-PRODUCER_FIXTURE_PATHS = tuple(sorted(PRODUCER_FIXTURE_DIRECTORY.glob("*.md")))
+PRODUCER_FIXTURE_PATHS = tuple(
+    reversed(sorted(PRODUCER_FIXTURE_DIRECTORY.glob("*.md")))
+)
 PRODUCER_RELATIVE_PATHS = tuple(
     (Path("producers") / fixture_path.name).as_posix()
     for fixture_path in PRODUCER_FIXTURE_PATHS
