@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Final, Optional
+from typing import Final
 
 LoadAverages = tuple[float, float, float]
 
@@ -24,6 +24,7 @@ class Status(str, Enum):
     """Terminal waiter states exposed in the JSON result."""
 
     READY = "ready"
+    NOT_READY = "not_ready"
     UNSUPPORTED = "unsupported"
     INTERRUPTED = "interrupted"
     ERROR = "error"
@@ -35,7 +36,18 @@ class ExitCode(IntEnum):
     READY = 0
     ERROR = 1
     UNSUPPORTED = 2
+    NOT_READY = 3
     INTERRUPTED = 130
+
+
+STATUS_EXIT_CODES: Final = {
+    Status.READY: ExitCode.READY,
+    Status.ERROR: ExitCode.ERROR,
+    Status.UNSUPPORTED: ExitCode.UNSUPPORTED,
+    Status.NOT_READY: ExitCode.NOT_READY,
+    Status.INTERRUPTED: ExitCode.INTERRUPTED,
+}
+STATUS_READINESS: Final = {status: status is Status.READY for status in Status}
 
 
 class UnsupportedPlatformError(RuntimeError):
@@ -64,7 +76,7 @@ class Dependencies:
     """Boundaries that make load and time behavior deterministic to exercise."""
 
     read_load_averages: Callable[[], LoadAverages]
-    read_cpu_count: Callable[[], Optional[int]]
+    read_cpu_count: Callable[[], int | None]
     monotonic: Callable[[], float]
     sleep: Callable[[float], None]
 
@@ -75,22 +87,17 @@ class Result:
 
     status: Status
     ready: bool
-    initial: Optional[Observation]
-    final: Optional[Observation]
+    initial: Observation | None
+    final: Observation | None
     wait_cycles: int
     waited_seconds: float
-    error_type: Optional[str] = None
-    error_message: Optional[str] = None
+    error_type: str | None = None
+    error_message: str | None = None
 
     @property
     def exit_code(self) -> ExitCode:
         """Map the terminal status to its process exit code."""
-        return {
-            Status.READY: ExitCode.READY,
-            Status.UNSUPPORTED: ExitCode.UNSUPPORTED,
-            Status.INTERRUPTED: ExitCode.INTERRUPTED,
-            Status.ERROR: ExitCode.ERROR,
-        }[self.status]
+        return STATUS_EXIT_CODES[self.status]
 
     def as_dict(self) -> dict[str, object]:
         """Return the stable terminal JSON document."""
@@ -173,15 +180,15 @@ def terminal_result(
     status: Status,
     dependencies: Dependencies,
     started_at: float,
-    initial: Optional[Observation],
-    final: Optional[Observation],
+    initial: Observation | None,
+    final: Observation | None,
     wait_cycles: int,
-    error: Optional[BaseException] = None,
+    error: BaseException | None = None,
 ) -> Result:
     """Build one terminal result without retaining intermediate observations."""
     return Result(
         status=status,
-        ready=status is Status.READY,
+        ready=STATUS_READINESS[status],
         initial=initial,
         final=final,
         wait_cycles=wait_cycles,
@@ -194,8 +201,8 @@ def terminal_result(
 def wait_until_ready(dependencies: Dependencies) -> Result:
     """Own observation, sleeping, and rechecking until a terminal result exists."""
     started_at = dependencies.monotonic()
-    initial: Optional[Observation] = None
-    final: Optional[Observation] = None
+    initial: Observation | None = None
+    final: Observation | None = None
     wait_cycles = 0
 
     try:
