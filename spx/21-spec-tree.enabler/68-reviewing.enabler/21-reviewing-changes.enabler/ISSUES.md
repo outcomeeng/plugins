@@ -79,4 +79,18 @@ Required handling:
 - Distinguish reviewer-owned scope derivation from a caller-supplied scope filter in the declaration, so the exclusion does not weaken the caller-independence rule this node already carries.
 - Keep audit and base-sync scope unaffected unless the amended decision covers them — `branch_scope` serves all three consumers, and base sync needs the real changed-file set.
 
+## 8. The review-changes skill omits an explicit model pin
+
+`src/plugins/spec-tree/skills/review-changes/SKILL.md` declares no `model` field, so a direct skill invocation inherits the session model. `skill-standards` states that marketplace verification-sensitive surfaces use explicit `sonnet` and never use session inheritance, and every `audit-*` skill in the spec-tree plugin pins `model: sonnet`. Review is a verification type whose findings decide `VERIFICATION_READINESS`, so an inherited model makes the review verdict depend on whichever model the invoking session happens to run.
+
+The primary path is already pinned: the `changes-reviewer` agent declares `model: sonnet`, so agent-dispatched reviews are reproducible today. The gap is the direct skill-invocation path.
+
+Required handling:
+
+- Add `model: sonnet` to the `review-changes` skill frontmatter, matching the `audit-*` sibling convention.
+- Regenerate the plugin runtime trees and the catalog so the pin reaches `dist/`.
+- Re-run the skill auditor for the node after the change.
+
+The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `scope-changeset` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
+
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
