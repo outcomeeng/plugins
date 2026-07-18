@@ -24,7 +24,7 @@ Walk these steps in order. Verification, review, push, and open continue without
 
 **Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
 
-**Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. For a stacked branch, record `topology=stacked`, `stack_base=<previous-stack-branch>`, and `active_base=stack_base` from the classification result. Resolve that branch's exact open pull request with `gh pr view "$stack_base" --json number,url,state,headRefName,headRefOid,baseRefName`; require `state == OPEN` and `headRefName == stack_base`, then record the returned full URL as `stack_base_pr_url`. A missing or mismatched base PR fails topology classification before verification.
+**Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. For a stacked branch, record `topology=stacked`, `stack_base=<previous-stack-branch>`, and `active_base=stack_base` from the classification result. Replace `<stack-base>` with that recorded literal value and resolve its exact open pull request with `gh pr view "<stack-base>" --json number,url,state,headRefName,headRefOid,baseRefName`; require `state == OPEN` and `headRefName == stack_base`, then record the returned full URL as `stack_base_pr_url`. A missing or mismatched base PR fails topology classification before verification.
 
 **Step 2 — GATE: Preliminary branch hygiene.** Run /merging-standards `<branch_hygiene>` with the `active_base` recorded in Step 1. Every condition must hold or the flow stops at the first failed condition. This early pass prevents verification work on an invalid branch; Step 4 repeats hygiene after the verification fixpoint.
 
@@ -95,7 +95,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
   --title "<commit-subject under 70 chars per /commit-changes>" \
   --body-file - \
   --head "$(git branch --show-current)" \
-  --base "$stack_base" \
+  --base "<stack-base>" \
   --draft <<'EOF'
 ## Summary
 
@@ -123,7 +123,7 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 ```
 
-Programmatic runners that require one physical command line use `printf` with one argument per output line. Select the peer or stacked form after topology classification. Each command may wrap visually in a rendered view; keep each as one physical shell line, with `<branch>` resolved before composing it.
+Programmatic runners that require one physical command line use `printf` with one argument per output line. Select the peer or stacked form after topology classification. Each command may wrap visually in a rendered view; keep each as one physical shell line, with `<branch>`, `<stack-base-pr-url>`, and `<stack-base>` replaced by their recorded literal values before composing it.
 
 Peer PR:
 
@@ -134,7 +134,7 @@ printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '#
 Stacked PR:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' "- Merge after $stack_base_pr_url (branch: $stack_base)." '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "$stack_base" --draft
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' '- Merge after <stack-base-pr-url> (branch: <stack-base>).' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "<stack-base>" --draft
 ```
 
 Flag rationale:

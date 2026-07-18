@@ -39,7 +39,7 @@ The `reviews` field carries formal review submissions. The `comments` field carr
 
 <workflow>
 
-Walk these steps on each management pass. Inspect, classify, rebase, re-review, push, and foreground PR-check wait continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step. The only lifecycle pauses are the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`, plus the action-token emissions when a gate withholds.
+Walk these steps on each management pass. Inspect, classify, rebase, re-review, push, and foreground PR-check wait continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step. The only lifecycle pauses are the structured question for an exact stack-base PR pointer when required metadata and an operator-supplied pointer are both absent; the autonomous merge after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`; and the action-token emissions when a gate withholds.
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. Then invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool.
 
