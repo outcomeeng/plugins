@@ -18,12 +18,18 @@ CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` hol
 - Given a stacked pull request whose `## Stack` section records the exact stack-base pull-request URL and branch and whose base pull request remains unmerged, when `/manage-pr` inspects that exact base pull request, then it records `stack_base_pending=true`, keeps the current pull request draft, and withholds `MERGE_READINESS` with `MERGE_BLOCKED:stack-base-unmerged` ([audit])
 - Given a stacked pull request whose `## Stack` section records the exact stack-base pull-request URL and branch, when `/manage-pr` inspects that exact base pull request and observes it merged, then it transitions the stacked pull request to peer topology: retargets the repository default branch and replaces the body in one edit, preserves every non-stack section while removing the entire `## Stack` section and every reference to the retired stack base, marks the pull request ready, and performs a fresh peer inspection ([audit])
 
+### Mappings
+
+- ALWAYS: `/manage-pr` resolves review threads through its helper by either a known review-thread node ID or by discovering the thread node ID from the inspected pull-request review-comment ID before running the `resolveReviewThread` mutation; review-comment discovery paginates review threads and comments before declaring absence, and exits with deterministic errors for absent review comments and malformed GitHub payload shapes ([test](tests/test_resolve_review_thread.mapping.l1.py))
+
+### Properties
+
+- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.property.l1.py))
+
 ### Compliance
 
 - ALWAYS: when the current-head CI review reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file, `/manage-pr` fires the mention-triggered reviewer with the project's configured trigger phrase (default `@spec-tree`) and treats its posted findings as the current-head review, per `spx/15-merging.pdr.md` ([audit])
 - ALWAYS: `/manage-pr` presents payload-bearing `gh pr comment` and `gh pr review` commands by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | gh pr ... --body-file -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
-- ALWAYS: `/manage-pr` resolves review threads through its helper by either a known review-thread node ID or by discovering the thread node ID from the inspected pull-request review-comment ID before running the `resolveReviewThread` mutation; review-comment discovery paginates review threads and comments before declaring absence, and exits with deterministic errors for absent review comments and malformed GitHub payload shapes ([test](tests/test_resolve_review_thread.mapping.l1.py))
-- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.property.l1.py))
 - ALWAYS: on a follow-up push that only rebased onto an advanced base, `/manage-pr` re-establishes `VERIFICATION_READINESS` scoped by sync-base's readiness-preservation proof — reusing converged agentic verification when the branch diff is unchanged and the base delta touches no governance surface, and running only the overlay's narrowest lane covering the base delta — while any content fix in the pass re-runs verification predicates in full, per `spx/15-merging.pdr.md` ([audit])
 - ALWAYS: `/manage-pr` clears a base-sync `dirty_tree` outcome by committing the working changes through `/commit-changes` then re-syncing, never stashing and never surfacing it as a rebase conflict, per `spx/15-merging.pdr.md` ([audit])
 - ALWAYS: after merge cleanup and any declared deploy/release phase handling, `/manage-pr` applies one closeout behavior on every invocation: it builds the branch-state closeout record, runs safe cleanup, continues any remaining in-scope work, and invokes `/handoff` plain when the session is over; it does not end with only PR state, branch cleanup, or merge commit mechanics ([audit])
