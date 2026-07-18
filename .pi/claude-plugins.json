@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "marketplaces": {
+    "outcomeeng": {
+      "source": "https://github.com/outcomeeng/plugins"
+    }
+  },
+  "plugins": {
+    "instructions@outcomeeng": {},
+    "typescript@outcomeeng": {},
+    "prose@outcomeeng": {},
+    "python@outcomeeng": {},
+    "spec-tree@outcomeeng": {}
+  }
+}

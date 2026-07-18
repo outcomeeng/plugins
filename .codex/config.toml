@@ -16,8 +16,3 @@ enabled = true
 
 [plugins."spec-tree@outcomeeng"]
 enabled = true
-
-# Present in .claude/settings.json. Effective after a Codex-compatible
-# taches-cc-resources marketplace entry is installed.
-[plugins."taches-cc-resources@taches-cc-resources"]
-enabled = true
