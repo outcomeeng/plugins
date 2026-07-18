@@ -1,8 +1,8 @@
 # Plugin Build
 
-PROVIDES Claude Code-authored plugin files with deterministic compatibility emission for Codex
+PROVIDES authored plugin files with deterministic agent-harness-native emission for Claude Code and Codex
 SO THAT plugin authors and the marketplace
-CAN maintain skills and thin agents as one canonical source while delivering coding-agent-specific outputs.
+CAN maintain skills and thin agents as one canonical source while delivering native outputs for each coding agent.
 
 ## Assertions
 
