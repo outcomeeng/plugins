@@ -4,7 +4,7 @@
 
 ## Recovery boundary
 
-The recovery source is `origin/work/strict-finding-disposition` at `5f26a67a9aef9327e57fd5e02d130c8363578a07`. Against `origin/main` at `681e59bda5fd0481b079804732a19eafc0d30d2b`, it contains 103 branch commits and changes 189 paths. The aggregate remains recovery material and never enters whole-changeset verification or publication as one pull request.
+The recovery source is `origin/work/strict-finding-disposition` at `5f26a67a9aef9327e57fd5e02d130c8363578a07`. Against `origin/main` at `b8503c8147f9291a67d828e649baff0d9c078d9c`, it contains 103 branch commits and changes 189 paths. The aggregate remains recovery material and never enters whole-changeset verification or publication as one pull request.
 
 The changeset-coherence auditor on `origin/work/changeset-coherence-auditor` remains outside this execution plan until the operator starts that work explicitly.
 
@@ -12,13 +12,12 @@ The changeset-coherence auditor on `origin/work/changeset-coherence-auditor` rem
 
 Run one independently mergeable cycle at a time. Load the target node's plan before reconstructing its patch from current `origin/main`.
 
-1. `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/PLAN.md`
-2. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md`
-3. `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`
-4. `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/PLAN.md`
-5. `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`
-6. `spx/43-typescript.enabler/25-typescript-standards.enabler/29-typescript-code.enabler/PLAN.md`
-7. `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md`
+1. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/PLAN.md`
+2. `spx/13-infrastructure.enabler/25-eval-harness.enabler/PLAN.md`
+3. `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/PLAN.md`
+4. `spx/21-spec-tree.enabler/68-audit.enabler/PLAN.md`
+5. `spx/43-typescript.enabler/25-typescript-standards.enabler/29-typescript-code.enabler/PLAN.md`
+6. `spx/21-spec-tree.enabler/76-merging.enabler/PLAN.md`
 
 ## Apply-local procedure
 
