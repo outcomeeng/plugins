@@ -22,7 +22,11 @@ from outcomeeng_evals.producer_prompt import (
     MATERIALIZED_PROMPT_FILENAME,
     PRODUCER_FIELD,
     PRODUCER_FILE_KIND,
+    PRODUCER_FILE_PLACEHOLDER,
+    PRODUCER_PATH_PLACEHOLDER,
     PRODUCER_SECTION_KIND,
+    PRODUCER_SECTION_NAME_PLACEHOLDER,
+    PRODUCER_SECTION_PLACEHOLDER,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
@@ -37,7 +41,7 @@ COMPLETE_PRODUCER_FIXTURE_PATH = (
 SECTION_NAME = "audit_tag_validity"
 SELECTED_RULE = "Evidence type must match the claim."
 UNRELATED_RULE = "This surrounding section is not selected."
-LITERAL_PRODUCER_SECTION_TOKEN = "{producer_section}"
+LITERAL_PRODUCER_SECTION_TOKEN = PRODUCER_SECTION_PLACEHOLDER
 STALE_PROMPT = "stale prompt\n"
 PROMPT_PATH_OUTSIDE_EVAL_DIRECTORY = "../../prompt.md"
 PRODUCER_PATH_OUTSIDE_REPOSITORY = "../outside/SKILL.md"
@@ -234,6 +238,7 @@ def write_eval_fixture(
     prompt_template_path: str = PROMPT_TEMPLATE_FILENAME,
     producer_relative_path: str = PRODUCER_RELATIVE_PATH,
     omitted_prompt_source_fields: tuple[str, ...] = (),
+    producer_placeholder_count: int = 1,
 ) -> tuple[Path, Path]:
     """Write one producer prompt eval into temporary repository storage."""
     repo_root = tmp_path / "repo"
@@ -275,10 +280,10 @@ def write_eval_fixture(
         (eval_dir / prompt_template_path).write_text(
             "\n".join(
                 [
-                    "Producer: {producer_path}",
-                    "Section: {producer_section_name}",
+                    f"Producer: {PRODUCER_PATH_PLACEHOLDER}",
+                    f"Section: {PRODUCER_SECTION_NAME_PLACEHOLDER}",
                     "",
-                    "{producer_section}",
+                    *([PRODUCER_SECTION_PLACEHOLDER] * producer_placeholder_count),
                     "",
                 ]
             ),
@@ -313,7 +318,11 @@ def write_eval_fixture(
     return repo_root, eval_dir / EVAL_TOML_FILENAME
 
 
-def write_complete_producer_file_fixture(tmp_path: Path) -> tuple[Path, Path]:
+def write_complete_producer_file_fixture(
+    tmp_path: Path,
+    *,
+    producer_placeholder_count: int = 1,
+) -> tuple[Path, Path]:
     """Write one whole-producer eval into temporary repository storage."""
     repo_root, eval_toml = write_eval_fixture(
         tmp_path,
@@ -324,7 +333,14 @@ def write_complete_producer_file_fixture(tmp_path: Path) -> tuple[Path, Path]:
         repo_root / PRODUCER_RELATIVE_PATH,
     )
     (eval_toml.parent / PROMPT_TEMPLATE_FILENAME).write_text(
-        "Producer: {producer_path}\n\n{producer_file}\n",
+        "\n".join(
+            [
+                f"Producer: {PRODUCER_PATH_PLACEHOLDER}",
+                "",
+                *([PRODUCER_FILE_PLACEHOLDER] * producer_placeholder_count),
+                "",
+            ]
+        ),
         encoding="utf-8",
     )
     write_prompt_source_definition(
@@ -333,6 +349,36 @@ def write_complete_producer_file_fixture(tmp_path: Path) -> tuple[Path, Path]:
         include_section=False,
     )
     return repo_root, eval_toml
+
+
+def write_producer_section_fixture_without_body(tmp_path: Path) -> tuple[Path, Path]:
+    """Write one section eval whose template omits the selected section."""
+    return write_eval_fixture(tmp_path, producer_placeholder_count=0)
+
+
+def write_producer_section_fixture_with_repeated_body(
+    tmp_path: Path,
+) -> tuple[Path, Path]:
+    """Write one section eval whose template repeats the selected section."""
+    return write_eval_fixture(tmp_path, producer_placeholder_count=2)
+
+
+def write_producer_file_fixture_without_body(tmp_path: Path) -> tuple[Path, Path]:
+    """Write one whole-file eval whose template omits the producer body."""
+    return write_complete_producer_file_fixture(
+        tmp_path,
+        producer_placeholder_count=0,
+    )
+
+
+def write_producer_file_fixture_with_repeated_body(
+    tmp_path: Path,
+) -> tuple[Path, Path]:
+    """Write one whole-file eval whose template repeats the producer body."""
+    return write_complete_producer_file_fixture(
+        tmp_path,
+        producer_placeholder_count=2,
+    )
 
 
 def write_external_eval_fixture(tmp_path: Path) -> tuple[Path, Path]:

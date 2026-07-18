@@ -11,6 +11,8 @@ from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     PRODUCER_FIELD,
     PRODUCER_FILE_KIND,
+    PRODUCER_FILE_PLACEHOLDER,
+    PRODUCER_SECTION_PLACEHOLDER,
     SECTION_FIELD,
     TEMPLATE_FIELD,
     PromptMaterializationDrift,
@@ -28,7 +30,6 @@ from outcomeeng_testing.harnesses.producer_section_prompt import (
     PRODUCER_RELATIVE_PATH,
     PROMPT_FILENAME,
     PROMPT_PATH_OUTSIDE_EVAL_DIRECTORY,
-    PROMPT_TEMPLATE_FILENAME,
     SECTION_NAME,
     SELECTED_RULE,
     STALE_PROMPT,
@@ -38,7 +39,11 @@ from outcomeeng_testing.harnesses.producer_section_prompt import (
     producer_section,
     write_eval_fixture,
     write_external_eval_fixture,
-    write_prompt_source_definition,
+    write_complete_producer_file_fixture,
+    write_producer_file_fixture_with_repeated_body,
+    write_producer_file_fixture_without_body,
+    write_producer_section_fixture_with_repeated_body,
+    write_producer_section_fixture_without_body,
 )
 
 
@@ -57,25 +62,12 @@ def test_materializes_prompt_from_named_producer_section(tmp_path: Path) -> None
 
 @with_temp_workspace
 def test_materializes_prompt_from_complete_producer_file(tmp_path: Path) -> None:
-    repo_root, eval_toml = write_eval_fixture(
-        tmp_path,
-        prompt_source_kind=PRODUCER_FILE_KIND,
-    )
-    eval_dir = eval_toml.parent
+    repo_root, eval_toml = write_complete_producer_file_fixture(tmp_path)
     producer_text = (repo_root / PRODUCER_RELATIVE_PATH).read_text(encoding="utf-8")
-    (eval_dir / PROMPT_TEMPLATE_FILENAME).write_text(
-        "Producer: {producer_path}\n\n{producer_file}\n",
-        encoding="utf-8",
-    )
-    write_prompt_source_definition(
-        eval_toml,
-        prompt_source_kind=PRODUCER_FILE_KIND,
-        include_section=False,
-    )
 
     materialize_prompt(eval_toml, repo_root=repo_root)
 
-    prompt_text = (eval_dir / PROMPT_FILENAME).read_text(encoding="utf-8")
+    prompt_text = (eval_toml.parent / PROMPT_FILENAME).read_text(encoding="utf-8")
     assert producer_text in prompt_text
     assert PRODUCER_RELATIVE_PATH in prompt_text
 
@@ -89,6 +81,46 @@ def test_producer_file_rejects_section_selector(tmp_path: Path) -> None:
 
     with pytest.raises(ProducerPromptError, match=SECTION_FIELD):
         materialize_prompt(eval_toml, repo_root=repo_root)
+
+
+@with_temp_workspace
+def test_producer_section_rejects_template_without_body(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_producer_section_fixture_without_body(tmp_path)
+
+    with pytest.raises(ProducerPromptError) as error:
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+    assert PRODUCER_SECTION_PLACEHOLDER in str(error.value)
+
+
+@with_temp_workspace
+def test_producer_section_rejects_template_with_repeated_body(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_producer_section_fixture_with_repeated_body(tmp_path)
+
+    with pytest.raises(ProducerPromptError) as error:
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+    assert PRODUCER_SECTION_PLACEHOLDER in str(error.value)
+
+
+@with_temp_workspace
+def test_producer_file_rejects_template_without_body(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_producer_file_fixture_without_body(tmp_path)
+
+    with pytest.raises(ProducerPromptError) as error:
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+    assert PRODUCER_FILE_PLACEHOLDER in str(error.value)
+
+
+@with_temp_workspace
+def test_producer_file_rejects_template_with_repeated_body(tmp_path: Path) -> None:
+    repo_root, eval_toml = write_producer_file_fixture_with_repeated_body(tmp_path)
+
+    with pytest.raises(ProducerPromptError) as error:
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+    assert PRODUCER_FILE_PLACEHOLDER in str(error.value)
 
 
 @with_temp_workspace

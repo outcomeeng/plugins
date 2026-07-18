@@ -22,13 +22,13 @@ PRODUCER_FILE_KIND: Final = "producer-file"
 PRODUCER_FILES_KIND: Final = "producer-files"
 PROMPT_FIELD: Final = "prompt"
 MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
+PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
+PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
+PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
+PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 PRODUCER_PATHS_PLACEHOLDER: Final = "{producer_paths}"
 PRODUCER_FILES_PLACEHOLDER: Final = "{producer_files}"
 
-_PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
-_PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
-_PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
-_PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 _REQUIRED_PLACEHOLDER_COUNT: Final = 1
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
@@ -188,21 +188,21 @@ def load_producer_prompt_definition(
 def render_prompt(definition: ProducerPromptDefinition) -> str:
     """Render a prompt template from the declared producer source."""
     template = definition.template_path.read_text(encoding="utf-8")
+    _require_placeholder_once(
+        template,
+        placeholder=_producer_content_placeholder(definition.kind),
+        template_path=definition.template_path,
+    )
     if definition.kind == PRODUCER_FILE_KIND:
         producer = definition.producers[0]
         return _replace_known_placeholders_once(
             template,
             {
-                _PRODUCER_PATH_PLACEHOLDER: producer.relative_path,
-                _PRODUCER_FILE_PLACEHOLDER: producer.path.read_text(encoding="utf-8"),
+                PRODUCER_PATH_PLACEHOLDER: producer.relative_path,
+                PRODUCER_FILE_PLACEHOLDER: producer.path.read_text(encoding="utf-8"),
             },
         )
     if definition.kind == PRODUCER_FILES_KIND:
-        _require_placeholder_once(
-            template,
-            placeholder=PRODUCER_FILES_PLACEHOLDER,
-            template_path=definition.template_path,
-        )
         return _replace_known_placeholders_once(
             template,
             {
@@ -224,9 +224,9 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
         producer_path=producer.path,
     )
     replacements = {
-        _PRODUCER_PATH_PLACEHOLDER: producer.relative_path,
-        _PRODUCER_SECTION_NAME_PLACEHOLDER: definition.section_name,
-        _PRODUCER_SECTION_PLACEHOLDER: producer_section,
+        PRODUCER_PATH_PLACEHOLDER: producer.relative_path,
+        PRODUCER_SECTION_NAME_PLACEHOLDER: definition.section_name,
+        PRODUCER_SECTION_PLACEHOLDER: producer_section,
     }
     return _replace_known_placeholders_once(template, replacements)
 
@@ -256,6 +256,17 @@ def _require_placeholder_once(
             f"found {placeholder_count}"
         )
         raise ProducerPromptError(msg)
+
+
+def _producer_content_placeholder(kind: str) -> str:
+    if kind == PRODUCER_FILE_KIND:
+        return PRODUCER_FILE_PLACEHOLDER
+    if kind == PRODUCER_FILES_KIND:
+        return PRODUCER_FILES_PLACEHOLDER
+    if kind == PRODUCER_SECTION_KIND:
+        return PRODUCER_SECTION_PLACEHOLDER
+    msg = f"unsupported producer prompt kind: {kind!r}"
+    raise ProducerPromptError(msg)
 
 
 def extract_named_producer_section(
@@ -377,12 +388,11 @@ def _resolve_definition(
             f"must not alias {PROMPT_FIELD}"
         )
         raise ProducerPromptError(msg)
-    if kind == PRODUCER_FILES_KIND:
-        _require_placeholder_once(
-            template_path.read_text(encoding="utf-8"),
-            placeholder=PRODUCER_FILES_PLACEHOLDER,
-            template_path=template_path,
-        )
+    _require_placeholder_once(
+        template_path.read_text(encoding="utf-8"),
+        placeholder=_producer_content_placeholder(kind),
+        template_path=template_path,
+    )
 
     return ProducerPromptDefinition(
         eval_toml_path=eval_toml_path,
