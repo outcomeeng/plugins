@@ -97,7 +97,7 @@ Compare timestamps against the most recent push. Entries after that push are re-
 </review_inspection>
 <review_classification>
 
-Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
+Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **concern** (one of five). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
 
 This skill is the canonical consumer-facing taxonomy. Repositories may add local review instructions, but the default severity and category vocabulary below is complete here.
 
@@ -118,7 +118,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 **Cross-reviewer union and convergence.** Build one finding ledger from all current-head review surfaces and reviewers, then classify each item once. A no-findings review from the designated CI reviewer, a clean local review, a passing deterministic check, or an approved audit never cancels a valid finding from another reviewer. Multiple review rounds that keep surfacing valid variants in the same area are not reviewer noise and not an operator decision point; they prove the prior fix or sweep was too narrow. Treat the next valid variant as the same defect class until the underlying lifecycle contract is repaired and a new review round finds no valid in-scope variant. "Not wired into production yet" and "deferred next slice" are not dispositions for code in the diff — if the changed diff carries the defect and the finding is valid in scope, fix it in the changeset before merge.
 
-**Category** (one of six), grouped by three axes:
+**Concern** (one of five), grouped by three axes:
 
 *What the code does vs. what it is supposed to do*
 
@@ -132,7 +132,6 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 *How it does what it is supposed to do*
 
-- `standards` — adherence to CLAUDE.md and the rules declared in standards skills (naming conventions, command tokens, file structure, language idioms).
 - `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
@@ -153,9 +152,9 @@ Required: <concrete change>
 ```
 
 ```text
-### DEBT [standards]: path/to/file:97
-Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
-Evidence: <quote the diff or behavior and explain how it violates the standard>
+### DEBT [evidence]: path/to/file:97
+Reference: <quote the evidence rule from CLAUDE.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
+Evidence: <quote the diff or behavior and explain how it weakens the declared evidence>
 Required: <concrete change>
 ```
 
