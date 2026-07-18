@@ -147,6 +147,30 @@ def with_sectioned_producer_files_workspace() -> Iterator[ProducerFilesWorkspace
         yield workspace
 
 
+@contextmanager
+def with_missing_producer_files_placeholder_workspace() -> Iterator[
+    ProducerFilesWorkspace
+]:
+    """Yield a plural-producer eval whose template omits producer bodies."""
+    with _producer_files_workspace(
+        producer_fixture_paths=PRODUCER_FIXTURE_PATHS,
+        producer_files_placeholder_count=0,
+    ) as workspace:
+        yield workspace
+
+
+@contextmanager
+def with_duplicate_producer_files_placeholder_workspace() -> Iterator[
+    ProducerFilesWorkspace
+]:
+    """Yield a plural-producer eval whose template repeats producer bodies."""
+    with _producer_files_workspace(
+        producer_fixture_paths=PRODUCER_FIXTURE_PATHS,
+        producer_files_placeholder_count=2,
+    ) as workspace:
+        yield workspace
+
+
 def run_producer_files_change_property(
     assertion: Callable[[ProducerFileMutation], None],
 ) -> None:
@@ -184,6 +208,7 @@ def _producer_files_workspace(
     absolute_source_paths: bool = False,
     parent_traversal_source_paths: bool = False,
     include_section: bool = False,
+    producer_files_placeholder_count: int = 1,
 ) -> Iterator[ProducerFilesWorkspace]:
     with TemporaryDirectory() as temp_dir:
         repo_root = Path(temp_dir) / "repo"
@@ -219,18 +244,14 @@ def _producer_files_workspace(
             copyfile(fixture_path, producer_path)
 
         template_path = eval_dir / PROMPT_TEMPLATE_FILENAME
-        template_path.write_text(
-            "\n".join(
-                [
-                    "Producers:",
-                    PRODUCER_PATHS_PLACEHOLDER,
-                    "",
-                    PRODUCER_FILES_PLACEHOLDER,
-                    "",
-                ]
-            ),
-            encoding="utf-8",
-        )
+        template_lines = [
+            "Producers:",
+            PRODUCER_PATHS_PLACEHOLDER,
+            "",
+            *([PRODUCER_FILES_PLACEHOLDER] * producer_files_placeholder_count),
+            "",
+        ]
+        template_path.write_text("\n".join(template_lines), encoding="utf-8")
         eval_toml_path = eval_dir / EVAL_TOML_FILENAME
         section_definition = (
             [f'{SECTION_FIELD} = "{SECTION_FIELD}"'] if include_section else []

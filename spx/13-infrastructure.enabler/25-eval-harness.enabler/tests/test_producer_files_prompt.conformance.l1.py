@@ -7,13 +7,16 @@ import pytest
 from outcomeeng_evals.producer_prompt import (
     PRODUCERS_FIELD,
     PRODUCER_FILES_KIND,
+    PRODUCER_FILES_PLACEHOLDER,
     ProducerPromptError,
     materialize_prompt,
 )
 from outcomeeng_testing.harnesses.producer_prompt import (
     with_absolute_producer_files_workspace,
+    with_duplicate_producer_files_placeholder_workspace,
     with_duplicate_producer_files_workspace,
     with_empty_producer_files_workspace,
+    with_missing_producer_files_placeholder_workspace,
     with_parent_traversal_producer_files_workspace,
     with_producer_files_workspace,
     with_sectioned_producer_files_workspace,
@@ -82,3 +85,23 @@ def test_producer_files_rejects_section_with_actual_source_kind() -> None:
                 workspace.eval_toml_path,
                 repo_root=workspace.repo_root,
             )
+
+
+def test_producer_files_rejects_template_without_producer_bodies() -> None:
+    with with_missing_producer_files_placeholder_workspace() as workspace:
+        with pytest.raises(ProducerPromptError) as error:
+            materialize_prompt(
+                workspace.eval_toml_path,
+                repo_root=workspace.repo_root,
+            )
+        assert PRODUCER_FILES_PLACEHOLDER in str(error.value)
+
+
+def test_producer_files_rejects_template_with_repeated_producer_bodies() -> None:
+    with with_duplicate_producer_files_placeholder_workspace() as workspace:
+        with pytest.raises(ProducerPromptError) as error:
+            materialize_prompt(
+                workspace.eval_toml_path,
+                repo_root=workspace.repo_root,
+            )
+        assert PRODUCER_FILES_PLACEHOLDER in str(error.value)

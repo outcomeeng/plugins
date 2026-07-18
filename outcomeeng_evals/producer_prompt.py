@@ -29,6 +29,7 @@ _PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 _PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
 _PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
+_REQUIRED_PLACEHOLDER_COUNT: Final = 1
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -197,6 +198,11 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
             },
         )
     if definition.kind == PRODUCER_FILES_KIND:
+        _require_placeholder_once(
+            template,
+            placeholder=PRODUCER_FILES_PLACEHOLDER,
+            template_path=definition.template_path,
+        )
         return _replace_known_placeholders_once(
             template,
             {
@@ -235,6 +241,21 @@ def _render_path_labeled_producers(producers: tuple[ProducerSource, ...]) -> str
         )
         for producer in producers
     )
+
+
+def _require_placeholder_once(
+    template: str,
+    *,
+    placeholder: str,
+    template_path: Path,
+) -> None:
+    placeholder_count = template.count(placeholder)
+    if placeholder_count != _REQUIRED_PLACEHOLDER_COUNT:
+        msg = (
+            f"{template_path}: expected exactly one {placeholder!r} placeholder, "
+            f"found {placeholder_count}"
+        )
+        raise ProducerPromptError(msg)
 
 
 def extract_named_producer_section(
@@ -356,6 +377,12 @@ def _resolve_definition(
             f"must not alias {PROMPT_FIELD}"
         )
         raise ProducerPromptError(msg)
+    if kind == PRODUCER_FILES_KIND:
+        _require_placeholder_once(
+            template_path.read_text(encoding="utf-8"),
+            placeholder=PRODUCER_FILES_PLACEHOLDER,
+            template_path=template_path,
+        )
 
     return ProducerPromptDefinition(
         eval_toml_path=eval_toml_path,
