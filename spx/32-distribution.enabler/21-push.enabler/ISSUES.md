@@ -12,4 +12,4 @@ The **push wrapper** refreshes every local marketplace plugin after a no-upstrea
 
 **Required handling.** Preserve the remote destination's pre-push commit for explicit refspecs, or add an equivalent source-owned range input, and pass that commit to sync after a successful push. Add scenario evidence proving that a no-upstream push to an explicit destination skips marketplace refresh when the published range changes no plugin distribution path.
 
-**Revisit condition.** Resolve this entry before the next direct-push lifecycle, or in the next change to `outcomeeng/distribution/push.py`, its scenario tests, or the push-and-sync contract, whichever occurs first.
+**Revisit condition.** Resolve this entry before the next no-upstream direct-push lifecycle after this note is published, or in the next change to `outcomeeng/distribution/push.py`, its scenario tests, or the push-and-sync contract, whichever occurs first.
