@@ -12,7 +12,7 @@ A review, audit, or merge workflow can derive an exact committed changeset from 
 2. Run the focused node tests and validation.
 3. Run the test-evidence auditor, implementation auditor, and changeset reviewer on one clean committed head.
 4. Run the terminal full deterministic gate when the current merge overlay requires it.
-5. Push the exact reviewed head to PR #451, inspect all current-head review surfaces and checks, and merge through `/manage-pr`.
+5. Push the exact reviewed head to PR #451 and drive it through `/merge`, which delegates the open pull-request lifecycle and current-head inspection to `/manage-pr`.
 6. Complete branch cleanup and marketplace-source refresh before advancing the apply merge-cycle index.
 
 ## Revisit condition
