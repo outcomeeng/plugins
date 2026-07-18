@@ -6,6 +6,10 @@ CAN reject accumulated programs of work before expensive implementation audits a
 
 ## Assertions
 
+### Scenarios
+
+- Given a feature branch whose local base ref lags `origin/<base>` by an already-merged commit, when the audit resolves its own committed scope, then the resolved scope carries the branch's own change and excludes the already-merged file ([test](tests/test_resolve_scope.scenario.l1.py))
+
 ### Compliance
 
 - ALWAYS: an exact committed changeset receives `APPROVED` only when its authored artifacts realize one behavioral outcome or inseparable semantic clusters with one verification story and one rollback story ([eval](evals/coherence-verdict/eval.toml))

@@ -7,7 +7,7 @@ description: >-
   review-unit sequencing.
 model: sonnet
 argument-hint: "<branch-or-base...head>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git rev-parse:*), Bash(git show:*)
+allowed-tools: Read, Grep, Glob, Bash(python3:*resolve_scope.py*), Bash(git diff:*), Bash(git show:*)
 ---
 
 <objective>
@@ -30,7 +30,7 @@ A verdict on whether one exact committed changeset forms one coherent review uni
 <audit_workflow>
 
 1. Require `$ARGUMENTS` to identify a branch, `HEAD`, or a committed `<base>...<head>` scope. When no exact committed scope can be resolved, return the `BLOCKED` JSON object in `<verdict_format>`; scope failure occurs before a coherence verdict and never fabricates commit identities.
-2. Consume the changed-file set and the full base and head commit IDs the caller derived through `/scope-changeset`, and preserve them verbatim. NEVER derive base-ref, commit identity, or diff scope inside this audit; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits. When that derived scope is absent, return the `BLOCKED` JSON object rather than resolving the scope from raw git. Read changed content only within the supplied scope.
+2. Resolve the exact committed scope by running `python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" "<scope>"`, which routes base-ref resolution, remote-tracking-ref composition, commit identity, and three-dot diff scope through the canonical changeset-scope primitives. Preserve its `base`, `head`, and `changed_paths` verbatim. NEVER derive base-ref, commit identity, or diff scope from raw git; a bare local branch ref lags `origin/<base>` in a multi-worktree checkout and re-admits already-merged commits. A nonzero exit returns the `BLOCKED` JSON object. Read changed content only within the resolved scope.
 3. Enumerate every changed path and classify its role: decision/specification, test/eval evidence, implementation, generated artifact, workflow/configuration, documentation, migration, deployment, or release.
 4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. In an already-collected evidence packet, `role: generated` classifies the artifact kind only; it never establishes provenance. Require `generated_from`, a declared relationship record, or equivalent explicit evidence. When `generated_relationship_evidence.status` is `missing`, return `UNKNOWN` with `missing-generated-source-evidence` before clustering the unresolved artifact. Exclude resolved generated fanout from authored breadth while retaining it in each producer cluster's `generated_fanout`.
 5. Extract behavioral claims from the changed declarations and observable implementation/evidence. Use commit messages only as supporting evidence; they never override changed artifacts.
