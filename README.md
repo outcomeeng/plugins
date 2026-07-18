@@ -287,7 +287,7 @@ Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /
 
 ### spec-tree
 
-Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue
+Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue
 
 | Type  | Name                          | Purpose                                                                                                                                                                                                                                                                                                                                                         |
 | ----- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
