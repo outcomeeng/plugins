@@ -60,11 +60,11 @@ During audits, prioritize evaluation of:
 
 5. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
 6. Handle edge cases:
-   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
+   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, add a `REJECT` finding with rule `configuration_issue` to the `must-fix` row and proceed with available content; the incomplete audit remains `REJECTED`.
    - If YAML frontmatter is malformed, flag as critical issue.
    - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
    - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
-   - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
+   - If the skill is under 100 lines, record `simple` in `metadata.skill_type` and evaluate accordingly.
 7. Evaluate the target skill against the standards loaded in steps 1-2.
 
 **Use ACTUAL patterns from `/skill-standards`, not memory.** Never treat a creator skill's workflow references as standards — those references carry authoring workflow content only.
