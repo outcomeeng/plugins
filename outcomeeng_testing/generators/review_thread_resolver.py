@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.util
 import re
 import sys
-from enum import StrEnum
 from pathlib import Path
 from types import ModuleType
 
@@ -23,73 +22,81 @@ SCRIPT = (
     / "scripts"
     / "resolve_review_thread.py"
 )
-VALID_THREAD_ID = "PRRT_valid001"
-VALID_REPOSITORY = "outcomeeng/plugins"
-VALID_PR_NUMBER = "405"
-VALID_REVIEW_COMMENT_ID = "12345"
-VALID_HOST = "ghe.example.com"
-
-
-class InvalidResolverInput(StrEnum):
-    THREAD_ID = "thread_id"
-    REPOSITORY = "repository"
-    PR_NUMBER = "pr_number"
-    REVIEW_COMMENT_ID = "review_comment_id"
-    HOST = "host"
-    MIXED_MODE = "mixed_mode"
 
 
 def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     """Generated malformed CLI argv domains for the resolver boundary."""
 
+    repository_option = _source_string("REPOSITORY_OPTION")
+    pull_request_option = _source_string("PULL_REQUEST_OPTION")
+    review_comment_id_option = _source_string("REVIEW_COMMENT_ID_OPTION")
+    host_option = _source_string("HOST_OPTION")
+
     return st.one_of(
         _invalid_thread_ids().map(lambda value: (value,)),
-        _invalid_repositories().map(
-            lambda value: (
-                "--repo",
-                value,
-                "--pr",
-                VALID_PR_NUMBER,
-                "--review-comment-id",
-                VALID_REVIEW_COMMENT_ID,
+        st.tuples(
+            _invalid_repositories(),
+            _valid_numbers(),
+            _valid_comment_ids(),
+        ).map(
+            lambda values: (
+                repository_option,
+                values[0],
+                pull_request_option,
+                values[1],
+                review_comment_id_option,
+                values[2],
             )
         ),
-        _invalid_numbers().map(
-            lambda value: (
-                "--repo",
-                VALID_REPOSITORY,
-                "--pr",
-                value,
-                "--review-comment-id",
-                VALID_REVIEW_COMMENT_ID,
+        st.tuples(
+            _valid_repositories(),
+            _invalid_numbers(),
+            _valid_comment_ids(),
+        ).map(
+            lambda values: (
+                repository_option,
+                values[0],
+                pull_request_option,
+                values[1],
+                review_comment_id_option,
+                values[2],
             )
         ),
-        _invalid_comment_ids().map(
-            lambda value: (
-                "--repo",
-                VALID_REPOSITORY,
-                "--pr",
-                VALID_PR_NUMBER,
-                "--review-comment-id",
-                value,
+        st.tuples(
+            _valid_repositories(),
+            _valid_numbers(),
+            _invalid_comment_ids(),
+        ).map(
+            lambda values: (
+                repository_option,
+                values[0],
+                pull_request_option,
+                values[1],
+                review_comment_id_option,
+                values[2],
             )
         ),
-        _invalid_hosts().map(
-            lambda value: (
-                "--host",
-                value,
-                VALID_THREAD_ID,
+        st.tuples(_invalid_hosts(), _valid_thread_ids()).map(
+            lambda values: (
+                host_option,
+                values[0],
+                values[1],
             )
         ),
-        st.just(
-            (
-                VALID_THREAD_ID,
-                "--repo",
-                VALID_REPOSITORY,
-                "--pr",
-                VALID_PR_NUMBER,
-                "--review-comment-id",
-                VALID_REVIEW_COMMENT_ID,
+        st.tuples(
+            _valid_thread_ids(),
+            _valid_repositories(),
+            _valid_numbers(),
+            _valid_comment_ids(),
+        ).map(
+            lambda values: (
+                values[0],
+                repository_option,
+                values[1],
+                pull_request_option,
+                values[2],
+                review_comment_id_option,
+                values[3],
             )
         ),
     )
@@ -115,6 +122,26 @@ def _invalid_hosts() -> SearchStrategy[str]:
     return _strings_outside_pattern(_pattern("HOST_PATTERN"))
 
 
+def _valid_thread_ids() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("NODE_ID_PATTERN"))
+
+
+def _valid_repositories() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("REPOSITORY_PATTERN"))
+
+
+def _valid_numbers() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("NUMBER_PATTERN"))
+
+
+def _valid_comment_ids() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("COMMENT_ID_PATTERN"))
+
+
+def _strings_inside_pattern(pattern: re.Pattern[str]) -> SearchStrategy[str]:
+    return st.from_regex(pattern, fullmatch=True)
+
+
 def _strings_outside_pattern(pattern: re.Pattern[str]) -> SearchStrategy[str]:
     return st.text(max_size=32).filter(lambda value: pattern.fullmatch(value) is None)
 
@@ -123,6 +150,13 @@ def _pattern(name: str) -> re.Pattern[str]:
     value = getattr(_load_script(), name)
     if not isinstance(value, re.Pattern):
         raise RuntimeError(f"resolve_review_thread.{name} must be a regex pattern")
+    return value
+
+
+def _source_string(name: str) -> str:
+    value = getattr(_load_script(), name)
+    if not isinstance(value, str):
+        raise RuntimeError(f"resolve_review_thread.{name} must be a string")
     return value
 
 

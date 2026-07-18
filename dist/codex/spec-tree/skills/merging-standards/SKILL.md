@@ -70,7 +70,7 @@ Read \`${SKILL_DIR}/references/branch-and-push.md\` before checkout-sensitive li
 </assigned_cwd_worktree_discipline>
 
 <branch_hygiene>
-Read \`${SKILL_DIR}/references/branch-and-push.md\` before every push. Apply its \`<branch_hygiene>\` contract.
+Read \`${SKILL_DIR}/references/branch-and-push.md\` before every push. Set its required \`active_base\` and \`publication_phase\` inputs, then apply the \`<branch_hygiene>\` contract. Opening uses \`publication_phase=initial\`; management follow-ups use \`publication_phase=follow-up\`.
 </branch_hygiene>
 
 <branch_topology>
@@ -141,7 +141,7 @@ How to avoid: Pass `--delete-branch=false`, then run the explicit cleanup sequen
 <success_criteria>
 The flows that consume this vocabulary satisfy their contracts when, at minimum:
 
-- `<branch_hygiene>` predicates hold before every push (initial and every follow-up).
+- `<branch_hygiene>` predicates hold before every push with the correct `publication_phase`; only the duplicate-open-PR predicate is initial-publication-specific.
 - `<branch_topology>` is classified before every push, with the matching gate passing.
 - Every push uses the explicit destination ref form from `<push_semantics>`.
 - A managing-flow pass that finds the branch behind `origin/<base>` rebases it per `<base_sync>` before driving the work queue.

@@ -54,6 +54,11 @@ REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 NUMBER_PATTERN = re.compile(r"[1-9]\d*")
 COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{1,256}")
 HOST_PATTERN = re.compile(r"[A-Za-z0-9.-]+")
+THREAD_ID_ARGUMENT = "thread_id"
+REPOSITORY_OPTION = "--repo"
+HOST_OPTION = "--host"
+PULL_REQUEST_OPTION = "--pr"
+REVIEW_COMMENT_ID_OPTION = "--review-comment-id"
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -62,15 +67,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Resolve one GitHub pull-request review thread.",
     )
     parser.add_argument(
-        "thread_id",
+        THREAD_ID_ARGUMENT,
         nargs="?",
         help="GitHub review thread node ID to resolve",
     )
-    parser.add_argument("--repo", help="Repository in owner/name form")
-    parser.add_argument("--host", help="GitHub host for gh api --hostname")
-    parser.add_argument("--pr", help="Pull request number")
+    parser.add_argument(REPOSITORY_OPTION, help="Repository in owner/name form")
+    parser.add_argument(HOST_OPTION, help="GitHub host for gh api --hostname")
+    parser.add_argument(PULL_REQUEST_OPTION, help="Pull request number")
     parser.add_argument(
-        "--review-comment-id",
+        REVIEW_COMMENT_ID_OPTION,
         help="Review comment database ID or node ID from the pull-request comments API",
     )
     return parser.parse_args(argv)
