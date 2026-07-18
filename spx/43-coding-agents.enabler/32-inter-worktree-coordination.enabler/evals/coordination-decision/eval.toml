@@ -3,7 +3,7 @@ cases = "cases.jsonl"
 prompt = "prompt.md"
 plugin_dir = "dist/claude/coding-agents"
 owned_paths = [
-  "spx/43-coding-agents.enabler/15-channel-selection.pdr.md",
+  "spx/43-coding-agents.enabler/15-agent-environments.pdr.md",
   "spx/43-coding-agents.enabler/15-runtime-adapters.adr.md",
   "spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/inter-worktree-coordination.md",
   "spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/evals/coordination-decision/**",
