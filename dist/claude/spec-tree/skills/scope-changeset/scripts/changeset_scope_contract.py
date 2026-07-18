@@ -1,0 +1,18 @@
+"""Source-owned vocabulary for canonical changeset derivation."""
+
+from __future__ import annotations
+
+BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
+BRANCH_SLUG_MAX_LENGTH = 64
+BRANCH_REF_PATH_SEPARATOR = "/"
+BRANCH_SLUG_PATH_SUBSTITUTE = "__"
+BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
+BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
+ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
+ORIGIN_HEAD_REF = f"{ORIGIN_HEAD_REF_PREFIX}HEAD"
+ORIGIN_REF_PREFIX = "origin/"
+HEAD_REF = "HEAD"
+BRANCH_SCOPE_RANGE_TEMPLATE = f"{{origin_ref}}...{HEAD_REF}"
+FRONTMATTER_DELIMITER = "---"
+COMMIT_PEEL_SUFFIX = "^{commit}"
+BRANCH_SLUG_SUFFIX_SEPARATOR = "--"

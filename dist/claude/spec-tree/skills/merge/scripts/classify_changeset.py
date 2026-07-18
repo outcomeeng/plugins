@@ -15,12 +15,12 @@ Portability: stdlib only — no third-party packages, no `uv`, no `outcomeeng_*`
 imports. This script ships into consumer plugin trees where only the standard
 library is available.
 
-Tested inputs and error cases: `test_classify_changeset.scenario.l1.py`
-exercises coordination-note-only, mixed, empty, and duplicate path sets;
-positive and negative `PLAN.md` / `ISSUES.md` basename recognition; importlib
-loading of the co-located `changeset_scope.py`; end-to-end changed-path
-delegation through `detect_base_ref` and `branch_scope`; and git porcelain
-records for paths containing spaces before this script is bundled.
+Tested inputs and error cases: the co-located classifier scenario and mapping
+evidence exercises importlib loading of `changeset_scope.py`, end-to-end
+changed-path delegation through `detect_base_ref` and `branch_scope`, finite
+coordination-note classification, git porcelain records for paths containing
+spaces, and unconfigured remote-default diagnostics before this script is
+bundled.
 """
 
 from __future__ import annotations
@@ -28,11 +28,16 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 import re
+import runpy
 import subprocess
 import sys
 from types import ModuleType
+from typing import cast
 
-COORDINATION_NOTE_BASENAMES = ("PLAN.md", "ISSUES.md")
+_CONTRACT = runpy.run_path(str(pathlib.Path(__file__).with_name("merge_contract.py")))
+COORDINATION_NOTE_BASENAMES = cast(
+    tuple[str, ...], _CONTRACT["COORDINATION_NOTE_BASENAMES"]
+)
 _COORDINATION_NOTE = re.compile(
     r"(^|/)("
     + "|".join(re.escape(name) for name in COORDINATION_NOTE_BASENAMES)

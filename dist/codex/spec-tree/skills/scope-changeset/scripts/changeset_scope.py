@@ -27,20 +27,30 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+import runpy
 import subprocess
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Protocol, cast
 
-BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
-BRANCH_SLUG_MAX_LENGTH = 64
-BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
-BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
-ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
-ORIGIN_HEAD_REF = f"{ORIGIN_HEAD_REF_PREFIX}HEAD"
-ORIGIN_REF_PREFIX = "origin/"
-BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
-FRONTMATTER_DELIMITER = "---"
-COMMIT_PEEL_SUFFIX = "^{commit}"
+_CONTRACT = runpy.run_path(
+    str(pathlib.Path(__file__).with_name("changeset_scope_contract.py"))
+)
+BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = cast(
+    int, _CONTRACT["BRANCH_SLUG_COLLISION_SUFFIX_LENGTH"]
+)
+BRANCH_SLUG_MAX_LENGTH = cast(int, _CONTRACT["BRANCH_SLUG_MAX_LENGTH"])
+BRANCH_REF_PATH_SEPARATOR = cast(str, _CONTRACT["BRANCH_REF_PATH_SEPARATOR"])
+BRANCH_SLUG_PATH_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_PATH_SUBSTITUTE"])
+BRANCH_SLUG_DOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOT_SUBSTITUTE"])
+BRANCH_SLUG_DOTDOT_SUBSTITUTE = cast(str, _CONTRACT["BRANCH_SLUG_DOTDOT_SUBSTITUTE"])
+ORIGIN_HEAD_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_HEAD_REF_PREFIX"])
+ORIGIN_HEAD_REF = cast(str, _CONTRACT["ORIGIN_HEAD_REF"])
+ORIGIN_REF_PREFIX = cast(str, _CONTRACT["ORIGIN_REF_PREFIX"])
+HEAD_REF = cast(str, _CONTRACT["HEAD_REF"])
+BRANCH_SCOPE_RANGE_TEMPLATE = cast(str, _CONTRACT["BRANCH_SCOPE_RANGE_TEMPLATE"])
+FRONTMATTER_DELIMITER = cast(str, _CONTRACT["FRONTMATTER_DELIMITER"])
+COMMIT_PEEL_SUFFIX = cast(str, _CONTRACT["COMMIT_PEEL_SUFFIX"])
+BRANCH_SLUG_SUFFIX_SEPARATOR = cast(str, _CONTRACT["BRANCH_SLUG_SUFFIX_SEPARATOR"])
 
 
 class Runner(Protocol):
@@ -293,7 +303,10 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
     consumers import this contract directly).
     """
     # Stage 1: replace slashes.
-    slashed = branch_name.replace("/", "__")
+    slashed = branch_name.replace(
+        BRANCH_REF_PATH_SEPARATOR,
+        BRANCH_SLUG_PATH_SUBSTITUTE,
+    )
 
     # Stage 2: defuse whole-segment ``.`` / ``..`` values.
     if slashed == ".":
@@ -305,7 +318,7 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
 
     digest = hashlib.sha256(branch_name.encode("utf-8")).hexdigest()
     suffix = digest[:BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
-    suffix_with_separator = f"--{suffix}"
+    suffix_with_separator = f"{BRANCH_SLUG_SUFFIX_SEPARATOR}{suffix}"
 
     # Stage 3: bound the length.
     if len(base_slug) > BRANCH_SLUG_MAX_LENGTH:
