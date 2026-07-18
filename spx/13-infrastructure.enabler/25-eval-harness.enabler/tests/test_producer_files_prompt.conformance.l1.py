@@ -8,10 +8,13 @@ from outcomeeng_evals.producer_prompt import (
     PRODUCERS_FIELD,
     PRODUCER_FILES_KIND,
     PRODUCER_FILES_PLACEHOLDER,
+    PromptMaterializationDrift,
     ProducerPromptError,
     materialize_prompt,
+    verify_materialized_prompt,
 )
 from outcomeeng_testing.harnesses.producer_prompt import (
+    invoke_materialize_prompts_recipe,
     with_absolute_producer_files_workspace,
     with_duplicate_producer_files_placeholder_workspace,
     with_duplicate_producer_files_workspace,
@@ -19,6 +22,7 @@ from outcomeeng_testing.harnesses.producer_prompt import (
     with_missing_producer_files_placeholder_workspace,
     with_parent_traversal_producer_files_workspace,
     with_producer_files_workspace,
+    with_repository_producer_files_workspace,
     with_sectioned_producer_files_workspace,
 )
 
@@ -40,6 +44,29 @@ def test_materializes_prompt_from_ordered_producer_files() -> None:
             )
         )
         assert producer_block_positions == tuple(sorted(producer_block_positions))
+
+
+def test_producer_files_currentness_follows_every_producer() -> None:
+    with with_repository_producer_files_workspace() as workspace:
+        materialized = invoke_materialize_prompts_recipe(workspace, check=False)
+        assert materialized.returncode == 0, materialized.stdout + materialized.stderr
+
+        verify_materialized_prompt(
+            workspace.eval_toml_path,
+            repo_root=workspace.repo_root,
+        )
+        current = invoke_materialize_prompts_recipe(workspace, check=True)
+        assert current.returncode == 0, current.stdout + current.stderr
+
+        workspace.append_to_producer(0, workspace.producer_texts[0])
+
+        with pytest.raises(PromptMaterializationDrift):
+            verify_materialized_prompt(
+                workspace.eval_toml_path,
+                repo_root=workspace.repo_root,
+            )
+        stale = invoke_materialize_prompts_recipe(workspace, check=True)
+        assert stale.returncode != 0
 
 
 def test_producer_files_rejects_empty_source_set() -> None:

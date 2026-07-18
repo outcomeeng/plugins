@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ from outcomeeng_evals.producer_prompt import (
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 PRODUCER_FIXTURE_DIRECTORY = (
     Path(__file__).parent.parent / "fixtures" / "producer_prompt"
 )
@@ -50,6 +52,7 @@ class ProducerFilesWorkspace:
     """A real temporary repository carrying one plural-producer eval."""
 
     repo_root: Path
+    eval_root: Path
     eval_toml_path: Path
     prompt_path: Path
     producer_relative_paths: tuple[str, ...]
@@ -73,6 +76,16 @@ def with_producer_files_workspace() -> Iterator[ProducerFilesWorkspace]:
     """Yield a plural-producer eval backed by real temporary files."""
     with _producer_files_workspace(
         producer_fixture_paths=PRODUCER_FIXTURE_PATHS,
+    ) as workspace:
+        yield workspace
+
+
+@contextmanager
+def with_repository_producer_files_workspace() -> Iterator[ProducerFilesWorkspace]:
+    """Yield a plural-producer eval addressable by repository Just recipes."""
+    with _producer_files_workspace(
+        producer_fixture_paths=PRODUCER_FIXTURE_PATHS,
+        repository_root=REPO_ROOT,
     ) as workspace:
         yield workspace
 
@@ -170,6 +183,23 @@ def producer_prompt_property(property_run: Callable[[], None]) -> Callable[[], N
     return run_property
 
 
+def invoke_materialize_prompts_recipe(
+    workspace: ProducerFilesWorkspace,
+    *,
+    check: bool,
+) -> subprocess.CompletedProcess[str]:
+    """Run the repository prompt-materialization recipe for one workspace."""
+    recipe = "eval-materialize-prompts-check" if check else "eval-materialize-prompts"
+    return subprocess.run(
+        ["just", recipe, str(workspace.eval_root)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=90,
+    )
+
+
 @contextmanager
 def _producer_files_workspace(
     *,
@@ -178,13 +208,26 @@ def _producer_files_workspace(
     parent_traversal_source_paths: bool = False,
     include_section: bool = False,
     producer_files_placeholder_count: int = 1,
+    repository_root: Path | None = None,
 ) -> Iterator[ProducerFilesWorkspace]:
-    with TemporaryDirectory() as temp_dir:
-        repo_root = Path(temp_dir) / "repo"
-        eval_dir = repo_root / "spx" / "node" / "evals" / "rule"
+    with TemporaryDirectory(dir=repository_root) as temp_dir:
+        workspace_root = Path(temp_dir)
+        repo_root = repository_root or workspace_root / "repo"
+        eval_root = (
+            workspace_root / "node"
+            if repository_root is not None
+            else repo_root / "spx" / "node"
+        )
+        eval_dir = eval_root / "evals" / "rule"
         eval_dir.mkdir(parents=True)
         producer_relative_paths = tuple(
-            (Path("producers") / fixture_path.name).as_posix()
+            (
+                (workspace_root / "producers" / fixture_path.name)
+                .relative_to(repo_root)
+                .as_posix()
+                if repository_root is not None
+                else (Path("producers") / fixture_path.name).as_posix()
+            )
             for fixture_path in producer_fixture_paths
         )
         producer_texts = tuple(
@@ -245,6 +288,7 @@ def _producer_files_workspace(
         (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
         yield ProducerFilesWorkspace(
             repo_root=repo_root,
+            eval_root=eval_root,
             eval_toml_path=eval_toml_path,
             prompt_path=eval_dir / MATERIALIZED_PROMPT_FILENAME,
             producer_relative_paths=producer_relative_paths,
