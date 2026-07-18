@@ -41,7 +41,7 @@ Rewrite `SKILL.md` from the router template with `<objective>`, `<essential_prin
 
 <step name="validate_equivalence">
 
-Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain a fresh skill-audit approval.
+Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain a fresh typed `skill-auditor` approval.
 
 </step>
 
@@ -52,6 +52,6 @@ Map every preserved behavior from the pre-upgrade inventory to its new location.
 - The router conversion is justified by distinct intents or conditional detail.
 - Every preserved behavior has one destination, with no duplication or orphaned bundled file.
 - Every route resolves through an exact bundled path and produces its declared output.
-- Repository checks pass and an independent skill audit approves the complete bundle.
+- Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>

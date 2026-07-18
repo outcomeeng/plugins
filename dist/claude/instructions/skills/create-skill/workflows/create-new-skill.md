@@ -76,7 +76,7 @@ Keep domain detail in cited references one level below `SKILL.md`, without neste
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. When the runtime exposes `skill-auditor`, dispatch it over the complete skill bundle; otherwise invoke `/audit-skills` over that bundle. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, verify frontmatter parsing, XML tag closure, bundled-link resolution, and directory/name agreement with its available validation surface before dispatching the audit.
+Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `skill-auditor` over the complete skill bundle. If the role is unavailable or returns no complete structured verdict, return `BLOCKED`; never substitute an in-context `/audit-skills` invocation. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, verify frontmatter parsing, XML tag closure, bundled-link resolution, and directory/name agreement with its available validation surface before dispatching the audit.
 
 </step>
 
@@ -95,6 +95,6 @@ Invoke the skill against representative input. Confirm that it selects the inten
 - Every reviewed plugin skill has a naming-classification row, with only proven violations or explicit operator-directed names changed.
 - The selected structure follows the canonical progressive-disclosure rule, with every bundled file cited and no nested or orphaned references.
 - Tool permissions, arguments, dynamic context, and bundled paths match the runtime capability contract.
-- Any bundled scripts pass success and failure tests, repository checks pass, and the typed audit or `/audit-skills` fallback is `APPROVED`.
+- Any bundled scripts pass success and failure tests, repository checks pass, and the typed `skill-auditor` verdict is `APPROVED`.
 
 </success_criteria>

@@ -32,7 +32,7 @@ Add the template to the target skill's template index and cite it from every con
 
 <step name="validate">
 
-Render one representative instance, verify that no unresolved placeholder remains, run the target repository's canonical skill checks, and obtain a fresh skill audit over the complete bundle.
+Render one representative instance, verify that no unresolved placeholder remains, run the target repository's canonical skill checks, and obtain a fresh typed `skill-auditor` verdict over the complete bundle.
 
 </step>
 
@@ -43,6 +43,6 @@ Render one representative instance, verify that no unresolved placeholder remain
 - The template has one producing artifact and at least one cited consumer.
 - Variable placeholders and invariant content are distinguishable, with no repository-specific default hidden in the scaffold.
 - A representative render contains no unresolved placeholder and passes its artifact validation.
-- Repository checks pass and an independent skill audit approves the complete bundle.
+- Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>

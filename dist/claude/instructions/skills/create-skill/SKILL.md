@@ -18,6 +18,7 @@ A skill-authoring request routed to its matching typed workflow.
 - Apply `/skill-standards` and the repository's `spx/local/skills.md` overlay before proposing any skill name.
 - Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
 - Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
+- Dispatch every skill audit through the typed `skill-auditor` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skills` in the authoring context.
 
 </essential_principles>
 
@@ -124,7 +125,7 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 
 - Representative input selects exactly one intended workflow, and every routing target exists in `<workflows_index>`.
 - Each selected workflow loads only the standards and conditional references its route requires.
-- A produced or improved skill passes the target repository's deterministic skill checks and an independent `/audit-skills` audit with zero must-fix items against `/skill-standards`.
+- A produced or improved skill passes the target repository's deterministic skill checks and receives an `APPROVED` verdict from the typed `skill-auditor` over the complete bundle.
 
 </success_criteria>
 

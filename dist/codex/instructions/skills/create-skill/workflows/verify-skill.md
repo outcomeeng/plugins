@@ -48,7 +48,7 @@ When the operator explicitly requests updates, require an authoritative replacem
 
 <step name="validate_updates">
 
-When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and a fresh skill audit over the complete bundle.
+When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and obtain a fresh typed `skill-auditor` verdict over the complete bundle.
 
 </step>
 
@@ -59,6 +59,6 @@ When updates were applied, confirm each updated claim matches its recorded prima
 - Every changeable external claim has a location, primary source, and explicit status.
 - The overall verdict follows mechanically from the row statuses.
 - Audit-only verification changes no file.
-- Authorized updates match primary evidence, pass repository checks, and receive independent skill-audit approval.
+- Authorized updates match primary evidence, pass repository checks, and receive typed `skill-auditor` approval.
 
 </success_criteria>

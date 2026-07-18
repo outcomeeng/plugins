@@ -32,7 +32,7 @@ Add the trigger and exact `${CLAUDE_SKILL_DIR}/workflows/{descriptive-name}.md` 
 
 <step name="validate">
 
-Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and a fresh skill audit approves the complete bundle.
+Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and a fresh typed `skill-auditor` verdict approves the complete bundle.
 
 </step>
 
@@ -43,6 +43,6 @@ Exercise the new trigger and its nearest adjacent trigger. Confirm each selects 
 - The new route represents a distinct intent and produces an output named by its success criteria.
 - The workflow has pure XML structure and loads only required references.
 - Routing selects the new workflow for representative input without displacing adjacent routes.
-- Repository checks pass and an independent skill audit approves the complete bundle.
+- Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>

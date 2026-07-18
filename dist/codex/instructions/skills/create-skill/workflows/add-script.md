@@ -32,7 +32,7 @@ Cite the script from each consuming workflow through the target skill's runtime 
 
 <step name="validate">
 
-Run the script tests, target repository's canonical skill build and deterministic checks, and a fresh skill audit over the complete bundle. Remove the script when it cannot meet the declared test or portability contract.
+Run the script tests and the target repository's canonical skill build and deterministic checks, then obtain a fresh typed `skill-auditor` verdict over the complete bundle. Remove the script when it cannot meet the declared test or portability contract.
 
 </step>
 
@@ -43,6 +43,6 @@ Run the script tests, target repository's canonical skill build and deterministi
 - The script provides a deterministic capability that workflow prose alone cannot supply.
 - Its invocation, inputs, outputs, exit statuses, side effects, ceilings, and cleanup owner are explicit.
 - Success, failure, and cleanup tests pass through the target repository's declared test workflow.
-- Every bundled citation resolves, repository checks pass, and an independent skill audit approves the complete bundle.
+- Every bundled citation resolves, repository checks pass, and a typed `skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>

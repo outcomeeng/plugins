@@ -38,7 +38,7 @@ Add the file to the target skill's `<reference_index>`. Add it to `<required_rea
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body has pure XML structure, and a fresh skill audit approves the complete bundle.
+Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body has pure XML structure, and a fresh typed `skill-auditor` verdict approves the complete bundle.
 
 </step>
 
@@ -49,6 +49,6 @@ Run the target repository's canonical skill build and deterministic checks. Conf
 - The reference lives under the resolved authored skill path and has one documented purpose.
 - Every required consumer cites it, every citation resolves, and no unrelated workflow loads it.
 - Shared standards remain in their owning reference skill, with no duplicated rule catalog in the new file.
-- Repository checks pass and an independent skill audit approves the complete bundle.
+- Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
 
 </success_criteria>
