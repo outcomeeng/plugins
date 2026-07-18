@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git rev-parse:*),
 
 <objective>
 
-A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`, or `UNKNOWN` — carrying complete semantic clusters, evidence stories, publication authorization, findings, and a dependency-ordered review-unit sequence.
+A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`, or `UNKNOWN` — carrying complete semantic clusters, evidence stories, publication authorization, findings that each name the violated rule, its location, and the evidence, and a dependency-ordered review-unit sequence.
 
 </objective>
 
@@ -36,7 +36,7 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 4. Resolve every generated artifact to its producing authored artifact from repository-declared build relationships. In an already-collected evidence packet, `role: generated` classifies the artifact kind only; it never establishes provenance. Require `generated_from`, a declared relationship record, or equivalent explicit evidence. When `generated_relationship_evidence.status` is `missing`, return `UNKNOWN` with `missing-generated-source-evidence` before clustering the unresolved artifact. Exclude resolved generated fanout from authored breadth while retaining it in each producer cluster's `generated_fanout`.
 5. Extract behavioral claims from the changed declarations and observable implementation/evidence. Use commit messages only as supporting evidence; they never override changed artifacts.
 6. Build the smallest semantic clusters whose artifacts realize one claim. Record each cluster's authored artifacts, generated fanout, verification story, rollback story, dependencies, and independent-mergeability judgment.
-7. Collapse dependency cycles and clusters that cannot be verified or rolled back separately into one inseparable cluster. Order remaining clusters topologically, breaking independent ties by the lexicographically first authored path.
+7. Collapse dependency cycles and clusters that cannot be verified or rolled back separately into one inseparable cluster. Order remaining clusters topologically, breaking independent ties by the lexicographically first authored path. Every cluster that survives this collapse forms its own review unit, so its `independently_mergeable` is `true` — a lone cluster and a cluster that depends on and merges after an earlier cluster are both `true`. A `false` judgment applies only to a cluster still fused with another before collapse, and such a cluster never survives into the projection.
 8. Record review-load signals and whether a repository baseline exists. Use those signals to increase scrutiny only.
 9. Apply `<verdict_rules>`, create findings, and return the exact schema in `<verdict_format>`.
 
@@ -47,6 +47,8 @@ A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`
 - `APPROVED`: the authored change realizes one behavioral outcome, or several inseparable clusters sharing one verification and rollback story. `publication_authorized` is `true`; `recommended_pr_sequence` is empty.
 - `REJECTED`: two or more semantic clusters are independently mergeable. `publication_authorized` is `false`; `recommended_pr_sequence` covers every cluster exactly once in dependency order.
 - `UNKNOWN`: missing evidence can change cluster membership, dependency order, generated-source attribution, verification unity, rollback unity, or independent mergeability. `publication_authorized` is `false`.
+
+In the final schema every cluster carries `independently_mergeable: true`; the verdict is distinguished by cluster count — one cluster approves, two or more independently mergeable clusters reject — never by a per-cluster `false`.
 
 An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
 
