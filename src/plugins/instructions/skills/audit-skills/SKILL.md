@@ -67,7 +67,7 @@ During audits, prioritize evaluation of:
    - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
 7. Evaluate the target skill against the standards loaded in steps 1-2.
 
-**Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skills/references/` for standards — that directory is workflow content only.
+**Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skill/references/` for standards — that directory is workflow content only.
 </audit_workflow>
 
 <evaluation_areas>

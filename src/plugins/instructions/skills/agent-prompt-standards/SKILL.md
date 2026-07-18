@@ -164,7 +164,7 @@ The rationale after the dash prevents blind rule-following and helps Claude judg
 
 - **Explaining Claude to Claude** — "As an AI language model..." wastes context. Claude knows what it is.
 - **Motivational prose** — "This is a critical task that requires careful attention" adds nothing. State the constraints.
-- **Repeating the skill name** — "The create-skills skill is designed to..." — Claude has the name from frontmatter.
+- **Repeating the skill name** — "The create-skill skill is designed to..." — Claude has the name from frontmatter.
 - **Empty disclaimers** — "Results may vary" — if there are real failure modes, document them concretely; if not, cut the disclaimer.
 
 </anti_patterns>

@@ -1,5 +1,5 @@
 ---
-name: create-skills
+name: create-skill
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
 ---
@@ -11,6 +11,14 @@ Invoke the `instructions:agent-prompt-standards` skill before proceeding. If tha
 <objective>
 A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.
 </objective>
+
+<essential_principles>
+
+- Apply `/skill-standards` and the repository's `spx/local/skills.md` overlay before proposing any skill name.
+- Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
+- Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
+
+</essential_principles>
 
 <reference_loading>
 Before creating, editing, or auditing any skill, read `/skill-standards` — the single source of truth for all skill standards (frontmatter, XML structure, naming, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, script testing). Then check for `spx/local/skills.md` at the repository root and read it if it exists.
@@ -110,3 +118,9 @@ All in `${SKILL_DIR}/scripts/`:
 <success_criteria>
 A well-structured skill passes `/audit-skills` with zero must-fix items against the standards in `/skill-standards`.
 </success_criteria>
+
+<failure_modes>
+
+**Failure 1: Claude generalized one rename across unlike skill types.** Claude saw plural workflow names and `-standards` reference names in one plugin, then proposed singularizing every shared-looking name before classifying each skill. The proposal contradicted the reference-skill `{domain}-standards` convention and treated grammatical number as a mechanical rule. Before any rename, emit the classification matrix required by the selected workflow, read declared vocabulary and relevant file history, and decide each name from its own skill type and invocation semantics.
+
+</failure_modes>

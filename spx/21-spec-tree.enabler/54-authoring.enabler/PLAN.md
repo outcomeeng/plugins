@@ -32,7 +32,7 @@ The only child pair is ordered by this row. No same-index or unordered child pai
 
 **Merge 1: stable declaration form.** Clarify that a node heading describes claim shape independently of the verification type selected by `/test`. Make `/audit-specs` accept the canonical universal audit rule under `### Compliance` consistently and add eval cases that reproduce both prior contradictory verdicts.
 
-**Merge 2: focused `/spec` workflow.** Add artifact-class routing to `/apply` before language detection so skill-backed nodes invoke `/create-skills`, skill validation, and `skill-auditor`; language architecture, test, and code skills run only when the implementation artifact requires that language. Then make `/author` internal and packet-driven, add public `/spec`, and cover existing-artifact updates plus one unambiguous new artifact.
+**Merge 2: focused `/spec` workflow.** Add artifact-class routing to `/apply` before language detection so skill-backed nodes invoke `/create-skill`, skill validation, and `skill-auditor`; language architecture, test, and code skills run only when the implementation artifact requires that language. Then make `/author` internal and packet-driven, add public `/spec`, and cover existing-artifact updates plus one unambiguous new artifact.
 
 | Slice property       | Selected behavior                                                                                                                                                                                                          |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

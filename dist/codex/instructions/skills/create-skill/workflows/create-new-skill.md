@@ -72,7 +72,7 @@ Keep domain detail in cited references one level below `SKILL.md`, without neste
 Run the bundled structural validator:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" <skill-path>
+python3 "${SKILL_DIR}/scripts/quick_validate.py" <skill-path>
 ```
 
 Run the target repository's canonical skill build and deterministic checks. When the runtime exposes `skill-auditor`, dispatch it over the complete skill bundle; otherwise invoke `/audit-skills` over that bundle. Repair every must-fix finding before publication.
