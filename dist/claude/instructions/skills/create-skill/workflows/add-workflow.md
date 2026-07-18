@@ -18,11 +18,23 @@ Name the distinct user intent, trigger phrases, observable output, required refe
 
 </step>
 
+<gate name="pre_write">
+
+STOP before creating the workflow unless its exact target path, distinct trigger, output, required references, authority boundary, and success evidence are resolved, with no overlap that makes route selection ambiguous.
+
+</gate>
+
 <step name="write_workflow">
 
 Create `workflows/{descriptive-name}.md` with `<required_reading>`, `<process>`, and `<success_criteria>`. Use named `<step>` elements inside `<process>` and pure XML structure throughout. Load only references required by this route.
 
 </step>
+
+<gate name="post_write">
+
+STOP before router registration unless XML tags close, every bundled citation resolves, no placeholder remains, and representative input distinguishes this workflow from each adjacent route.
+
+</gate>
 
 <step name="register_route">
 

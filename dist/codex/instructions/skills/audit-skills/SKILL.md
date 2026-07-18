@@ -41,7 +41,7 @@ During audits, prioritize evaluation of:
 - Constraint strength (MUST/NEVER/ALWAYS vs weak modals)
 - Error handling coverage (missing files, malformed input, edge cases)
 - Example quality (concrete, realistic, demonstrates key patterns)
-- **Operational effectiveness** (verifiable success criteria, verification gates, failure modes)
+- **Operational effectiveness** (verifiable success criteria, failure modes, and observable validation)
 - **Procedural/operational balance** (skill states both how to DO the work and how to KNOW it was done right)
 
 </focus_areas>
@@ -112,13 +112,6 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 - Can "did I succeed?" be answered with a boolean, not a judgment call?
 - ❌ Bad: "Task complete when migration is done"
 - ✅ Good: "Coverage on src/foo.ts must be ≥86%. Run: `pnpm test --coverage | grep foo.ts`"
-
-**Verification Gates**:
-
-- Are there explicit "STOP and verify before proceeding" checkpoints?
-- Do gates have pass/fail criteria with specific commands?
-- ❌ Bad: "Verify coverage matches before removing legacy tests"
-- ✅ Good: "GATE 2: Run `pnpm test --coverage` for both legacy and SPX. If delta >0.5%, STOP."
 
 **Failure Modes Documentation**:
 
@@ -206,7 +199,6 @@ Flag these issues:
 - **windows_paths**: Backslash paths instead of forward slashes
 - **bloat**: Obvious explanations, redundant content
 - **unverifiable_success_criteria**: Success criteria that can't be tested with a command or boolean check
-- **no_verification_gates**: Complex multi-step skill without explicit stop-and-check points
 - **no_failure_modes**: Skill lacks documentation of what went wrong in practice
 - **abstract_examples**: Examples that show patterns but not concrete values/outputs
 - **orphaned_references**: Files in `references/` not cited from SKILL.md or any workflow file. Verify with `grep -rn "<filename>" <skill-dir>/`. Orphans inflate token cost via speculative reads (Claude tends to open siblings of cited references) and indicate either dead content or a missing cross-reference. Flag as critical: either delete the file or add an explicit `<required_reading>` reference from the workflow that needs it.
@@ -230,14 +222,14 @@ Apply judgment based on skill complexity and purpose:
 - Required tags only is appropriate - don't flag missing conditional tags
 - Minimal examples acceptable
 - Light validation sufficient
-- Operational effectiveness: success criteria should still be verifiable, but gates/failure modes not expected
+- Operational effectiveness: success criteria should still be verifiable, while failure modes remain proportional to observed history
 
 **Complex skills** (multi-step, external APIs, security concerns):
 
 - Missing conditional tags (security_checklist, validation, error_handling) is a real issue
 - Comprehensive examples expected
 - Thorough validation required
-- **Operational effectiveness is CRITICAL**: Must have verifiable success criteria, verification gates, and failure modes
+- **Operational effectiveness is CRITICAL**: Must have verifiable success criteria, observable validation, and failure modes
 - Flag heavily procedural skills that lack operational content as critical issue
 
 **Delegation skills** (invoke subagents):
@@ -249,7 +241,7 @@ Apply judgment based on skill complexity and purpose:
 **Migration/transformation skills** (change state, move files, update systems):
 
 - **Highest operational bar**: These skills change things that are hard to undo
-- MUST have verification gates before destructive operations
+- MUST state authority, validation, and recovery boundaries before destructive operations
 - MUST have failure modes from actual usage
 - MUST have concrete examples showing before/after with real values
 - Flag missing operational content as critical, not recommendation
@@ -412,7 +404,7 @@ Before presenting audit findings, verify:
 **Operational effectiveness checks** (for complex skills):
 
 - [ ] Evaluated whether success criteria are verifiable (commands, thresholds)
-- [ ] Checked for verification gates in multi-step workflows
+- [ ] Checked for observable validation in multi-step workflows
 - [ ] Looked for failure modes documentation
 - [ ] Assessed procedural vs operational balance
 - [ ] Flagged abstract examples that should be concrete

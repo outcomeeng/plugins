@@ -18,11 +18,23 @@ Specify arguments, input format, output format, exit statuses, side effects, res
 
 </step>
 
+<gate name="pre_write">
+
+STOP before writing code unless the exact authored target, language workflow, script contract, tool permission, consumers, tests, portability boundary, and cleanup owner are resolved. Confirm the script supplies deterministic value that workflow prose cannot provide.
+
+</gate>
+
 <step name="author_and_test">
 
 Create `scripts/{descriptive-name}.{extension}` through the target language's implementation workflow. Add tests through its test workflow for valid input, invalid input, missing resources, deterministic output, and cleanup on success and failure. Never retain an untested placeholder script.
 
 </step>
+
+<gate name="post_write">
+
+STOP before registering the script unless focused success, failure, and cleanup tests pass; its invocation and exit behavior match the declared contract; and no placeholder, unbounded ceiling, undeclared dependency, or unresolved bundled path remains.
+
+</gate>
 
 <step name="register_script">
 

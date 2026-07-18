@@ -18,11 +18,23 @@ Name the artifact the template produces, the workflow that consumes it, the fiel
 
 </step>
 
+<gate name="pre_write">
+
+STOP before creating the template unless its exact target path, produced artifact, consuming workflows, variable fields, invariant content, and representative render validation are resolved.
+
+</gate>
+
 <step name="write_template">
 
 Create `templates/{descriptive-name}.md` under the resolved skill. Use semantic XML for a skill or prompt template, with output-shaped `<objective>` and `<success_criteria>` sections when the rendered artifact is a `SKILL.md`. Keep placeholders explicit and avoid hidden repository-specific defaults.
 
 </step>
+
+<gate name="post_write">
+
+STOP before registration unless a representative render contains no unintended placeholder, its required XML structure is valid, and every repository-specific value is an explicit input rather than a hidden default.
+
+</gate>
 
 <step name="register_template">
 

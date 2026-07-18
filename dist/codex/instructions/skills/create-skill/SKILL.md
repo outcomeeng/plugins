@@ -9,7 +9,7 @@ Invoke the `instructions:skill-standards` skill before proceeding. If that skill
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.
+A skill-authoring request routed to its matching typed workflow.
 </objective>
 
 <essential_principles>
@@ -41,6 +41,7 @@ What would you like to do?
 6. Add a script
 7. Upgrade a skill to a router
 8. Understand skill patterns
+9. Verify skill content is current
 
 **Wait for response before proceeding.**
 </intake>
@@ -57,6 +58,7 @@ What would you like to do?
 | 6, "add script"                          | `${SKILL_DIR}/workflows/add-script.md`          |
 | 7, "upgrade to router"                   | `${SKILL_DIR}/workflows/upgrade-to-router.md`   |
 | 8, "patterns", "understand", "help"      | `${SKILL_DIR}/workflows/understand-patterns.md` |
+| 9, "verify content", "current"           | `${SKILL_DIR}/workflows/verify-skill.md`        |
 
 **Intent-based routing** (if user provides clear context):
 

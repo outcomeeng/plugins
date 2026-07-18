@@ -33,11 +33,27 @@ Read the source that declares any overlapping methodology vocabulary and inspect
 
 </step>
 
-<step name="apply_requested_improvements">
+<gate name="pre_write" condition="the operator requested improvements">
+
+STOP before mutation unless every accepted finding is mapped to its governing rule, every same-class instance in the complete bundle is identified, the exact authored paths are resolved, and every operator-owned decision that changes behavior is settled.
+
+</gate>
+
+<step name="apply_requested_improvements" condition="the operator requested improvements">
 
 Before changing behavior, load `${CLAUDE_SKILL_DIR}/references/test-patterns.md`. Load `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the repair changes variable inputs, clarification, abstraction level, or tool choice. Load `${CLAUDE_SKILL_DIR}/references/technical-patterns.md` when the repair touches files, data, external services, state mutation, or executable automation.
 
 Apply every must-fix item and every explicitly requested improvement through the authoring rules loaded by `/create-skill`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
+
+</step>
+
+<gate name="post_write" condition="the operator requested improvements">
+
+STOP before repository validation unless every accepted finding and same-class instance is repaired, frontmatter and XML structure are valid, every bundled citation resolves, and focused checks for the changed behavior pass.
+
+</gate>
+
+<step name="validate_and_reaudit" condition="the operator requested improvements">
 
 Run the target repository's canonical skill build and deterministic checks. Create a clean checkpoint after those checks pass and repeat the same audit route over the new head. Continue until the verdict is `APPROVED` or a concrete blocker remains.
 
