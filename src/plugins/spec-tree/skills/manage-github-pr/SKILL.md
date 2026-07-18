@@ -52,7 +52,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Step 4 — Commit.** Invoke `/commit-changes`. Branch off the base first when the work sits on the base branch.
 
-**Step 5 — Open.** When `pr_pointer` is absent, invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR in the review state its topology permits — ready for a peer branch, or draft for a stacked branch awaiting its base. Record the returned full PR number as `pr_pointer`. When Open PR mode or an Instructed mode on a branch with an existing PR already recorded `pr_pointer`, skip this step.
+**Step 5 — Open.** When `pr_pointer` is absent, invoke `/open-pr`. It evaluates `VERIFICATION_READINESS` and opens the PR in the review state its topology permits — ready for a peer branch, or draft for a stacked branch awaiting its base. Record the returned full PR URL as `pr_pointer`. When Open PR mode or an Instructed mode on a branch with an existing PR already recorded `pr_pointer`, skip this step.
 
 **Step 6 — Tail-delegate management and closeout.** Invoke `/manage-pr <pr_pointer>` with the exact pointer recorded by Step 1 or Step 5. It evaluates `MERGE_READINESS`, merges under the gate, runs any declared deploy and release phases, continues remaining in-scope work, and invokes `/handoff` plain when the session is complete. Treat `/manage-pr` as the terminal lifecycle protocol once invoked: do not run a second continuation or closeout path after it returns.
 
