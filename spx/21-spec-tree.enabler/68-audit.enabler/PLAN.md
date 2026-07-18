@@ -35,3 +35,11 @@ skills only; they do not ship language-specific auditor agents.
 - Root guide published-floor rule: shipped skills may depend on `spx
   verification run` only after the repository floor and CI pin reach the
   published SPX release carrying it.
+
+## Strict-finding-disposition extraction
+
+`work/audit-runtime-evidence` currently changes 59 paths across implementation-audit contracts, Python authoring guidance, distribution code, and repository configuration. Partition it before publication.
+
+The audit-owned merge cycle contains the implementation-auditor run contract, coverage inventory, wrapper configuration, governing audit declarations, co-located tests, and required generated output. Python authoring or distribution changes that can merge and verify without that contract receive their own owning-node plans and branches.
+
+**Revisit condition:** replace this section with the resulting audit PR reference after the branch has one implementation-audit behavior, one verification story, and one rollback story. Keep the separate changeset-coherence auditor excluded until the operator starts it explicitly.

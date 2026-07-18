@@ -165,3 +165,11 @@ The `[eval]`-backed `/merge` transport-selection assertion now states `spx/local
 ## Add an `[eval]` case for the assigned-CWD branch-here-and-continue recovery
 
 The assigned-worktree discipline assertion in `merging.md` is `[audit]`-backed (the skills teach it; an audit reads the skill text), and the governing PDR (`spx/15-merging.pdr.md` property 4) anchors it. What no `[eval]` case yet exercises is the behaviorally novel recovery path: assigned worktree on the default branch or a detached HEAD, or a branch owned by another worktree → the lifecycle creates a task branch in the assigned worktree and continues (a `BRANCH_AND_CONTINUE`-style outcome) rather than emitting a `STOP`. Authoring this needs an eval that models worktree-state inputs (current branch, detached HEAD, sibling-worktree branch ownership), which the `transport-selection` / `local-completion-boundary` eval harnesses do not model today, plus a `prompt.md` and a baseline `history.jsonl` run. Deferred as incremental behavioral evidence: the assertion is `[audit]`-backed and PDR-anchored (no unbacked gap), evals are not part of the `just check` / CI gate, and this is best authored alongside the absent-overlay eval case above. Surfaced by the local `changes-reviewer` on PR #333 (DEBT [evidence]).
+
+## Strict-finding-disposition extraction
+
+PR #447 on `work/merge-skill-runtime-contracts` is the merge-owned consumer cycle. Reconcile it only after the node-local changeset-scope, test-verification, review, and audit contracts it consumes have converged on `origin/main`.
+
+Keep one PR when the authored `/merge`, `/open-pr`, `/manage-github-pr`, `/manage-pr`, shared readiness rules, action tokens, and first affected merging specs form one portable lifecycle contract with one rollback boundary. Split any independently mergeable review-result implementation or verifier infrastructure into its owning node.
+
+**Revisit condition:** update this section after PR #447 is rebased onto its merged prerequisites and a current semantic-cohesion review either approves that lifecycle cluster or identifies the exact replacement PR sequence.
