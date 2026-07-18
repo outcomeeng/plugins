@@ -209,13 +209,14 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 ### coding-agents
 
-Coding-agent coordination: /coordinate-agents, /message-agents, /recover-prowl-agents
+Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents
 
-| Type  | Name                    | Purpose                                                                                                                          |
-| ----- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination |
-| Skill | `/message-agents`       | Discovering a Prowl coding-agent recipient or sending facts, ownership proposals, or acknowledgements to another agent pane      |
-| Skill | `/recover-prowl-agents` | Prowl has restored panes whose stopped coding-agent sessions may need recovery                                                   |
+| Type  | Name                    | Purpose                                                                                                                                                    |
+| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination                           |
+| Skill | `/message-agents`       | Discovering a Prowl coding-agent recipient or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane |
+| Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                  |
+| Skill | `/recover-prowl-agents` | Prowl has restored panes whose stopped coding-agent sessions may need recovery                                                                             |
 
 ### frontend
 

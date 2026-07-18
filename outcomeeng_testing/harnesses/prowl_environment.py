@@ -379,7 +379,7 @@ def verify_prowl_compliance() -> list[str]:
         instruction="return one terminal result",
         coordination_reference=str(uuid.UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")),
     )
-    invalid_result_forms = (
+    invalid_result_forms: tuple[dict[str, str], ...] = (
         {},
         {module.RESULT_REFERENCE_FIELD: "result://missing-projection"},
         {module.PROJECTION_FIELD: "projection without reference"},

@@ -1,50 +1,35 @@
 #!/usr/bin/env python3
-"""Validate and deliver source-owned coordination envelopes through Prowl."""
+"""Validate source-owned coordination envelopes and environment deliveries."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import subprocess
 import sys
 import uuid
-from dataclasses import dataclass
 from enum import StrEnum
-from typing import Callable, Mapping, Protocol, TextIO
+from typing import Callable, Mapping, TextIO, cast
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_VERSION_FIELD = "schemaVersion"
-COMMAND_TIMEOUT_SECONDS = 15
-PROWL_COMMAND = "prowl"
-JSON_FLAG = "--json"
-PUBLIC_AGENT_COMMAND = (PROWL_COMMAND, "agents", JSON_FLAG)
-PROWL_SEND_PREFIX = (PROWL_COMMAND, "send")
-PANE_OPTION = "--pane"
-NO_WAIT_OPTION = "--no-wait"
-OK_FIELD = "ok"
-DATA_FIELD = "data"
-AGENTS_FIELD = "agents"
-ACCEPTED_FIELD = "accepted"
-ERROR_FIELD = "error"
-MESSAGE_FIELD = "message"
-ID_FIELD = "id"
-PANE_FIELD = "pane"
-WORKTREE_FIELD = "worktree"
-PROJECT_FIELD = "project"
-RUN_FIELD = "run"
-PATH_FIELD = "path"
-ROOT_PATH_FIELD = "root_path"
-BRANCH_FIELD = "branch"
 STATUS_FIELD = "status"
+DETAIL_FIELD = "detail"
 COMMAND_EXIT_CODE_FIELD = "commandExitCode"
+TRANSPORT_FIELD = "transport"
 ACKNOWLEDGED_FIELD = "acknowledged"
 AGREED_FIELD = "agreed"
 OWNERSHIP_ESTABLISHED_FIELD = "ownershipEstablished"
-TRANSPORT_FIELD = "transport"
-DETAIL_FIELD = "detail"
 CALLER_FIELD = "caller"
 TARGETS_FIELD = "targets"
+AGENTS_FIELD = "agents"
+ENVIRONMENT_FIELD = "environment"
+DISCOVERY_FIELD = "discovery"
+MESSAGE_REQUEST_FIELD = "messageRequest"
+ENVELOPE_FIELD = "envelope"
+DELIVERY_FIELD = "delivery"
+DELIVERED_FIELD = "delivered"
+TEXT_FIELD = "text"
 PROWL_PANE_ID_ENV = "PROWL_PANE_ID"
 PROWL_WORKTREE_PATH_ENV = "PROWL_WORKTREE_PATH"
 TO_PANE_FIELD = "toPane"
@@ -60,6 +45,15 @@ REPOSITORY_FIELD = "repository"
 MESSAGE_STATE_FIELD = "messageState"
 SENDER_FIELD = "sender"
 RECIPIENT_FIELD = "recipient"
+ID_FIELD = "id"
+PANE_FIELD = "pane"
+WORKTREE_FIELD = "worktree"
+PROJECT_FIELD = "project"
+RUN_FIELD = "run"
+PATH_FIELD = "path"
+ROOT_PATH_FIELD = "root_path"
+BRANCH_FIELD = "branch"
+
 ENVELOPE_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
@@ -107,7 +101,8 @@ IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 
 class Operation(StrEnum):
     DISCOVER = "discover"
-    SEND = "send"
+    BUILD = "build"
+    RESULT = "result"
 
 
 class CallerStatus(StrEnum):
@@ -118,12 +113,10 @@ class CallerStatus(StrEnum):
 
 CALLER_STATUS_DETAILS = {
     CallerStatus.UNSUPPORTED_TERMINAL: (
-        "Prowl caller evidence is unavailable. Run inside a Prowl pane with an exact "
-        "pane or worktree identity."
+        "Prowl caller evidence is unavailable. Run inside a Prowl pane with an exact pane or worktree identity."
     ),
     CallerStatus.CALLER_AMBIGUOUS: (
-        "Prowl caller evidence matches more than one detected agent. Supply an exact "
-        "PROWL_PANE_ID before sending."
+        "Prowl caller evidence matches more than one detected agent. Supply an exact PROWL_PANE_ID before sending."
     ),
 }
 
@@ -161,61 +154,18 @@ RESPONSE_KINDS = frozenset(
 
 
 class DeliveryStatus(StrEnum):
+    READY = "ready"
     DELIVERED = "delivered"
     DELIVERY_FAILED = "delivery-failed"
     INVALID_IDENTITY = "invalid-identity"
-    PROWL_UNAVAILABLE = "prowl-unavailable"
+    ENVIRONMENT_UNAVAILABLE = "environment-unavailable"
     INVALID_SCHEMA = "invalid-schema"
 
 
-@dataclass(frozen=True)
-class CommandResult:
-    returncode: int
-    stdout: str
-    stderr: str
-
-
-class CommandRunner(Protocol):
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult: ...
-
-
-@dataclass(frozen=True)
-class SubprocessRunner:
-    timeout_seconds: int = COMMAND_TIMEOUT_SECONDS
-
-    def run(self, argv: tuple[str, ...], stdin: str | None = None) -> CommandResult:
-        try:
-            completed = subprocess.run(
-                argv,
-                input=stdin,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-                check=False,
-            )
-        except FileNotFoundError as error:
-            raise MessageError(
-                DeliveryStatus.PROWL_UNAVAILABLE,
-                "Prowl CLI is unavailable. Install `prowl` or run this skill inside Prowl.",
-            ) from error
-        except subprocess.TimeoutExpired as error:
-            raise MessageError(
-                DeliveryStatus.DELIVERY_FAILED,
-                f"Prowl command exceeded the {self.timeout_seconds}-second bound: {' '.join(argv)}",
-            ) from error
-        return CommandResult(completed.returncode, completed.stdout, completed.stderr)
-
-
 class MessageError(RuntimeError):
-    def __init__(
-        self,
-        status: DeliveryStatus,
-        message: str,
-        command_exit_code: int | None = None,
-    ) -> None:
+    def __init__(self, status: DeliveryStatus, message: str) -> None:
         super().__init__(message)
         self.status = status
-        self.command_exit_code = command_exit_code
 
 
 def _object(value: object, location: str) -> dict[str, object]:
@@ -252,57 +202,13 @@ def _message_kind(value: object, location: str = "request.kind") -> MessageKind:
         ) from error
 
 
-def _decode(result: CommandResult, command: tuple[str, ...]) -> dict[str, object]:
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
-        raise MessageError(
-            DeliveryStatus.DELIVERY_FAILED,
-            f"Prowl command failed ({result.returncode}): {' '.join(command)}: {detail}",
-            result.returncode,
-        )
-    try:
-        payload = _object(json.loads(result.stdout), "response")
-    except json.JSONDecodeError as error:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            f"Prowl returned invalid JSON for {' '.join(command)}: {error.msg}",
-            result.returncode,
-        ) from error
-    if payload.get(OK_FIELD) is not True:
-        error_payload = payload.get(ERROR_FIELD)
-        detail = "public response reported failure"
-        if isinstance(error_payload, dict):
-            message = error_payload.get(MESSAGE_FIELD)
-            if isinstance(message, str) and message:
-                detail = message
-        raise MessageError(
-            DeliveryStatus.DELIVERY_FAILED,
-            f"Prowl command was not accepted: {' '.join(command)}: {detail}",
-            result.returncode,
-        )
-    return payload
-
-
-def _agents(payload: dict[str, object]) -> list[dict[str, object]]:
-    data = _object(payload.get(DATA_FIELD), f"response.{DATA_FIELD}")
-    agents = data.get(AGENTS_FIELD)
-    if not isinstance(agents, list):
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            f"Expected an array at response.{DATA_FIELD}.{AGENTS_FIELD}.",
-        )
-    return [
-        _object(item, f"response.data.agents[{index}]")
-        for index, item in enumerate(agents)
-    ]
-
-
-def identity_from_agent(item: dict[str, object]) -> dict[str, str]:
-    pane = _object(item.get(PANE_FIELD), f"agent.{PANE_FIELD}")
-    worktree = _object(item.get(WORKTREE_FIELD), f"agent.{WORKTREE_FIELD}")
-    project = _object(item.get(PROJECT_FIELD), f"agent.{PROJECT_FIELD}")
+def identity_from_agent(item: object) -> dict[str, str]:
+    value = _object(item, "agent")
+    pane = _object(value.get(PANE_FIELD), f"agent.{PANE_FIELD}")
+    worktree = _object(value.get(WORKTREE_FIELD), f"agent.{WORKTREE_FIELD}")
+    project = _object(value.get(PROJECT_FIELD), f"agent.{PROJECT_FIELD}")
     identity = {
-        "agent": _text(item.get(ID_FIELD), f"agent.{ID_FIELD}"),
+        "agent": _text(value.get(ID_FIELD), f"agent.{ID_FIELD}"),
         "pane": _text(pane.get(ID_FIELD), f"agent.{PANE_FIELD}.{ID_FIELD}"),
         "worktree": _text(
             worktree.get(PATH_FIELD), f"agent.{WORKTREE_FIELD}.{PATH_FIELD}"
@@ -315,28 +221,40 @@ def identity_from_agent(item: dict[str, object]) -> dict[str, str]:
             f"agent.{WORKTREE_FIELD}.{ROOT_PATH_FIELD}",
         ),
     }
-    run = item.get(RUN_FIELD)
+    run = value.get(RUN_FIELD)
     if run is not None:
-        identity["run"] = _text(
+        identity[RUN_FIELD] = _text(
             _object(run, f"agent.{RUN_FIELD}").get(ID_FIELD),
             f"agent.{RUN_FIELD}.{ID_FIELD}",
         )
-    return identity
+    return validate_identity(identity, "identity")
 
 
 def validate_identity(identity: object, label: str) -> dict[str, str]:
     value = _object(identity, label)
     unexpected = sorted(set(value) - IDENTITY_INPUT_FIELDS)
-    if unexpected:
+    missing = sorted(set(IDENTITY_FIELDS) - set(value))
+    if unexpected or missing:
+        details: list[str] = []
+        if unexpected:
+            details.append(f"unsupported: {', '.join(unexpected)}")
+        if missing:
+            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"{label.title()} contains unsupported fields: {', '.join(unexpected)}.",
+            f"{label.title()} identity fields are invalid ({'; '.join(details)}).",
         )
     validated = {
         field: _text(value.get(field), f"{label}.{field}") for field in IDENTITY_FIELDS
     }
-    if value.get("run") is not None:
-        validated["run"] = _text(value.get("run"), f"{label}.run")
+    for field in (WORKTREE_FIELD, REPOSITORY_FIELD):
+        if not os.path.isabs(validated[field]):
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                f"Expected an absolute path at {label}.{field}.",
+            )
+    if value.get(RUN_FIELD) is not None:
+        validated[RUN_FIELD] = _text(value.get(RUN_FIELD), f"{label}.{RUN_FIELD}")
     return validated
 
 
@@ -351,8 +269,8 @@ def discover_callers(
     matches = [
         identity
         for identity in identities
-        if (pane_id is None or identity["pane"] == pane_id)
-        and (worktree_path is None or identity["worktree"] == worktree_path)
+        if (pane_id is None or identity[PANE_FIELD] == pane_id)
+        and (worktree_path is None or identity[WORKTREE_FIELD] == worktree_path)
     ]
     if len(matches) == 1:
         return CallerStatus.PROWL_PANE, matches
@@ -360,13 +278,11 @@ def discover_callers(
 
 
 def discover(
-    runner: CommandRunner, environment: Mapping[str, str]
+    roster: list[dict[str, object]], environment: Mapping[str, str]
 ) -> dict[str, object]:
-    payload = _decode(runner.run(PUBLIC_AGENT_COMMAND), PUBLIC_AGENT_COMMAND)
-    roster = _agents(payload)
     status, matches = discover_callers(roster, environment)
     return {
-        "schemaVersion": SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: status,
         DETAIL_FIELD: CALLER_STATUS_DETAILS.get(status),
         CALLER_FIELD: matches[0] if status == CallerStatus.PROWL_PANE else None,
@@ -390,7 +306,7 @@ def coordination_reference(
         except ValueError as error:
             raise MessageError(
                 DeliveryStatus.INVALID_SCHEMA,
-                f"Acknowledgement coordination reference is not a UUID: {active_reference}",
+                f"Response coordination reference is not a UUID: {active_reference}",
             ) from error
     if active_reference is not None:
         raise MessageError(
@@ -436,7 +352,7 @@ def _validated_fields(
     unexpected = sorted(set(item) - fields)
     missing = sorted(fields - set(item))
     if unexpected or missing:
-        details = []
+        details: list[str] = []
         if unexpected:
             details.append(f"unsupported: {', '.join(unexpected)}")
         if missing:
@@ -476,8 +392,7 @@ def _mutation_contract(
         return None, None
     if mutation_target is None:
         raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            "observedState requires mutationTarget.",
+            DeliveryStatus.INVALID_SCHEMA, "observedState requires mutationTarget."
         )
     target = _validated_fields(
         mutation_target,
@@ -543,18 +458,10 @@ def build_envelope(
     mutation_target: object = None,
     observed_state: object = None,
 ) -> dict[str, object]:
-    if not subject:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA, "Message subject must not be empty."
-        )
-    if not facts:
+    if not facts or any(not isinstance(fact, str) or not fact for fact in facts):
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "At least one authoritative fact is required.",
-        )
-    if any(not fact for fact in facts):
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA, "Message facts must be non-empty strings."
+            "Message facts must be a non-empty array of non-empty strings.",
         )
     validated_sender = validate_identity(sender, SENDER_FIELD)
     validated_recipient = validate_identity(recipient, RECIPIENT_FIELD)
@@ -574,27 +481,22 @@ def build_envelope(
         MESSAGE_STATE_FIELD: MESSAGE_STATE_BY_KIND[kind],
         SENDER_FIELD: validated_sender,
         RECIPIENT_FIELD: validated_recipient,
-        SUBJECT_FIELD: subject,
+        SUBJECT_FIELD: _text(subject, SUBJECT_FIELD),
         FACTS_FIELD: facts,
-        REQUEST_FIELD: request,
+        REQUEST_FIELD: _optional_text(request, REQUEST_FIELD),
         MUTATION_TARGET_FIELD: validated_target,
         OBSERVED_STATE_FIELD: validated_state,
     }
 
 
 def validate_envelope(envelope: object) -> dict[str, object]:
-    value = _object(envelope, "envelope")
+    value = _object(envelope, ENVELOPE_FIELD)
     unexpected = sorted(set(value) - ENVELOPE_FIELDS)
     missing = sorted(ENVELOPE_FIELDS - set(value))
     if unexpected or missing:
-        details = []
-        if unexpected:
-            details.append(f"unsupported: {', '.join(unexpected)}")
-        if missing:
-            details.append(f"missing: {', '.join(missing)}")
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            f"Envelope fields are invalid ({'; '.join(details)}).",
+            "Envelope must contain exactly the source-owned fields.",
         )
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise MessageError(
@@ -608,23 +510,29 @@ def validate_envelope(envelope: object) -> dict[str, object]:
             DeliveryStatus.INVALID_SCHEMA,
             f"Envelope message state must be {expected_state} for kind {kind}.",
         )
-    reference = _text(
-        value.get(COORDINATION_REFERENCE_FIELD),
-        f"envelope.{COORDINATION_REFERENCE_FIELD}",
+    reference = (
+        coordination_reference(
+            kind, cast(str | None, value.get(COORDINATION_REFERENCE_FIELD))
+        )
+        if kind in RESPONSE_KINDS
+        else _text(
+            value.get(COORDINATION_REFERENCE_FIELD), COORDINATION_REFERENCE_FIELD
+        )
     )
-    try:
-        canonical_reference = str(uuid.UUID(reference))
-    except ValueError as error:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            f"Envelope coordination reference is not a UUID: {reference}",
-        ) from error
-    validated_sender = validate_identity(value.get(SENDER_FIELD), SENDER_FIELD)
-    validated_recipient = validate_identity(value.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
-    validated_target, validated_state = _mutation_contract(
+    if kind not in RESPONSE_KINDS:
+        try:
+            reference = str(uuid.UUID(reference))
+        except ValueError as error:
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                f"Envelope coordination reference is not a UUID: {reference}",
+            ) from error
+    sender = validate_identity(value.get(SENDER_FIELD), SENDER_FIELD)
+    recipient = validate_identity(value.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
+    target, state = _mutation_contract(
         kind,
-        validated_sender,
-        validated_recipient,
+        sender,
+        recipient,
         value.get(MUTATION_TARGET_FIELD),
         value.get(OBSERVED_STATE_FIELD),
     )
@@ -640,73 +548,62 @@ def validate_envelope(envelope: object) -> dict[str, object]:
         )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        COORDINATION_REFERENCE_FIELD: canonical_reference,
+        COORDINATION_REFERENCE_FIELD: reference,
         KIND_FIELD: kind,
         MESSAGE_STATE_FIELD: expected_state,
-        SENDER_FIELD: validated_sender,
-        RECIPIENT_FIELD: validated_recipient,
-        SUBJECT_FIELD: _text(value.get(SUBJECT_FIELD), f"envelope.{SUBJECT_FIELD}"),
+        SENDER_FIELD: sender,
+        RECIPIENT_FIELD: recipient,
+        SUBJECT_FIELD: _text(value.get(SUBJECT_FIELD), SUBJECT_FIELD),
         FACTS_FIELD: facts,
-        REQUEST_FIELD: _optional_text(
-            value.get(REQUEST_FIELD), f"envelope.{REQUEST_FIELD}"
-        ),
-        MUTATION_TARGET_FIELD: validated_target,
-        OBSERVED_STATE_FIELD: validated_state,
+        REQUEST_FIELD: _optional_text(value.get(REQUEST_FIELD), REQUEST_FIELD),
+        MUTATION_TARGET_FIELD: target,
+        OBSERVED_STATE_FIELD: state,
     }
 
 
-def delivery_command(pane_id: str) -> tuple[str, ...]:
-    return (
-        *PROWL_SEND_PREFIX,
-        PANE_OPTION,
-        pane_id,
-        NO_WAIT_OPTION,
-        JSON_FLAG,
-    )
+def _target_by_pane(targets: object, pane_id: str) -> dict[str, str]:
+    if not isinstance(targets, list):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA, "Expected discovered targets to be an array."
+        )
+    matches = [
+        validate_identity(item, "target")
+        for item in targets
+        if _object(item, "target").get(PANE_FIELD) == pane_id
+    ]
+    if len(matches) != 1:
+        raise MessageError(
+            DeliveryStatus.INVALID_IDENTITY,
+            f"Expected exactly one target with pane UUID {pane_id}; found {len(matches)}.",
+        )
+    return matches[0]
 
 
-def send_envelope(envelope: object, runner: CommandRunner) -> dict[str, object]:
+def delivery_request(envelope: object) -> dict[str, object]:
     value = validate_envelope(envelope)
     recipient = validate_identity(value.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
-    rendered = json.dumps(value, sort_keys=True)
-    command = delivery_command(recipient["pane"])
-    result = runner.run(command, rendered)
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
-        return {
-            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-            STATUS_FIELD: DeliveryStatus.DELIVERY_FAILED,
-            COORDINATION_REFERENCE_FIELD: value.get(COORDINATION_REFERENCE_FIELD),
-            COMMAND_EXIT_CODE_FIELD: result.returncode,
-            DETAIL_FIELD: detail,
-        }
-    payload = _decode(result, command)
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        STATUS_FIELD: DeliveryStatus.DELIVERED,
-        COORDINATION_REFERENCE_FIELD: value.get(COORDINATION_REFERENCE_FIELD),
-        COMMAND_EXIT_CODE_FIELD: result.returncode,
-        TRANSPORT_FIELD: payload,
-        ACKNOWLEDGED_FIELD: False,
-        AGREED_FIELD: False,
-        OWNERSHIP_ESTABLISHED_FIELD: False,
+        STATUS_FIELD: DeliveryStatus.READY,
+        COORDINATION_REFERENCE_FIELD: value[COORDINATION_REFERENCE_FIELD],
+        TO_PANE_FIELD: recipient[PANE_FIELD],
+        TEXT_FIELD: json.dumps(value, sort_keys=True),
     }
 
 
-def send_request(
-    request: object, discovery: dict[str, object], runner: CommandRunner
-) -> dict[str, object]:
-    value = _object(request, "request")
+def send_request(request: object, discovery: object) -> dict[str, object]:
+    value = _object(request, MESSAGE_REQUEST_FIELD)
     unexpected = sorted(set(value) - REQUEST_INPUT_FIELDS)
     if unexpected:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
             f"Message request contains unsupported fields: {', '.join(unexpected)}.",
         )
-    if discovery.get(STATUS_FIELD) != CallerStatus.PROWL_PANE:
+    discovered = _object(discovery, DISCOVERY_FIELD)
+    if discovered.get(STATUS_FIELD) != CallerStatus.PROWL_PANE:
         raise MessageError(
             DeliveryStatus.INVALID_IDENTITY,
-            f"Cannot send because caller status is {discovery.get(STATUS_FIELD)}.",
+            f"Cannot send because caller status is {discovered.get(STATUS_FIELD)}.",
         )
     facts = value.get(FACTS_FIELD)
     if not isinstance(facts, list) or not all(isinstance(fact, str) for fact in facts):
@@ -716,9 +613,9 @@ def send_request(
         )
     envelope = build_envelope(
         kind=_message_kind(value.get(KIND_FIELD)),
-        sender=discovery.get(CALLER_FIELD),
+        sender=discovered.get(CALLER_FIELD),
         recipient=_target_by_pane(
-            discovery.get(TARGETS_FIELD),
+            discovered.get(TARGETS_FIELD),
             _text(value.get(TO_PANE_FIELD), f"request.{TO_PANE_FIELD}"),
         ),
         subject=_text(value.get(SUBJECT_FIELD), f"request.{SUBJECT_FIELD}"),
@@ -731,80 +628,141 @@ def send_request(
         mutation_target=value.get(MUTATION_TARGET_FIELD),
         observed_state=value.get(OBSERVED_STATE_FIELD),
     )
-    return send_envelope(envelope, runner)
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        ENVELOPE_FIELD: envelope,
+        DELIVERY_FIELD: delivery_request(envelope),
+    }
+
+
+def delivery_result(
+    envelope: object,
+    *,
+    delivered: bool,
+    command_exit_code: int | None,
+    transport: object = None,
+    detail: str | None = None,
+) -> dict[str, object]:
+    value = validate_envelope(envelope)
+    if delivered and command_exit_code != 0:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered environment result requires commandExitCode equal to zero.",
+        )
+    result: dict[str, object] = {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        STATUS_FIELD: (
+            DeliveryStatus.DELIVERED if delivered else DeliveryStatus.DELIVERY_FAILED
+        ),
+        COORDINATION_REFERENCE_FIELD: value[COORDINATION_REFERENCE_FIELD],
+        COMMAND_EXIT_CODE_FIELD: command_exit_code,
+        TRANSPORT_FIELD: transport,
+        ACKNOWLEDGED_FIELD: False,
+        AGREED_FIELD: False,
+        OWNERSHIP_ESTABLISHED_FIELD: False,
+    }
+    if not delivered:
+        result[DETAIL_FIELD] = _optional_text(detail, DETAIL_FIELD) or (
+            "The environment capability did not deliver the envelope."
+        )
+    return result
+
+
+def command_exit_code(operation: Operation, result: object) -> int:
+    value = _object(result, "result")
+    status = value.get(STATUS_FIELD)
+    if operation is Operation.DISCOVER:
+        return 0 if status == CallerStatus.PROWL_PANE else 2
+    if operation is Operation.BUILD:
+        delivery = value.get(DELIVERY_FIELD)
+        return (
+            0
+            if isinstance(delivery, dict)
+            and delivery.get(STATUS_FIELD) == DeliveryStatus.READY
+            else 2
+        )
+    return 0 if status == DeliveryStatus.DELIVERED else 2
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="operation", required=True)
     for operation in Operation:
-        subparsers.add_parser(operation)
+        subparsers.add_parser(operation.value)
     return parser
 
 
-def command_exit_code(operation: Operation, result: object) -> int:
-    status = _object(result, "result").get(STATUS_FIELD)
-    if operation is Operation.DISCOVER:
-        return 0 if status == CallerStatus.PROWL_PANE else 2
-    return 0 if status == DeliveryStatus.DELIVERED else 2
-
-
-def _target_by_pane(targets: object, pane_id: str) -> dict[str, str]:
-    if not isinstance(targets, list):
+def _json_input(stream: TextIO) -> dict[str, object]:
+    try:
+        return _object(json.load(stream), "stdin")
+    except json.JSONDecodeError as error:
         raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA, "Expected discovered targets to be an array."
-        )
-    matches = [
-        validate_identity(item, "target")
-        for item in targets
-        if _object(item, "target").get("pane") == pane_id
-    ]
-    if len(matches) != 1:
-        raise MessageError(
-            DeliveryStatus.INVALID_IDENTITY,
-            f"Expected exactly one target with pane UUID {pane_id}; found {len(matches)}.",
-        )
-    return matches[0]
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Message input on stdin is invalid JSON: {error.msg}",
+        ) from error
 
 
 def main(
     argv: list[str] | None = None,
     *,
-    runner: CommandRunner | None = None,
     environment: Mapping[str, str] | None = None,
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
 ) -> int:
     args = _parser().parse_args(argv)
     operation = Operation(args.operation)
-    command_runner = runner if runner is not None else SubprocessRunner()
-    active_environment = environment if environment is not None else os.environ
     input_stream = stdin if stdin is not None else sys.stdin
     output_stream = stdout if stdout is not None else sys.stdout
     try:
-        discovery = discover(command_runner, active_environment)
+        value = _json_input(input_stream)
         if operation is Operation.DISCOVER:
-            result: object = discovery
-        else:
-            try:
-                request = json.load(input_stream)
-            except json.JSONDecodeError as error:
+            agents_value = value.get(AGENTS_FIELD)
+            if not isinstance(agents_value, list):
                 raise MessageError(
                     DeliveryStatus.INVALID_SCHEMA,
-                    f"Message request on stdin is invalid JSON: {error.msg}",
-                ) from error
-            result = send_request(request, discovery, command_runner)
+                    f"Expected an array at stdin.{AGENTS_FIELD}.",
+                )
+            active_environment = (
+                environment
+                if environment is not None
+                else cast(
+                    Mapping[str, str],
+                    _object(value.get(ENVIRONMENT_FIELD, {}), ENVIRONMENT_FIELD),
+                )
+            )
+            result = discover(
+                [
+                    _object(item, f"agents[{index}]")
+                    for index, item in enumerate(agents_value)
+                ],
+                active_environment,
+            )
+        elif operation is Operation.BUILD:
+            result = send_request(
+                value.get(MESSAGE_REQUEST_FIELD), value.get(DISCOVERY_FIELD)
+            )
+        else:
+            result = delivery_result(
+                value.get(ENVELOPE_FIELD),
+                delivered=value.get(DELIVERED_FIELD) is True,
+                command_exit_code=cast(int | None, value.get(COMMAND_EXIT_CODE_FIELD)),
+                transport=value.get(TRANSPORT_FIELD),
+                detail=cast(str | None, value.get(DETAIL_FIELD)),
+            )
         print(json.dumps(result, sort_keys=True), file=output_stream)
         return command_exit_code(operation, result)
     except MessageError as error:
-        failure: dict[str, object] = {
-            "schemaVersion": SCHEMA_VERSION,
-            STATUS_FIELD: error.status,
-            DETAIL_FIELD: str(error),
-        }
-        if error.command_exit_code is not None:
-            failure[COMMAND_EXIT_CODE_FIELD] = error.command_exit_code
-        print(json.dumps(failure, sort_keys=True), file=output_stream)
+        print(
+            json.dumps(
+                {
+                    SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+                    STATUS_FIELD: error.status,
+                    DETAIL_FIELD: str(error),
+                },
+                sort_keys=True,
+            ),
+            file=output_stream,
+        )
         return 2
 
 

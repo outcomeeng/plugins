@@ -41,7 +41,7 @@
     {
       "name": "coding-agents",
       "source": "./dist/claude/coding-agents",
-      "description": "Coding-agent coordination: /coordinate-agents, /message-agents, /recover-prowl-agents"
+      "description": "Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents"
     },
     {
       "name": "work",

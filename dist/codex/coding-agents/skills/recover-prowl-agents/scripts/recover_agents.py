@@ -1,27 +1,17 @@
 #!/usr/bin/env python3
-"""Recover SPX-selected native sessions in exact live Prowl panes."""
+"""Plan and verify native-session recovery from public Prowl evidence."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import subprocess
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
-from typing import Protocol, TextIO
+from typing import TextIO, cast
 
-SCHEMA_VERSION = 2
-COMMAND_TIMEOUT_SECONDS = 15
-PROWL_COMMAND = "prowl"
-JSON_FLAG = "--json"
-PROWL_LIST_COMMAND = (PROWL_COMMAND, "list", JSON_FLAG)
-PROWL_AGENTS_COMMAND = (PROWL_COMMAND, "agents", JSON_FLAG)
-PROWL_SEND_PREFIX = (PROWL_COMMAND, "send")
-PANE_OPTION = "--pane"
-NO_WAIT_OPTION = "--no-wait"
+SCHEMA_VERSION = 3
 SPX_RESUME_COMMAND = "spx agent resume --latest"
 RECOVERY_REASSESSMENT_PROMPT = (
     "Recovery check: Prowl restored this pane and SPX selected this native session. "
@@ -34,8 +24,7 @@ RECOVERY_REASSESSMENT_PROMPT = (
 RECOVERY_INPUT = f"{SPX_RESUME_COMMAND}\n{RECOVERY_REASSESSMENT_PROMPT}"
 NATIVE_AGENT_TYPES = frozenset({"claude", "codex"})
 
-OK_FIELD = "ok"
-DATA_FIELD = "data"
+SCHEMA_VERSION_FIELD = "schemaVersion"
 ITEMS_FIELD = "items"
 AGENTS_FIELD = "agents"
 WORKTREE_FIELD = "worktree"
@@ -45,6 +34,7 @@ PATH_FIELD = "path"
 ROOT_PATH_FIELD = "root_path"
 TYPE_FIELD = "type"
 STATUS_FIELD = "status"
+DETAIL_FIELD = "detail"
 TARGETS_FIELD = "targets"
 CORRELATIONS_FIELD = "correlations"
 CWD_FIELD = "cwd"
@@ -59,6 +49,12 @@ OCCUPIED_PANE_IDS_FIELD = "occupiedPaneIds"
 UNEXPECTED_AGENT_PANE_IDS_FIELD = "unexpectedAgentPaneIds"
 COMMAND_FIELD = "command"
 REASSESSMENT_SENT_FIELD = "reassessmentSent"
+DELIVERIES_FIELD = "deliveries"
+DELIVERY_RESULTS_FIELD = "deliveryResults"
+PLAN_FIELD = "plan"
+TEXT_FIELD = "text"
+DELIVERED_FIELD = "delivered"
+COMMAND_EXIT_CODE_FIELD = "commandExitCode"
 PANE_RESULT_FIELDS = frozenset(
     {
         PANE_ID_FIELD,
@@ -80,11 +76,13 @@ CORRELATION_FIELDS = frozenset(
         STATUS_FIELD,
     }
 )
+DELIVERY_FIELDS = frozenset({PANE_ID_FIELD, TEXT_FIELD})
 
 
 class Operation(StrEnum):
     RECOVER = "recover"
     VERIFY = "verify"
+    SETTLE = "settle"
 
 
 class ResultStatus(StrEnum):
@@ -95,66 +93,13 @@ class ResultStatus(StrEnum):
     PANE_OCCUPIED = "pane-occupied"
     CORRELATION_INCOMPLETE = "correlation-incomplete"
     INVALID_SCHEMA = "invalid-schema"
-    PROWL_UNAVAILABLE = "prowl-unavailable"
+    ENVIRONMENT_UNAVAILABLE = "environment-unavailable"
     COMMAND_FAILED = "command-failed"
 
 
 class Resolution(StrEnum):
     RESUMED = "resumed"
     ALREADY_CORRELATED = "already-correlated"
-
-
-@dataclass(frozen=True)
-class CommandResult:
-    returncode: int
-    stdout: str
-    stderr: str
-
-
-class CommandRunner(Protocol):
-    def run(
-        self,
-        argv: tuple[str, ...],
-        cwd: Path | None = None,
-        stdin: str | None = None,
-    ) -> CommandResult: ...
-
-
-@dataclass(frozen=True)
-class SubprocessRunner:
-    timeout_seconds: int = COMMAND_TIMEOUT_SECONDS
-
-    def run(
-        self,
-        argv: tuple[str, ...],
-        cwd: Path | None = None,
-        stdin: str | None = None,
-    ) -> CommandResult:
-        try:
-            completed = subprocess.run(
-                argv,
-                cwd=cwd,
-                input=stdin,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-                check=False,
-            )
-        except FileNotFoundError as error:
-            status = (
-                ResultStatus.PROWL_UNAVAILABLE
-                if argv[0] == PROWL_COMMAND
-                else ResultStatus.COMMAND_FAILED
-            )
-            raise AdapterError(
-                status, f"Required command is unavailable: {argv[0]}"
-            ) from error
-        except subprocess.TimeoutExpired as error:
-            raise AdapterError(
-                ResultStatus.COMMAND_FAILED,
-                f"Command exceeded the {self.timeout_seconds}-second bound: {' '.join(argv)}",
-            ) from error
-        return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
 class AdapterError(RuntimeError):
@@ -225,51 +170,6 @@ def _absolute_path(value: object, location: str) -> str:
     return path
 
 
-def _checked(result: CommandResult, command: tuple[str, ...]) -> str:
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
-        raise AdapterError(
-            ResultStatus.COMMAND_FAILED,
-            f"Command failed ({result.returncode}): {' '.join(command)}: {detail}",
-        )
-    return result.stdout
-
-
-def _json_result(result: CommandResult, command: tuple[str, ...]) -> dict[str, object]:
-    raw = _checked(result, command)
-    try:
-        payload = _object(json.loads(raw), "response")
-    except json.JSONDecodeError as error:
-        raise AdapterError(
-            ResultStatus.INVALID_SCHEMA,
-            f"Command returned invalid JSON for {' '.join(command)}: {error.msg}",
-        ) from error
-    if payload.get(OK_FIELD) is not True:
-        raise AdapterError(
-            ResultStatus.COMMAND_FAILED,
-            f"Command returned a non-success response: {' '.join(command)}",
-        )
-    return payload
-
-
-def _public_items(payload: dict[str, object], field: str) -> list[dict[str, object]]:
-    data = _object(payload.get(DATA_FIELD), f"response.{DATA_FIELD}")
-    return _array(data.get(field), f"response.{DATA_FIELD}.{field}")
-
-
-def _runtime_rosters(
-    runner: CommandRunner,
-) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    panes = _public_items(
-        _json_result(runner.run(PROWL_LIST_COMMAND), PROWL_LIST_COMMAND), ITEMS_FIELD
-    )
-    agents = _public_items(
-        _json_result(runner.run(PROWL_AGENTS_COMMAND), PROWL_AGENTS_COMMAND),
-        AGENTS_FIELD,
-    )
-    return panes, agents
-
-
 def _pane_identity(item: dict[str, object], location: str) -> PaneIdentity:
     worktree = _object(item.get(WORKTREE_FIELD), f"{location}.worktree")
     pane = _object(item.get(PANE_FIELD), f"{location}.pane")
@@ -306,15 +206,13 @@ def _pane_roster(items: list[dict[str, object]]) -> dict[str, PaneIdentity]:
         if identity.pane_id in roster:
             raise AdapterError(
                 ResultStatus.INVALID_SCHEMA,
-                f"Prowl returned duplicate pane identity: {identity.pane_id}",
+                f"Public evidence returned duplicate pane identity: {identity.pane_id}",
             )
         roster[identity.pane_id] = identity
     return roster
 
 
-def _agent_roster(
-    items: list[dict[str, object]],
-) -> dict[str, list[AgentIdentity]]:
+def _agent_roster(items: list[dict[str, object]]) -> dict[str, list[AgentIdentity]]:
     roster: dict[str, list[AgentIdentity]] = {}
     for index, item in enumerate(items):
         identity = _agent_identity(item, f"agents[{index}]")
@@ -338,8 +236,7 @@ def _selected_pane_ids(values: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _validate_targets(
-    selected: tuple[str, ...],
-    panes: dict[str, PaneIdentity],
+    selected: tuple[str, ...], panes: dict[str, PaneIdentity]
 ) -> dict[str, PaneIdentity]:
     missing = [pane_id for pane_id in selected if pane_id not in panes]
     if missing:
@@ -350,27 +247,12 @@ def _validate_targets(
     return {pane_id: panes[pane_id] for pane_id in selected}
 
 
-def recovery_send_command(pane_id: str) -> tuple[str, ...]:
-    return (
-        *PROWL_SEND_PREFIX,
-        PANE_OPTION,
-        pane_id,
-        NO_WAIT_OPTION,
-        JSON_FLAG,
-    )
-
-
-def _send_text(runner: CommandRunner, pane_id: str, text: str) -> None:
-    command = recovery_send_command(pane_id)
-    _json_result(runner.run(command, stdin=text), command)
-
-
 def recover(
     selected_pane_ids: tuple[str, ...],
-    runner: CommandRunner,
+    pane_items: list[dict[str, object]],
+    agent_items: list[dict[str, object]],
 ) -> dict[str, object]:
     selected = _selected_pane_ids(selected_pane_ids)
-    pane_items, agent_items = _runtime_rosters(runner)
     panes = _pane_roster(pane_items)
     targets = _validate_targets(selected, panes)
     agents = _agent_roster(agent_items)
@@ -384,21 +266,21 @@ def recover(
             occupied.append(pane_id)
     if occupied:
         return {
-            "schemaVersion": SCHEMA_VERSION,
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
             STATUS_FIELD: ResultStatus.PANE_OCCUPIED,
-            "detail": (
-                "Selected panes have non-native or multiple detected-agent "
-                "correlations."
+            DETAIL_FIELD: (
+                "Selected panes have non-native or multiple detected-agent correlations."
             ),
             OCCUPIED_PANE_IDS_FIELD: occupied,
             TARGETS_FIELD: [
                 targets[pane_id].result(ResultStatus.PANE_OCCUPIED)
                 for pane_id in occupied
             ],
+            DELIVERIES_FIELD: [],
         }
 
     results: list[dict[str, object]] = []
-    resumed = 0
+    deliveries: list[dict[str, object]] = []
     for pane_id in selected:
         pane = targets[pane_id]
         matches = agents.get(pane_id, [])
@@ -411,26 +293,57 @@ def recover(
                 )
             results.append(pane.result(Resolution.ALREADY_CORRELATED))
             continue
-        _send_text(runner, pane_id, RECOVERY_INPUT)
-        resumed += 1
         result = pane.result(Resolution.RESUMED)
         result[COMMAND_FIELD] = SPX_RESUME_COMMAND
         result[REASSESSMENT_SENT_FIELD] = True
         results.append(result)
+        deliveries.append({PANE_ID_FIELD: pane_id, TEXT_FIELD: RECOVERY_INPUT})
 
     return {
-        "schemaVersion": SCHEMA_VERSION,
-        STATUS_FIELD: ResultStatus.RESUMED if resumed else ResultStatus.ALREADY_CURRENT,
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        STATUS_FIELD: (
+            ResultStatus.RESUMED if deliveries else ResultStatus.ALREADY_CURRENT
+        ),
         TARGETS_FIELD: results,
+        DELIVERIES_FIELD: deliveries,
     }
+
+
+def settle_recovery(plan: object, delivery_results: object) -> dict[str, object]:
+    value = _object(plan, PLAN_FIELD)
+    deliveries = _array(value.get(DELIVERIES_FIELD), f"{PLAN_FIELD}.{DELIVERIES_FIELD}")
+    results = _array(delivery_results, DELIVERY_RESULTS_FIELD)
+    expected_panes = [
+        _text(delivery.get(PANE_ID_FIELD), f"delivery.{PANE_ID_FIELD}")
+        for delivery in deliveries
+    ]
+    observed_panes = [
+        _text(result.get(PANE_ID_FIELD), f"deliveryResult.{PANE_ID_FIELD}")
+        for result in results
+    ]
+    if expected_panes != observed_panes:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Delivery results must match planned pane identities in order.",
+        )
+    failures = [result for result in results if result.get(DELIVERED_FIELD) is not True]
+    if failures:
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            STATUS_FIELD: ResultStatus.COMMAND_FAILED,
+            DETAIL_FIELD: "One or more planned recovery inputs were not delivered.",
+            DELIVERY_RESULTS_FIELD: results,
+            TARGETS_FIELD: value.get(TARGETS_FIELD),
+        }
+    return {**value, DELIVERY_RESULTS_FIELD: results}
 
 
 def verify(
     selected_pane_ids: tuple[str, ...],
-    runner: CommandRunner,
+    pane_items: list[dict[str, object]],
+    agent_items: list[dict[str, object]],
 ) -> dict[str, object]:
     selected = _selected_pane_ids(selected_pane_ids)
-    pane_items, agent_items = _runtime_rosters(runner)
     panes = _pane_roster(pane_items)
     targets = _validate_targets(selected, panes)
     agents = _agent_roster(agent_items)
@@ -466,7 +379,7 @@ def verify(
         else ResultStatus.CORRELATION_INCOMPLETE
     )
     return {
-        "schemaVersion": SCHEMA_VERSION,
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: result_status,
         TARGETS_FIELD: len(selected),
         VERIFIED_FIELD: len(correlations),
@@ -481,42 +394,70 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="operation", required=True)
     for operation in Operation:
-        command = subparsers.add_parser(operation)
-        command.add_argument("--pane", action="append", required=True)
+        command = subparsers.add_parser(operation.value)
+        if operation is not Operation.SETTLE:
+            command.add_argument("--pane", action="append", required=True)
     return parser
+
+
+def _input(stream: TextIO) -> dict[str, object]:
+    try:
+        return _object(json.load(stream), "stdin")
+    except json.JSONDecodeError as error:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            f"Recovery input on stdin is invalid JSON: {error.msg}",
+        ) from error
+
+
+def command_exit_code(result: object) -> int:
+    status = _object(result, "result").get(STATUS_FIELD)
+    return (
+        0
+        if status
+        in {
+            ResultStatus.RESUMED,
+            ResultStatus.ALREADY_CURRENT,
+            ResultStatus.VERIFIED,
+        }
+        else 2
+    )
 
 
 def main(
     argv: list[str] | None = None,
     *,
-    runner: CommandRunner | None = None,
+    stdin: TextIO | None = None,
     stdout: TextIO | None = None,
 ) -> int:
     args = _parser().parse_args(argv)
     operation = Operation(args.operation)
-    command_runner = runner if runner is not None else SubprocessRunner()
+    input_stream = stdin if stdin is not None else sys.stdin
     output_stream = stdout if stdout is not None else sys.stdout
     try:
-        selected = tuple(args.pane)
-        result = (
-            recover(selected, command_runner)
-            if operation is Operation.RECOVER
-            else verify(selected, command_runner)
-        )
+        value = _input(input_stream)
+        if operation is Operation.SETTLE:
+            result = settle_recovery(
+                value.get(PLAN_FIELD), value.get(DELIVERY_RESULTS_FIELD)
+            )
+        else:
+            pane_items = _array(value.get(ITEMS_FIELD), ITEMS_FIELD)
+            agent_items = _array(value.get(AGENTS_FIELD), AGENTS_FIELD)
+            selected = tuple(cast(list[str], args.pane))
+            result = (
+                recover(selected, pane_items, agent_items)
+                if operation is Operation.RECOVER
+                else verify(selected, pane_items, agent_items)
+            )
         print(json.dumps(result, sort_keys=True), file=output_stream)
-        passing = {
-            ResultStatus.RESUMED,
-            ResultStatus.ALREADY_CURRENT,
-            ResultStatus.VERIFIED,
-        }
-        return 0 if result[STATUS_FIELD] in passing else 2
+        return command_exit_code(result)
     except AdapterError as error:
         print(
             json.dumps(
                 {
-                    "schemaVersion": SCHEMA_VERSION,
+                    SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
                     STATUS_FIELD: error.status,
-                    "detail": str(error),
+                    DETAIL_FIELD: str(error),
                 },
                 sort_keys=True,
             ),
