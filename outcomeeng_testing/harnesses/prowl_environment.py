@@ -7,6 +7,7 @@ import json
 import re
 import sys
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -30,6 +31,9 @@ PROWL_ENVIRONMENT_PATH = (
 )
 CODING_AGENTS_SOURCE = ROOT / "src/plugins/coding-agents"
 OPERATE_PROWL_SOURCE = CODING_AGENTS_SOURCE / "skills/operate-prowl"
+RAW_PROWL_VIOLATION_FIXTURE = (
+    ROOT / "outcomeeng_testing/fixtures/prowl_environment/raw_prowl_command.py.txt"
+)
 PROPERTY_SEED = 2026071801
 PROPERTY_EXAMPLES = 40
 PROPERTY_REPLAY_PATH = (
@@ -402,15 +406,13 @@ def verify_prowl_properties() -> list[str]:
     return failures
 
 
-def _raw_prowl_script_violations() -> list[str]:
-    violations: list[str] = []
+def _raw_prowl_script_violations(paths: Iterable[Path]) -> list[str]:
     raw_python = re.compile(r"PROWL_COMMAND|[\[(]['\"]prowl['\"]")
-    for path in sorted(CODING_AGENTS_SOURCE.rglob("*.py")):
-        if OPERATE_PROWL_SOURCE in path.parents:
-            continue
-        if raw_python.search(path.read_text(encoding="utf-8")):
-            violations.append(str(path.relative_to(ROOT)))
-    return violations
+    return [
+        str(path.relative_to(ROOT))
+        for path in sorted(paths)
+        if raw_python.search(path.read_text(encoding="utf-8"))
+    ]
 
 
 def verify_prowl_compliance() -> list[str]:
@@ -459,10 +461,20 @@ def verify_prowl_compliance() -> list[str]:
             if error.status != module.ExecutionStatus.INVALID_SCHEMA:
                 failures.append(f"invalid result form mapped to {error.status}")
 
-    violations = _raw_prowl_script_violations()
+    script_paths = (
+        path
+        for path in CODING_AGENTS_SOURCE.rglob("*.py")
+        if OPERATE_PROWL_SOURCE not in path.parents
+    )
+    violations = _raw_prowl_script_violations(script_paths)
     if violations:
         failures.append(
             "raw Prowl command construction remains in a script outside /operate-prowl: "
             + ", ".join(violations)
         )
+
+    expected_fixture = str(RAW_PROWL_VIOLATION_FIXTURE.relative_to(ROOT))
+    fixture_violations = _raw_prowl_script_violations((RAW_PROWL_VIOLATION_FIXTURE,))
+    if fixture_violations != [expected_fixture]:
+        failures.append("raw Prowl command rule accepted its violating script fixture")
     return failures

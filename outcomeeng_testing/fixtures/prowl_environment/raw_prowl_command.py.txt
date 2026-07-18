@@ -1,0 +1,5 @@
+"""Violating shipped-script payload for raw Prowl command detection."""
+
+import subprocess
+
+subprocess.run(["prowl", "list", "--json"], check=True)
