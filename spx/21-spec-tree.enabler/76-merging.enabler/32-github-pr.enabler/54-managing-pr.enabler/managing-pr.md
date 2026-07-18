@@ -22,11 +22,9 @@ CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` hol
 
 - A resolver request maps a known review-thread node ID to direct `resolveReviewThread` mutation, a known pull-request review-comment ID to paginated thread discovery followed by that mutation, an absent review comment to a deterministic absence error, and a malformed GitHub payload to a deterministic payload-shape error ([test](tests/test_resolve_review_thread.mapping.l1.py))
 
-### Properties
-
-- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.property.l1.py))
-
 ### Compliance
+
+- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.compliance.l1.py))
 
 - ALWAYS: when the current-head CI review reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file, `/manage-pr` fires the mention-triggered reviewer with the project's configured trigger phrase (default `@spec-tree`) and treats its posted findings as the current-head review, per `spx/15-merging.pdr.md` ([audit])
 - ALWAYS: `/manage-pr` presents payload-bearing `gh pr comment` and `gh pr review` commands by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | gh pr ... --body-file -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])

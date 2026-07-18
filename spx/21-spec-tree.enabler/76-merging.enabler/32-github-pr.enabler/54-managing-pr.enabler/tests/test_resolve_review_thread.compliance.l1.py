@@ -1,4 +1,4 @@
-"""Property tests for the manage-pr review-thread resolver."""
+"""Compliance tests for the manage-pr review-thread resolver."""
 
 from __future__ import annotations
 
