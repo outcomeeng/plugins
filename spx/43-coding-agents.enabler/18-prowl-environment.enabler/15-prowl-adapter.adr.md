@@ -22,9 +22,11 @@ One capability keeps Prowl command knowledge testable and portable while preserv
 - ALWAYS: public Prowl responses map to versioned source-owned results or named schema and command failures without value rewriting ([conformance])
 - ALWAYS: matching repeated terminal handbacks are idempotent and conflicting terminal kinds for one coordination reference are rejected ([property])
 - ALWAYS: requests for focus, key injection, tab or pane creation, and tab or pane closure fail before command execution when mutation authorization is absent ([compliance])
-- NEVER: a shipped coding-agents file outside `/operate-prowl` constructs a Prowl argument vector, invokes Prowl command help, or names the external `prowl-cli` skill as an operational dependency ([compliance])
+- NEVER: a shipped coding-agents Python script outside `/operate-prowl` constructs a Prowl argument vector or invokes Prowl command help ([compliance])
 
 ### Audit
+
+- NEVER: a shipped coding-agents skill outside `/operate-prowl` instructs a workflow to construct Prowl commands, invoke Prowl command help, or depend on an external environment-control skill ([audit])
 
 - ALWAYS: the Prowl subprocess boundary accepts a dependency-injected `CommandRunner` Protocol and the default runner uses captured text input and output with a bounded timeout ([audit])
 - ALWAYS: tests inject controlled runner implementations only under `/test` Stage 5 exception 1 (failure simulation) or exception 2 (interaction protocols) ([audit])

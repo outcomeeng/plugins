@@ -6,12 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import uuid
 from enum import StrEnum
 from typing import Callable, Mapping, TextIO, cast
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SCHEMA_VERSION_FIELD = "schemaVersion"
 STATUS_FIELD = "status"
 DETAIL_FIELD = "detail"
@@ -40,6 +41,7 @@ REQUEST_FIELD = "request"
 COORDINATION_REFERENCE_FIELD = "coordinationReference"
 MUTATION_TARGET_FIELD = "mutationTarget"
 OBSERVED_STATE_FIELD = "observedState"
+ACCEPTED_FIELD = "accepted"
 HEAD_FIELD = "head"
 REPOSITORY_FIELD = "repository"
 MESSAGE_STATE_FIELD = "messageState"
@@ -53,6 +55,8 @@ RUN_FIELD = "run"
 PATH_FIELD = "path"
 ROOT_PATH_FIELD = "root_path"
 BRANCH_FIELD = "branch"
+CLEAN_STATUS = "clean"
+FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
 
 ENVELOPE_FIELDS = frozenset(
     {
@@ -67,6 +71,7 @@ ENVELOPE_FIELDS = frozenset(
         REQUEST_FIELD,
         MUTATION_TARGET_FIELD,
         OBSERVED_STATE_FIELD,
+        ACCEPTED_FIELD,
     }
 )
 REQUEST_INPUT_FIELDS = frozenset(
@@ -79,6 +84,7 @@ REQUEST_INPUT_FIELDS = frozenset(
         COORDINATION_REFERENCE_FIELD,
         MUTATION_TARGET_FIELD,
         OBSERVED_STATE_FIELD,
+        ACCEPTED_FIELD,
     }
 )
 MUTATION_TARGET_FIELDS = frozenset(
@@ -326,6 +332,7 @@ def build_request(
     coordination_reference: str | None = None,
     mutation_target: object = None,
     observed_state: object = None,
+    accepted: bool | None = None,
 ) -> dict[str, object]:
     return {
         TO_PANE_FIELD: _text(to_pane, f"request.{TO_PANE_FIELD}"),
@@ -338,6 +345,7 @@ def build_request(
         ),
         MUTATION_TARGET_FIELD: mutation_target,
         OBSERVED_STATE_FIELD: observed_state,
+        ACCEPTED_FIELD: accepted,
     }
 
 
@@ -345,8 +353,6 @@ def _validated_fields(
     value: object,
     label: str,
     fields: frozenset[str],
-    *,
-    allow_empty: frozenset[str] = frozenset(),
 ) -> dict[str, str]:
     item = _object(value, label)
     unexpected = sorted(set(item) - fields)
@@ -361,18 +367,15 @@ def _validated_fields(
             DeliveryStatus.INVALID_SCHEMA,
             f"{label} fields are invalid ({'; '.join(details)}).",
         )
-    validated: dict[str, str] = {}
-    for field in fields:
-        raw = item.get(field)
-        if field in allow_empty:
-            if not isinstance(raw, str):
-                raise MessageError(
-                    DeliveryStatus.INVALID_SCHEMA,
-                    f"Expected a string at {label}.{field}.",
-                )
-            validated[field] = raw
-        else:
-            validated[field] = _text(raw, f"{label}.{field}")
+    validated = {field: _text(item.get(field), f"{label}.{field}") for field in fields}
+    if (
+        HEAD_FIELD in validated
+        and FULL_HEAD_PATTERN.fullmatch(validated[HEAD_FIELD]) is None
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Expected a complete lowercase hexadecimal HEAD at {label}.{HEAD_FIELD}.",
+        )
     return validated
 
 
@@ -398,7 +401,6 @@ def _mutation_contract(
         mutation_target,
         MUTATION_TARGET_FIELD,
         MUTATION_TARGET_FIELDS,
-        allow_empty=frozenset({STATUS_FIELD}),
     )
     if kind is MessageKind.OWNERSHIP_PROPOSAL:
         if observed_state is not None:
@@ -414,7 +416,6 @@ def _mutation_contract(
             observed_state,
             OBSERVED_STATE_FIELD,
             OBSERVED_STATE_FIELDS,
-            allow_empty=frozenset({STATUS_FIELD}),
         )
     elif kind is MessageKind.MUTATION_AUTHORIZATION:
         expected_identity = recipient
@@ -422,7 +423,6 @@ def _mutation_contract(
             observed_state,
             OBSERVED_STATE_FIELD,
             OBSERVED_STATE_FIELDS,
-            allow_empty=frozenset({STATUS_FIELD}),
         )
     else:
         raise MessageError(
@@ -457,6 +457,7 @@ def build_envelope(
     uuid_factory: Callable[[], uuid.UUID] = uuid.uuid4,
     mutation_target: object = None,
     observed_state: object = None,
+    accepted: bool | None = None,
 ) -> dict[str, object]:
     if not facts or any(not isinstance(fact, str) or not fact for fact in facts):
         raise MessageError(
@@ -465,6 +466,17 @@ def build_envelope(
         )
     validated_sender = validate_identity(sender, SENDER_FIELD)
     validated_recipient = validate_identity(recipient, RECIPIENT_FIELD)
+    if kind is MessageKind.ACKNOWLEDGEMENT:
+        if not isinstance(accepted, bool):
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "An acknowledgement requires boolean accepted state.",
+            )
+    elif accepted is not None:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"{kind.value} cannot carry accepted state.",
+        )
     validated_target, validated_state = _mutation_contract(
         kind,
         validated_sender,
@@ -486,6 +498,7 @@ def build_envelope(
         REQUEST_FIELD: _optional_text(request, REQUEST_FIELD),
         MUTATION_TARGET_FIELD: validated_target,
         OBSERVED_STATE_FIELD: validated_state,
+        ACCEPTED_FIELD: accepted,
     }
 
 
@@ -504,6 +517,18 @@ def validate_envelope(envelope: object) -> dict[str, object]:
             f"Envelope schema version must be {SCHEMA_VERSION}.",
         )
     kind = _message_kind(value.get(KIND_FIELD), f"envelope.{KIND_FIELD}")
+    accepted = value.get(ACCEPTED_FIELD)
+    if kind is MessageKind.ACKNOWLEDGEMENT:
+        if not isinstance(accepted, bool):
+            raise MessageError(
+                DeliveryStatus.INVALID_SCHEMA,
+                "An acknowledgement requires boolean accepted state.",
+            )
+    elif accepted is not None:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"{kind.value} cannot carry accepted state.",
+        )
     expected_state = MESSAGE_STATE_BY_KIND[kind]
     if value.get(MESSAGE_STATE_FIELD) != expected_state:
         raise MessageError(
@@ -558,6 +583,7 @@ def validate_envelope(envelope: object) -> dict[str, object]:
         REQUEST_FIELD: _optional_text(value.get(REQUEST_FIELD), REQUEST_FIELD),
         MUTATION_TARGET_FIELD: target,
         OBSERVED_STATE_FIELD: state,
+        ACCEPTED_FIELD: accepted,
     }
 
 
@@ -627,6 +653,7 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
         ),
         mutation_target=value.get(MUTATION_TARGET_FIELD),
         observed_state=value.get(OBSERVED_STATE_FIELD),
+        accepted=cast(bool | None, value.get(ACCEPTED_FIELD)),
     )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,

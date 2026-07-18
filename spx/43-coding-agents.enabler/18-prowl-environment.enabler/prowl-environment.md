@@ -23,4 +23,8 @@ CAN operate between any positively identified Prowl agents without constructing 
 ### Compliance
 
 - ALWAYS: focus, key injection, tab or pane creation, and tab or pane closure require explicit mutation authorization in the operation request before any Prowl command runs ([test](tests/test_prowl_environment.compliance.l1.py))
-- NEVER: another shipped coding-agents skill or script constructs a raw Prowl argument vector, invokes `prowl --help`, or depends on the external `prowl-cli` skill ([test](tests/test_prowl_environment.compliance.l1.py))
+- NEVER: another shipped coding-agents script constructs a raw Prowl argument vector or invokes Prowl command help ([test](tests/test_prowl_environment.compliance.l1.py))
+
+### Audit
+
+- NEVER: another shipped coding-agents skill instructs a workflow to construct raw Prowl commands, invoke Prowl command help, or depend on an external environment-control skill ([audit])

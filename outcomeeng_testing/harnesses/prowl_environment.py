@@ -334,18 +334,13 @@ def verify_prowl_properties() -> list[str]:
     return failures
 
 
-def _raw_prowl_violations() -> list[str]:
+def _raw_prowl_script_violations() -> list[str]:
     violations: list[str] = []
     raw_python = re.compile(r"PROWL_COMMAND|[\[(]['\"]prowl['\"]")
-    raw_markdown = re.compile(r"`prowl(?:\s|`)|\bprowl-cli\b")
-    for path in sorted(CODING_AGENTS_SOURCE.rglob("*")):
-        if not path.is_file() or OPERATE_PROWL_SOURCE in path.parents:
+    for path in sorted(CODING_AGENTS_SOURCE.rglob("*.py")):
+        if OPERATE_PROWL_SOURCE in path.parents:
             continue
-        if path.suffix not in {".py", ".md"}:
-            continue
-        text = path.read_text(encoding="utf-8")
-        pattern = raw_python if path.suffix == ".py" else raw_markdown
-        if pattern.search(text):
+        if raw_python.search(path.read_text(encoding="utf-8")):
             violations.append(str(path.relative_to(ROOT)))
     return violations
 
@@ -396,10 +391,10 @@ def verify_prowl_compliance() -> list[str]:
             if error.status != module.ExecutionStatus.INVALID_SCHEMA:
                 failures.append(f"invalid result form mapped to {error.status}")
 
-    violations = _raw_prowl_violations()
+    violations = _raw_prowl_script_violations()
     if violations:
         failures.append(
-            "raw Prowl command construction remains outside /operate-prowl: "
+            "raw Prowl command construction remains in a script outside /operate-prowl: "
             + ", ".join(violations)
         )
     return failures

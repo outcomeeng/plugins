@@ -44,7 +44,7 @@ def mutation_target(
         module.BRANCH_FIELD: identity[module.BRANCH_FIELD],
         module.REPOSITORY_FIELD: identity[module.REPOSITORY_FIELD],
         module.HEAD_FIELD: f"{ordinal:040x}",
-        module.STATUS_FIELD: "",
+        module.STATUS_FIELD: module.CLEAN_STATUS,
     }
 
 
@@ -59,5 +59,5 @@ def observed_mutation_state(
         module.BRANCH_FIELD: identity[module.BRANCH_FIELD],
         module.REPOSITORY_FIELD: identity[module.REPOSITORY_FIELD],
         module.HEAD_FIELD: f"{ordinal:040x}",
-        module.STATUS_FIELD: "",
+        module.STATUS_FIELD: module.CLEAN_STATUS,
     }

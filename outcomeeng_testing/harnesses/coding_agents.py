@@ -112,19 +112,20 @@ def verify_agent_message_mappings() -> list[str]:
     recipient_state = observed_mutation_state(module, recipient, ordinal=3)
     sender_state = observed_mutation_state(module, sender, ordinal=1)
     cases = (
-        (module.MessageKind.OWNERSHIP_PROPOSAL, None, None, None),
-        (module.MessageKind.FACT, None, None, None),
-        (module.MessageKind.ACKNOWLEDGEMENT, active, None, None),
-        (module.MessageKind.MUTATION_STATE, active, sender_target, sender_state),
+        (module.MessageKind.OWNERSHIP_PROPOSAL, None, None, None, None),
+        (module.MessageKind.FACT, None, None, None, None),
+        (module.MessageKind.ACKNOWLEDGEMENT, active, None, None, True),
+        (module.MessageKind.MUTATION_STATE, active, sender_target, sender_state, None),
         (
             module.MessageKind.MUTATION_AUTHORIZATION,
             active,
             recipient_target,
             recipient_state,
+            None,
         ),
     )
     observed_states: set[object] = set()
-    for (kind, reference, target, state), expected_state in zip(
+    for (kind, reference, target, state, accepted), expected_state in zip(
         cases, module.MessageState, strict=True
     ):
         envelope = module.build_envelope(
@@ -137,14 +138,29 @@ def verify_agent_message_mappings() -> list[str]:
             active_reference=reference,
             mutation_target=target,
             observed_state=state,
+            accepted=accepted,
         )
         if envelope[module.KIND_FIELD] != kind:
             failures.append(f"message kind {kind} collapsed during mapping")
         if envelope[module.MESSAGE_STATE_FIELD] != expected_state:
             failures.append(f"message kind {kind} mapped to the wrong state")
+        if envelope[module.ACCEPTED_FIELD] is not accepted:
+            failures.append(f"message kind {kind} mapped accepted state incorrectly")
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
     if len(observed_states) != len(module.MessageKind):
         failures.append("message kinds did not map to distinct states")
+    rejected_acknowledgement = module.build_envelope(
+        kind=module.MessageKind.ACKNOWLEDGEMENT,
+        sender=recipient,
+        recipient=sender,
+        subject="ownership response",
+        facts=["the ownership proposal was rejected"],
+        request=None,
+        active_reference=active,
+        accepted=False,
+    )
+    if rejected_acknowledgement[module.ACCEPTED_FIELD] is not False:
+        failures.append("rejected acknowledgement did not preserve accepted false")
 
     envelope = _fact_envelope(module, sender, recipient)
     failed = module.delivery_result(
@@ -173,6 +189,16 @@ def verify_agent_message_compliance() -> list[str]:
     sender = module.identity_from_agent(public_roster[0])
     recipient = module.identity_from_agent(public_roster[1])
     discovery = _discovery(module, public_roster, sender[module.PANE_FIELD])
+    if (
+        sender[module.RUN_FIELD]
+        != cast(dict[str, object], public_roster[0][module.RUN_FIELD])[module.ID_FIELD]
+    ):
+        failures.append("sender run identity was not preserved from public evidence")
+    if (
+        recipient[module.RUN_FIELD]
+        != cast(dict[str, object], public_roster[1][module.RUN_FIELD])[module.ID_FIELD]
+    ):
+        failures.append("recipient run identity was not preserved from public evidence")
     envelope = _fact_envelope(module, sender, recipient)
     delivery = module.delivery_request(envelope)
     if delivery[module.TO_PANE_FIELD] != recipient[module.PANE_FIELD]:
@@ -211,6 +237,19 @@ def verify_agent_message_compliance() -> list[str]:
                 failures.append(f"message accepted {label} without {identity_field}")
             except module.MessageError:
                 pass
+        invalid_run = {**identity, module.RUN_FIELD: ""}
+        try:
+            module.build_envelope(
+                kind=module.MessageKind.FACT,
+                sender=invalid_run if label == module.SENDER_FIELD else sender,
+                recipient=invalid_run if label == module.RECIPIENT_FIELD else recipient,
+                subject="invalid run identity",
+                facts=["run identity must be complete when present"],
+                request=None,
+            )
+            failures.append(f"message accepted malformed {label} run identity")
+        except module.MessageError:
+            pass
 
     active_reference = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     recipient_target = mutation_target(module, recipient, ordinal=2)
@@ -279,14 +318,61 @@ def verify_agent_message_compliance() -> list[str]:
             if error.status != module.DeliveryStatus.INVALID_IDENTITY:
                 failures.append(f"mismatched target mapped to {error.status}")
 
+    invalid_proposal_targets = (
+        {**recipient_target, module.HEAD_FIELD: "f" * 39},
+        {**recipient_target, module.STATUS_FIELD: ""},
+    )
+    for invalid_target in invalid_proposal_targets:
+        try:
+            module.build_envelope(
+                kind=module.MessageKind.OWNERSHIP_PROPOSAL,
+                sender=sender,
+                recipient=recipient,
+                subject="stale target state",
+                facts=["target HEAD and status must be complete"],
+                request="report exact state",
+                mutation_target=invalid_target,
+            )
+            failures.append("proposal accepted stale target HEAD or status")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_SCHEMA:
+                failures.append(f"stale proposal target mapped to {error.status}")
+
+    stale_authorization_targets = (
+        {**recipient_target, module.HEAD_FIELD: "f" * 40},
+        {**recipient_target, module.STATUS_FIELD: "dirty"},
+    )
+    for stale_target in stale_authorization_targets:
+        try:
+            module.build_envelope(
+                kind=module.MessageKind.MUTATION_AUTHORIZATION,
+                sender=sender,
+                recipient=recipient,
+                subject="stale authorization target",
+                facts=["target must match the reported state"],
+                request=None,
+                active_reference=active_reference,
+                mutation_target=stale_target,
+                observed_state=recipient_state,
+            )
+            failures.append("authorization accepted stale target HEAD or status")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_IDENTITY:
+                failures.append(f"stale authorization target mapped to {error.status}")
+
     for state_field in module.OBSERVED_STATE_FIELDS:
+        if state_field == module.HEAD_FIELD:
+            mismatched_value = "f" * 40
+        elif state_field == module.STATUS_FIELD:
+            mismatched_value = "dirty"
+        else:
+            candidate = sender.get(state_field, "different")
+            mismatched_value = (
+                candidate if candidate != recipient_state[state_field] else "different"
+            )
         mismatched_state = {
             **recipient_state,
-            state_field: (
-                sender.get(state_field, "different")
-                if sender.get(state_field) != recipient_state[state_field]
-                else "different"
-            ),
+            state_field: mismatched_value,
         }
         try:
             module.build_envelope(
