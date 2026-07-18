@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
 arguments: pr
-allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr ready:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, multi_agent_v1.spawn_agent, multi_agent_v1.wait_agent, multi_agent_v1.close_agent, request_user_input, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr ready:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
 ---
 
 <objective>
@@ -78,13 +78,13 @@ For each line-level review thread in the ledger, retain the inspected review-com
 
 Then re-run /merging-standards `<branch_hygiene>` with the `active_base` recorded in Step 2 and re-run the active topology gate before the push — hygiene and topology apply on every push, not only at creation. Push via /merging-standards `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form.
 
-A `stack_transition=true` pass is the sole draft follow-up exception. After its reconstructed head passes `VERIFICATION_READINESS` and the peer gate, force-with-lease push that head. From the `body` captured in Step 1, remove the complete `## Stack` section — from that heading through the line before the next level-two heading, or through the end of the body when no later level-two heading exists — and remove every remaining reference to the retired stack base. Preserve every other section, its order, and its content. Retarget the PR and replace its body in one `gh pr edit` mutation, then move it to ready.
+A `stack_transition=true` pass is the sole draft follow-up exception. After its reconstructed head passes `VERIFICATION_READINESS` and the peer gate, force-with-lease push that head. Immediately before editing the PR, run `gh pr view <pr-number> --json body,headRefOid`, require the returned `headRefOid` to equal the reconstructed head just pushed, and use that fresh returned `body` as the rewrite source. Remove the complete `## Stack` section — from that heading through the line before the next level-two heading, or through the end of the body when no later level-two heading exists — and remove every remaining reference to the retired stack base. Preserve every other live section, its order, and its content. Retarget the PR and replace its body in one `gh pr edit` mutation, then move it to ready.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc carrying the complete preserved body:
 
 ```bash
 gh pr edit <pr-number> --base <default-branch> --body-file - <<'EOF'
-<complete body from Step 1 with the entire Stack section removed>
+<fresh live body with the entire Stack section removed>
 EOF
 gh pr ready <pr-number>
 ```
