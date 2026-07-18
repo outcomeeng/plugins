@@ -3,7 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for VERIFICATION_READINESS, explicit branch publication, topology-appropriate pull-request state, and lifecycle handoff.
-allowed-tools: Read, Glob, Grep, Edit, Write,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} {{! tool('ask_user') !}}, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
+allowed-tools: Read, Glob, Grep, Edit, Write,{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}}, {{! tool('close_agent') !}},{!% endif %!} Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(git status:*), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(printf:*), Skill
 ---
 
 <objective>
@@ -152,10 +152,10 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 **Step 6 — Capture the opened PR identity.** Read the host-observed identity after creation:
 
 ```bash
-gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,reviews,comments
+gh pr view --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,reviews,comments
 ```
 
-Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. Surface the PR number, URL, full head SHA, head branch, base branch, and draft state as this protocol's result. This opening protocol performs no PR-management action.
+Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. For a peer PR, require the observed `body` to contain no complete `## Stack` section. For a stacked PR, require the observed `body` to contain one complete `## Stack` section whose merge-order line contains the exact recorded `stack_base_pr_url` and `stack_base`; missing, placeholder, duplicate, or mismatched stack metadata fails the opening protocol. Surface the PR number, URL, full head SHA, head branch, base branch, and draft state as this protocol's result. This opening protocol performs no PR-management action.
 
 **Exit.** End after surfacing the opened PR identity and topology state.
 
