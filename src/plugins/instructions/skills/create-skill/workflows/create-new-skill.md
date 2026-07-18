@@ -52,6 +52,7 @@ Select the matching template:
 | Automation  | `${CLAUDE_SKILL_DIR}/templates/automation-skill.md` |
 | Analyzer    | `${CLAUDE_SKILL_DIR}/templates/analyzer-skill.md`   |
 | Validator   | `${CLAUDE_SKILL_DIR}/templates/validator-skill.md`  |
+| Reference   | `${CLAUDE_SKILL_DIR}/templates/reference-skill.md`  |
 
 </step>
 

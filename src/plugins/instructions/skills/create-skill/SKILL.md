@@ -2,6 +2,7 @@
 name: create-skill
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving skills or bundled skill components, including SKILL.md, workflows, references, templates, or scripts.
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill, WebFetch, WebSearch
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}
@@ -115,6 +116,7 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 | `automation-skill.md` | Automation type template      |
 | `analyzer-skill.md`   | Analyzer type template        |
 | `validator-skill.md`  | Validator type template       |
+| `reference-skill.md`  | Reference type template       |
 
 </templates_index>
 

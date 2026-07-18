@@ -22,7 +22,7 @@ An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and
 - ALWAYS provide file:line locations for every finding
 - NEVER generate fixes unless explicitly requested by the user
 - NEVER make assumptions about skill intent - flag ambiguities as findings
-- MUST complete all evaluation areas (YAML, Structure, Content, Anti-patterns)
+- MUST complete all evaluation areas
 - ALWAYS apply contextual judgment - what matters for a simple skill differs from a complex one
 
 </constraints>
@@ -67,7 +67,7 @@ During audits, prioritize evaluation of:
    - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
 7. Evaluate the target skill against the standards loaded in steps 1-2.
 
-**Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skill/references/` for standards — that directory is workflow content only.
+**Use ACTUAL patterns from `/skill-standards`, not memory.** Never treat a creator skill's workflow references as standards — those references carry authoring workflow content only.
 </audit_workflow>
 
 <evaluation_areas>

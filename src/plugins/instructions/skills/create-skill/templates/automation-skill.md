@@ -14,9 +14,9 @@ A completed {{process}} run that produces {{output}} with deterministic validati
 
 <available_scripts>
 
-| Script                    | Purpose     | Usage                                                            |
-| ------------------------- | ----------- | ---------------------------------------------------------------- |
-| `scripts/{{script-1}}.py` | {{Purpose}} | `python3 "${CLAUDE_SKILL_DIR}/scripts/{{script-1}}.py" {{args}}` |
+| Script                                  | Purpose     | Usage                                                                                          |
+| --------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| `scripts/{{script-name}}.{{extension}}` | {{Purpose}} | `{{interpreter-command}} "${CLAUDE_SKILL_DIR}/scripts/{{script-name}}.{{extension}}" {{args}}` |
 
 </available_scripts>
 

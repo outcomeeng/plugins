@@ -44,6 +44,8 @@ A completed {{procedure}} with {{observable result}} and reproducible verificati
 
 <official_documentation>
 
+{{Include only when current external documentation governs the procedure; otherwise remove this section.}}
+
 | Resource       | URL     | Governing use |
 | -------------- | ------- | ------------- |
 | {{Resource 1}} | {{URL}} | {{Purpose}}   |
