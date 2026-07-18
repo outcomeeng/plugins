@@ -20,6 +20,8 @@ The skill subsumes the command: slash invocation, argument passing, and a curate
 - ALWAYS: paths in skill content resolve via `${CLAUDE_SKILL_DIR}` — `$0`-derived expressions do not resolve to the skill directory under the Bash tool ([audit])
 - ALWAYS: scratch directories come from a unique-per-invocation source, and the orchestrator that creates one removes it on every exit path including failure — helper modules register no `atexit` handlers ([audit])
 - ALWAYS: skills prefer stdin/stdout pipes between scripts over intermediate files; an intermediate file is valid only when fanout demands a directory ([audit])
+- ALWAYS: Python helper logic that invokes an external command or subprocess accepts a source-owned Protocol-typed collaborator; the entrypoint binds the production process adapter at the outer edge ([audit])
+- NEVER: framework mocks replace external-command or subprocess collaborators; tests inject explicit collaborators only under a `/test` exception case ([audit])
 - ALWAYS: PR lifecycle skills wait for non-terminal PR checks with one foreground `gh pr checks <pr-number> --watch --fail-fast --interval 30` invocation, then re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before acting ([audit])
 - NEVER: invoke or document `gh run watch` as an actionable instruction — unreaped subprocess trees exhaust the host across turns ([audit])
 - NEVER: write agent-owned polling waits or helper polling loops except the bounded host-readiness script — repeated process trees accumulate until host resources are exhausted ([audit])
