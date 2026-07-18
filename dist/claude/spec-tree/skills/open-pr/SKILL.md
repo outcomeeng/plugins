@@ -11,18 +11,18 @@ A pull request opened in the review state its topology permits — ready for a p
 </objective>
 
 <project_specialization>
-Step 0 checks whether `spx/local/open-pr.md` exists at the repository root only after the live foundation gate holds. When present, read it and apply it as a product-specific addition to this flow (extra pre-flight checks and additional required body sections).
+Step 0 applies any PR-opening pre-flight checks and required body sections declared by `spx/local/merging.md`, reached through /merging-standards only after the live foundation gate holds.
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, local-review, or terminal full-deterministic predicates of `VERIFICATION_READINESS`; open the PR before `VERIFICATION_READINESS` holds; open a peer PR as a draft gating step; keep a stacked PR draft after its exact base PR merges and reconstruction succeeds; add another draft-to-ready gate beyond that stack dependency; or weaken the upstream-safety check.
 
-Deployment and release recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, giving PR publication and management one policy source. Step 0 reaches that optional overlay through /merging-standards only after the live foundation gate holds. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
+Deployment and release recognition, merge command, local deterministic verification scope, and PR-opening specialization live in `spx/local/merging.md`, giving PR publication and management one policy source. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <workflow>
 
 Walk these steps in order. Verification, review, push, and open continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step; harness approval and the overlay's pre-mutation confirmation are distinct boundaries.
 
-**Step 0 — Load foundation, references, and overlays.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Then check whether `spx/local/open-pr.md` exists; read it only when present. Never read either repository overlay before the foundation marker is live.
+**Step 0 — Load foundation, references, and overlay.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Never read the repository overlay before the foundation marker is live.
 
 **Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer gate or pre-create stacked classification. Start from the peer gate against the repository default; repair as peer when divergence is accidental. When the dependency is intentionally stacked, use an exact `stack_base_pr_pointer` already present in caller state or ask for that pointer through the runtime's structured-question capability. Resolve it with `gh pr view "<stack-base-pr-pointer>" --json number,url,state,headRefName,headRefOid,baseRefName`; require `state == OPEN`, then record the returned full URL as `stack_base_pr_url`, the returned literal `headRefName` as `stack_base`, `topology=stacked`, and `active_base=stack_base`. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. Run the peer gate against the default `active_base` or the pre-create stacked classification against the recorded `stack_base`; a missing or mismatched stack-base PR fails classification before verification. Carry the resolved `stack_base_pr_url` and `stack_base` unchanged into the `gh pr create --base` argument and complete `## Stack` body section in Step 5.
 
