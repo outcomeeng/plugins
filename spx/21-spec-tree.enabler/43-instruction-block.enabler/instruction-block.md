@@ -56,6 +56,7 @@ CAN retain the Spec Tree routing instructions and reach the product's own phase 
 
 ### Compliance
 
+- ALWAYS: generation emits a stop trigger that invokes `/wait-for-load` before every test, eval, build, or validation command, waits for `ready: true`, then runs the selected command unchanged, and never uses host load to reduce scope, workers, limits, deadlines, or verification ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: generation emits and validates a managed router that requires a live `SPEC_TREE_FOUNDATION` marker before direct filesystem access under `spx/` or access to source and test content, while exempting `spx session` operations — including inspection, archive, and release — `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology until their output is followed into product content ([test](tests/test_instruction_block.compliance.l1.py))
 - ALWAYS: the Codex router block begins with the operator-override rule as its first rendered body content, before the `Spec Tree Instructions` heading, while the Claude router block omits that Codex-only rule ([audit])
 - ALWAYS: when the operator asks a question, the Codex router revokes mutation privileges, stops destructive or state-changing non-verification processes, preserves running verification unless the operator explicitly instructs Codex to stop it, and requires an immediate answer ([test](tests/test_instruction_block.compliance.l1.py))
