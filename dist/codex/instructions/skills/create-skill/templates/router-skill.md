@@ -4,14 +4,16 @@ description: >-
   ALWAYS invoke this skill when {{trigger conditions}}.
 ---
 
+<objective>
+A {{request type}} routed to the one workflow that produces {{observable output family}}.
+</objective>
+
 <essential_principles>
-{{Principles that ALWAYS apply, regardless of which workflow runs}}
 
-**Principle 1**: {{Explanation}}
+- {{Principle that applies to every route.}}
+- {{Cross-route safety or authority boundary.}}
+- {{Cross-route validation requirement.}}
 
-**Principle 2**: {{Explanation}}
-
-**Principle 3**: {{Explanation}}
 </essential_principles>
 
 <intake>
@@ -21,48 +23,41 @@ What would you like to do?
 2. {{Second option}}
 3. {{Third option}}
 
-**Wait for response before proceeding.**
+**Wait for the response before proceeding.**
 </intake>
 
 <routing>
-| Response | Workflow |
-|----------|----------|
-| 1, "{{keywords}}" | `workflows/{{first-workflow}}.md` |
-| 2, "{{keywords}}" | `workflows/{{second-workflow}}.md` |
-| 3, "{{keywords}}" | `workflows/{{third-workflow}}.md` |
 
-**After reading the workflow, follow it exactly.**
+| Response          | Workflow                                        |
+| ----------------- | ----------------------------------------------- |
+| 1, "{{keywords}}" | `${SKILL_DIR}/workflows/{{first-workflow}}.md`  |
+| 2, "{{keywords}}" | `${SKILL_DIR}/workflows/{{second-workflow}}.md` |
+| 3, "{{keywords}}" | `${SKILL_DIR}/workflows/{{third-workflow}}.md`  |
+
 </routing>
 
-<quick_reference>
-{{Brief reference information always useful to have visible}}
-</quick_reference>
-
 <reference_index>
-All in `references/`:
 
-| File               | Purpose     |
-| ------------------ | ----------- |
-| {{reference-1}}.md | {{Purpose}} |
-| {{reference-2}}.md | {{Purpose}} |
+| File                 | Purpose                         |
+| -------------------- | ------------------------------- |
+| `{{reference-1}}.md` | {{Load condition and purpose.}} |
+| `{{reference-2}}.md` | {{Load condition and purpose.}} |
 
 </reference_index>
 
 <workflows_index>
-All in `workflows/`:
 
-| Workflow          | Purpose     |
-| ----------------- | ----------- |
-| {{workflow-1}}.md | {{Purpose}} |
-| {{workflow-2}}.md | {{Purpose}} |
+| Workflow            | Purpose                         |
+| ------------------- | ------------------------------- |
+| `{{workflow-1}}.md` | {{Distinct intent and output.}} |
+| `{{workflow-2}}.md` | {{Distinct intent and output.}} |
 
 </workflows_index>
 
 <success_criteria>
-A well-executed {{skill name}}:
 
-- [ ] {{First criterion}}
-- [ ] {{Second criterion}}
-- [ ] {{Third criterion}}
+- Representative input selects exactly one intended route.
+- Every routed workflow exists and produces its declared output.
+- Every bundled reference is cited by a consumer and loads only when required.
 
 </success_criteria>

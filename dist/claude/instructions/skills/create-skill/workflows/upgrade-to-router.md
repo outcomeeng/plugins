@@ -1,158 +1,57 @@
-# Workflow: Upgrade Simple Skill to Router Pattern
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it. Read `${CLAUDE_SKILL_DIR}/templates/router-skill.md` before rewriting the target.
+
 </required_reading>
 
 <process>
-## Step 1: Analyze Current Skill
 
-Read the existing SKILL.md:
+<step name="resolve_target">
 
-```bash
-cat ~/.claude/skills/{skill-name}/SKILL.md
-wc -l ~/.claude/skills/{skill-name}/SKILL.md
-```
+Use the exact skill path supplied by the operator or established from the repository's authored layout. Read the complete skill bundle and record its current line count, user intents, common principles, route-specific procedures, references, and bundled assets. Never assume a user-home or runtime-cache destination.
 
-Identify:
+</step>
 
-- [ ] Current line count (if >300 lines, router pattern recommended)
-- [ ] Distinct user intents (multiple = router pattern)
-- [ ] Domain knowledge that could be extracted
-- [ ] Essential principles that must not be skipped
+<step name="prove_router_shape">
 
-## Step 2: Confirm Upgrade
+Convert only when the skill has distinct user intents, conditional workflows, or a cohesive overview whose route-specific detail exceeds the progressive-disclosure boundary. Preserve a simple skill when one workflow remains the clearest shape.
 
-Present analysis to user:
+</step>
 
-```
-Current skill analysis:
-- Line count: {X} lines
-- User intents identified: {list}
-- Extractable content: {list}
+<step name="design_routes">
 
-Router pattern is recommended because: {reason}
+Map every existing behavior to exactly one destination:
 
-Proceed with upgrade?
-```
+| Content                                | Destination               |
+| -------------------------------------- | ------------------------- |
+| Output target and universal principles | Router `SKILL.md`         |
+| Intent-specific procedure              | `workflows/{intent}.md`   |
+| Conditional domain knowledge           | `references/{subject}.md` |
+| Reusable output material               | `assets/` or `templates/` |
 
-## Step 3: Create Directory Structure
+Identify duplicated, obsolete, and orphaned content before mutation.
 
-```bash
-mkdir -p ~/.claude/skills/{skill-name}/workflows
-mkdir -p ~/.claude/skills/{skill-name}/references
-```
+</step>
 
-## Step 4: Extract Essential Principles
+<step name="rewrite_bundle">
 
-Identify content that:
+Rewrite `SKILL.md` from the router template with `<objective>`, `<essential_principles>`, `<intake>`, `<routing>`, indexes, and `<success_criteria>`. Create each workflow with `<required_reading>`, `<process>`, named `<step>` elements, and `<success_criteria>`. Use pure XML structure and exact `${CLAUDE_SKILL_DIR}` paths for bundled files.
 
-- Must ALWAYS be loaded
-- Applies regardless of which workflow runs
-- Should not be skippable
+</step>
 
-Move this into `<essential_principles>` tag in SKILL.md.
+<step name="validate_equivalence">
 
-## Step 5: Create Workflows
+Map every preserved behavior from the pre-upgrade inventory to its new location. Confirm no route, constraint, reference, or asset disappeared; remove only content proven duplicated or obsolete. Exercise every route plus one ambiguous input, run repository checks, and obtain a fresh skill-audit approval.
 
-For each distinct user intent, create a workflow file:
-
-```bash
-# Example: create, edit, delete intents
-touch ~/.claude/skills/{skill-name}/workflows/create-{thing}.md
-touch ~/.claude/skills/{skill-name}/workflows/edit-{thing}.md
-touch ~/.claude/skills/{skill-name}/workflows/delete-{thing}.md
-```
-
-Each workflow should have:
-
-- `<required_reading>` - Which references to load
-- `<process>` - Step-by-step procedure
-- `<success_criteria>` - When it's done
-
-## Step 6: Extract References
-
-Move domain knowledge to reference files:
-
-- Patterns and examples → `references/patterns.md`
-- API documentation → `references/api-reference.md`
-- Best practices → `references/best-practices.md`
-
-## Step 7: Rewrite SKILL.md
-
-Replace original SKILL.md with router structure:
-
-```yaml
----
-name: "{skill-name}"
-description: >-
-  ALWAYS invoke this skill when {trigger conditions}.
----
-```
-
-**IMPORTANT:** ALWAYS use the AskUserQuestion tool to ask the user for guidance and decisions. Present concise, highly structured options. Think hardest when determinng, which options to present and whether the user must choose one or multiple options might make sense.
-
-```text
-<essential_principles>
-{Extracted essential principles that always apply}
-</essential_principles>
-
-<intake>What would you like to do?
-1. {First option}
-2. {Second option}
-3. {Third option}
-
-**Wait for response before proceeding.**
-</intake>
-
-<routing>| Response | Workflow |
-|----------|----------|
-| 1, "{keywords}" | `workflows/{first-workflow}.md` |
-| 2, "{keywords}" | `workflows/{second-workflow}.md` |
-| 3, "{keywords}" | `workflows/{third-workflow}.md` |
-
-**After reading the workflow, follow it exactly.**</routing>
-
-<reference_index>All in `references/`:
-
-| File | Purpose |
-|------|---------|
-| {reference-1}.md | {Purpose} |
-| {reference-2}.md | {Purpose} |
-</reference_index>
-
-<workflows_index>All in `workflows/`:
-
-| Workflow | Purpose |
-|----------|---------|
-| {workflow-1}.md | {Purpose} |
-| {workflow-2}.md | {Purpose} |
-</workflows_index>
-
-<success_criteria>{Overall success criteria for the skill}</success_criteria>
-```
-
-## Step 8: Validate Upgrade
-
-- [ ] SKILL.md under 200 lines (was possibly 500+)
-- [ ] Essential principles inline in SKILL.md
-- [ ] All workflows exist and have proper structure
-- [ ] All references exist
-- [ ] Routing table maps to correct workflows
-- [ ] No broken links
-- [ ] Test each workflow path
+</step>
 
 </process>
 
 <success_criteria>
-Upgrade is complete when:
 
-- [ ] Directory structure created (workflows/, references/)
-- [ ] Essential principles extracted and inline
-- [ ] Workflows created for each user intent
-- [ ] References created for domain knowledge
-- [ ] SKILL.md rewritten with router pattern
-- [ ] All paths tested and working
-- [ ] SKILL.md significantly shorter than before
+- The router conversion is justified by distinct intents or conditional detail.
+- Every preserved behavior has one destination, with no duplication or orphaned bundled file.
+- Every route resolves through an exact bundled path and produces its declared output.
+- Repository checks pass and an independent skill audit approves the complete bundle.
 
 </success_criteria>

@@ -1,89 +1,64 @@
 ---
 name: "{{skill-name}}"
 description: >-
-  ALWAYS invoke this skill when users need to {{trigger conditions}}.
+  ALWAYS invoke this skill when automating {{trigger conditions}}.
 ---
 
 <objective>
-A completed run of {{process}}, reproducible across invocations.
+A completed {{process}} run that produces {{output}} with deterministic validation and cleanup.
 </objective>
 
 <quick_start>
-
-```bash
-{{Quick command to run the automation}}
-```
-
+{{Include only when one command performs the complete safe path; otherwise remove this section.}}
 </quick_start>
-
-<before_implementation>
-Gather context to ensure successful implementation:
-
-| Source               | Gather                                    |
-| -------------------- | ----------------------------------------- |
-| **Codebase**         | Existing structure, patterns, conventions |
-| **Conversation**     | User's specific requirements, constraints |
-| **Skill References** | Domain patterns from `references/`        |
-| **User Guidelines**  | Product-specific conventions              |
-
-</before_implementation>
 
 <available_scripts>
 
 | Script                    | Purpose     | Usage                                                     |
 | ------------------------- | ----------- | --------------------------------------------------------- |
 | `scripts/{{script-1}}.py` | {{Purpose}} | `python3 "${SKILL_DIR}/scripts/{{script-1}}.py" {{args}}` |
-| `scripts/{{script-2}}.py` | {{Purpose}} | `python3 "${SKILL_DIR}/scripts/{{script-2}}.py" {{args}}` |
 
 </available_scripts>
 
 <dependencies>
-**Execution**:
 
-- Python 3.11+
-- Stdlib-only helper scripts, unless dependencies are vendored inside the skill.
-- No on-the-fly package installation during normal skill use.
+- {{Runtime and supported-version contract.}}
+- {{Vendored or standard-library dependency boundary.}}
+- NEVER install dependencies during normal skill execution.
 
 </dependencies>
 
 <input_output>
-**Input**:
 
-- Format: {{Input format}}
-- Location: {{Where to find input}}
-- Constraints: {{Any limitations}}
-
-**Output**:
-
-- Format: {{Output format}}
-- Location: {{Where output is saved}}
-- Validation: {{How to verify}}
+| Direction | Format     | Location     | Constraint or validation |
+| --------- | ---------- | ------------ | ------------------------ |
+| Input     | {{Format}} | {{Location}} | {{Constraint}}           |
+| Output    | {{Format}} | {{Location}} | {{Validation}}           |
 
 </input_output>
 
 <error_handling>
 
-| Error       | Cause     | Recovery       |
-| ----------- | --------- | -------------- |
-| {{Error 1}} | {{Cause}} | {{How to fix}} |
-| {{Error 2}} | {{Cause}} | {{How to fix}} |
+| Error       | Detection  | Terminal action                    |
+| ----------- | ---------- | ---------------------------------- |
+| {{Error 1}} | {{Signal}} | {{Recovery or actionable failure}} |
+| {{Error 2}} | {{Signal}} | {{Recovery or actionable failure}} |
 
 </error_handling>
 
 <workflow>
-1. **Prepare**: Verify input and dependencies
-2. **Execute**: Run the automation script
-3. **Validate**: Check output is correct
-4. **Clean up**: Remove temporary files
+
+<step name="validate_input">{{Reject invalid input before mutation.}}</step>
+<step name="execute">{{Run the declared automation through its bundled path.}}</step>
+<step name="validate_output">{{Check the output through the declared deterministic contract.}}</step>
+<step name="clean_up">{{Remove invocation-owned temporary state on every exit path.}}</step>
 
 </workflow>
 
 <success_criteria>
-Automation is complete when:
 
-- [ ] Script runs without errors
-- [ ] Output matches expected format
-- [ ] Validation passes
-- [ ] No temporary files left behind
+- Valid input produces the declared output and invalid input fails actionably before mutation.
+- Output validation passes.
+- Invocation-owned temporary state is absent after success and failure.
 
 </success_criteria>

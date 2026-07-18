@@ -1,93 +1,66 @@
 ---
 name: "{{skill-name}}"
 description: >-
-  ALWAYS invoke this skill when users ask to review, analyze, or extract insights from {{triggers}}.
+  ALWAYS invoke this skill when analyzing {{triggers}}.
 ---
 
 <objective>
-A {{subject}} analysis report with prioritized findings and actionable recommendations.
+A {{subject}} analysis report with evidence-backed findings, priorities, and actionable recommendations.
 </objective>
 
 <quick_start>
-{{Quick example of running an analysis}}
+{{Include only when an abbreviated analysis remains representative; otherwise remove this section.}}
 </quick_start>
 
-<before_implementation>
-Gather context to ensure successful implementation:
-
-| Source               | Gather                                    |
-| -------------------- | ----------------------------------------- |
-| **Codebase**         | Existing structure, patterns, conventions |
-| **Conversation**     | User's specific requirements, constraints |
-| **Skill References** | Domain patterns from `references/`        |
-| **User Guidelines**  | Product-specific conventions              |
-
-</before_implementation>
-
 <analysis_scope>
-**What to analyze**:
+
+<included>
 
 - {{Item 1}}
 - {{Item 2}}
-- {{Item 3}}
 
-**What to ignore**:
+</included>
+
+<excluded>
 
 - {{Exclusion 1}}
 - {{Exclusion 2}}
+
+</excluded>
 
 </analysis_scope>
 
 <evaluation_criteria>
 
-| Criterion       | Weight | How to Assess |
-| --------------- | ------ | ------------- |
-| {{Criterion 1}} | {{X%}} | {{Method}}    |
-| {{Criterion 2}} | {{X%}} | {{Method}}    |
-| {{Criterion 3}} | {{X%}} | {{Method}}    |
+| Criterion       | Evidence              | Priority rule |
+| --------------- | --------------------- | ------------- |
+| {{Criterion 1}} | {{Required evidence}} | {{Rule}}      |
+| {{Criterion 2}} | {{Required evidence}} | {{Rule}}      |
 
 </evaluation_criteria>
 
 <output_format>
 
-## Analysis Report: {{Subject}}
+<summary>{{Overall conclusion and scope coverage.}}</summary>
+<findings>{{Each finding with evidence, impact, and priority.}}</findings>
+<recommendations>{{Specific action mapped to each valid finding.}}</recommendations>
+<unresolved>{{Evidence gaps that prevent a conclusion.}}</unresolved>
 
-### Executive Summary
-
-{{1-2 paragraph overview}}
-
-### Key Findings
-
-1. **{{Finding 1}}**: {{Details}}
-2. **{{Finding 2}}**: {{Details}}
-3. **{{Finding 3}}**: {{Details}}
-
-### Recommendations
-
-- {{Recommendation 1}}
-- {{Recommendation 2}}
-
-### Detailed Analysis
-
-{{Section-by-section breakdown}}
 </output_format>
 
-<synthesis>
-After gathering findings:
+<workflow>
 
-1. Combine findings into actionable insights
-2. Prioritize by impact
-3. Identify patterns across findings
-4. Make specific recommendations
+<step name="collect_evidence">{{Read every in-scope source and record coverage.}}</step>
+<step name="evaluate">{{Apply each criterion consistently to the evidence.}}</step>
+<step name="synthesize">{{Group related findings and prioritize by the declared rule.}}</step>
+<step name="render_report">{{Produce the exact output format without unsupported conclusions.}}</step>
 
-</synthesis>
+</workflow>
 
 <success_criteria>
-Analysis is complete when:
 
-- [ ] All scope items analyzed
-- [ ] Criteria applied consistently
-- [ ] Report follows output format
-- [ ] Recommendations are actionable
+- Every included scope item is covered or listed as unresolved with the missing evidence.
+- Every finding cites evidence and follows the declared priority rule.
+- Every recommendation maps to a valid finding.
 
 </success_criteria>

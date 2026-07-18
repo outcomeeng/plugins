@@ -104,19 +104,8 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 
 </templates_index>
 
-<scripts_index>
-All in `${CLAUDE_SKILL_DIR}/scripts/`:
-
-| Script              | Purpose                              |
-| ------------------- | ------------------------------------ |
-| `init_skill.py`     | Initialize skill directory structure |
-| `package_skill.py`  | Validate and package skill           |
-| `quick_validate.py` | Quick YAML/structure validation      |
-
-</scripts_index>
-
 <success_criteria>
-A well-structured skill passes `/audit-skills` with zero must-fix items against the standards in `/skill-standards`.
+A well-structured skill passes the target repository's deterministic skill checks and an independent `/audit-skills` audit with zero must-fix items against `/skill-standards`.
 </success_criteria>
 
 <failure_modes>

@@ -1,150 +1,58 @@
-# Workflow: Verify Skill Content is Current
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+
 </required_reading>
 
 <process>
-## Step 1: Identify Skill to Verify
 
-**If user provided path**: Use that skill
+<step name="resolve_target">
 
-**If not specified**: Ask which skill to verify
+Use the exact skill path supplied by the operator or established from the repository's authored layout. Read the complete bundle and keep the verification read-only unless the operator explicitly requested updates.
 
-## Step 2: Inventory External Dependencies
+</step>
 
-Read the skill and identify:
+<step name="inventory_claims">
 
-1. **APIs/Services referenced**
-   - External APIs (OpenAI, Stripe, etc.)
-   - Cloud services (AWS, GCP, Azure)
-   - Third-party tools
+Inventory every claim whose truth can change: APIs and services, package versions, command syntax, authentication methods, external links, platform behavior, and time-sensitive recommendations. Record the file and line for each claim. Exclude stable local instructions whose authority is repository truth.
 
-2. **Libraries/Packages**
-   - Python packages
-   - npm packages
-   - Other dependencies
+</step>
 
-3. **Documentation links**
-   - Official docs URLs
-   - Tutorial links
-   - Reference material
+<step name="verify_sources">
 
-4. **Best practices/patterns**
-   - Date-sensitive recommendations
-   - Version-specific guidance
+Check each inventory row against the current primary source for the exact product and environment the skill names. Prefer official documentation, package registries, release notes, and direct hosted-surface observation. Distinguish Cloud, Server, hosted runner, and local CLI variants when their contracts differ. Record the source URL or repository path and one status: `current`, `update-required`, `broken`, or `unverifiable`.
 
-## Step 3: Check for Staleness
+</step>
 
-For each external dependency:
+<step name="produce_report">
 
-### APIs/Services
+Return a report with these fields for every claim:
 
-```
-Use WebFetch or WebSearch to check:
-- Has the API version changed?
-- Are endpoints still valid?
-- Have authentication methods changed?
-- Are there breaking changes?
-```
+| Field           | Required content                                          |
+| --------------- | --------------------------------------------------------- |
+| Location        | Exact file and line                                       |
+| Claim           | The skill's current statement                             |
+| Evidence        | Primary source URL or repository path                     |
+| Status          | `current`, `update-required`, `broken`, or `unverifiable` |
+| Required change | Exact replacement or `none`                               |
 
-### Libraries/Packages
+The overall verdict is `CURRENT` only when every inventory row is `current`. Any `update-required`, `broken`, or `unverifiable` row prevents that verdict.
 
-```bash
-# Check latest versions
-npm show {package} version  # for npm
-pip index versions {package}  # for pip
-```
+</step>
 
-### Documentation Links
+<step name="apply_authorized_updates" condition="the operator explicitly requested updates">
 
-```
-Use WebFetch to verify:
-- Does the URL still work?
-- Has the content moved?
-- Is the information current?
-```
+Apply each evidence-backed replacement through the creator workflow. Run repository checks and a fresh skill audit over the complete bundle. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
 
-### Best Practices
-
-```
-Use WebSearch for:
-"{technology} best practices 2025"
-"{technology} deprecated features"
-```
-
-## Step 4: Document Findings
-
-Create a verification report:
-
-```
-## Verification Report: {skill-name}
-
-### Current
-- [ ] {Item}: Still accurate as of {date}
-
-### Needs Update
-- [ ] {Item}: {What changed}
-  → Recommendation: {How to fix}
-
-### Broken
-- [ ] {Item}: {What's wrong}
-  → Recommendation: {How to fix}
-
-### Verified On: {date}
-```
-
-## Step 5: Offer Updates
-
-If issues found, ask:
-"Would you like me to update the skill with current information?"
-
-Options:
-
-1. **Update all** - Apply all recommended updates
-2. **Update one by one** - Review each update
-3. **Just the report** - No changes needed
-
-## Step 6: Apply Updates (if requested)
-
-For each update:
-
-1. Make the change
-2. Note what was updated
-3. Verify the new content is accurate
-
-## Step 7: Add Verification Timestamp
-
-Consider adding to SKILL.md:
-
-```text
-<last_verified>Content verified current as of: {YYYY-MM-DD}</last_verified>
-```
+</step>
 
 </process>
 
-<staleness_indicators>
-Signs a skill may need verification:
-
-| Indicator           | Check                              |
-| ------------------- | ---------------------------------- |
-| Time-sensitive info | Dates, version numbers, "as of..." |
-| External URLs       | Links to docs, tutorials           |
-| API references      | Endpoints, authentication          |
-| Library versions    | Package versions, imports          |
-| Best practices      | Recommendations that evolve        |
-| Deprecated features | Old patterns still referenced      |
-
-</staleness_indicators>
-
 <success_criteria>
-Verification is complete when:
 
-- [ ] All external dependencies inventoried
-- [ ] Each dependency checked for currency
-- [ ] Report generated with findings
-- [ ] Updates applied (if requested)
-- [ ] Verification timestamp added
-- [ ] User has confidence in skill accuracy
+- Every changeable external claim has a location, primary source, and explicit status.
+- The overall verdict follows mechanically from the row statuses.
+- Audit-only verification changes no file.
+- Authorized updates match primary evidence, pass repository checks, and receive independent skill-audit approval.
 
 </success_criteria>

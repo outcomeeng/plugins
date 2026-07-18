@@ -1,115 +1,48 @@
-# Workflow: Add a Workflow to Existing Skill
-
 <required_reading>
-Read `/skill-standards` for the full skill standards before running this workflow. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+
 </required_reading>
 
 <process>
-## Step 1: Identify Target Skill
 
-**If user provided path**: Use that skill
+<step name="resolve_target">
 
-**If not specified**: Ask which skill to add workflow to
+Use the exact skill path supplied by the operator or established from the repository's authored layout. Read the complete target bundle and confirm that the skill is a router or that the requested change justifies converting it to one. Never assume a user-home or runtime-cache destination.
 
-## Step 2: Verify Skill Structure
+</step>
 
-Check if skill uses router pattern:
+<step name="define_route">
 
-```bash
-ls ~/.claude/skills/{skill-name}/workflows/ 2>/dev/null
-```
+Name the distinct user intent, trigger phrases, observable output, required references, and success evidence. Reject a route that duplicates an existing workflow or differs only by wording.
 
-**If no workflows/ directory**:
-→ Recommend running `workflows/upgrade-to-router.md` first
-→ Or create workflows/ directory if user confirms
+</step>
 
-## Step 3: Gather Workflow Details
+<step name="write_workflow">
 
-Ask using {{! tool('ask_user') !}}:
+Create `workflows/{descriptive-name}.md` with `<required_reading>`, `<process>`, and `<success_criteria>`. Use named `<step>` elements inside `<process>` and pure XML structure throughout. Load only references required by this route.
 
-1. **Workflow name**: What should this workflow be called?
-   - Use lowercase-with-hyphens
-   - Be descriptive: `create-component.md`, `deploy-service.md`
+</step>
 
-2. **Workflow purpose**: What does this workflow do?
+<step name="register_route">
 
-3. **Required references**: Which reference files should be loaded?
+Add the trigger and exact `${CLAUDE_SKILL_DIR}/workflows/{descriptive-name}.md` path to `<routing>`. Add the file and purpose to `<workflows_index>`. Keep common principles in the router and route-specific procedure in the workflow.
 
-## Step 4: Create Workflow File
+</step>
 
-Use this structure:
+<step name="validate">
 
-```markdown
-# Workflow: {Descriptive Title}
+Exercise the new trigger and its nearest adjacent trigger. Confirm each selects exactly one intended route, every bundled link resolves, repository checks pass, and a fresh skill audit approves the complete bundle.
 
-<required_reading>
-Read these reference files NOW:
-
-1. `references/{relevant-reference}.md`
-   </required_reading>
-
-<process>
-## Step 1: {First Step}
-
-{Step description}
-
-## Step 2: {Second Step}
-
-{Step description}
-
-...
-</process>
-
-<success_criteria>
-Workflow is complete when:
-
-- [ ] {First criterion}
-- [ ] {Second criterion}
-
-</success_criteria>
-```
-
-Write to: `~/.claude/skills/{skill-name}/workflows/{workflow-name}.md`
-
-## Step 5: Update SKILL.md Routing
-
-Add new workflow to the routing table in SKILL.md:
-
-```text
-<routing>| Response | Workflow |
-|----------|----------|
-| existing entries... |
-| {new trigger}, "{keywords}" | `workflows/{workflow-name}.md` |</routing>
-```
-
-Also update `<workflows_index>`:
-
-```text
-<workflows_index>| Workflow | Purpose |
-|----------|---------|
-| existing entries... |
-| {workflow-name}.md | {Purpose} |</workflows_index>
-```
-
-## Step 6: Validate
-
-- [ ] Workflow file exists at correct path
-- [ ] Has required_reading section
-- [ ] Has process section with numbered steps
-- [ ] Has success_criteria section
-- [ ] SKILL.md routing table updated
-- [ ] SKILL.md workflows_index updated
-- [ ] All referenced files exist
+</step>
 
 </process>
 
 <success_criteria>
-Workflow addition is complete when:
 
-- [ ] Workflow file created with proper structure
-- [ ] SKILL.md routing updated
-- [ ] SKILL.md workflows_index updated
-- [ ] All references exist
-- [ ] User can invoke the new workflow
+- The new route represents a distinct intent and produces an output named by its success criteria.
+- The workflow has pure XML structure and loads only required references.
+- Routing selects the new workflow for representative input without displacing adjacent routes.
+- Repository checks pass and an independent skill audit approves the complete bundle.
 
 </success_criteria>

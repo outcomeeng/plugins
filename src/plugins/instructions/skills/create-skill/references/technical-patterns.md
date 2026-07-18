@@ -1,207 +1,95 @@
 <overview>
 
-Technical patterns for skills that execute processes — error handling, security, dependencies, performance. Reference these when the skill being built processes data, calls APIs, handles files, or performs any multi-step operation with failure modes.
-
-Skill structure standards (naming, frontmatter, XML tags, file organization) live in `/skill-standards`. This file covers concerns internal to what skills DO, not how they're shaped.
+Apply these patterns when a skill processes files or data, invokes external services, mutates state, or bundles executable automation. Skill structure remains governed by `/skill-standards`.
 
 </overview>
 
-<error_handling>
+<error_contract>
 
-Document error scenarios and actions in a table:
+Define every expected failure with an observable signal and one terminal action:
 
-```markdown
-## Error Handling
+| Failure class              | Detection                                          | Required action                                                            |
+| -------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| Invalid input              | Schema or precondition failure                     | Reject before mutation and name the invalid field                          |
+| Missing resource           | Path, dependency, or capability absent             | Name the resource and exact acquisition step                               |
+| Transient external failure | Timeout, rate limit, or retryable service response | Retry only when the service contract permits it and keep a bounded default |
+| Authority failure          | Authentication or permission rejection             | Stop and request the required authority without exposing credentials       |
+| Partial mutation           | One step fails after state changed                 | Reconcile or roll back through the declared recovery contract              |
+| Unknown failure            | Unclassified exception or response                 | Preserve diagnostics and stop without claiming success                     |
 
-| Scenario        | Detection               | Action                      |
-| --------------- | ----------------------- | --------------------------- |
-| Invalid input   | Validation fails        | Return error with specifics |
-| File not found  | FileNotFoundError       | Clear message, suggest fix  |
-| Network failure | Timeout/ConnectionError | Retry 3x with backoff       |
-| Auth failure    | 401/403 response        | Prompt re-authentication    |
-| Unknown error   | Catch-all exception     | Log context, safe default   |
-```
+Catch only failures the workflow can classify. Broad catch-all handling belongs at a process boundary where it produces diagnostics and a non-success exit; never convert an unknown failure into a successful fallback.
 
-**Retry with exponential backoff:**
-
-```python
-import time
-import random
-
-
-def retry_with_backoff(func, max_retries=3, base_delay=0.1):
-    for attempt in range(max_retries):
-        try:
-            return func()
-        except Exception:
-            if attempt == max_retries - 1:
-                raise
-            delay = base_delay * (2**attempt) + random.uniform(0, 0.1)
-            time.sleep(delay)
-```
-
-**Consistent error response shape:**
-
-```typescript
-interface ErrorResponse {
-  isError: true;
-  content: [{ type: "text"; text: string }]; // User-facing message
-  _meta?: {
-    errorCode: string; // Machine-readable code
-    details: unknown; // Debug info (not shown to user)
-    retryable: boolean; // Can the user retry?
-  };
-}
-```
-
-**Graceful degradation ladder:**
-
-1. **Primary** — execute main logic
-2. **Retry** — transient failure with backoff
-3. **Cache** — serve cached result if available
-4. **Fallback** — safe default or partial result
-5. **Fail** — clear error message with next steps
-
-</error_handling>
+</error_contract>
 
 <security>
 
-**Secrets:**
-
-- NEVER hardcode API keys, tokens, or passwords in code.
-- NEVER commit `.env` files.
-- NEVER log sensitive values or put them in error messages.
-- ALWAYS use environment variables; keep `.env` in `.gitignore`; provide `.env.example`.
-
-**Path traversal prevention:**
-
-```python
-import os
-
-
-def safe_path(base_dir: str, user_path: str) -> str:
-    full_path = os.path.normpath(os.path.join(base_dir, user_path))
-    if not full_path.startswith(os.path.normpath(base_dir)):
-        raise ValueError("Invalid path: traversal detected")
-    return full_path
-```
-
-**Input validation with schema:**
-
-```typescript
-import { z } from "zod";
-
-const InputSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  count: z.number().int().positive().max(1000),
-});
-
-const result = InputSchema.safeParse(userInput);
-if (!result.success) {
-  return { error: result.error.format() };
-}
-```
-
-**SQL — parameterized queries only:**
-
-```python
-# ❌ NEVER
-query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL injection
-
-# ✅ ALWAYS
-cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-```
-
-**Output escaping for generated HTML:**
-
-```typescript
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#039;",
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
-}
-```
+- NEVER embed, print, commit, or return secrets.
+- Resolve credentials through the target environment's declared mechanism.
+- Validate and normalize untrusted paths, then prove the resolved path is inside the authorized root using path-component semantics.
+- Use parameterized database queries and context-appropriate output escaping.
+- Validate untrusted input before side effects and bound size, count, recursion, and concurrency.
+- Keep mutation authority explicit; read-only inspection never implies permission to write or publish.
 
 </security>
 
 <dependencies>
 
-Document dependencies so Claude knows what the skill requires:
+Document only dependencies the execution path requires:
 
-```markdown
-## Dependencies
+| Field             | Required content                                                             |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Runtime           | Supported versions and authoritative source                                  |
+| Required packages | Exact capability and installation owner                                      |
+| Optional packages | Behavior gained and fallback when absent                                     |
+| External services | Endpoint class, authentication owner, rate limits, and current documentation |
+| Bundled files     | Exact `${CLAUDE_SKILL_DIR}` path and consumer                                |
 
-### Required
-
-- Python 3.10+ (for match statements)
-- Node.js 18+ (for fetch API)
-
-### Optional
-
-- Redis 7+ (caching, improves performance)
-- Docker (containerized deployment)
-
-### External APIs
-
-| API    | Purpose     | Rate Limit | Auth    |
-| ------ | ----------- | ---------- | ------- |
-| OpenAI | Embeddings  | 3000/min   | API key |
-| GitHub | Repo access | 5000/hour  | OAuth   |
-```
-
-**Version compatibility matrix** (when version matters):
-
-```markdown
-| Component | Minimum | Recommended | Notes                     |
-| --------- | ------- | ----------- | ------------------------- |
-| Python    | 3.10    | 3.11+       | Match statements required |
-| Node.js   | 18      | 20 LTS      | Native fetch required     |
-```
+Never install dependencies during normal skill execution. A repository or plugin installation workflow owns dependency acquisition.
 
 </dependencies>
 
-<performance>
+<resource_boundaries>
 
-**Timeout protection:**
+| Resource      | Contract to declare                                              |
+| ------------- | ---------------------------------------------------------------- |
+| Time          | Per-operation timeout and terminal timeout behavior              |
+| Files         | Accepted types, maximum size, temporary-storage owner, cleanup   |
+| Requests      | Batch and concurrency limits, retry ceiling, rate-limit handling |
+| Memory        | Streaming or chunking threshold                                  |
+| External cost | Default budget and authority required to raise it                |
 
-```typescript
-async function withTimeout<T>(promise: Promise<T>, ms: number, message = "Operation timed out"): Promise<T> {
-  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), ms));
-  return Promise.race([promise, timeout]);
-}
+Defaults are authority. Never raise a cost, retry, worker, timeout, or external-capacity ceiling without operator approval when the governing repository requires it.
 
-const result = await withTimeout(fetchData(), 5000);
-```
+</resource_boundaries>
 
-**Resource limits** — document and enforce:
+<state_and_cleanup>
 
-```markdown
-| Resource            | Limit     | Reason             |
-| ------------------- | --------- | ------------------ |
-| Request timeout     | 25s       | Platform limit     |
-| File size           | 10MB      | Memory constraints |
-| Batch size          | 100 items | API rate limits    |
-| Concurrent requests | 5         | Prevent overload   |
-```
+- Create temporary state through an invocation-unique mechanism.
+- Assign cleanup to the process that created the state.
+- Clean up on success, classified failure, interruption, and validation failure.
+- Preserve user-owned files and unrelated working-tree state.
+- Verify postconditions from observable state rather than from the absence of an exception.
 
-</performance>
+</state_and_cleanup>
 
-<edge_cases>
+<edge_case_inventory>
 
-Always handle:
+| Surface    | Minimum cases                                                                  |
+| ---------- | ------------------------------------------------------------------------------ |
+| Input      | Empty, absent, malformed, oversized, Unicode, boundary values                  |
+| Filesystem | Missing, symlinked, unreadable, unwritable, concurrent change                  |
+| Network    | DNS failure, timeout, rate limit, authentication rejection, malformed response |
+| State      | Already applied, partial prior run, concurrent actor, stale read               |
+| Output     | Empty result, invalid encoding, destination collision, verification failure    |
 
-| Category    | Edge cases                                     |
-| ----------- | ---------------------------------------------- |
-| **Input**   | Empty, null, undefined, very large             |
-| **Files**   | Missing, locked, wrong format, empty           |
-| **Network** | Timeout, DNS failure, rate limited             |
-| **Data**    | Unicode, special chars, injection attempts     |
-| **State**   | Concurrent access, stale data, race conditions |
+</edge_case_inventory>
 
-</edge_cases>
+<validation>
+
+- Every side effect has a precondition, authority boundary, observable postcondition, and recovery path.
+- Every expected failure maps to one terminal action.
+- Dependency and version claims cite current authoritative sources when they can change.
+- Resource ceilings are explicit and are never raised implicitly.
+- Temporary state is invocation-unique and removed on every exit path.
+
+</validation>

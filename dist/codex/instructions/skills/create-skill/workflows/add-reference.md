@@ -1,132 +1,54 @@
-# Workflow: Add a Reference to Existing Skill
-
 <required_reading>
-Read `/skill-standards` for the full skill standards — the progressive-disclosure section governs reference files. Then check for `spx/local/skills.md` at the repo root if present.
+
+Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it.
+
 </required_reading>
 
 <process>
-## Step 1: Identify Target Skill
 
-**If user provided path**: Use that skill
+<step name="resolve_target">
 
-**If not specified**: Ask which skill to add reference to
+Use the exact skill path supplied by the operator or established from the repository's authored layout. Read its `SKILL.md`, existing `references/`, and every workflow that may consume the new reference. Never assume a user-home or runtime-cache destination.
 
-## Step 2: Verify References Directory
+</step>
 
-```bash
-ls ~/.claude/skills/{skill-name}/references/ 2>/dev/null
-```
+<step name="classify_content">
 
-**If no references/ directory**:
+Name the reference's purpose, owning workflows, required load condition, and source of truth. Keep shared standards in a `{domain}-standards` reference skill; use the target skill's `references/` only for workflow-specific domain knowledge.
 
-```bash
-mkdir -p ~/.claude/skills/{skill-name}/references
-```
+Choose one source:
 
-## Step 3: Gather Reference Details
+- Primary documentation or repository truth researched for the task.
+- Operator-provided content.
+- Domain knowledge extracted from the target `SKILL.md` to improve progressive disclosure.
 
-Ask using request_user_input:
+</step>
 
-1. **Reference name**: What should this reference be called?
-   - Use lowercase-with-hyphens
-   - Be descriptive: `api-patterns.md`, `security-checklist.md`
+<step name="write_reference">
 
-2. **Reference purpose**: What domain knowledge does this contain?
+Create `references/{descriptive-name}.md` under the resolved target skill. Use semantic XML sections with no Markdown headings. Include only knowledge the consuming workflow needs, and keep any examples inside the section that owns them.
 
-3. **When to load**: Which workflows should reference this file?
+</step>
 
-## Step 4: Determine Content Source
+<step name="register_reference">
 
-Ask how to populate the reference:
+Add the file to the target skill's `<reference_index>`. Add it to `<required_reading>` only in workflows that require it. Cite the path exactly once per consuming surface and remove any duplicated content the extraction supersedes.
 
-1. **Research domain** - I'll gather information from official docs and best practices
-2. **User provides content** - You'll give me the content to include
-3. **Extract from existing** - Pull domain knowledge from current SKILL.md
+</step>
 
-## Step 5: Create Reference File
+<step name="validate">
 
-Structure varies by content type:
+Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body has pure XML structure, and a fresh skill audit approves the complete bundle.
 
-**For domain knowledge**:
-
-```markdown
-<overview>
-Brief description of what this reference covers.
-</overview>
-
-<section_name>
-Content organized by topic...
-</section_name>
-
-<patterns>
-Code examples, recipes, or reusable patterns...
-</patterns>
-```
-
-**For checklists**:
-
-```markdown
-<checklist>
-## {Checklist Name}
-
-- [ ] Item 1
-- [ ] Item 2
-
-</checklist>
-```
-
-**For API/library docs**:
-
-```markdown
-<api_reference>
-
-| Method  | Purpose | Example     |
-| ------- | ------- | ----------- |
-| method1 | Does X  | `example()` |
-
-</api_reference>
-```
-
-Write to: `~/.claude/skills/{skill-name}/references/{reference-name}.md`
-
-## Step 6: Update SKILL.md
-
-Add to `<reference_index>`:
-
-```text
-<reference_index>| File | Purpose |
-|------|---------|
-| existing entries... |
-| {reference-name}.md | {Purpose} |</reference_index>
-```
-
-## Step 7: Update Relevant Workflows
-
-For each workflow that should use this reference, add to `<required_reading>`:
-
-```text
-<required_reading>Read these reference files NOW:
-
-1. existing references...
-2. `references/{reference-name}.md`</required_reading>
-```
-
-## Step 8: Validate
-
-- [ ] Reference file exists at correct path
-- [ ] Content is well-organized with XML tags
-- [ ] SKILL.md reference_index updated
-- [ ] Relevant workflows updated with required_reading
-- [ ] No broken links
+</step>
 
 </process>
 
 <success_criteria>
-Reference addition is complete when:
 
-- [ ] Reference file created with proper structure
-- [ ] SKILL.md reference_index updated
-- [ ] Relevant workflows reference the new file
-- [ ] Content is useful and well-organized
+- The reference lives under the resolved authored skill path and has one documented purpose.
+- Every required consumer cites it, every citation resolves, and no unrelated workflow loads it.
+- Shared standards remain in their owning reference skill, with no duplicated rule catalog in the new file.
+- Repository checks pass and an independent skill audit approves the complete bundle.
 
 </success_criteria>

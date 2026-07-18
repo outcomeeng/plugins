@@ -1,334 +1,123 @@
-# Reusability Patterns
+<overview>
 
-Patterns for creating adaptable skills that handle variations across requirements.
+Create reusable skills by separating stable domain knowledge from choices that vary per request. Encode stable rules and procedures; resolve variable inputs through repository truth or focused operator questions.
 
----
+</overview>
 
-## Skills = Procedural Knowledge + Domain Expertise
+<knowledge_model>
 
-Every production-grade skill encodes TWO types of knowledge:
+Production skills combine two knowledge classes:
 
-### Procedural Knowledge (HOW)
+| Class                | Content                                                  | Typical location                                     |
+| -------------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| Procedural knowledge | Ordered actions, decisions, validation, failure handling | `SKILL.md` or `workflows/`                           |
+| Domain knowledge     | Contracts, patterns, anti-patterns, external conventions | `references/` or a shared `{domain}-standards` skill |
 
-Step-by-step processes, decision trees, workflows that guide execution.
+Keep procedures near the route that executes them. Keep shared standards in a reference skill when multiple skills need the same rules.
 
-| Examples                                                                   |
-| -------------------------------------------------------------------------- |
-| "First validate input, then process, then verify output"                   |
-| "If authentication fails, retry with backoff, then prompt for credentials" |
-| "Check for null → validate format → transform → return"                    |
+</knowledge_model>
 
-### Domain Expertise (WHAT)
+<varies_and_constant>
 
-Concepts, best practices, patterns, anti-patterns specific to the domain.
+Before authoring, classify the domain:
 
-| Examples                                         |
-| ------------------------------------------------ |
-| "WCAG AA requires 4.5:1 contrast ratio for text" |
-| "React components should be pure functions"      |
-| "API rate limits are typically 1000 req/min"     |
+| Question                                   | Authoring consequence                                       |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| What changes between valid requests?       | Intake fields or conditional routes                         |
+| What remains true for every request?       | Inline principles, workflow invariants, or domain standards |
+| Which choices can repository truth settle? | Read and derive; do not ask                                 |
+| Which choices belong to the operator?      | Ask only when the answer changes behavior or location       |
+| Which boundaries reject the request?       | Explicit constraints and actionable failures                |
 
-### How They Work Together
+Never hardcode a variable merely because the first example supplied one value.
 
-```
-User Request
-     │
-     ▼
-┌─────────────────────────────────┐
-│ Domain Expertise (WHAT)         │
-│ - Understand the domain         │
-│ - Apply best practices          │
-│ - Avoid anti-patterns           │
-└─────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────┐
-│ Procedural Knowledge (HOW)      │
-│ - Follow step-by-step workflow  │
-│ - Make decisions at branches    │
-│ - Handle errors appropriately   │
-└─────────────────────────────────┘
-     │
-     ▼
-Quality Output
-```
+</varies_and_constant>
 
-### Encoding in Skills (Embedded, Not Discovered at Runtime)
+<domain_examples>
 
-| Knowledge Type         | Where to Embed                              |
-| ---------------------- | ------------------------------------------- |
-| Procedural (workflows) | SKILL.md main sections                      |
-| Domain expertise       | `references/` (structured per domain needs) |
-| Complex procedures     | `scripts/` for executable code              |
-| Templates              | `assets/` for boilerplate                   |
+<example name="visualization">
 
-**What goes in references/**:
+| Varies                                                       | Constant                                                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Data shape, chart type, rendering library, interaction level | Accessibility, responsive behavior, validation, loading and error states |
 
-- Library/API documentation
-- Best practices
-- Code examples
-- Patterns and anti-patterns
-- Domain-specific details
+Resolve the data and presentation choices; encode the quality invariants.
 
-**Key**: Domain expertise is EMBEDDED during skill creation. Generated skills are zero-shot experts. Structure `references/` based on what the domain needs.
+</example>
 
----
+<example name="web_application">
 
-## Core Concept: Varies vs Constant
+| Varies                                                                                     | Constant                                                                            |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Data store, styling system, authentication provider, deployment target, requested features | Component boundaries, error handling, security, performance, repository conventions |
 
-Every domain has elements that VARY across use cases and elements that remain CONSTANT.
+Read the existing stack before asking for a preference.
 
-**Skills encode the CONSTANT patterns and ask clarifying questions for what VARIES.**
+</example>
 
----
+<example name="deployment">
 
-## Domain Analysis Pattern
+| Varies                                                            | Constant                                                                      |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Platform, orchestration, configuration system, environment, scale | Rollback, health checks, secret handling, observability, authority boundaries |
 
-Before creating a skill, analyze the domain:
+Treat every external mutation as an explicit authority boundary.
 
-| Question                        | Purpose                                 |
-| ------------------------------- | --------------------------------------- |
-| What changes between use cases? | Identify clarification questions needed |
-| What stays the same?            | Identify patterns to encode in skill    |
-| What are the common variations? | Identify options to present             |
-| What are the boundaries?        | Identify scope (does/does not do)       |
+</example>
 
----
+<example name="api_integration">
 
-## Examples by Domain
+| Varies                                                   | Constant                                                                               |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Service, endpoints, authentication, schemas, rate limits | Input validation, timeouts, retry classification, response validation, secret handling |
 
-### Visualization Skills
+Verify service-specific claims against current primary documentation.
 
-| Varies                           | Constant                   |
-| -------------------------------- | -------------------------- |
-| Data shape/structure             | Rendering lifecycle        |
-| Chart type (bar, line, pie)      | Accessibility requirements |
-| Library (Recharts, D3, Chart.js) | Responsive patterns        |
-| Color scheme                     | Loading/error states       |
-| Interactivity level              | Data validation            |
+</example>
 
-**Skill should**: Ask for data shape, chart type, library preference
-**Skill should NOT**: Hardcode specific data fields or single chart type
+</domain_examples>
 
-### Web Framework Skills (Next.js, React, etc.)
+<abstraction_levels>
 
-| Varies                                | Constant                   |
-| ------------------------------------- | -------------------------- |
-| Database (Postgres, MongoDB, Prisma)  | Product structure patterns |
-| CSS framework (Tailwind, CSS Modules) | Component architecture     |
-| Auth provider (NextAuth, Clerk)       | Error handling patterns    |
-| Deployment target (Vercel, AWS)       | Performance best practices |
-| Features (specific pages, APIs)       | Security patterns          |
+| Level                            | Shape                                                      | Guidance                                                              |
+| -------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| Domain-agnostic                  | Error handling, testing strategy, documentation generation | Reusable across products                                              |
+| Domain-specific and tool-neutral | Visualization, deployment, API integration                 | Prefer when tools legitimately vary                                   |
+| Tool-specific                    | Next.js, PostgreSQL, Kubernetes                            | Keep requests adaptable within the tool                               |
+| Requirement-specific             | One sales chart or one fixed login form                    | Keep in project instructions or implementation, never a general skill |
 
-**Skill should**: Ask for tech stack preferences, feature requirements
-**Skill should NOT**: Hardcode database schema or specific routes
+</abstraction_levels>
 
-### Deployment Skills
+<clarification_design>
 
-| Varies                                      | Constant                     |
-| ------------------------------------------- | ---------------------------- |
-| Platform (AWS, GCP, Azure)                  | CI/CD principles             |
-| Orchestration (Kubernetes, ECS, serverless) | Rollback strategies          |
-| Configuration (Helm, Terraform, CDK)        | Health check patterns        |
-| Environment (dev, staging, prod)            | Secret management principles |
-| Scale requirements                          | Monitoring patterns          |
+Ask a question only when all conditions hold:
 
-**Skill should**: Ask for platform, orchestration preference, environment
-**Skill should NOT**: Hardcode specific cloud resources or configs
+1. Repository truth and supplied context do not answer it.
+2. Different answers materially change behavior, risk, ownership, or artifact location.
+3. The operator owns the choice.
 
-### API Integration Skills
+For bounded choices, present mutually exclusive options with their consequences. Preserve free-form input for product intent that cannot be reduced to safe options.
 
-| Varies                 | Constant                |
-| ---------------------- | ----------------------- |
-| Endpoint URLs          | Error handling patterns |
-| Authentication method  | Retry with backoff      |
-| Request/response shape | Rate limiting handling  |
-| Third-party service    | Timeout management      |
-| Rate limits            | Response validation     |
+</clarification_design>
 
-**Skill should**: Ask for API details, auth method
-**Skill should NOT**: Hardcode specific API endpoints
+<validation>
 
-### Data Processing Skills
+- Variable fields, schemas, tools, and paths are derived or requested rather than embedded as one example.
+- Stable domain constraints appear once in the owning standards or workflow surface.
+- Every clarification changes a documented branch of behavior.
+- The skill supports more than one valid request inside its declared abstraction level.
+- Scope boundaries identify requests the skill does not own.
 
-| Varies                        | Constant                  |
-| ----------------------------- | ------------------------- |
-| Input format (CSV, JSON, XML) | Validation patterns       |
-| Output format                 | Error recovery            |
-| Transformation rules          | Streaming for large files |
-| Data schema                   | Progress reporting        |
-| Volume/scale                  | Cleanup procedures        |
+</validation>
 
-**Skill should**: Ask for input/output formats, transformation needs
-**Skill should NOT**: Hardcode specific field names or schemas
+<anti_patterns>
 
----
+| Pattern                                  | Failure                                                   | Correction                                                    |
+| ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| Hardcoded first example                  | One request becomes the domain contract                   | Separate variable input from stable rules                     |
+| Tool lock-in in a domain-level skill     | Valid ecosystems become unsupported accidentally          | Ask or derive the tool; keep domain invariants stable         |
+| Feature enumeration                      | A fixed product backlog replaces a reusable capability    | Ask for requested features and encode category-level patterns |
+| Questions repository truth answers       | Intake becomes noisy and shifts decisions to the operator | Inspect the repository first                                  |
+| Shared rules in one creator's references | Other consumers duplicate or cannot load them             | Extract a `{domain}-standards` reference skill                |
 
-## Abstraction Levels
-
-### Level 1: Domain-Agnostic (Highest Reuse)
-
-Skills that work across many domains:
-
-- Error handling patterns
-- Logging and monitoring
-- Testing strategies
-- Documentation generation
-
-### Level 2: Domain-Specific, Tool-Agnostic (High Reuse)
-
-Skills that work within a domain but across tools:
-
-- "Visualization" (not "Recharts visualization")
-- "Deployment" (not "Kubernetes deployment")
-- "API integration" (not "Stripe integration")
-
-### Level 3: Tool-Specific (Moderate Reuse)
-
-Skills for specific tools but adaptable workflows:
-
-- "Next.js applications" (adaptable to different features)
-- "PostgreSQL databases" (adaptable to different schemas)
-
-### Level 4: Requirement-Specific (Avoid)
-
-Skills tied to single requirements:
-
-- "Sales dashboard with bar chart" - TOO SPECIFIC
-- "User auth with email/password" - TOO SPECIFIC
-
----
-
-## Clarification Questions for Reusability
-
-Structure questions to capture variations:
-
-```markdown
-## Required Clarifications
-
-1. **[Variable Element]**: "What [element] will you use?"
-   - Option A → implications
-   - Option B → implications
-   - Other → ask for details
-
-2. **[Another Variable]**: "What are your requirements for [aspect]?"
-```
-
-### Good Examples
-
-```markdown
-## Required Clarifications
-
-1. **Data source**: "What shape will the input data have?"
-   - Provide example structure
-
-2. **Output format**: "What type of visualization?"
-   - Chart (bar, line, pie, etc.)
-   - Table
-   - Dashboard
-   - Other
-
-3. **Library preference**: "Any preferred visualization library?"
-   - Recharts (React)
-   - D3.js (vanilla)
-   - Chart.js
-   - No preference (recommend based on use case)
-```
-
-### Bad Examples (Too Specific)
-
-```markdown
-## This skill creates:
-
-- A bar chart showing monthly sales
-- Using Recharts
-- With blue color scheme
-```
-
----
-
-## Reusability Checklist
-
-Before finalizing a skill, verify:
-
-### Scope
-
-- [ ] Does NOT hardcode specific data fields/schemas
-- [ ] Does NOT hardcode specific tool/library (unless tool-specific skill)
-- [ ] Does NOT hardcode specific configurations
-- [ ] DOES handle common variations via clarifications
-
-### Clarifications
-
-- [ ] Asks for variable elements (data shape, tool preference, etc.)
-- [ ] Provides reasonable options for common choices
-- [ ] Allows "other" for uncommon variations
-
-### Patterns
-
-- [ ] Encodes CONSTANT domain patterns (best practices, error handling)
-- [ ] Separates concerns (what varies vs what's constant)
-- [ ] Works for multiple use cases within the domain
-
-### Boundaries
-
-- [ ] Clear scope (what it does / does not do)
-- [ ] Explicit about abstraction level (domain vs tool-specific)
-
----
-
-## Anti-Patterns
-
-### Hardcoded Specifics
-
-```markdown
-# Bad: Hardcoded data fields
-
-The widget displays:
-
-- product.name
-- product.price
-- product.quantity
-```
-
-```markdown
-# Good: Adaptable to data shape
-
-Ask for data structure, then map fields dynamically.
-```
-
-### Single Tool Lock-in (when domain-level skill)
-
-```markdown
-# Bad: Tool lock-in for domain skill
-
-This visualization skill uses Recharts exclusively.
-```
-
-```markdown
-# Good: Tool-agnostic with preference
-
-Ask for library preference. Support Recharts, D3, Chart.js, or recommend based on use case.
-```
-
-### Feature Enumeration
-
-```markdown
-# Bad: Listing specific features
-
-Creates:
-
-- Login page
-- Dashboard
-- Settings page
-```
-
-```markdown
-# Good: Feature categories
-
-Ask what features are needed. Provide patterns for:
-
-- Authentication flows
-- Data display pages
-- Configuration interfaces
-```
+</anti_patterns>

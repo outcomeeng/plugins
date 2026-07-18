@@ -1,93 +1,60 @@
 ---
 name: "{{skill-name}}"
 description: >-
-  ALWAYS invoke this skill when users need to {{trigger conditions}}.
+  ALWAYS invoke this skill when following {{trigger conditions}}.
 ---
 
 <objective>
-{{domain/task}} completed under step-by-step guidance.
+A completed {{procedure}} with {{observable result}} and reproducible verification.
 </objective>
 
 <quick_start>
-{{Simplest possible example to get started}}
+{{Include only when the abbreviated path remains complete and safe; otherwise remove this section.}}
 </quick_start>
 
-<before_implementation>
-Gather context to ensure successful implementation:
-
-| Source               | Gather                                    |
-| -------------------- | ----------------------------------------- |
-| **Codebase**         | Existing structure, patterns, conventions |
-| **Conversation**     | User's specific requirements, constraints |
-| **Skill References** | Domain patterns from `references/`        |
-| **User Guidelines**  | Product-specific conventions              |
-
-</before_implementation>
-
 <workflow>
-Copy this checklist and track progress:
 
-```
-- [ ] Step 1: {{First step}}
-- [ ] Step 2: {{Second step}}
-- [ ] Step 3: {{Third step}}
-- [ ] Step 4: {{Fourth step}}
-```
+<step name="{{first_step_name}}">
+{{Inputs, procedure, and expected intermediate result.}}
+</step>
 
-## Step 1: {{First Step}}
+<step name="{{second_step_name}}">
+{{Inputs, procedure, and expected intermediate result.}}
+</step>
 
-{{Detailed description}}
+<step name="{{verify_result}}">
+{{Exact verification and failure handling.}}
+</step>
 
-## Step 2: {{Second Step}}
-
-{{Detailed description}}
-
-## Step 3: {{Third Step}}
-
-{{Detailed description}}
-
-## Step 4: {{Fourth Step}}
-
-{{Detailed description}}
 </workflow>
 
 <examples>
-### Example 1: {{Scenario}}
 
-**Input**: {{Input description}}
+<example name="{{scenario_one}}">
+<input>{{Input description.}}</input>
+<output>{{Expected output.}}</output>
+</example>
 
-**Output**:
-
-```
-{{Expected output}}
-```
-
-### Example 2: {{Scenario}}
-
-**Input**: {{Input description}}
-
-**Output**:
-
-```
-{{Expected output}}
-```
+<example name="{{scenario_two}}">
+<input>{{Input description.}}</input>
+<output>{{Expected output.}}</output>
+</example>
 
 </examples>
 
 <official_documentation>
 
-| Resource       | URL     | Use For     |
-| -------------- | ------- | ----------- |
-| {{Resource 1}} | {{URL}} | {{Purpose}} |
-| {{Resource 2}} | {{URL}} | {{Purpose}} |
+| Resource       | URL     | Governing use |
+| -------------- | ------- | ------------- |
+| {{Resource 1}} | {{URL}} | {{Purpose}}   |
+| {{Resource 2}} | {{URL}} | {{Purpose}}   |
 
 </official_documentation>
 
 <success_criteria>
-Guide task is complete when:
 
-- [ ] All steps followed
-- [ ] Output matches expected format
-- [ ] User understands the process
+- Every required step reaches its expected intermediate result.
+- The final output matches the declared shape.
+- The exact verification passes or reports an actionable terminal failure.
 
 </success_criteria>

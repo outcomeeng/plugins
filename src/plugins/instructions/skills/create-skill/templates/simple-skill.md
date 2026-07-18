@@ -5,32 +5,33 @@ description: >-
 ---
 
 <objective>
-{{The output this skill produces, in one sentence — a noun phrase or output-state naming the artifact, never an activity verb ("Audit…", "Generate…") or an actor ("The skill…")}}
+{{The observable output, in one sentence with no actor or activity framing.}}
 </objective>
 
 <quick_start>
-{{Minimal working example or immediate actionable guidance}}
+{{Include only for an on-demand skill with a complete, safe fast path; otherwise remove this section.}}
 </quick_start>
 
 <workflow>
-## Step 1: {{First Step}}
 
-{{Description}}
+<step name="{{first_step_name}}">
+{{Specific input, action, and decision boundary.}}
+</step>
 
-## Step 2: {{Second Step}}
+<step name="{{second_step_name}}">
+{{Specific input, action, and decision boundary.}}
+</step>
 
-{{Description}}
+<step name="{{validate_output}}">
+{{Exact checks that establish the output.}}
+</step>
 
-## Step 3: {{Third Step}}
-
-{{Description}}
 </workflow>
 
 <success_criteria>
-Task is complete when:
 
-- [ ] {{First criterion}}
-- [ ] {{Second criterion}}
-- [ ] {{Third criterion}}
+- {{Observable output property.}}
+- {{Required validation result.}}
+- {{Required failure or boundary behavior.}}
 
 </success_criteria>

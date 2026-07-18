@@ -31,6 +31,12 @@ Research domain concepts, current official guidance, observed failure modes, sec
 
 </step>
 
+<step name="select_authoring_references">
+
+Load `${SKILL_DIR}/references/reusability-patterns.md` when the capability must support variable requests or tool choices. Load `${SKILL_DIR}/references/technical-patterns.md` when the skill handles files, data, external services, state mutation, or executable automation. Load `${SKILL_DIR}/references/test-patterns.md` when creating behavior or materially changing activation, routing, output, or failure handling. Skip a reference only when its load condition does not apply.
+
+</step>
+
 <step name="choose_structure">
 
 Use a single `SKILL.md` for one cohesive workflow whose complete instructions satisfy `/skill-standards`'s progressive-disclosure rule. Use the router pattern when the capability has distinct user intents, conditional workflows, or reusable references.
@@ -69,13 +75,7 @@ Keep domain detail in cited references one level below `SKILL.md`, without neste
 
 <step name="validate">
 
-Run the bundled structural validator:
-
-```bash
-python3 "${SKILL_DIR}/scripts/quick_validate.py" <skill-path>
-```
-
-Run the target repository's canonical skill build and deterministic checks. When the runtime exposes `skill-auditor`, dispatch it over the complete skill bundle; otherwise invoke `/audit-skills` over that bundle. Repair every must-fix finding before publication.
+Run the target repository's canonical skill build and deterministic checks. When the runtime exposes `skill-auditor`, dispatch it over the complete skill bundle; otherwise invoke `/audit-skills` over that bundle. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, verify frontmatter parsing, XML tag closure, bundled-link resolution, and directory/name agreement with its available validation surface before dispatching the audit.
 
 </step>
 
@@ -94,6 +94,6 @@ Invoke the skill against representative input. Confirm that it selects the inten
 - Every reviewed plugin skill has a naming-classification row, with only proven violations or explicit operator-directed names changed.
 - The selected structure follows the canonical progressive-disclosure rule, with every bundled file cited and no nested or orphaned references.
 - Tool permissions, arguments, dynamic context, and bundled paths match the runtime capability contract.
-- Bundled scripts pass success and failure tests, repository checks pass, and the typed audit or `/audit-skills` fallback is `APPROVED`.
+- Any bundled scripts pass success and failure tests, repository checks pass, and the typed audit or `/audit-skills` fallback is `APPROVED`.
 
 </success_criteria>

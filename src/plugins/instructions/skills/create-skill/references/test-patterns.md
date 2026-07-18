@@ -1,164 +1,113 @@
 <overview>
 
-Test skills with evaluation-driven development. Build evaluations BEFORE writing extensive documentation so the skill solves real problems, not imagined ones. Test with every model that will use the skill. Add feedback loops for quality-critical operations.
+Develop behavior-producing skills from representative evaluations and fresh-context use. Establish the failure before adding extensive guidance, then keep only content that changes the observed result.
 
 </overview>
 
 <evaluation_driven_development>
 
-Build evaluations first, not last. This ensures the evals target actual problems, not anticipated ones.
+<step name="identify_gap">
 
-**Process:**
+Run representative tasks without the proposed skill or with the current skill. Record specific incorrect choices, missing context, invalid output, or activation failures.
 
-1. **Identify gaps** — run Claude on representative tasks WITHOUT a skill. Document specific failures or missing context.
-2. **Create evaluations** — build 3+ scenarios that test these gaps.
-3. **Establish baseline** — measure Claude's performance without the skill.
-4. **Write minimal skill** — create just enough content to address the gaps and pass evaluations.
-5. **Iterate** — execute evaluations, compare against baseline, refine.
+</step>
 
-**Why:** solves actual problems; prevents over-engineering; provides objective success criteria; makes iteration measurable.
+<step name="define_cases">
+
+Create cases that isolate each observed gap. Include a normal case, a boundary case, and a failure case when the capability owns those behaviors. State expected behavior as observable output or state, never as free-form quality praise.
+
+</step>
+
+<step name="establish_baseline">
+
+Record the result without the change. A case with no reproduced gap cannot prove the new guidance caused an improvement.
+
+</step>
+
+<step name="author_minimum">
+
+Add the smallest instruction, reference, template, or executable contract that addresses the reproduced gap. Keep unrelated domain knowledge out of the eager payload.
+
+</step>
+
+<step name="compare_and_iterate">
+
+Run the same cases with the changed skill in a fresh context. Compare against the baseline, record regressions, and repeat until the expected behavior holds without displacing adjacent behavior.
+
+</step>
 
 </evaluation_driven_development>
 
-<evaluation_structure>
+<case_contract>
 
-```json
-{
-  "skills": ["skill-name"],
-  "query": "User request that triggers the skill",
-  "files": ["test-files/input.pdf"],
-  "expected_behavior": ["Specific behavior 1", "Specific behavior 2", "Specific behavior 3"]
-}
-```
+Each case records:
 
-| Field               | Content                         |
-| ------------------- | ------------------------------- |
-| `skills`            | Which skill(s) should be loaded |
-| `query`             | User request to test            |
-| `files`             | Any input files needed          |
-| `expected_behavior` | Observable behaviors to verify  |
+| Field               | Required content                                       |
+| ------------------- | ------------------------------------------------------ |
+| Name                | Stable case identifier                                 |
+| Trigger             | Representative operator request                        |
+| Inputs              | Required files, repository state, or external fixtures |
+| Expected behavior   | Observable actions, output fields, or terminal state   |
+| Prohibited behavior | Specific regression the case rejects                   |
+| Evidence            | Deterministic check or structured grading contract     |
 
-</evaluation_structure>
+Use the target repository's declared eval or test format. Never invent a parallel case schema when the repository already owns one.
 
-<evaluation_scenarios>
+</case_contract>
 
-Minimum 3 scenarios per skill:
+<scenario_selection>
 
-1. **Happy path** — standard use case, everything works.
-2. **Edge case** — unusual input, boundary conditions.
-3. **Error case** — invalid input, missing dependencies.
+| Scenario         | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Normal           | Prove the primary route and output                                           |
+| Boundary         | Prove behavior near a valid limit or ambiguous route                         |
+| Failure          | Prove actionable handling of invalid input or unavailable capability         |
+| Adjacent trigger | Prove description or router changes do not steal another skill's request     |
+| Portability      | Prove bundled paths and instructions work on every supported runtime surface |
 
-```json
-[
-  {
-    "name": "basic_extraction",
-    "query": "Extract text from this PDF",
-    "files": ["simple.pdf"],
-    "expected_behavior": ["Extracts all text", "Preserves structure"]
-  },
-  {
-    "name": "scanned_pdf",
-    "query": "Extract text from this scanned PDF",
-    "files": ["scanned.pdf"],
-    "expected_behavior": ["Detects scanned content", "Uses OCR", "Warns about accuracy"]
-  },
-  {
-    "name": "corrupted_pdf",
-    "query": "Extract text from this PDF",
-    "files": ["corrupted.pdf"],
-    "expected_behavior": ["Detects corruption", "Provides clear error", "Suggests alternatives"]
-  }
-]
-```
+Select scenarios from the skill's actual contracts; a fixed minimum never substitutes for covering every distinct behavior.
 
-</evaluation_scenarios>
+</scenario_selection>
 
-<multi_model_testing>
+<fresh_context_testing>
 
-Skills act as additions to models — effectiveness depends on the underlying model. Test with every model the skill will run against.
+Use separate authoring and execution contexts. The authoring context carries design history that can hide missing instructions; the execution context sees only the shipped skill and task inputs.
 
-| Model  | Check                                   | Adjust if needed              |
-| ------ | --------------------------------------- | ----------------------------- |
-| Haiku  | Does the skill provide enough guidance? | Add more explicit steps       |
-| Sonnet | Is the skill clear and efficient?       | Balance detail vs conciseness |
-| Opus   | Does the skill avoid over-explaining?   | Remove obvious explanations   |
+Observe:
 
-**Process:**
+- Unexpected exploration paths indicate unclear routing or missing constraints.
+- Unread required references indicate weak citations or incorrect progressive disclosure.
+- Repeated dependence on one section indicates content may belong in the eager skill body.
+- Never-read content indicates a candidate for removal or a missing route.
+- A passing result that depends on conversation history indicates the skill bundle is incomplete.
 
-1. Run the same task with each target model.
-2. Note where models struggle or diverge.
-3. Adjust the skill to work across all targets.
-4. Re-test after changes.
+</fresh_context_testing>
 
-What works for Opus may need more detail for Haiku.
+<multi_model_and_runtime_coverage>
 
-</multi_model_testing>
+Run cases against every model class and runtime surface the skill officially supports when behavior can differ across them. Preserve one contract across targets; add target-specific rendering only where the platform contract differs.
 
-<iterative_development>
+</multi_model_and_runtime_coverage>
 
-Develop skills with two Claude instances — "Claude A" authors, "Claude B" uses.
+<feedback_loop>
 
-**Creating new skills:**
+For each iteration:
 
-1. Complete a task without a skill using normal prompting with Claude A.
-2. Identify a pattern in the context repeatedly provided.
-3. Ask Claude A to create a skill that captures the pattern.
-4. Review for conciseness — remove unnecessary explanations.
-5. Test with a fresh Claude B instance with the skill loaded.
-6. Bring observations back to Claude A and iterate.
+1. Apply one coherent change.
+2. Run the narrow deterministic checks.
+3. Exercise the affected cases in a fresh context.
+4. Compare with the recorded baseline and prior passing cases.
+5. Repair regressions before widening the change.
+6. Obtain the required independent audit after deterministic checks pass.
 
-**Improving existing skills:**
+</feedback_loop>
 
-1. Use the skill in real workflows with Claude B.
-2. Note struggles, successes, unexpected choices.
-3. Return to Claude A: "When using this skill, Claude B forgot X…"
-4. Apply refinements from Claude A.
-5. Re-test with Claude B.
+<success_criteria>
 
-**What to observe in Claude B:**
+- Every changed behavior traces to a reproduced gap or explicit new requirement.
+- Cases describe observable evidence and reject the original failure.
+- Fresh-context results pass without relying on authoring history.
+- Adjacent triggers and prior passing cases remain intact.
+- Repository checks and the required independent audit pass on the exact committed bundle.
 
-- Unexpected exploration paths → structure isn't intuitive
-- Missed references to important content → links need to be explicit
-- Overreliance on certain sections → content should be in SKILL.md
-- Content that's never accessed → might be unnecessary
-
-</iterative_development>
-
-<feedback_loops>
-
-Quality-critical skills include explicit feedback loops.
-
-**Validate-Fix-Repeat:**
-
-```markdown
-<process>
-
-1. Edit the file.
-2. Validate immediately: run the validation script.
-3. If validation fails:
-   - Review the error message carefully.
-   - Fix the issues.
-   - Run validation again.
-4. Only proceed when validation passes.
-5. Finalize output.
-
-</process>
-```
-
-**Plan-Validate-Execute** (complex, destructive, or batch operations):
-
-```markdown
-<process>
-
-1. Analyze input; create `changes.json` plan.
-2. Validate the plan: `python3 validate_changes.py changes.json`.
-3. If validation fails, fix the plan and re-validate.
-4. Only when valid: execute changes.
-5. Verify output.
-
-</process>
-```
-
-Why this works: catches errors before they're applied, machine-verifiable via scripts, reversible planning phase, clear debugging through specific error messages.
-
-</feedback_loops>
+</success_criteria>
