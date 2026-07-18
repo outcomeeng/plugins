@@ -172,11 +172,39 @@ def verify_prowl_mappings() -> list[str]:
             )
         if module.HELP_OPTION in actual:
             failures.append("an operation command invoked Prowl help")
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        response = {
+            module.OK_FIELD: True,
+            module.COMMAND_FIELD: operation,
+            module.SCHEMA_VERSION_SNAKE_FIELD: f"prowl.cli.{operation.value}.v1",
+            module.DATA_FIELD: {module.ID_FIELD: f"{operation.value}-response"},
+        }
+        executed = module.execute(
+            request,
+            RecordingRunner([module.CommandResult(0, json.dumps(response), "")]),
+        )
+        if executed[module.STATUS_FIELD] != module.ExecutionStatus.SUCCEEDED:
+            failures.append(
+                f"{operation.value} did not produce a checked success result"
+            )
+        if executed[module.OPERATION_FIELD] != operation:
+            failures.append(f"{operation.value} checked result changed the operation")
+        if executed[module.RESPONSE_FIELD] != response:
+            failures.append(f"{operation.value} checked result rewrote the response")
 
     public_item = public_agent_item(module, ordinal=1)
     projected = module.participant_from_agent(public_item)
     if projected != agent_identity(module, ordinal=1):
         failures.append("public Prowl identity fields were not preserved")
+    ambiguous_payload = {
+        module.DATA_FIELD: {module.AGENTS_FIELD: [public_item, {**public_item}]}
+    }
+    try:
+        module.participants_from_agents(ambiguous_payload)
+        failures.append("duplicate public pane identities did not map to ambiguity")
+    except module.ProwlEnvironmentError as error:
+        if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+            failures.append(f"ambiguous public identities mapped to {error.status}")
 
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
@@ -210,6 +238,21 @@ def verify_prowl_mappings() -> list[str]:
         delivery_arguments = cast(dict[str, object], delivery[module.ARGUMENTS_FIELD])
         if delivery_arguments[module.PANE_FIELD] != sender[module.PANE_FIELD]:
             failures.append(f"{terminal_kind.value} delivery targeted the wrong pane")
+        durable = module.terminal_handback(
+            delegation,
+            terminal_kind,
+            result_reference=f"result://{terminal_kind.value}",
+            projection=f"bounded {terminal_kind.value} projection",
+        )
+        if durable[module.RESULT_REFERENCE_FIELD] != f"result://{terminal_kind.value}":
+            failures.append(f"{terminal_kind.value} did not preserve durable reference")
+        if (
+            durable[module.PROJECTION_FIELD]
+            != f"bounded {terminal_kind.value} projection"
+        ):
+            failures.append(
+                f"{terminal_kind.value} did not preserve bounded projection"
+            )
     return failures
 
 
@@ -231,6 +274,12 @@ def verify_prowl_conformance() -> list[str]:
         [module.CommandResult(0, json.dumps(response), "")]
     )
     success = module.execute(request, success_runner)
+    if success[module.SCHEMA_VERSION_FIELD] != module.SCHEMA_VERSION:
+        failures.append(
+            "valid public JSON omitted the source-owned result schema version"
+        )
+    if success[module.OPERATION_FIELD] != module.Operation.LIST:
+        failures.append("valid public JSON omitted the source-owned result operation")
     if success[module.STATUS_FIELD] != module.ExecutionStatus.SUCCEEDED:
         failures.append("valid public JSON did not map to succeeded")
     if success[module.RESPONSE_FIELD] != response:
@@ -317,14 +366,33 @@ def verify_prowl_properties() -> list[str]:
             conflicting_kind,
             inline_result="conflicting terminal result",
         )
-        try:
-            module.reduce_terminal(first, conflict)
-            failures.append("conflicting terminal handback was accepted")
-        except module.ProwlEnvironmentError as error:
-            if error.status != module.ExecutionStatus.INVALID_SCHEMA:
-                failures.append(
-                    f"conflicting terminal mapped to unexpected status {error.status}"
-                )
+        conflicts = (
+            conflict,
+            module.terminal_handback(
+                delegation,
+                terminal_kind,
+                inline_result=(
+                    f"{inline_result}!"
+                    if inline_result is not None
+                    else "different inline result"
+                ),
+            ),
+            module.terminal_handback(
+                delegation,
+                terminal_kind,
+                result_reference="result://different-terminal-payload",
+                projection="different bounded projection",
+            ),
+        )
+        for conflicting_terminal in conflicts:
+            try:
+                module.reduce_terminal(first, conflicting_terminal)
+                failures.append("conflicting terminal handback was accepted")
+            except module.ProwlEnvironmentError as error:
+                if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+                    failures.append(
+                        f"conflicting terminal mapped to unexpected status {error.status}"
+                    )
 
     run_replayable_property(
         generated_terminal_property,

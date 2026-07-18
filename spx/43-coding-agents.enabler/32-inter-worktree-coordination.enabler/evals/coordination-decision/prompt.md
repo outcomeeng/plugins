@@ -40,7 +40,18 @@ Use only explicit SPX facts, public runtime projections, checked command results
 }
 ```
 
-Preserve the complete input `participants` array in the verdict. Each message carries a complete `toPane` UUID, `kind`, `subject`, a `facts` array of strings, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Use `fact` for dependency and recovery facts. Use `request: null` when no recipient action is requested. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
+Preserve the complete input `participants` array in the verdict. Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
+
+Use these branch-owned payloads:
+
+| Branch                      | `subject`                          | `facts`                                                               | `request`                                                                                                   |
+| --------------------------- | ---------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Path ownership proposal     | `Ownership overlap`                | one `overlap=<path>` string per checked overlapping path              | `Accept or reject this ownership proposal.`                                                                 |
+| Delegated-mutation proposal | `Delegated mutation ownership`     | `target identity and state are authoritative`                         | `Report exact pre-mutation state and accept or reject ownership.`                                           |
+| Dependency handoff          | `Dependency fact`                  | the checked dependency fact only                                      | null                                                                                                        |
+| Shared-blocker recovery     | `Shared blocker restored`          | `externalConditionKey=<key>` and `status=<operator-confirmed-status>` | null                                                                                                        |
+| Mutation authorization      | `Delegated mutation authorization` | `accepted ownership and observed state match the target`              | `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.` |
+
 4. Apply the protocol:
 
 - Ownership overlap produces an `ownership-proposal`; its boundary remains proposed until a matching accepted acknowledgement arrives.

@@ -18,7 +18,4 @@ CAN resolve ownership overlap, dependency handoffs, and shared external blockers
 - ALWAYS: shared blockers correlate only from the same authoritative external-condition key and produce one operator action plus recovery facts for every affected workflow ([eval](evals/coordination-decision/eval.toml))
 - NEVER: coordination prescribes workflow-specific retries, reconstructs another workflow's successful state, or substitutes prose inference for missing evidence ([eval](evals/coordination-decision/eval.toml))
 - NEVER: coordination authorizes mutation in a sibling worktree or transfer of another workflow's commit without an accepted ownership proposal ([eval](evals/coordination-decision/eval.toml))
-
-### Audit
-
 - NEVER: a message is sent directly by coordination; delivery routes through `/message-agents` ([audit])

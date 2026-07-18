@@ -391,6 +391,55 @@ def verify_agent_message_compliance() -> list[str]:
             if error.status != module.DeliveryStatus.INVALID_IDENTITY:
                 failures.append(f"mismatched state mapped to {error.status}")
 
+    stale_state_targets = (
+        {**sender_target, module.HEAD_FIELD: "f" * 40},
+        {**sender_target, module.STATUS_FIELD: "dirty"},
+    )
+    for stale_target in stale_state_targets:
+        try:
+            module.build_envelope(
+                kind=module.MessageKind.MUTATION_STATE,
+                sender=sender,
+                recipient=recipient,
+                subject="stale mutation-state target",
+                facts=["reported state must match its target"],
+                request=None,
+                active_reference=active_reference,
+                mutation_target=stale_target,
+                observed_state=sender_state,
+            )
+            failures.append("mutation-state accepted a stale target HEAD or status")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_IDENTITY:
+                failures.append(f"stale mutation-state target mapped to {error.status}")
+    for state_field in module.OBSERVED_STATE_FIELDS:
+        if state_field == module.HEAD_FIELD:
+            mismatched_value = "f" * 40
+        elif state_field == module.STATUS_FIELD:
+            mismatched_value = "dirty"
+        else:
+            candidate = recipient.get(state_field, "different")
+            mismatched_value = (
+                candidate if candidate != sender_state[state_field] else "different"
+            )
+        mismatched_state = {**sender_state, state_field: mismatched_value}
+        try:
+            module.build_envelope(
+                kind=module.MessageKind.MUTATION_STATE,
+                sender=sender,
+                recipient=recipient,
+                subject="mismatched mutation state",
+                facts=["reported state must match its target"],
+                request=None,
+                active_reference=active_reference,
+                mutation_target=sender_target,
+                observed_state=mismatched_state,
+            )
+            failures.append(f"mutation-state accepted mismatched {state_field}")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_IDENTITY:
+                failures.append(f"mismatched mutation-state mapped to {error.status}")
+
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
         kind=module.MessageKind.FACT,
