@@ -5,15 +5,18 @@ Apply the complete producer's semantic classification workflow to the supplied e
 ---
 name: audit-changeset-coherence
 description: >-
-  ALWAYS invoke this skill when deciding whether an exact committed changeset
-  forms one coherent review unit or requires a dependency-ordered split.
+  Changeset-coherence audit methodology — judges whether an exact committed
+  changeset forms one coherent review unit, covering semantic clustering,
+  generated-source attribution, evidence completeness, and dependency-ordered
+  review-unit sequencing.
+model: sonnet
 argument-hint: "<branch-or-base...head>"
 allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git rev-parse:*), Bash(git show:*)
 ---
 
 <objective>
 
-A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`, or `UNKNOWN` — carrying complete semantic clusters, verification and rollback stories, publication authorization, findings that each name the violated rule, its location, and the evidence, and a dependency-ordered review-unit sequence.
+A verdict on whether one exact committed changeset forms one coherent review unit — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence.
 
 </objective>
 
