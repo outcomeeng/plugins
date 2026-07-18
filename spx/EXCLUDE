@@ -3,6 +3,7 @@
 # Linting (ruff) always applies.
 # Remove entries when implementation begins and tests should start running.
 
+13-infrastructure.enabler/13-host-readiness.enabler
 21-spec-tree.enabler/18-context-loading.enabler
 21-spec-tree.enabler/21-templates.enabler
 21-spec-tree.enabler/54-authoring.enabler

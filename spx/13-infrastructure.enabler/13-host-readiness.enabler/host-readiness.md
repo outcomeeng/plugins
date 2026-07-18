@@ -1,0 +1,23 @@
+# Host Readiness
+
+PROVIDES bounded host-load readiness observations through silent foreground waiter invocations
+SO THAT resource-intensive local workflows
+CAN start only when normalized host load is ready and defer safely while it remains above capacity
+
+## Assertions
+
+### Scenarios
+
+- Given normalized host load at or below capacity on the first observation, when the waiter runs, then it emits one terminal `ready` result with `ready: true` and exits zero without sleeping ([test](tests/test_host_readiness.scenario.l1.py))
+- Given normalized host load above capacity that becomes ready within ten minutes, when the waiter runs, then it sleeps and rechecks inside the same process before emitting one terminal `ready` result ([test](tests/test_host_readiness.scenario.l1.py))
+- Given normalized host load that remains above capacity for ten minutes, when the waiter reaches its deadline, then it emits one terminal `not_ready` result with `ready: false`, the final observation, and exit code 3 ([test](tests/test_host_readiness.scenario.l1.py))
+
+### Mappings
+
+- Each terminal waiter status maps to its declared readiness boolean and exit code: `ready` to true and 0, `error` to false and 1, `unsupported` to false and 2, `not_ready` to false and 3, and `interrupted` to false and 130 ([test](tests/test_host_readiness.mapping.l1.py))
+
+### Compliance
+
+- ALWAYS: a waiter invocation owns every load observation, interval, sleep, and recheck until it emits its terminal result; the agent never polls an active waiter ([audit])
+- ALWAYS: only an explicit `not_ready` terminal result permits another waiter invocation, and retries stop when ten invocations or one hour of waiter time is reached, whichever occurs first ([audit])
+- NEVER: absent or malformed terminal output permits another waiter invocation or the resource-intensive command; the agent blocks for the operator ([audit])
