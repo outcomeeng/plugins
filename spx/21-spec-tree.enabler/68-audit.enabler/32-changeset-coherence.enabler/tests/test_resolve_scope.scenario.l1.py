@@ -6,7 +6,9 @@ import json
 
 from outcomeeng_testing.harnesses.changeset_scope import (
     COHERENCE_SCOPE,
+    checkout_branch,
     contains_python_traceback,
+    git_commit_oid,
     repo_without_origin,
     run_coherence_scope,
     stale_local_base_repo,
@@ -47,6 +49,25 @@ def test_explicit_commit_range_resolves_both_endpoints() -> None:
         )
 
         assert range_form == branch_form
+
+
+def test_branch_not_checked_out_resolves_its_own_paths() -> None:
+    """A named branch resolves its own scope, not the checked-out branch's.
+
+    The canonical branch-scope range fixes its far end at ``HEAD``, so an audit
+    invoked on a branch other than the checked-out one would pair that branch's
+    head identity with the checked-out branch's paths and classify the wrong
+    changeset.
+    """
+    with stale_local_base_repo() as stale:
+        checkout_branch(stale.repo, stale.base_ref)
+
+        resolved = json.loads(
+            run_coherence_scope(stale.repo, stale.feature_branch).stdout
+        )
+
+        assert frozenset(resolved["changed_paths"]) == frozenset((stale.feature_file,))
+        assert resolved["head"] == git_commit_oid(stale.repo, stale.feature_branch)
 
 
 def test_unconfigured_remote_base_is_reported_without_traceback() -> None:

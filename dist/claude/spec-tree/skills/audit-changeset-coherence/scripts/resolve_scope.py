@@ -85,15 +85,22 @@ def _resolve_branch(
 ) -> dict[str, object]:
     """Resolve a branch or `HEAD` against its configured remote base.
 
-    `branch_scope` composes `origin/<base>...HEAD` internally, so the base
-    identity recorded here is the remote-tracking ref rather than a bare local
-    branch name that can lag it.
+    The range is composed against the supplied `ref` rather than through
+    `branch_scope`, whose range template fixes the far end at `HEAD`: an audit
+    invoked on a branch that is not the checked-out one would otherwise record
+    that branch's head identity beside the checked-out branch's paths and
+    classify the wrong changeset. Composition still goes through
+    `remote_tracking_ref`, the single source of the `origin/` form, so a bare
+    local base ref never widens the scope.
     """
     base_ref = scope.detect_base_ref(repo)
+    origin_ref = scope.remote_tracking_ref(base_ref)
     return {
-        "base": scope.commit_oid(scope.remote_tracking_ref(base_ref), repo=repo),
+        "base": scope.commit_oid(origin_ref, repo=repo),
         "head": scope.commit_oid(ref, repo=repo),
-        "changed_paths": scope.branch_scope(base_ref, repo=repo),
+        "changed_paths": scope.expand_diff_range(
+            f"{origin_ref}{RANGE_SEPARATOR}{ref}", repo=repo
+        ),
     }
 
 

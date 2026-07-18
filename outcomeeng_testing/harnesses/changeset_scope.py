@@ -521,6 +521,16 @@ def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
     )
 
 
+def checkout_branch(repo: pathlib.Path, branch: str) -> None:
+    """Switch ``repo`` to an existing branch.
+
+    Lets a scenario resolve a branch that is not the checked-out one, which
+    distinguishes a range composed against the named ref from one composed
+    against ``HEAD``.
+    """
+    _git(repo, "switch", "-q", branch)
+
+
 def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     """Return Git's merge-base scope for a caller-supplied ref."""
     contract = load_changeset_scope_contract_module()
