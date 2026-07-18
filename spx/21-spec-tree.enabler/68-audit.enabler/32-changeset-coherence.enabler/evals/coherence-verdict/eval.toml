@@ -1,0 +1,25 @@
+title = "changeset-coherence-verdict"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/**",
+  "src/plugins/spec-tree/skills/audit-changeset-coherence/**",
+  "src/plugins/spec-tree/agents/changeset-coherence-auditor.md",
+  "dist/claude/spec-tree/skills/audit-changeset-coherence/**",
+  "dist/claude/spec-tree/agents/changeset-coherence-auditor.md",
+  "dist/codex/spec-tree/skills/audit-changeset-coherence/**",
+  "dist/codex/spec-tree/agents/changeset-coherence-auditor.md",
+]
+smoke_cases = [
+  "coherent-generated-fanout-approved",
+  "independent-clusters-rejected-in-order",
+  "missing-rollback-evidence-unknown",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md"
+template = "prompt.template.md"

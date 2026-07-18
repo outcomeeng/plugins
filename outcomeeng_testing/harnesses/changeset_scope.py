@@ -69,6 +69,16 @@ MERGE_CLASSIFIER_MODULE_PATH = (
     / "classify_changeset.py"
 )
 MERGE_CONTRACT_MODULE_PATH = MERGE_CLASSIFIER_MODULE_PATH.with_name("merge_contract.py")
+COHERENCE_SCOPE_MODULE_PATH = (
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "audit-changeset-coherence"
+    / "scripts"
+    / "resolve_scope.py"
+)
 CHANGESET_SCOPE_FIXTURES_DIR = (
     pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "changeset_scope"
 )
@@ -159,10 +169,16 @@ def load_merge_contract_module() -> ModuleType:
     return _load_source_module("merge_contract", MERGE_CONTRACT_MODULE_PATH)
 
 
+def load_coherence_scope_module() -> ModuleType:
+    """Load the coherence-audit scope resolver through its shipped file boundary."""
+    return _load_source_module("resolve_scope", COHERENCE_SCOPE_MODULE_PATH)
+
+
 CHANGESET_SCOPE = load_changeset_scope_module()
 CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
 MERGE_CLASSIFIER = load_merge_classifier_module()
 MERGE_CONTRACT = load_merge_contract_module()
+COHERENCE_SCOPE = load_coherence_scope_module()
 
 
 def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str:
@@ -505,6 +521,16 @@ def git_commit_oid(repo: pathlib.Path, ref: str) -> str:
     )
 
 
+def checkout_branch(repo: pathlib.Path, branch: str) -> None:
+    """Switch ``repo`` to an existing branch.
+
+    Lets a scenario resolve a branch that is not the checked-out one, which
+    distinguishes a range composed against the named ref from one composed
+    against ``HEAD``.
+    """
+    _git(repo, "switch", "-q", branch)
+
+
 def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     """Return Git's merge-base scope for a caller-supplied ref."""
     contract = load_changeset_scope_contract_module()
@@ -516,6 +542,19 @@ def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]
     """Run the shipped merge classifier and return its observable process result."""
     return subprocess.run(
         (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def run_coherence_scope(
+    repo: pathlib.Path, scope: str
+) -> subprocess.CompletedProcess[str]:
+    """Run the shipped coherence scope resolver and return its process result."""
+    return subprocess.run(
+        (sys.executable, str(COHERENCE_SCOPE_MODULE_PATH), scope),
         cwd=repo,
         text=True,
         capture_output=True,
