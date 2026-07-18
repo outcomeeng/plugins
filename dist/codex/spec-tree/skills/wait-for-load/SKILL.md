@@ -10,13 +10,13 @@ A terminal host-readiness result produced by one silent foreground process that 
 </objective>
 
 <workflow>
-1. Run this command exactly once before the resource-intensive local command:
+1. Start this command once for the readiness attempt before the resource-intensive local command:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/wait_for_load.py"
 ```
 
-2. Collect that process's completion. When the harness returns a running-process handle, continue collecting the same process; never re-read host load, calculate another interval, schedule a timer, or start a second waiter.
+2. Collect that process's completion. When the harness returns a running-process handle, continue collecting the same process; never re-read host load, calculate another interval, schedule a timer, or start another waiter while the original remains active. If the original waiter has exited and its handle or terminal result is irrecoverably lost, start one replacement waiter as recovery; never start any further waiter.
 3. Read the exit status and the one terminal JSON document:
    - Exit zero with `status: "ready"` and `ready: true` permits the resource-intensive command.
    - A nonzero exit reports `unsupported`, `interrupted`, or `error`; stop the resource-intensive command and report that terminal JSON.
@@ -79,7 +79,7 @@ Release verification covers these controlled boundaries without wall-clock delay
 
 <success_criteria>
 
-- exactly one waiter process owns every host-load observation, interval, sleep, and recheck
+- only one waiter process is active at a time during a readiness attempt; if the original waiter exits and its handle or terminal result is irrecoverably lost, no more than one replacement waiter starts
 - no stdout or stderr output appears before the terminal JSON document
 - the resource-intensive command starts only after exit zero with `status: "ready"` and `ready: true`
 - nonzero results stop the resource-intensive command and remain machine-readable
