@@ -6,7 +6,7 @@ allowed-tools: Read, Skill
 ---
 
 <objective>
-A structured coordination decision that preserves independent workflow ownership and routes every planned delivery through `/message-agents`.
+A structured coordination decision that preserves independent workflow ownership.
 </objective>
 
 <evidence_model>
@@ -36,13 +36,22 @@ Use only explicit SPX facts, public runtime projections, checked command results
 }
 ```
 
+For a shared blocker, replace `operatorAction: null` with this complete object:
+
+```json
+{
+  "externalConditionKey": "<complete authoritative key>",
+  "status": "<operator-confirmed status>"
+}
+```
+
 Preserve the complete input `participants` array in the verdict. Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
 
 Use these branch-owned payloads:
 
 | Branch                      | `subject`                          | `facts`                                                               | `request`                                                                                                   |
 | --------------------------- | ---------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Path ownership proposal     | `Ownership overlap`                | one `overlap=<path>` string per checked overlapping path              | `Accept or reject this ownership proposal.`                                                                 |
+| Ownership proposal          | `Ownership overlap`                | one `overlap=<path-or-concern>` string per checked overlapping item   | `Accept or reject this ownership proposal.`                                                                 |
 | Delegated-mutation proposal | `Delegated mutation ownership`     | `target identity and state are authoritative`                         | `Report exact pre-mutation state and accept or reject ownership.`                                           |
 | Dependency handoff          | `Dependency fact`                  | the checked dependency fact only                                      | null                                                                                                        |
 | Shared-blocker recovery     | `Shared blocker restored`          | `externalConditionKey=<key>` and `status=<operator-confirmed-status>` | null                                                                                                        |
@@ -50,7 +59,7 @@ Use these branch-owned payloads:
 
 4. Apply the protocol:
 
-- Ownership overlap produces an `ownership-proposal`; its boundary remains proposed until a matching accepted acknowledgement arrives.
+- A checked path or concern overlap produces an `ownership-proposal` with one `overlap=<path-or-concern>` fact per overlapping item; its boundary remains proposed until a matching accepted acknowledgement arrives.
 - A dependency handoff sends `kind: "fact"` with checked facts and `request: null`, not another workflow's continuation instructions.
 - A delegated mutation begins with an `ownership-proposal` whose `mutationTarget` contains the recipient's exact pane UUID, worktree path, branch, repository, full HEAD SHA, and status. The recipient performs no mutation until it returns both a matching `acknowledgement` with `accepted: true` and a `mutation-state` message with the same coordination reference and an `observedState` containing its exact worktree, branch, repository, full HEAD SHA, and status.
 - When delegated-mutation evidence has no `observedState`, emit one ownership proposal carrying the exact target and request the state report.
@@ -58,7 +67,7 @@ Use these branch-owned payloads:
 - When any observed worktree, branch, repository, HEAD, or status value differs from the target, emit `status: "coordination-needed"`, `reason: "ownership-overlap"`, and no message. A mismatch produces no authorization.
 - Emit one `mutation-authorization` only when the accepted acknowledgement is valid and every observed value matches. Target the exact recipient pane, preserve the active coordination reference, echo the target and observed state, and set `request` exactly to `Recreate the required change in the target worktree; do not mutate or transfer from the sibling worktree.`
 - Every sibling worktree stays read-only to both workflows. Transfer an exact commit only through a separate ownership proposal and accepted acknowledgement; delegated-mutation authorization never transfers a sibling commit.
-- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey`. When restoration is operator-confirmed, keep that action record and produce one `kind: "fact"` recovery message for every affected participant.
+- A shared blocker produces exactly one non-null `operatorAction` carrying its complete `externalConditionKey` and operator-confirmed `status`. When restoration is operator-confirmed, keep that action record and produce one `kind: "fact"` recovery message for every affected participant.
 - Independent work produces `status: "no-coordination"`, `reason: "independent"`, `operatorAction: null`, and no message only when authoritative evidence explicitly establishes independence. Blocker evidence with distinct complete `externalConditionKey` values and no other relationship evidence establishes that the blockers are independent.
 - A signal gap produces `status: "signal-gap"`, `reason: "insufficient-evidence"`, `operatorAction: null`, and no message.
 
