@@ -9,7 +9,7 @@ allowed-tools: Read, Grep, Glob, Skill, Bash(git diff:*), Bash(git rev-parse:*),
 
 <objective>
 
-A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`, or `UNKNOWN` — carrying complete semantic clusters, evidence stories, publication authorization, findings that each name the violated rule, its location, and the evidence, and a dependency-ordered review-unit sequence.
+A structured verdict on one exact committed changeset — `APPROVED`, `REJECTED`, or `UNKNOWN` — carrying complete semantic clusters, verification and rollback stories, publication authorization, findings that each name the violated rule, its location, and the evidence, and a dependency-ordered review-unit sequence.
 
 </objective>
 
@@ -48,7 +48,7 @@ In the final schema every cluster carries `independently_mergeable: true`; the v
 
 An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
 
-For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. Every artifact classified as generated MUST resolve through an explicit repository-declared relationship or a `generated_from` field in an already-collected evidence packet. NEVER infer a generated artifact's producer from path similarity, artifact count, or the presence of only one authored artifact; unresolved attribution yields `UNKNOWN` with `missing-generated-source-evidence`.
+For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. In every projected cluster the `dependencies` field is an array — `[]` when no dependency on another cluster is established — NEVER a `null` copied from the packet; unresolved packet dependency evidence is recorded only in the `missing-dependency-evidence` finding, NEVER echoed into a cluster. Every artifact classified as generated MUST resolve through an explicit repository-declared relationship or a `generated_from` field in an already-collected evidence packet. NEVER infer a generated artifact's producer from path similarity, artifact count, or the presence of only one authored artifact; unresolved attribution yields `UNKNOWN` with `missing-generated-source-evidence`.
 
 When an evidence packet supplies already-collected claims, artifact paths, evidence paths, dependencies, or review-load signals, preserve those values verbatim in the projection. Sort claim and path arrays lexicographically. Copy `review_load` without reinterpretation. Every normal verdict carries every field in the schema, using empty arrays or objects when a field has no entries.
 
