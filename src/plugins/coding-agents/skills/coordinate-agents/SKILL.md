@@ -36,7 +36,7 @@ Use only explicit SPX facts, public runtime projections, checked command results
 }
 ```
 
-Preserve the complete input `participants` array in the verdict. Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
+Preserve the complete input `participants` array in the verdict. Each message carries every field in the source-owned message contract: complete `toPane` UUID, `kind`, `subject`, `facts`, `request`, `coordinationReference`, `mutationTarget`, `observedState`, and `accepted`. `facts` is always an array of strings, including branches with exactly one fact. Use null for every field that does not apply. `kind` MUST be exactly `ownership-proposal`, `fact`, `acknowledgement`, `mutation-state`, or `mutation-authorization`. Omit or set `coordinationReference` to null for initiating proposals and facts so `/message-agents` creates a UUID; every response kind preserves the active proposal UUID. Only an `acknowledgement` carries boolean `accepted`; every other kind carries `accepted: null`.
 
 Use these branch-owned payloads:
 
