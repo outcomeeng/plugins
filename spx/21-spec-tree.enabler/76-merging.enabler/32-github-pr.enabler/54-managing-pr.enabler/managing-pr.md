@@ -20,7 +20,7 @@ CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` hol
 
 ### Mappings
 
-- ALWAYS: `/manage-pr` resolves review threads through its helper by either a known review-thread node ID or by discovering the thread node ID from the inspected pull-request review-comment ID before running the `resolveReviewThread` mutation; review-comment discovery paginates review threads and comments before declaring absence, and exits with deterministic errors for absent review comments and malformed GitHub payload shapes ([test](tests/test_resolve_review_thread.mapping.l1.py))
+- A resolver request maps a known review-thread node ID to direct `resolveReviewThread` mutation, a known pull-request review-comment ID to paginated thread discovery followed by that mutation, an absent review comment to a deterministic absence error, and a malformed GitHub payload to a deterministic payload-shape error ([test](tests/test_resolve_review_thread.mapping.l1.py))
 
 ### Properties
 
