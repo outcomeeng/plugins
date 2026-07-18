@@ -1,0 +1,16 @@
+{
+  "name": "coding-agents",
+  "version": "0.1.0",
+  "description": "Coding-agent coordination: /recover-prowl-agents, /message-agents, /coordinate-agents",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "coding-agents",
+    "coordination",
+    "prowl",
+    "worktrees"
+  ]
+}
