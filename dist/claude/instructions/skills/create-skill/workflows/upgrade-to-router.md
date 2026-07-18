@@ -33,23 +33,11 @@ Identify duplicated, obsolete, and orphaned content before mutation.
 
 </step>
 
-<gate name="pre_write">
-
-STOP before rewriting the bundle unless every existing behavior maps to one destination, every route has a distinct trigger and output, exact workflow and reference paths are selected, and removed content is proven duplicated or obsolete.
-
-</gate>
-
 <step name="rewrite_bundle">
 
 Rewrite `SKILL.md` from the router template with `<objective>`, `<essential_principles>`, `<intake>`, `<routing>`, indexes, and `<success_criteria>`. Create each workflow with `<required_reading>`, `<process>`, named `<step>` elements, and `<success_criteria>`. Use pure XML structure and exact `${CLAUDE_SKILL_DIR}` paths for bundled files.
 
 </step>
-
-<gate name="post_write">
-
-STOP before equivalence validation unless every route target and bundled citation resolves, each route selects one workflow for representative input, XML tags close, and no unintended placeholder or duplicate procedure remains.
-
-</gate>
 
 <step name="validate_equivalence">
 

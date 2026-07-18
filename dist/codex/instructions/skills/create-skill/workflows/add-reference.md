@@ -24,23 +24,11 @@ Choose one source:
 
 </step>
 
-<gate name="pre_write">
-
-STOP before creating the reference unless its exact target path, single purpose, authoritative source, consuming workflows, and load conditions are resolved, and the content is confirmed as workflow-specific knowledge rather than shared standards.
-
-</gate>
-
 <step name="write_reference">
 
 Create `references/{descriptive-name}.md` under the resolved target skill. Use semantic XML sections with no Markdown headings. Include only knowledge the consuming workflow needs, and keep any examples inside the section that owns them.
 
 </step>
-
-<gate name="post_write">
-
-STOP before registration unless the body has pure XML structure, every source-backed claim is accurate, no copied standard remains, and the new file contains no unresolved placeholder or nested reference dependency.
-
-</gate>
 
 <step name="register_reference">
 

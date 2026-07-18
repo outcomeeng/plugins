@@ -119,7 +119,7 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 - Are failures from actual usage, not hypotheticals?
 - Does each failure have: what happened, why it failed, how to avoid?
 - ❌ Bad: No failure modes section
-- ✅ Good: "Failure 1: Agent compared coverage per-story instead of per-file. Why: Multiple stories share one legacy file. Avoid: Always compare at legacy file level."
+- ✅ Good: "Failure 1: Claude compared coverage per-story instead of per-file. Why: Multiple stories share one legacy file. Avoid: Always compare at legacy file level."
 
 **Example Concreteness**:
 

@@ -22,9 +22,9 @@ The audit is read-only: never edit files, assign a numeric score, ask the audito
 
 </step>
 
-<step name="classify_renames" condition="the requested improvement creates or renames a skill">
+<step name="classify_renames">
 
-Apply `/skill-standards` `<naming_conventions>` and the repository's skill-authoring overlay. Before proposing or applying a rename, produce this matrix for every skill the applicable repository policy requires reviewing:
+When the requested improvement creates or renames a skill, apply `/skill-standards` `<naming_conventions>` and the repository's skill-authoring overlay. Before proposing or applying a rename, produce this matrix for every skill the applicable repository policy requires reviewing:
 
 | Current name | Skill type | Governing naming form | Proposed name or keep | Reason |
 | ------------ | ---------- | --------------------- | --------------------- | ------ |
@@ -33,29 +33,17 @@ Read the source that declares any overlapping methodology vocabulary and inspect
 
 </step>
 
-<gate name="pre_write" condition="the operator requested improvements">
+<step name="apply_requested_improvements">
 
-STOP before mutation unless every accepted finding is mapped to its governing rule, every same-class instance in the complete bundle is identified, the exact authored paths are resolved, and every operator-owned decision that changes behavior is settled.
-
-</gate>
-
-<step name="apply_requested_improvements" condition="the operator requested improvements">
-
-Before changing behavior, load `${CLAUDE_SKILL_DIR}/references/test-patterns.md`. Load `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the repair changes variable inputs, clarification, abstraction level, or tool choice. Load `${CLAUDE_SKILL_DIR}/references/technical-patterns.md` when the repair touches files, data, external services, state mutation, or executable automation.
+For an explicit improvement request, map every accepted finding to its governing rule, identify every same-class instance in the complete bundle, resolve the exact authored paths, and settle every operator-owned decision that changes behavior. Before changing behavior, load `${CLAUDE_SKILL_DIR}/references/test-patterns.md`. Load `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the repair changes variable inputs, clarification, abstraction level, or tool choice. Load `${CLAUDE_SKILL_DIR}/references/technical-patterns.md` when the repair touches files, data, external services, state mutation, or executable automation.
 
 Apply every must-fix item and every explicitly requested improvement through the authoring rules loaded by `/create-skill`. Preserve unaffected content and keep standards in `/skill-standards` rather than copying them into the target skill.
 
 </step>
 
-<gate name="post_write" condition="the operator requested improvements">
+<step name="validate_and_reaudit">
 
-STOP before repository validation unless every accepted finding and same-class instance is repaired, frontmatter and XML structure are valid, every bundled citation resolves, and focused checks for the changed behavior pass.
-
-</gate>
-
-<step name="validate_and_reaudit" condition="the operator requested improvements">
-
-Run the target repository's canonical skill build and deterministic checks. Create a clean checkpoint after those checks pass and repeat the same audit route over the new head. Continue until the verdict is `APPROVED` or a concrete blocker remains.
+For an explicit improvement request, confirm every accepted finding and same-class instance is repaired, frontmatter and XML structure are valid, every bundled citation resolves, and focused checks for the changed behavior pass. Run the target repository's canonical skill build and deterministic checks. Create a clean checkpoint after those checks pass and repeat the same audit route over the new head. Continue until the verdict is `APPROVED` or a concrete blocker remains.
 
 </step>
 

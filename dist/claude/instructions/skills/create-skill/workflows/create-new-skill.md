@@ -63,12 +63,6 @@ Create only the directories the selected structure needs: `workflows/`, `referen
 
 </step>
 
-<gate name="pre_write">
-
-STOP before creating files unless the skill type, classified name, exact authored target path, selected template, required references, side-effect boundary, and success evidence are resolved. Confirm every selected bundled path exists and every operator-owned choice that changes the artifact is settled.
-
-</gate>
-
 <step name="author_skill">
 
 Write YAML frontmatter and the required `<objective>` and `<success_criteria>` sections. A non-router procedure uses `<workflow>` in `SKILL.md`; a router adds the router tags required by `/skill-standards`. Files under `workflows/` use `<required_reading>`, `<process>`, and `<success_criteria>`.
@@ -78,12 +72,6 @@ Add `<quick_start>` only when `/skill-standards` permits an abbreviated on-deman
 Keep domain detail in cited references one level below `SKILL.md`, without nested reference chains. When adding scripts, follow `/skill-standards`'s script rules, use the target repository's required implementation language, and test success and failure inputs before inclusion.
 
 </step>
-
-<gate name="post_write">
-
-STOP before repository-wide validation unless frontmatter parses, the directory and `name` agree, XML tags close, every routing and bundled-file citation resolves, no template placeholder remains unintentionally, and every newly bundled script's focused success and failure tests pass. Repair the phase that introduced any failure before continuing.
-
-</gate>
 
 <step name="validate">
 

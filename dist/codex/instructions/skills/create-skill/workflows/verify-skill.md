@@ -40,27 +40,15 @@ The overall verdict is `CURRENT` only when every inventory row is `current`. Any
 
 </step>
 
-<gate name="pre_write" condition="the operator explicitly requested updates">
+<step name="apply_authorized_updates">
 
-STOP before mutation unless every changed claim has an authoritative replacement, the exact authored paths are resolved, and no `unverifiable` row is being converted into guessed guidance.
-
-</gate>
-
-<step name="apply_authorized_updates" condition="the operator explicitly requested updates">
-
-Apply each evidence-backed replacement through the creator workflow. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
+When the operator explicitly requests updates, require an authoritative replacement for every changed claim, resolve the exact authored paths, and never convert an `unverifiable` row into guessed guidance. Apply each evidence-backed replacement through the creator workflow. Do not add a persistent verification timestamp; source evidence and current repository validation establish currency without a stale-prone marker.
 
 </step>
 
-<gate name="post_write" condition="the operator explicitly requested updates">
+<step name="validate_updates">
 
-STOP before full repository validation unless each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass.
-
-</gate>
-
-<step name="validate_updates" condition="the operator explicitly requested updates">
-
-Run repository checks and a fresh skill audit over the complete bundle.
+When updates were applied, confirm each updated claim matches its recorded primary evidence, every bundled citation resolves, structure remains valid, and focused checks for changed commands or examples pass. Run repository checks and a fresh skill audit over the complete bundle.
 
 </step>
 
