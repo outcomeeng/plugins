@@ -59,7 +59,7 @@ If `spx/local/merging.md` defines a custom branch-push command, follow that over
 
 **Step 5 — GATE: Open the PR in its topology state.** Pipe the curated body to gh on stdin via `--body-file -`. A peer PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3). A stacked PR targets its previous stack branch and remains draft until that base merges. Choose the stdin form by harness.
 
-Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until the exact base PR merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base_pr_url` and `stack_base` branch. Replace both placeholders in the body with those host-observed values before executing the command.
+Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. Adapt the selected concrete body form by `<body_template>` change type before execution; a documentation-only PR removes the complete `## Test plan` section rather than emitting the generic section empty. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until the exact base PR merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base_pr_url` and `stack_base` branch. Replace both placeholders in the body with those host-observed values before executing the command.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc. Peer PRs use this form and omit the stack section:
 
