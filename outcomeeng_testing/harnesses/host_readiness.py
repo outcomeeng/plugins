@@ -189,19 +189,18 @@ def terminal_result_for(status: StatusValue) -> WaitRun:
     )
 
 
-def status_cases() -> tuple[StatusValue, ...]:
-    """Return every source-owned terminal status."""
+def terminal_status_mapping_holds() -> bool:
+    """Verify terminal results consume both complete source-owned mappings."""
     module = load_host_readiness_module()
-    return cast(tuple[StatusValue, ...], tuple(module.Status))
-
-
-def exit_code_for_status(status: StatusValue) -> object:
-    """Derive the expected exit-code member from matching enum identity."""
-    module = load_host_readiness_module()
-    return module.ExitCode[status.name]
-
-
-def readiness_for_status(status: StatusValue) -> bool:
-    """Derive readiness from the sole ready status."""
-    module = load_host_readiness_module()
-    return status is module.Status.READY
+    statuses = set(module.Status)
+    if statuses != set(module.STATUS_EXIT_CODES) or statuses != set(
+        module.STATUS_READINESS
+    ):
+        return False
+    return all(
+        terminal_result_for(cast(StatusValue, status)).result.exit_code
+        is module.STATUS_EXIT_CODES[status]
+        and terminal_result_for(cast(StatusValue, status)).result.ready
+        is module.STATUS_READINESS[status]
+        for status in statuses
+    )

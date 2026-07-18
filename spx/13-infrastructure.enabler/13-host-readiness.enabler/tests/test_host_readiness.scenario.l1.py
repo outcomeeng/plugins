@@ -8,30 +8,51 @@ from outcomeeng_testing.harnesses.host_readiness import (
 
 
 def test_initial_ready_observation_returns_without_sleeping() -> None:
-    run = run_immediate_ready()
-
-    assert run.result.status is run.module.Status.READY
-    assert run.result.ready is True
-    assert run.result.exit_code is run.module.ExitCode.READY
-    assert not run.clock.sleeps
+    assert (
+        run_immediate_ready().result.status is run_immediate_ready().module.Status.READY
+    )
+    assert run_immediate_ready().result.ready is True
+    assert (
+        run_immediate_ready().result.exit_code
+        is run_immediate_ready().module.ExitCode.READY
+    )
+    assert not run_immediate_ready().clock.sleeps
 
 
 def test_load_becoming_ready_returns_from_the_same_invocation() -> None:
-    run = run_ready_before_deadline()
-
-    assert run.result.status is run.module.Status.READY
-    assert run.result.ready is True
-    assert run.result.exit_code is run.module.ExitCode.READY
-    assert run.result.wait_cycles == len(run.clock.sleeps)
-    assert run.result.waited_seconds < run.module.MAXIMUM_WAIT_SECONDS
+    assert (
+        run_ready_before_deadline().result.status
+        is run_ready_before_deadline().module.Status.READY
+    )
+    assert run_ready_before_deadline().result.ready is True
+    assert (
+        run_ready_before_deadline().result.exit_code
+        is run_ready_before_deadline().module.ExitCode.READY
+    )
+    assert run_ready_before_deadline().result.wait_cycles == len(
+        run_ready_before_deadline().clock.sleeps
+    )
+    assert (
+        run_ready_before_deadline().result.waited_seconds
+        < run_ready_before_deadline().module.MAXIMUM_WAIT_SECONDS
+    )
 
 
 def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:
-    run = run_deadline_not_ready()
-
-    assert run.result.status is run.module.Status.NOT_READY
-    assert run.result.ready is False
-    assert run.result.exit_code is run.module.ExitCode.NOT_READY
-    assert run.result.final is not None
-    assert run.result.waited_seconds == run.module.MAXIMUM_WAIT_SECONDS
-    assert sum(run.clock.sleeps) == run.module.MAXIMUM_WAIT_SECONDS
+    assert (
+        run_deadline_not_ready().result.status
+        is run_deadline_not_ready().module.Status.NOT_READY
+    )
+    assert run_deadline_not_ready().result.ready is False
+    assert (
+        run_deadline_not_ready().result.exit_code
+        is run_deadline_not_ready().module.ExitCode.NOT_READY
+    )
+    assert run_deadline_not_ready().result.final is not None
+    assert (
+        run_deadline_not_ready().result.waited_seconds
+        == run_deadline_not_ready().module.MAXIMUM_WAIT_SECONDS
+    )
+    assert sum(run_deadline_not_ready().clock.sleeps) == (
+        run_deadline_not_ready().module.MAXIMUM_WAIT_SECONDS
+    )
