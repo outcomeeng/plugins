@@ -13,7 +13,7 @@ A pull request opened in the review state its topology permits — ready for a p
 <project_specialization>
 Step 0 checks whether `spx/local/open-pr.md` exists at the repository root only after the live foundation gate holds. When present, read it and apply it as a product-specific addition to this flow (extra pre-flight checks and additional required body sections).
 
-The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
+The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`; open the PR before `VERIFICATION_READINESS` holds; open a peer PR as a draft gating step; keep a stacked PR draft after its exact base PR merges and reconstruction succeeds; add another draft-to-ready gate beyond that stack dependency; or weaken the upstream-safety check.
 
 Deployment and release recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, giving PR publication and management one policy source. Step 0 reaches that optional overlay through /merging-standards only after the live foundation gate holds. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
