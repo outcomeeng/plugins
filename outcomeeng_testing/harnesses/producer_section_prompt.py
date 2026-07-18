@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from shutil import copyfile, copytree
-from tempfile import TemporaryDirectory
 
 from click.testing import CliRunner, Result
-from hypothesis import given, seed, settings
-from hypothesis import strategies as st
 
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.cli.commands.materialize_prompts import (
@@ -39,6 +34,7 @@ COMPLETE_PRODUCER_FIXTURE_PATH = (
     Path(__file__).parent.parent / "fixtures" / "producer_prompt" / "base-skill.md"
 )
 SECTION_NAME = "audit_tag_validity"
+UNRELATED_SECTION_NAME = "other_section"
 SELECTED_RULE = "Evidence type must match the claim."
 UNRELATED_RULE = "This surrounding section is not selected."
 LITERAL_PRODUCER_SECTION_TOKEN = PRODUCER_SECTION_PLACEHOLDER
@@ -49,158 +45,6 @@ UNSUPPORTED_PROMPT_SOURCE_KIND = "simulation"
 LITERAL_STEP_CLOSING_DELIMITER = "Literal </step> delimiter in prose."
 NESTED_STEP_NAME = "nested_step"
 NESTED_STEP_BODY = "Nested body."
-PRODUCER_PROMPT_PROPERTY_SEED = 20260706
-PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
-NONCANONICAL_PROMPT_PROPERTY_SEED = 20260711
-WHOLE_PRODUCER_PROPERTY_SEED = 20260717
-PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
-    "just test "
-    "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.property.l1.py::"
-    "test_materialized_prompt_changes_only_with_selected_section"
-)
-NONCANONICAL_PROMPT_PROPERTY_REPLAY_PATH = (
-    "just test "
-    "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.property.l1.py::"
-    "test_materialization_rejects_noncanonical_prompt_path"
-)
-WHOLE_PRODUCER_PROPERTY_REPLAY_PATH = (
-    "just test "
-    "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.property.l1.py::"
-    "test_materialized_prompt_changes_with_single_producer_file"
-)
-RULE_TEXT = st.text(
-    alphabet=st.characters(
-        blacklist_categories=("Cc", "Cs"),
-        blacklist_characters=["<", ">", "\x00"],
-    ),
-    min_size=1,
-    max_size=80,
-)
-RULE_TOKEN_SUFFIX = st.text(
-    alphabet=st.characters(
-        whitelist_categories=("Ll", "Lu", "Nd"),
-    ),
-    min_size=1,
-    max_size=32,
-)
-NONCANONICAL_PROMPT_FILENAMES = st.from_regex(
-    r"[a-z][a-z0-9_-]{0,20}\.md",
-    fullmatch=True,
-).filter(lambda value: value != MATERIALIZED_PROMPT_FILENAME)
-
-
-@dataclass(frozen=True)
-class SelectedSectionMutation:
-    """One generated mutation with harness-owned temporary storage."""
-
-    tmp_path: Path
-    rule_suffix: str
-    unrelated_rule: str
-    updated_unrelated_rule: str
-
-
-@dataclass(frozen=True)
-class NoncanonicalPromptPath:
-    """One generated noncanonical prompt path with temporary storage."""
-
-    tmp_path: Path
-    prompt_path: str
-
-
-@dataclass(frozen=True)
-class WholeProducerMutation:
-    """One generated whole-producer mutation with temporary storage."""
-
-    tmp_path: Path
-    suffix: str
-
-
-def run_selected_section_change_property(
-    assertion: Callable[[SelectedSectionMutation], None],
-) -> None:
-    """Run selected-section mutations through a test-owned predicate."""
-
-    @seed(PRODUCER_PROMPT_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
-    @given(
-        rule_suffix=RULE_TOKEN_SUFFIX,
-        unrelated_rule=RULE_TEXT,
-        updated_unrelated_rule=RULE_TEXT,
-    )
-    def generated_assertion(
-        rule_suffix: str,
-        unrelated_rule: str,
-        updated_unrelated_rule: str,
-    ) -> None:
-        with TemporaryDirectory() as temp_dir:
-            assertion(
-                SelectedSectionMutation(
-                    tmp_path=Path(temp_dir),
-                    rule_suffix=rule_suffix,
-                    unrelated_rule=unrelated_rule,
-                    updated_unrelated_rule=updated_unrelated_rule,
-                )
-            )
-
-    try:
-        generated_assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {PRODUCER_PROMPT_PROPERTY_SEED}")
-        error.add_note(f"Replay path: {PRODUCER_PROMPT_PROPERTY_REPLAY_PATH}")
-        raise
-
-
-def run_noncanonical_prompt_path_property(
-    assertion: Callable[[NoncanonicalPromptPath], None],
-) -> None:
-    """Run generated prompt paths through a test-owned predicate."""
-
-    @seed(NONCANONICAL_PROMPT_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
-    @given(prompt_path=NONCANONICAL_PROMPT_FILENAMES)
-    def generated_assertion(prompt_path: str) -> None:
-        with TemporaryDirectory() as temp_dir:
-            assertion(
-                NoncanonicalPromptPath(
-                    tmp_path=Path(temp_dir),
-                    prompt_path=prompt_path,
-                )
-            )
-
-    try:
-        generated_assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {NONCANONICAL_PROMPT_PROPERTY_SEED}")
-        error.add_note(f"Replay path: {NONCANONICAL_PROMPT_PROPERTY_REPLAY_PATH}")
-        raise
-
-
-def run_whole_producer_change_property(
-    assertion: Callable[[WholeProducerMutation], None],
-) -> None:
-    """Run whole-producer mutations through a test-owned predicate."""
-
-    @seed(WHOLE_PRODUCER_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)
-    @given(suffix=RULE_TEXT)
-    def generated_assertion(suffix: str) -> None:
-        with TemporaryDirectory() as temp_dir:
-            assertion(
-                WholeProducerMutation(
-                    tmp_path=Path(temp_dir),
-                    suffix=suffix,
-                )
-            )
-
-    try:
-        generated_assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {WHOLE_PRODUCER_PROPERTY_SEED}")
-        error.add_note(f"Replay path: {WHOLE_PRODUCER_PROPERTY_REPLAY_PATH}")
-        raise
 
 
 def invoke_materialize_prompts(
@@ -247,7 +91,7 @@ def write_eval_fixture(
     eval_dir.mkdir(parents=True)
     producer_path.parent.mkdir(parents=True)
 
-    producer_sections = [producer_section("other_section", UNRELATED_RULE)]
+    producer_sections = [producer_section(UNRELATED_SECTION_NAME, UNRELATED_RULE)]
     if include_false_positive_attributes:
         producer_sections.extend(
             [

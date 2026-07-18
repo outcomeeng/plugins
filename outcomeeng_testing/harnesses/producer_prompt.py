@@ -10,8 +10,7 @@ from pathlib import Path
 from shutil import copyfile
 from tempfile import TemporaryDirectory
 
-from hypothesis import given, seed, settings
-from hypothesis import strategies as st
+from hypothesis import seed, settings
 
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
@@ -26,6 +25,7 @@ from outcomeeng_evals.producer_prompt import (
     SECTION_FIELD,
     TEMPLATE_FIELD,
 )
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
 PRODUCER_FIXTURE_DIRECTORY = (
@@ -36,21 +36,12 @@ PRODUCER_RELATIVE_PATHS = tuple(
     (Path("producers") / fixture_path.name).as_posix()
     for fixture_path in PRODUCER_FIXTURE_PATHS
 )
-PRODUCER_FILES_PROPERTY_SEED = 20260717
-PRODUCER_FILES_PROPERTY_EXAMPLES = 30
-PRODUCER_FILES_PROPERTY_REPLAY_PATH = (
+PRODUCER_PROMPT_PROPERTY_SEED = 20260717
+PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
+PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.property.l1.py::"
-    "test_materialized_prompt_changes_with_each_producer_file"
-)
-PRODUCER_TEXT_SUFFIXES = st.text(
-    alphabet=st.characters(
-        blacklist_categories=("Cc", "Cs"),
-        blacklist_characters=["\x00"],
-    ),
-    min_size=1,
-    max_size=64,
+    "test_producer_prompt.property.l1.py"
 )
 
 
@@ -75,14 +66,6 @@ class ProducerFilesWorkspace:
             producer_path.read_text(encoding="utf-8") + suffix,
             encoding="utf-8",
         )
-
-
-@dataclass(frozen=True)
-class ProducerFileMutation:
-    """One generated mutation of a producer in an ordered source set."""
-
-    producer_index: int
-    suffix: str
 
 
 @contextmanager
@@ -171,34 +154,20 @@ def with_duplicate_producer_files_placeholder_workspace() -> Iterator[
         yield workspace
 
 
-def run_producer_files_change_property(
-    assertion: Callable[[ProducerFileMutation], None],
-) -> None:
-    """Run generated producer mutations through a test-owned predicate."""
-
-    @seed(PRODUCER_FILES_PROPERTY_SEED)
-    @settings(max_examples=PRODUCER_FILES_PROPERTY_EXAMPLES)
-    @given(
-        producer_index=st.integers(
-            min_value=0,
-            max_value=len(PRODUCER_RELATIVE_PATHS) - 1,
-        ),
-        suffix=PRODUCER_TEXT_SUFFIXES,
+def producer_prompt_property(property_run: Callable[[], None]) -> Callable[[], None]:
+    """Apply the shared Hypothesis policy for producer-prompt properties."""
+    configured = seed(PRODUCER_PROMPT_PROPERTY_SEED)(
+        settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)(property_run)
     )
-    def generated_assertion(producer_index: int, suffix: str) -> None:
-        assertion(
-            ProducerFileMutation(
-                producer_index=producer_index,
-                suffix=suffix,
-            )
+
+    def run_property() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=PRODUCER_PROMPT_PROPERTY_SEED,
+            replay_path=PRODUCER_PROMPT_PROPERTY_REPLAY_PATH,
         )
 
-    try:
-        generated_assertion()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {PRODUCER_FILES_PROPERTY_SEED}")
-        error.add_note(f"Replay path: {PRODUCER_FILES_PROPERTY_REPLAY_PATH}")
-        raise
+    return run_property
 
 
 @contextmanager
