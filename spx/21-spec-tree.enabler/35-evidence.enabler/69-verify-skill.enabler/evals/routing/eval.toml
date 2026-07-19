@@ -6,6 +6,7 @@ owned_paths = [
   "spx/21-spec-tree.enabler/35-evidence.enabler/69-verify-skill.enabler/**",
   "src/plugins/spec-tree/skills/verify/**",
   "dist/claude/spec-tree/skills/verify/**",
+  "dist/codex/spec-tree/skills/verify/**",
 ]
 smoke_cases = [
   "routes-deterministic-behavior-to-test",
@@ -18,6 +19,10 @@ trials = 1
 ci_policy = "manual"
 
 [prompt_source]
-kind = "producer-file"
-producer = "src/plugins/spec-tree/skills/verify/SKILL.md"
+kind = "producer-files"
+producers = [
+  "src/plugins/spec-tree/skills/verify/SKILL.md",
+  "dist/claude/spec-tree/skills/verify/SKILL.md",
+  "dist/codex/spec-tree/skills/verify/SKILL.md",
+]
 template = "prompt.template.md"

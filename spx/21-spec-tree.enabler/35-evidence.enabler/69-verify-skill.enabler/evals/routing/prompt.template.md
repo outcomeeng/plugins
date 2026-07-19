@@ -1,4 +1,6 @@
-<!-- Generated from the complete producer at {producer_path}. -->
+<!-- Generated from the complete producer set:
+{producer_paths}
+-->
 
 Apply the complete verification-routing producer below to the supplied request. The runner substitutes only the request's `input` object into `{input_json}`; grader expectations remain withheld from the producer.
 
@@ -12,7 +14,9 @@ Return exactly one JSON object with these fields:
 - `evidence_shape`: `path-bearing`, `pathless`, or `null`
 - `reason`: a concise string
 
-{producer_file}
+````text
+{producer_files}
+````
 The verification request (JSON-encoded):
 
 ```json
