@@ -49,10 +49,22 @@ def load_host_readiness_module() -> ModuleType:
     return module
 
 
+class UnboundedWaiterError(AssertionError):
+    """Raised when a waiter sleeps past the deadline its source declares."""
+
+
 @dataclass
 class ControlledClock:
-    """Monotonic clock whose sleep advances deterministically."""
+    """Monotonic clock whose sleep advances deterministically within a horizon.
 
+    The horizon is the waiter's own source-declared maximum wait. Advancing
+    past it means the waiter under exercise never reaches a terminal result,
+    and because this clock costs no wall-clock time such a waiter would spin
+    until it exhausts host memory. Failing on the first sleep beyond the
+    horizon converts that exhaustion into an immediate, readable failure.
+    """
+
+    horizon: float
     current: float = 0.0
     sleeps: list[float] = field(default_factory=list)
 
@@ -62,6 +74,11 @@ class ControlledClock:
 
     def sleep(self, seconds: float) -> None:
         """Record and advance by one requested sleep interval."""
+        if self.current + seconds > self.horizon:
+            raise UnboundedWaiterError(
+                f"waiter slept to {self.current + seconds}s past its "
+                f"{self.horizon}s deadline after {len(self.sleeps)} intervals"
+            )
         self.sleeps.append(seconds)
         self.current += seconds
 
@@ -129,7 +146,7 @@ def _high_load(module: ModuleType) -> tuple[float, float, float]:
 def _run(observations: list[tuple[float, float, float]]) -> WaitRun:
     """Run the waiter against controlled observations and monotonic time."""
     module = load_host_readiness_module()
-    clock = ControlledClock()
+    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
     sequence = LoadSequence(observations)
     dependencies = module.Dependencies(
         read_load_averages=sequence.read,
@@ -165,7 +182,7 @@ def run_deadline_not_ready() -> WaitRun:
 def terminal_result_for(status: StatusValue) -> WaitRun:
     """Build a terminal result for one source-owned status."""
     module = load_host_readiness_module()
-    clock = ControlledClock()
+    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
     dependencies = module.Dependencies(
         read_load_averages=lambda: _ready_load(module),
         read_cpu_count=lambda: CPU_COUNT,
