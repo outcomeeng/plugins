@@ -55,6 +55,12 @@ A completed {{process}} run that produces {{output}} with deterministic validati
 
 </workflow>
 
+<failure_modes>
+
+{{Include only automation failures observed in actual use, each with what happened, why it failed, and how to avoid it. Remove this section when no observed failure exists.}}
+
+</failure_modes>
+
 <success_criteria>
 
 - Valid input produces the declared output and invalid input fails actionably before mutation.

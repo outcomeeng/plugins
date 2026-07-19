@@ -33,6 +33,8 @@ This skill provides routing, workflows, templates, and domain-workflow reference
 </reference_loading>
 
 <intake>
+When the request already identifies one intent below, skip this menu and route directly. Otherwise ask:
+
 What would you like to do?
 
 1. Create a new skill
@@ -45,7 +47,7 @@ What would you like to do?
 8. Understand skill patterns
 9. Verify skill content is current
 
-**Wait for response before proceeding.**
+**Wait for a response only after asking this menu.**
 </intake>
 
 <routing>
