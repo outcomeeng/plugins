@@ -5,7 +5,7 @@ description: >-
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>
@@ -53,7 +53,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the PDR.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent, then invoke `/contextualize` on the directory containing the PDR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
 Do not proceed without live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers for the PDR directory.
 

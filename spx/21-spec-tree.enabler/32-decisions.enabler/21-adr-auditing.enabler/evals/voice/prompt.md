@@ -8,7 +8,7 @@ description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Skill
+allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*)
 ---
 
 <objective>
@@ -56,7 +56,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 **Step 1: Load context**
 
-Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent. Record the base directory exposed by that invocation and read its bundled canonical ADR template at `templates/decisions/decision-name.adr.md`; the template remains owned by `/understand` and is never copied into this skill. Then invoke `/contextualize` on the directory containing the ADR.
+Invoke `/understand` when the live `<SPEC_TREE_FOUNDATION>` marker is absent. Record the base directory exposed by that invocation and read its bundled canonical ADR template at `templates/decisions/decision-name.adr.md`; the template remains owned by `/understand` and is never copied into this skill. Then invoke `/contextualize` on the directory containing the ADR. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
 Do not proceed without the canonical ADR template content and live `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers.
 
