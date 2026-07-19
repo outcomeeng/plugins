@@ -248,7 +248,7 @@ For each child node:
 3. Use the applicable template under `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
-Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.
+Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/verify` or `/apply` writes the first test file.
 
 Revise the parent spec so it summarizes the child structure without narrating the refactor. Remove moved assertions and keep cross-cutting assertions.
 

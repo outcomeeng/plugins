@@ -1,0 +1,23 @@
+title = "verification-type-routing"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/35-evidence.enabler/69-verify-skill.enabler/**",
+  "src/plugins/spec-tree/skills/verify/**",
+  "dist/claude/spec-tree/skills/verify/**",
+]
+smoke_cases = [
+  "routes-deterministic-behavior-to-test",
+  "routes-structured-producer-to-evaluate",
+  "routes-semantic-constraint-to-audit",
+  "rejects-unsupported-tag",
+]
+threshold = 1.0
+trials = 1
+ci_policy = "manual"
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/spec-tree/skills/verify/SKILL.md"
+template = "prompt.template.md"

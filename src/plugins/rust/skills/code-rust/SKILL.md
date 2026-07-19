@@ -36,7 +36,7 @@ Do not search the product directory for skill files when the loading message alr
 1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
 2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. Use `/test-rust` when behavior changes require new or revised tests.
+4. Invoke `/verify` when behavior changes require new or revised evidence; use `/test-rust` for Rust expression after test is selected.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
 
 </quick_start>
@@ -94,7 +94,7 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/test-rust` before adding or revising tests. If the change alters behavior and no test already proves that behavior, write or extend tests first.
+Invoke `/verify` before adding or revising evidence. When it selects test, use `/test-rust` for Rust expression. If the change alters behavior and no evidence already proves that behavior, establish the evidence first.
 
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>

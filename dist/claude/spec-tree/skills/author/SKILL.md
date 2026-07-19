@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/verify`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -163,8 +163,8 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/
 **Assertion rules** (from live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
-- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
+- Each assertion carries the evidence tag and path contract returned by `/verify`: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval](evals/{rule}/eval.toml))` for graded LLM behavior, or `([audit])` for human judgment
+- `/verify` selects each assertion's verification type; when it selects test, `/test` and `/test-{language}` select the assertion type and language expression. Authoring writes those returned selections without choosing them independently.
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
@@ -193,8 +193,8 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
-- [ ] Verification type and assertion type are left to `/test` — authoring does not select them
+- [ ] Every assertion carries the `[test]`, `[eval]`, or `[audit]` selection returned by `/verify` (targets don't need to exist yet)
+- [ ] Verification type comes from `/verify`, and test assertion type comes from `/test`; authoring writes both returned selections without choosing either independently
 - [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
 - [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
@@ -266,7 +266,7 @@ Recommend next steps based on artifact type:
 | ADR/PDR                      | Verify compliance in affected nodes with `/align` |
 | Enabler                      | Author dependent outcome nodes                    |
 | Outcome with many assertions | Decompose with `/decompose`                       |
-| Outcome with few assertions  | Write tests with `/test`                          |
+| Outcome with few assertions  | Establish evidence with `/verify`                 |
 
 </step>
 
@@ -323,7 +323,7 @@ How to avoid: read the proposed container name aloud and ask "what would I refus
 
 Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors any level 1 test can falsify — write a test that simulates a crash between temp-write and rename, diff the resulting settings.json against the pre-state; run `install` twice and diff. An `### Audit` rule an automated test can falsify is a rejection-worthy audit finding — it means the rule will not be enforced by CI and will silently regress.
 
-How to avoid: before placing a rule under `### Audit`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, the rule belongs under `### Testing` with the assertion type `/test` selects — write it and link it from the implementing spec. Reserve `### Audit` (`[audit]`) for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[audit]` tags there rot silently.
+How to avoid: before placing a rule under `### Audit`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, `/verify` selects test and the rule belongs under `### Testing` with the assertion type `/test` selects — write it and link it from the implementing spec. Reserve `### Audit` (`[audit]`) for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[audit]` tags there rot silently.
 
 **Failure 8: Over-multiplying decision records in small trees**
 
@@ -363,7 +363,7 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 **Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Keep indices packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
-**Placing testable MUST/NEVER rules under `### Audit`.** An `[audit]` tag silences CI enforcement — any rule under `### Audit` will not fail a build when violated. If a concrete automated test can falsify the rule, it belongs under `### Testing` with the assertion type `/test` selects, and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they never go under `### Audit`. Reserve `### Audit` for semantic constraints no automated check can falsify.
+**Placing testable MUST/NEVER rules under `### Audit`.** An `[audit]` tag silences CI enforcement — any rule under `### Audit` will not fail a build when violated. If a concrete automated test can falsify the rule, `/verify` selects test, it belongs under `### Testing` with the assertion type `/test` selects, and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they never go under `### Audit`. Reserve `### Audit` for semantic constraints no automated check can falsify.
 
 **Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's coordination notes and delegates to `/decompose <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 

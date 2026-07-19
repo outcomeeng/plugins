@@ -20,7 +20,7 @@
 
 ### Testing
 
-{Verified by a deterministic test. Each rule carries its assertion type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — selected by `/test` (with `/test-{language}`) from the rule's quantifier, never inferred from this heading. Do not include test files; these belong to the specs implementing this PDR.}
+{Verified by a deterministic test. `/verify` selects test from the real subject's verdict; `/test` then selects each rule's assertion type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — from the rule's quantifier before `/test-{language}` supplies language expression. The heading never determines the assertion type. Do not include test files; these belong to the specs implementing this PDR.}
 
 - ALWAYS: {rule} ([{assertion type}])
 - NEVER: {prohibition} ([{assertion type}])

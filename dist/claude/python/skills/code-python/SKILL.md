@@ -15,7 +15,7 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 </repo_local_overlay>
 
 <objective>
-Python implementation code that makes its node's existing tests pass.
+Python implementation code that satisfies its node's established evidence and passes its deterministic tests.
 </objective>
 
 <mode_detection>
@@ -36,12 +36,12 @@ Python implementation code that makes its node's existing tests pass.
 
 Before invoking this skill:
 
-1. **Tests must exist** - Written by `/test-python`
-2. **Tests must be reviewed** - Approved by `/audit-python-tests`
+1. **Evidence must exist** - Established through `/verify`; when test is selected, expressed through `/test` and `/test-python`
+2. **Evidence must be reviewed** - Approved by the auditor matching each selected evidence type
 3. **Spec must be loaded** - Context from `/spec-tree:contextualize`
 4. **Standards are pre-loaded above**
 
-If tests don't exist or aren't approved, go back to earlier steps.
+If required evidence does not exist or lacks approval, return to the evidence workflow.
 </prerequisites>
 
 <write_mode_workflow>

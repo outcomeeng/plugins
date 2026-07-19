@@ -1,11 +1,13 @@
 ---
 name: test
-description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
+description: >-
+  ALWAYS invoke this skill before writing or repairing deterministic tests for
+  a spec assertion or when learning the testing approach.
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
-Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
+Spec-tree assertion tests that are canonically named, assertion-typed, source-contract-coupled, language-routed, and reproducible for property failures.
 </objective>
 
 <prerequisite>
@@ -48,15 +50,15 @@ This loads:
 
 **Step 2: Extract assertions from the spec**
 
-Parse the target spec node. Extract all typed assertions and their test links:
+Parse the target spec node. Extract only assertions already selected for `[test]` evidence and their test links:
 
-| Type            | Pattern in spec                                    | Test strategy        |
-| --------------- | -------------------------------------------------- | -------------------- |
-| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based        |
-| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized        |
-| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation      |
-| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based       |
-| **Compliance**  | `ALWAYS/NEVER: {rule} ([audit]/[test]/[eval])`     | Audit, test, or eval |
+| Type            | Pattern in spec                                    | Test strategy   |
+| --------------- | -------------------------------------------------- | --------------- |
+| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based   |
+| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized   |
+| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation |
+| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based  |
+| **Compliance**  | `ALWAYS/NEVER: {rule} ([test](...))`               | Violating cases |
 
 Record each assertion with:
 
@@ -73,12 +75,12 @@ Record each assertion with:
 
 For each assertion:
 
-| Status            | Condition                                     | Action                                     |
-| ----------------- | --------------------------------------------- | ------------------------------------------ |
-| **Covered**       | Test link exists and resolves to a file       | Verify in Step 4                           |
-| **Missing link**  | No `([test])`, `([eval])`, or `([audit])` tag | Must add evidence link                     |
-| **Broken link**   | Link present but file doesn't exist           | Must create test file                      |
-| **No assertions** | Spec has no typed assertions                  | Spec needs work first — do not write tests |
+| Status            | Condition                               | Action                                     |
+| ----------------- | --------------------------------------- | ------------------------------------------ |
+| **Covered**       | Test link exists and resolves to a file | Verify in Step 4                           |
+| **Missing link**  | `[test]` selected with no path          | Must add test evidence link                |
+| **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
+| **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
 
 **Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
@@ -133,7 +135,7 @@ Delegate language-specific structure to `/test-python` or `/test-rust` or `/test
 
 **Step 6: Update spec assertion links**
 
-After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification, `[eval]` for LLM-driven behavior that emits a parseable structured verdict, or `[audit]` for semantic constraints requiring agent judgment (`[review]` is the legacy spelling of `[audit]`).
+After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
 
 </step>
 

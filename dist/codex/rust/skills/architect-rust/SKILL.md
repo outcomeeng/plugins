@@ -67,7 +67,7 @@ Read these files to understand product structure and workflow:
 
 - `AGENTS.md` - Product navigation, work item status, BSP dependencies
 
-For Rust test standards and methodology, read `/rust-test-standards`, then invoke `/test-rust`.
+For evidence routing, invoke `/verify`. After test is selected, read `/rust-test-standards` and invoke `/test-rust` for Rust expression.
 
 **3. Existing Decisions**
 
@@ -115,7 +115,7 @@ Execute these phases IN ORDER.
 3. Read `/rust-standards`, then `/rust-architecture-standards`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists
-6. Invoke `/test-rust` to understand testing methodology
+6. Invoke `/verify` for evidence routing; after test is selected, invoke `/test-rust` for Rust expression
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes

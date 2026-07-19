@@ -32,7 +32,7 @@ NEVER create a test workaround for code that lacks source-owned contracts, typed
 Run this workflow for new Python tests:
 
 1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
-2. For each assertion, use `/test` to select the assertion type, execution level, and any Stage 5 exception.
+2. Receive the assertion type, execution level, and any Stage 5 exception already selected through `/verify` and `/test`; do not route evidence from the language specialist.
 3. Apply the source-contract-first gate in `<source_contract_gate>`: inspect the code under test and identify the production contract the test will exercise.
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.

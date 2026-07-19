@@ -137,7 +137,7 @@ Recommend next steps:
 
 - "Compose top-level nodes with `/decompose spx/`"
 - "Fill in assertions for created nodes with `/author`"
-- "When assertions are ready, write tests with `/test`"
+- "When assertions are ready, establish evidence with `/verify`"
 
 </step>
 

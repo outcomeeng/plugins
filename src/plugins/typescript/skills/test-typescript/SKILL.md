@@ -40,7 +40,7 @@ TypeScript test files that supply evidence for a node specification's assertions
 
 **Output:** Test files written to `$node_path/tests/` directory
 
-**Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
+**Prerequisites:** Standards and the `/test` router are pre-loaded above. After `/verify` selects test, `/test` chooses the assertion type and level; this skill implements those decisions in TypeScript.
 
 **Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
 

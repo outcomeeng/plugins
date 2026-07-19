@@ -19,7 +19,7 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
+4. Invoke `/verify` before adding or revising evidence. When it selects test, write or update the co-located spec-tree tests first using the assertion type chosen by `/test` and the TypeScript expression from `/typescript-test-standards`.
 5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
 
 <gate name="red-evidence">

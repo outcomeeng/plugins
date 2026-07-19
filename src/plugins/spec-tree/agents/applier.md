@@ -50,16 +50,16 @@ Step 1: Invoke `spec-tree:understand`.
 Step 2: Invoke `spec-tree:contextualize` for the target node, then read any dispatch-named decisions or test files before editing.
 Step 3: If architecture or decision work is requested, invoke the detected language's `architect-{lang}` skill and edit the decision/spec artifact first.
 Step 4: Add an `ARCHITECTURE_AUDIT_REQUIRED` handoff item for architecture work. Do not run the audit gate.
-Step 5: If test work is requested or implementation lacks evidence, invoke the detected language's `test-{lang}` skill and create or update tests from the spec assertions before changing implementation.
-Step 6: Add a `TEST_AUDIT_REQUIRED` handoff item for test work. Do not run the audit gate.
+Step 5: If evidence work is requested or implementation lacks evidence, invoke `spec-tree:verify` for the target node. Let it route selected test work through `test` to the detected language specialist and report any required eval capability before changing implementation.
+Step 6: Add an `EVIDENCE_AUDIT_REQUIRED` handoff item for every applicable test or eval evidence type. Do not run the audit gate.
 Step 7: Invoke the detected language's `code-{lang}` skill before changing implementation. Change implementation only after the relevant tests exist.
 Step 8: Run the product's narrow deterministic verification command for the changed tests or implementation when the command is discoverable, then add an `IMPLEMENTATION_AUDIT_REQUIRED` handoff item. Do not run the audit gate.
 
-Every audit handoff includes the scope decision from `<step name="resolve-scope">`:
+Every audit handoff includes the decision from the `resolve-scope` step:
 
 - `ARCHITECTURE_AUDIT_REQUIRED` after architecture authoring, with ADR path, governing node path, detected language, scope, and changed files.
-- `TEST_AUDIT_REQUIRED` after test authoring, with governing node, assertion headings, test files, detected language, scope, and changed files.
-- `IMPLEMENTATION_AUDIT_REQUIRED` after implementation, with repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. This is an advisory work summary rather than a dispatch-ready gating request; the main `/apply` flow creates a clean checkpoint and replaces the live list with the resulting committed `<base>..<head>` scope before dispatch.
+- `EVIDENCE_AUDIT_REQUIRED` after evidence authoring, with governing node, verification type, assertion headings, test files or eval artifacts and producer artifacts, detected language when applicable, scope, and changed files.
+- `IMPLEMENTATION_AUDIT_REQUIRED` after implementation, with repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. This is an advisory work summary rather than a dispatch-ready gating request; the main `/apply` flow creates a clean checkpoint and replaces the live list with the resulting committed base-to-head scope before dispatch.
 
 Do not invent missing requirements. If the dispatch prompt, repository files, or required Skill invocations do not identify enough spec assertions, target files, language workflow, or verification commands to proceed safely, stop with `METHODOLOGY_REQUIRED` and name the missing input.
 
@@ -67,9 +67,9 @@ Do not invent missing requirements. If the dispatch prompt, repository files, or
 
 <gate_protocol>
 
-At Steps 4 and 6, do not run the gates. Record the corresponding `ARCHITECTURE_AUDIT_REQUIRED` or `TEST_AUDIT_REQUIRED` handoff for the final aggregate report.
+At Steps 4 and 6, do not run the gates. Record the corresponding `ARCHITECTURE_AUDIT_REQUIRED` or `EVIDENCE_AUDIT_REQUIRED` handoff for the final aggregate report.
 
-At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit-implementation` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` advisory handoff containing repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. The main conversation must run focused verification, create a checkpoint commit, confirm a clean worktree, and dispatch `implementation-auditor` with the exact committed `<base>..<head>` scope and no live file list.
+At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang}-architecture`, or `spec-tree:audit-implementation` directly. Record an `IMPLEMENTATION_AUDIT_REQUIRED` advisory handoff containing repository path, live file list including untracked files, governing node path, detected language, and deterministic verification already run. The main conversation must run focused verification, create a checkpoint commit, confirm a clean worktree, and dispatch `implementation-auditor` with the exact committed base-to-head scope and no live file list.
 
 </gate_protocol>
 
@@ -97,10 +97,10 @@ When returning the aggregate handoff report, report:
 **Gate handoffs:**
 
 - Step 4: `ARCHITECTURE_AUDIT_REQUIRED` with ADR path or decision/spec artifact path, governing node path, detected language, scope, and changed files; or `not_applicable` with reason.
-- Step 6: `TEST_AUDIT_REQUIRED` with governing node, assertion headings, test files, detected language, scope, and changed files; or `not_applicable` with reason.
-- Step 8: `IMPLEMENTATION_AUDIT_REQUIRED` with repository path, live file list, changeset scope, governing node path, detected language, deterministic verification; or `not_applicable` with reason.
+- Step 6: `EVIDENCE_AUDIT_REQUIRED` with governing node, verification type, assertion headings, test files or eval artifacts and producer artifacts, detected language when applicable, scope, and changed files; or `not_applicable` with reason.
+- Step 8: `IMPLEMENTATION_AUDIT_REQUIRED` with repository path, live file list, governing node path, detected language, deterministic verification, and an explicit note that the main conversation creates the committed changeset scope before dispatch; or `not_applicable` with reason.
 
-**Deterministic verification:** {command and result, or why the command could not be discovered}
+**Deterministic verification:** {concrete command and result}
 **Tests:** {passing command result, or not run because no implementation was changed}
 **Files created/modified:** {list}
 
@@ -110,8 +110,6 @@ When stopped because required input is missing, report:
 **Failed at:** `METHODOLOGY_REQUIRED`
 **Missing input:** {spec assertions, target files, verification command, dispatch scope, or language}
 **Evidence checked:** {files or prompt fields inspected}
-**Attempts:** {n}/3
-
 </output_format>
 
 <success_criteria>
@@ -120,6 +118,6 @@ When stopped because required input is missing, report:
 - The audit scope decision is explicit, and cross-node work widens every audit handoff to whole-changeset scope.
 - Every required audit gate point appears in the aggregate report instead of running an audit in the phase runner.
 - The final report names the node path, detected language, handoff requests, test result, and changed files.
-- A stopped run names the failed step, reason, and attempt count.
+- A stopped run names the failed step, missing input, and evidence checked.
 
 </success_criteria>

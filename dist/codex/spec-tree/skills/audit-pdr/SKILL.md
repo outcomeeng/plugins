@@ -116,12 +116,12 @@ For each product property:
 Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
-   - under `### Testing` → a `/test`-routed evidence type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Testing` → a `/test`-routed assertion type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
    - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
-   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
-2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+   An unsupported bare mechanism tag, a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
+2. Under `### Testing`, the assertion type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 
 A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
 

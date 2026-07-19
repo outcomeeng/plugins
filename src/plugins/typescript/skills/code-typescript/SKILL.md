@@ -221,7 +221,7 @@ Before writing code, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-**For TypeScript testing guidance, load both `/typescript-test-standards` and `/test-typescript`.**
+Invoke `/verify` before adding or revising evidence. When it selects test, load both `/typescript-test-standards` and `/test-typescript` for TypeScript expression.
 
 Use `/typescript-test-standards` as the canonical source for:
 
