@@ -14,9 +14,10 @@ Return exactly one JSON object with these fields:
 - `evidence_shape`: `path-bearing`, `pathless`, or `null`
 - `reason`: a concise string
 
-````text
+<pre><code>
 {producer_files}
-````
+</code></pre>
+
 The verification request (JSON-encoded):
 
 ```json

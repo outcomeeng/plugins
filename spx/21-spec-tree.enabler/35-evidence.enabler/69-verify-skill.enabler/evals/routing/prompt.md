@@ -16,7 +16,7 @@ Return exactly one JSON object with these fields:
 - `evidence_shape`: `path-bearing`, `pathless`, or `null`
 - `reason`: a concise string
 
-````text
+<pre><code>
 <!-- Producer: src/plugins/spec-tree/skills/verify/SKILL.md -->
 
 ---
@@ -343,7 +343,8 @@ For the terminal unsupported-input guard, record no verification type, specialis
 
 </success_criteria>
 
-````
+</code></pre>
+
 The verification request (JSON-encoded):
 
 ```json
