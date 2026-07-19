@@ -468,52 +468,53 @@ def _assert_authority_hierarchy_policy_is_complete() -> None:
                     )
 
 
-def _assert_codex_router_enforces_operator_question_interrupt() -> None:
+def _assert_all_routers_enforce_operator_question_interrupt() -> None:
     """Challenge question policy across every declared language subset."""
     for enabled_languages in harness.template_language_subsets():
-        document = _render_shipped_instruction_blocks(enabled_languages)[
-            harness.HARNESS_CODEX
-        ]
-        router = dist.managed_router_block(document)
-        policy = dist.operator_question_policy_block(router)
-        assert policy is not None
-        dist.validate_operator_question_policy({dist.CODEX_HARNESS: document})
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        dist.validate_operator_question_policy(documents)
+        for agent_harness, document in documents.items():
+            router = dist.managed_router_block(document)
+            policy = dist.operator_question_policy_block(router)
+            assert policy is not None
 
-        for _, required_text in dist.CODEX_OPERATOR_QUESTION_REQUIREMENTS:
-            invalid_document = document.replace(
-                policy, policy.replace(required_text, "", 1), 1
-            )
-            try:
-                dist.validate_operator_question_policy(
-                    {dist.CODEX_HARNESS: invalid_document}
+            for _, required_text in dist.OPERATOR_QUESTION_REQUIREMENTS:
+                invalid_document = document.replace(
+                    policy, policy.replace(required_text, "", 1), 1
                 )
-            except dist.OperatorQuestionPolicyError:
-                pass
-            else:
-                raise AssertionError(
-                    f"incomplete operator-question policy was accepted: {required_text}"
-                )
+                try:
+                    dist.validate_operator_question_policy(
+                        {agent_harness: invalid_document}
+                    )
+                except dist.OperatorQuestionPolicyError:
+                    pass
+                else:
+                    raise AssertionError(
+                        "incomplete operator-question policy was accepted: "
+                        f"{required_text}"
+                    )
 
-        for (
-            contradiction_name,
-            contradiction_text,
-        ) in dist.CODEX_OPERATOR_QUESTION_CONTRADICTIONS:
-            invalid_policy = policy.replace(
-                dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE,
-                f"{contradiction_text}\n\n{dist.CODEX_OPERATOR_QUESTION_POLICY_CLOSE}",
-                1,
-            )
-            invalid_document = document.replace(policy, invalid_policy, 1)
-            try:
-                dist.validate_operator_question_policy(
-                    {dist.CODEX_HARNESS: invalid_document}
+            for (
+                contradiction_name,
+                contradiction_text,
+            ) in dist.OPERATOR_QUESTION_CONTRADICTIONS:
+                invalid_policy = policy.replace(
+                    dist.OPERATOR_QUESTION_POLICY_CLOSE,
+                    f"{contradiction_text}\n\n{dist.OPERATOR_QUESTION_POLICY_CLOSE}",
+                    1,
                 )
-            except dist.OperatorQuestionPolicyError:
-                pass
-            else:
-                raise AssertionError(
-                    f"contradictory operator-question policy was accepted: {contradiction_name}"
-                )
+                invalid_document = document.replace(policy, invalid_policy, 1)
+                try:
+                    dist.validate_operator_question_policy(
+                        {agent_harness: invalid_document}
+                    )
+                except dist.OperatorQuestionPolicyError:
+                    pass
+                else:
+                    raise AssertionError(
+                        "contradictory operator-question policy was accepted: "
+                        f"{contradiction_name}"
+                    )
 
 
 def _assert_codex_router_bounds_dispatched_verifiers() -> None:
@@ -560,22 +561,20 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
-def codex_router_policy_evidence_run() -> harness.EvidenceRun:
-    """Run every source-declared Codex router-policy evidence obligation."""
+def router_policy_evidence_run() -> harness.EvidenceRun:
+    """Run every source-declared router-policy evidence obligation."""
     assertions = {
-        dist.CODEX_ROUTER_POLICY_NAMES[0]: (
-            _assert_codex_router_enforces_operator_question_interrupt
-        ),
-        dist.CODEX_ROUTER_POLICY_NAMES[1]: (
-            _assert_codex_router_bounds_dispatched_verifiers
-        ),
+        dist.ROUTER_POLICY_NAMES[
+            0
+        ]: _assert_all_routers_enforce_operator_question_interrupt,
+        dist.ROUTER_POLICY_NAMES[1]: (_assert_codex_router_bounds_dispatched_verifiers),
     }
     executed: list[str] = []
-    for policy_name in dist.CODEX_ROUTER_POLICY_NAMES:
+    for policy_name in dist.ROUTER_POLICY_NAMES:
         assertions[policy_name]()
         executed.append(policy_name)
     return harness.EvidenceRun(
-        declared=dist.CODEX_ROUTER_POLICY_NAMES,
+        declared=dist.ROUTER_POLICY_NAMES,
         executed=tuple(executed),
     )
 

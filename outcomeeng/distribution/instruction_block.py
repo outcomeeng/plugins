@@ -112,6 +112,22 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ),
     ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
     ("Codex guide filename", "`AGENTS.md` for Codex"),
+    (
+        "dangerous-command guard stop trigger",
+        "a dangerous-command guard (DCG) block terminates the attempted command family",
+    ),
+    (
+        "dangerous-command guard retry prohibition",
+        "NEVER** retry it by reformulating, splitting, rewriting, removing the flagged clause, or substituting an equivalent command to evade the guard",
+    ),
+    (
+        "dangerous-command guard sanctioned path",
+        "follow the active skills, repository instructions, and declared overlays to find a sanctioned operation",
+    ),
+    (
+        "dangerous-command guard terminal report",
+        "report the blocked command with secrets redacted",
+    ),
 )
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
     "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
@@ -156,28 +172,28 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
     ),
 )
 CODEX_HARNESS: Final = "codex"
-CODEX_ROUTER_POLICY_NAMES: Final = (
+ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
-    "verifier-dispatch",
+    "codex-verifier-dispatch",
 )
-CODEX_OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
-CODEX_OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
-CODEX_OPERATOR_QUESTION_REQUIREMENTS: Final = (
+OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
+OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
+OPERATOR_QUESTION_REQUIREMENTS: Final = (
     (
         "mutation privilege revocation",
-        "Codex is immediately revoked all privileges to modify the current product or any external file, service, or resource",
+        "immediately relinquish all privileges to modify the current product or any external file, service, or resource",
     ),
-    ("immediate answer", "Codex MUST answer the question immediately"),
+    ("immediate answer", "Answer the question immediately"),
     (
         "non-verification process stop",
         "ALWAYS: stop any running non-verification process that is destructive or modifies files, external resources, or state",
     ),
     (
         "verification process preservation",
-        "NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs Codex to stop it",
+        "NEVER: stop a running verification process — including agentic verification, tests, or evals — unless the operator explicitly instructs that process to stop",
     ),
 )
-CODEX_OPERATOR_QUESTION_CONTRADICTIONS: Final = (
+OPERATOR_QUESTION_CONTRADICTIONS: Final = (
     (
         "unqualified state-changing process stop",
         "ALWAYS: stop any running process that is destructive or modifies files, external resources, or state",
@@ -579,45 +595,45 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
 
 
 def operator_question_policy_block(router: str) -> str | None:
-    """Return the Codex operator-question policy block from a complete router."""
-    start = router.find(CODEX_OPERATOR_QUESTION_POLICY_OPEN)
+    """Return the operator-question policy block from a complete router."""
+    start = router.find(OPERATOR_QUESTION_POLICY_OPEN)
     if start == -1:
         return None
-    end = router.find(CODEX_OPERATOR_QUESTION_POLICY_CLOSE, start)
+    end = router.find(OPERATOR_QUESTION_POLICY_CLOSE, start)
     if end == -1:
         return None
-    return router[start : end + len(CODEX_OPERATOR_QUESTION_POLICY_CLOSE)]
+    return router[start : end + len(OPERATOR_QUESTION_POLICY_CLOSE)]
 
 
 def validate_operator_question_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
-    """Reject a Codex router that omits or contradicts question-interrupt policy."""
-    document = blocks_by_harness.get(CODEX_HARNESS)
-    if document is None:
-        raise OperatorQuestionPolicyError("missing Codex router")
-    router = managed_router_block(document)
-    policy = operator_question_policy_block(router) or ""
-    missing = [
-        name
-        for name, required_text in CODEX_OPERATOR_QUESTION_REQUIREMENTS
-        if required_text not in policy
-    ]
-    if missing:
-        details = ", ".join(missing)
-        raise OperatorQuestionPolicyError(
-            f"Codex operator-question policy is incomplete: {details}"
-        )
-    contradictions = [
-        name
-        for name, forbidden_text in CODEX_OPERATOR_QUESTION_CONTRADICTIONS
-        if forbidden_text in policy
-    ]
-    if contradictions:
-        details = ", ".join(contradictions)
-        raise OperatorQuestionPolicyError(
-            f"Codex operator-question policy is contradictory: {details}"
-        )
+    """Reject a router that omits or contradicts question-interrupt policy."""
+    if not blocks_by_harness:
+        raise OperatorQuestionPolicyError("missing router")
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        policy = operator_question_policy_block(router) or ""
+        missing = [
+            name
+            for name, required_text in OPERATOR_QUESTION_REQUIREMENTS
+            if required_text not in policy
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise OperatorQuestionPolicyError(
+                f"{harness} operator-question policy is incomplete: {details}"
+            )
+        contradictions = [
+            name
+            for name, forbidden_text in OPERATOR_QUESTION_CONTRADICTIONS
+            if forbidden_text in policy
+        ]
+        if contradictions:
+            details = ", ".join(contradictions)
+            raise OperatorQuestionPolicyError(
+                f"{harness} operator-question policy is contradictory: {details}"
+            )
 
 
 def verifier_dispatch_policy_paragraph(router: str) -> str | None:

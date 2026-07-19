@@ -9,7 +9,4 @@ def test_instruction_block_compliance_evidence() -> None:
         evidence.compliance_evidence_run().executed
         == evidence.compliance_evidence_declarations()
     )
-    assert (
-        evidence.codex_router_policy_evidence_run().executed
-        == source.CODEX_ROUTER_POLICY_NAMES
-    )
+    assert evidence.router_policy_evidence_run().executed == source.ROUTER_POLICY_NAMES
