@@ -52,9 +52,10 @@ and renderer.
    interface and generate static `tokens.css`. Browser styles reference token
    variables rather than raw color, font, size, radius, shadow, or motion
    literals.
-5. **State core placement.** Move complex, test-bearing state behavior into the
-   SPX CLI when the prototype becomes shipped behavior. The plugin keeps thin
-   MCP launch glue and static renderer assets.
+5. **State core placement.** Move the state behavior into the SPX CLI when the
+   prototype becomes shipped behavior and proves its value; past fifty lines a
+   shipped script owes that extraction. The plugin keeps thin MCP launch glue
+   and static renderer assets.
 6. **Plugin productization.** Create the shipped interfaces plugin with
    stdlib-only Python scripts, static renderer assets, MCP server registration,
    and vendored local `woff2` fonts.
