@@ -796,7 +796,11 @@ def _thread_argv(
 
 
 def _comment(comment_id: str, database_id: int) -> dict[str, object]:
-    return _source_payload("review_comment_payload", comment_id, database_id)
+    module = load_script()
+    return {
+        _source_string(module, "ID_FIELD"): comment_id,
+        _source_string(module, "DATABASE_ID_FIELD"): database_id,
+    }
 
 
 def _comments(
@@ -805,16 +809,22 @@ def _comments(
     has_next: bool,
     end_cursor: str | None = None,
 ) -> dict[str, object]:
-    return _source_payload(
-        "comments_connection_payload",
-        nodes,
-        has_next=has_next,
-        end_cursor=end_cursor,
-    )
+    module = load_script()
+    return {
+        _source_string(module, "PAGE_INFO_FIELD"): {
+            _source_string(module, "HAS_NEXT_PAGE_FIELD"): has_next,
+            _source_string(module, "END_CURSOR_FIELD"): end_cursor,
+        },
+        _source_string(module, "NODES_FIELD"): nodes,
+    }
 
 
 def _thread_node(thread_id: str, comments: dict[str, object]) -> dict[str, object]:
-    return _source_payload("review_thread_payload", thread_id, comments)
+    module = load_script()
+    return {
+        _source_string(module, "ID_FIELD"): thread_id,
+        _source_string(module, "COMMENTS_FIELD"): comments,
+    }
 
 
 def _review_threads(
@@ -823,33 +833,56 @@ def _review_threads(
     has_next: bool = False,
     end_cursor: str | None = None,
 ) -> dict[str, object]:
-    return _source_payload(
-        "review_threads_connection_payload",
-        nodes,
-        has_next=has_next,
-        end_cursor=end_cursor,
-    )
+    module = load_script()
+    return {
+        _source_string(module, "PAGE_INFO_FIELD"): {
+            _source_string(module, "HAS_NEXT_PAGE_FIELD"): has_next,
+            _source_string(module, "END_CURSOR_FIELD"): end_cursor,
+        },
+        _source_string(module, "NODES_FIELD"): nodes,
+    }
 
 
 def _threads_payload(review_threads: dict[str, object]) -> dict[str, object]:
-    return _source_payload("review_threads_response_payload", review_threads)
+    module = load_script()
+    return {
+        _source_string(module, "DATA_FIELD"): {
+            _source_string(module, "REPOSITORY_FIELD"): {
+                _source_string(module, "PULL_REQUEST_FIELD"): {
+                    _source_string(module, "REVIEW_THREADS_FIELD"): review_threads,
+                }
+            }
+        }
+    }
 
 
 def _repository_response(repository: object) -> dict[str, object]:
-    return _source_payload("repository_response_payload", repository)
+    module = load_script()
+    return {
+        _source_string(module, "DATA_FIELD"): {
+            _source_string(module, "REPOSITORY_FIELD"): repository,
+        }
+    }
 
 
 def _pull_request_response(pull_request: object) -> dict[str, object]:
-    return _source_payload("pull_request_response_payload", pull_request)
+    module = load_script()
+    return {
+        _source_string(module, "DATA_FIELD"): {
+            _source_string(module, "REPOSITORY_FIELD"): {
+                _source_string(module, "PULL_REQUEST_FIELD"): pull_request,
+            }
+        }
+    }
 
 
 def _thread_comments_response(node: object) -> dict[str, object]:
-    return _source_payload("thread_comments_response_payload", node)
-
-
-def _source_payload(name: str, *args: object, **kwargs: object) -> dict[str, object]:
-    builder = cast("Callable[..., dict[str, object]]", getattr(load_script(), name))
-    return builder(*args, **kwargs)
+    module = load_script()
+    return {
+        _source_string(module, "DATA_FIELD"): {
+            _source_string(module, "NODE_FIELD"): node,
+        }
+    }
 
 
 def _source_string(module: ModuleType, name: str) -> str:
