@@ -41,3 +41,17 @@ def test_wait_for_load_stop_trigger_policy() -> None:
                         for agent_harness, document in documents.items()
                     }
                 )
+        for contradiction in source.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
+            with pytest.raises(source.WaitForLoadPolicyError):
+                source.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(
+                            source.managed_router_block(document),
+                            source.managed_router_block(document).replace(
+                                "\n", f"\n{contradiction.violating_directive}\n", 1
+                            ),
+                            1,
+                        )
+                        for agent_harness, document in documents.items()
+                    }
+                )

@@ -90,6 +90,32 @@ WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
 )
+
+
+@dataclass(frozen=True)
+class WaitForLoadContradiction:
+    """A prohibited host-load directive and a representative router violation."""
+
+    name: str
+    pattern: re.Pattern[str]
+    violating_directive: str
+
+
+WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
+    WaitForLoadContradiction(
+        name="host-load verification reduction",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r"(?=.*\b(?:(?:host|system|high)\s+load(?:\s+average)?|load\s+average)\b)"
+            r"(?=.*\b(?:reduce|lower|decrease|cut|narrow|shorten|skip|omit|throttle|cap|fewer)\b)"
+            r"(?=.*\b(?:scope|workers?|limits?|deadlines?|verification|tests?|evals?|builds?|validation)\b).*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "When host load is high, reduce test scope and use fewer workers."
+        ),
+    ),
+)
 CODEX_HARNESS: Final = "codex"
 CODEX_ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
@@ -237,7 +263,7 @@ class FoundationAccessPolicyError(InstructionBlockRenderError):
 
 
 class WaitForLoadPolicyError(InstructionBlockRenderError):
-    """Raised when a rendered router omits part of its load-wait policy."""
+    """Raised when a rendered router omits or contradicts its load-wait policy."""
 
 
 class OperatorQuestionPolicyError(InstructionBlockRenderError):
@@ -472,6 +498,16 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
             details = ", ".join(missing)
             raise WaitForLoadPolicyError(
                 f"{harness} router wait-for-load policy is incomplete: {details}"
+            )
+        contradictions = [
+            rule.name
+            for rule in WAIT_FOR_LOAD_POLICY_CONTRADICTIONS
+            if rule.pattern.search(router)
+        ]
+        if contradictions:
+            details = ", ".join(contradictions)
+            raise WaitForLoadPolicyError(
+                f"{harness} router wait-for-load policy is contradictory: {details}"
             )
 
 
