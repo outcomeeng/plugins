@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
@@ -40,6 +41,15 @@ class WholeProducerMutation:
     """One generated whole-producer text mutation."""
 
     suffix: str
+
+
+class MalformedProducerFilesDefinition(Enum):
+    """Closed malformed-definition domain required by the plural source contract."""
+
+    MISSING_PRODUCERS = auto()
+    MIXED_PRODUCER_FIELDS = auto()
+    NON_STRING_MEMBER = auto()
+    EMPTY_MEMBER = auto()
 
 
 _PRODUCER_TEXT = st.text(

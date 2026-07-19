@@ -17,6 +17,7 @@ from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     MATERIALIZED_PROMPT_FILENAME,
+    PRODUCER_FIELD,
     PRODUCERS_FIELD,
     PRODUCER_FILES_KIND,
     PRODUCER_FILES_PLACEHOLDER,
@@ -25,6 +26,9 @@ from outcomeeng_evals.producer_prompt import (
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
+)
+from outcomeeng_testing.generators.producer_prompt import (
+    MalformedProducerFilesDefinition,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -109,6 +113,18 @@ def with_duplicate_producer_files_workspace() -> Iterator[ProducerFilesWorkspace
             PRODUCER_FIXTURE_PATHS[0],
             PRODUCER_FIXTURE_PATHS[0],
         ),
+    ) as workspace:
+        yield workspace
+
+
+@contextmanager
+def with_malformed_producer_files_workspace(
+    malformed_definition: MalformedProducerFilesDefinition,
+) -> Iterator[ProducerFilesWorkspace]:
+    """Yield a plural-producer eval with one contract-defined malformed shape."""
+    with _producer_files_workspace(
+        producer_fixture_paths=PRODUCER_FIXTURE_PATHS,
+        malformed_definition=malformed_definition,
     ) as workspace:
         yield workspace
 
@@ -211,6 +227,7 @@ def _producer_files_workspace(
     include_section: bool = False,
     producer_files_placeholder_count: int = 1,
     repository_root: Path | None = None,
+    malformed_definition: MalformedProducerFilesDefinition | None = None,
 ) -> Iterator[ProducerFilesWorkspace]:
     with TemporaryDirectory(dir=repository_root) as temp_dir:
         workspace_root = Path(temp_dir)
@@ -270,6 +287,10 @@ def _producer_files_workspace(
         section_definition = (
             [f'{SECTION_FIELD} = "{SECTION_FIELD}"'] if include_section else []
         )
+        producer_definition = _producer_definition_lines(
+            producer_definition_paths,
+            malformed_definition=malformed_definition,
+        )
         eval_toml_path.write_text(
             "\n".join(
                 [
@@ -279,7 +300,7 @@ def _producer_files_workspace(
                     "",
                     f"[{PROMPT_SOURCE_TABLE}]",
                     f'{KIND_FIELD} = "{PRODUCER_FILES_KIND}"',
-                    f"{PRODUCERS_FIELD} = {json.dumps(producer_definition_paths)}",
+                    *producer_definition,
                     f'{TEMPLATE_FIELD} = "{PROMPT_TEMPLATE_FILENAME}"',
                     *section_definition,
                     "",
@@ -296,3 +317,23 @@ def _producer_files_workspace(
             producer_relative_paths=producer_relative_paths,
             producer_texts=producer_texts,
         )
+
+
+def _producer_definition_lines(
+    producer_definition_paths: tuple[str, ...],
+    *,
+    malformed_definition: MalformedProducerFilesDefinition | None,
+) -> tuple[str, ...]:
+    if malformed_definition is MalformedProducerFilesDefinition.MISSING_PRODUCERS:
+        return ()
+
+    producer_values: list[object] = list(producer_definition_paths)
+    if malformed_definition is MalformedProducerFilesDefinition.NON_STRING_MEMBER:
+        producer_values.append(len(producer_definition_paths))
+    elif malformed_definition is MalformedProducerFilesDefinition.EMPTY_MEMBER:
+        producer_values.append("")
+
+    lines = [f"{PRODUCERS_FIELD} = {json.dumps(producer_values)}"]
+    if malformed_definition is MalformedProducerFilesDefinition.MIXED_PRODUCER_FIELDS:
+        lines.append(f"{PRODUCER_FIELD} = {json.dumps(producer_definition_paths[0])}")
+    return tuple(lines)

@@ -14,6 +14,9 @@ from outcomeeng_evals.producer_prompt import (
     producer_path_label,
     verify_materialized_prompt,
 )
+from outcomeeng_testing.generators.producer_prompt import (
+    MalformedProducerFilesDefinition,
+)
 from outcomeeng_testing.harnesses.producer_prompt import (
     invoke_materialize_prompts_recipe,
     with_absolute_producer_files_workspace,
@@ -21,6 +24,7 @@ from outcomeeng_testing.harnesses.producer_prompt import (
     with_duplicate_producer_files_workspace,
     with_empty_producer_files_workspace,
     with_missing_producer_files_placeholder_workspace,
+    with_malformed_producer_files_workspace,
     with_parent_traversal_producer_files_workspace,
     with_producer_files_workspace,
     with_repository_producer_files_workspace,
@@ -85,6 +89,21 @@ def test_producer_files_rejects_empty_source_set() -> None:
 def test_producer_files_rejects_duplicate_source_path() -> None:
     with with_duplicate_producer_files_workspace() as workspace:
         with pytest.raises(ProducerPromptError, match=PRODUCERS_FIELD):
+            materialize_prompt(
+                workspace.eval_toml_path,
+                repo_root=workspace.repo_root,
+            )
+
+
+@pytest.mark.parametrize(
+    "malformed_definition",
+    tuple(MalformedProducerFilesDefinition),
+)
+def test_producer_files_rejects_malformed_declarations(
+    malformed_definition: MalformedProducerFilesDefinition,
+) -> None:
+    with with_malformed_producer_files_workspace(malformed_definition) as workspace:
+        with pytest.raises(ProducerPromptError):
             materialize_prompt(
                 workspace.eval_toml_path,
                 repo_root=workspace.repo_root,
