@@ -171,17 +171,22 @@ class SectionMutationObservation:
 
 
 @dataclass(frozen=True)
+class PromptSnapshot:
+    """Content and mtime of the generated prompt at one observation point."""
+
+    text: str
+    mtime_ns: int
+
+
+@dataclass(frozen=True)
 class CliMaterializationObservation:
     write_result: Result
     check_result: Result
     stale_result: Result
-    prompt_path: Path
-    materialized_prompt: str
-    materialized_mtime_ns: int
-    checked_prompt: str
-    checked_mtime_ns: int
-    stale_prompt: str
-    stale_mtime_ns: int
+    materialized: PromptSnapshot
+    checked: PromptSnapshot
+    stale: PromptSnapshot
+    after_stale_check: PromptSnapshot
 
 
 @dataclass(frozen=True)
@@ -515,26 +520,28 @@ def cli_materialization_observation(tmp_path: Path) -> CliMaterializationObserva
     runner = CliRunner()
     command = _materialize_command(workspace)
     write_result = runner.invoke(main, command)
-    materialized_prompt = workspace.prompt_path.read_text(encoding="utf-8")
-    materialized_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
+    materialized = _prompt_snapshot(workspace.prompt_path)
     check_result = runner.invoke(main, [*command, "--check"])
-    checked_prompt = workspace.prompt_path.read_text(encoding="utf-8")
-    checked_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
-    stale_prompt = f"{materialized_prompt}\nstale\n"
-    workspace.prompt_path.write_text(stale_prompt, encoding="utf-8")
-    stale_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
+    checked = _prompt_snapshot(workspace.prompt_path)
+    workspace.prompt_path.write_text(f"{materialized.text}\nstale\n", encoding="utf-8")
+    stale = _prompt_snapshot(workspace.prompt_path)
     stale_result = runner.invoke(main, [*command, "--check"])
+    after_stale_check = _prompt_snapshot(workspace.prompt_path)
     return CliMaterializationObservation(
         write_result=write_result,
         check_result=check_result,
         stale_result=stale_result,
-        prompt_path=workspace.prompt_path,
-        materialized_prompt=materialized_prompt,
-        materialized_mtime_ns=materialized_mtime_ns,
-        checked_prompt=checked_prompt,
-        checked_mtime_ns=checked_mtime_ns,
-        stale_prompt=stale_prompt,
-        stale_mtime_ns=stale_mtime_ns,
+        materialized=materialized,
+        checked=checked,
+        stale=stale,
+        after_stale_check=after_stale_check,
+    )
+
+
+def _prompt_snapshot(prompt_path: Path) -> PromptSnapshot:
+    return PromptSnapshot(
+        text=prompt_path.read_text(encoding="utf-8"),
+        mtime_ns=prompt_path.stat().st_mtime_ns,
     )
 
 

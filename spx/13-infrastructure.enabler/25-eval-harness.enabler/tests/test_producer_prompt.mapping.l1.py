@@ -16,15 +16,10 @@ def test_cli_write_and_check_modes_map_to_prompt_state() -> None:
         assert observation.write_result.exit_code == os.EX_OK
         assert PROMPT_FILENAME in observation.write_result.output
         assert observation.check_result.exit_code == os.EX_OK
-        assert observation.checked_prompt == observation.materialized_prompt
-        assert observation.checked_mtime_ns == observation.materialized_mtime_ns
+        assert observation.checked == observation.materialized
         assert observation.stale_result.exit_code != os.EX_OK
         assert PROMPT_FILENAME in observation.stale_result.output
-        assert (
-            observation.prompt_path.read_text(encoding="utf-8")
-            == observation.stale_prompt
-        )
-        assert observation.prompt_path.stat().st_mtime_ns == observation.stale_mtime_ns
+        assert observation.after_stale_check == observation.stale
 
     run_cli_materialization_mapping(predicate)
 
