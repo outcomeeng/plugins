@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `spx/local/skills.md` when the target repository provides it.
+Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `${CLAUDE_SKILL_DIR}/references/test-patterns.md` for activation, routing, and fresh-context validation. Read `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the new route introduces variable request shapes or tool choices. Read `spx/local/skills.md` when the target repository provides it.
 
 </required_reading>
 

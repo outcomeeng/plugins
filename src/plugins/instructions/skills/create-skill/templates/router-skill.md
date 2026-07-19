@@ -58,7 +58,7 @@ What would you like to do?
 
 <success_criteria>
 
-- Representative input selects exactly one intended route.
+- For every route, one canonical trigger and its nearest adjacent or ambiguous trigger select the intended workflow without stealing a neighboring intent.
 - Every routed workflow exists and produces its declared output.
 - Every bundled reference is cited by a consumer and loads only when required.
 
