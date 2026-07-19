@@ -250,40 +250,86 @@ Without a workflow, the subagent may skip important steps or review inconsistent
 </anti_pattern>
 
 <anti_pattern name="unclear_trigger">
-The `description` field is critical for automatic invocation. LLM agents use descriptions to make routing decisions.
+{!% if target == 'codex' %!}
+The `description` field guides Codex when selecting among custom agents after the user explicitly requests a custom-agent or subagent workflow.
+{!% else %!}
+The `description` field is critical for automatic invocation. Claude uses descriptions to make routing decisions.
+{!% endif %!}
 
 **Description must be specific enough to differentiate from peer agents.**
 
 ❌ Bad (too vague):
 
+{!% if target == 'codex' %!}
+
+```toml
+description = "Helps with testing"
+```
+
+{!% else %!}
+
 ```yaml
 description: Helps with testing
 ```
 
+{!% endif %!}
+
 ❌ Bad (not differentiated):
+
+{!% if target == 'codex' %!}
+
+```toml
+description = "Billing agent"
+```
+
+{!% else %!}
 
 ```yaml
 description: Billing agent
 ```
 
+{!% endif %!}
+
 ✅ Good (specific triggers + differentiation):
 
-```yaml
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient. Proactively use after implementing new features.
+{!% if target == 'codex' %!}
+
+```toml
+description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
 ```
 
+{!% else %!}
+
+```yaml
+description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
+```
+
+{!% endif %!}
+
 ✅ Good (clear scope):
+
+{!% if target == 'codex' %!}
+
+```toml
+description = "Handles current billing statements and payment processing. Use when the user asks about invoices, payments, or billing history, excluding subscription changes."
+```
+
+{!% else %!}
 
 ```yaml
 description: Handles current billing statements and payment processing. Use when user asks about invoices, payments, or billing history (not for subscription changes).
 ```
+
+{!% endif %!}
 
 **Optimization tips**:
 
 - Include **trigger keywords** that match common user requests
 - Specify **when to use** (not just what it does)
 - **Differentiate** from similar agents (what this one does vs others)
+  {!% if target != 'codex' %!}
 - Include **proactive triggers** if agent should be invoked automatically
+  {!% endif %!}
 
 </anti_pattern>
 
@@ -506,7 +552,11 @@ Task is complete when:
 - **Skipping steps**: Make workflow more explicit
 - **Inconsistent output**: Define output format more clearly
 - **Overstepping bounds**: Add or clarify constraints
+  {!% if target == 'codex' %!}
+- **Wrong custom agent selected after an explicit request**: Clarify the description with distinguishing purpose and usage terms
+  {!% else %!}
 - **Not automatically invoked**: Improve description field with trigger keywords
+  {!% endif %!}
 
 </common_issues>
 </testing_subagents>
