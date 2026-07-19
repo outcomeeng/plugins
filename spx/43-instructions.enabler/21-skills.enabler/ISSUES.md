@@ -32,3 +32,17 @@ for granting and omitting bare `Bash`.
 
 Source: skill-auditor finding `f-004`, rule `read_only_audit_capabilities`, severity
 `REJECT`, reconciled with the earlier `overbroad_allowed_tools` rejection.
+
+## Revalidate after exercise-driven edits
+
+`src/plugins/instructions/skills/create-skill/workflows/create-new-skill.md:79`
+allows the representative exercise to trigger iterative edits after deterministic
+checks and the skill audit have already completed. The final bundle can therefore
+differ from the bundle those gates evaluated.
+
+Required handling: run the representative exercise before final validation, or loop
+every exercise-driven edit back through deterministic checks and the complete-bundle
+skill audit before publication.
+
+Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
+category after merge.
