@@ -74,6 +74,19 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
+WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
+    "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
+    "ALWAYS invoke `/wait-for-load`.**"
+)
+WAIT_FOR_LOAD_READY_REQUIREMENT: Final = (
+    "**ALWAYS** wait for `ready: true`, then run the selected command unchanged."
+)
+WAIT_FOR_LOAD_SCOPE_REQUIREMENT: Final = "**NEVER** use host load to reduce scope, workers, limits, deadlines, or verification."
+WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
+    ("stop trigger", WAIT_FOR_LOAD_STOP_TRIGGER),
+    ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
+    ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
+)
 CODEX_HARNESS: Final = "codex"
 CODEX_ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
@@ -218,6 +231,10 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
 
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
+
+
+class WaitForLoadPolicyError(InstructionBlockRenderError):
+    """Raised when a rendered router omits part of its load-wait policy."""
 
 
 class OperatorQuestionPolicyError(InstructionBlockRenderError):
@@ -433,6 +450,22 @@ def validate_foundation_access_policy(
             )
 
 
+def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
+    """Reject a rendered harness router that weakens the load-wait policy."""
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        missing = [
+            name
+            for name, required_text in WAIT_FOR_LOAD_POLICY_REQUIREMENTS
+            if required_text not in router
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise WaitForLoadPolicyError(
+                f"{harness} router wait-for-load policy is incomplete: {details}"
+            )
+
+
 def operator_question_policy_block(router: str) -> str | None:
     """Return the Codex operator-question policy block from a complete router."""
     start = router.find(CODEX_OPERATOR_QUESTION_POLICY_OPEN)
@@ -534,6 +567,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
+    validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_verifier_dispatch_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)

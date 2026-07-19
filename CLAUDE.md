@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.26.0 langs:python -->
+<!-- SPEC-TREE v0.26.1 langs:python -->
 
 # Spec Tree Instructions
 
@@ -59,11 +59,11 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### Before resource-intensive local work -> `/wait-for-load`
+### Before tests, evals, builds, or validation -> `/wait-for-load`
 
-Invoke `/wait-for-load` before starting a resource-intensive local command. Run its bundled host-load waiter exactly once and collect that process's completion. The waiter owns CPU normalization, all three load-average observations, interval selection, sleeping, and rechecking; it remains silent until one terminal JSON result.
-
-Proceed only when the waiter exits zero with `status: "ready"` and `ready: true`. Never calculate a host-load delay, run repeated load commands, schedule a host-load heartbeat or timer, or substitute shell polling. A nonzero waiter result stops the heavy command and supplies the terminal reason to report.
+🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, ALWAYS invoke `/wait-for-load`.**
+**ALWAYS** wait for `ready: true`, then run the selected command unchanged.
+**NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
 ### When shipping work to the default branch -> `/merge` (transport dispatcher)
 
