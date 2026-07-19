@@ -11,6 +11,7 @@ from outcomeeng_evals.producer_prompt import (
     PromptMaterializationDrift,
     ProducerPromptError,
     materialize_prompt,
+    producer_path_label,
     verify_materialized_prompt,
 )
 from outcomeeng_testing.harnesses.producer_prompt import (
@@ -32,15 +33,18 @@ def test_materializes_prompt_from_ordered_producer_files() -> None:
         materialize_prompt(workspace.eval_toml_path, repo_root=workspace.repo_root)
         prompt_text = workspace.read_prompt()
         producer_block_positions = tuple(
-            position
+            prompt_text.index(
+                "\n\n".join(
+                    [
+                        producer_path_label(relative_path),
+                        producer_text,
+                    ]
+                )
+            )
             for relative_path, producer_text in zip(
                 workspace.producer_relative_paths,
                 workspace.producer_texts,
                 strict=True,
-            )
-            for position in (
-                prompt_text.rindex(relative_path),
-                prompt_text.index(producer_text),
             )
         )
         assert producer_block_positions == tuple(sorted(producer_block_positions))

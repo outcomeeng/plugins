@@ -28,6 +28,7 @@ PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
 PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 PRODUCER_PATHS_PLACEHOLDER: Final = "{producer_paths}"
 PRODUCER_FILES_PLACEHOLDER: Final = "{producer_files}"
+PRODUCER_PATH_LABEL_TEMPLATE: Final = "<!-- Producer: {producer_path} -->"
 
 _REQUIRED_PLACEHOLDER_COUNT: Final = 1
 _SECTION_NAME_PATTERN: Final = (
@@ -231,11 +232,16 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
     return _replace_known_placeholders_once(template, replacements)
 
 
+def producer_path_label(relative_path: str) -> str:
+    """Render the source-owned label for one complete producer body."""
+    return PRODUCER_PATH_LABEL_TEMPLATE.format(producer_path=relative_path)
+
+
 def _render_path_labeled_producers(producers: tuple[ProducerSource, ...]) -> str:
     return "\n\n".join(
         "\n\n".join(
             [
-                f"<!-- Producer: {producer.relative_path} -->",
+                producer_path_label(producer.relative_path),
                 producer.path.read_text(encoding="utf-8"),
             ]
         )
