@@ -30,7 +30,7 @@ The `/internal-doc-standards` catalog encodes this calibration. The inherited pr
 <workflow>
 1. Read `/internal-doc-standards` for the catalog of conventions and anti-patterns.
 
-2. Confirm ownership before drafting. Apply the `<artifact_ownership>` test: when a repository or domain workflow governs the artifact, stop and route to that workflow. Then identify the type — process documentation, workspace-native decision record, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions.
+2. Confirm ownership before drafting. Apply the `<artifact_ownership>` test: when a repository or domain workflow governs the artifact, stop and route to that workflow. Then identify the type — process documentation, workspace-native decision record, workspace-native design spec, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions.
 
 3. Identify canonical homes. For each concept the document will reference, locate its canonical home in the workspace. Plan inline hyperlinks to those homes; don't restate canonical content.
 
@@ -48,6 +48,8 @@ The `/internal-doc-standards` catalog encodes this calibration. The inherited pr
 Brief conventions for common internal-doc types.
 
 Workspace-native decision records. Lead with the decision in one sentence. Then context, options considered, reasoning, consequences. Decisive language throughout; the doc encodes a decision that's been made. These conventions cover only decision records no repository or domain workflow governs — an ADR or PDR follows its governing repository skill, not this shape.
+
+Workspace-native design specs. Lead with what the design produces and for whom. Then the constraints it works within, the shape of the approach, and the open questions. These conventions cover only design specs no repository or domain workflow governs — a spec, ADR, or PDR under a repository's own tree follows its governing repository skill, not this shape.
 
 Hiring rubrics and scorecards. Lead with what the rubric measures. Then the scoring scale, then the items. Items are grouped by category. Each item has a behavioral indicator and a source. Scoring guidance is concrete (1 means X, 2 means Y, etc.).
 
