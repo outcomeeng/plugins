@@ -15,7 +15,7 @@ Invoke the `instructions:agent-prompt-standards` skill before proceeding. If tha
 Invoke the `instructions:create-subagent` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A structured verdict on one custom agent configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, governing convention, and consequence.
+An `APPROVED` or `REJECTED` verdict on one custom agent configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
 </objective>
 
 <constraints>

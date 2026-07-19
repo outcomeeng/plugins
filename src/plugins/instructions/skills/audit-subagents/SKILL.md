@@ -15,7 +15,7 @@ allowed-tools: Read, Grep, Glob, Skill
 {!% require_skill 'instructions:create-subagent' %!}
 
 <objective>
-A structured verdict on one {{! term('configured_agent') !}} configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, governing convention, and consequence.
+An `APPROVED` or `REJECTED` verdict on one {{! term('configured_agent') !}} configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, violated convention, concrete evidence, and consequence.
 </objective>
 
 <constraints>

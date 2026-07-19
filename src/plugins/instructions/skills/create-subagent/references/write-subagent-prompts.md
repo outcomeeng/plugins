@@ -519,14 +519,14 @@ Rather than:
 <practice name="success_criteria">
 Define what successful completion looks like:
 
-```markdown
+```text
 <success_criteria>
 Task is complete when:
 
-- All modified files have been reviewed
-- Each issue has severity rating and specific fix
-- Output format is valid JSON
-- No vulnerabilities were missed (cross-check against OWASP Top 10)
+- Every path in the declared modified-file scope appears in `reviewed_paths`
+- Every finding contains `path`, `line`, `severity`, `evidence`, and `fix`
+- The final output parses as valid JSON
+- `owasp_coverage` contains one `checked` or `not_applicable` row with evidence for each OWASP Top 10 category
   </success_criteria>
 ```
 
