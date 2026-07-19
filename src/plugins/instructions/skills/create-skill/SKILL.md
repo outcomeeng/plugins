@@ -2,7 +2,7 @@
 name: create-skill
 description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill, WebFetch, WebSearch
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill,{!% if target == 'claude' %!} Agent,{!% endif %!} WebFetch, WebSearch
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}
