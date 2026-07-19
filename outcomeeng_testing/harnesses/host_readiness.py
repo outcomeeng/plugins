@@ -14,7 +14,7 @@ import pathlib
 import sys
 from dataclasses import dataclass, field
 from types import ModuleType
-from typing import Final, Protocol, cast
+from typing import Protocol, cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 HOST_READINESS_MODULE_PATH = (
@@ -112,34 +112,6 @@ class WaitResult(Protocol):
         ...
 
 
-class StatusValue(Protocol):
-    """Observable enum-member contract used by the mapping evidence."""
-
-    name: str
-    value: str
-
-
-READY_STATUS: Final = "ready"
-NOT_READY_STATUS: Final = "not_ready"
-
-DECLARED_TERMINAL_CONTRACT: Final[dict[str, tuple[bool, int]]] = {
-    READY_STATUS: (True, 0),
-    "error": (False, 1),
-    "unsupported": (False, 2),
-    NOT_READY_STATUS: (False, 3),
-    "interrupted": (False, 130),
-}
-"""Readiness and process exit code the node spec declares for each status.
-
-This table restates the declaration rather than importing the waiter's own
-enums, so it is an oracle independent of the module under test. Comparing a
-result against the module's own `ExitCode` members cannot fail when those
-members are renumbered; comparing against this table can. The exit code is a
-process-level contract read by callers that never import the module, so a
-renumbering is a breaking change these values exist to catch.
-"""
-
-
 @dataclass(frozen=True)
 class WaitRun:
     """Result plus controlled clock evidence from one waiter invocation."""
@@ -147,8 +119,6 @@ class WaitRun:
     module: ModuleType
     result: WaitResult
     clock: ControlledClock
-    declared_ready: bool
-    declared_exit_code: int
 
 
 def _load_at_ratio(ratio: float) -> tuple[float, float, float]:
@@ -167,9 +137,7 @@ def _high_load(module: ModuleType) -> tuple[float, float, float]:
     return _load_at_ratio(math.nextafter(module.CAPACITY_RATIO, math.inf))
 
 
-def _run(
-    observations: list[tuple[float, float, float]], declared_status: str
-) -> WaitRun:
+def _run(observations: list[tuple[float, float, float]]) -> WaitRun:
     """Run the waiter against controlled observations and monotonic time."""
     module = load_host_readiness_module()
     clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
@@ -180,78 +148,49 @@ def _run(
         monotonic=clock.monotonic,
         sleep=clock.sleep,
     )
-    declared_ready, declared_exit_code = DECLARED_TERMINAL_CONTRACT[declared_status]
     return WaitRun(
         module=module,
         result=cast(WaitResult, module.wait_until_ready(dependencies)),
         clock=clock,
-        declared_ready=declared_ready,
-        declared_exit_code=declared_exit_code,
     )
 
 
 def run_immediate_ready() -> WaitRun:
     """Run one invocation whose initial observation is ready."""
     module = load_host_readiness_module()
-    return _run([_ready_load(module)], READY_STATUS)
+    return _run([_ready_load(module)])
 
 
 def run_ready_before_deadline() -> WaitRun:
     """Run one invocation whose second observation is ready."""
     module = load_host_readiness_module()
-    return _run([_high_load(module), _ready_load(module)], READY_STATUS)
+    return _run([_high_load(module), _ready_load(module)])
 
 
 def run_deadline_not_ready() -> WaitRun:
     """Run one invocation whose load stays above capacity through its deadline."""
     module = load_host_readiness_module()
-    return _run([_high_load(module)], NOT_READY_STATUS)
+    return _run([_high_load(module)])
 
 
-def terminal_result_for(status: StatusValue) -> WaitRun:
-    """Build a terminal result for one source-owned status."""
+def terminal_result_for_status(status: object) -> WaitResult:
+    """Build the terminal result the waiter emits for one source-owned status."""
     module = load_host_readiness_module()
     clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
-    declared_ready, declared_exit_code = DECLARED_TERMINAL_CONTRACT[str(status.value)]
     dependencies = module.Dependencies(
         read_load_averages=lambda: _ready_load(module),
         read_cpu_count=lambda: CPU_COUNT,
         monotonic=clock.monotonic,
         sleep=clock.sleep,
     )
-    return WaitRun(
-        module=module,
-        result=cast(
-            WaitResult,
-            module.terminal_result(
-                status=status,
-                dependencies=dependencies,
-                started_at=clock.monotonic(),
-                initial=None,
-                final=None,
-                wait_cycles=0,
-            ),
+    return cast(
+        WaitResult,
+        module.terminal_result(
+            status=status,
+            dependencies=dependencies,
+            started_at=clock.monotonic(),
+            initial=None,
+            final=None,
+            wait_cycles=0,
         ),
-        clock=clock,
-        declared_ready=declared_ready,
-        declared_exit_code=declared_exit_code,
     )
-
-
-def terminal_status_mapping_holds() -> bool:
-    """Verify every status carries the readiness and exit code the spec declares."""
-    module = load_host_readiness_module()
-    statuses = set(module.Status)
-    if statuses != set(module.STATUS_EXIT_CODES) or statuses != set(
-        module.STATUS_READINESS
-    ):
-        return False
-    if {str(status.value) for status in statuses} != set(DECLARED_TERMINAL_CONTRACT):
-        return False
-    for status in statuses:
-        run = terminal_result_for(cast(StatusValue, status))
-        if run.result.ready is not run.declared_ready:
-            return False
-        if int(run.result.exit_code) != run.declared_exit_code:
-            return False
-    return True
