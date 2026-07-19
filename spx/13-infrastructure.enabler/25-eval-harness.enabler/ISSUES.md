@@ -2,6 +2,14 @@
 
 Open items carried forward from the eval-harness refactor. None block the harness as shipped; each is a follow-up decision or enhancement.
 
+## Sectionless Python producer contributes zero section cases
+
+The producer-section case corpus (`producer_cases()` in `outcomeeng_testing/evals/producer_prompt.py`) scans every shipped `audit*tests` skill for named `<step name="...">` sections. `dist/claude/python/skills/audit-python-tests/SKILL.md` (and its `dist/codex` mirror) carries zero such sections, so the Python producer silently contributes no section cases to the section-materialization and section-mutation evidence, while the spec-tree, TypeScript, and Rust producers contribute 10, 8, and 8. The whole-file mapping evidence (`spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_producer_files_prompt.mapping.l1.py`) still covers the Python producer.
+
+**Why deferred**: the fix restructures another plugin's shipped skill content — adding named step sections to `src/plugins/python/skills/audit-python-tests/SKILL.md` requires the skill-auditor gate, a python plugin version bump, `dist/` regeneration, and content design of that skill's section structure; it exists independently of this changeset (the skill ships sectionless on the default branch today).
+
+**Resolution shape**: add named `<step name="...">` sections to `src/plugins/python/skills/audit-python-tests/SKILL.md` and rebuild, then add an assertion in `producer_cases()` (or a dedicated test) that fails when any discovered producer contributes zero named-step cases, so a producer silently losing its step markup surfaces as a test failure. The assertion lands second because it is red until the Python skill carries sections.
+
 ## Cross-suite parallelism
 
 The harness supports `--workers` for parallelism within a suite. `run --all` could also parallelize across suites. Defer; today's use case is one eval at a time.
