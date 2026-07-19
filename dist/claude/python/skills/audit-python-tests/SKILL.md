@@ -212,11 +212,12 @@ Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructur
 </audit_workflow>
 
 <verdict_format>
-This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`), the JSON schema, and the closed `property` enum are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows. Put evidence-property findings in `gate-1-assertion` and repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
+
+Every finding carries a `property` drawn from the base enum. Python-specific concerns map onto it rather than extending it: a harness that leaks a temporary directory or leaves a session open is `coupling` when it severs the asserted behavior and `declarations` when it owns setup policy; a `conftest.py` discovery defect is `evidence-chain-completeness`; a strategy that collapses to a single example is `falsifiability`. A concern with no home in the base enum is a signal to extend that enum in `/audit-tests`, never to invent a value here.
 
 For each finding, include:
 
-- Verdict property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
 - Exact file and line
 - The imported chain when the defect is outside the test file
 - Required fix

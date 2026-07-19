@@ -71,7 +71,7 @@ Challenge the assertion:
 - Is the assertion type correct for the claim?
 - Does it overlap with another assertion in the same node or parent?
 
-Record challenge findings and continue unless the assertion type is invalid.
+Record challenge findings and continue unless the assertion type is invalid. A `challenge` finding carries property `alignment` from the base `/audit-tests` enum — the claim itself is malformed or misaligned with its governing decision.
 </step>
 
 <step name="scope">
@@ -83,7 +83,7 @@ Example:
 | -------------------------------------------------- | ---------------------------------------------------- |
 | "MUST exit 0 with no stdout for invalid hook JSON" | (1) invalid JSON input, (2) exit 0, (3) empty stdout |
 
-The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding.
+The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding carrying property `coverage` from the base `/audit-tests` enum — clauses of the claim go unexercised.
 </step>
 
 <step name="evidence">

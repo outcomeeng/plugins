@@ -26,6 +26,7 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 - ALWAYS construct every finding as one complete record containing `id`, `file`, `line`, `assertion`, `property`, `rule`, `severity`, `message`, and `remediation_target` before adding it to a row — required fields are never deferred to verdict rendering.
 - ALWAYS reject an incomplete evidence-chain inventory before approval; absence of an artifact is missing evidence, never permission to infer its contents.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
+- This skill grants no `Bash` capability, unlike the language auditors it composes. The omission is deliberate: the no-deterministic-verification constraint above is enforced at the tool-permission layer rather than by prose alone, and this base audit reaches every artifact it judges through `Read`, `Grep`, and `Glob`. Do not add a `Bash` grant for parity.
 
 </constraints>
 

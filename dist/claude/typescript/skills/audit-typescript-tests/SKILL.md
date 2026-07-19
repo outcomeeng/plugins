@@ -93,7 +93,7 @@ For each assertion in the spec's Assertions section, execute steps 1–8 in orde
 - Is the assertion type (Scenario / Mapping / Conformance / Property / Compliance) the right one for the claim? A behavioral rule is not a Scenario.
 - Does the assertion overlap with another assertion in the same node or a parent (redundancy)?
 
-Record any issue as a `challenge` finding and continue to step 2 — challenge issues do not short-circuit the remaining steps unless the assertion type is provably wrong (which invalidates step 4).
+Record any issue as a `challenge` finding carrying property `alignment` from the base `/audit-tests` enum — the claim itself is malformed or misaligned with its governing decision — and continue to step 2. Challenge issues do not short-circuit the remaining steps unless the assertion type is provably wrong (which invalidates step 4).
 
 </step>
 
@@ -108,7 +108,7 @@ Decompose the assertion text into testable clauses. Examples:
 | "MUST reject expired requests with HTTP 410 and an error-schema body" | (1) reject, (2) HTTP 410, (3) body schema conforms          |
 | "Outputs OKLCH colors meeting WCAG AA at AA-Large text weights"       | (1) OKLCH format, (2) WCAG AA contrast, (3) AA-Large sizing |
 
-The test must exercise every clause with at least one `expect`. Single `expect` for a multi-clause assertion → REJECT this assertion with a `scope` finding.
+The test must exercise every clause with at least one `expect`. Single `expect` for a multi-clause assertion → REJECT this assertion with a `scope` finding carrying property `coverage` from the base `/audit-tests` enum — clauses of the claim go unexercised.
 
 </step>
 
