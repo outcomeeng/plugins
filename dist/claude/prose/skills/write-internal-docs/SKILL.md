@@ -84,7 +84,7 @@ The document survives an `/audit-internal-docs` pass with no flagged violations.
 | ------------------------- | -------------------------------------------- |
 | `/internal-doc-standards` | Always, before writing                       |
 | `/audit-internal-docs`    | When the draft is ready for review           |
-| `/prose-standards`        | When you need the inherited rules            |
+| `/prose-standards`        | For the inherited rules                      |
 | `/write-prose`            | For external-facing prose, not internal docs |
 
 </reference_index>

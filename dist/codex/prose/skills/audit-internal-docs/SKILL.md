@@ -12,6 +12,11 @@ Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill
 A list of internal-doc anti-patterns found, each flagged with its category and pattern name and paired with a concrete rewrite.
 </objective>
 
+<constraints>
+NEVER modify the document under review — this skill produces flags and proposed rewrites, and the user applies them.
+NEVER flag a pattern the internal-doc overrides explicitly permit — the overrides are the catalog's decision, not an oversight.
+</constraints>
+
 <artifact_ownership>
 Reviewing a document follows the same ownership rules as writing it. Artifact ownership outranks audience, so "it lives in a workspace and colleagues read it" never routes a review here on its own.
 
@@ -29,9 +34,22 @@ Repository-governed engineering artifacts — `AGENTS.md`, spec-tree specs, ADRs
 
 5. Propose a concrete rewrite for each flag. Don't just say "avoid X" — show the fixed text. The rewrite makes the suggestion actionable and lets the user accept or modify it directly.
 
-6. Summarize. Total violation count, most frequent category, overall assessment of doc quality. The summary lets the user prioritize their attention.
+6. Emit the flags and the closing summary in the shape `<verdict_format>` defines.
 
 </workflow>
+
+<verdict_format>
+Report each violation as a flag carrying four parts:
+
+- **Pattern** — the specific anti-pattern name from the catalog.
+- **Category** — the catalog section it belongs to.
+- **Quote** — the offending text as it appears in the document.
+- **Rewrite** — the corrected text, ready to accept.
+
+Close with a summary carrying the total violation count, the most frequent category, and an overall assessment of doc quality.
+
+When the document is governed elsewhere per `<artifact_ownership>`, emit no flags: name the governing workflow and stop.
+</verdict_format>
 
 <what_to_check>
 Apply the catalog systematically.

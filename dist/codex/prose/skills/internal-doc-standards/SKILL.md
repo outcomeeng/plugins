@@ -15,7 +15,7 @@ This is a reference skill. Composing internal-doc skills load these standards ex
 </reference_note>
 
 <scope>
-USE this catalog for internal team docs that live in your workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
+USE this catalog for internal team docs that live in the workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
 
 DO NOT use this catalog for repository-governed engineering artifacts. `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
 
@@ -63,7 +63,7 @@ Rules specific to internal docs.
 
 Lead with the gist. Open every internal doc with the substantive lead sentence. Not metadata, not a "what this page is about" boilerplate, not a fractal summary. The first sentence is the first thing the page says about its actual subject. "Living document. Status: DRAFT. Owner: ..." at the top of a page is the canonical violation.
 
-Status, owner, and dates belong in document metadata. Notion has page properties for these. Other tools have frontmatter, headers, or sidebar metadata. Put status, owner, and last-updated date in the platform-native metadata, not in the opening prose. If you need them visible in-document, use a small structured callout that a reader can skim past.
+Status, owner, and dates belong in document metadata. Notion has page properties for these. Other tools have frontmatter, headers, or sidebar metadata. Put status, owner, and last-updated date in the platform-native metadata, not in the opening prose. When they must stay visible in-document, use a small structured callout that a reader can skim past.
 
 Headings are sentence case with no end punctuation. "How this layer is used" is correct. "How This Layer Is Used:" is title-cased and ends with a colon, both of which are wrong. Exceptions are proper nouns that retain their canonical capitalization, e.g., "Have Backbone; Disagree and Commit" as an Amazon Leadership Principle.
 
