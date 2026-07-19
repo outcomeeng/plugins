@@ -214,10 +214,10 @@ def terminal_status_mapping_holds() -> bool:
         module.STATUS_READINESS
     ):
         return False
-    return all(
-        terminal_result_for(cast(StatusValue, status)).result.exit_code
-        is module.STATUS_EXIT_CODES[status]
-        and terminal_result_for(cast(StatusValue, status)).result.ready
-        is module.STATUS_READINESS[status]
-        for status in statuses
-    )
+    for status in statuses:
+        result = terminal_result_for(cast(StatusValue, status)).result
+        if result.exit_code is not module.STATUS_EXIT_CODES[status]:
+            return False
+        if result.ready is not module.STATUS_READINESS[status]:
+            return False
+    return True
