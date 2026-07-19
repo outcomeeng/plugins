@@ -15,7 +15,7 @@ def test_initial_ready_observation_returns_without_sleeping() -> None:
 
     assert run.result.status is run.module.Status.READY
     assert run.result.ready is True
-    assert int(run.result.exit_code) == 0
+    assert run.result.exit_code is run.module.ExitCode.READY
     assert not run.clock.sleeps
 
 
@@ -33,7 +33,7 @@ def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:
 
     assert run.result.status is run.module.Status.NOT_READY
     assert run.result.ready is False
-    assert int(run.result.exit_code) == 3
+    assert run.result.exit_code is run.module.ExitCode.NOT_READY
     assert run.result.final is not None
     assert run.result.waited_seconds == run.module.MAXIMUM_WAIT_SECONDS
     assert sum(run.clock.sleeps) == run.module.MAXIMUM_WAIT_SECONDS
@@ -44,7 +44,7 @@ def test_host_without_a_positive_cpu_count_returns_unsupported() -> None:
 
     assert run.result.status is run.module.Status.UNSUPPORTED
     assert run.result.ready is False
-    assert int(run.result.exit_code) == 2
+    assert run.result.exit_code is run.module.ExitCode.UNSUPPORTED
 
 
 def test_interrupt_during_a_wait_interval_returns_interrupted() -> None:
@@ -52,7 +52,7 @@ def test_interrupt_during_a_wait_interval_returns_interrupted() -> None:
 
     assert run.result.status is run.module.Status.INTERRUPTED
     assert run.result.ready is False
-    assert int(run.result.exit_code) == 130
+    assert run.result.exit_code is run.module.ExitCode.INTERRUPTED
 
 
 def test_failing_load_reader_returns_error() -> None:
@@ -60,4 +60,4 @@ def test_failing_load_reader_returns_error() -> None:
 
     assert run.result.status is run.module.Status.ERROR
     assert run.result.ready is False
-    assert int(run.result.exit_code) == 1
+    assert run.result.exit_code is run.module.ExitCode.ERROR

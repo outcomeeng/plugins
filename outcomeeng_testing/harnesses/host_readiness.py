@@ -43,6 +43,22 @@ HOST_READINESS_MODULE_PATH = (
 MODULE_NAME = "wait_for_load"
 CPU_COUNT = 1
 
+DECLARED_EXIT_CODES: Final = (
+    ("ready", 0),
+    ("error", 1),
+    ("unsupported", 2),
+    ("not_ready", 3),
+    ("interrupted", 130),
+)
+"""The status-to-exit-code contract the node spec declares, transcribed here.
+
+This is the one place the harness states a value rather than deriving it from
+the module. The derivation is deliberately absent: an oracle read out of
+`STATUS_EXIT_CODES` would compare that table against itself and hold for any
+value it contained. Transcribing the spec's own numbers is what lets the
+mapping evidence fail when the module stops honoring them.
+"""
+
 
 def load_host_readiness_module() -> ModuleType:
     """Load and cache the shipped host-readiness module."""
@@ -70,11 +86,16 @@ class UnboundedWaiterError(AssertionError):
 class ControlledClock:
     """Monotonic clock whose sleep advances deterministically within a horizon.
 
-    The horizon is the waiter's own source-declared maximum wait. Advancing
-    past it means the waiter under exercise never reaches a terminal result,
-    and because this clock costs no wall-clock time such a waiter would spin
-    until it exhausts host memory. Failing on the first sleep beyond the
-    horizon converts that exhaustion into an immediate, readable failure.
+    The horizon is the waiter's own source-declared maximum wait. A waiter that
+    never reaches a terminal result would spin forever here, because this clock
+    costs no wall-clock time. Two distinct failures produce that spin, and each
+    raises on the offending sleep so the test fails immediately and readably
+    rather than hanging:
+
+    - sleeping past the horizon, which overshoots the declared deadline; and
+    - sleeping a non-positive interval, which advances nothing and so can
+      repeat without ever reaching the deadline. A bounded waiter always makes
+      progress, so a non-advancing sleep is always a defect.
     """
 
     horizon: float
@@ -87,6 +108,12 @@ class ControlledClock:
 
     def sleep(self, seconds: float) -> None:
         """Record and advance by one requested sleep interval."""
+        if seconds <= 0:
+            raise UnboundedWaiterError(
+                f"waiter slept {seconds}s at {self.current}s, advancing nothing "
+                f"after {len(self.sleeps)} intervals; it cannot reach its "
+                f"{self.horizon}s deadline"
+            )
         if self.current + seconds > self.horizon:
             raise UnboundedWaiterError(
                 f"waiter slept to {self.current + seconds}s past its "
