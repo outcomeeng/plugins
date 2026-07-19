@@ -434,18 +434,16 @@ A well-configured {{! term('configured_agent') !}} has:
 
 {!% if target == 'codex' %!}
 
-- Valid TOML file with `name`, `description`, and `{{! field('configured_agent_prompt') !}}`
-- Clear role definition in {{! term('configured_agent_prompt') !}}
-- Appropriate sandbox and tool-surface restrictions
-- XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
+- A file that the target runtime's TOML parser or agent loader accepts, with `name`, `description`, and `{{! field('configured_agent_prompt') !}}`
+- A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
+- Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
   {!% else %!}
-- Valid YAML frontmatter (name matches file, description includes triggers)
-- Clear role definition in {{! term('configured_agent_prompt') !}}
-- Appropriate tool restrictions (least privilege)
-- XML-structured {{! term('configured_agent_prompt') !}} with role, approach, and constraints
+- A file that the target runtime's agent loader accepts, with YAML frontmatter whose name matches the filename
+- A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
+- Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
   {!% endif %!}
-- Description field optimized for automatic routing
-- At least one verification run or documented dry-run against the {{! term('configured_agent') !}}'s intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description that states both what the {{! term('configured_agent') !}} does and when to invoke it
+- A model identifier accepted by the target runtime and consistent with the configuration's stated capability, cost, and reproducibility requirements
+- A recorded representative invocation or dry-run naming the intended workflow, expected output shape, and observed result; rerun it after every configuration edit
 
 </success_criteria>

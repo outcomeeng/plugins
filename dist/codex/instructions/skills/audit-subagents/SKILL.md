@@ -38,7 +38,14 @@ A verdict on one custom agent configuration file (`.codex/agents/*.toml` or `~/.
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read `instructions:create-subagent` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
+1. Both skills are already injected above. Read `instructions:create-subagent` plus every guide that supplies an evaluation area:
+   - `references/subagents.md`
+   - `references/write-subagent-prompts.md`
+   - `references/evaluation-and-testing.md`
+   - `references/error-handling-and-recovery.md`
+   - `references/context-management.md`
+   - `references/orchestration-patterns.md`
+   - `references/debugging-agents.md`
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.

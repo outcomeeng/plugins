@@ -308,13 +308,12 @@ How to avoid: Keep SKILL.md under 500 lines; move extended examples and configur
 <success_criteria>
 A well-configured subagent has:
 
-- Valid YAML frontmatter (name matches file, description includes triggers)
-- Clear role definition in system prompt
-- Appropriate tool restrictions (least privilege)
-- XML-structured system prompt with role, approach, and constraints
+- A file that the target runtime's agent loader accepts, with YAML frontmatter whose name matches the filename
+- A `system prompt` containing XML-structured role, workflow, constraints, and output expectations
+- Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
 
-- Description field optimized for automatic routing
-- At least one verification run or documented dry-run against the subagent's intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description that states both what the subagent does and when to invoke it
+- A model identifier accepted by the target runtime and consistent with the configuration's stated capability, cost, and reproducibility requirements
+- A recorded representative invocation or dry-run naming the intended workflow, expected output shape, and observed result; rerun it after every configuration edit
 
 </success_criteria>

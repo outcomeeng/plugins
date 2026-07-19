@@ -302,13 +302,12 @@ How to avoid: Keep SKILL.md under 500 lines; move extended examples and configur
 <success_criteria>
 A well-configured custom agent has:
 
-- Valid TOML file with `name`, `description`, and `developer_instructions`
-- Clear role definition in developer instructions
-- Appropriate sandbox and tool-surface restrictions
-- XML-structured developer instructions with role, approach, and constraints
+- A file that the target runtime's TOML parser or agent loader accepts, with `name`, `description`, and `developer_instructions`
+- A `developer_instructions` containing XML-structured role, workflow, constraints, and output expectations
+- Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
 
-- Description field optimized for automatic routing
-- At least one verification run or documented dry-run against the custom agent's intended workflow
-- Model selection appropriate for task complexity, cost, and reproducibility needs
+- A description that states both what the custom agent does and when to invoke it
+- A model identifier accepted by the target runtime and consistent with the configuration's stated capability, cost, and reproducibility requirements
+- A recorded representative invocation or dry-run naming the intended workflow, expected output shape, and observed result; rerun it after every configuration edit
 
 </success_criteria>
