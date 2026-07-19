@@ -150,9 +150,10 @@ def _assert_newer_template_adds_section_preserving_shared_region(
 
 
 def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
-    real = _template(tmp_path)
+    real = tmp_path / "template-target"
+    real.mkdir()
     link = tmp_path / "link-template.md"
-    link.symlink_to(real)
+    link.symlink_to(real, target_is_directory=True)
     repo = tmp_path / "repo"
     repo.mkdir()
     code = MODULE.main(
@@ -190,6 +191,8 @@ def _assert_cli_rejects_template_without_frontmatter_version(
     )
     assert code == 2
     assert MODULE.MISSING_TEMPLATE_VERSION_ERROR in capsys.readouterr().err
+    assert not (repo / harness.INSTRUCTION_CLAUDE).exists()
+    assert not (repo / harness.INSTRUCTION_AGENTS).exists()
 
 
 def _assert_cli_rejects_missing_repo_root(
