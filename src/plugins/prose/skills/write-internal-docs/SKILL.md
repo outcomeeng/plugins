@@ -78,6 +78,12 @@ Metadata lives in document properties or a small structured callout, not in open
 The document survives an `/audit-internal-docs` pass with no flagged violations.
 </success_criteria>
 
+<failure_modes>
+**The ownership test passed and the audience test never ran.**
+
+Claude confirmed that no repository workflow governed a status page living in the workspace, then drafted it against this skill's conventions. The page addressed customers, so the prose skills owned it, and outward-facing copy inherited internal-doc formatting. Ownership alone never establishes that a document is an internal doc: apply both `<artifact_ownership>` tests, and route an outward-facing draft to `/write-prose` even when it lives in the workspace beside genuine internal docs.
+</failure_modes>
+
 <reference_index>
 
 | Skill                     | When to read                                 |

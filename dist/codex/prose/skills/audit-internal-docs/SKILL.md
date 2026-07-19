@@ -68,7 +68,7 @@ The review is complete when:
 
 Every flag carries all four `<verdict_format>` parts — Pattern, Category, Quote, and Rewrite — and the rewrite shows fixed text rather than an instruction.
 
-The summary gives a count, identifies the most frequent category, and assesses overall doc quality.
+The summary's violation count matches the number of flags actually listed, and the category it names as most frequent is the one those flags carry most often.
 
 Co-occurring patterns in a single sentence are flagged as highest priority. A sentence that contains an em-dash, a significance adverb, and a parenthetical aside used for emphasis is three violations in one place and deserves explicit attention.
 
@@ -76,6 +76,12 @@ The audit applies the internal-doc overrides correctly. Parens that aid clarity 
 
 The audit covers the `<success_criteria>` items from `/internal-doc-standards` as a minimum.
 </success_criteria>
+
+<failure_modes>
+**The ownership test passed and the audience test never ran.**
+
+Claude confirmed that no repository workflow governed a status page living in the workspace, then reviewed it against this catalog. The page addressed customers, so the prose skills owned its conventions, and the review applied internal-doc rules to outward-facing copy. Ownership alone never establishes that a document is an internal doc: apply both `<artifact_ownership>` tests, and route an outward-facing draft to `/audit-prose` even when it lives in the workspace beside genuine internal docs.
+</failure_modes>
 
 <reference_index>
 
