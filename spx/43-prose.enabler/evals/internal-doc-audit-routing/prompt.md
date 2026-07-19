@@ -11,7 +11,7 @@ Apply the complete producer below to the supplied request. Decide whether this s
 ---
 name: audit-internal-docs
 description: >-
-  ALWAYS invoke this skill when auditing or reviewing internal team documents for cleanup. Use this whenever the user asks to review, audit, clean up, or check the writing of a Notion page, runbook, hiring rubric, scorecard, internal policy, competency model, onboarding guide, status page, or a workspace-native decision record or design spec that no repository or domain workflow already governs. NEVER invoke for repository-governed engineering artifacts that carry a dedicated domain workflow — CLAUDE.md, spec-tree specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md — follow the governing repository skill instead; living in a workspace never overrides that ownership. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use audit-prose for those instead. NEVER invoke for responses to the user, including long research summaries delivered in chat.
+  ALWAYS invoke this skill when reviewing, auditing, or cleaning up the writing in internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and team decision records and design specs. NEVER invoke for a doc a repository or domain workflow already owns — specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md, CLAUDE.md — follow that workflow instead.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
