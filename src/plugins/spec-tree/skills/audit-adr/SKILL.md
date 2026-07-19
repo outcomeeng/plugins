@@ -4,7 +4,7 @@ description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
   covering section structure, atemporal voice, and per-rule tag validity.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 <objective>

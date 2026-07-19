@@ -5,7 +5,7 @@ description: >-
   covering content classification, property quality, per-rule tag validity,
   atemporal voice, and consistency with ancestor decisions.
 model: sonnet
-allowed-tools: Read, Grep, Glob, Bash, Skill
+allowed-tools: Read, Grep, Glob, Skill
 ---
 
 <objective>
