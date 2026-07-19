@@ -6,6 +6,7 @@ from outcomeeng.validation.link_integrity import (
     REASON_EVAL_TARGET_NOT_EVAL_TOML,
     REASON_EVAL_TARGET_OUTSIDE_EVALS_DIR,
     REASON_TARGET_MISSING,
+    REASON_TARGET_NOT_FILE,
     REASON_TEST_TARGET_NOT_COLLECTABLE,
     REASON_TEST_TARGET_OUTSIDE_TESTS_DIR,
     BrokenEvalLink,
@@ -57,6 +58,15 @@ def test_evidence_link_integrity_contract() -> None:
                     == observation.target_path.resolve()
                 )
                 assert observation.broken_eval_links[0].reason == REASON_TARGET_MISSING
+            case LinkIntegrityCase.EVAL_NOT_FILE:
+                assert len(observation.broken_eval_links) == 1
+                assert isinstance(observation.broken_eval_links[0], BrokenEvalLink)
+                assert observation.target_path is not None
+                assert (
+                    observation.broken_eval_links[0].target.resolve()
+                    == observation.target_path.resolve()
+                )
+                assert observation.broken_eval_links[0].reason == REASON_TARGET_NOT_FILE
             case LinkIntegrityCase.EVAL_NON_TOML:
                 assert len(observation.broken_eval_links) == 1
                 assert isinstance(observation.broken_eval_links[0], BrokenEvalLink)
@@ -111,6 +121,15 @@ def test_evidence_link_integrity_contract() -> None:
                     == observation.target_path.resolve()
                 )
                 assert observation.broken_test_links[0].reason == REASON_TARGET_MISSING
+            case LinkIntegrityCase.TEST_NOT_FILE:
+                assert len(observation.broken_test_links) == 1
+                assert isinstance(observation.broken_test_links[0], BrokenTestLink)
+                assert observation.target_path is not None
+                assert (
+                    observation.broken_test_links[0].target.resolve()
+                    == observation.target_path.resolve()
+                )
+                assert observation.broken_test_links[0].reason == REASON_TARGET_NOT_FILE
             case LinkIntegrityCase.TEST_NON_DEFAULT_NAME:
                 assert len(observation.broken_test_links) == 1
                 assert isinstance(observation.broken_test_links[0], BrokenTestLink)

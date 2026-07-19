@@ -29,6 +29,7 @@ class LinkIntegrityCase(StrEnum):
     EVAL_ALL = "eval-all"
     EVAL_VALID = "eval-valid"
     EVAL_MISSING = "eval-missing"
+    EVAL_NOT_FILE = "eval-not-file"
     EVAL_NON_TOML = "eval-non-toml"
     EVAL_DEEP = "eval-deep"
     EVAL_LOOSE = "eval-loose"
@@ -37,6 +38,7 @@ class LinkIntegrityCase(StrEnum):
     TEST_FENCED = "test-fenced"
     TEST_VALID = "test-valid"
     TEST_MISSING = "test-missing"
+    TEST_NOT_FILE = "test-not-file"
     TEST_NON_DEFAULT_NAME = "test-non-default-name"
     TEST_NON_PYTHON = "test-non-python"
     TEST_DEEP = "test-deep"
@@ -168,6 +170,18 @@ def _observe_link_case(root: Path, case: LinkIntegrityCase) -> LinkIntegrityObse
             source_path=source,
             target_path=root / "evals" / "missing-rule" / EVAL_TOML_FILENAME,
         )
+    if case is LinkIntegrityCase.EVAL_NOT_FILE:
+        root.mkdir(parents=True)
+        target = root / "evals" / "rule" / EVAL_TOML_FILENAME
+        target.mkdir(parents=True)
+        (root / "spec.md").write_text(
+            f"([eval](evals/rule/{EVAL_TOML_FILENAME}))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            broken_eval_links=tuple(validate_eval_links(root)),
+            target_path=target,
+        )
     if case is LinkIntegrityCase.EVAL_NON_TOML:
         root.mkdir(parents=True)
         target = root / "evals" / "rule" / "cases.jsonl"
@@ -242,6 +256,18 @@ def _observe_link_case(root: Path, case: LinkIntegrityCase) -> LinkIntegrityObse
         root.mkdir(parents=True)
         target = root / "tests" / "missing.py"
         (root / "spec.md").write_text("([test](tests/missing.py))\n", encoding="utf-8")
+        return LinkIntegrityObservation(
+            case=case,
+            broken_test_links=tuple(validate_test_links(root)),
+            target_path=target,
+        )
+    if case is LinkIntegrityCase.TEST_NOT_FILE:
+        root.mkdir(parents=True)
+        target = root / "tests" / "test_dir.conformance.l1.py"
+        target.mkdir(parents=True)
+        (root / "spec.md").write_text(
+            f"([test](tests/{target.name}))\n", encoding="utf-8"
+        )
         return LinkIntegrityObservation(
             case=case,
             broken_test_links=tuple(validate_test_links(root)),
