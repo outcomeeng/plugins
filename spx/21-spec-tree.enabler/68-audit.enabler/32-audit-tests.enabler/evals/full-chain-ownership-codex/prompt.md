@@ -7,6 +7,7 @@ name: audit-tests
 description: >-
   Test-evidence audit methodology for judging behavior-coupled evidence against
   spec assertions.
+model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
 
@@ -27,15 +28,7 @@ A verdict on whether a spec node's tests provide behavior-coupled evidence its a
 
 </constraints>
 
-<audit_workflow>
-
-<step name="load_standards">
-
-**Step 0: Load shared test-evidence standards**
-
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
-
-</step>
+<essential_principles>
 
 **PREDICATE AND OWNERSHIP SCREEN, THEN COUPLING.**
 
@@ -66,6 +59,18 @@ Classify bindings by what they choose. Observation aliases, actual-result bindin
 **BINARY VERDICT.**
 
 APPROVED or REJECTED. No middle ground. If any property is missing for any assertion, REJECTED.
+
+</essential_principles>
+
+<audit_workflow>
+
+<step name="load_standards">
+
+**Step 0: Load shared test-evidence standards**
+
+Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+
+</step>
 
 <step name="load_context">
 
