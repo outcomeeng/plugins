@@ -17,11 +17,11 @@ CAN start only when normalized host load is ready and defer safely while it rema
 
 ### Mappings
 
-- Every terminal status maps to its declared process exit code — `ready` 0, `error` 1, `unsupported` 2, `not_ready` 3, `interrupted` 130 — the contract a calling workflow branches on ([test](tests/test_host_readiness.mapping.l1.py))
 - Every terminal status carries both a readiness boolean and an exit code, readiness holding only for `ready` — the status set, the readiness table, and the exit-code table enumerate the same statuses ([test](tests/test_host_readiness.mapping.l1.py))
 
 ### Compliance
 
+- ALWAYS: the process exit code for each terminal status is `ready` 0, `error` 1, `unsupported` 2, `not_ready` 3, `interrupted` 130 — the contract a calling workflow branches on, declared here and honored by the waiter's exit-code enum ([audit])
 - ALWAYS: a waiter invocation owns every load observation, interval, sleep, and recheck until it emits its terminal result; the agent never polls an active waiter ([audit])
 - ALWAYS: only an explicit `not_ready` terminal result permits another waiter invocation, and retries stop when ten invocations or one hour of waiter time is reached, whichever occurs first ([audit])
 - NEVER: absent or malformed terminal output permits another waiter invocation or the resource-intensive command; the agent blocks for the operator ([audit])
