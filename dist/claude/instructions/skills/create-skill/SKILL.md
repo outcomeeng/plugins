@@ -116,6 +116,7 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 | `guide-skill.md`      | Guide type template           |
 | `automation-skill.md` | Automation type template      |
 | `analyzer-skill.md`   | Analyzer type template        |
+| `auditor-skill.md`    | Auditor type template         |
 | `validator-skill.md`  | Validator type template       |
 | `reference-skill.md`  | Reference type template       |
 

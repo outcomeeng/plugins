@@ -10,7 +10,7 @@ Read `/skill-standards` and `/agent-prompt-standards` before authoring. Read `sp
 
 Extract the requested capability, target repository or plugin, activation trigger, observable output, side effects, and constraints from the operator's instruction. Ask only for operator-owned gaps that materially change the skill's behavior or location.
 
-Classify the skill as builder, guide, automation, analyzer, validator, or reference using `/skill-standards`. Determine whether description matching, exact-name composition, or an auditor preload reaches it before writing its description. Confirm the output the `<objective>` will name and the evidence the `<success_criteria>` will require.
+Classify the skill as builder, guide, automation, analyzer, validator, or reference using `/skill-standards`. Treat an `audit-*` skill as a validator-family auditor that requires the canonical auditor structure. Determine whether description matching, exact-name composition, or an auditor preload reaches it before writing its description. Confirm the output the `<objective>` will name and the evidence the `<success_criteria>` will require.
 
 </step>
 
@@ -35,6 +35,8 @@ Research domain concepts, current official guidance, observed failure modes, sec
 
 Load `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` when the capability must support variable requests or tool choices. Load `${CLAUDE_SKILL_DIR}/references/technical-patterns.md` when the skill handles files, data, external services, state mutation, or executable automation. Load `${CLAUDE_SKILL_DIR}/references/test-patterns.md` when creating behavior or materially changing activation, routing, output, or failure handling. Skip a reference only when its load condition does not apply.
 
+For an `audit-*` skill, read `/skill-standards`'s `references/auditor-skeleton.md` before choosing sections or writing the verdict contract. Before writing any skill-bundled file reference, read `/skill-standards`'s `references/runtime-variables.md`. Before authoring a bundled script, read `/skill-standards`'s `references/script-standards.md`.
+
 </step>
 
 <step name="choose_structure">
@@ -51,6 +53,7 @@ Select the matching template:
 | Guide       | `${CLAUDE_SKILL_DIR}/templates/guide-skill.md`      |
 | Automation  | `${CLAUDE_SKILL_DIR}/templates/automation-skill.md` |
 | Analyzer    | `${CLAUDE_SKILL_DIR}/templates/analyzer-skill.md`   |
+| Auditor     | `${CLAUDE_SKILL_DIR}/templates/auditor-skill.md`    |
 | Validator   | `${CLAUDE_SKILL_DIR}/templates/validator-skill.md`  |
 | Reference   | `${CLAUDE_SKILL_DIR}/templates/reference-skill.md`  |
 
