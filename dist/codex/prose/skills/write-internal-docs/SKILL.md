@@ -1,7 +1,7 @@
 ---
 name: write-internal-docs
 description: >-
-  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and team decision records and design specs. NEVER invoke for a doc a repository or domain workflow already owns — specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md, AGENTS.md — follow that workflow instead.
+  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and team decision records and design specs. NEVER invoke for a doc a repository or domain workflow already owns — specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md, AGENTS.md — follow that workflow instead. NEVER invoke for writing aimed at outside readers even when it is drafted in the workspace — public status pages, release notes, marketing copy, READMEs, blog posts — use write-prose.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
@@ -16,7 +16,7 @@ Artifact ownership outranks audience. A document read only by colleagues still b
 
 Repository-governed engineering artifacts — `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, `SKILL.md` — carry dedicated domain workflows that own their structure, voice, and required sections. Write those through the governing repository skill. This skill's conventions do not apply to them and never substitute for that workflow.
 
-Apply this test before drafting: when a repository or domain workflow governs the artifact, stop and route there. Only documents no such workflow governs are internal docs.
+Apply two tests before drafting. Ownership first: when a repository or domain workflow governs the artifact, stop and route there. Audience second: when the writing addresses readers outside the team — a public status page, customer release notes, marketing copy — route to `/write-prose`, even though the draft lives in the workspace. Only a document that passes both tests is an internal doc.
 </artifact_ownership>
 
 <why_internal_docs_are_different>

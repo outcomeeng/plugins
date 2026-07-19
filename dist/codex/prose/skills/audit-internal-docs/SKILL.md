@@ -1,7 +1,7 @@
 ---
 name: audit-internal-docs
 description: >-
-  ALWAYS invoke this skill when reviewing, auditing, or cleaning up the writing in internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and team decision records and design specs. NEVER invoke for a doc a repository or domain workflow already owns — specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md, AGENTS.md — follow that workflow instead.
+  ALWAYS invoke this skill when reviewing, auditing, or cleaning up the writing in internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and team decision records and design specs. NEVER invoke for a doc a repository or domain workflow already owns — specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md, AGENTS.md — follow that workflow instead. NEVER invoke for writing aimed at outside readers even when it is drafted in the workspace — public status pages, release notes, marketing copy, READMEs, blog posts — use audit-prose.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
@@ -21,6 +21,8 @@ NEVER flag a pattern the internal-doc overrides explicitly permit — the overri
 Reviewing a document follows the same ownership rules as writing it. Artifact ownership outranks audience, so "it lives in a workspace and colleagues read it" never routes a review here on its own.
 
 Repository-governed engineering artifacts — `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, `SKILL.md` — carry dedicated domain workflows that own their structure, voice, and required sections. Route their review to the governing repository skill. Auditing them against this catalog would flag conventions their governing workflow requires.
+
+Apply two tests before reviewing. Ownership first: when a repository or domain workflow governs the artifact, stop and route there. Audience second: when the document addresses readers outside the team — a public status page, customer release notes, marketing copy — route the review to `/audit-prose`, even though the draft lives in the workspace. Only a document that passes both tests is an internal doc.
 </artifact_ownership>
 
 <workflow>
