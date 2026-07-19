@@ -6,6 +6,9 @@
 .pi/*
 !.pi/claude-plugins.json
 
+# Subagent run transcripts (local tool output; never committed)
+.pi-subagents/
+
 # Local MCP server registration (machine-specific absolute paths)
 .mcp.json
 

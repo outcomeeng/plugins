@@ -13,6 +13,7 @@
     "**/.ruff_cache/**",
     "**/.spx/sessions/**",
     "**/.spx/reviews/**",
+    "**/.pi-subagents/**",
     "**/*-lock.json",
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
