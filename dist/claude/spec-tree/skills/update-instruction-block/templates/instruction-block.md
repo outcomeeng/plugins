@@ -200,7 +200,7 @@ Spawn the requested verifier or reviewer with an identity-only initial turn:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "<exact-agent-type>",
-    "message": "Identity preflight only. Run `printenv OUTCOMEENG_CODEX_AGENT_NAME` and return stdout exactly. If the variable is unset, return AGENT_IDENTITY_UNSET. Do not run the role workflow."
+    "message": "Identity preflight only. Run `printf '%s' \"${OUTCOMEENG_CODEX_AGENT_NAME:-AGENT_IDENTITY_UNSET}\"` and return stdout exactly. Do not run the role workflow."
   }
 }
 ```
