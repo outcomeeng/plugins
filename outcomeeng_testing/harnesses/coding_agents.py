@@ -156,6 +156,16 @@ def verify_agent_message_mappings() -> list[str]:
             failures.append(f"message kind {kind} mapped to the wrong state")
         if envelope[module.ACCEPTED_FIELD] is not accepted:
             failures.append(f"message kind {kind} mapped accepted state incorrectly")
+        if (
+            kind in module.RESPONSE_KINDS
+            and envelope[module.COORDINATION_REFERENCE_FIELD] != active
+        ):
+            failures.append(f"response message {kind} lost its active reference")
+        if (
+            kind not in module.RESPONSE_KINDS
+            and envelope[module.COORDINATION_REFERENCE_FIELD] == active
+        ):
+            failures.append(f"initiating message {kind} reused the active reference")
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
     if len(observed_states) != len(module.MessageKind):
         failures.append("message kinds did not map to distinct states")
@@ -507,6 +517,17 @@ def verify_agent_message_compliance() -> list[str]:
         request=None,
     )
     built = module.send_request(valid_request, discovery)
+    invalid_discoveries = (
+        {**discovery, module.STATUS_FIELD: module.CallerStatus.UNSUPPORTED_TERMINAL},
+        {**discovery, module.STATUS_FIELD: module.CallerStatus.CALLER_AMBIGUOUS},
+    )
+    for invalid_discovery in invalid_discoveries:
+        try:
+            module.send_request(valid_request, invalid_discovery)
+            failures.append("message accepted an unsupported or ambiguous discovery")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_IDENTITY:
+                failures.append(f"invalid discovery mapped to {error.status}")
     if (
         built[module.DELIVERY_FIELD][module.TO_PANE_FIELD]
         != recipient[module.PANE_FIELD]
