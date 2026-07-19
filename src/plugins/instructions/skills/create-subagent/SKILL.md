@@ -437,13 +437,15 @@ A well-configured {{! term('configured_agent') !}} has:
 - A TOML file with `name`, `description`, and `{{! field('configured_agent_prompt') !}}` that a fresh Codex session loads without a configuration error and exposes by name in `spawn_agent`'s `agent_type` values
 - A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
+- A recorded `spawn_agent` call with the configured name as `agent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
   {!% else %!}
 - A YAML-frontmatter file whose name matches the filename and whose configured name and scope appear in `/agents` after saving
 - A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
 - Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
+- A recorded Agent-tool call with the configured name as `subagent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
   {!% endif %!}
 - A description that states both what the {{! term('configured_agent') !}} does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
-- A recorded representative invocation naming the intended workflow and expected output shape, with an observed final result matching that contract; rerun it after every configuration edit
+- The target-specific invocation check rerun after every configuration edit
 
 </success_criteria>

@@ -14,11 +14,11 @@
 <context>
 Subagent prompts should be task-specific, not generic. They define a specialized role with clear focus areas, workflows, and constraints.
 
-**Critical**: Subagent.md files use pure XML structure (no markdown headings). Like skills and slash commands, this improves parsing and token efficiency.
+**Critical**: The custom agent prompt body uses pure XML structure (no markdown headings). This improves parsing and token efficiency while leaving target-specific TOML or YAML configuration outside the prompt body.
 </context>
 
 <xml_structure_rule>
-**Remove ALL markdown headings (##, ###) from subagent body.** Use semantic XML tags instead.
+**Remove ALL markdown headings (##, ###) from the custom agent prompt body.** Use semantic XML tags instead.
 
 Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links).
 
@@ -50,7 +50,7 @@ Example:
 - NEVER modify production code, ONLY test files
 - MUST verify tests pass before completing
 - ALWAYS include edge case coverage
-- DO NOT run tests without explicit user request
+- NEVER run tests without explicit user request
 </constraints>
 ```
 
@@ -103,9 +103,9 @@ For each issue found:
    </output_format>
 
 <constraints>
-- Focus only on security issues, not code style
-- Provide actionable fixes, not vague warnings
-- If no issues found, confirm the review was completed
+- MUST focus only on security issues, not code style
+- MUST provide actionable fixes, not vague warnings
+- ALWAYS confirm completion when no issues are found
 </constraints>
 ```
 </example>
@@ -153,9 +153,9 @@ Follow AAA pattern:
   </quality_criteria>
 
 <constraints>
-- Do not modify production code
-- Do not run tests without confirming setup is complete
-- Do not replace dependencies unless the product's testing standards select an approved test double
+- NEVER modify production code
+- NEVER run tests without confirming setup is complete
+- NEVER replace dependencies unless the product's testing standards select an approved test double
 </constraints>
 ```
 </example>
@@ -207,10 +207,10 @@ Claude is a debugging specialist skilled at root cause analysis and systematic p
    </output_format>
 
 <constraints>
-- Make minimal changes to fix the issue
-- Preserve existing functionality
-- Add tests to prevent regression
-- Document non-obvious fixes
+- MUST make minimal changes to fix the issue
+- MUST preserve existing functionality
+- MUST add tests to prevent regression
+- MUST document non-obvious fixes
 </constraints>
 ```
 </example>
@@ -300,9 +300,9 @@ Without constraints, subagents might:
 
 ```markdown
 <constraints>
-- Only modify test files, never production code
-- Always run tests after writing them
-- Do not commit changes automatically
+- NEVER modify files outside the test scope
+- ALWAYS run tests after writing them
+- NEVER commit changes automatically
 </constraints>
 ```
 
@@ -415,7 +415,7 @@ Clearly state constraints with strong modal verbs:
 - NEVER modify X
 - ALWAYS verify Y before Z
 - MUST include edge case testing
-- DO NOT proceed without validation
+- NEVER proceed without validation
 </constraints>
 ```
 
@@ -540,9 +540,9 @@ Expected output structure
 </output_format>
 
 <constraints>
-- Do not X
-- Always Y
-- Never Z
+- NEVER do X
+- ALWAYS do Y
+- MUST verify Z
 </constraints>
 """
 ```
