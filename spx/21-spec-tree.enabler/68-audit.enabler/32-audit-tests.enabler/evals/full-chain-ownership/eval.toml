@@ -12,6 +12,11 @@ smoke_cases = [
   "approves-source-owned-protocol",
   "rejects-unread-import",
   "rejects-rust-generator-owned-protocol",
+  "rejects-fixture-owned-protocol",
+  "rejects-discovery-owned-protocol",
+  "rejects-production-derived-oracle",
+  "approves-independent-conformance-oracle",
+  "rejects-harness-owned-predicate",
 ]
 threshold = 0.85
 trials = 1
