@@ -8,6 +8,7 @@ import sys
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
 from types import ModuleType
 from typing import Protocol, cast
@@ -16,6 +17,7 @@ from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.prowl_environment import (
+    PUBLIC_PROWL_OPERATION_NAMES,
     agent_identity,
     coordination_references,
     operation_requests,
@@ -28,8 +30,12 @@ ROOT = Path(__file__).parents[2]
 PROWL_ENVIRONMENT_PATH = (
     ROOT / "src/plugins/coding-agents/skills/operate-prowl/scripts/prowl_environment.py"
 )
-CODING_AGENTS_SOURCE = ROOT / "src/plugins/coding-agents"
-OPERATE_PROWL_SOURCE = CODING_AGENTS_SOURCE / "skills/operate-prowl"
+CODING_AGENTS_RUNTIME_ROOTS = (
+    ROOT / "src/plugins/coding-agents",
+    ROOT / "dist/claude/coding-agents",
+    ROOT / "dist/codex/coding-agents",
+)
+OPERATE_PROWL_RELATIVE = Path("skills/operate-prowl")
 RAW_PROWL_VIOLATION_FIXTURE = (
     ROOT / "outcomeeng_testing/fixtures/prowl_environment/raw_prowl_command.py.txt"
 )
@@ -77,15 +83,15 @@ def _load() -> ModuleType:
 
 def _selector(module: ModuleType, arguments: dict[str, object]) -> list[str]:
     command: list[str] = []
-    for field_name, option in (
-        (module.TARGET_FIELD, module.TARGET_OPTION),
-        (module.WORKTREE_FIELD, module.WORKTREE_OPTION),
-        (module.TAB_FIELD, module.TAB_OPTION),
-        (module.PANE_FIELD, module.PANE_OPTION),
+    for field_name, public_option in (
+        (module.TARGET_FIELD, "--target"),
+        (module.WORKTREE_FIELD, "--worktree"),
+        (module.TAB_FIELD, "--tab"),
+        (module.PANE_FIELD, "--pane"),
     ):
         value = arguments.get(field_name)
         if value is not None:
-            command.extend((option, cast(str, value)))
+            command.extend((public_option, cast(str, value)))
     return command
 
 
@@ -95,63 +101,59 @@ def _expected_command(
     operation = module.Operation(request[module.OPERATION_FIELD])
     arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
     if operation is module.Operation.LIST:
-        return (module.PROWL_COMMAND, module.LIST_COMMAND, module.JSON_OPTION)
+        return ("prowl", "list", "--json")
     if operation is module.Operation.AGENTS:
-        return (module.PROWL_COMMAND, module.AGENTS_COMMAND, module.JSON_OPTION)
+        return ("prowl", "agents", "--json")
     if operation is module.Operation.OPEN:
-        command = [module.PROWL_COMMAND, module.OPEN_COMMAND, module.JSON_OPTION]
+        command = ["prowl", "open", "--json"]
         if arguments.get(module.PATH_FIELD) is not None:
             command.append(cast(str, arguments[module.PATH_FIELD]))
         return tuple(command)
 
     if operation is module.Operation.TAB_CREATE:
-        command = [module.PROWL_COMMAND, module.TAB_COMMAND, module.CREATE_COMMAND]
+        command = ["prowl", "tab", "create"]
     elif operation is module.Operation.TAB_CLOSE:
-        command = [module.PROWL_COMMAND, module.TAB_COMMAND, module.CLOSE_COMMAND]
+        command = ["prowl", "tab", "close"]
     elif operation is module.Operation.PANE_CLOSE:
-        command = [module.PROWL_COMMAND, module.PANE_COMMAND, module.CLOSE_COMMAND]
+        command = ["prowl", "pane", "close"]
     else:
-        command = [module.PROWL_COMMAND, operation.value]
+        command = ["prowl", operation.value]
     command.extend(_selector(module, arguments))
-    command.append(module.JSON_OPTION)
+    command.append("--json")
 
     if operation is module.Operation.READ:
-        for field_name, option in (
-            (module.LAST_FIELD, module.LAST_OPTION),
-            (module.STABLE_INTERVAL_FIELD, module.STABLE_INTERVAL_OPTION),
-            (module.STABLE_PERIOD_FIELD, module.STABLE_PERIOD_OPTION),
-            (module.WAIT_TIMEOUT_FIELD, module.WAIT_TIMEOUT_OPTION),
+        for field_name, public_option in (
+            (module.LAST_FIELD, "--last"),
+            (module.STABLE_INTERVAL_FIELD, "--stable-interval"),
+            (module.STABLE_PERIOD_FIELD, "--stable-period"),
+            (module.WAIT_TIMEOUT_FIELD, "--wait-timeout"),
         ):
             value = arguments.get(field_name)
             if value is not None:
-                command.extend((option, str(value)))
+                command.extend((public_option, str(value)))
         if arguments.get(module.WAIT_STABLE_FIELD) is True:
-            command.append(module.WAIT_STABLE_OPTION)
+            command.append("--wait-stable")
     elif operation is module.Operation.SEND:
-        for field_name, option in (
-            (module.NO_ENTER_FIELD, module.NO_ENTER_OPTION),
-            (module.NO_WAIT_FIELD, module.NO_WAIT_OPTION),
-            (module.CAPTURE_FIELD, module.CAPTURE_OPTION),
+        for field_name, public_option in (
+            (module.NO_ENTER_FIELD, "--no-enter"),
+            (module.NO_WAIT_FIELD, "--no-wait"),
+            (module.CAPTURE_FIELD, "--capture"),
         ):
             if arguments.get(field_name) is True:
-                command.append(option)
+                command.append(public_option)
         if arguments.get(module.TIMEOUT_FIELD) is not None:
-            command.extend(
-                (module.TIMEOUT_OPTION, str(arguments[module.TIMEOUT_FIELD]))
-            )
+            command.extend(("--timeout", str(arguments[module.TIMEOUT_FIELD])))
         command.append(cast(str, arguments[module.TEXT_FIELD]))
     elif operation is module.Operation.KEY:
         if arguments.get(module.REPEAT_FIELD) is not None:
-            command.extend((module.REPEAT_OPTION, str(arguments[module.REPEAT_FIELD])))
+            command.extend(("--repeat", str(arguments[module.REPEAT_FIELD])))
         command.append(cast(str, arguments[module.KEY_FIELD]))
     elif operation is module.Operation.TAB_CREATE:
         if arguments.get(module.PATH_FIELD) is not None:
-            command.extend(
-                (module.PATH_OPTION, cast(str, arguments[module.PATH_FIELD]))
-            )
+            command.extend(("--path", cast(str, arguments[module.PATH_FIELD])))
     elif operation in {module.Operation.TAB_CLOSE, module.Operation.PANE_CLOSE}:
         if arguments.get(module.FORCE_FIELD) is True:
-            command.append(module.FORCE_OPTION)
+            command.append("--force")
     return tuple(command)
 
 
@@ -159,12 +161,16 @@ def verify_prowl_mappings() -> list[str]:
     module = _load()
     failures: list[str] = []
     requests = operation_requests(module)
-    observed_operations = {
-        module.Operation(request[module.OPERATION_FIELD]) for request in requests
-    }
-    if observed_operations != set(module.Operation):
+    required_operations = set(PUBLIC_PROWL_OPERATION_NAMES)
+    declared_operations = {operation.value for operation in module.Operation}
+    if declared_operations != required_operations:
         failures.append(
-            "operation requests do not cover the complete Prowl command surface"
+            "adapter operation registry differs from the required public Prowl surface"
+        )
+    observed_operations = {str(request[module.OPERATION_FIELD]) for request in requests}
+    if observed_operations != required_operations:
+        failures.append(
+            "operation requests do not cover the required public Prowl surface"
         )
     for request in requests:
         actual = module.command_for(request)
@@ -365,10 +371,27 @@ def verify_prowl_conformance() -> list[str]:
                 module.ID_FIELD: f"{operation.value}-identity-verbatim",
             },
         }
-        success = module.execute(
-            request,
-            RecordingRunner([module.CommandResult(0, json.dumps(response), "")]),
+        output_stream = StringIO()
+        cli_exit_code = module.main(
+            [module.CliOperation.RUN.value],
+            runner=RecordingRunner([module.CommandResult(0, json.dumps(response), "")]),
+            stdin=StringIO(json.dumps(request)),
+            stdout=output_stream,
         )
+        rendered = output_stream.getvalue()
+        if rendered.count("\n") != 1:
+            failures.append(
+                f"{operation.value} CLI emitted more or less than one JSON document"
+            )
+        try:
+            success = json.loads(rendered)
+        except json.JSONDecodeError as error:
+            failures.append(
+                f"{operation.value} CLI emitted malformed JSON: {error.msg}"
+            )
+            continue
+        if cli_exit_code != 0:
+            failures.append(f"{operation.value} CLI success exited {cli_exit_code}")
         try:
             validated = module.validate_operation_result(success, operation)
         except module.ProwlEnvironmentError as error:
@@ -563,8 +586,9 @@ def verify_prowl_compliance() -> list[str]:
 
     script_paths = (
         path
-        for path in CODING_AGENTS_SOURCE.rglob("*.py")
-        if OPERATE_PROWL_SOURCE not in path.parents
+        for runtime_root in CODING_AGENTS_RUNTIME_ROOTS
+        for path in runtime_root.rglob("*.py")
+        if OPERATE_PROWL_RELATIVE not in path.relative_to(runtime_root).parents
     )
     violations = module.raw_prowl_command_violations(_source_texts(script_paths))
     if violations:

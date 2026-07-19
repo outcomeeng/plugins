@@ -4,8 +4,22 @@ from __future__ import annotations
 
 from itertools import combinations
 from types import ModuleType
+from typing import Final
 
 from hypothesis import strategies as st
+
+PUBLIC_PROWL_OPERATION_NAMES: Final[tuple[str, ...]] = (
+    "list",
+    "agents",
+    "read",
+    "send",
+    "key",
+    "focus",
+    "tab-create",
+    "tab-close",
+    "pane-close",
+    "open",
+)
 
 
 def coordination_references() -> st.SearchStrategy[str]:
@@ -43,7 +57,8 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
     argument_names = {field: name for name, field in module.ARGUMENT_NAMES.items()}
     requests: list[dict[str, object]] = []
     ordinal = 0
-    for operation in module.Operation:
+    for operation_name in PUBLIC_PROWL_OPERATION_NAMES:
+        operation = module.Operation(operation_name)
         contract = module.OPERATION_CONTRACTS[operation]
         for shape in contract.request_shapes:
             optional_fields = tuple(sorted(shape.optional_fields))
