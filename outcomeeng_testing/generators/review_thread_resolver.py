@@ -75,7 +75,7 @@ def resolver_domains() -> SearchStrategy[ResolverDomain]:
             unique=True,
         ).map(tuple),
         comment_ids=st.lists(
-            _valid_comment_ids(),
+            _valid_thread_ids(),
             min_size=10,
             max_size=10,
             unique=True,
@@ -87,7 +87,7 @@ def resolver_domains() -> SearchStrategy[ResolverDomain]:
             unique=True,
         ).map(tuple),
         cursors=st.lists(
-            _valid_comment_ids(),
+            _valid_cursors(),
             min_size=2,
             max_size=2,
             unique=True,
@@ -192,8 +192,8 @@ def _validate_mapping_domain(domain: ResolverDomain) -> None:
         ("REPOSITORY_PATTERN", (domain.repository,)),
         ("NUMBER_PATTERN", (str(domain.pr_number), *map(str, domain.database_ids))),
         ("HOST_PATTERN", (domain.host,)),
-        ("NODE_ID_PATTERN", domain.thread_ids),
-        ("COMMENT_ID_PATTERN", (*domain.comment_ids, *domain.cursors)),
+        ("NODE_ID_PATTERN", (*domain.thread_ids, *domain.comment_ids)),
+        ("CURSOR_PATTERN", domain.cursors),
     )
     for pattern_name, values in values_by_pattern:
         pattern = _pattern(pattern_name)
@@ -216,7 +216,14 @@ def _invalid_numbers() -> SearchStrategy[str]:
 
 
 def _invalid_comment_ids() -> SearchStrategy[str]:
-    return _strings_outside_pattern(_pattern("COMMENT_ID_PATTERN"))
+    number_pattern = _pattern("NUMBER_PATTERN")
+    node_id_pattern = _pattern("NODE_ID_PATTERN")
+    return st.text(max_size=32).filter(
+        lambda value: (
+            number_pattern.fullmatch(value) is None
+            and node_id_pattern.fullmatch(value) is None
+        )
+    )
 
 
 def _invalid_hosts() -> SearchStrategy[str]:
@@ -236,7 +243,11 @@ def _valid_numbers() -> SearchStrategy[str]:
 
 
 def _valid_comment_ids() -> SearchStrategy[str]:
-    return _strings_inside_pattern(_pattern("COMMENT_ID_PATTERN"))
+    return st.one_of(_valid_numbers(), _valid_thread_ids())
+
+
+def _valid_cursors() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("CURSOR_PATTERN"))
 
 
 def _valid_hosts() -> SearchStrategy[str]:

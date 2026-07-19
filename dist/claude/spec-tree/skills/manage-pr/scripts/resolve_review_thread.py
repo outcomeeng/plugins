@@ -8,8 +8,8 @@ import json
 import re
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
-from typing import cast
+from collections.abc import Iterator
+from typing import Protocol, cast
 
 
 QUERY = (
@@ -54,7 +54,7 @@ REPOSITORY_PATTERN = re.compile(
     r"[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*"
 )
 NUMBER_PATTERN = re.compile(r"[1-9]\d*")
-COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_=-]{0,255}")
+CURSOR_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_=-]{0,255}")
 HOST_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]*")
 THREAD_ID_ARGUMENT = "thread_id"
 REPOSITORY_OPTION = "--repo"
@@ -107,7 +107,32 @@ ERROR_COMMENT_NOT_FOUND = (
     "review comment was not found after complete review-thread pagination"
 )
 VALIDATION_ERROR_EXIT_CODE = 2
-CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
+
+
+class CommandRunner(Protocol):
+    def __call__(
+        self,
+        args: list[str],
+        *,
+        check: bool,
+        capture_output: bool = False,
+        text: bool = False,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+def run_subprocess(
+    args: list[str],
+    *,
+    check: bool,
+    capture_output: bool = False,
+    text: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        check=check,
+        capture_output=capture_output,
+        text=text,
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -149,7 +174,9 @@ def validate_number(value: str | None, name: str) -> int:
 
 
 def validate_comment_id(comment_id: str | None) -> str:
-    if comment_id is None or not COMMENT_ID_PATTERN.fullmatch(comment_id):
+    if comment_id is None or not (
+        NUMBER_PATTERN.fullmatch(comment_id) or NODE_ID_PATTERN.fullmatch(comment_id)
+    ):
         raise ValueError("review_comment_id must be a database ID or GitHub node ID")
     return comment_id
 
@@ -338,7 +365,7 @@ def main(
     runner: CommandRunner | None = None,
 ) -> int:
     if runner is None:
-        runner = cast("CommandRunner", subprocess.run)
+        runner = run_subprocess
     args = parse_args(argv)
     try:
         host = validate_host(args.host)
