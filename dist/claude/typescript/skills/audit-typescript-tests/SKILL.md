@@ -248,16 +248,21 @@ Applied at step 8 of Gate 1.
 
 <supplement property="coupling">
 
-Restate the executable coupling categories this supplement applies to TypeScript imports — do not delegate to `/audit-tests`:
+This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to TypeScript imports. Classify from the table below rather than restating a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
-| Category   | Definition                                                                       | Verdict                           |
-| ---------- | -------------------------------------------------------------------------------- | --------------------------------- |
-| Direct     | Test imports the module under test                                               | Proceed                           |
-| Indirect   | Test imports a harness wrapping the module                                       | Proceed — step 7 traced the chain |
-| Transitive | Test imports a consumer of the module                                            | Proceed — verify test level       |
-| False      | Imports the module but never calls assertion-relevant symbols                    | REJECT                            |
-| Partial    | Calls functions on wrong inputs or wrong code paths                              | REJECT                            |
-| Severed    | Imports the module and replaces behavior with `vi.mock`, stubbed spies, or fakes | REJECT                            |
+| Category           | Definition                                                                                         | Verdict                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test imports the module under test                                                                 | Proceed                                         |
+| Indirect           | Test imports a harness wrapping the module                                                         | Proceed — step 7 traced the chain               |
+| Transitive         | Test imports a consumer of the module                                                              | Proceed — verify test level                     |
+| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test  | REJECT — laundering                             |
+| False              | Imports the module but never calls assertion-relevant symbols                                      | REJECT                                          |
+| Partial            | Calls functions on wrong inputs or wrong code paths                                                | REJECT                                          |
+| None               | Test imports only its test framework — `vitest`, `@testing-library/*` — with zero codebase imports | REJECT — tautology                              |
+| Severed            | Imports the module and replaces behavior with `vi.mock`, stubbed spies, or fakes                   | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                           | REJECT — couples to authored text, not behavior |
+
+Prose-coupling holds full-chain in TypeScript as elsewhere: a harness that exposes the authored path as a constant, or a reader function performing the `readFile` inside test infrastructure, does not convert a prose assertion into behavioral coupling. Follow the read to its source and classify by what is ultimately exercised. Reading an authored *source* file for a structural lint that exercises a rule is not prose-coupling.
 
 **Type-only imports do not count.**
 

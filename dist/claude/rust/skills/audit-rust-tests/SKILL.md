@@ -191,16 +191,21 @@ Applied during Gate 1.
 
 <supplement property="coupling">
 
-| Category   | Definition                                                                                                            | Verdict                       |
-| ---------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| Direct     | Test calls the governed Rust function, type, module, or binary                                                        | Proceed                       |
-| Indirect   | Test calls test infrastructure that calls the governed path                                                           | Proceed after harness tracing |
-| Transitive | Test calls a public consumer of the governed path                                                                     | Proceed if the level matches  |
-| False      | Test imports the module but never calls assertion-relevant symbols                                                    | REJECT                        |
-| Partial    | Test calls the right module with wrong inputs or wrong path                                                           | REJECT                        |
-| Severed    | Test or harness replaces the governed behavior with a mock, fake, generated mock, alternate module, or bypassing stub | REJECT                        |
+This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to Rust paths. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
-Framework/library imports such as `std`, `tempfile`, `assert_cmd`, `predicates`, `insta`, `tokio`, `proptest`, and `quickcheck` do not count as coupling by themselves. `assert_cmd::Command::cargo_bin(...)` counts as coupling to the named binary contract.
+| Category           | Definition                                                                                                                 | Verdict                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test calls the governed Rust function, type, module, or binary                                                             | Proceed                                         |
+| Indirect           | Test calls test infrastructure that calls the governed path                                                                | Proceed after harness tracing                   |
+| Transitive         | Test calls a public consumer of the governed path                                                                          | Proceed if the level matches                    |
+| Laundered indirect | Calls a `<product>_testing` module that exists only to expose hardcoded values back to the test                            | REJECT — laundering                             |
+| False              | Test imports the module but never calls assertion-relevant symbols                                                         | REJECT                                          |
+| Partial            | Test calls the right module with wrong inputs or wrong path                                                                | REJECT                                          |
+| None               | Test imports only its test framework or dev-dependency crates, with zero product-crate coupling                            | REJECT — tautology                              |
+| Severed            | Test or harness replaces the governed behavior with a mock, fake, generated mock, alternate module, or bypassing stub      | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content, including through a harness constant or an infrastructure reader | REJECT — couples to authored text, not behavior |
+
+Framework/library imports such as `std`, `tempfile`, `assert_cmd`, `predicates`, `insta`, `tokio`, `proptest`, and `quickcheck` do not count as coupling by themselves. `assert_cmd::Command::cargo_bin(...)` counts as coupling to the named binary contract. The Prose-coupling row is the table-side form of the source-file read that `<structural_reading>` screens for; both reach the same REJECT.
 
 </supplement>
 

@@ -181,6 +181,21 @@ test("records charge requests", async () => {
 
 </dependency_injection>
 
+<predicate_and_oracle_litmus>
+
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is TypeScript-specific and never replace or bound it.
+
+- Invert the `expect` matcher. Only the linked test changes; no harness or collaborator code changes.
+- Read the test callback alone. Every pass/fail predicate is visible there.
+- Trace each case to the spec scenario, complete source-owned mapping, `fast-check` arbitrary, external conformance oracle, governing compliance rule, or inert whole-payload fixture.
+- Trace each expected result to an oracle outside the production table, algorithm, parser, branch logic, or collaborator verdict method under test.
+- Mutate the assertion-relevant production behavior. The test fails.
+- Read each harness and factory. It returns observations, state, or handles — never a verdict, and never a `*Succeeds`, `isValid`, or `wasCalledWith` method.
+- Read a failure message. It reports actual against expected at the `expect` site, not `expect(helper()).toBe(true)`.
+- Ask whether the same harness could serve a test claiming the opposite about the same observation. It can when the predicate is test-owned.
+
+</predicate_and_oracle_litmus>
+
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
 

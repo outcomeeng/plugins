@@ -210,13 +210,16 @@ Allowed controlled implementations and recording collaborators are explicit obje
 
 <predicate_and_oracle_litmus>
 
-Apply the shared `/test-evidence-standards` questions with Python syntax:
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is Python-specific and never replace or bound it.
 
 - Invert the `assert` expression. Only the linked test changes; no harness or collaborator code changes.
 - Read the test function alone. Every pass/fail predicate is visible there.
 - Trace each case to the spec scenario, complete source-owned mapping, Hypothesis domain, external conformance oracle, governing compliance rule, or inert whole-payload fixture.
 - Trace each expected result to an oracle outside the production table, algorithm, parser, branch logic, or collaborator verdict method under test.
 - Mutate the assertion-relevant production behavior. The test fails.
+- Read each fixture and harness. It returns observations, state, or handles — never a verdict, and never a `*_succeeds`, `is_valid`, `was_called_with`, or `assert_called` method.
+- Read a failure message. It reports actual against expected at the `assert` site, not `assert helper(...)`.
+- Ask whether the same fixture or harness could serve a test claiming the opposite about the same observation. It can when the predicate is test-owned.
 
 </predicate_and_oracle_litmus>
 
