@@ -126,7 +126,7 @@ All in `${CLAUDE_SKILL_DIR}/templates/`:
 
 <success_criteria>
 
-- Representative input selects exactly one intended workflow, and every routing target exists in `<workflows_index>`.
+- For every route, one canonical trigger and its nearest adjacent trigger select exactly the intended workflow, and every routing target exists in `<workflows_index>`.
 - Each selected workflow loads only the standards and conditional references its route requires.
 - Each selected workflow produces the output declared by its own success criteria.
 - A produced or improved skill passes the target repository's deterministic skill checks and receives an `APPROVED` verdict from the typed `skill-auditor` over the complete bundle.
