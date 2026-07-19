@@ -16,7 +16,7 @@ A verdict on one PDR against the PDR evidence model — APPROVED, or REJECTED wi
 
 <prerequisites>
 
-Read the PDR evidence model completely before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
+Read the PDR evidence model's boundary guidance for content classification, property quality, and tag validity before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
 
 </prerequisites>
 

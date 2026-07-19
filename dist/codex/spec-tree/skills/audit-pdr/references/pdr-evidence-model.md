@@ -1,8 +1,8 @@
 <overview>
 
-Detailed evidence model for PDR auditing. Read this before auditing any PDR.
+Detailed boundary guidance for PDR content classification, property quality, and tag validity. Read this before auditing any PDR.
 
-Five properties define PDR evidence: content classification, property quality, tag validity, atemporal voice, consistency. This reference provides detailed definitions, boundary cases, and concrete examples for each.
+The audit skill owns the complete five-property workflow, including atemporal voice and consistency. This reference defines the three properties whose classification boundaries require extended examples.
 
 </overview>
 
