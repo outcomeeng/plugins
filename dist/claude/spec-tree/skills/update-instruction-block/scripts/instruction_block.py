@@ -34,7 +34,9 @@ The deterministic modules ``test_instruction_block.scenario.l1.py``,
 cases assert both root files are regenerated without changing independent content, check maps
 absent/stale/current inputs to the matching status, reconcile refuses dirty, tied, one-sided, and
 malformed shared regions, invalid symlink/path/language inputs exit nonzero, and repeated writes
-are idempotent. Temporary products use pytest's ``tmp_path`` fixture, which owns cleanup.
+are idempotent. The evidence harness allocates each temporary product through
+``TemporaryDirectory`` and synthesizes per-case subdirectories inside it; the context manager owns
+cleanup.
 """
 
 from __future__ import annotations
