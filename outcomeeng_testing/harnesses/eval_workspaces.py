@@ -7,11 +7,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-def with_temp_workspace(assertion: Callable[[Path], None]) -> Callable[[], None]:
-    """Run a no-argument assertion inside a temporary workspace."""
+def with_temp_workspace(test_body: Callable[[Path], None]) -> Callable[[], None]:
+    """Run a no-argument test callback inside a temporary workspace."""
 
-    def run_assertion() -> None:
+    def run_test() -> None:
         with TemporaryDirectory() as temp_dir:
-            assertion(Path(temp_dir))
+            test_body(Path(temp_dir))
 
-    return run_assertion
+    return run_test

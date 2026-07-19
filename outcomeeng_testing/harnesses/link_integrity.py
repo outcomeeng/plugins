@@ -1,7 +1,10 @@
-"""Fixture writers for evidence-link-integrity tests."""
+"""Workspace and observation infrastructure for evidence-link validation."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -16,6 +19,39 @@ from outcomeeng.validation.link_integrity import (
     validate_eval_links,
     validate_test_links,
 )
+
+
+class LinkIntegrityCase(StrEnum):
+    EVAL_RESOLVABLE = "eval-resolvable"
+    EVAL_NON_LINK = "eval-non-link"
+    EVAL_INLINE = "eval-inline"
+    EVAL_FENCED = "eval-fenced"
+    EVAL_ALL = "eval-all"
+    EVAL_VALID = "eval-valid"
+    EVAL_MISSING = "eval-missing"
+    EVAL_NON_TOML = "eval-non-toml"
+    EVAL_DEEP = "eval-deep"
+    EVAL_LOOSE = "eval-loose"
+    TEST_RESOLVABLE = "test-resolvable"
+    TEST_INLINE = "test-inline"
+    TEST_FENCED = "test-fenced"
+    TEST_VALID = "test-valid"
+    TEST_MISSING = "test-missing"
+    TEST_NON_DEFAULT_NAME = "test-non-default-name"
+    TEST_NON_PYTHON = "test-non-python"
+    TEST_DEEP = "test-deep"
+    TEST_LOOSE = "test-loose"
+
+
+@dataclass(frozen=True)
+class LinkIntegrityObservation:
+    case: LinkIntegrityCase
+    eval_links: tuple[EvalLink, ...] = ()
+    test_links: tuple[TestLink, ...] = ()
+    broken_eval_links: tuple[BrokenEvalLink, ...] = ()
+    broken_test_links: tuple[BrokenTestLink, ...] = ()
+    source_path: Path | None = None
+    target_path: Path | None = None
 
 
 def write_eval_dir(directory: Path, slug: str) -> Path:
@@ -39,306 +75,210 @@ def write_test_file(directory: Path, name: str) -> Path:
     return test_path
 
 
-def assert_link_integrity_contract() -> None:
-    with TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        _assert_find_eval_links_finds_resolvable_link(root / "eval-resolvable")
-        _assert_find_eval_links_ignores_non_eval_markdown_links(root / "eval-nonlink")
-        _assert_find_eval_links_ignores_inline_code_spans(root / "eval-inline")
-        _assert_find_eval_links_ignores_fenced_code_blocks(root / "eval-fenced")
-        _assert_find_eval_links_returns_all_links_across_files(root / "eval-all")
-        _assert_validate_eval_links_returns_empty_when_all_resolve(root / "eval-valid")
-        _assert_validate_eval_links_reports_missing_eval_toml(root / "eval-missing")
-        _assert_validate_eval_links_rejects_link_to_non_eval_toml(root / "eval-nontoml")
-        _assert_validate_eval_links_resolves_paths_relative_to_source(
-            root / "eval-deep"
+def run_link_integrity_contract(
+    predicate: Callable[[LinkIntegrityObservation], None],
+) -> None:
+    """Deliver every rule-derived link case to the linked test predicate."""
+    with TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        for case in LinkIntegrityCase:
+            predicate(_observe_link_case(root / case.value, case))
+
+
+def _observe_link_case(root: Path, case: LinkIntegrityCase) -> LinkIntegrityObservation:
+    if case is LinkIntegrityCase.EVAL_RESOLVABLE:
+        node_dir = root / "spx" / "node"
+        node_dir.mkdir(parents=True)
+        target = write_eval_dir(node_dir, "rule-one")
+        source = node_dir / "spec.md"
+        source.write_text(
+            "- NEVER: bad thing ([eval](evals/rule-one/eval.toml))\n",
+            encoding="utf-8",
         )
-        _assert_validate_eval_links_rejects_target_outside_evals_dir(
-            root / "eval-loose"
+        return LinkIntegrityObservation(
+            case=case,
+            eval_links=tuple(find_eval_links(root)),
+            source_path=source,
+            target_path=target,
         )
-        _assert_find_test_links_finds_resolvable_link(root / "test-resolvable")
-        _assert_find_test_links_ignores_inline_code_spans(root / "test-inline")
-        _assert_find_test_links_ignores_fenced_code_blocks(root / "test-fenced")
-        _assert_validate_test_links_returns_empty_when_all_resolve(root / "test-valid")
-        _assert_validate_test_links_reports_missing_target(root / "test-missing")
-        _assert_validate_test_links_rejects_non_test_filename(root / "test-nonname")
-        _assert_validate_test_links_rejects_non_python_target(root / "test-nonpython")
-        _assert_validate_test_links_resolves_paths_relative_to_source(
-            root / "test-deep"
+    if case is LinkIntegrityCase.EVAL_NON_LINK:
+        root.mkdir(parents=True)
+        (root / "spec.md").write_text(
+            "- ALWAYS: do thing ([test](tests/test_thing.conformance.l1.py))\n"
+            "- See [related doc](other.md)\n",
+            encoding="utf-8",
         )
-        _assert_validate_test_links_rejects_target_outside_tests_dir(
-            root / "test-loose"
+        return LinkIntegrityObservation(
+            case=case, eval_links=tuple(find_eval_links(root))
         )
-
-
-def _assert_find_eval_links_finds_resolvable_link(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    write_eval_dir(node_dir, "rule-one")
-    spec = node_dir / "spec.md"
-    spec.write_text(
-        "- NEVER: bad thing ([eval](evals/rule-one/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    links = find_eval_links(root)
-
-    assert len(links) == 1
-    assert isinstance(links[0], EvalLink)
-    assert links[0].source.resolve() == spec.resolve()
-    assert (
-        links[0].target.resolve()
-        == (node_dir / "evals" / "rule-one" / EVAL_TOML_FILENAME).resolve()
-    )
-
-
-def _assert_find_eval_links_ignores_non_eval_markdown_links(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    spec = node_dir / "spec.md"
-    spec.write_text(
-        "- ALWAYS: do thing ([test](tests/test_thing.conformance.l1.py))\n"
-        "- See [related doc](other.md)\n",
-        encoding="utf-8",
-    )
-
-    assert find_eval_links(root) == []
-
-
-def _assert_find_eval_links_ignores_inline_code_spans(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    spec = node_dir / "spec.md"
-    spec.write_text(
-        "Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. "
-        "The runner consumes it.\n",
-        encoding="utf-8",
-    )
-
-    assert find_eval_links(root) == []
-
-
-def _assert_find_eval_links_ignores_fenced_code_blocks(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    spec = node_dir / "spec.md"
-    spec.write_text(
-        "Example assertion:\n\n"
-        "```markdown\n"
-        "- ALWAYS: foo ([eval](evals/example/eval.toml))\n"
-        "```\n",
-        encoding="utf-8",
-    )
-
-    assert find_eval_links(root) == []
-
-
-def _assert_find_eval_links_returns_all_links_across_files(root: Path) -> None:
-    node_a = root / "spx" / "a"
-    node_b = root / "spx" / "b"
-    node_a.mkdir(parents=True)
-    node_b.mkdir(parents=True)
-    write_eval_dir(node_a, "rule-a")
-    write_eval_dir(node_b, "rule-b")
-    (node_a / "spec.md").write_text(
-        "([eval](evals/rule-a/eval.toml))\n",
-        encoding="utf-8",
-    )
-    (node_b / "spec.md").write_text(
-        "([eval](evals/rule-b/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    assert len(find_eval_links(root)) == 2
-
-
-def _assert_validate_eval_links_returns_empty_when_all_resolve(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    write_eval_dir(node_dir, "rule-one")
-    (node_dir / "spec.md").write_text(
-        "([eval](evals/rule-one/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    assert validate_eval_links(root) == []
-
-
-def _assert_validate_eval_links_reports_missing_eval_toml(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    (node_dir / "spec.md").write_text(
-        "([eval](evals/missing-rule/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    broken = validate_eval_links(root)
-
-    assert len(broken) == 1
-    assert isinstance(broken[0], BrokenEvalLink)
-    assert "missing-rule" in str(broken[0].target)
-
-
-def _assert_validate_eval_links_rejects_link_to_non_eval_toml(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    (node_dir / "spec.md").write_text(
-        "([eval](evals/rule/cases.jsonl))\n",
-        encoding="utf-8",
-    )
-    (node_dir / "evals" / "rule").mkdir(parents=True)
-    (node_dir / "evals" / "rule" / "cases.jsonl").write_text("", encoding="utf-8")
-
-    broken = validate_eval_links(root)
-
-    assert len(broken) == 1
-    assert "eval.toml" in broken[0].reason
-
-
-def _assert_validate_eval_links_resolves_paths_relative_to_source(root: Path) -> None:
-    deep_node = root / "spx" / "a" / "b" / "c"
-    deep_node.mkdir(parents=True)
-    write_eval_dir(deep_node, "deep-rule")
-    (deep_node / "spec.md").write_text(
-        "([eval](evals/deep-rule/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    assert validate_eval_links(root) == []
-
-
-def _assert_validate_eval_links_rejects_target_outside_evals_dir(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    loose_dir = node_dir / "evals"
-    loose_dir.mkdir()
-    (loose_dir / EVAL_TOML_FILENAME).write_text(
-        'title = "x"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
-        encoding="utf-8",
-    )
-    (node_dir / "spec.md").write_text(
-        "([eval](evals/eval.toml))\n",
-        encoding="utf-8",
-    )
-
-    broken = validate_eval_links(root)
-
-    assert len(broken) == 1
-    assert "evals/" in broken[0].reason
-
-
-def _assert_find_test_links_finds_resolvable_link(root: Path) -> None:
-    write_test_file(root, "test_thing.conformance.l1.py")
-    (root / "spec.md").write_text(
-        "Assertion ([test](tests/test_thing.conformance.l1.py))\n",
-        encoding="utf-8",
-    )
-
-    links = find_test_links(root)
-
-    assert len(links) == 1
-    assert isinstance(links[0], TestLink)
-    assert links[0].target.name == "test_thing.conformance.l1.py"
-
-
-def _assert_find_test_links_ignores_inline_code_spans(root: Path) -> None:
+    if case is LinkIntegrityCase.EVAL_INLINE:
+        root.mkdir(parents=True)
+        (root / "spec.md").write_text(
+            "Sample link form: `[eval](evals/{rule-slug}/eval.toml)`.\n",
+            encoding="utf-8",
+        )
+        return LinkIntegrityObservation(
+            case=case, eval_links=tuple(find_eval_links(root))
+        )
+    if case is LinkIntegrityCase.EVAL_FENCED:
+        root.mkdir(parents=True)
+        (root / "spec.md").write_text(
+            "```markdown\n([eval](evals/example/eval.toml))\n```\n",
+            encoding="utf-8",
+        )
+        return LinkIntegrityObservation(
+            case=case, eval_links=tuple(find_eval_links(root))
+        )
+    if case is LinkIntegrityCase.EVAL_ALL:
+        node_a = root / "spx" / "a"
+        node_b = root / "spx" / "b"
+        node_a.mkdir(parents=True)
+        node_b.mkdir(parents=True)
+        write_eval_dir(node_a, "rule-a")
+        write_eval_dir(node_b, "rule-b")
+        (node_a / "spec.md").write_text(
+            "([eval](evals/rule-a/eval.toml))\n", encoding="utf-8"
+        )
+        (node_b / "spec.md").write_text(
+            "([eval](evals/rule-b/eval.toml))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case, eval_links=tuple(find_eval_links(root))
+        )
+    if case in {LinkIntegrityCase.EVAL_VALID, LinkIntegrityCase.EVAL_DEEP}:
+        node_dir = root / "spx" / "node"
+        if case is LinkIntegrityCase.EVAL_DEEP:
+            node_dir = root / "spx" / "a" / "b" / "c"
+        node_dir.mkdir(parents=True)
+        write_eval_dir(node_dir, "rule-one")
+        (node_dir / "spec.md").write_text(
+            "([eval](evals/rule-one/eval.toml))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            broken_eval_links=tuple(validate_eval_links(root)),
+        )
+    if case is LinkIntegrityCase.EVAL_MISSING:
+        root.mkdir(parents=True)
+        source = root / "spec.md"
+        source.write_text("([eval](evals/missing-rule/eval.toml))\n", encoding="utf-8")
+        return LinkIntegrityObservation(
+            case=case,
+            broken_eval_links=tuple(validate_eval_links(root)),
+            source_path=source,
+            target_path=root / "evals" / "missing-rule" / EVAL_TOML_FILENAME,
+        )
+    if case is LinkIntegrityCase.EVAL_NON_TOML:
+        root.mkdir(parents=True)
+        target = root / "evals" / "rule" / "cases.jsonl"
+        target.parent.mkdir(parents=True)
+        target.write_text("", encoding="utf-8")
+        (root / "spec.md").write_text(
+            "([eval](evals/rule/cases.jsonl))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            broken_eval_links=tuple(validate_eval_links(root)),
+            target_path=target,
+        )
+    if case is LinkIntegrityCase.EVAL_LOOSE:
+        root.mkdir(parents=True)
+        target = root / "evals" / EVAL_TOML_FILENAME
+        target.parent.mkdir()
+        target.write_text(
+            'title = "x"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
+            encoding="utf-8",
+        )
+        (root / "spec.md").write_text("([eval](evals/eval.toml))\n", encoding="utf-8")
+        return LinkIntegrityObservation(
+            case=case,
+            broken_eval_links=tuple(validate_eval_links(root)),
+            target_path=target,
+        )
+    if case is LinkIntegrityCase.TEST_RESOLVABLE:
+        root.mkdir(parents=True)
+        target = write_test_file(root, "test_thing.conformance.l1.py")
+        source = root / "spec.md"
+        source.write_text(
+            "Assertion ([test](tests/test_thing.conformance.l1.py))\n",
+            encoding="utf-8",
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            test_links=tuple(find_test_links(root)),
+            source_path=source,
+            target_path=target,
+        )
+    if case in {LinkIntegrityCase.TEST_INLINE, LinkIntegrityCase.TEST_FENCED}:
+        root.mkdir(parents=True)
+        (root / "doc.md").write_text(
+            {
+                LinkIntegrityCase.TEST_INLINE: (
+                    "The link form `[test](path/to/test.py)` is required.\n"
+                ),
+                LinkIntegrityCase.TEST_FENCED: (
+                    "```\nAssertion ([test](tests/test_x.py))\n```\n"
+                ),
+            }[case],
+            encoding="utf-8",
+        )
+        return LinkIntegrityObservation(
+            case=case, test_links=tuple(find_test_links(root))
+        )
+    if case in {LinkIntegrityCase.TEST_VALID, LinkIntegrityCase.TEST_DEEP}:
+        node_dir = root
+        if case is LinkIntegrityCase.TEST_DEEP:
+            node_dir = root / "spx" / "a" / "b"
+        node_dir.mkdir(parents=True)
+        write_test_file(node_dir, "test_x.conformance.l1.py")
+        (node_dir / "spec.md").write_text(
+            "([test](tests/test_x.conformance.l1.py))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            broken_test_links=tuple(validate_test_links(root)),
+        )
+    if case is LinkIntegrityCase.TEST_MISSING:
+        root.mkdir(parents=True)
+        target = root / "tests" / "missing.py"
+        (root / "spec.md").write_text("([test](tests/missing.py))\n", encoding="utf-8")
+        return LinkIntegrityObservation(
+            case=case,
+            broken_test_links=tuple(validate_test_links(root)),
+            target_path=target,
+        )
+    if case in {
+        LinkIntegrityCase.TEST_NON_DEFAULT_NAME,
+        LinkIntegrityCase.TEST_NON_PYTHON,
+    }:
+        root.mkdir(parents=True)
+        target = (
+            root
+            / "tests"
+            / (
+                "helper.py"
+                if case is LinkIntegrityCase.TEST_NON_DEFAULT_NAME
+                else "test_thing.txt"
+            )
+        )
+        target.parent.mkdir(parents=True)
+        target.write_text("", encoding="utf-8")
+        (root / "spec.md").write_text(
+            f"([test](tests/{target.name}))\n", encoding="utf-8"
+        )
+        return LinkIntegrityObservation(
+            case=case,
+            broken_test_links=tuple(validate_test_links(root)),
+            target_path=target,
+        )
     root.mkdir(parents=True)
-    (root / "doc.md").write_text(
-        "The link form `[test](path/to/test.py)` is required.\n",
-        encoding="utf-8",
-    )
-
-    assert find_test_links(root) == []
-
-
-def _assert_find_test_links_ignores_fenced_code_blocks(root: Path) -> None:
-    root.mkdir(parents=True)
-    (root / "doc.md").write_text(
-        "```\nAssertion ([test](tests/test_x.py))\n```\n",
-        encoding="utf-8",
-    )
-
-    assert find_test_links(root) == []
-
-
-def _assert_validate_test_links_returns_empty_when_all_resolve(root: Path) -> None:
-    write_test_file(root, "test_x.conformance.l1.py")
+    target = root / "test_loose.conformance.l1.py"
+    target.write_text("def test_placeholder() -> None: pass\n", encoding="utf-8")
     (root / "spec.md").write_text(
-        "([test](tests/test_x.conformance.l1.py))\n",
-        encoding="utf-8",
+        "([test](test_loose.conformance.l1.py))\n", encoding="utf-8"
     )
-
-    assert validate_test_links(root) == []
-
-
-def _assert_validate_test_links_reports_missing_target(root: Path) -> None:
-    root.mkdir(parents=True)
-    (root / "spec.md").write_text(
-        "([test](tests/missing.py))\n",
-        encoding="utf-8",
+    return LinkIntegrityObservation(
+        case=case,
+        broken_test_links=tuple(validate_test_links(root)),
+        target_path=target,
     )
-
-    broken = validate_test_links(root)
-
-    assert len(broken) == 1
-    assert isinstance(broken[0], BrokenTestLink)
-    assert "does not exist" in broken[0].reason
-
-
-def _assert_validate_test_links_rejects_non_test_filename(root: Path) -> None:
-    helper = root / "tests" / "helper.py"
-    helper.parent.mkdir(parents=True)
-    helper.write_text("# helper\n", encoding="utf-8")
-    (root / "spec.md").write_text(
-        "([test](tests/helper.py))\n",
-        encoding="utf-8",
-    )
-
-    broken = validate_test_links(root)
-
-    assert len(broken) == 1
-    assert "pytest collectable" in broken[0].reason
-
-
-def _assert_validate_test_links_rejects_non_python_target(root: Path) -> None:
-    txt_file = root / "tests" / "test_thing.txt"
-    txt_file.parent.mkdir(parents=True)
-    txt_file.write_text("not python\n", encoding="utf-8")
-    (root / "spec.md").write_text(
-        "([test](tests/test_thing.txt))\n",
-        encoding="utf-8",
-    )
-
-    broken = validate_test_links(root)
-
-    assert len(broken) == 1
-    assert "pytest collectable" in broken[0].reason
-
-
-def _assert_validate_test_links_resolves_paths_relative_to_source(root: Path) -> None:
-    deep_node = root / "spx" / "a" / "b"
-    deep_node.mkdir(parents=True)
-    write_test_file(deep_node, "test_deep.conformance.l1.py")
-    (deep_node / "spec.md").write_text(
-        "([test](tests/test_deep.conformance.l1.py))\n",
-        encoding="utf-8",
-    )
-
-    assert validate_test_links(root) == []
-
-
-def _assert_validate_test_links_rejects_target_outside_tests_dir(root: Path) -> None:
-    node_dir = root / "spx" / "node"
-    node_dir.mkdir(parents=True)
-    loose_test = node_dir / "test_loose.conformance.l1.py"
-    loose_test.write_text("def test_placeholder() -> None: pass\n", encoding="utf-8")
-    (node_dir / "spec.md").write_text(
-        "([test](test_loose.conformance.l1.py))\n",
-        encoding="utf-8",
-    )
-
-    broken = validate_test_links(root)
-
-    assert len(broken) == 1
-    assert isinstance(broken[0], BrokenTestLink)
-    assert "tests/" in broken[0].reason
