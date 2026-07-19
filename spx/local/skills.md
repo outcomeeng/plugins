@@ -4,7 +4,8 @@ Loaded by `/skill-standards` `<repo_local_overlay>` when authoring or auditing s
 
 ## Current Skill Names
 
-ALWAYS: Invoked workflow skills are named in imperative form.
-ALWAYS: Reference skills are named as noun phrases ending in the domain they standardize.
-ALWAYS: Any material change to a skill implies renaming all skills in the entire plugin to match the latest instruction-authoring rules.
+ALWAYS: Invoked workflow skills are named as imperative phrases that match user speech; grammatical number follows the capability's meaning and is never changed mechanically across a plugin.
+ALWAYS: Reference skills are named `{domain}-standards`, where `{domain}` names the standardized subject.
+ALWAYS: Any material change to a skill implies auditing every skill name in the entire plugin against the latest instruction-authoring rules and renaming each nonconforming skill; compliant names remain unchanged.
+ALWAYS: Before proposing a skill rename, classify every reviewed skill by current name, skill type, governing naming form, proposed name or keep disposition, and reason. Read declared methodology vocabulary and relevant file history before treating a name as defective. A shared token, suffix, or grammatical number never proves a batch rename.
 ALWAYS: New agents are named in actor form and ALWAYS differ from the skill name they implement. For example, `adr-auditor` implements `audit-adr`.

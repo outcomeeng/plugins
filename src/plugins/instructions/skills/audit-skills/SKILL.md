@@ -22,7 +22,7 @@ An `APPROVED` or `REJECTED` verdict on a SKILL.md against `/skill-standards` and
 - ALWAYS provide file:line locations for every finding
 - NEVER generate fixes unless explicitly requested by the user
 - NEVER make assumptions about skill intent - flag ambiguities as findings
-- MUST complete all evaluation areas (YAML, Structure, Content, Anti-patterns)
+- MUST complete all evaluation areas
 - ALWAYS apply contextual judgment - what matters for a simple skill differs from a complex one
 
 </constraints>
@@ -41,7 +41,7 @@ During audits, prioritize evaluation of:
 - Constraint strength (MUST/NEVER/ALWAYS vs weak modals)
 - Error handling coverage (missing files, malformed input, edge cases)
 - Example quality (concrete, realistic, demonstrates key patterns)
-- **Operational effectiveness** (verifiable success criteria, verification gates, failure modes)
+- **Operational effectiveness** (verifiable success criteria, failure modes, and observable validation)
 - **Procedural/operational balance** (skill states both how to DO the work and how to KNOW it was done right)
 
 </focus_areas>
@@ -60,14 +60,14 @@ During audits, prioritize evaluation of:
 
 5. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
 6. Handle edge cases:
-   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
+   - If `/skill-standards` or `/agent-prompt-standards` is unreadable, add a `REJECT` finding with rule `configuration_issue` to the `must-fix` row and proceed with available content; the incomplete audit remains `REJECTED`.
    - If YAML frontmatter is malformed, flag as critical issue.
    - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
    - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
-   - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
+   - If the skill is under 100 lines, record `simple` in `metadata.skill_type` and evaluate accordingly.
 7. Evaluate the target skill against the standards loaded in steps 1-2.
 
-**Use ACTUAL patterns from `/skill-standards`, not memory.** Never read `create-skills/references/` for standards — that directory is workflow content only.
+**Use ACTUAL patterns from `/skill-standards`, not memory.** Never treat a creator skill's workflow references as standards — those references carry authoring workflow content only.
 </audit_workflow>
 
 <evaluation_areas>
@@ -113,20 +113,13 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 - ❌ Bad: "Task complete when migration is done"
 - ✅ Good: "Coverage on src/foo.ts must be ≥86%. Run: `pnpm test --coverage | grep foo.ts`"
 
-**Verification Gates**:
-
-- Are there explicit "STOP and verify before proceeding" checkpoints?
-- Do gates have pass/fail criteria with specific commands?
-- ❌ Bad: "Verify coverage matches before removing legacy tests"
-- ✅ Good: "GATE 2: Run `pnpm test --coverage` for both legacy and SPX. If delta >0.5%, STOP."
-
 **Failure Modes Documentation**:
 
 - Does the skill document what can go wrong in practice?
 - Are failures from actual usage, not hypotheticals?
 - Does each failure have: what happened, why it failed, how to avoid?
 - ❌ Bad: No failure modes section
-- ✅ Good: "Failure 1: Agent compared coverage per-story instead of per-file. Why: Multiple stories share one legacy file. Avoid: Always compare at legacy file level."
+- ✅ Good: "Failure 1: Claude compared coverage per-story instead of per-file. Why: Multiple stories share one legacy file. Avoid: Always compare at legacy file level."
 
 **Example Concreteness**:
 
@@ -206,7 +199,6 @@ Flag these issues:
 - **windows_paths**: Backslash paths instead of forward slashes
 - **bloat**: Obvious explanations, redundant content
 - **unverifiable_success_criteria**: Success criteria that can't be tested with a command or boolean check
-- **no_verification_gates**: Complex multi-step skill without explicit stop-and-check points
 - **no_failure_modes**: Skill lacks documentation of what went wrong in practice
 - **abstract_examples**: Examples that show patterns but not concrete values/outputs
 - **orphaned_references**: Files in `references/` not cited from SKILL.md or any workflow file. Verify with `grep -rn "<filename>" <skill-dir>/`. Orphans inflate token cost via speculative reads (Claude tends to open siblings of cited references) and indicate either dead content or a missing cross-reference. Flag as critical: either delete the file or add an explicit `<required_reading>` reference from the workflow that needs it.
@@ -230,14 +222,14 @@ Apply judgment based on skill complexity and purpose:
 - Required tags only is appropriate - don't flag missing conditional tags
 - Minimal examples acceptable
 - Light validation sufficient
-- Operational effectiveness: success criteria should still be verifiable, but gates/failure modes not expected
+- Operational effectiveness: success criteria should still be verifiable, while failure modes remain proportional to observed history
 
 **Complex skills** (multi-step, external APIs, security concerns):
 
 - Missing conditional tags (security_checklist, validation, error_handling) is a real issue
 - Comprehensive examples expected
 - Thorough validation required
-- **Operational effectiveness is CRITICAL**: Must have verifiable success criteria, verification gates, and failure modes
+- **Operational effectiveness is CRITICAL**: Must have verifiable success criteria, observable validation, and failure modes
 - Flag heavily procedural skills that lack operational content as critical issue
 
 **Delegation skills** (invoke subagents):
@@ -249,7 +241,7 @@ Apply judgment based on skill complexity and purpose:
 **Migration/transformation skills** (change state, move files, update systems):
 
 - **Highest operational bar**: These skills change things that are hard to undo
-- MUST have verification gates before destructive operations
+- MUST state authority, validation, and recovery boundaries before destructive operations
 - MUST have failure modes from actual usage
 - MUST have concrete examples showing before/after with real values
 - Flag missing operational content as critical, not recommendation
@@ -412,7 +404,7 @@ Before presenting audit findings, verify:
 **Operational effectiveness checks** (for complex skills):
 
 - [ ] Evaluated whether success criteria are verifiable (commands, thresholds)
-- [ ] Checked for verification gates in multi-step workflows
+- [ ] Checked for observable validation in multi-step workflows
 - [ ] Looked for failure modes documentation
 - [ ] Assessed procedural vs operational balance
 - [ ] Flagged abstract examples that should be concrete

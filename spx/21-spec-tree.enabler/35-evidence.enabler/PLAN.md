@@ -175,7 +175,7 @@ Include the rejecting case in the smoke set after it proves stable. Re-materiali
 1. Invoke `/understand` after any compaction.
 2. Invoke `/contextualize spx/21-spec-tree.enabler/35-evidence.enabler`.
 3. Invoke `/slice` to select the executable slice. Do not use a plan-slice workflow.
-4. Invoke `/apply` before implementation, `/test` before test work, and `instructions:create-skills` before editing any skill content.
+4. Invoke `/apply` before implementation, `/test` before test work, and `instructions:create-skill` before editing any skill content.
 5. Contextualize every additional governing node before touching its spec, source, tests, or eval artifacts. At minimum this includes the audit-specs, audit-tests, align, Python tests, Python architecture, and eval-harness nodes reached by the slices below.
 
 ### 2. Correct the declaration and migration policy
