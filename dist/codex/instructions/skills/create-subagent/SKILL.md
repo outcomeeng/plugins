@@ -274,6 +274,13 @@ Edit custom agent files directly:
 </manual_editing>
 </management>
 
+<invocation_check_boundary>
+Include a target-specific invocation-check handoff with every created or edited configuration. Keep the invocation outside this skill's restricted execution; its `allowed-tools` intentionally omit custom agent-spawn authority.
+
+The handoff names the configured `agent_type`, the expected final-message fields or sections, and the `completed` result required from `spawn_agent`.
+
+</invocation_check_boundary>
+
 <reference>
 **Core references**:
 
@@ -305,10 +312,10 @@ A well-configured custom agent has:
 - A TOML file with `name`, `description`, and `developer_instructions` that a fresh Codex session loads without a configuration error and exposes by name in `spawn_agent`'s `agent_type` values
 - A `developer_instructions` containing XML-structured role, workflow, constraints, and output expectations
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
-- A recorded `spawn_agent` call with the configured name as `agent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
+- A post-skill `spawn_agent` invocation record produced from the handoff, using the configured name as `agent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
 
 - A description that states both what the custom agent does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
-- The target-specific invocation check rerun after every configuration edit
+- The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution
 
 </success_criteria>

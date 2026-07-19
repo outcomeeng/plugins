@@ -280,6 +280,13 @@ Edit subagent files directly:
 </manual_editing>
 </management>
 
+<invocation_check_boundary>
+Include a target-specific invocation-check handoff with every created or edited configuration. Keep the invocation outside this skill's restricted execution; its `allowed-tools` intentionally omit subagent-spawn authority.
+
+The handoff names the configured `subagent_type`, the expected final-message fields or sections, and the `completed` result required from the Agent tool.
+
+</invocation_check_boundary>
+
 <reference>
 **Core references**:
 
@@ -311,10 +318,10 @@ A well-configured subagent has:
 - A YAML-frontmatter file whose name matches the filename and whose configured name and scope appear in `/agents` after saving
 - A `system prompt` containing XML-structured role, workflow, constraints, and output expectations
 - Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
-- A recorded Agent-tool call with the configured name as `subagent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
+- A post-skill Agent-tool invocation record produced from the handoff, using the configured name as `subagent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
 
 - A description that states both what the subagent does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
-- The target-specific invocation check rerun after every configuration edit
+- The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution
 
 </success_criteria>

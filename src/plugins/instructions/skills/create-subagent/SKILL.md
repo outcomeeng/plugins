@@ -404,6 +404,17 @@ Edit {{! term('configured_agent_files') !}} directly:
 </manual_editing>
 </management>
 
+<invocation_check_boundary>
+Include a target-specific invocation-check handoff with every created or edited configuration. Keep the invocation outside this skill's restricted execution; its `allowed-tools` intentionally omit {{! term('configured_agent') !}}-spawn authority.
+
+{!% if target == 'codex' %!}
+The handoff names the configured `agent_type`, the expected final-message fields or sections, and the `completed` result required from `spawn_agent`.
+{!% else %!}
+The handoff names the configured `subagent_type`, the expected final-message fields or sections, and the `completed` result required from the Agent tool.
+{!% endif %!}
+
+</invocation_check_boundary>
+
 <reference>
 **Core references**:
 
@@ -437,15 +448,15 @@ A well-configured {{! term('configured_agent') !}} has:
 - A TOML file with `name`, `description`, and `{{! field('configured_agent_prompt') !}}` that a fresh Codex session loads without a configuration error and exposes by name in `spawn_agent`'s `agent_type` values
 - A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
-- A recorded `spawn_agent` call with the configured name as `agent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
+- A post-skill `spawn_agent` invocation record produced from the handoff, using the configured name as `agent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
   {!% else %!}
 - A YAML-frontmatter file whose name matches the filename and whose configured name and scope appear in `/agents` after saving
 - A `{{! field('configured_agent_prompt') !}}` containing XML-structured role, workflow, constraints, and output expectations
 - Every declared tool mapped to at least one workflow step, with no workflow step requiring an undeclared tool
-- A recorded Agent-tool call with the configured name as `subagent_type` that reaches `completed`; its final message contains every field or section declared by the output expectations
+- A post-skill Agent-tool invocation record produced from the handoff, using the configured name as `subagent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
   {!% endif %!}
 - A description that states both what the {{! term('configured_agent') !}} does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
-- The target-specific invocation check rerun after every configuration edit
+- The target-specific invocation check rerun after every configuration edit as a post-skill step outside this skill's restricted execution
 
 </success_criteria>
