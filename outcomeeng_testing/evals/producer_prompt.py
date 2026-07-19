@@ -13,7 +13,12 @@ from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
-from outcomeeng.distribution.contracts import DIST_DIR_NAME, Target
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
+    Target,
+)
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 from outcomeeng_evals.producer_prompt import (
@@ -42,7 +47,8 @@ PRODUCER_SOURCE_PATHS = tuple(
         producer_path
         for target in Target
         for producer_path in PROJECT_ROOT.glob(
-            f"{DIST_DIR_NAME}/{target.value}/*/skills/audit*tests/SKILL.md"
+            f"{DIST_DIR_NAME}/{target.value}/*/{SKILLS_SUBDIR_NAME}/"
+            f"audit*tests/{SKILL_FILENAME}"
         )
     )
 )
