@@ -3,7 +3,7 @@ name: test-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
   NEVER write or fix Python tests without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m ruff check:*), Bash(python3 -m mypy:*)
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -37,7 +37,7 @@ Run this workflow for new Python tests:
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
-7. Keep literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, and property-generated parameters out of the executed test file. Convenience aliases may derive solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data.
+7. Keep every predicate and assertion API call in the linked test function or callback. Permit bindings that only receive actual results, imported source contracts, generated values, harness observations, resource handles, or fixture paths; reject bindings that choose literals, vocabulary, case data, expected results, configuration, setup policy, generator domains, or verdict rules.
 8. Import source-owned values from the owning module.
 9. Import variable input domains from `product_testing.generators.*`.
 10. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
@@ -101,7 +101,8 @@ Python test work satisfies this skill when:
 
 - Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
-- Tests introduce no local literals, numbers, vocabulary, case data, expected results, or configuration; convenience aliases derive solely from source contracts, generators, harnesses, inert-fixture path providers, or eval case data
+- Tests keep every predicate and assertion API call in the linked test function or callback
+- Test-file bindings introduce no local data, expectation, configuration, setup policy, generator domain, or verdict rule
 - Generators represent meaningful variable domains
 - Harnesses manage resource lifecycle and pytest fixture body code
 - Inert fixtures are consumed only as files

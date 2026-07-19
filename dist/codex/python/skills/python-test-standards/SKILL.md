@@ -80,7 +80,7 @@ Where the *values* the cases use live:
 | Whole-payload real-world sample                              | An inert fixture file under `product_testing/fixtures/`, read by path         |
 | One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                              |
 
-Executed Python test files are typed assertion files. They introduce no literals, numbers, vocabulary, case data, expected results, configuration, pytest fixture parameters, or property-generated parameters. Convenience variables and constants may alias values derived solely from imported source contracts, generators, harnesses, fixture-path providers, or justified eval case data; the alias introduces no data or policy of its own.
+Executed Python test files are typed assertion files. Their test functions or callbacks own every predicate and assertion API call. Bindings may receive or rename actual results, imported source contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths when they introduce no data or policy. They never choose literals, numbers, vocabulary, case data, expected results, configuration, setup policy, generator domains, or verdict rules.
 
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary — a hand-written key is a hand-picked case for the parser or consumer. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed.
 
@@ -205,8 +205,20 @@ Forbidden replacement patterns:
 - `mocker.patch(...)` replacing the dependency under test
 - `monkeypatch` replacing the behavior under test
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception.
+Allowed controlled implementations and recording collaborators are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception. They implement the production Protocol, preserve the behavior boundary, and expose state or recorded interactions only. The linked test asserts against those observations. They NEVER accept an expected outcome, call `assert`, expose `was_called_with` or `assert_called`, or return pass/fail verdicts.
 </dependency_injection>
+
+<predicate_and_oracle_litmus>
+
+Apply the shared `/test-evidence-standards` questions with Python syntax:
+
+- Invert the `assert` expression. Only the linked test changes; no harness or collaborator code changes.
+- Read the test function alone. Every pass/fail predicate is visible there.
+- Trace each case to the spec scenario, complete source-owned mapping, Hypothesis domain, external conformance oracle, governing compliance rule, or inert whole-payload fixture.
+- Trace each expected result to an oracle outside the production table, algorithm, parser, branch logic, or collaborator verdict method under test.
+- Mutate the assertion-relevant production behavior. The test fails.
+
+</predicate_and_oracle_litmus>
 
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require Hypothesis and a meaningful property.
@@ -245,7 +257,7 @@ Reject or rewrite these patterns:
 - Source-owned values copied into local constants
 - Test-file-local constants for values the production module owns
 - Variable or constant declarations in executed test files that introduce data, expected outputs, runner settings, setup policy, literals, numbers, vocabulary, case choices, or configuration rather than aliasing a value derived solely from an imported owner
-- Pytest fixture parameters or property-generated parameters in executed test files; the harness owns fixture access and generated-case binding
+- Pytest fixture parameters or property-generated parameters that choose data, configuration, setup policy, or verdict rules; parameters that only receive values from their semantic owner remain assertion flow
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer
 - Hand-copied artifact field names from YAML, HCL, bash, JSON schema, or IaC templates as substitutes for imports from the Python module that should render or consume the artifact
 - Test-runner tuning values (timeouts, retries, polling intervals) declared at test scope when the harness that owns the resource should own the value
@@ -265,7 +277,9 @@ Python test guidance follows this standard when:
 
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `test_<subject>.<evidence>.<level>[.<runner>].py`
-- Executed test files introduce no local data or policy; convenience aliases derive solely from imported owners, and fixture parameters or property-generated parameters remain outside the assertion file
+- Executed test functions and callbacks own every predicate and assertion API call; infrastructure exposes observations without verdict logic
+- Test-file bindings introduce no local data or policy; aliases, fixture parameters, and property-generated parameters are valid when they only receive values selected by their semantic owner
+- Every case and expected result passes the assertion-type provenance and oracle-independence litmus
 - Source architecture is improved before tests accept copied values, replacement mocks, or fixture laundering
 - Every test case has a documentable source outside the author's head — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
 - Source-owned values come from the owning production module; container keys are imported, not hand-written; runner-tuning values live on the harness that owns the resource

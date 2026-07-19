@@ -1,32 +1,20 @@
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input
 ---
+
+Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.
 
 <objective>
 Spec-tree assertion tests that are canonically named, evidence-routed, source-contract-coupled, and reproducible for property failures.
 </objective>
 
-<prerequisite>
+<shared_standards>
 
-**PREREQUISITE**: Read `${SKILL_DIR}/references/methodology.md` before writing any test.
+Apply the complete predicate-seam, semantic-binding, case-provenance, oracle-independence, and assertion-type litmus rules loaded from `/test-evidence-standards` for every verification type. Load the execution-level and runner methodology only when Step 4 selects `[test]` evidence.
 
-That local reference contains:
-
-- non-negotiable testing rules and evidence standards
-- the split between test configuration, test data, harnesses, generators, fixtures, and eval cases
-- property-based seed and replay requirements
-- the pre-test questions and the evidence trap
-- the separation between assertion type, execution level, and runner
-- the 4-part progression
-- the 5-stage router with stop conditions
-- the 5 factors, the 7 exception cases, and key examples
-- the naming and co-location contract
-
-Then follow the spec-tree workflow below.
-
-</prerequisite>
+</shared_standards>
 
 <workflow>
 
@@ -100,7 +88,7 @@ Report the evidence gap summary before proceeding.
 
 **Step 4: Route each assertion through the methodology**
 
-For each assertion that needs a test, apply the 5-stage router from `${SKILL_DIR}/references/methodology.md`:
+Select the verification type before execution-level or runner concerns. When at least one assertion needs `[test]` evidence, read `${SKILL_DIR}/references/methodology.md` exactly once, then apply its 5-stage router to every `[test]` assertion:
 
 0. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
 1. **Stage 1** — What evidence does this assertion demand?
@@ -108,6 +96,8 @@ For each assertion that needs a test, apply the 5-stage router from `${SKILL_DIR
 3. **Stages 3–5** — If `L1` is viable, classify the code, check real system viability, and match an exception if needed.
 
 Document the routing decision for each assertion.
+
+Assertions routed to `[eval]` or `[audit]` do not load the test execution-level and runner methodology.
 
 </step>
 
@@ -164,12 +154,26 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 </cross_cutting_assertions>
 
+<failure_modes>
+
+**Execution-level methodology loaded for every evidence route.**
+
+What happened: Claude loaded `${SKILL_DIR}/references/methodology.md` before selecting `[test]`, `[eval]`, or `[audit]` evidence.
+
+Why it failed: the reference governs test execution levels and runners, so loading it for eval and audit routes made progressive disclosure unconditional and spent context on rules those routes never consume.
+
+How to avoid: keep `/test-evidence-standards` eager for every route, then read the execution-level methodology exactly once only when Step 4 selects at least one `[test]` assertion.
+
+</failure_modes>
+
 <success_criteria>
 
 Testing output is sound when:
 
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
-- Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every test keeps all predicates and assertion API calls in the linked test function or callback; infrastructure exposes observations without verdict logic.
+- Every test-file binding introduces no test-owned data, expectation, configuration, setup policy, or verdict rule.
+- Every case and oracle passes the assertion-type litmus questions from `/test-evidence-standards`.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
 - Every spec assertion that receives test evidence links to the evidence file that verifies it.
