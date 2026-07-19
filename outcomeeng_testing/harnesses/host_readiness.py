@@ -161,6 +161,23 @@ def _high_load(module: ModuleType) -> tuple[float, float, float]:
     return _load_at_ratio(math.nextafter(module.CAPACITY_RATIO, math.inf))
 
 
+def _load_demanding_more_than_the_deadline(
+    module: ModuleType,
+) -> tuple[float, float, float]:
+    """Build an observation whose computed interval exceeds the whole deadline.
+
+    The waiter derives its interval from `horizon * log(ratio)` over the
+    longest load horizon, so a ratio of `exp(MAXIMUM_WAIT_SECONDS / horizon)`
+    computes exactly the deadline. Doubling that exponent computes twice the
+    deadline, which is what forces the waiter to clamp its sleep to the time
+    remaining. Deriving the ratio keeps it beyond the deadline if either
+    source constant changes.
+    """
+    longest_horizon = max(module.LOAD_HORIZONS_SECONDS)
+    exponent = 2 * module.MAXIMUM_WAIT_SECONDS / longest_horizon
+    return _load_at_ratio(module.CAPACITY_RATIO * math.exp(exponent))
+
+
 def _run(
     observations: list[tuple[float, float, float]],
     *,
@@ -206,6 +223,12 @@ def run_deadline_not_ready() -> WaitRun:
     """Run one invocation whose load stays above capacity through its deadline."""
     module = load_host_readiness_module()
     return _run([_high_load(module)])
+
+
+def run_interval_clamped_to_remaining() -> WaitRun:
+    """Run one invocation whose computed interval outruns the time remaining."""
+    module = load_host_readiness_module()
+    return _run([_load_demanding_more_than_the_deadline(module)])
 
 
 def run_unsupported_platform() -> WaitRun:

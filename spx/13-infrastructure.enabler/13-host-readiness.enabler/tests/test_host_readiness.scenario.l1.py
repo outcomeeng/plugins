@@ -5,6 +5,7 @@ from outcomeeng_testing.harnesses.host_readiness import (
     run_error_reading_load,
     run_immediate_ready,
     run_interrupted_during_wait,
+    run_interval_clamped_to_remaining,
     run_ready_before_deadline,
     run_unsupported_platform,
 )
@@ -37,6 +38,14 @@ def test_load_remaining_high_returns_not_ready_at_the_deadline() -> None:
     assert run.result.final is not None
     assert run.result.waited_seconds == run.module.MAXIMUM_WAIT_SECONDS
     assert sum(run.clock.sleeps) == run.module.MAXIMUM_WAIT_SECONDS
+
+
+def test_interval_longer_than_the_remaining_time_sleeps_only_what_remains() -> None:
+    run = run_interval_clamped_to_remaining()
+
+    assert run.result.status is run.module.Status.NOT_READY
+    assert run.clock.sleeps == [run.module.MAXIMUM_WAIT_SECONDS]
+    assert run.result.waited_seconds == run.module.MAXIMUM_WAIT_SECONDS
 
 
 def test_host_without_a_positive_cpu_count_returns_unsupported() -> None:
