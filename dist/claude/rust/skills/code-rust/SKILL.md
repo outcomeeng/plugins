@@ -27,10 +27,6 @@ Use this path to access skill files:
 Do not search the product directory for skill files when the loading message already provides the base path.
 </accessing_skill_files>
 
-<reference_loading>
-**Standards are pre-loaded above.** After loading, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-</reference_loading>
-
 <quick_start>
 
 1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
