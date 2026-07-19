@@ -18,12 +18,12 @@ Producer files and named producer sections are the supported source-derived coup
 
 ### Testing
 
-- ALWAYS: an eval definition with `prompt_source.kind = "producer-section"` resolves the prompt template relative to the eval directory and resolves the producer path against the repository root, then materializes `prompt.md` from the selected producer section ([conformance])
-- ALWAYS: an eval definition with `prompt_source.kind = "producer-file"` resolves the same paths and materializes `prompt.md` from the complete producer file without parsing it as text ([conformance])
-- ALWAYS: producer-section extraction selects exactly one named XML-like section from the producer text and fails when no matching section or multiple matching sections exist ([mapping])
+- ALWAYS: an eval definition with `prompt_source.kind = "producer-section"` resolves the prompt template relative to the eval directory and resolves the producer path against the repository root, then materializes `prompt.md` from the selected producer section ([compliance])
+- ALWAYS: an eval definition with `prompt_source.kind = "producer-file"` resolves the same paths and materializes `prompt.md` from the complete producer file without parsing it as text ([mapping])
+- ALWAYS: producer-section extraction selects exactly one named XML-like section from the producer text and fails when no matching section or multiple matching sections exist ([compliance])
 - ALWAYS: prompt materialization changes when the selected producer section changes and stays unchanged when unrelated producer text changes ([property])
-- ALWAYS: the `outcomeeng-evals materialize-prompts --check` command fails when a generated `prompt.md` differs from its source-derived rendering and exits successfully when every generated prompt is current ([compliance])
-- NEVER: a producer-coupled eval definition accepts a missing producer path, missing prompt template, a missing section name for `producer-section`, a section name for `producer-file`, or an unsupported prompt source kind ([conformance])
+- ALWAYS: the `outcomeeng-evals materialize-prompts --check` command fails when a generated `prompt.md` differs from its source-derived rendering and exits successfully when every generated prompt is current ([mapping])
+- NEVER: a producer-coupled eval definition accepts a missing producer path, missing prompt template, a missing section name for `producer-section`, a section name for `producer-file`, or an unsupported prompt source kind ([compliance])
 
 ### Audit
 
