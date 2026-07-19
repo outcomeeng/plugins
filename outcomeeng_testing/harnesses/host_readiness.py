@@ -3,7 +3,19 @@
 The waiter lives under a plugin skill directory and is loaded through
 ``importlib``. A controllable monotonic clock and source-derived load sequences
 exercise readiness, bounded sleeping, and terminal status behavior without
-wall-clock delay or framework mocking.
+wall-clock delay or framework mocking. Every double is injected through the
+waiter's own ``Dependencies`` seam; the module under test is never patched.
+
+- Stage 5 #3 (Time and concurrency): `ControlledClock` replaces
+  `time.monotonic` and `time.sleep`, and `LoadSequence` scripts the observation
+  each recheck reads. The waiter's bounded retry loop is the behavior under
+  test, and neither a real ten-minute deadline nor real host load is
+  controllable or cheap enough to drive it.
+- Stage 5 #1 (Failure simulation): the `read_cpu_count` stub returning no
+  positive count, the `sleep` callable raising `KeyboardInterrupt`, and the
+  `read_load_averages` callable raising produce the `unsupported`,
+  `interrupted`, and `error` terminal results. A real host offers no way to
+  induce those failures on demand.
 """
 
 from __future__ import annotations
