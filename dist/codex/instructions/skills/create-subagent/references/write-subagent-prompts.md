@@ -250,32 +250,33 @@ Without a workflow, the subagent may skip important steps or review inconsistent
 </anti_pattern>
 
 <anti_pattern name="unclear_trigger">
-The `description` field is critical for automatic invocation. LLM agents use descriptions to make routing decisions.
+
+The `description` field guides Codex when selecting among custom agents after the user explicitly requests a custom-agent or subagent workflow.
 
 **Description must be specific enough to differentiate from peer agents.**
 
 ❌ Bad (too vague):
 
-```yaml
-description: Helps with testing
+```toml
+description = "Helps with testing"
 ```
 
 ❌ Bad (not differentiated):
 
-```yaml
-description: Billing agent
+```toml
+description = "Billing agent"
 ```
 
 ✅ Good (specific triggers + differentiation):
 
-```yaml
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient. Proactively use after implementing new features.
+```toml
+description = "Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient."
 ```
 
 ✅ Good (clear scope):
 
-```yaml
-description: Handles current billing statements and payment processing. Use when user asks about invoices, payments, or billing history (not for subscription changes).
+```toml
+description = "Handles current billing statements and payment processing. Use when the user asks about invoices, payments, or billing history, excluding subscription changes."
 ```
 
 **Optimization tips**:
@@ -283,7 +284,6 @@ description: Handles current billing statements and payment processing. Use when
 - Include **trigger keywords** that match common user requests
 - Specify **when to use** (not just what it does)
 - **Differentiate** from similar agents (what this one does vs others)
-- Include **proactive triggers** if agent should be invoked automatically
 
 </anti_pattern>
 
@@ -506,7 +506,8 @@ Task is complete when:
 - **Skipping steps**: Make workflow more explicit
 - **Inconsistent output**: Define output format more clearly
 - **Overstepping bounds**: Add or clarify constraints
-- **Not automatically invoked**: Improve description field with trigger keywords
+
+- **Wrong custom agent selected after an explicit request**: Clarify the description with distinguishing purpose and usage terms
 
 </common_issues>
 </testing_subagents>

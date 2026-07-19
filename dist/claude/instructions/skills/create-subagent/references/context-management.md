@@ -588,14 +588,17 @@ Prompt caching works best with stable context. Stable prompt prefixes become che
 <cache_friendly_context>
 **Structure context for caching**:
 
-```markdown
-## [CACHEABLE: Stable subagent instructions]<role>...</role><focus_areas>...</focus_areas><workflow>...</workflow>
+```text
+<cacheable_context>
+<role>...</role>
+<focus_areas>...</focus_areas>
+<workflow>...</workflow>
+</cacheable_context>
 
-## [CACHE BREAKPOINT]
-
-[VARIABLE: Task-specific context]
+<variable_context>
 Current task: ...
 Recent context: ...
+</variable_context>
 ```
 
 **Benefit**: Stable instructions cached, task-specific context fresh. 90% cost reduction on cached portion.

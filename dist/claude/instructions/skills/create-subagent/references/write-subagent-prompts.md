@@ -250,7 +250,8 @@ Without a workflow, the subagent may skip important steps or review inconsistent
 </anti_pattern>
 
 <anti_pattern name="unclear_trigger">
-The `description` field is critical for automatic invocation. LLM agents use descriptions to make routing decisions.
+
+The `description` field is critical for automatic invocation. Claude uses descriptions to make routing decisions.
 
 **Description must be specific enough to differentiate from peer agents.**
 
@@ -269,7 +270,7 @@ description: Billing agent
 ✅ Good (specific triggers + differentiation):
 
 ```yaml
-description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient. Proactively use after implementing new features.
+description: Creates comprehensive test suites. Use when new code needs tests or test coverage is insufficient.
 ```
 
 ✅ Good (clear scope):
@@ -283,6 +284,7 @@ description: Handles current billing statements and payment processing. Use when
 - Include **trigger keywords** that match common user requests
 - Specify **when to use** (not just what it does)
 - **Differentiate** from similar agents (what this one does vs others)
+
 - Include **proactive triggers** if agent should be invoked automatically
 
 </anti_pattern>
@@ -506,6 +508,7 @@ Task is complete when:
 - **Skipping steps**: Make workflow more explicit
 - **Inconsistent output**: Define output format more clearly
 - **Overstepping bounds**: Add or clarify constraints
+
 - **Not automatically invoked**: Improve description field with trigger keywords
 
 </common_issues>
