@@ -233,7 +233,7 @@ Structure the {{! term('configured_agent_prompt') !}} with pure XML tags. Remove
 
 ```toml
 name = "security_reviewer"
-description = "Reviews code for security vulnerabilities."
+description = "Reviews code for security vulnerabilities. Use after security-sensitive code changes or before release."
 sandbox_mode = "read-only"
 model = "{{! term('configured_agent_standard_model') !}}"
 {{! field('configured_agent_prompt') !}} = """
@@ -264,7 +264,7 @@ Claude is a senior code reviewer specializing in security.
 ```text
 ---
 name: security-reviewer
-description: Reviews code for security vulnerabilities
+description: Reviews code for security vulnerabilities. Use after security-sensitive code changes or before release.
 tools: Read, Grep, Glob, Bash
 model: {{! term('configured_agent_standard_model') !}}
 ---
