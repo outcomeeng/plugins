@@ -15,7 +15,7 @@ Invoke the `instructions:agent-prompt-standards` skill before proceeding. If tha
 Invoke the `instructions:create-subagent` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-A verdict on one custom agent configuration file (`.codex/agents/*.toml` or `~/.codex/agents/*.toml`) against the create-subagent and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
+A structured verdict on one custom agent configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, governing convention, and consequence.
 </objective>
 
 <constraints>

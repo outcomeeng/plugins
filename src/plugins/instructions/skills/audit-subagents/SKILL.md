@@ -15,7 +15,7 @@ allowed-tools: Read, Grep, Glob, Skill
 {!% require_skill 'instructions:create-subagent' %!}
 
 <objective>
-A verdict on one {{! term('configured_agent') !}} configuration file ({!% if target == 'codex' %!}`.codex/agents/*.toml` or `~/.codex/agents/*.toml`{!% else %!}`.claude/agents/*.md` or `~/.claude/agents/*.md`{!% endif %!}) against the create-subagent and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
+A structured verdict on one {{! term('configured_agent') !}} configuration file against the `create-subagent` and `/agent-prompt-standards` conventions, with every finding naming its location, governing convention, and consequence.
 </objective>
 
 <constraints>
