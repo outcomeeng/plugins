@@ -43,22 +43,6 @@ HOST_READINESS_MODULE_PATH = (
 MODULE_NAME = "wait_for_load"
 CPU_COUNT = 1
 
-DECLARED_EXIT_CODES: Final = (
-    ("ready", 0),
-    ("error", 1),
-    ("unsupported", 2),
-    ("not_ready", 3),
-    ("interrupted", 130),
-)
-"""The status-to-exit-code contract the node spec declares, transcribed here.
-
-This is the one place the harness states a value rather than deriving it from
-the module. The derivation is deliberately absent: an oracle read out of
-`STATUS_EXIT_CODES` would compare that table against itself and hold for any
-value it contained. Transcribing the spec's own numbers is what lets the
-mapping evidence fail when the module stops honoring them.
-"""
-
 
 def load_host_readiness_module() -> ModuleType:
     """Load and cache the shipped host-readiness module."""
