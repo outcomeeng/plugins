@@ -92,10 +92,10 @@ EOF
 gh pr ready <pr-number>
 ```
 
-Programmatic Claude Code, Codex, and hosted runners use one physical command line for the same complete body and ready transition:
+Programmatic Claude Code, Codex, and hosted runners encode each preserved body line as one POSIX single-quoted shell word, replacing every literal apostrophe with the exact shell sequence `'"'"'`. Shell parsing restores the original apostrophe; every other character inside the single-quoted word remains literal. Never place an unescaped live body line inside the command. Use one physical command line for the same complete body and ready transition:
 
 ```bash
-printf '%s\n' '<first preserved body line>' '<next preserved body line>' | gh pr edit <pr-number> --base <default-branch> --body-file - && gh pr ready <pr-number>
+printf '%s\n' '<first preserved body line>' 'Don'"'"'t alter reviewer text' '<next preserved body line>' | gh pr edit <pr-number> --base <default-branch> --body-file - && gh pr ready <pr-number>
 ```
 
 If the ready mutation fails after the body-and-base edit succeeds, leave the host-observed intermediate state intact; the next pass classifies it as `topology=peer` with `ready_transition_pending=true` and completes only the ready mutation through the recovery path above. Discard the pre-transition inspection and return to Step 1. Confirm the fresh `body` has no `## Stack` section and no retired stack-base reference. Every later follow-up push goes to the ready peer PR and re-fires CI with no draft toggle. A stacked PR whose base remains unmerged stays draft and never runs either transition command.
