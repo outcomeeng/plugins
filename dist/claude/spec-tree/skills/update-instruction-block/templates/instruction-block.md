@@ -221,7 +221,19 @@ After an exact identity match, submit the role task to the same verified agent i
 
 Collect the role-task result with `multi_agent_v1.wait_agent` again. Identity preflight success authorizes only this child identity; the role task still passes only through its own output contract below.
 
-Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `implementation-auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
+Wait once for one or more spawned agents. Use the 10-minute individual-file timeout for identity preflights and for subagents such as `implementation-auditor` or `spec-auditor`:
+
+```json
+{
+  "tool": "multi_agent_v1.wait_agent",
+  "arguments": {
+    "targets": ["<agent-id-from-spawn-agent>"],
+    "timeout_ms": 600000
+  }
+}
+```
+
+Use the 30-minute changeset timeout only for `changes-reviewer` role work:
 
 ```json
 {
