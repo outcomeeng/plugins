@@ -12,6 +12,7 @@ import importlib.util
 import math
 import pathlib
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Protocol, cast
@@ -137,16 +138,27 @@ def _high_load(module: ModuleType) -> tuple[float, float, float]:
     return _load_at_ratio(math.nextafter(module.CAPACITY_RATIO, math.inf))
 
 
-def _run(observations: list[tuple[float, float, float]]) -> WaitRun:
-    """Run the waiter against controlled observations and monotonic time."""
+def _run(
+    observations: list[tuple[float, float, float]],
+    *,
+    read_cpu_count: Callable[[], int | None] | None = None,
+    read_load_averages: Callable[[], tuple[float, float, float]] | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> WaitRun:
+    """Run the waiter against controlled observations and monotonic time.
+
+    Each keyword replaces one injected dependency so a caller can drive the
+    waiter down a failure path — an unusable CPU count, an interrupt during a
+    wait interval, or a load reader that raises — without patching the module.
+    """
     module = load_host_readiness_module()
     clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
     sequence = LoadSequence(observations)
     dependencies = module.Dependencies(
-        read_load_averages=sequence.read,
-        read_cpu_count=lambda: CPU_COUNT,
+        read_load_averages=read_load_averages or sequence.read,
+        read_cpu_count=read_cpu_count or (lambda: CPU_COUNT),
         monotonic=clock.monotonic,
-        sleep=clock.sleep,
+        sleep=sleep or clock.sleep,
     )
     return WaitRun(
         module=module,
@@ -173,24 +185,27 @@ def run_deadline_not_ready() -> WaitRun:
     return _run([_high_load(module)])
 
 
-def terminal_result_for_status(status: object) -> WaitResult:
-    """Build the terminal result the waiter emits for one source-owned status."""
+def run_unsupported_platform() -> WaitRun:
+    """Run one invocation on a host reporting no positive CPU count."""
     module = load_host_readiness_module()
-    clock = ControlledClock(horizon=module.MAXIMUM_WAIT_SECONDS)
-    dependencies = module.Dependencies(
-        read_load_averages=lambda: _ready_load(module),
-        read_cpu_count=lambda: CPU_COUNT,
-        monotonic=clock.monotonic,
-        sleep=clock.sleep,
-    )
-    return cast(
-        WaitResult,
-        module.terminal_result(
-            status=status,
-            dependencies=dependencies,
-            started_at=clock.monotonic(),
-            initial=None,
-            final=None,
-            wait_cycles=0,
-        ),
-    )
+    return _run([_ready_load(module)], read_cpu_count=lambda: None)
+
+
+def run_interrupted_during_wait() -> WaitRun:
+    """Run one invocation interrupted while sleeping between observations."""
+    module = load_host_readiness_module()
+
+    def interrupt(seconds: float) -> None:
+        raise KeyboardInterrupt
+
+    return _run([_high_load(module)], sleep=interrupt)
+
+
+def run_error_reading_load() -> WaitRun:
+    """Run one invocation whose load reader fails unexpectedly."""
+    module = load_host_readiness_module()
+
+    def fail() -> tuple[float, float, float]:
+        raise RuntimeError("load averages unavailable")
+
+    return _run([_ready_load(module)], read_load_averages=fail)
