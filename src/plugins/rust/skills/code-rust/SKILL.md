@@ -58,13 +58,13 @@ After loading `/rust-standards` and `/rust-test-standards`, check for `spx/local
 <hierarchy_of_authority>
 Use guidance in this order:
 
-1. `README.md`, `docs/`, and other product documentation
-2. `{{! file('root_guide') !}}`
-3. ADRs, PDRs, and spec-tree artifacts
-4. this skill and its helper files
-5. existing code as reference only
+1. this skill and its loaded Rust standards
+2. loaded ADRs, PDRs, and spec-tree artifacts
+3. `{{! file('root_guide') !}}`, `README.md`, `docs/`, and other product documentation
+4. tests as executable evidence
+5. existing code as the lowest-layer reference
 
-When documentation and code disagree, documentation wins.
+When layers disagree, the higher authority wins.
 </hierarchy_of_authority>
 
 <codebase_discovery>
