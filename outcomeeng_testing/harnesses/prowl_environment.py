@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import re
 import sys
 import uuid
 from collections.abc import Iterable
@@ -200,15 +199,30 @@ def verify_prowl_mappings() -> list[str]:
     projected = module.participant_from_agent(public_item)
     if projected != agent_identity(module, ordinal=1):
         failures.append("public Prowl identity fields were not preserved")
+    public_payload = {module.DATA_FIELD: {module.AGENTS_FIELD: [public_item]}}
+    projection = module.participant_projection(public_payload)
+    if projection[module.STATUS_FIELD] != module.ExecutionStatus.SUCCEEDED:
+        failures.append("valid public agent evidence did not map to success")
+    if projection[module.PARTICIPANTS_FIELD] != [projected]:
+        failures.append("public agent projection rewrote preserved identities")
+    unavailable_payloads: tuple[dict[str, object], ...] = (
+        {},
+        {module.DATA_FIELD: {module.AGENTS_FIELD: []}},
+        {module.DATA_FIELD: {module.AGENTS_FIELD: [{}]}},
+    )
+    for unavailable_payload in unavailable_payloads:
+        unavailable = module.participant_projection(unavailable_payload)
+        if (
+            unavailable[module.STATUS_FIELD]
+            != module.ExecutionStatus.IDENTITY_UNAVAILABLE
+        ):
+            failures.append("unusable public agent evidence lacked unavailable result")
     ambiguous_payload = {
         module.DATA_FIELD: {module.AGENTS_FIELD: [public_item, {**public_item}]}
     }
-    try:
-        module.participants_from_agents(ambiguous_payload)
-        failures.append("duplicate public pane identities did not map to ambiguity")
-    except module.ProwlEnvironmentError as error:
-        if error.status != module.ExecutionStatus.INVALID_SCHEMA:
-            failures.append(f"ambiguous public identities mapped to {error.status}")
+    ambiguous = module.participant_projection(ambiguous_payload)
+    if ambiguous[module.STATUS_FIELD] != module.ExecutionStatus.IDENTITY_AMBIGUOUS:
+        failures.append("duplicate public pane identities lacked ambiguous result")
 
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
@@ -263,34 +277,36 @@ def verify_prowl_mappings() -> list[str]:
 def verify_prowl_conformance() -> list[str]:
     module = _load()
     failures: list[str] = []
-    request = module.operation_request(module.Operation.LIST)
-    response = {
-        module.OK_FIELD: True,
-        module.COMMAND_FIELD: module.Operation.LIST,
-        module.SCHEMA_VERSION_SNAKE_FIELD: "prowl.cli.list.v1",
-        module.DATA_FIELD: {
-            module.STATUS_FIELD: "terminal-green",
-            module.CONCLUSION_FIELD: "success",
-            module.ID_FIELD: "identity-verbatim",
-        },
-    }
-    success_runner = RecordingRunner(
-        [module.CommandResult(0, json.dumps(response), "")]
-    )
-    success = module.execute(request, success_runner)
-    if success[module.SCHEMA_VERSION_FIELD] != module.SCHEMA_VERSION:
-        failures.append(
-            "valid public JSON omitted the source-owned result schema version"
+    requests = operation_requests(module)
+    for request in requests:
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        response = {
+            module.OK_FIELD: True,
+            module.COMMAND_FIELD: operation,
+            module.SCHEMA_VERSION_SNAKE_FIELD: f"prowl.cli.{operation.value}.v1",
+            module.DATA_FIELD: {
+                module.STATUS_FIELD: "terminal-green",
+                module.CONCLUSION_FIELD: "success",
+                module.ID_FIELD: f"{operation.value}-identity-verbatim",
+            },
+        }
+        success = module.execute(
+            request,
+            RecordingRunner([module.CommandResult(0, json.dumps(response), "")]),
         )
-    if success[module.OPERATION_FIELD] != module.Operation.LIST:
-        failures.append("valid public JSON omitted the source-owned result operation")
-    if success[module.STATUS_FIELD] != module.ExecutionStatus.SUCCEEDED:
-        failures.append("valid public JSON did not map to succeeded")
-    if success[module.RESPONSE_FIELD] != response:
-        failures.append("public Prowl response values were rewritten")
-    if success[module.COMMAND_EXIT_CODE_FIELD] != 0:
-        failures.append("successful command exit code was not preserved")
+        try:
+            validated = module.validate_operation_result(success, operation)
+        except module.ProwlEnvironmentError as error:
+            failures.append(f"{operation.value} result failed source schema: {error}")
+            continue
+        if validated[module.STATUS_FIELD] != module.ExecutionStatus.SUCCEEDED:
+            failures.append(f"{operation.value} public JSON did not map to succeeded")
+        if validated[module.RESPONSE_FIELD] != response:
+            failures.append(f"{operation.value} public response values were rewritten")
+        if validated[module.COMMAND_EXIT_CODE_FIELD] != 0:
+            failures.append(f"{operation.value} command exit code was not preserved")
 
+    request = module.operation_request(module.Operation.LIST)
     failure_cases = (
         (
             module.CommandResult(7, "", "command failed"),
@@ -316,11 +332,16 @@ def verify_prowl_conformance() -> list[str]:
     )
     for command_result, expected_status in failure_cases:
         result = module.execute(request, RecordingRunner([command_result]))
-        if result[module.STATUS_FIELD] != expected_status:
+        try:
+            validated = module.validate_operation_result(result, module.Operation.LIST)
+        except module.ProwlEnvironmentError as error:
+            failures.append(f"failure result did not conform to source schema: {error}")
+            continue
+        if validated[module.STATUS_FIELD] != expected_status:
             failures.append(
-                f"command result mapped to {result[module.STATUS_FIELD]}, expected {expected_status}"
+                f"command result mapped to {validated[module.STATUS_FIELD]}, expected {expected_status}"
             )
-        if result[module.COMMAND_EXIT_CODE_FIELD] != command_result.returncode:
+        if validated[module.COMMAND_EXIT_CODE_FIELD] != command_result.returncode:
             failures.append("failure result did not preserve the checked exit code")
     return failures
 
@@ -406,13 +427,11 @@ def verify_prowl_properties() -> list[str]:
     return failures
 
 
-def _raw_prowl_script_violations(paths: Iterable[Path]) -> list[str]:
-    raw_python = re.compile(r"PROWL_COMMAND|[\[(]['\"]prowl['\"]")
-    return [
-        str(path.relative_to(ROOT))
+def _source_texts(paths: Iterable[Path]) -> dict[str, str]:
+    return {
+        str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
         for path in sorted(paths)
-        if raw_python.search(path.read_text(encoding="utf-8"))
-    ]
+    }
 
 
 def verify_prowl_compliance() -> list[str]:
@@ -466,7 +485,7 @@ def verify_prowl_compliance() -> list[str]:
         for path in CODING_AGENTS_SOURCE.rglob("*.py")
         if OPERATE_PROWL_SOURCE not in path.parents
     )
-    violations = _raw_prowl_script_violations(script_paths)
+    violations = module.raw_prowl_command_violations(_source_texts(script_paths))
     if violations:
         failures.append(
             "raw Prowl command construction remains in a script outside /operate-prowl: "
@@ -474,7 +493,9 @@ def verify_prowl_compliance() -> list[str]:
         )
 
     expected_fixture = str(RAW_PROWL_VIOLATION_FIXTURE.relative_to(ROOT))
-    fixture_violations = _raw_prowl_script_violations((RAW_PROWL_VIOLATION_FIXTURE,))
+    fixture_violations = module.raw_prowl_command_violations(
+        _source_texts((RAW_PROWL_VIOLATION_FIXTURE,))
+    )
     if fixture_violations != [expected_fixture]:
         failures.append("raw Prowl command rule accepted its violating script fixture")
     return failures

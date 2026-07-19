@@ -22,70 +22,38 @@ def result_forms() -> st.SearchStrategy[tuple[str | None, str | None, str | None
     )
 
 
+def _request_argument_value(
+    module: ModuleType, field_name: str, ordinal: int
+) -> object:
+    if field_name in module.SELECTOR_FIELDS:
+        return f"selector-{ordinal}-{field_name}"
+    if field_name == module.PATH_FIELD:
+        return f"/generated/{ordinal}"
+    if field_name in module.TEXT_ARGUMENT_FIELDS:
+        return f"generated-{field_name}-{ordinal}"
+    if field_name in module.INTEGER_BOUNDS:
+        return module.INTEGER_BOUNDS[field_name][0]
+    if field_name in module.BOOLEAN_ARGUMENT_FIELDS:
+        return True
+    raise AssertionError(f"Source operation contract has no generator for {field_name}")
+
+
 def operation_requests(module: ModuleType) -> list[dict[str, object]]:
-    pane = "11111111-1111-4111-8111-111111111111"
-    tab = "22222222-2222-4222-8222-222222222222"
-    worktree = "/repo/worktree"
-    path = "/repo/worktree/subdirectory"
-    return [
-        module.operation_request(module.Operation.LIST),
-        module.operation_request(module.Operation.AGENTS),
-        module.operation_request(
-            module.Operation.READ,
-            pane=pane,
-            last=37,
-            wait_stable=True,
-            stable_interval=250,
-            stable_period=900,
-            wait_timeout=12,
-        ),
-        module.operation_request(
-            module.Operation.SEND,
-            pane=pane,
-            text="run the bounded task",
-            no_enter=True,
-            no_wait=True,
-        ),
-        module.operation_request(
-            module.Operation.SEND,
-            target=pane,
-            text="run and capture",
-            capture=True,
-            timeout=45,
-        ),
-        module.operation_request(
-            module.Operation.KEY,
-            target=pane,
-            key="enter",
-            repeat=3,
-            mutation_authorized=True,
-        ),
-        module.operation_request(
-            module.Operation.FOCUS,
-            worktree=worktree,
-            mutation_authorized=True,
-        ),
-        module.operation_request(
-            module.Operation.TAB_CREATE,
-            worktree=worktree,
-            path=path,
-            mutation_authorized=True,
-        ),
-        module.operation_request(
-            module.Operation.TAB_CLOSE,
-            tab=tab,
-            force=True,
-            mutation_authorized=True,
-        ),
-        module.operation_request(
-            module.Operation.PANE_CLOSE,
-            pane=pane,
-            force=True,
-            mutation_authorized=True,
-        ),
-        module.operation_request(module.Operation.OPEN, path=path),
-        module.operation_request(module.Operation.OPEN),
-    ]
+    argument_names = {field: name for name, field in module.ARGUMENT_NAMES.items()}
+    requests: list[dict[str, object]] = []
+    ordinal = 0
+    for operation in module.Operation:
+        contract = module.OPERATION_CONTRACTS[operation]
+        for shape in contract.request_shapes:
+            ordinal += 1
+            arguments = {
+                argument_names[field_name]: _request_argument_value(
+                    module, field_name, ordinal
+                )
+                for field_name in shape
+            }
+            requests.append(module.operation_request(operation, **arguments))
+    return requests
 
 
 def public_agent_item(module: ModuleType, ordinal: int) -> dict[str, object]:

@@ -6,12 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Mapping, Protocol, TextIO, cast
+from typing import Final, Mapping, Protocol, TextIO, cast
 from urllib.parse import urlparse
 
 SCHEMA_VERSION = 1
@@ -101,8 +102,22 @@ PROJECTION_FIELD = "projection"
 DELEGATION_FIELD = "delegation"
 TERMINAL_FIELD = "terminal"
 CONCLUSION_FIELD = "conclusion"
+PARTICIPANTS_FIELD = "participants"
 
 REQUEST_FIELDS = frozenset({SCHEMA_VERSION_FIELD, OPERATION_FIELD, ARGUMENTS_FIELD})
+SUCCESS_RESULT_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        OPERATION_FIELD,
+        STATUS_FIELD,
+        COMMAND_EXIT_CODE_FIELD,
+        RESPONSE_FIELD,
+    }
+)
+FAILURE_RESULT_REQUIRED_FIELDS = frozenset(
+    {SCHEMA_VERSION_FIELD, OPERATION_FIELD, STATUS_FIELD, DETAIL_FIELD}
+)
+FAILURE_RESULT_OPTIONAL_FIELDS = frozenset({COMMAND_EXIT_CODE_FIELD})
 SELECTOR_FIELDS = (TARGET_FIELD, WORKTREE_FIELD, TAB_FIELD, PANE_FIELD)
 IDENTITY_FIELDS = (
     AGENT_FIELD,
@@ -161,11 +176,133 @@ MUTATING_OPERATIONS = frozenset(
 )
 
 
+@dataclass(frozen=True)
+class OperationContract:
+    allowed_fields: frozenset[str]
+    request_shapes: tuple[frozenset[str], ...]
+
+
+_SELECTORS = frozenset(SELECTOR_FIELDS)
+OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
+    Operation.LIST: OperationContract(frozenset(), (frozenset(),)),
+    Operation.AGENTS: OperationContract(frozenset(), (frozenset(),)),
+    Operation.READ: OperationContract(
+        _SELECTORS
+        | {
+            LAST_FIELD,
+            WAIT_STABLE_FIELD,
+            STABLE_INTERVAL_FIELD,
+            STABLE_PERIOD_FIELD,
+            WAIT_TIMEOUT_FIELD,
+        },
+        (
+            frozenset(
+                {
+                    PANE_FIELD,
+                    LAST_FIELD,
+                    WAIT_STABLE_FIELD,
+                    STABLE_INTERVAL_FIELD,
+                    STABLE_PERIOD_FIELD,
+                    WAIT_TIMEOUT_FIELD,
+                }
+            ),
+        ),
+    ),
+    Operation.SEND: OperationContract(
+        _SELECTORS
+        | {
+            TEXT_FIELD,
+            NO_ENTER_FIELD,
+            NO_WAIT_FIELD,
+            CAPTURE_FIELD,
+            TIMEOUT_FIELD,
+        },
+        (
+            frozenset({PANE_FIELD, TEXT_FIELD, NO_ENTER_FIELD, NO_WAIT_FIELD}),
+            frozenset({TARGET_FIELD, TEXT_FIELD, CAPTURE_FIELD, TIMEOUT_FIELD}),
+        ),
+    ),
+    Operation.KEY: OperationContract(
+        _SELECTORS | {KEY_FIELD, REPEAT_FIELD, MUTATION_AUTHORIZED_FIELD},
+        (
+            frozenset(
+                {TARGET_FIELD, KEY_FIELD, REPEAT_FIELD, MUTATION_AUTHORIZED_FIELD}
+            ),
+        ),
+    ),
+    Operation.FOCUS: OperationContract(
+        _SELECTORS | {MUTATION_AUTHORIZED_FIELD},
+        (frozenset({WORKTREE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+    ),
+    Operation.TAB_CREATE: OperationContract(
+        _SELECTORS | {PATH_FIELD, MUTATION_AUTHORIZED_FIELD},
+        (frozenset({WORKTREE_FIELD, PATH_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+    ),
+    Operation.TAB_CLOSE: OperationContract(
+        _SELECTORS | {FORCE_FIELD, MUTATION_AUTHORIZED_FIELD},
+        (frozenset({TAB_FIELD, FORCE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+    ),
+    Operation.PANE_CLOSE: OperationContract(
+        _SELECTORS | {FORCE_FIELD, MUTATION_AUTHORIZED_FIELD},
+        (frozenset({PANE_FIELD, FORCE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+    ),
+    Operation.OPEN: OperationContract(
+        frozenset({PATH_FIELD}),
+        (frozenset({PATH_FIELD}), frozenset()),
+    ),
+}
+INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
+    LAST_FIELD: (1, 1_000_000),
+    STABLE_INTERVAL_FIELD: (50, 5_000),
+    STABLE_PERIOD_FIELD: (100, 60_000),
+    WAIT_TIMEOUT_FIELD: (1, 300),
+    TIMEOUT_FIELD: (1, 300),
+    REPEAT_FIELD: (1, 100),
+}
+BOOLEAN_ARGUMENT_FIELDS = frozenset(
+    {
+        WAIT_STABLE_FIELD,
+        NO_ENTER_FIELD,
+        NO_WAIT_FIELD,
+        CAPTURE_FIELD,
+        FORCE_FIELD,
+        MUTATION_AUTHORIZED_FIELD,
+    }
+)
+TEXT_ARGUMENT_FIELDS = frozenset({TEXT_FIELD, KEY_FIELD})
+ARGUMENT_NAMES: Final[Mapping[str, str]] = {
+    "target": TARGET_FIELD,
+    "worktree": WORKTREE_FIELD,
+    "tab": TAB_FIELD,
+    "pane": PANE_FIELD,
+    "last": LAST_FIELD,
+    "wait_stable": WAIT_STABLE_FIELD,
+    "stable_interval": STABLE_INTERVAL_FIELD,
+    "stable_period": STABLE_PERIOD_FIELD,
+    "wait_timeout": WAIT_TIMEOUT_FIELD,
+    "text": TEXT_FIELD,
+    "no_enter": NO_ENTER_FIELD,
+    "no_wait": NO_WAIT_FIELD,
+    "capture": CAPTURE_FIELD,
+    "timeout": TIMEOUT_FIELD,
+    "key": KEY_FIELD,
+    "repeat": REPEAT_FIELD,
+    "path": PATH_FIELD,
+    "force": FORCE_FIELD,
+    "mutation_authorized": MUTATION_AUTHORIZED_FIELD,
+}
+RAW_PROWL_COMMAND_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"PROWL_COMMAND|[\[(]['\"]prowl['\"]"
+)
+
+
 class ExecutionStatus(StrEnum):
     SUCCEEDED = "succeeded"
     COMMAND_FAILED = "command-failed"
     INVALID_SCHEMA = "invalid-schema"
     PROWL_UNAVAILABLE = "prowl-unavailable"
+    IDENTITY_UNAVAILABLE = "identity-unavailable"
+    IDENTITY_AMBIGUOUS = "identity-ambiguous"
     MUTATION_UNAUTHORIZED = "mutation-unauthorized"
     OPERATION_UNAVAILABLE = "operation-unavailable"
 
@@ -319,34 +456,7 @@ def _one_selector(arguments: dict[str, object]) -> None:
 
 
 def _allowed_fields(operation: Operation) -> frozenset[str]:
-    selectors = frozenset(SELECTOR_FIELDS)
-    if operation in {Operation.LIST, Operation.AGENTS}:
-        return frozenset()
-    if operation is Operation.READ:
-        return selectors | {
-            LAST_FIELD,
-            WAIT_STABLE_FIELD,
-            STABLE_INTERVAL_FIELD,
-            STABLE_PERIOD_FIELD,
-            WAIT_TIMEOUT_FIELD,
-        }
-    if operation is Operation.SEND:
-        return selectors | {
-            TEXT_FIELD,
-            NO_ENTER_FIELD,
-            NO_WAIT_FIELD,
-            CAPTURE_FIELD,
-            TIMEOUT_FIELD,
-        }
-    if operation is Operation.KEY:
-        return selectors | {KEY_FIELD, REPEAT_FIELD, MUTATION_AUTHORIZED_FIELD}
-    if operation is Operation.FOCUS:
-        return selectors | {MUTATION_AUTHORIZED_FIELD}
-    if operation is Operation.TAB_CREATE:
-        return selectors | {PATH_FIELD, MUTATION_AUTHORIZED_FIELD}
-    if operation in {Operation.TAB_CLOSE, Operation.PANE_CLOSE}:
-        return selectors | {FORCE_FIELD, MUTATION_AUTHORIZED_FIELD}
-    return frozenset({PATH_FIELD})
+    return OPERATION_CONTRACTS[operation].allowed_fields
 
 
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
@@ -401,15 +511,7 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             f"{operation.value} requires one exact target selector.",
         )
 
-    integer_fields = {
-        LAST_FIELD: (1, 1_000_000),
-        STABLE_INTERVAL_FIELD: (50, 5_000),
-        STABLE_PERIOD_FIELD: (100, 60_000),
-        WAIT_TIMEOUT_FIELD: (1, 300),
-        TIMEOUT_FIELD: (1, 300),
-        REPEAT_FIELD: (1, 100),
-    }
-    for field, (minimum, maximum) in integer_fields.items():
+    for field, (minimum, maximum) in INTEGER_BOUNDS.items():
         if field in arguments:
             _integer(
                 arguments[field],
@@ -417,13 +519,7 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 minimum=minimum,
                 maximum=maximum,
             )
-    for field in (
-        WAIT_STABLE_FIELD,
-        NO_ENTER_FIELD,
-        NO_WAIT_FIELD,
-        CAPTURE_FIELD,
-        FORCE_FIELD,
-    ):
+    for field in BOOLEAN_ARGUMENT_FIELDS - {MUTATION_AUTHORIZED_FIELD}:
         if field in arguments:
             _boolean(arguments[field], f"request.{ARGUMENTS_FIELD}.{field}")
     if PATH_FIELD in arguments:
@@ -443,37 +539,16 @@ def operation_request(
     operation: Operation | str, **kwargs: object
 ) -> dict[str, object]:
     operation_value = Operation(operation)
-    argument_names = {
-        "target": TARGET_FIELD,
-        "worktree": WORKTREE_FIELD,
-        "tab": TAB_FIELD,
-        "pane": PANE_FIELD,
-        "last": LAST_FIELD,
-        "wait_stable": WAIT_STABLE_FIELD,
-        "stable_interval": STABLE_INTERVAL_FIELD,
-        "stable_period": STABLE_PERIOD_FIELD,
-        "wait_timeout": WAIT_TIMEOUT_FIELD,
-        "text": TEXT_FIELD,
-        "no_enter": NO_ENTER_FIELD,
-        "no_wait": NO_WAIT_FIELD,
-        "capture": CAPTURE_FIELD,
-        "timeout": TIMEOUT_FIELD,
-        "key": KEY_FIELD,
-        "repeat": REPEAT_FIELD,
-        "path": PATH_FIELD,
-        "force": FORCE_FIELD,
-        "mutation_authorized": MUTATION_AUTHORIZED_FIELD,
-    }
     arguments: dict[str, object] = {}
     for name, value in kwargs.items():
-        if name not in argument_names:
-            valid = ", ".join(sorted(argument_names))
+        if name not in ARGUMENT_NAMES:
+            valid = ", ".join(sorted(ARGUMENT_NAMES))
             raise ProwlEnvironmentError(
                 ExecutionStatus.INVALID_SCHEMA,
                 f"Unsupported operation-request argument {name!r}. Valid arguments: {valid}.",
             )
         if value is not None:
-            arguments[argument_names[name]] = value
+            arguments[ARGUMENT_NAMES[name]] = value
     request: dict[str, object] = {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         OPERATION_FIELD: operation_value,
@@ -555,6 +630,79 @@ def command_for(request: object) -> tuple[str, ...]:
     return tuple(command)
 
 
+def raw_prowl_command_violations(sources: Mapping[str, str]) -> list[str]:
+    return sorted(
+        name for name, text in sources.items() if RAW_PROWL_COMMAND_PATTERN.search(text)
+    )
+
+
+def validate_operation_result(
+    result: object, expected_operation: Operation | None = None
+) -> dict[str, object]:
+    value = _object(result, "result")
+    if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Operation result schema version must be {SCHEMA_VERSION}.",
+        )
+    operation = _operation(value.get(OPERATION_FIELD))
+    if expected_operation is not None and operation is not expected_operation:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Operation result identifies {operation.value}; expected {expected_operation.value}.",
+        )
+    try:
+        status = ExecutionStatus(_text(value.get(STATUS_FIELD), STATUS_FIELD))
+    except ValueError as error:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Unsupported operation result status: {value.get(STATUS_FIELD)!r}.",
+        ) from error
+
+    if status is ExecutionStatus.SUCCEEDED:
+        if set(value) != SUCCESS_RESULT_FIELDS:
+            raise ProwlEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                "Successful operation result fields do not match the source-owned schema.",
+            )
+        exit_code = value.get(COMMAND_EXIT_CODE_FIELD)
+        if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+            raise ProwlEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Expected an integer at result.{COMMAND_EXIT_CODE_FIELD}.",
+            )
+        response = _object(value.get(RESPONSE_FIELD), f"result.{RESPONSE_FIELD}")
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            OPERATION_FIELD: operation,
+            STATUS_FIELD: status,
+            COMMAND_EXIT_CODE_FIELD: exit_code,
+            RESPONSE_FIELD: response,
+        }
+
+    allowed_fields = FAILURE_RESULT_REQUIRED_FIELDS | FAILURE_RESULT_OPTIONAL_FIELDS
+    if not FAILURE_RESULT_REQUIRED_FIELDS <= set(value) or set(value) - allowed_fields:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            "Failed operation result fields do not match the source-owned schema.",
+        )
+    validated: dict[str, object] = {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        OPERATION_FIELD: operation,
+        STATUS_FIELD: status,
+        DETAIL_FIELD: _text(value.get(DETAIL_FIELD), f"result.{DETAIL_FIELD}"),
+    }
+    if COMMAND_EXIT_CODE_FIELD in value:
+        exit_code = value[COMMAND_EXIT_CODE_FIELD]
+        if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+            raise ProwlEnvironmentError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Expected an integer at result.{COMMAND_EXIT_CODE_FIELD}.",
+            )
+        validated[COMMAND_EXIT_CODE_FIELD] = exit_code
+    return validated
+
+
 def _failure_result(
     operation: Operation,
     status: ExecutionStatus,
@@ -569,7 +717,7 @@ def _failure_result(
     }
     if command_exit_code is not None:
         result[COMMAND_EXIT_CODE_FIELD] = command_exit_code
-    return result
+    return validate_operation_result(result, operation)
 
 
 def execute(request: object, runner: CommandRunner) -> dict[str, object]:
@@ -603,13 +751,16 @@ def execute(request: object, runner: CommandRunner) -> dict[str, object]:
         return _failure_result(
             operation, ExecutionStatus.COMMAND_FAILED, detail, result.returncode
         )
-    return {
-        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        OPERATION_FIELD: operation,
-        STATUS_FIELD: ExecutionStatus.SUCCEEDED,
-        COMMAND_EXIT_CODE_FIELD: result.returncode,
-        RESPONSE_FIELD: payload,
-    }
+    return validate_operation_result(
+        {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            OPERATION_FIELD: operation,
+            STATUS_FIELD: ExecutionStatus.SUCCEEDED,
+            COMMAND_EXIT_CODE_FIELD: result.returncode,
+            RESPONSE_FIELD: payload,
+        },
+        operation,
+    )
 
 
 def validate_identity(identity: object, location: str) -> dict[str, str]:
@@ -674,13 +825,41 @@ def participants_from_agents(payload: object) -> list[dict[str, str]]:
     data = _object(response.get(DATA_FIELD), f"response.{DATA_FIELD}")
     agents = _array(data.get(AGENTS_FIELD), f"response.{DATA_FIELD}.{AGENTS_FIELD}")
     participants = [participant_from_agent(item) for item in agents]
+    if not participants:
+        raise ProwlEnvironmentError(
+            ExecutionStatus.IDENTITY_UNAVAILABLE,
+            "Prowl returned no positively identified agents.",
+        )
     pane_ids = [participant[PANE_FIELD] for participant in participants]
     if len(pane_ids) != len(set(pane_ids)):
         raise ProwlEnvironmentError(
-            ExecutionStatus.INVALID_SCHEMA,
+            ExecutionStatus.IDENTITY_AMBIGUOUS,
             "Prowl returned ambiguous duplicate agent pane identities.",
         )
     return participants
+
+
+def participant_projection(payload: object) -> dict[str, object]:
+    try:
+        participants = participants_from_agents(payload)
+    except ProwlEnvironmentError as error:
+        status = (
+            ExecutionStatus.IDENTITY_AMBIGUOUS
+            if error.status is ExecutionStatus.IDENTITY_AMBIGUOUS
+            else ExecutionStatus.IDENTITY_UNAVAILABLE
+        )
+        return {
+            SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+            OPERATION_FIELD: Operation.AGENTS,
+            STATUS_FIELD: status,
+            DETAIL_FIELD: str(error),
+        }
+    return {
+        SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
+        OPERATION_FIELD: Operation.AGENTS,
+        STATUS_FIELD: ExecutionStatus.SUCCEEDED,
+        PARTICIPANTS_FIELD: participants,
+    }
 
 
 def _canonical_reference(value: object) -> str:
