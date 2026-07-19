@@ -38,10 +38,10 @@ Return a report with these fields for every claim:
 
 Representative rows:
 
-| Location                 | Claim                                                | Evidence                                                | Status            | Required change                            |
-| ------------------------ | ---------------------------------------------------- | ------------------------------------------------------- | ----------------- | ------------------------------------------ |
-| `SKILL.md:42`            | `$ARGUMENTS` preserves free-form input               | `/skill-standards` `references/command-capabilities.md` | `current`         | `none`                                     |
-| `workflows/create.md:18` | Authored source uses `${SKILL_DIR}` for bundle paths | `/skill-standards` `references/command-capabilities.md` | `update-required` | Replace `${SKILL_DIR}` with `${SKILL_DIR}` |
+| Location                 | Claim                                                | Evidence                                                | Status            | Required change                                   |
+| ------------------------ | ---------------------------------------------------- | ------------------------------------------------------- | ----------------- | ------------------------------------------------- |
+| `SKILL.md:42`            | `$ARGUMENTS` preserves free-form input               | `/skill-standards` `references/command-capabilities.md` | `current`         | `none`                                            |
+| `workflows/create.md:18` | Authored source uses `${SKILL_DIR}` for bundle paths | `/skill-standards` `references/command-capabilities.md` | `update-required` | Replace `${SKILL_DIR}` with `${CLAUDE_SKILL_DIR}` |
 
 The overall verdict is `CURRENT` only when every inventory row is `current`. Any `update-required`, `broken`, or `unverifiable` row prevents that verdict.
 
