@@ -11,18 +11,18 @@ A pull request opened in the review state its topology permits — ready for a p
 </objective>
 
 <project_specialization>
-Step 0 applies any PR-opening pre-flight checks and required body sections declared by `spx/local/merging.md`, reached through /merging-standards only after the live foundation gate holds.
+Step 0 receives `/merging-standards` `<pr_opening_specialization>` after the live foundation gate holds. The resolved contract supplies ordered `additional_preflights` and `required_body_sections`; this protocol never discovers, reads, or interprets `spx/local/merging.md`.
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, local-review, or terminal full-deterministic predicates of `VERIFICATION_READINESS`; open the PR before `VERIFICATION_READINESS` holds; open a peer PR as a draft gating step; keep a stacked PR draft after its exact base PR merges and reconstruction succeeds; add another draft-to-ready gate beyond that stack dependency; or weaken the upstream-safety check.
 
-Deployment and release recognition, merge command, local deterministic verification scope, and PR-opening specialization live in `spx/local/merging.md`, giving PR publication and management one policy source. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the overlay allowed to centralize scope and escalation cases.
+Deployment and release recognition, merge command, local deterministic verification scope, and PR-opening specialization reach this protocol through named /merging-standards contracts. The local deterministic-verification commands come from the project's own `CLAUDE.md` convention, with the resolved specialization allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <workflow>
 
 Walk these steps in order. Verification, review, push, and open continue without a separate workflow confirmation. When a consumer-defined command requires normal harness tool approval per `<shell_scope>`, obtain that approval and resume the same step; harness approval and the overlay's pre-mutation confirmation are distinct boundaries.
 
-**Step 0 — Load foundation, references, and overlay.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary, including its conditional `spx/local/merging.md` read) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Never read the repository overlay before the foundation marker is live.
+**Step 0 — Load foundation, references, and specialization.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. After the marker is live, invoke /merging-standards (shared vocabulary and sole repository-overlay reader) and /commit-changes (commit type/scope classification for the title) via the Skill tool. Record the resolved `<pr_opening_specialization>` contract, including its ordered `additional_preflights` and `required_body_sections`. Never read the repository overlay from this protocol.
 
 **Step 1 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer gate or pre-create stacked classification. Start from the peer gate against the repository default; repair as peer when divergence is accidental. When the dependency is intentionally stacked, use an exact `stack_base_pr_pointer` already known to this skill or acquire that pointer through the runtime's structured-question capability. Resolve it with `gh pr view "<stack-base-pr-pointer>" --json number,url,state,headRefName,headRefOid,baseRefName`; require `state == OPEN`, then record the returned full URL as `stack_base_pr_url`, the returned literal `headRefName` as `stack_base`, `topology=stacked`, and `active_base=stack_base`. For a peer branch, record `topology=peer` and set `active_base` to the repository default branch. Run the peer gate against the default `active_base` or the pre-create stacked classification against the recorded `stack_base`; a missing or mismatched stack-base PR fails classification before verification. Carry the resolved `stack_base_pr_url` and `stack_base` unchanged into the `gh pr create --base` argument and complete `## Stack` body section in Step 5.
 
@@ -48,20 +48,20 @@ The iteration accumulates commits on the branch — the eventual push at Step 4 
 
 </step>
 
-**Step 4 — GATE: Publication preflight and push.** Run every overlay-declared preflight check per /merging-standards `<overlay_safety_checks>`, then repeat `<branch_hygiene>` with `publication_phase=initial` and the Step 1 `active_base` so the complete preflight guards the exact checkout state the remote receives. If an open PR appeared since Step 2, resolve its complete identity fields, require `state == OPEN`, invoke `/manage-pr <returned-full-url>`, and exit this opening protocol. Use the explicit destination ref form from /merging-standards `<push_semantics>`:
+**Step 4 — GATE: Publication preflight and push.** Run every applicable `additional_preflights` entry from the Step 0 `<pr_opening_specialization>` contract in declared order, then run every repository safety preflight per /merging-standards `<overlay_safety_checks>`. Repeat `<branch_hygiene>` with `publication_phase=initial` and the Step 1 `active_base` so the complete preflight guards the exact checkout state the remote receives. If an open PR appeared since Step 2, resolve its complete identity fields, require `state == OPEN`, invoke `/manage-pr <returned-full-url>`, and exit this opening protocol. Use the explicit destination ref form from /merging-standards `<push_semantics>`:
 
 ```bash
 branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
 
-If `spx/local/merging.md` defines a custom branch-push command, follow that overlay instead — the explicit destination ref must remain part of any custom command.
+If /merging-standards resolves a custom branch-push command, follow that contract instead — the explicit destination ref must remain part of any custom command.
 
 **Step 5 — GATE: Open the PR in its topology state.** Immediately before creation, run `gh pr view --json number,url,state,headRefName,headRefOid,baseRefName`. When it resolves an open PR, require `state == OPEN`, invoke `/manage-pr <returned-full-url>`, and exit this opening protocol. Otherwise pipe the curated body to gh on stdin via `--body-file -`. A peer PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3). A stacked PR targets its previous stack branch and remains draft until that base merges. Choose the stdin form by harness.
 
 If `gh pr create` exits nonzero, preserve its complete diagnostic and re-run the same `gh pr view` identity query to classify a create race. An open PR transfers to `/manage-pr <returned-full-url>` and exits this protocol; when no open PR resolves, surface the original create failure without further mutation.
 
-Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. Adapt the selected concrete body form by `<body_template>` change type before execution; a documentation-only PR removes the complete `## Test plan` section rather than emitting the generic section empty. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until the exact base PR merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base_pr_url` and `stack_base` branch. Replace both placeholders in the body with those host-observed values before executing the command.
+Bind the topology-specific arguments and body inside the same shell invocation as `gh pr create`. Adapt the selected concrete body form by `<body_template>` change type before execution; a documentation-only PR removes the complete `## Test plan` section rather than emitting the generic section empty. Insert every applicable `required_body_sections` entry from the Step 0 contract at the marked project-section position, exactly once and in declared order; remove the marker itself. A peer branch passes no additional arguments and omits the `## Stack` section. A stacked branch targets its previous stack branch, remains draft until the exact base PR merges, and includes a `## Stack` section whose merge-order line names the recorded full `stack_base_pr_url` and `stack_base` branch. Replace both stack placeholders and every project-section marker with host-observed or resolved content before executing the command.
 
 Interactive Claude Code and Codex sessions use a quoted heredoc. Peer PRs use this form and omit the stack section:
 
@@ -81,6 +81,8 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 ## Changes
 
 - <change>
+
+<required-project-sections>
 
 ## Test plan
 
@@ -113,6 +115,8 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 
 - <change>
 
+<required-project-sections>
+
 ## Stack
 
 - Merge after <stack-base-pr-url> (branch: <stack-base>).
@@ -132,13 +136,13 @@ Programmatic runners that require one physical command line use `printf` with on
 Peer PR:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' <required-project-section-printf-arguments> '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>"
 ```
 
 Stacked PR:
 
 ```bash
-printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' '## Stack' '' '- Merge after <stack-base-pr-url> (branch: <stack-base>).' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "<stack-base>" --draft
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Changes' '' '- <change>' '' <required-project-section-printf-arguments> '## Stack' '' '- Merge after <stack-base-pr-url> (branch: <stack-base>).' '' '## Test plan' '' '- [ ] <verification step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file - --head "<branch>" --base "<stack-base>" --draft
 ```
 
 Flag rationale:
@@ -153,13 +157,15 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
+For heredocs, replace `<required-project-sections>` with the complete applicable Markdown sections. For programmatic forms, replace `<required-project-section-printf-arguments>` with one single-quoted `printf` argument per body line, including `''` arguments for blank lines. When the resolved list is empty, remove the marker or argument slot and its adjacent marker-only blank line.
+
 **Step 6 — Capture the opened PR identity.** Read the host-observed identity after creation:
 
 ```bash
 gh pr view --json number,url,body,headRefName,headRefOid,baseRefName,state,isDraft,reviews,comments
 ```
 
-Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. For a peer PR, require the observed `body` to contain no complete `## Stack` section. For a stacked PR, run /merging-standards `<branch_topology>` existing-PR stacked gate: require the observed base to equal the recorded `stack_base`, the PR to remain draft, and the observed `body` to contain one complete `## Stack` section whose merge-order line contains the exact recorded `stack_base_pr_url` and `stack_base`; missing, placeholder, duplicate, or mismatched stack metadata fails the opening protocol. Surface the PR number, URL, full head SHA, head branch, base branch, and draft state as this protocol's result. This opening protocol performs no PR-management action.
+Require `headRefOid` to equal the full published branch HEAD and the observed topology fields to match Step 5. Verify each applicable `required_body_sections` entry appears exactly once in declared order and every inapplicable configured section is absent. For a peer PR, require the observed `body` to contain no complete `## Stack` section. For a stacked PR, run /merging-standards `<branch_topology>` existing-PR stacked gate: require the observed base to equal the recorded `stack_base`, the PR to remain draft, and the observed `body` to contain one complete `## Stack` section whose merge-order line contains the exact recorded `stack_base_pr_url` and `stack_base`; missing, placeholder, duplicate, or mismatched stack metadata fails the opening protocol. Surface the PR number, URL, full head SHA, head branch, base branch, and draft state as this protocol's result. This opening protocol performs no PR-management action.
 
 **Exit.** End after surfacing the opened PR identity and topology state.
 
@@ -199,6 +205,8 @@ The PR body is markdown prose passed to gh on stdin. Default template:
 ## Changes
 
 - <bulleted list of what was modified, grouped by area>
+
+<required project sections from /merging-standards pr_opening_specialization>
 
 ## Test plan
 
@@ -255,7 +263,7 @@ The opened pull request is sound when:
 - Its URL, number, head branch, head SHA, base branch, and draft state are observable from the host and match the published branch.
 - A peer PR targets the repository default branch and is ready for review; a stacked PR targets its declared stack base, is draft, and records the host-observed base PR URL and branch in `## Stack`.
 - The published head is the exact clean committed tree for which every `VERIFICATION_READINESS` predicate holds.
-- The title is one Conventional Commit subject under 70 characters, and the body contains every section required by `<body_template>` and the active project overlay; conditional sections appear only when their applicability rules require them, with real newlines throughout.
+- The title is one Conventional Commit subject under 70 characters, and the body contains every section required by `<body_template>` and the resolved `<pr_opening_specialization>` contract; conditional sections appear only when their applicability rules require them, exactly once and in declared order, with real newlines throughout.
 - The remote branch was published through an explicit `HEAD:refs/heads/<branch>` destination.
 - The surfaced result contains the PR number, URL, full `headRefOid`, head branch, base branch, and draft state, and no identity string prohibited by /merging-standards `<self_reference>`.
 

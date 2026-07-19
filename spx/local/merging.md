@@ -70,6 +70,8 @@ When the full `just check-full` bundle is required, it is the terminal local det
 
 ## Pull-request opening additions
 
+`/merging-standards` resolves this section into its `<pr_opening_specialization>` contract. `/open-pr` receives the ordered preflights and body sections from that contract and never reads or interprets this file directly.
+
 Before opening a pull request, verify these repository-specific predicates in addition to the portable branch-hygiene and `VERIFICATION_READINESS` predicates:
 
 | Check                                                                                          | If failing                                                           |
@@ -80,7 +82,7 @@ Before opening a pull request, verify these repository-specific predicates in ad
 | `README.md` skill and thin-agent catalog updated to match the change                           | STOP. New or removed artifacts must appear in the catalog.           |
 | `update-instruction-block/templates/instruction-block.md` updated when skill structure changes | STOP. New projects inherit this template.                            |
 
-Append these sections to the portable pull-request body template:
+Supply these body sections to the contract in the declared order. The contract inserts applicable sections after `## Changes` and before the topology-specific `## Stack` section or portable tail:
 
 ```text
 ## Versioning
