@@ -1,0 +1,26 @@
+title = "artifact-ownership-routing"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/prose"
+owned_paths = [
+  "spx/43-prose.enabler/prose.md",
+  "spx/43-prose.enabler/evals/artifact-ownership-routing/**",
+  "src/plugins/prose/skills/internal-doc-standards/**",
+  "src/plugins/prose/skills/write-internal-docs/**",
+  "src/plugins/prose/skills/audit-internal-docs/**",
+  "dist/claude/prose/skills/internal-doc-standards/**",
+  "dist/claude/prose/skills/write-internal-docs/**",
+  "dist/claude/prose/skills/audit-internal-docs/**",
+]
+smoke_cases = [
+  "spec-tree-issues-defect-routes-to-repository-skill",
+  "notion-onboarding-guide-routes-to-internal-write",
+  "workspace-native-decision-record-routes-to-internal-write",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/prose/skills/internal-doc-standards/SKILL.md"
+template = "prompt.template.md"
