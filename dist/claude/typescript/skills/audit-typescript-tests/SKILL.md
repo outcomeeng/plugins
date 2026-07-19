@@ -73,7 +73,7 @@ A test literal that re-declares a production-owned value instead of importing it
 
 Executed TypeScript test files are typed assertion files. Before judging the assertion method, read every `const`, `let`, `var`, framework fixture parameter, property-generated parameter, local function, predicate, and assertion API call. Accept bindings that only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. Reject bindings that choose cases, expectations, configuration, setup policy, generator domains, fixture contents, or verdict rules. Reject local functions when they own those choices or move a predicate or assertion call out of the linked test function or callback.
 
-Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count, and all are valid when they only alias an observation selected elsewhere. The finding carries property `declarations` and rule `test-owned-declaration` — the vocabulary the base `/audit-tests` verdict schema declares — and the message names the right semantic owner.
+Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count, and all are valid when they only alias an observation selected elsewhere. The finding carries property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` or `test-owned data` — and the message names the right semantic owner.
 
 Property-based tests must route the property assertion through a harness or wrapper that owns seed selection, `numRuns`, and replay diagnostics. A TypeScript property test is rejected when failure output would not include the seed and replay path, or when the test file owns the seed/run-count itself.
 
@@ -116,7 +116,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 **Step 3 — Test-file declarations**
 
-Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, framework fixture parameter, or property-generated parameter that chooses data or policy is a `declarations` finding with rule `test-owned-declaration`. Any local `function` declaration that owns data, configuration, setup, reusable cases, fixtures, generators, harness behavior, diagnostics, credentials, or source vocabulary carries the same property and rule. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
+Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, framework fixture parameter, or property-generated parameter that chooses data or policy is a `declarations` finding, ruled `test-owned configuration` for runner, seed, retry, setup, or lifecycle policy and `test-owned data` for hand-picked data, expectations, fixture contents, or generator domains. Any local `function` declaration that owns data, configuration, setup, reusable cases, fixtures, generators, harness behavior, diagnostics, credentials, or source vocabulary carries the same property and whichever of the two labels fits. For property assertions, missing seed/replay reporting is a `missing property seed reporting` finding, spelled as the base skill spells it.
 
 </step>
 
@@ -188,7 +188,7 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `@testin
 3. If the import targets `@testing/fixtures/*`, REJECT with a `fixture_import` finding. Fixtures are inert files: tests may read, copy, or pass fixture paths, but executed tests must not import fixture modules or consume fixture exports.
 4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
 5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
-6. If a property harness or wrapper owns `numRuns` or seed policy, verify it reports seed and replay details on failure; otherwise REJECT with `missing_property_seed_reporting`.
+6. If a property harness or wrapper owns `numRuns` or seed policy, verify it reports seed and replay details on failure; otherwise REJECT with `missing property seed reporting`, spelled as the base skill spells it.
 7. If the test-infrastructure file imports another test-infrastructure file, trace one level at a time until the chain terminates at a non-test module.
 
 If an executed test imports a local test-adjacent module that carries harness, generator, or fixture behavior outside the canonical `@testing/` path, REJECT with a `noncanonical_test_infrastructure` finding. Spec-tree `tests/` directories contain typed assertion files only.
