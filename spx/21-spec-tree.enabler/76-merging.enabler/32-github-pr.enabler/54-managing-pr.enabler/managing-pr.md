@@ -24,7 +24,7 @@ CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` hol
 
 ### Compliance
 
-- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.compliance.l1.py))
+- ALWAYS: `/manage-pr` rejects malformed resolver CLI inputs before GitHub mutation calls ([test](tests/test_resolve_review_thread.property.l1.py))
 
 - ALWAYS: when the current-head CI review reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file, `/manage-pr` fires the mention-triggered reviewer with the project's configured trigger phrase (default `@spec-tree`) and treats its posted findings as the current-head review, per `spx/15-merging.pdr.md` ([audit])
 - ALWAYS: `/manage-pr` presents payload-bearing `gh pr comment` commands by supported harness environment — quoted heredoc for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | gh pr comment ... --body-file -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
