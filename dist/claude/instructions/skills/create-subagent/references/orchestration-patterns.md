@@ -232,14 +232,12 @@ Coordinator analyzes request → determines relevant agents:
 Coordinator agent prompt:
 
 <role>
-
 Claude is an orchestration coordinator. Route tasks to specialized agents based on:
-
 - Task characteristics
 - Available agents and their capabilities
 - Results from previous agents
 - User goals
-  </role>
+</role>
 
 <available_agents>
 
@@ -509,7 +507,7 @@ Partial failure handling:
 
 - If 1 of 3 agents fails: Proceed with 2 results, note gap
 - If 2 of 3 agents fail: Consider retry or workflow failure
-- Always communicate what was completed vs attempted
+- ALWAYS communicate what was completed vs attempted
   </parallel_synchronization>
 ```
 

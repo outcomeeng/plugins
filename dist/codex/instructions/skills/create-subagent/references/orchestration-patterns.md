@@ -232,14 +232,12 @@ Coordinator analyzes request → determines relevant agents:
 Coordinator agent prompt:
 
 <role>
-
-The custom agent is an orchestration coordinator. Route tasks to specialized agents based on:
-
+Claude is an orchestration coordinator. Route tasks to specialized agents based on:
 - Task characteristics
 - Available agents and their capabilities
 - Results from previous agents
 - User goals
-  </role>
+</role>
 
 <available_agents>
 
@@ -429,7 +427,7 @@ model = "gpt-5.4"
 model_reasoning_effort = "high"
 developer_instructions = """
 <role>
-The custom agent is a workflow coordinator. Analyze tasks, identify required agents, orchestrate their execution.
+Claude is a workflow coordinator. Analyze tasks, identify required agents, and orchestrate their execution.
 </role>
 
 <available_agents>
@@ -508,7 +506,7 @@ Partial failure handling:
 
 - If 1 of 3 agents fails: Proceed with 2 results, note gap
 - If 2 of 3 agents fail: Consider retry or workflow failure
-- Always communicate what was completed vs attempted
+- ALWAYS communicate what was completed vs attempted
   </parallel_synchronization>
 ```
 
