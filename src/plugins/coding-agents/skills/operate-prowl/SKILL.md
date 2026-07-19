@@ -14,20 +14,20 @@ A versioned JSON Prowl operation result or one correlated terminal delegation ha
 
 The source-owned operation names are:
 
-| Operation    | Arguments                                                                | Mutation authorization |
-| ------------ | ------------------------------------------------------------------------ | ---------------------- |
-| `list`       | none                                                                     | no                     |
-| `agents`     | none                                                                     | no                     |
-| `read`       | one selector; optional `last`, `waitStable`, stability bounds            | no                     |
-| `send`       | one selector, `text`; optional `noEnter`, `noWait`, `capture`, `timeout` | no                     |
-| `key`        | one selector, `key`; optional `repeat`                                   | required               |
-| `focus`      | one selector                                                             | required               |
-| `tab-create` | optional selector and `path`                                             | required               |
-| `tab-close`  | one selector; optional `force`                                           | required               |
-| `pane-close` | one selector; optional `force`                                           | required               |
-| `open`       | optional `path`                                                          | no                     |
+| Operation    | Arguments                                                                                           | Mutation authorization |
+| ------------ | --------------------------------------------------------------------------------------------------- | ---------------------- |
+| `list`       | none                                                                                                | no                     |
+| `agents`     | none                                                                                                | no                     |
+| `read`       | one selector; optional `last`, `waitStable`, stability bounds                                       | no                     |
+| `send`       | one selector, `text`; optional `noEnter`, `noWait`, `capture`, `timeout` with the constraints below | no                     |
+| `key`        | one selector, `key`; optional `repeat`                                                              | required               |
+| `focus`      | one selector                                                                                        | required               |
+| `tab-create` | optional selector and `path`                                                                        | required               |
+| `tab-close`  | one selector; optional `force`                                                                      | required               |
+| `pane-close` | one selector; optional `force`                                                                      | required               |
+| `open`       | optional `path`                                                                                     | no                     |
 
-A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve its complete public value. The adapter always requests public JSON and owns every Prowl command token and flag.
+A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve its complete public value. For `send`, `capture` cannot combine with `noEnter` or `noWait`, and `timeout` cannot combine with `noWait`. The adapter always requests public JSON and owns every Prowl command token and flag.
 
 </operation_surface>
 

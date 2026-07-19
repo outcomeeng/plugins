@@ -253,8 +253,13 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         _selector_shapes(frozenset({MUTATION_AUTHORIZED_FIELD}))
     ),
     Operation.TAB_CREATE: OperationContract(
-        _selector_shapes(
-            frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
+        (
+            RequestShape(
+                frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
+            ),
+            *_selector_shapes(
+                frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
+            ),
         )
     ),
     Operation.TAB_CLOSE: OperationContract(

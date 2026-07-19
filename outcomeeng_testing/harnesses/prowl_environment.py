@@ -206,13 +206,25 @@ def verify_prowl_mappings() -> list[str]:
                     if field not in module.SELECTOR_FIELDS
                 },
             }
+            selectorless_fields = frozenset(
+                cast(dict[str, object], without_selector[module.ARGUMENTS_FIELD])
+            )
+            selectorless_allowed = any(
+                shape.accepts(selectorless_fields)
+                for shape in module.OPERATION_CONTRACTS[operation].request_shapes
+            )
             try:
                 module.command_for(without_selector)
-                failures.append(
-                    f"{operation.value} accepted a request without its required selector"
-                )
+                if not selectorless_allowed:
+                    failures.append(
+                        f"{operation.value} accepted a request without its required selector"
+                    )
             except module.ProwlEnvironmentError as error:
-                if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+                if selectorless_allowed:
+                    failures.append(
+                        f"{operation.value} rejected its declared selectorless shape"
+                    )
+                elif error.status != module.ExecutionStatus.INVALID_SCHEMA:
                     failures.append(
                         f"{operation.value} selector omission mapped to {error.status}"
                     )
