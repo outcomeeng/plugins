@@ -23,6 +23,8 @@ SCRIPT = (
     / "scripts"
     / "resolve_review_thread.py"
 )
+MAPPING_IDENTIFIER_COUNT = 10
+MAPPING_CURSOR_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,26 @@ class ResolverDomain:
     comment_ids: tuple[str, ...]
     database_ids: tuple[int, ...]
     cursors: tuple[str, ...]
+
+
+def resolver_mapping_domain() -> ResolverDomain:
+    """Finite synthetic domain for resolver interaction mappings."""
+
+    domain = ResolverDomain(
+        repository="owner/repository",
+        pr_number=1,
+        host="github.example",
+        thread_ids=tuple(
+            f"THREAD_{index:08d}" for index in range(MAPPING_IDENTIFIER_COUNT)
+        ),
+        comment_ids=tuple(
+            f"COMMENT_{index:08d}" for index in range(MAPPING_IDENTIFIER_COUNT)
+        ),
+        database_ids=tuple(range(1, MAPPING_IDENTIFIER_COUNT + 1)),
+        cursors=tuple(f"CURSOR_{index:08d}" for index in range(MAPPING_CURSOR_COUNT)),
+    )
+    _validate_mapping_domain(domain)
+    return domain
 
 
 def resolver_domains() -> SearchStrategy[ResolverDomain]:
@@ -163,6 +185,22 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
             )
         ),
     )
+
+
+def _validate_mapping_domain(domain: ResolverDomain) -> None:
+    values_by_pattern = (
+        ("REPOSITORY_PATTERN", (domain.repository,)),
+        ("NUMBER_PATTERN", (str(domain.pr_number), *map(str, domain.database_ids))),
+        ("HOST_PATTERN", (domain.host,)),
+        ("NODE_ID_PATTERN", domain.thread_ids),
+        ("COMMENT_ID_PATTERN", (*domain.comment_ids, *domain.cursors)),
+    )
+    for pattern_name, values in values_by_pattern:
+        pattern = _pattern(pattern_name)
+        if any(pattern.fullmatch(value) is None for value in values):
+            raise RuntimeError(
+                f"resolver mapping domain violates source pattern {pattern_name}"
+            )
 
 
 def _invalid_thread_ids() -> SearchStrategy[str]:

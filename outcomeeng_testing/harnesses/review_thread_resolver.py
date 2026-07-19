@@ -19,7 +19,7 @@ from hypothesis import given, seed, settings
 from outcomeeng_testing.generators.review_thread_resolver import (
     ResolverDomain,
     malformed_resolver_argvs,
-    resolver_domains,
+    resolver_mapping_domain,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -41,8 +41,6 @@ ResolverResponder = Callable[
 InjectedCommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 MALFORMED_INPUT_PROPERTY_SEED = 20260707
 MALFORMED_INPUT_PROPERTY_EXAMPLES = 50
-MAPPING_PROPERTY_SEED = 20260719
-MAPPING_PROPERTY_EXAMPLES = 5
 
 
 @dataclass(frozen=True)
@@ -53,14 +51,8 @@ class ResolverRun:
     calls: tuple[tuple[str, ...], ...]
 
 
-def _run_mapping_property(assertion: Callable[[ResolverDomain], None]) -> bool:
-    @seed(MAPPING_PROPERTY_SEED)
-    @settings(max_examples=MAPPING_PROPERTY_EXAMPLES)
-    @given(domain=resolver_domains())
-    def generated_assertion(domain: ResolverDomain) -> None:
-        assertion(domain)
-
-    generated_assertion()
+def _run_mapping_case(assertion: Callable[[ResolverDomain], None]) -> bool:
+    assertion(resolver_mapping_domain())
     return True
 
 
@@ -126,7 +118,7 @@ def review_comment_id_discovers_thread_before_resolving() -> bool:
             host=True,
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def direct_thread_id_resolves_without_discovery() -> bool:
@@ -140,7 +132,7 @@ def direct_thread_id_resolves_without_discovery() -> bool:
         assert run.returncode == 0
         assert run.calls == (_resolve_call(thread_id, module, domain, host=True),)
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def review_thread_discovery_pages_threads_until_comment_is_found() -> bool:
@@ -223,7 +215,7 @@ def review_thread_discovery_pages_threads_until_comment_is_found() -> bool:
             host=True,
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def review_thread_discovery_pages_comments_until_comment_is_found() -> bool:
@@ -306,7 +298,7 @@ def review_thread_discovery_pages_comments_until_comment_is_found() -> bool:
             host=True,
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def malformed_inputs_fail_before_github_calls() -> bool:
@@ -353,7 +345,7 @@ def review_comment_not_found_after_complete_pagination_returns_error() -> bool:
         assert _source_string(load_script(), "ERROR_COMMENT_NOT_FOUND") in run.stderr
         assert len(run.calls) == 1
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def missing_comment_page_info_returns_error() -> bool:
@@ -392,7 +384,7 @@ def missing_comment_page_info_returns_error() -> bool:
             in run.stderr
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def null_review_thread_discovery_payload_returns_error() -> bool:
@@ -408,7 +400,7 @@ def null_review_thread_discovery_payload_returns_error() -> bool:
             domain,
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def missing_review_thread_nodes_returns_error() -> bool:
@@ -426,7 +418,7 @@ def missing_review_thread_nodes_returns_error() -> bool:
             domain,
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def null_paginated_thread_node_returns_error() -> bool:
@@ -474,7 +466,7 @@ def null_paginated_thread_node_returns_error() -> bool:
         assert run.returncode == _validation_error_exit_code()
         assert _source_string(module, "ERROR_NODE") in run.stderr
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def malformed_paginated_response_returns_error() -> bool:
@@ -505,7 +497,7 @@ def malformed_paginated_response_returns_error() -> bool:
             in run.stderr
         )
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def malformed_payload_shapes_return_errors() -> bool:
@@ -609,7 +601,7 @@ def malformed_payload_shapes_return_errors() -> bool:
         assert run.returncode == _validation_error_exit_code()
         assert _source_string(module, "ERROR_NODE_COMMENTS") in run.stderr
 
-    return _run_mapping_property(assertion)
+    return _run_mapping_case(assertion)
 
 
 def _run_resolver(argv: list[str], responder: ResolverResponder) -> ResolverRun:
@@ -739,11 +731,25 @@ def _graphql_argv(
     *,
     silent: bool = False,
 ) -> tuple[str, ...]:
-    builder = cast(
-        "Callable[..., list[str]]",
-        getattr(module, "graphql_argv"),
+    argv = list(_graphql_prefix(module))
+    if host is not None:
+        argv.extend([_source_string(module, "HOSTNAME_OPTION"), host])
+    if silent:
+        argv.append(_source_string(module, "SILENT_OPTION"))
+    argv.extend(
+        [
+            _source_string(module, "RAW_FIELD_OPTION"),
+            f"{_source_string(module, 'QUERY_FIELD')}={query}",
+        ]
     )
-    return tuple(builder(query, fields, host, silent=silent))
+    for key, value in fields.items():
+        argv.extend(
+            [
+                _source_string(module, "TYPED_FIELD_OPTION"),
+                f"{key}={value}",
+            ]
+        )
+    return tuple(argv)
 
 
 def _graphql_prefix(module: ModuleType) -> tuple[str, ...]:
