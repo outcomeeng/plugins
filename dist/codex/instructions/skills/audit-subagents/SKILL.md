@@ -82,7 +82,7 @@ These issues significantly hurt effectiveness - flag as critical:
 
 - Does prompt include constraints section with clear boundaries?
 - Anti-pattern: No constraints specified, allowing unsafe or out-of-scope actions
-- Pass: At least 3 constraints using strong modal verbs (MUST, NEVER, ALWAYS)
+- Pass: Constraints use strong modal verbs (MUST, NEVER, ALWAYS) and cover every material boundary for the custom agent's purpose and complexity
 
 **tool_access**:
 
@@ -104,7 +104,7 @@ These issues significantly hurt effectiveness - flag as critical:
 Check against `/agent-prompt-standards` conventions:
 
 - **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
-- **Description style**: Directive pattern for description field. Matches user speech
+- **Description style**: Natural-language purpose and usage wording from `create-subagent`; states what the custom agent does and when to invoke it. Do not apply the directive skill-frontmatter description pattern.
 - **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
 - **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
 

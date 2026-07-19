@@ -302,12 +302,12 @@ How to avoid: Keep SKILL.md under 500 lines; move extended examples and configur
 <success_criteria>
 A well-configured custom agent has:
 
-- A file that the target runtime's TOML parser or agent loader accepts, with `name`, `description`, and `developer_instructions`
+- A TOML file with `name`, `description`, and `developer_instructions` that a fresh Codex session loads without a configuration error and exposes by name in `spawn_agent`'s `agent_type` values
 - A `developer_instructions` containing XML-structured role, workflow, constraints, and output expectations
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
 
 - A description that states both what the custom agent does and when to invoke it
-- A model identifier accepted by the target runtime and consistent with the configuration's stated capability, cost, and reproducibility requirements
-- A recorded representative invocation or dry-run naming the intended workflow, expected output shape, and observed result; rerun it after every configuration edit
+- A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
+- A recorded representative invocation naming the intended workflow and expected output shape, with an observed final result matching that contract; rerun it after every configuration edit
 
 </success_criteria>
