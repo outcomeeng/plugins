@@ -14,14 +14,9 @@ Classify the skill as builder, guide, automation, analyzer, validator, or refere
 
 </step>
 
-<step name="classify_name">
+<step name="complete_name_review">
 
-Apply `/skill-standards` `<naming_conventions>` and the repository's skill-authoring overlay. When the target plugin already contains skills and repository policy requires plugin-wide naming review, produce this matrix before writing or renaming any skill:
-
-| Current name | Skill type | Governing naming form | Proposed name or keep | Reason |
-| ------------ | ---------- | --------------------- | --------------------- | ------ |
-
-Read the source that declares any overlapping methodology vocabulary and inspect relevant file history before classifying a name as defective. Never infer a batch rename from a shared lexical token, suffix, or grammatical number.
+Complete the router's `<material_change_name_review>` before writing the new skill. Use the proposed name only when its classification conforms to the governing naming form and declared methodology vocabulary.
 
 </step>
 

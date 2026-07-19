@@ -32,6 +32,17 @@ When the skill takes arguments, injects state-dependent context, restricts tools
 This skill provides routing, workflows, templates, and domain-workflow references for creating skills. It does not restate standards.
 </reference_loading>
 
+<material_change_name_review>
+
+Before any route creates or materially changes skill content, apply `/skill-standards` `<naming_conventions>` and the repository's skill-authoring overlay. When repository policy requires plugin-wide naming review, produce this matrix for every skill the policy requires reviewing before route-specific edits begin:
+
+| Current name | Skill type | Governing naming form | Proposed name or keep | Reason |
+| ------------ | ---------- | --------------------- | --------------------- | ------ |
+
+Read the source that declares any overlapping methodology vocabulary and inspect relevant file history before classifying a name as defective. Never infer a batch rename from a shared lexical token, suffix, or grammatical number. Apply only explicit operator-directed renames and names the classification proves nonconforming. Audit-only requests and read-only pattern questions skip this mutation gate.
+
+</material_change_name_review>
+
 <intake>
 When the request already identifies one intent below, skip this menu and route directly. Otherwise ask:
 

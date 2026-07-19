@@ -22,14 +22,9 @@ The audit is read-only: never edit files, assign a numeric score, ask the audito
 
 </step>
 
-<step name="classify_renames">
+<step name="complete_name_review">
 
-When the requested improvement creates or renames a skill, apply `/skill-standards` `<naming_conventions>` and the repository's skill-authoring overlay. Before proposing or applying a rename, produce this matrix for every skill the applicable repository policy requires reviewing:
-
-| Current name | Skill type | Governing naming form | Proposed name or keep | Reason |
-| ------------ | ---------- | --------------------- | --------------------- | ------ |
-
-Read the source that declares any overlapping methodology vocabulary and inspect relevant file history before classifying a name as defective. Never infer a batch rename from a shared lexical token, suffix, or grammatical number. Apply only explicit operator-directed renames and names the classification proves nonconforming.
+For every explicit improvement request, complete the router's `<material_change_name_review>` before applying any change. Audit-only requests remain read-only and skip the mutation gate.
 
 </step>
 
