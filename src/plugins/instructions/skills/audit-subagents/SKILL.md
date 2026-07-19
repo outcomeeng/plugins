@@ -12,10 +12,10 @@ allowed-tools: Read, Grep, Glob, Bash, Skill
 
 {!% require_skill 'instructions:agent-prompt-standards' %!}
 
-{!% require_skill 'instructions:create-subagents' %!}
+{!% require_skill 'instructions:create-subagent' %!}
 
 <objective>
-A verdict on one {{! term('configured_agent') !}} configuration file ({!% if target == 'codex' %!}`.codex/agents/*.toml` or `~/.codex/agents/*.toml`{!% else %!}`.claude/agents/*.md` or `~/.claude/agents/*.md`{!% endif %!}) against the create-subagents and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
+A verdict on one {{! term('configured_agent') !}} configuration file ({!% if target == 'codex' %!}`.codex/agents/*.toml` or `~/.codex/agents/*.toml`{!% else %!}`.claude/agents/*.md` or `~/.claude/agents/*.md`{!% endif %!}) against the create-subagent and `/agent-prompt-standards` conventions — APPROVED when no critical issue rejects it, or REJECTED when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
 </objective>
 
 <constraints>
@@ -40,7 +40,7 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read `instructions:create-subagents` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
+1. Both skills are already injected above. Read `instructions:create-subagent` plus its `references/subagents.md` and `references/write-subagent-prompts.md` files.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.

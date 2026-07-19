@@ -1,8 +1,9 @@
 ---
-name: create-subagents
+name: create-subagent
 description: >-
   ALWAYS invoke this skill when creating, editing, or configuring custom agents.
   NEVER create custom agents without this skill.
+allowed-tools: Read, Glob, Write, Edit, Skill, request_user_input
 ---
 
 Invoke the `instructions:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

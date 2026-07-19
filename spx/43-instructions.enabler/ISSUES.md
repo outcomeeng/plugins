@@ -90,15 +90,3 @@ Required handling: decide which layer owns per-runtime model selection for agent
 The audit skills declare their target input two ways. `src/plugins/instructions/skills/audit-subagents/SKILL.md` declares `argument-hint` and `arguments` and substitutes the named argument through its body. `src/plugins/instructions/skills/audit-skills/SKILL.md`, `src/plugins/spec-tree/skills/audit-adr/SKILL.md`, and `src/plugins/spec-tree/skills/audit-pdr/SKILL.md` declare no argument and take their target from the invoking prompt, so `/` autocomplete offers no signal about the expected input. `src/plugins/instructions/skills/skill-standards/references/command-capabilities.md` requires `argument-hint` when a skill takes arguments, which does not settle whether an audit target is an argument or prompt context.
 
 Required handling: decide whether an audit skill's target is a declared argument, then apply the answer across the audit-skill family rather than one file at a time — the answer changes each skill's input contract and its `missing_argument_hint` exposure under `audit-skills`'s own anti-pattern list. Reconcile with entry 1's skeleton sweep, which rewrites the same frontmatter. Gate changed skills with `instructions:skill-auditor`.
-
-## 10. Create-subagents tool restriction
-
-`src/plugins/instructions/skills/create-subagents/SKILL.md` is the only remaining instructions-plugin skill without an `allowed-tools` declaration. `/skill-standards` requires each skill to grant only the capabilities its workflow needs, and `spx/13-plugin-and-runtime-conventions.adr.md` requires every shipped skill to carry restricted tool access.
-
-Required handling:
-
-- Inventory every tool the complete `create-subagents` workflow uses across Claude Code and Codex rendering.
-- Add the narrowest portable `allowed-tools` declaration that preserves authoring, validation, and required composition while excluding unrelated mutation, network, and shell capabilities.
-- Rebuild both runtime trees, run the deterministic skill checks, and gate the complete bundle with `instructions:skill-auditor`.
-
-Revisit in the next instructions-authoring cleanup PR after the `create-skill` rename PR merges.
