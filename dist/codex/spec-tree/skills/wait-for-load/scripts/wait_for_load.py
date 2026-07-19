@@ -17,6 +17,7 @@ LoadAverages = tuple[float, float, float]
 
 CAPACITY_RATIO: Final = 1.0
 MINIMUM_WAIT_SECONDS: Final = 60
+MAXIMUM_WAIT_SECONDS: Final = 600
 LOAD_HORIZONS_SECONDS: Final[LoadAverages] = (60.0, 300.0, 900.0)
 
 
@@ -209,8 +210,18 @@ def wait_until_ready(dependencies: Dependencies) -> Result:
         final = observe(dependencies)
         initial = final
         while not is_ready(final):
+            remaining = MAXIMUM_WAIT_SECONDS - elapsed_seconds(dependencies, started_at)
+            if remaining <= 0:
+                return terminal_result(
+                    status=Status.NOT_READY,
+                    dependencies=dependencies,
+                    started_at=started_at,
+                    initial=initial,
+                    final=final,
+                    wait_cycles=wait_cycles,
+                )
             wait_cycles += 1
-            dependencies.sleep(wait_seconds(final))
+            dependencies.sleep(min(wait_seconds(final), remaining))
             final = observe(dependencies)
     except UnsupportedPlatformError as error:
         return terminal_result(
