@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 {!% require_skill 'prose:internal-doc-standards' %!}
 
 <objective>
-A list of internal-doc anti-patterns found, each flagged with its category and pattern name and paired with a concrete rewrite.
+A list of internal-doc anti-patterns found, each flagged with its category and pattern name and paired with a concrete rewrite. A closing summary states the violation count, the most frequent category, and an overall quality assessment.
 </objective>
 
 <constraints>
@@ -64,9 +64,7 @@ Internal-doc-specific overrides. Don't flag a parens-clarification that the over
 <success_criteria>
 The review is complete when:
 
-Every flagged violation names the specific pattern and the category.
-
-Every flag includes a concrete rewrite, not just a label or instruction.
+Every flag carries all four `<verdict_format>` parts — Pattern, Category, Quote, and Rewrite — and the rewrite shows fixed text rather than an instruction.
 
 The summary gives a count, identifies the most frequent category, and assesses overall doc quality.
 
