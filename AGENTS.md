@@ -432,66 +432,22 @@ This repository publishes two plugin surfaces from the same source tree:
 
 Shared plugins ship both manifests where supported.
 
-## Agent Harness Guidance
-
-This file is shared by Claude Code and Codex. Follow the rule's intent with the tool names available in the current harness.
-
-| Capability                       | Claude Code                      | Codex                                        |
-| -------------------------------- | -------------------------------- | -------------------------------------------- |
-| Structured question with choices | `AskUserQuestion`                | `request_user_input`                         |
-| Read files                       | `Read`                           | `exec_command` with `rg`, `sed`, or `cat`    |
-| Edit files                       | `Edit` / `Write`                 | `apply_patch`                                |
-| Search files                     | `Glob` / `Grep`                  | `exec_command` with `rg` or `rg --files`     |
-| Read-only research agents        | `Task` / configured subagents    | `spawn_agent` only when explicitly requested |
-| Product plugin settings          | `.claude/settings.json`          | `.codex/config.toml`                         |
-| User-scope plugin registration   | `~/.claude/` via `claude plugin` | `~/.codex/config.toml` via `codex plugin`    |
-
-When these instructions say `AskUserQuestion`, Codex must use `request_user_input`. When these instructions say `Read`, `Edit`, or `Write`, Codex must use its local shell and patch tools in a way that preserves the same behavior.
-
 ## Marketplace Methodology
 
 This file covers repository rules that apply across both agents.
 
 Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
-Spec-tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/spec-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. The sibling `references/` directory carries conditional operational detail.
-
-## Historical Context
-
-The Outcome Engineering methodology has evolved through three generations. Only the current one is active.
-
-| Generation              | Plugin       | Directory     | Node types                     | Context skill              | Status      |
-| ----------------------- | ------------ | ------------- | ------------------------------ | -------------------------- | ----------- |
-| 1st (Jul 2025–Jan 2026) | `specs`      | `specs/work/` | `capability → feature → story` | legacy context entry point | **Legacy**  |
-| 2nd (Jan–Mar 2026)      | `spx-legacy` | `spx/`        | `capability → feature → story` | legacy context entry point | **Legacy**  |
-| 3rd (Mar 2026–)         | `spec-tree`  | `spx/`        | `enabler`, `outcome`           | `/contextualize`           | **Current** |
-
-**What changed across generations:**
-
-- **1st → 2nd**: Moved from `specs/work/` to `spx/`, adopted durable map principles and sparse integer ordering. The three-level hierarchy (`capability/feature/story`) remained.
-- **2nd → 3rd**: Replaced the fixed three-level hierarchy with two recursive node types (`enabler`, `outcome`) that nest to arbitrary depth. Replaced the second-generation context entry point with `/contextualize`. Merged the separate `spx` and `code` plugins into `spec-tree`.
-
-Historical plugin implementations are pruned from this repository. The history table explains why old product directories or installed plugins may still appear outside this checkout.
+Spec-tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/spec-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. The sibling `references/` directory is the canonical and only correct location for templates for any document used by Spec Tree.
 
 ## Critical Rules
 
-- ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See the plugin catalog in [`README.md`](README.md#plugins) for the available skills.
-- ⚠️ **NEVER write code without invoking a skill first** - See the plugin catalog in [`README.md`](README.md#plugins) for language-specific coding skills.
-- ⚠️ **Use the managed router as the sole `/understand` trigger** - The "Before product-content access" section at the top of this file decides when the foundation marker is required and which operational commands are exempt. Once that gate requires `/understand`, invoke `/contextualize <full-path>` before working on each existing governed node; it loads product, decisions, ancestry, target, and lower-index constraints. For edits to a node-governed skill, agent, template, test, or implementation, load `/understand`, then `/contextualize`, then the artifact-authoring skill. The "Spec-tree navigation" section below explains inverse mapping from changed files to governing nodes.
-- ⚠️ **ALWAYS use the root managed Spec Tree instruction block before spec-tree work** - The instruction block in this root instruction file is the spec-tree skill router. Read it before working with files under `spx/` or applying spec-tree lifecycle rules from the product-owned root instruction content.
-- ⚠️ **NEVER create a spec-tree artifact without invoking `/author` first** - Before creating a product spec, ADR, PDR, enabler, or outcome, invoke `/author`. The skill carries the templates, the index-assignment procedure, and chains into `/contextualize` on the parent directory so sibling enumeration prevents index collisions. Do not invoke `/contextualize` directly on a not-yet-existing node path — it will abort with "Target path not found"; the bootstrap-mode entry point belongs to `/author`.
-- ⚠️ **ALWAYS read harness guide files in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's active harness guide first if it exists: `CLAUDE.md` in Claude Code, `AGENTS.md` in Codex.
-- ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
 - ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
-- ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. Review and audit enforce this convention; no automated lint rule covers the shorthand form. (The separate `reference-portability` gate step catches real-digit `spx/<digits>-…` node paths and product roots in shipped `src/plugins/` content, not bare `ADR-21` shorthand.)
-- ⚠️ **No docstring-length or "no comments" rule exists** - The spec-reference rule above is the *only* prohibition on code comments and docstrings. Multi-line module/function docstrings and explanatory comments that capture non-obvious invariants are expected (clarity over brevity); peer code carries them — `outcomeeng/validation/reference_portability.py` opens with a multi-paragraph module docstring. A review finding that cites a CLAUDE.md/AGENTS.md rule such as "default to writing no comments", "one short line max", or "never multi-paragraph docstrings/multi-line comment blocks" is **unbacked** — no such rule exists in this repository (`grep` it and see). Refute such a finding on the thread; do **not** collapse docstrings or comments to satisfy it. (A reviewer may be importing a personal-scope style preference that does not govern this repo.)
 - ⚠️ **Depend on an `spx` CLI capability only after it is PUBLISHED and the floor is advanced** - The shipped skills and their tests invoke the `@outcomeeng/spx` CLI; a skill or test that assumes a capability merged only to spx `main` (not yet published to npm) ships a contract the consumer's installed CLI cannot honor, and surfaces as an opaque CI test failure or a consumer regression. Merged-to-spx-main is **not** "available." A capability is available only when (1) an `@outcomeeng/spx` release containing it is published to npm, (2) `REQUIRED_SPX_VERSION` in `outcomeeng/validation/spx_version.py` is advanced to that version, and (3) `SPX_VERSION` in `.github/workflows/check.yml` is bumped to a published version at or above the floor. The `spx-version` gate step enforces pin ≥ floor, and the pin can only reach a published version — so a dependency on an unpublished capability fails `just check-full` in CI with a named gap, governed by `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`.
 - ⚠️ **Protect untracked work during cleanup** - use `just clean` (`git clean -fdX`) for gitignored artifacts such as `.DS_Store` and `__pycache__`. Inspect every non-gitignored untracked path before removing it and establish whether it is user work, generated output, or stale workspace state. Empty directories remain visible to filesystem discovery even though Git does not track them; remove a stale empty directory after confirming it is empty and no workflow owns it.
-- ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
 - ⚠️ **The methodology is multi-language** - Skill content shipped under `dist/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each language plugin's `{language}-test-standards` skill for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
 - ⚠️ **Authored skill content names "Claude" as the subject — never strip it to satisfy the self-reference policy** - Per `instructions`'s `agent-prompt-standards` `<voice>` rule, skill and methodology content drops the subject (imperative mood) by default and names **"Claude"** for behavioral claims, tendencies, and failure modes; **"the agent"**, **"an agent"**, **"the model"**, and **"you"** are banned subjects. The `<self_reference_policy>` ban on "Claude" in generated content governs **operational artifacts only** — branch names, commit messages, PR titles and bodies, review comments — NOT authored skill content under `src/plugins/`. The build ships authored "Claude" verbatim to both `dist/claude/` and `dist/codex/` (no identity substitution today); other-agent targeting is a downstream replacement step, so the authored canon is always "Claude". Conflating the two — removing "Claude" from skill content because the self-reference policy forbids it in commits — is a real, recurring error.
 - ⚠️ **Editing skill content requires the skill auditor as a gate** - After editing any `SKILL.md` or skill reference under `src/plugins/`, run `instructions:skill-auditor` (or `/audit-skills`) before shipping. The `changes-reviewer` local review and the CI `spec-tree-review` do NOT load the skill-authoring standards (`skill-standards`, `agent-prompt-standards`) and will not catch voice (named-subject), structure, or progressive-disclosure violations — only the skill auditor does.
-- ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 
 - 🛑 **STOP TRIGGER — NEVER abbreviate a session ID, or any identity value** - A session ID is `YYYY-MM-DD_HH-MM-SS` and is reproduced **verbatim and in full** every single time — in prose, questions, commits, and tool calls. NEVER shorten it to a fragment (e.g. the `HH-MM-SS` tail, the date, or any substring): a fragment identifies nothing, is ambiguous across sessions, breaks `spx session show/pickup/archive` lookups, and obscures the user's comparison against the source. The same rule binds every agent-surfaced identity value — commit SHA, run ID, `owner/repo`, host account, agent-session ID: copy it exactly from its source, never paraphrase or truncate it (this is the product-level verbatim-identity compliance rule in `spx/outcomeeng.product.md`). If a value is long, paste the whole value; do not "tidy" it.
 
@@ -511,9 +467,6 @@ Historical plugin implementations are pruned from this repository. The history t
   - Marketplace install refresh after merged plugin-distribution changes: `just sync-marketplace <previous-main-ref>` from the marketplace-source worktree, as directed by `spx/local/merging.md`.
 - 🛑 **STOP TRIGGER — NEVER raise command expense ceilings without explicit operator approval** - Command defaults are authority for cost-bearing and quota-bearing runs. Do not add or increase flags, environment variables, or config values that raise spend, quota use, hosted minutes, paid API usage, token budget, worker parallelism, retry count, timeout, or external-service capacity without structured operator approval in the same turn. Examples include `--max-budget-usd`, model/API budget caps, worker or parallelism counts, retry limits, hosted-runner minutes, and paid-provider switches. If a command fails because the default ceiling is too low, stop and ask with `request_user_input`, naming the exact failed command, the blocked ceiling, the proposed new ceiling, and a pause/inspect option.
 - ✅ **Use the Justfile as this repo's command interface** - Use `just --list` / `just help` only to confirm exact recipe spelling after a governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. Repository-local Python modules (`python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations) run through `just` recipes only; inside the `Justfile`, those invocations are recipe implementation details. If a needed repository operation exists only as a Python module, add or fix the narrow Just recipe first, then run the recipe. Plugin-shipped skill scripts are different: when an active skill instructs a direct `python3 "${CLAUDE_SKILL_DIR}/scripts/..."` command, run that exact portable skill script. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
-- ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
-- ✅ **ALWAYS USE the harness structured-question tool for questions with predefined options.** Claude Code uses `AskUserQuestion`; Codex uses `request_user_input`. Do NOT use structured questions for open-ended questions where the user needs to provide free-form context — ask in plain text instead.
-- ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
 - ⚠️ **Spec-only validation stays on the spec lane** - When the change only adds or edits specs, decisions, EXCLUDE entries, or Markdown instructions, use the spec-only command pair in this repo's command surface above. Do not run `spx validation all`, install Node dependencies, or run ESLint/TypeScript validation unless JavaScript/TypeScript source, package manager files, validation config, or the validation pipeline changed, or the user explicitly asks for the full gate.
 
@@ -531,10 +484,6 @@ Authors of skills, agents, and the scripts they invoke must assume:
 The `outcomeeng_*` Python packages in this repo are part of the product's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside a generated plugin runtime tree is not portable.
 
 When a skill genuinely needs richer Python machinery, the right answer is usually to write the logic in stdlib-only form, ship it inside the plugin, and document the `python3 "${CLAUDE_SKILL_DIR}/..."` invocation in the skill body.
-
-## Read Tool Output
-
-The `</output>` tag at the end of Read tool results is the tool's output delimiter — it is NOT part of the file content. Never treat it as a "stray closing tag" or attempt to remove it from files.
 
 ## Markdown Formatting Rules
 
@@ -621,7 +570,7 @@ Per-language test conventions live in `spx/15-test-language.adr.md` (this produc
 
 ## Before Making Changes
 
-### After Adding/Modifying Skills, Agents etc.
+### After Adding/Modifying Skills, Agents etc
 
 Everything under `src/plugins/` is authored source; the installed trees under `dist/claude/` and `dist/codex/` are generated. After any `src/plugins/` edit, regenerate them so the two match:
 
