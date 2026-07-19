@@ -39,6 +39,8 @@ Do not search the product directory for skill files when the loading message alr
 4. Invoke `/verify` when behavior changes require new or revised evidence; use `/test-rust` for Rust expression after test is selected.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
 
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
+
 </quick_start>
 
 <essential_principles>
