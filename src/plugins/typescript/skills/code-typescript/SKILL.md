@@ -382,6 +382,7 @@ import { treeBuilder } from "@testing/harnesses/tree-builder";
 <command_resolution>
 Resolve commands from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Use raw tool commands only when the repository has no validation wrapper.
 When sources conflict, resolve in this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback.
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 </command_resolution>
 
 ```bash
