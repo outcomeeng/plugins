@@ -23,7 +23,7 @@ A skill-authoring request routed to its matching typed workflow.
 </essential_principles>
 
 <reference_loading>
-Before creating, editing, or auditing any skill, read `/skill-standards` — the single source of truth for all skill standards (frontmatter, XML structure, naming, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, script testing). Then check for `spx/local/skills.md` at the repository root and read it if it exists.
+Before creating, editing, or auditing any skill, read `/skill-standards`, then check for `spx/local/skills.md` at the repository root and read it if it exists.
 
 Also read `/agent-prompt-standards` for voice, description style, constraint language, and anti-pattern conventions before writing prompt text.
 
