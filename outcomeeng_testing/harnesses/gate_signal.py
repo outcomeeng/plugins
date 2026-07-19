@@ -24,6 +24,9 @@ from outcomeeng.validation import (
     SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
 )
+from outcomeeng_testing.harnesses.gate import (
+    assert_signal_shutdown_waits_are_bounded,
+)
 
 ORCHESTRATOR_STARTUP_SECONDS: Final = 8.0
 TERMINATION_DEADLINE_SECONDS: Final = 6.0
@@ -94,7 +97,9 @@ sys.exit(run(spawner=PidPrintingSpawner(), sink=sys.stdout, steps=steps))
 
 
 def _spawn_signal_wrapper_program(
-    delivered_signal: signal.Signals, pid_path: Path, signal_path: Path
+    delivered_signal: signal.Signals,
+    pid_path: Path,
+    signal_path: Path,
 ) -> str:
     """Return a wrapper that raises a forwarded signal during production spawn."""
     return f"""
@@ -281,6 +286,7 @@ def _assert_failed_signal_summary(
 
 def assert_signals_terminate_process_groups_within_grace() -> None:
     """Exercise every forwarded signal against a real in-flight child group."""
+    assert_signal_shutdown_waits_are_bounded()
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -310,6 +316,7 @@ def assert_signals_terminate_process_groups_within_grace() -> None:
 
 def assert_spawn_window_signals_reach_child_groups() -> None:
     """Exercise every forwarded signal raised during production child spawn."""
+    assert_signal_shutdown_waits_are_bounded()
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -318,7 +325,9 @@ def assert_spawn_window_signals_reach_child_groups() -> None:
             orchestrator = _spawn_wrapper(
                 root / "spawn_signal_wrapper.py",
                 _spawn_signal_wrapper_program(
-                    delivered_signal, grandchild_pid_path, grandchild_signal_path
+                    delivered_signal,
+                    grandchild_pid_path,
+                    grandchild_signal_path,
                 ),
             )
             child_pid: int | None = None

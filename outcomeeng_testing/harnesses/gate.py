@@ -536,7 +536,7 @@ def assert_gate_compliance_contract() -> None:
         f"(the production adapter); found: {importers}"
     )
 
-    _assert_signal_shutdown_waits_are_bounded()
+    assert_signal_shutdown_waits_are_bounded()
 
     source_text = validation_package_source_text()
     assert "gh run watch" not in source_text
@@ -1557,7 +1557,7 @@ class BoundedAdvancingClock:
         self.current += seconds
 
 
-def _assert_signal_shutdown_waits_are_bounded() -> None:
+def assert_signal_shutdown_waits_are_bounded() -> None:
     assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
     grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
     sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
@@ -1583,6 +1583,7 @@ __all__ = [
     "RecordingSpawner",
     "SignalRaisingSpawner",
     "SpawnFailingSpawner",
+    "assert_signal_shutdown_waits_are_bounded",
 ]
 
 

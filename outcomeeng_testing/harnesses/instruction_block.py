@@ -406,6 +406,7 @@ def scenario_evidence_contract() -> tuple[str, ...]:
         "cli_rejects_non_directory_repo_root",
         "cli_rejects_root_symlink_escaping_repo",
         "cli_rejects_spx_symlink_during_language_detection",
+        "cli_rejects_template_without_frontmatter_version",
         "cli_write_without_repo_root_exits",
         "diverged_shared_region_reconciles_to_more_recent_side",
         "duplicate_shared_region_name_is_malformed",
