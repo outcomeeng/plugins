@@ -38,7 +38,7 @@ The `/internal-doc-standards` catalog encodes this calibration. The inherited pr
 
 5. Apply the positive patterns. Scannable headings, concrete examples, decisive language, action labels, cross-links to canonical sources.
 
-6. Apply the formatting overrides where they help. Bold for inline key terms on first introduction. Parens for acronym definitions and clarifying lists. Definition lists instead of bold-first bullets. Italics for terms being defined and document titles.
+6. Apply the formatting overrides where they help. `/internal-doc-standards` `<overrides>` carries them with worked examples; each one relaxes a prose-standards rule that internal docs need back.
 
 7. Audit before publishing. Run `/audit-internal-docs` on the draft. Fix flagged violations. The catalog's `<success_criteria>` section is the minimum check.
 

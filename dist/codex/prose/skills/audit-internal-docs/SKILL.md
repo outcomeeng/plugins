@@ -32,7 +32,7 @@ Apply two tests before reviewing. Ownership first: when a repository or domain w
 
 3. Read the document being reviewed.
 
-4. Flag each violation. Name the specific pattern and the category it belongs to. The category labels match the catalog sections: inherited word choice, inherited sentence structure, inherited tone, inherited composition, inherited formatting, internal-doc heading rules, internal-doc metadata rules, internal-doc cross-reference rules, internal-doc list and table rules.
+4. Flag each violation. Name the specific pattern and the category it belongs to, drawing the category from the `<what_to_check>` sweep list.
 
 5. Propose a concrete rewrite for each flag. Don't just say "avoid X" — show the fixed text. The rewrite makes the suggestion actionable and lets the user accept or modify it directly.
 
@@ -54,13 +54,30 @@ When the document is governed elsewhere per `<artifact_ownership>`, emit no flag
 </verdict_format>
 
 <what_to_check>
-Apply the catalog systematically.
+Sweep every category below. `/internal-doc-standards` carries the rule text and the examples; this list names the categories so no section goes unswept.
 
-Inherited rules from `/prose-standards`. Word choice anti-patterns (significance adverbs, authenticity adverbs, overused vocabulary, ornate nouns, pompous verbs). Sentence-structure anti-patterns (negative parallelism, stacked negations, rhetorical self-answers, anaphora abuse, tricolon stacking, filler transitions, gerund fragment litanies). Tone anti-patterns (false suspense, unnecessary metaphors, hypothetical openers, asserted clarity, grandiose stakes inflation, teacher-student condescension). Composition anti-patterns (fractal summaries, dead metaphors, signposted conclusions, dismissive optimism). Formatting anti-patterns: em-dash overuse remains forbidden, unicode decoration remains forbidden.
+Inherited categories, from that catalog's `<inherited_rules>`:
 
-Internal-doc-specific rules from `/internal-doc-standards`. The opening sentence must be the substantive lead, not metadata or boilerplate. Headings must be sentence case with no end punctuation. Acronyms must be defined on first introduction and reused at least twice. Concepts with canonical homes must be linked inline. Metadata must live in document properties, not opening prose. Bold must mark inline key terms on first introduction, not act as general emphasis. Italics must mark defined terms and document titles, not substitute for bold.
+- Word choice
+- Sentence structure
+- Paragraph structure
+- Tone
+- Composition
+- Formatting
 
-Internal-doc-specific overrides. Don't flag a parens-clarification that the override allows. Don't flag a bold table-cell label that the override allows. Don't flag an italic structural label in a repeated pattern that the override allows. The internal-doc catalog explicitly permits these patterns; flagging them would be a mistake.
+Internal-doc categories, from its `<additional_rules>` and `<success_criteria>`:
+
+- Lead-first opening
+- Heading case and parent-title repetition
+- Metadata placement
+- Acronym definition and reuse
+- Cross-reference linking
+- Bold and italic usage
+- List and table shape
+- Callout density
+- Decisive language and action labels
+
+Overrides, from its `<overrides>`: parens that aid clarity, bold table-cell labels, bold inline paragraph introducers, and italic structural labels in repeated patterns. Read the override text before flagging any of these — the catalog permits them deliberately, so a flag against one is a false positive.
 </what_to_check>
 
 <success_criteria>
@@ -70,7 +87,7 @@ Every flag carries all four `<verdict_format>` parts — Pattern, Category, Quot
 
 The summary's violation count matches the number of flags actually listed, and the category it names as most frequent is the one those flags carry most often.
 
-Co-occurring patterns in a single sentence are flagged as highest priority. A sentence that contains an em-dash, a significance adverb, and a parenthetical aside used for emphasis is three violations in one place and deserves explicit attention.
+A sentence carrying two or more co-occurring patterns produces one flag naming every pattern present, and those flags are listed before the single-pattern ones. A sentence with an em-dash, a significance adverb, and a parenthetical aside used for emphasis yields one flag naming all three, never three separate flags.
 
 The audit applies the internal-doc overrides correctly. Parens that aid clarity are not flagged. Bold table-cell labels are not flagged. Italic structural labels in repeated patterns are not flagged.
 
