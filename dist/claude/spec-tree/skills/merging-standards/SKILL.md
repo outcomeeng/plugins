@@ -33,6 +33,23 @@ If `spx/local/merging.md` is absent or silent on a topic, the defaults in this r
 The overlay cannot override the topology state. Once `VERIFICATION_READINESS` holds, a peer PR is created `ready_for_review`; a stacked PR is created draft and stays draft per `<branch_topology>` until its base merges. No other draft phase or gated draft-to-ready promotion exists.
 </repo_local_overlay>
 
+<resolved_contracts>
+Resolve repository specialization once, while loading this reference, and expose these named contracts to every lifecycle protocol:
+
+- `transport_selection_contract` — optional transport override (`manage-github-pr` or `direct-push`). Default: no override.
+- `verification_contract` — touched-scope deterministic commands and escalation rules, optional terminal full deterministic command, required evidence-auditor predicates, required checks, and governance-surface paths used by base-sync preservation. Defaults: project-declared touched-scope commands, no terminal full command, transport-required evidence predicates and checks, and no additional governance surfaces.
+- `pre_mutation_confirmation_contract` — whether a structured confirmation is required before the first lifecycle mutation. Default: `required=false`.
+- `safety_contract` — ordered preflight checks and ordered post-cleanup checks, including applicability and failure handling. Defaults: empty lists.
+- `publication_contract` — branch-push command, explicit destination-ref requirement, and `<pr_opening_specialization>`. Default push: the portable explicit-destination command from `<push_semantics>`; opening lists default empty.
+- `direct_push_contract` — checkout strategy, destination ref, push command, and required checks for the direct-push transport. Defaults: the portable direct-push lifecycle and no additional checks.
+- `merge_execution_contract` — merge strategy, exact merge command, and cleanup mode. Default: rebase merge with `--delete-branch=false` followed by worktree-safe manual cleanup from `<merge_cleanup>`.
+- `reviewer_trigger_contract` — mention-reviewer trigger phrase. Default: `@spec-tree`.
+- `delivery_phase_contract` — ordered preview, deploy, and release actions with their authorization predicates. Defaults: each phase is a no-op.
+- `project_command_contract` — the union of commands carried by the resolved contracts, with order, applicability, expected result, and failure handling preserved. A protocol may also receive a command from the product's root guide when another governing workflow selects it.
+
+Protocol skills consume these values as resolved data. They MUST NOT reopen specialization discovery, reinterpret repository prose, or substitute a similarly named command from another document. A resolved command outside a protocol skill's narrow approval-free grants runs through the harness's normal per-call approval path; when that path is unavailable, the protocol emits `MERGE_BLOCKED:project-command-approval-unavailable` with the blocked command and contract name.
+</resolved_contracts>
+
 <pr_opening_specialization>
 Resolve the optional overlay's PR-opening configuration into one contract before `/open-pr` starts publication:
 

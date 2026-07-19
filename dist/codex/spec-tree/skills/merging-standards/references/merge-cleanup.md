@@ -2,15 +2,15 @@
 
 Once `MERGE_READINESS` authorizes the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, merge and clean up only in the assigned worktree. Never detach, clean, or delete a branch in a worktree a live agent holds.
 
-Run every overlay-declared preflight check before the merge command and every post-cleanup check after detaching and before branch deletion. Use the overlay's merge flag; the default is `--rebase`. Always pass `--delete-branch=false` so branch cleanup remains explicit and worktree-safe.
+Run every command in `safety_contract.pre_mutation_checks` before the merge command and every command in `safety_contract.post_cleanup_checks` after detaching and before branch deletion. Use `merge_execution_contract.merge_flag`; the default is `--rebase`. Always pass `--delete-branch=false` so branch cleanup remains explicit and worktree-safe.
 
 ```bash
 base_from_pr=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch_from_pr=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-gh pr merge <pr-number> <overlay-merge-flag-or---rebase> --delete-branch=false
+gh pr merge <pr-number> <resolved-merge-flag-or---rebase> --delete-branch=false
 git fetch origin "$base_from_pr"
 git switch --detach "origin/$base_from_pr"
-# Run every post-cleanup check declared by spx/local/merging.md here; continue only when all pass.
+# Run safety_contract.post_cleanup_checks here; continue only when all pass.
 remote_branch_status=0
 git ls-remote --exit-code --heads origin "$branch_from_pr" >/dev/null || remote_branch_status=$?
 case "$remote_branch_status" in

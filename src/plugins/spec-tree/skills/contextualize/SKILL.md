@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Skill
 
 <objective>
 
-A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a product-root or node target — every applicable ancestor spec, lower-index sibling spec, ADR, PDR, cited methodology-governance decision, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
+A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a product-root or node target — every applicable ancestor spec, lower-index sibling spec, ADR, PDR, cited methodology-governance decision, and guide file read into the conversation, with local overlays enumerated for their governing skills and no heuristic selection.
 
 </objective>
 
@@ -106,9 +106,6 @@ Glob: "spx/ISSUES.md"
 
 # Enumerate local overlays
 Glob: "spx/local/*.md"
-
-# Read local lifecycle overlay if present
-Read: spx/local/merging.md  (if exists)
 ```
 
 **Read EVERY file returned by the ADR/PDR globs.** Do not filter by title. Decision records contain cross-cutting constraints that may not be obvious from the title.
@@ -119,7 +116,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Coordination notes**: Read product-level `PLAN.md` and `ISSUES.md` when present. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
 
-**Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
+**Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest without reading them. Each governing standards skill owns its overlay; `/merging-standards` is the sole merge-lifecycle reader and interpreter of `spx/local/merging.md`. The transport-neutral default-branch completion boundary comes from the live foundation and does not require repository specialization.
 
 </step>
 
@@ -267,8 +264,8 @@ Test links: {list from target spec, full paths resolved from target} | none
 Co-located tests: {count} listed | none
 Implementation: unknown unless already established by a prior workflow
 Coordination notes: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
-Local skill overlays: {comma-separated list from spx/local/} | none
-Lifecycle overlays read: spx/local/merging.md | none
+Local skill overlays listed: {comma-separated list from spx/local/} | none
+Merge specialization: unresolved here; /merging-standards reads and resolves the optional spx/local/merging.md when the merge lifecycle begins
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; local verification, review, audit, and commits are progress, not completion, while the branch carries changes ahead of its resolved base
 Governed next workflow: /merge after local verification when the work changes files and is destined for the default branch, unless explicitly scoped to proposal, analysis, review, or local-only work, or stopped at an explicit lifecycle gate with no independent local action remaining
 Progress verdict rule: status and progress answers must classify the lifecycle as complete, continuing, or blocked; a clean worktree, committed branch, or passing local gate cannot classify default-branch work as complete while changes remain ahead of the resolved base
@@ -326,7 +323,7 @@ Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without th
 
 **Failure 6: Omitted lifecycle continuation from the context marker**
 
-Claude loaded `/understand`, completed edits, passed deterministic verification, committed the branch, then stopped because the context packet carried document context but no branch-lifecycle state. Context loading now reads `spx/local/merging.md` when present and records the default-branch completion boundary plus `/merge` continuation in `<SPEC_TREE_CONTEXT>`, so local readiness is not mistaken for delivered value.
+Claude loaded `/understand`, completed edits, passed deterministic verification, committed the branch, then stopped because the context packet carried document context but no branch-lifecycle state. Context loading records the transport-neutral default-branch completion boundary plus `/merge` continuation in `<SPEC_TREE_CONTEXT>` while leaving repository specialization to `/merging-standards`, so local readiness is not mistaken for delivered value and the overlay keeps one reader.
 
 **Failure 7: Treated status reporting as permission to stop**
 
@@ -368,8 +365,8 @@ Context loading is complete when:
 - [ ] Implementation state reported as unknown unless a prior workflow already established it
 - [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at product root, each ancestor, and target
 - [ ] Coordination-note citations excluded from cited-governance loading
-- [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
-- [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
+- [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest without being read
+- [ ] Lifecycle continuation state emitted from the transport-neutral foundation; merge specialization left to `/merging-standards`
 - [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`

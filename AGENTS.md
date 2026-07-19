@@ -102,7 +102,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merge` reads `spx/local/merging.md` as a repo-local overlay **when that file is present**; the overlay is optional, so its absence is normal and not a blocker — `/merge` applies the default lifecycle. `spx/local/merging.md` is the one place repository-specific merge behavior belongs: never infer the transport from other docs when it is absent, and never edit this generated instruction block to change merge behavior — invoke `/merge` and let the lifecycle apply the defaults. The three authority gates, the delivered-value boundary, and the finding-disposition rule are transport-neutral and live in `/merging-standards`.
+Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merging-standards` is the sole merge-lifecycle reader and interpreter of the optional `spx/local/merging.md` specialization; it resolves repository-specific values into named contracts that `/merge` and the transport protocols consume. The specialization's absence is normal and applies the default lifecycle. Never infer transport behavior from other docs, and never edit this generated instruction block to change merge behavior. The four authority gates, delivered-value boundary, and finding-disposition rule are transport-neutral and live in `/merging-standards`.
 
 ## Stop Triggers
 
@@ -630,7 +630,7 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### Autonomy
 
-The managed Spec Tree instruction block in this root file is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it classifies the changeset, reads `spx/local/merging.md` when present, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from the product-owned root instruction content.
+The managed Spec Tree instruction block in this root file is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it loads `/merging-standards`, consumes the named contracts that skill resolves from optional repository specialization, classifies the changeset, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from the product-owned root instruction content.
 
 The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the governing skill flow. The only permitted direct git/GitHub command forms are those an active skill or this repository command section names exactly.
 
@@ -638,7 +638,7 @@ The autonomy does **not** cover blind force-push (`git push --force`), force-pus
 
 ### Lifecycle
 
-The lifecycle authority is: the managed Spec Tree instruction block routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `AGENTS.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
+The lifecycle authority is: the managed Spec Tree instruction block routes to skills; `/merging-standards` alone reads and interprets `spx/local/merging.md` and resolves named contracts; `/merge`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` consume those contracts. Root `AGENTS.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
 
 ### Marketplace Publish Commands
 

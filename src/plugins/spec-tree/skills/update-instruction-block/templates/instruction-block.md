@@ -109,7 +109,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merge` reads `spx/local/merging.md` as a repo-local overlay **when that file is present**; the overlay is optional, so its absence is normal and not a blocker — `/merge` applies the default lifecycle. `spx/local/merging.md` is the one place repository-specific merge behavior belongs: never infer the transport from other docs when it is absent, and never edit this generated instruction block to change merge behavior — invoke `/merge` and let the lifecycle apply the defaults. The three authority gates, the delivered-value boundary, and the finding-disposition rule are transport-neutral and live in `/merging-standards`.
+Every change destined for the default branch routes through `/merge`, the transport dispatcher — it classifies the changeset, selects the transport, and delegates. `/merging-standards` is the sole merge-lifecycle reader and interpreter of the optional `spx/local/merging.md` specialization; it resolves repository-specific values into named contracts that `/merge` and the transport protocols consume. The specialization's absence is normal and applies the default lifecycle. Never infer transport behavior from other docs, and never edit this generated instruction block to change merge behavior. The four authority gates, delivered-value boundary, and finding-disposition rule are transport-neutral and live in `/merging-standards`.
 
 ## Stop Triggers
 

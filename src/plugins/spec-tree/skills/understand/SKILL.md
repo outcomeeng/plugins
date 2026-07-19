@@ -443,7 +443,7 @@ Coordination notes are stale-prone inputs. Reconcile every loaded `PLAN.md` or `
 - `ISSUES.md` carries known defects, contradictions, gaps, and untestable assertions.
 - Session files remain operational state outside Git; they never replace node-local coordination.
 
-`spx/local/` holds product-specific overlays for coding, architecture, testing, and lifecycle skills. Enumerate overlays during context loading and read each only when its governing skill requires it. `spx/local/merging.md` is the optional lifecycle overlay read by `/merge` and `/contextualize`.
+`spx/local/` holds product-specific overlays for coding, architecture, testing, and lifecycle skills. Enumerate overlays during context loading and read each only when its governing standards skill requires it. `/merging-standards` is the sole merge-lifecycle reader and interpreter of the optional `spx/local/merging.md`; `/understand`, `/contextualize`, `/merge`, and transport protocols never read it.
 
 </coordination_and_context>
 
@@ -466,7 +466,7 @@ A blocker exists only when the immediate next action needs operator input or an 
    - `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`
    - `spx/local/*.md`
      Node-local `PLAN.md` and `ISSUES.md` discovery belongs to `/contextualize` after a node is in scope; never enumerate coordination notes during `/understand`.
-4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
+4. Do not read local overlays. Changes destined for the default branch route through `/merge`; `/merging-standards` resolves the optional merge specialization into named contracts when that lifecycle begins.
 5. Locate the five authoring templates and `${CLAUDE_SKILL_DIR}/examples/*.md`; read them only when authoring:
    - `${CLAUDE_SKILL_DIR}/templates/product/product-name.product.md`
    - `${CLAUDE_SKILL_DIR}/templates/decisions/decision-name.adr.md`
@@ -480,7 +480,7 @@ A blocker exists only when the immediate next action needs operator input or an 
 <SPEC_TREE_FOUNDATION>
 Loaded inline: truth-hierarchy, artifact-placement, node-model, assertion-model, ordering-model, verification-model, imperfection-protocol
 Operational references available: excluded-nodes, product-domain-shapes
-Local lifecycle route: changes route through /merge; spx/local/merging.md refines the route when present
+Local lifecycle route: changes route through /merge; /merging-standards resolves optional repository specialization into named contracts when the lifecycle begins
 Default-branch completion boundary: delivered value reaches the default branch on origin through /merge; verified local work remains unfinished unless explicitly limited or stopped at an explicit gate with no independent action remaining
 Routing guide: loaded from {{! file('root_guide') !}} | absent
 Templates available: product, adr, pdr, enabler, outcome

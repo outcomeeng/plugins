@@ -1,6 +1,6 @@
 # Marketplace Merge Rules
 
-Loaded by `/merging-standards` `<repo_local_overlay>` and `/merge`. The product-specific values the merge skills read; the gates, transport selection, and protocols are injected by those skills.
+Loaded only by `/merging-standards` `<repo_local_overlay>`. It resolves these product-specific values into named contracts consumed by `/merge` and the transport protocols.
 
 ## Deployment and release recognition
 
