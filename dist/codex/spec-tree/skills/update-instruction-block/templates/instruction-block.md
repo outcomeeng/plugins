@@ -403,14 +403,14 @@ Use this shape for skill audits:
 }
 ```
 
-Use this shape for subagent audits:
+Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one verified `subagent-auditor` per file: acquire each handle sequentially, then let the role tasks run concurrently.
 
 ```json
 {
   "tool": "multi_agent_v1.send_input",
   "arguments": {
     "target": "<verified-subagent-auditor-agent-id>",
-    "message": "Repository: <absolute-repository-path>\nCustom agent files: <full paths to changed .codex/agents/*.toml or ~/.codex/agents/*.toml files>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nCustom agent file: <full path to one changed .codex/agents/*.toml or ~/.codex/agents/*.toml file>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
   }
 }
 ```
@@ -434,7 +434,7 @@ Use this shape for subagent audits:
 - `spec-auditor`: repository path, full node path, and the task to audit assertion quality, evidence tags, atemporal voice, decision alignment, and structure. Its final message MUST be `APPROVED` or `REJECTED`; rejection lists concrete findings with full paths, governing rules, and required fixes.
 - `adr-auditor` or `pdr-auditor`: repository path, full decision path, governing node, committed audit scope, and the role's decision-audit task; ADR tasks also carry the language-scope classification. The final message MUST follow that auditor's structured verdict contract without a competing prose envelope.
 - `skill-auditor`, when that configured role is installed: repository path, changed skill-content paths, governing nodes when known, deterministic verification state, and the skill-authoring audit task. Its final message MUST be the `instructions:audit-skills` JSON verdict with `schema_version: 1`, `skill: "audit-skills"`, `overall: "APPROVED" | "REJECTED"`, and the `keep-these-aspects`, `worth-improving`, and `must-fix` rows. Treat `overall` as authoritative. Malformed JSON, a missing required field or row, an unexpected `skill`, or an `overall` value outside that vocabulary blocks the gate.
-- `subagent-auditor`, when that configured role is installed: repository path, changed custom agent configuration paths in the active agent harness's native format, governing nodes when known, deterministic verification state, and the subagent-authoring audit task. Its final message MUST be the `instructions:audit-subagents` JSON verdict with `schema_version: 1`, `skill: "audit-subagents"`, `overall: "APPROVED" | "REJECTED"`, and the `critical-issues`, `recommendations`, `strengths`, and `quick-fixes` rows. Treat `overall` as authoritative. Malformed JSON, a missing required field or row, an unexpected `skill`, or an `overall` value outside that vocabulary blocks the gate.
+- `subagent-auditor`, when that configured role is installed: repository path, exactly one changed custom agent configuration path in the active agent harness's native format, governing nodes when known, deterministic verification state, and the subagent-authoring audit task. Multiple changed configurations require separate `subagent-auditor` dispatches, one per path; acquire their handles sequentially and let their role tasks run concurrently. Each final message MUST be the `instructions:audit-subagents` JSON verdict with `schema_version: 1`, `skill: "audit-subagents"`, `overall: "APPROVED" | "REJECTED"`, and the `critical-issues`, `recommendations`, `strengths`, and `quick-fixes` rows. Treat `overall` as authoritative. Malformed JSON, a missing required field or row, an unexpected `skill`, or an `overall` value outside that vocabulary blocks the gate.
 
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |

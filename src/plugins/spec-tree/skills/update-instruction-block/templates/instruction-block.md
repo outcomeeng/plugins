@@ -403,14 +403,14 @@ Use this shape for skill audits:
 }
 ```
 
-Use this shape for subagent audits:
+Use this shape for one subagent audit. When several custom-agent configurations changed, dispatch one verified `subagent-auditor` per file: acquire each handle sequentially, then let the role tasks run concurrently.
 
 ```json
 {
   "tool": "multi_agent_v1.send_input",
   "arguments": {
     "target": "<verified-subagent-auditor-agent-id>",
-    "message": "Repository: <absolute-repository-path>\nCustom agent files: <full paths to changed .codex/agents/*.toml or ~/.codex/agents/*.toml files>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nCustom agent file: <full path to one changed .codex/agents/*.toml or ~/.codex/agents/*.toml file>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
   }
 }
 ```
