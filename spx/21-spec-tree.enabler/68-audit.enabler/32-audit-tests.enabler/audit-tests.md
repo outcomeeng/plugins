@@ -25,7 +25,7 @@ A test missing any property has zero evidentiary value regardless of code qualit
 
 ## Coupling Taxonomy
 
-The `/audit-tests` skill in the spec-tree plugin classifies test coupling into distinct categories, each with a different audit response:
+The `/audit-tests` skill loads the same test-evidence standards as `/test`, then classifies test coupling into distinct categories, each with a different audit response:
 
 | Category           | Definition                                                                                                                                              | Verdict                                                                                 |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -76,11 +76,11 @@ Every other literal must come from one of three sources:
 
 Static-literal fixture files are not a valid source. A fixture that exports a hardcoded string or number recreates the laundered indirect coupling pattern under a fixture name.
 
-## Test File Declaration Rule
+## Test Predicate and Binding Rule
 
-Executed test files are typed assertion files only. They do not own test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior. Any variable, constant, framework fixture parameter, or property-generated parameter in a test file is evidence that the test is owning a value the evidence chain should source elsewhere. The audit records the binding before applying the literal rule, then names the proper owner: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable.
+Executed test files are typed assertion files whose functions or callbacks own every behavioral predicate and assertion API call. Harnesses, generators, fixtures, and controlled collaborators expose observations, generated values, or resource handles; they never accept expected outcomes, return pass/fail verdicts, call assertion APIs, or expose verdict-shaped helpers.
 
-Renaming a declaration to evade a case-based validation rule does not change ownership. A runner setting such as a property-test run count is test configuration and belongs in a harness. A boundary value or expected output belongs in a generator, source contract, or justified fixture/eval case. The test file keeps the assertion flow; infrastructure owns reusable choices.
+Bindings are classified by semantic choice. A binding that only receives or renames an imported source contract, generated value, harness observation, callback input, or fixture-path handle is valid when it introduces no data or policy. A binding that chooses a case, expected output, runner setting, seed, retry policy, setup policy, fixture payload, generator domain, or verdict rule is rejected and routed to its proper owner. Renaming never changes ownership.
 
 ## Positive Pattern
 
@@ -101,10 +101,13 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([audit])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([audit])
 - ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([audit])
+- ALWAYS: load and apply the same shared test-evidence standard used by `/test` before judging predicate ownership, semantic bindings, assertion-type case provenance, or oracle independence ([audit])
+- ALWAYS: require every behavioral predicate and assertion API call to remain lexically in the linked executed test function or callback; reject verdict logic in harnesses, generators, fixtures, controlled implementations, and recording collaborators ([audit])
 - ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the caller and CI own coverage measurement, per `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([audit])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([audit])
-- ALWAYS: detect every variable, constant, framework fixture parameter, and property-generated parameter in executed test files before approving evidence, reject every such binding, and name the proper owner for the value or configuration: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable ([audit])
+- ALWAYS: classify every test-file binding by what it chooses; permit observation and handle aliases that introduce no data or policy, reject bindings that choose data, expectations, configuration, setup policy, or verdict rules, and name the proper semantic owner ([audit])
+- ALWAYS: apply assertion-type litmus questions to scenario, mapping, property, conformance, and compliance cases, including whether the case source and oracle are independent of the implementation author and production path under test ([audit])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([audit])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([audit])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([audit])
