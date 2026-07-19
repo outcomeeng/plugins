@@ -262,7 +262,7 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
         ),
     ),
 )
-DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — discover deferred agent tools before reporting an agent unavailable.**"
+DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — in the main authoring conversation, discover deferred agent tools before reporting an agent unavailable.**"
 DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
     ("complete registry", "complete deferred-tool registry"),
