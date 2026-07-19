@@ -34,7 +34,7 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
 <workflow>
 
 1. Interpret `$ARGUMENTS` as one low-level operation, one delegation request, or one terminal handback. When it is empty, require a concrete operation before running the adapter.
-2. For `list`, `agents`, `read`, or `send`, build this source-owned request shape and set only arguments the operation accepts:
+2. For `list`, `agents`, `read`, `send`, or `open`, build this source-owned request shape and set only arguments the operation accepts:
 
 ```json
 {
@@ -43,6 +43,8 @@ A selector is exactly one of `target`, `worktree`, `tab`, or `pane`. Preserve it
   "arguments": {}
 }
 ```
+
+For `open`, set `operation` to `open` and set `arguments` to either `{}` or `{"path":"<complete-source-supplied-path>"}`. Treat both forms as non-mutating and never add `mutationAuthorized`.
 
 3. For `key`, `focus`, `tab-create`, `tab-close`, or `pane-close`, require an explicit user instruction authorizing that exact external mutation in the same turn. When authorization is absent, use `request_user_input` with the exact operation and complete target identity; do not run the adapter. After authorization, add `"mutationAuthorized": true` inside `arguments`.
 4. Submit a low-level request over stdin.
@@ -117,6 +119,14 @@ A complete inline result uses `inlineResult`. A durable result uses `resultRefer
 Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Cover every operation mapping, public JSON success and failure, exact participant projection, mutation rejection before command construction, delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
 
 </testing>
+
+<failure_modes>
+
+**A selectorless tab creation was rejected.** Claude applied the shared selector requirement to `tab-create`, even though the public operation accepts both selectorless and selected forms. The shared request builder hid the operation-specific shape. Build `tab-create` from its declared optional-selector contract and preserve optional `path` independently.
+
+**An advertised operation had no construction branch.** Claude listed `open` in the public surface but grouped only list, agents, read, and send into the non-mutating workflow. Executors then had to infer the request shape. Keep every advertised operation in an explicit construction branch; `open` accepts empty arguments or one source-supplied `path`.
+
+</failure_modes>
 
 <success_criteria>
 
