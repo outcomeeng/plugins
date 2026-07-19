@@ -1,7 +1,7 @@
 ---
 name: create-skill
 description: >-
-  ALWAYS invoke this skill when creating, editing, or improving skills or bundled skill components, including SKILL.md, workflows, references, templates, or scripts.
+  ALWAYS invoke this skill when creating, editing, or improving SKILL.md files or bundled workflows, references, templates, and scripts; explaining skill patterns; or verifying that skill content is current.
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill, WebFetch, WebSearch
 ---
 
