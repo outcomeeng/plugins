@@ -266,7 +266,9 @@ DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — discover def
 DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
     ("complete registry", "complete deferred-tool registry"),
-    ("registry capability", "`functions.exec`/`ALL_TOOLS`"),
+    ("top-level registry capability", "top-level `functions.exec`"),
+    ("deferred registry", "inspect `ALL_TOOLS`"),
+    ("nested shell distinction", "Treat `exec_command` as the nested shell tool"),
     ("typed spawn schema", "typed `spawn_agent`"),
     ("available roles", "`Available roles`"),
     ("exact role authority", "exact match proves availability"),
