@@ -10,6 +10,12 @@ The consequence is that `[eval]` evidence cannot couple to this skill. An eval m
 
 This is larger than a routing-boundary change: it redesigns the skill's output contract, touches the sibling `audit-prose`, and changes what evidence class the node's assertions carry.
 
+## Reference-skill `<success_criteria>` prove a downstream document, not the catalog
+
+`internal-doc-standards` and `prose-standards` both state `<success_criteria>` as properties of a document that applied the catalog — opening sentence substantive, acronyms reused twice, em dashes under three. Each `<objective>` names the catalog itself as the output, so neither file's criteria prove the artifact the skill produces. Nothing checks that every rule in `<inherited_rules>`, `<overrides>`, and `<additional_rules>` carries a worked Avoid/Prefer pair, which is the property that would establish the catalog is sound.
+
+Both reference skills carry the identical shape, so the fix belongs to the pair rather than to one file: correcting `internal-doc-standards` alone would leave the two siblings inconsistent for readers who compose them together. The resolution is one criterion per catalog verifying the catalog's own completeness, kept alongside the document-facing checklist that consumers rely on.
+
 ## Skill-delegation `Skill` allowed-tools gap — PR3 (prose half) (CLOSED)
 
 **Closed (branch `fix/skill-delegation-allowed-tools-develop-prose`, shipped with the develop half).**
