@@ -10,6 +10,10 @@ allowed-tools: Read
 The shared test-evidence standards that keep predicates in linked tests and cases independent from the implementation they verify.
 </objective>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, or oracle rule this reference states.
+</repo_local_overlay>
+
 <predicate_seam>
 
 The linked executed test function or callback owns every behavioral predicate and every assertion API call. A harness may establish context, manage resources, execute behavior, and pass observations or handles to the test. A harness, generator, fixture, controlled implementation, or recording collaborator NEVER:
