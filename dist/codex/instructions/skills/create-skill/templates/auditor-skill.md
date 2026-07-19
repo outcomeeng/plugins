@@ -2,11 +2,11 @@
 name: "audit-{{subject}}"
 description: >-
   {{Subject}} audit methodology — judges {{target}} against {{governing standards}}.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <objective>
-An `APPROVED` or `REJECTED` verdict on {{scope}} against {{governing standards}}, with every rejected finding naming the artifact location, violated rule, and evidence.
+An `APPROVED` or `REJECTED` verdict on {{scope}} against {{governing standards}}, with findings grouped as {{category one}}, {{category two}}, and {{category three}}; every rejected finding names the artifact location, violated rule, and evidence.
 </objective>
 
 <constraints>
@@ -32,12 +32,17 @@ An `APPROVED` or `REJECTED` verdict on {{scope}} against {{governing standards}}
 {
   "overall": "APPROVED | REJECTED",
   "scope": "{{exact audited scope}}",
-  "findings": [
+  "rows": [
     {
-      "artifact": "{{path and line or section}}",
-      "rule": "{{violated rule}}",
-      "evidence": "{{falsifiable evidence}}",
-      "required_fix": "{{correction required for approval}}"
+      "name": "{{category one | category two | category three}}",
+      "findings": [
+        {
+          "artifact": "{{path and line or section}}",
+          "rule": "{{violated rule}}",
+          "evidence": "{{falsifiable evidence}}",
+          "required_fix": "{{correction required for approval}}"
+        }
+      ]
     }
   ]
 }

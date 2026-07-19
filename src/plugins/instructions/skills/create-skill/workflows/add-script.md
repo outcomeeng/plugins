@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including the script-standards reference named by `/skill-standards` `<script_standards>`. Read `spx/local/skills.md` when the target repository provides it. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
+Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md` and the script-standards reference named by `<script_standards>`. Read `spx/local/skills.md` when the target repository provides it. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
 
 </required_reading>
 

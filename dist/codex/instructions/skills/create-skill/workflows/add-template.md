@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it. Read every existing template and consuming workflow in the target skill before adding another.
+Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `spx/local/skills.md` when the target repository provides it. Read every existing template and consuming workflow in the target skill before adding another.
 
 </required_reading>
 

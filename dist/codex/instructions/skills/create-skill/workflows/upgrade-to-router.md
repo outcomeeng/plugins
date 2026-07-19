@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`. Read `spx/local/skills.md` when the target repository provides it. Read `${SKILL_DIR}/templates/router-skill.md` before rewriting the target.
+Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md`. Read `spx/local/skills.md` when the target repository provides it. Read `${SKILL_DIR}/templates/router-skill.md` before rewriting the target.
 
 </required_reading>
 
