@@ -410,7 +410,7 @@ Use this shape for subagent audits:
   "tool": "multi_agent_v1.send_input",
   "arguments": {
     "target": "<verified-subagent-auditor-agent-id>",
-    "message": "Repository: <absolute-repository-path>\nSubagent files: <full paths to changed agents/*.md files>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed subagent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
+    "message": "Repository: <absolute-repository-path>\nCustom agent files: <full paths to changed .codex/agents/*.toml or ~/.codex/agents/*.toml files>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
   }
 }
 ```
