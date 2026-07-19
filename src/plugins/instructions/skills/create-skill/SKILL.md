@@ -15,7 +15,7 @@ A skill-authoring request routed to its matching typed workflow.
 
 <essential_principles>
 
-- Apply `/skill-standards` and the repository's `spx/local/skills.md` overlay before proposing any skill name.
+- Before any material skill change, apply `/skill-standards` and the repository overlay's required plugin-wide naming review.
 - Classify every skill name independently. A shared word, suffix, or grammatical number never establishes a batch rename.
 - Keep audit-only work read-only. Apply changes only when the operator requested creation or improvement.
 - Dispatch every skill audit through the typed `skill-auditor` role. If the role is unavailable or returns no complete structured verdict, report `BLOCKED`; never invoke `/audit-skills` in the authoring context.
@@ -61,7 +61,7 @@ What would you like to do?
 | 5, "add template"                                | `${CLAUDE_SKILL_DIR}/workflows/add-template.md`        |
 | 6, "add script"                                  | `${CLAUDE_SKILL_DIR}/workflows/add-script.md`          |
 | 7, "upgrade to router"                           | `${CLAUDE_SKILL_DIR}/workflows/upgrade-to-router.md`   |
-| 8, "patterns", "understand", "help"              | `${CLAUDE_SKILL_DIR}/workflows/understand-patterns.md` |
+| 8, "patterns", "understand patterns"             | `${CLAUDE_SKILL_DIR}/workflows/understand-patterns.md` |
 | 9, "verify content", "current"                   | `${CLAUDE_SKILL_DIR}/workflows/verify-skill.md`        |
 
 **After reading the workflow, follow it exactly.**
