@@ -25,7 +25,7 @@ An ADR's content is architecture — technology choices, data structures, implem
 
 **EVIDENCE TYPE MUST MATCH THE CLAIM.**
 
-Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance); `### Eval` → `[eval]`; `### Audit` → `[audit]`. `/test` selects the type; this audit verifies the selection is correct against the claim's shape — an audit that accepts any present tag verifies nothing, and the evidence type is the assertion's whole worth. The decisive check is the quantifier: a universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction. A missing tag, a bare mechanism tag (`[review]`/`[test]`), a tag disagreeing with its subsection, more than one tag, or an evidence type the `/test` router would not produce for the claim is a finding.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an assertion type (scenario, mapping, conformance, property, compliance); `### Eval` → `[eval]`; `### Audit` → `[audit]`. `/verify` selects the verification type, then `/test` selects the assertion type for a Testing rule; this audit verifies both selections fit the claim. The decisive assertion-type check is the quantifier: a universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction. A missing tag, an unsupported bare mechanism tag, a tag disagreeing with its subsection, more than one tag, or an assertion type the `/test` router would not produce for the claim is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -108,9 +108,9 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])`;
    - under `### Audit` → `([audit])`.
-2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+2. Under `### Testing`, the assertion type fits the claim's shape per the `/test` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 
-A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subsection, a missing tag, more than one tag, or an evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) is invalid.
+An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag, more than one tag, or an evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) is invalid.
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-tag." An evidence type that contradicts the claim's shape → REJECT — "evidence-type-mismatch."**
 
@@ -173,7 +173,7 @@ How to avoid: The ADR audit checks form — structure, voice, tag validity. Cont
 
 Claude saw a `### Testing` rule — a universal ALWAYS/NEVER claim — tagged `([scenario])`, and passed it because a tag was present and named one of the five evidence types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `/test` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
+How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
 
 </failure_modes>
 
