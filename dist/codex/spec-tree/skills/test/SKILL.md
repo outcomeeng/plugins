@@ -8,9 +8,21 @@ argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input
 ---
 
+<prerequisites>
+
+Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.
+
+</prerequisites>
+
 <objective>
 Spec-tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
 </objective>
+
+<shared_standards>
+
+`/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules that test authoring and test auditing both apply. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
+
+</shared_standards>
 
 <testing_methodology>
 
@@ -74,7 +86,7 @@ An executed test file is a typed assertion file. It owns the assertion flow: arr
 | Whole-payload samples            | Inert fixtures read, copied, or passed by path when the complete payload shape matters                                     |
 | Curated LLM/eval cases           | Eval case data when generating the case set as JSONL would be wasteful and not tractable                                   |
 
-Do not create variables, constants, fixture parameters, or property-generated parameters in the executed test file. Every value or configuration choice those bindings carry belongs in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Reject local functions that own runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, harness behavior, or source-owned singleton shapes. Naming a value or wrapping it in a local function does not make it evidence.
+Judge every binding — variable, constant, fixture parameter, property-generated parameter, alias, or local callback — by the semantic ownership rule in `/test-evidence-standards`. A binding may receive or rename a value an owning source already chose; it may never introduce a case, expected result, configuration choice, setup policy, generator domain, or verdict rule. Those belong in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independently owned oracle, or curated eval case data when generation is wasteful and not tractable. Naming a value or wrapping it in a local function never changes its owner.
 
 Property-based tests require reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. Failure output includes the seed and replay path. Seeds and run counts never live in the test file.
 
