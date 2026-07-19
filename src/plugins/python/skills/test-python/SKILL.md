@@ -75,6 +75,8 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 <verification>
 Run the product's canonical test, lint, and type commands — the ones its `{{! file('root_guide') !}}`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
+
 ```bash
 python3 -m pytest <node-path>/tests/ -v
 python3 -m ruff check <node-path>/tests/

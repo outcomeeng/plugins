@@ -48,6 +48,8 @@ If required evidence does not exist or lacks approval, return to the evidence wo
 
 Run the product's own canonical commands when it documents them — a `{{! file('root_guide') !}}` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
 
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
+
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
 ```bash
