@@ -59,6 +59,51 @@ REPOSITORY_OPTION = "--repo"
 HOST_OPTION = "--host"
 PULL_REQUEST_OPTION = "--pr"
 REVIEW_COMMENT_ID_OPTION = "--review-comment-id"
+GH_COMMAND = "gh"
+API_COMMAND = "api"
+GRAPHQL_RESOURCE = "graphql"
+HOSTNAME_OPTION = "--hostname"
+SILENT_OPTION = "--silent"
+RAW_FIELD_OPTION = "-f"
+TYPED_FIELD_OPTION = "-F"
+QUERY_FIELD = "query"
+ID_FIELD = "id"
+DATABASE_ID_FIELD = "databaseId"
+OWNER_FIELD = "owner"
+REPO_FIELD = "repo"
+NUMBER_FIELD = "number"
+THREADS_AFTER_FIELD = "threadsAfter"
+THREAD_ID_FIELD = "threadId"
+COMMENTS_AFTER_FIELD = "commentsAfter"
+DATA_FIELD = "data"
+REPOSITORY_FIELD = "repository"
+PULL_REQUEST_FIELD = "pullRequest"
+REVIEW_THREADS_FIELD = "reviewThreads"
+NODE_FIELD = "node"
+NODES_FIELD = "nodes"
+COMMENTS_FIELD = "comments"
+PAGE_INFO_FIELD = "pageInfo"
+HAS_NEXT_PAGE_FIELD = "hasNextPage"
+END_CURSOR_FIELD = "endCursor"
+ERROR_COMMENTS_NODES = "GitHub response comments.nodes must be a list"
+ERROR_COMMENTS_PAGE_INFO = "GitHub response comments.pageInfo must be an object"
+ERROR_COMMENTS_END_CURSOR = "GitHub response comments page is missing endCursor"
+ERROR_DATA = "GitHub response data must be an object"
+ERROR_NODE = "GitHub response node must be a PullRequestReviewThread object"
+ERROR_NODE_COMMENTS = "GitHub response node.comments must be an object"
+ERROR_REPOSITORY = "GitHub response repository must be an object"
+ERROR_PULL_REQUEST = "GitHub response pullRequest must be an object"
+ERROR_REVIEW_THREADS = "GitHub response reviewThreads must be an object"
+ERROR_REVIEW_THREADS_NODES = "GitHub response reviewThreads.nodes must be a list"
+ERROR_REVIEW_THREADS_PAGE_INFO = (
+    "GitHub response reviewThreads.pageInfo must be an object"
+)
+ERROR_REVIEW_THREADS_END_CURSOR = (
+    "GitHub response reviewThreads page is missing endCursor"
+)
+ERROR_COMMENT_NOT_FOUND = (
+    "review comment was not found after complete review-thread pagination"
+)
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -121,15 +166,84 @@ def graphql_argv(
     *,
     silent: bool = False,
 ) -> list[str]:
-    argv = ["gh", "api", "graphql"]
+    argv = [GH_COMMAND, API_COMMAND, GRAPHQL_RESOURCE]
     if host is not None:
-        argv.extend(["--hostname", host])
+        argv.extend([HOSTNAME_OPTION, host])
     if silent:
-        argv.append("--silent")
-    argv.extend(["-f", f"query={query}"])
+        argv.append(SILENT_OPTION)
+    argv.extend([RAW_FIELD_OPTION, f"{QUERY_FIELD}={query}"])
     for key, value in fields.items():
-        argv.extend(["-F", f"{key}={value}"])
+        argv.extend([TYPED_FIELD_OPTION, f"{key}={value}"])
     return argv
+
+
+def review_comment_payload(comment_id: str, database_id: int) -> dict[str, object]:
+    return {ID_FIELD: comment_id, DATABASE_ID_FIELD: database_id}
+
+
+def comments_connection_payload(
+    nodes: list[dict[str, object]],
+    *,
+    has_next: bool,
+    end_cursor: str | None = None,
+) -> dict[str, object]:
+    return {
+        PAGE_INFO_FIELD: {
+            HAS_NEXT_PAGE_FIELD: has_next,
+            END_CURSOR_FIELD: end_cursor,
+        },
+        NODES_FIELD: nodes,
+    }
+
+
+def review_thread_payload(
+    thread_id: str,
+    comments: dict[str, object],
+) -> dict[str, object]:
+    return {ID_FIELD: thread_id, COMMENTS_FIELD: comments}
+
+
+def review_threads_connection_payload(
+    nodes: list[dict[str, object]],
+    *,
+    has_next: bool = False,
+    end_cursor: str | None = None,
+) -> dict[str, object]:
+    return {
+        PAGE_INFO_FIELD: {
+            HAS_NEXT_PAGE_FIELD: has_next,
+            END_CURSOR_FIELD: end_cursor,
+        },
+        NODES_FIELD: nodes,
+    }
+
+
+def review_threads_response_payload(
+    review_threads: object,
+) -> dict[str, object]:
+    return {
+        DATA_FIELD: {
+            REPOSITORY_FIELD: {
+                PULL_REQUEST_FIELD: {REVIEW_THREADS_FIELD: review_threads},
+            }
+        }
+    }
+
+
+def repository_response_payload(repository: object) -> dict[str, object]:
+    return {DATA_FIELD: {REPOSITORY_FIELD: repository}}
+
+
+def pull_request_response_payload(pull_request: object) -> dict[str, object]:
+    return {
+        DATA_FIELD: {
+            REPOSITORY_FIELD: {PULL_REQUEST_FIELD: pull_request},
+        }
+    }
+
+
+def thread_comments_response_payload(node: object) -> dict[str, object]:
+    return {DATA_FIELD: {NODE_FIELD: node}}
 
 
 def run_graphql(
@@ -159,14 +273,15 @@ def require_object(value: object, message: str) -> dict[str, object]:
 
 def comment_matches(comment: dict[str, object], comment_id: str) -> bool:
     return (
-        str(comment.get("databaseId")) == comment_id or comment.get("id") == comment_id
+        str(comment.get(DATABASE_ID_FIELD)) == comment_id
+        or comment.get(ID_FIELD) == comment_id
     )
 
 
 def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
-    nodes = comments.get("nodes")
+    nodes = comments.get(NODES_FIELD)
     if not isinstance(nodes, list):
-        raise ValueError("GitHub response comments.nodes must be a list")
+        raise ValueError(ERROR_COMMENTS_NODES)
     for comment in nodes:
         if isinstance(comment, dict) and comment_matches(comment, comment_id):
             return True
@@ -182,78 +297,76 @@ def thread_has_comment(
 ) -> bool:
     if find_comment_in_page(comments, comment_id):
         return True
-    page_info = comments.get("pageInfo")
+    page_info = comments.get(PAGE_INFO_FIELD)
     if not isinstance(page_info, dict):
-        raise ValueError("GitHub response comments.pageInfo must be an object")
-    while page_info.get("hasNextPage"):
-        end_cursor = page_info.get("endCursor")
+        raise ValueError(ERROR_COMMENTS_PAGE_INFO)
+    while page_info.get(HAS_NEXT_PAGE_FIELD):
+        end_cursor = page_info.get(END_CURSOR_FIELD)
         if not isinstance(end_cursor, str) or not end_cursor:
-            raise ValueError("GitHub response comments page is missing endCursor")
+            raise ValueError(ERROR_COMMENTS_END_CURSOR)
         payload = run_graphql(
             THREAD_COMMENTS_QUERY,
-            {"threadId": thread_id, "commentsAfter": end_cursor},
+            {THREAD_ID_FIELD: thread_id, COMMENTS_AFTER_FIELD: end_cursor},
             host,
             runner,
         )
-        data = require_object(
-            payload.get("data"), "GitHub response data must be an object"
-        )
+        data = require_object(payload.get(DATA_FIELD), ERROR_DATA)
         node = require_object(
-            data.get("node"),
-            "GitHub response node must be a PullRequestReviewThread object",
+            data.get(NODE_FIELD),
+            ERROR_NODE,
         )
         comments = require_object(
-            node.get("comments"),
-            "GitHub response node.comments must be an object",
+            node.get(COMMENTS_FIELD),
+            ERROR_NODE_COMMENTS,
         )
         if find_comment_in_page(comments, comment_id):
             return True
-        page_info = comments.get("pageInfo")
+        page_info = comments.get(PAGE_INFO_FIELD)
         if not isinstance(page_info, dict):
-            raise ValueError("GitHub response comments.pageInfo must be an object")
+            raise ValueError(ERROR_COMMENTS_PAGE_INFO)
     return False
 
 
 def review_threads_from_payload(payload: dict[str, object]) -> dict[str, object]:
-    data = require_object(payload.get("data"), "GitHub response data must be an object")
+    data = require_object(payload.get(DATA_FIELD), ERROR_DATA)
     repository = require_object(
-        data.get("repository"),
-        "GitHub response repository must be an object",
+        data.get(REPOSITORY_FIELD),
+        ERROR_REPOSITORY,
     )
     pull_request = require_object(
-        repository.get("pullRequest"),
-        "GitHub response pullRequest must be an object",
+        repository.get(PULL_REQUEST_FIELD),
+        ERROR_PULL_REQUEST,
     )
     return require_object(
-        pull_request.get("reviewThreads"),
-        "GitHub response reviewThreads must be an object",
+        pull_request.get(REVIEW_THREADS_FIELD),
+        ERROR_REVIEW_THREADS,
     )
 
 
 def iter_thread_comments(
     review_threads: dict[str, object],
 ) -> Iterator[tuple[str, dict[str, object]]]:
-    threads = review_threads.get("nodes")
+    threads = review_threads.get(NODES_FIELD)
     if not isinstance(threads, list):
-        raise ValueError("GitHub response reviewThreads.nodes must be a list")
+        raise ValueError(ERROR_REVIEW_THREADS_NODES)
     for thread in threads:
         if not isinstance(thread, dict):
             continue
-        thread_id = validate_thread_id(str(thread.get("id")))
-        comments = thread.get("comments")
+        thread_id = validate_thread_id(str(thread.get(ID_FIELD)))
+        comments = thread.get(COMMENTS_FIELD)
         if isinstance(comments, dict):
             yield thread_id, comments
 
 
 def next_threads_cursor(review_threads: dict[str, object]) -> str | None:
-    page_info = review_threads.get("pageInfo")
+    page_info = review_threads.get(PAGE_INFO_FIELD)
     if not isinstance(page_info, dict):
-        raise ValueError("GitHub response reviewThreads.pageInfo must be an object")
-    if not page_info.get("hasNextPage"):
+        raise ValueError(ERROR_REVIEW_THREADS_PAGE_INFO)
+    if not page_info.get(HAS_NEXT_PAGE_FIELD):
         return None
-    end_cursor = page_info.get("endCursor")
+    end_cursor = page_info.get(END_CURSOR_FIELD)
     if not isinstance(end_cursor, str) or not end_cursor:
-        raise ValueError("GitHub response reviewThreads page is missing endCursor")
+        raise ValueError(ERROR_REVIEW_THREADS_END_CURSOR)
     return end_cursor
 
 
@@ -265,7 +378,11 @@ def find_thread_id(
     host: str | None,
     runner: CommandRunner,
 ) -> str:
-    fields: dict[str, str | int] = {"owner": owner, "repo": repo, "number": pr_number}
+    fields: dict[str, str | int] = {
+        OWNER_FIELD: owner,
+        REPO_FIELD: repo,
+        NUMBER_FIELD: pr_number,
+    }
     while True:
         payload = run_graphql(THREADS_QUERY, fields, host, runner)
         review_threads = review_threads_from_payload(payload)
@@ -274,10 +391,8 @@ def find_thread_id(
                 return thread_id
         end_cursor = next_threads_cursor(review_threads)
         if end_cursor is None:
-            raise ValueError(
-                "review comment was not found after complete review-thread pagination"
-            )
-        fields["threadsAfter"] = end_cursor
+            raise ValueError(ERROR_COMMENT_NOT_FOUND)
+        fields[THREADS_AFTER_FIELD] = end_cursor
 
 
 def main(
@@ -308,7 +423,7 @@ def main(
         print(exc, file=sys.stderr)
         return 2
     completed = runner(
-        graphql_argv(QUERY, {"id": thread_id}, host, silent=True),
+        graphql_argv(QUERY, {ID_FIELD: thread_id}, host, silent=True),
         check=False,
     )
     return completed.returncode

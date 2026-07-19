@@ -72,7 +72,10 @@ def review_comment_id_discovers_thread_before_resolving() -> bool:
             [
                 _thread_node(
                     "PRRT_thread0001",
-                    {"nodes": [_comment("PRRC_comment0001", 12345)]},
+                    _comments(
+                        [_comment("PRRC_comment0001", 12345)],
+                        has_next=False,
+                    ),
                 )
             ]
         )
@@ -82,7 +85,7 @@ def review_comment_id_discovers_thread_before_resolving() -> bool:
         command: list[str],
         kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if "-F" in command and "number=405" in command:
+        if command == list(_discovery_call(module, host=True)):
             if kwargs.get("capture_output") is not True:
                 return _completed(command, returncode=98)
             if kwargs.get("text") is not True:
@@ -90,28 +93,11 @@ def review_comment_id_discovers_thread_before_resolving() -> bool:
             return _completed(command, stdout=json.dumps(threads_payload))
         return _completed(command)
 
-    run = _run_resolver(
-        [
-            "--host",
-            "ghe.example.com",
-            "--repo",
-            "outcomeeng/plugins",
-            "--pr",
-            "405",
-            "--review-comment-id",
-            "12345",
-        ],
-        responder,
-    )
+    run = _run_resolver(_discovery_argv("12345", host=True), responder)
     return (
         run.returncode == 0
         and len(run.calls) == 2
-        and run.calls[0][:3] == ("gh", "api", "graphql")
-        and "--hostname" in run.calls[0]
-        and "ghe.example.com" in run.calls[0]
-        and "owner=outcomeeng" in run.calls[0]
-        and "repo=plugins" in run.calls[0]
-        and "number=405" in run.calls[0]
+        and run.calls[0] == _discovery_call(module, host=True)
         and run.calls[1] == _resolve_call("PRRT_thread0001", module, host=True)
     )
 
@@ -119,7 +105,7 @@ def review_comment_id_discovers_thread_before_resolving() -> bool:
 def direct_thread_id_resolves_without_discovery() -> bool:
     module = load_script()
     run = _run_resolver(
-        ["--host", "ghe.example.com", "PRRT_thread0002"],
+        _thread_argv("PRRT_thread0002", host=True),
         lambda command, _kwargs: _completed(command),
     )
     return run.returncode == 0 and run.calls == (
@@ -128,6 +114,7 @@ def direct_thread_id_resolves_without_discovery() -> bool:
 
 
 def review_thread_discovery_pages_threads_until_comment_is_found() -> bool:
+    module = load_script()
     first_page = _threads_payload(
         _review_threads(
             [
@@ -162,23 +149,26 @@ def review_thread_discovery_pages_threads_until_comment_is_found() -> bool:
         command: list[str],
         kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if "id=PRRT_thread0004" in command:
+        if command == list(_resolve_call("PRRT_thread0004", module, host=True)):
             return _completed(command)
         if kwargs.get("capture_output") is not True:
             return _completed(command, returncode=98)
-        if "threadsAfter=cursor-1" in command:
+        if command == list(
+            _discovery_call(module, host=True, threads_after="cursor-1")
+        ):
             return _completed(command, stdout=json.dumps(second_page))
         return _completed(command, stdout=json.dumps(first_page))
 
     run = _run_resolver(_discovery_argv("404", host=True), responder)
     return (
         run.returncode == 0
-        and any("threadsAfter=cursor-1" in call for call in run.calls)
-        and run.calls[-1][-1] == "id=PRRT_thread0004"
+        and _discovery_call(module, host=True, threads_after="cursor-1") in run.calls
+        and run.calls[-1] == _resolve_call("PRRT_thread0004", module, host=True)
     )
 
 
 def review_thread_discovery_pages_comments_until_comment_is_found() -> bool:
+    module = load_script()
     threads_page = _threads_payload(
         _review_threads(
             [
@@ -194,43 +184,53 @@ def review_thread_discovery_pages_comments_until_comment_is_found() -> bool:
             has_next=False,
         )
     )
-    comments_page = {
-        "data": {
-            "node": {
-                "comments": _comments(
-                    [_comment("PRRC_comment0006", 606)],
-                    has_next=False,
-                )
-            }
+    comments_page = _thread_comments_response(
+        {
+            _source_string(module, "COMMENTS_FIELD"): _comments(
+                [_comment("PRRC_comment0006", 606)],
+                has_next=False,
+            )
         }
-    }
+    )
 
     def responder(
         command: list[str],
         kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if "id=PRRT_thread0005" in command:
+        if command == list(_resolve_call("PRRT_thread0005", module, host=True)):
             return _completed(command)
         if kwargs.get("capture_output") is not True:
             return _completed(command, returncode=98)
-        if "threadId=PRRT_thread0005" in command:
-            if "commentsAfter=comment-cursor-1" not in command:
-                return _completed(command, returncode=99)
+        if command == list(
+            _thread_comments_call(
+                module,
+                "PRRT_thread0005",
+                "comment-cursor-1",
+                host=True,
+            )
+        ):
             return _completed(command, stdout=json.dumps(comments_page))
         return _completed(command, stdout=json.dumps(threads_page))
 
     run = _run_resolver(_discovery_argv("606", host=True), responder)
-    graphql_calls = tuple(
-        call for call in run.calls if call[:3] == ("gh", "api", "graphql")
-    )
+    graphql_prefix = _graphql_prefix(module)
+    graphql_calls = tuple(call for call in run.calls if call[:3] == graphql_prefix)
     return (
         run.returncode == 0
-        and any("commentsAfter=comment-cursor-1" in call for call in run.calls)
+        and _thread_comments_call(
+            module,
+            "PRRT_thread0005",
+            "comment-cursor-1",
+            host=True,
+        )
+        in run.calls
         and len(graphql_calls) == len(run.calls)
         and all(
-            "--hostname" in call and "ghe.example.com" in call for call in graphql_calls
+            _source_string(module, "HOSTNAME_OPTION") in call
+            and "ghe.example.com" in call
+            for call in graphql_calls
         )
-        and run.calls[-1][-1] == "id=PRRT_thread0005"
+        and run.calls[-1] == _resolve_call("PRRT_thread0005", module, host=True)
     )
 
 
@@ -272,8 +272,7 @@ def review_comment_not_found_after_complete_pagination_returns_error() -> bool:
     )
     return (
         run.returncode == 2
-        and "review comment was not found after complete review-thread pagination"
-        in run.stderr
+        and _source_string(load_script(), "ERROR_COMMENT_NOT_FOUND") in run.stderr
         and len(run.calls) == 1
     )
 
@@ -284,7 +283,11 @@ def missing_comment_page_info_returns_error() -> bool:
             [
                 _thread_node(
                     "PRRT_thread0010",
-                    {"nodes": [_comment("PRRC_comment0010", 1010)]},
+                    {
+                        _source_string(load_script(), "NODES_FIELD"): [
+                            _comment("PRRC_comment0010", 1010)
+                        ]
+                    },
                 )
             ],
             has_next=False,
@@ -296,30 +299,36 @@ def missing_comment_page_info_returns_error() -> bool:
     )
     return (
         run.returncode == 2
-        and "GitHub response comments.pageInfo must be an object" in run.stderr
+        and _source_string(load_script(), "ERROR_COMMENTS_PAGE_INFO") in run.stderr
     )
 
 
 def null_review_thread_discovery_payload_returns_error() -> bool:
     return _payload_returns_error(
-        {"data": {"repository": None}},
-        "GitHub response repository must be an object",
+        _repository_response(None),
+        _source_string(load_script(), "ERROR_REPOSITORY"),
     ) and _payload_returns_error(
-        {"data": {"repository": {"pullRequest": None}}},
-        "GitHub response pullRequest must be an object",
+        _pull_request_response(None),
+        _source_string(load_script(), "ERROR_PULL_REQUEST"),
     )
 
 
 def missing_review_thread_nodes_returns_error() -> bool:
     return _payload_returns_error(
         _threads_payload(
-            {"pageInfo": {"hasNextPage": False, "endCursor": None}},
+            {
+                _source_string(load_script(), "PAGE_INFO_FIELD"): {
+                    _source_string(load_script(), "HAS_NEXT_PAGE_FIELD"): False,
+                    _source_string(load_script(), "END_CURSOR_FIELD"): None,
+                }
+            },
         ),
-        "GitHub response reviewThreads.nodes must be a list",
+        _source_string(load_script(), "ERROR_REVIEW_THREADS_NODES"),
     )
 
 
 def null_paginated_thread_node_returns_error() -> bool:
+    module = load_script()
     threads_page = _threads_payload(
         _review_threads(
             [
@@ -335,27 +344,37 @@ def null_paginated_thread_node_returns_error() -> bool:
             has_next=False,
         )
     )
-    null_node_page = {"data": {"node": None}}
+    null_node_page = _thread_comments_response(None)
 
     def responder(
         command: list[str],
         _kwargs: dict[str, object],
     ) -> subprocess.CompletedProcess[str]:
-        if "threadId=PRRT_thread0009" in command:
+        if command == list(
+            _thread_comments_call(
+                module,
+                "PRRT_thread0009",
+                "comment-cursor-2",
+                host=False,
+            )
+        ):
             return _completed(command, stdout=json.dumps(null_node_page))
         return _completed(command, stdout=json.dumps(threads_page))
 
     run = _run_resolver(_discovery_argv("1001"), responder)
-    return (
-        run.returncode == 2
-        and "GitHub response node must be a PullRequestReviewThread object"
-        in run.stderr
-    )
+    return run.returncode == 2 and _source_string(module, "ERROR_NODE") in run.stderr
 
 
 def malformed_paginated_response_returns_error() -> bool:
+    module = load_script()
     payload = _threads_payload(
-        {"pageInfo": {"hasNextPage": True, "endCursor": None}, "nodes": []}
+        {
+            _source_string(module, "PAGE_INFO_FIELD"): {
+                _source_string(module, "HAS_NEXT_PAGE_FIELD"): True,
+                _source_string(module, "END_CURSOR_FIELD"): None,
+            },
+            _source_string(module, "NODES_FIELD"): [],
+        }
     )
     run = _run_resolver(
         _discovery_argv("909"),
@@ -363,7 +382,7 @@ def malformed_paginated_response_returns_error() -> bool:
     )
     return (
         run.returncode == 2
-        and "GitHub response reviewThreads page is missing endCursor" in run.stderr
+        and _source_string(module, "ERROR_REVIEW_THREADS_END_CURSOR") in run.stderr
     )
 
 
@@ -430,23 +449,75 @@ def _resolve_call(
     *,
     host: bool,
 ) -> tuple[str, ...]:
-    command = [
-        "gh",
-        "api",
-        "graphql",
-    ]
-    if host:
-        command.extend(["--hostname", "ghe.example.com"])
-    command.extend(
-        [
-            "--silent",
-            "-f",
-            f"query={_query(module)}",
-            "-F",
-            f"id={thread_id}",
-        ]
+    return _graphql_argv(
+        module,
+        _query(module),
+        {_source_string(module, "ID_FIELD"): thread_id},
+        "ghe.example.com" if host else None,
+        silent=True,
     )
-    return tuple(command)
+
+
+def _discovery_call(
+    module: ModuleType,
+    *,
+    host: bool,
+    threads_after: str | None = None,
+) -> tuple[str, ...]:
+    fields: dict[str, str | int] = {
+        _source_string(module, "OWNER_FIELD"): "outcomeeng",
+        _source_string(module, "REPO_FIELD"): "plugins",
+        _source_string(module, "NUMBER_FIELD"): 405,
+    }
+    if threads_after is not None:
+        fields[_source_string(module, "THREADS_AFTER_FIELD")] = threads_after
+    return _graphql_argv(
+        module,
+        _source_string(module, "THREADS_QUERY"),
+        fields,
+        "ghe.example.com" if host else None,
+    )
+
+
+def _thread_comments_call(
+    module: ModuleType,
+    thread_id: str,
+    comments_after: str,
+    *,
+    host: bool,
+) -> tuple[str, ...]:
+    return _graphql_argv(
+        module,
+        _source_string(module, "THREAD_COMMENTS_QUERY"),
+        {
+            _source_string(module, "THREAD_ID_FIELD"): thread_id,
+            _source_string(module, "COMMENTS_AFTER_FIELD"): comments_after,
+        },
+        "ghe.example.com" if host else None,
+    )
+
+
+def _graphql_argv(
+    module: ModuleType,
+    query: str,
+    fields: dict[str, str | int],
+    host: str | None,
+    *,
+    silent: bool = False,
+) -> tuple[str, ...]:
+    builder = cast(
+        "Callable[..., list[str]]",
+        getattr(module, "graphql_argv"),
+    )
+    return tuple(builder(query, fields, host, silent=silent))
+
+
+def _graphql_prefix(module: ModuleType) -> tuple[str, ...]:
+    return (
+        _source_string(module, "GH_COMMAND"),
+        _source_string(module, "API_COMMAND"),
+        _source_string(module, "GRAPHQL_RESOURCE"),
+    )
 
 
 def _query(module: ModuleType) -> str:
@@ -454,24 +525,34 @@ def _query(module: ModuleType) -> str:
 
 
 def _discovery_argv(comment_id: str, *, host: bool = False) -> list[str]:
+    module = load_script()
     argv = []
     if host:
-        argv.extend(["--host", "ghe.example.com"])
+        argv.extend([_source_string(module, "HOST_OPTION"), "ghe.example.com"])
     argv.extend(
         [
-            "--repo",
+            _source_string(module, "REPOSITORY_OPTION"),
             "outcomeeng/plugins",
-            "--pr",
+            _source_string(module, "PULL_REQUEST_OPTION"),
             "405",
-            "--review-comment-id",
+            _source_string(module, "REVIEW_COMMENT_ID_OPTION"),
             comment_id,
         ]
     )
     return argv
 
 
+def _thread_argv(thread_id: str, *, host: bool = False) -> list[str]:
+    module = load_script()
+    argv = []
+    if host:
+        argv.extend([_source_string(module, "HOST_OPTION"), "ghe.example.com"])
+    argv.append(thread_id)
+    return argv
+
+
 def _comment(comment_id: str, database_id: int) -> dict[str, object]:
-    return {"id": comment_id, "databaseId": database_id}
+    return _source_payload("review_comment_payload", comment_id, database_id)
 
 
 def _comments(
@@ -480,14 +561,16 @@ def _comments(
     has_next: bool,
     end_cursor: str | None = None,
 ) -> dict[str, object]:
-    return {
-        "pageInfo": {"hasNextPage": has_next, "endCursor": end_cursor},
-        "nodes": nodes,
-    }
+    return _source_payload(
+        "comments_connection_payload",
+        nodes,
+        has_next=has_next,
+        end_cursor=end_cursor,
+    )
 
 
 def _thread_node(thread_id: str, comments: dict[str, object]) -> dict[str, object]:
-    return {"id": thread_id, "comments": comments}
+    return _source_payload("review_thread_payload", thread_id, comments)
 
 
 def _review_threads(
@@ -496,19 +579,37 @@ def _review_threads(
     has_next: bool = False,
     end_cursor: str | None = None,
 ) -> dict[str, object]:
-    return {
-        "pageInfo": {"hasNextPage": has_next, "endCursor": end_cursor},
-        "nodes": nodes,
-    }
+    return _source_payload(
+        "review_threads_connection_payload",
+        nodes,
+        has_next=has_next,
+        end_cursor=end_cursor,
+    )
 
 
 def _threads_payload(review_threads: dict[str, object]) -> dict[str, object]:
-    return {
-        "data": {
-            "repository": {
-                "pullRequest": {
-                    "reviewThreads": review_threads,
-                }
-            }
-        }
-    }
+    return _source_payload("review_threads_response_payload", review_threads)
+
+
+def _repository_response(repository: object) -> dict[str, object]:
+    return _source_payload("repository_response_payload", repository)
+
+
+def _pull_request_response(pull_request: object) -> dict[str, object]:
+    return _source_payload("pull_request_response_payload", pull_request)
+
+
+def _thread_comments_response(node: object) -> dict[str, object]:
+    return _source_payload("thread_comments_response_payload", node)
+
+
+def _source_payload(name: str, *args: object, **kwargs: object) -> dict[str, object]:
+    builder = cast("Callable[..., dict[str, object]]", getattr(load_script(), name))
+    return builder(*args, **kwargs)
+
+
+def _source_string(module: ModuleType, name: str) -> str:
+    value = getattr(module, name)
+    if not isinstance(value, str):
+        raise RuntimeError(f"resolve_review_thread.{name} must be a string")
+    return value
