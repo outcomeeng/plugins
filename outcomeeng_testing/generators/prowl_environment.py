@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import combinations
 from types import ModuleType
 
 from hypothesis import strategies as st
@@ -45,15 +46,18 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
     for operation in module.Operation:
         contract = module.OPERATION_CONTRACTS[operation]
         for shape in contract.request_shapes:
-            ordinal += 1
-            fields = shape.required_fields | shape.optional_fields
-            arguments = {
-                argument_names[field_name]: _request_argument_value(
-                    module, field_name, ordinal
-                )
-                for field_name in fields
-            }
-            requests.append(module.operation_request(operation, **arguments))
+            optional_fields = tuple(sorted(shape.optional_fields))
+            for subset_size in range(len(optional_fields) + 1):
+                for optional_subset in combinations(optional_fields, subset_size):
+                    ordinal += 1
+                    fields = shape.required_fields | frozenset(optional_subset)
+                    arguments = {
+                        argument_names[field_name]: _request_argument_value(
+                            module, field_name, ordinal
+                        )
+                        for field_name in fields
+                    }
+                    requests.append(module.operation_request(operation, **arguments))
     return requests
 
 
