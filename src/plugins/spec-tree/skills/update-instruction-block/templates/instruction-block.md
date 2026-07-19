@@ -412,6 +412,7 @@ Use this shape for subagent audits:
 <!-- /harness:claude -->
 
 {!% include 'agentic-execution/configured-verifier-contracts/fragment.md' %!}
+
 | User Says...                               | Skill                  | Agent                   |
 | ------------------------------------------ | ---------------------- | ----------------------- |
 | "Implement this outcome"                   | `/apply`               | `applier`               |
