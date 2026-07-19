@@ -322,7 +322,7 @@ Tests fail as expected. Ready for review.
 
 **Verification**
 
-Tests pass checklist. Ready for re-review.
+The checklist passes, and tests fail for the expected behavior. Ready for re-review.
 ```
 
 </output_format>
