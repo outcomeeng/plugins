@@ -508,6 +508,110 @@ def malformed_paginated_response_returns_error() -> bool:
     return _run_mapping_property(assertion)
 
 
+def malformed_payload_shapes_return_errors() -> bool:
+    def assertion(domain: ResolverDomain) -> None:
+        module = load_script()
+        data_field = _source_string(module, "DATA_FIELD")
+        review_threads_field = _source_string(module, "REVIEW_THREADS_FIELD")
+        nodes_field = _source_string(module, "NODES_FIELD")
+        page_info_field = _source_string(module, "PAGE_INFO_FIELD")
+        comments_field = _source_string(module, "COMMENTS_FIELD")
+
+        assert _payload_returns_error(
+            {data_field: None},
+            _source_string(module, "ERROR_DATA"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _pull_request_response({review_threads_field: None}),
+            _source_string(module, "ERROR_REVIEW_THREADS"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload({nodes_field: [], page_info_field: None}),
+            _source_string(module, "ERROR_REVIEW_THREADS_PAGE_INFO"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload(
+                _review_threads(
+                    [
+                        _thread_node(
+                            domain.thread_ids[8],
+                            {
+                                nodes_field: None,
+                                page_info_field: {
+                                    _source_string(
+                                        module, "HAS_NEXT_PAGE_FIELD"
+                                    ): False,
+                                    _source_string(module, "END_CURSOR_FIELD"): None,
+                                },
+                            },
+                        )
+                    ]
+                )
+            ),
+            _source_string(module, "ERROR_COMMENTS_NODES"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload(
+                _review_threads(
+                    [
+                        _thread_node(
+                            domain.thread_ids[8],
+                            _comments([], has_next=True),
+                        )
+                    ]
+                )
+            ),
+            _source_string(module, "ERROR_COMMENTS_END_CURSOR"),
+            domain,
+        )
+
+        thread_id = domain.thread_ids[9]
+        cursor = domain.cursors[1]
+        threads_page = _threads_payload(
+            _review_threads(
+                [
+                    _thread_node(
+                        thread_id,
+                        _comments([], has_next=True, end_cursor=cursor),
+                    )
+                ]
+            )
+        )
+        malformed_comments_page = _thread_comments_response({comments_field: None})
+
+        def responder(
+            command: list[str],
+            _kwargs: dict[str, object],
+        ) -> subprocess.CompletedProcess[str]:
+            if command == list(
+                _thread_comments_call(
+                    module,
+                    domain,
+                    thread_id,
+                    cursor,
+                    host=False,
+                )
+            ):
+                return _completed(
+                    command,
+                    stdout=json.dumps(malformed_comments_page),
+                )
+            return _completed(command, stdout=json.dumps(threads_page))
+
+        run = _run_resolver(
+            _discovery_argv(str(domain.database_ids[9]), domain),
+            responder,
+        )
+        assert run.returncode == _validation_error_exit_code()
+        assert _source_string(module, "ERROR_NODE_COMMENTS") in run.stderr
+
+    return _run_mapping_property(assertion)
+
+
 def _run_resolver(argv: list[str], responder: ResolverResponder) -> ResolverRun:
     module = load_script()
     stdout = io.StringIO()
