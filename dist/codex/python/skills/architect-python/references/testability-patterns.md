@@ -100,20 +100,19 @@ class TestUserValidation:
 **Example**:
 
 ```python
-from hypothesis import given, strategies as st
+from product_testing.generators.users import run_valid_user_record_property
 
 
-@given(st.text())
-def test_parse_user_never_crashes_on_any_name(name: str) -> None:
-    """Confidence: Does parse_user handle ANY string as a name?"""
-    try:
-        result = parse_user({"name": name, "email": "test@test.com"})
-        assert isinstance(result.name, str)
-    except ValidationError:
-        pass  # Rejecting invalid input is fine
+def test_parse_user_preserves_valid_records() -> None:
+    """Every valid record survives parse and serialization."""
+
+    def predicate(record: UserRecord) -> None:
+        assert serialize_user(parse_user(record)) == normalize_user_record(record)
+
+    run_valid_user_record_property(predicate)
 ```
 
-**Key property**: Explores unanticipated inputs. Finds edge cases automatically.
+**Key property**: Explores a generated valid-record domain and fails when parsing loses or changes source-owned data.
 
 ---
 
@@ -270,33 +269,60 @@ def test_calculate_total_always_non_negative(items: list[OrderLine]) -> None:
 
 Architecture decisions affect testability. Make these decisions in ADRs.
 
-### 1. Dependency Injection Enables Mocking
+### 1. Dependency Injection Exposes Controlled Boundaries
 
 ```python
-# TESTABLE - Dependencies injected
 class UserService:
     def __init__(self, repo: UserRepository, notifier: Notifier) -> None:
         self._repo = repo
         self._notifier = notifier
 
 
-# In tests:
-def test_user_service_sends_notification() -> None:
-    mock_repo = MockUserRepository()
-    mock_notifier = MockNotifier()
-    service = UserService(mock_repo, mock_notifier)
+class InMemoryUserRepository:
+    def __init__(self) -> None:
+        self.users: dict[str, User] = {}
 
-    service.create_user("John", "john@example.com")
+    def save(self, user: User) -> None:
+        self.users[user.email] = user
 
-    assert mock_notifier.was_called_with("john@example.com")
+
+class RecordingNotifier:
+    def __init__(self) -> None:
+        self.sent_to: list[str] = []
+
+    def send_welcome(self, email: str) -> None:
+        self.sent_to.append(email)
+
+
+@dataclass
+class UserServiceHarness:
+    repository: InMemoryUserRepository
+    notifier: RecordingNotifier
+
+    @classmethod
+    def create(cls) -> "UserServiceHarness":
+        return cls(InMemoryUserRepository(), RecordingNotifier())
+
+    def service(self) -> UserService:
+        return UserService(self.repository, self.notifier)
+
+
+# The linked test receives spec- or generator-owned registration data.
+def test_user_service_sends_notification(registration: Registration) -> None:
+    harness = UserServiceHarness.create()
+
+    harness.service().create_user(registration.name, registration.email)
+
+    assert registration.email in harness.repository.users
+    assert harness.notifier.sent_to == [registration.email]
 ```
 
 ```python
-# NOT TESTABLE - Hidden dependencies
+# Hidden dependencies prevent controlled boundary observations.
 class UserService:
     def __init__(self) -> None:
-        self._repo = PostgresUserRepository()  # Can't mock!
-        self._notifier = SmtpNotifier()  # Can't mock!
+        self._repo = PostgresUserRepository()
+        self._notifier = SmtpNotifier()
 ```
 
 ---
@@ -357,7 +383,7 @@ def test_validate_config() -> None:
 
 ---
 
-### 4. Protocols Enable Test Doubles
+### 4. Protocols Enable Controlled Implementations
 
 ```python
 class Clock(Protocol):
@@ -373,7 +399,7 @@ class RealClock:
         return datetime.now()
 
 
-class FakeClock:
+class ControlledClock:
     """Testing: Returns controlled time."""
 
     def __init__(self, fixed_time: datetime) -> None:
@@ -388,11 +414,11 @@ def create_timestamp(clock: Clock) -> str:
     return clock.now().isoformat()
 
 
-# Test with controlled time:
-def test_create_timestamp() -> None:
-    fake_clock = FakeClock(datetime(2024, 1, 1, 12, 0, 0))
-    result = create_timestamp(fake_clock)
-    assert result == "2024-01-01T12:00:00"
+# The linked test receives a generated instant and owns the predicate.
+def test_create_timestamp(instant: datetime) -> None:
+    result = create_timestamp(ControlledClock(instant))
+
+    assert result == instant.isoformat()
 ```
 
 ---
@@ -413,7 +439,9 @@ ADRs express testability through `### Audit` rules under `## Verification`, not 
 - ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables `l1` `mapping` and `property` evidence ([audit])
 - ALWAYS: order persistence accepts a repository Protocol -- enables `l2` scenario evidence with the real database harness ([audit])
 - ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic `l1` evidence without patching globals ([audit])
+- ALWAYS: controlled implementations and recording collaborators expose observations only; linked tests own every predicate and assertion call ([audit])
 - NEVER: `unittest.mock.patch` replaces repository, payment, or clock dependencies ([audit])
+- NEVER: collaborators expose matcher or verdict methods such as `was_called_with`, `assert_called`, or `is_valid` ([audit])
 ```
 
 ---

@@ -122,7 +122,8 @@ def sync_files(
 
 - No inheritance coupling
 - Works with any compatible object
-- Enables easy mocking in tests
+- Accepts controlled implementations and recording collaborators through the same typed boundary
+- Keeps predicates and assertion calls in the linked test
 - Documents the interface explicitly
 
 ---

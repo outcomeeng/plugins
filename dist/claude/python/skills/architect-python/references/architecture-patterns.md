@@ -204,7 +204,7 @@ def sync_files(source: Path, dest: Path) -> SyncResult:
 
 ### Why DI Matters
 
-1. **Testability**: Inject mocks for testing
+1. **Testability**: Inject controlled implementations or recording collaborators that preserve the Protocol boundary
 2. **Flexibility**: Swap implementations without code changes
 3. **Explicitness**: All dependencies visible in signature
 4. **No globals**: No hidden state
@@ -422,7 +422,7 @@ product/
 │   ├── adapters/       # External integrations
 │   ├── ports/          # Interfaces
 │   └── main.py         # Entry point
-├── mypackage_testing/      # Test utilities - INSTALLABLE
+├── mypackage_testing/      # Test infrastructure - INSTALLABLE
 │   ├── __init__.py
 │   ├── generators/         # Variable input domains
 │   ├── harnesses/          # Resource and boundary mediators
@@ -437,7 +437,7 @@ product/
                 └── test_baz.conformance.l3.py
 ```
 
-**Key**: Test infrastructure in `mypackage_testing/` is installed via the product's editable install (portable fallback `python3 -m pip install -e ".[dev]"`). Co-located tests in `spx/.../tests/` import generators from `mypackage_testing.generators`, harnesses from `mypackage_testing.harnesses`, and consume inert fixture files under `mypackage_testing/fixtures/` by path. See `test-infrastructure-patterns.md`.
+**Key**: Test infrastructure in `mypackage_testing/` is installed via the product's editable install (portable fallback `python3 -m pip install -e ".[dev]"`). Co-located tests in `spx/.../tests/` import generators from `mypackage_testing.generators`, harnesses from `mypackage_testing.harnesses`, and consume inert fixture files under `mypackage_testing/fixtures/` by path. See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md`.
 
 ---
 
