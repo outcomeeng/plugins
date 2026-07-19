@@ -21,7 +21,11 @@ from outcomeeng_evals.producer_prompt import (
     MATERIALIZED_PROMPT_FILENAME,
     PRODUCER_FIELD,
     PRODUCER_FILE_KIND,
+    PRODUCER_FILE_PLACEHOLDER,
+    PRODUCER_PATH_PLACEHOLDER,
     PRODUCER_SECTION_KIND,
+    PRODUCER_SECTION_NAME_PLACEHOLDER,
+    PRODUCER_SECTION_PLACEHOLDER,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
@@ -45,7 +49,6 @@ PRODUCER_SOURCE_PATHS = tuple(
 PRODUCER_RELATIVE_PATHS = tuple(
     path.relative_to(PROJECT_ROOT).as_posix() for path in PRODUCER_SOURCE_PATHS
 )
-LITERAL_PRODUCER_SECTION_TOKEN = "{producer_section}"
 NESTED_STEP_NAME = "nested_step"
 NESTED_STEP_BODY = "Nested body."
 STALE_PROMPT_SUFFIX = "stale"
@@ -275,10 +278,11 @@ def write_eval_workspace(
         )
 
     template_text = (
-        "Producer: {producer_path}\n\n{producer_file}\n"
+        f"Producer: {PRODUCER_PATH_PLACEHOLDER}\n\n{PRODUCER_FILE_PLACEHOLDER}\n"
         if prompt_source_kind == PRODUCER_FILE_KIND
-        else "Producer: {producer_path}\nSection: {producer_section_name}\n\n"
-        "{producer_section}\n"
+        else f"Producer: {PRODUCER_PATH_PLACEHOLDER}\n"
+        f"Section: {PRODUCER_SECTION_NAME_PLACEHOLDER}\n\n"
+        f"{PRODUCER_SECTION_PLACEHOLDER}\n"
     )
     (eval_dir / prompt_template_path).write_text(template_text, encoding="utf-8")
     write_prompt_source_definition(
@@ -455,7 +459,7 @@ def mutate_runtime_producer(
             f'{opening}{body}<step name="{NESTED_STEP_NAME}">'
             f"{NESTED_STEP_BODY}</step>\n</step>"
         ),
-        ProducerMutation.PLACEHOLDER_TEXT: f"{opening}\n{LITERAL_PRODUCER_SECTION_TOKEN}\n</step>",
+        ProducerMutation.PLACEHOLDER_TEXT: f"{opening}\n{PRODUCER_SECTION_PLACEHOLDER}\n</step>",
     }
     replacement = replacements.get(mutation)
     if replacement is None:

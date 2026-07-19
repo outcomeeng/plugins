@@ -8,6 +8,11 @@ import stat
 import subprocess
 from pathlib import Path
 
+from outcomeeng_evals.producer_prompt import (
+    PRODUCER_PATH_PLACEHOLDER,
+    PRODUCER_SECTION_NAME_PLACEHOLDER,
+    PRODUCER_SECTION_PLACEHOLDER,
+)
 from outcomeeng_evals.settings import (
     DEFAULT_MAX_BUDGET_USD_TEXT,
     DEFAULT_TIMEOUT_SECONDS_TEXT,
@@ -296,7 +301,9 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
     eval_dir.mkdir(parents=True)
     prompt_path = eval_dir / "prompt.md"
     (eval_dir / "prompt.template.md").write_text(
-        "Producer: {producer_path}\nSection: {producer_section_name}\n{producer_section}\n",
+        f"Producer: {PRODUCER_PATH_PLACEHOLDER}\n"
+        f"Section: {PRODUCER_SECTION_NAME_PLACEHOLDER}\n"
+        f"{PRODUCER_SECTION_PLACEHOLDER}\n",
         encoding="utf-8",
     )
     (eval_dir / "eval.toml").write_text(

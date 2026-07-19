@@ -7,12 +7,12 @@ import os
 from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     PRODUCER_FIELD,
+    PRODUCER_SECTION_PLACEHOLDER,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
 )
 from outcomeeng_testing.evals.producer_prompt import (
-    LITERAL_PRODUCER_SECTION_TOKEN,
     NESTED_STEP_BODY,
     NESTED_STEP_NAME,
     CliMaterializedProducer,
@@ -83,7 +83,7 @@ def test_cli_enforces_producer_prompt_contract() -> None:
                 assert observation.result.exit_code == os.EX_OK
                 assert (
                     workspace.prompt_path.read_text(encoding="utf-8").count(
-                        LITERAL_PRODUCER_SECTION_TOKEN
+                        PRODUCER_SECTION_PLACEHOLDER
                     )
                     == 1
                 )

@@ -21,10 +21,10 @@ PRODUCER_FILE_KIND: Final = "producer-file"
 PROMPT_FIELD: Final = "prompt"
 MATERIALIZED_PROMPT_FILENAME: Final = "prompt.md"
 
-_PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
-_PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
-_PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
-_PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
+PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
+PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
+PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
+PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -147,8 +147,8 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
         return _replace_known_placeholders_once(
             template,
             {
-                _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
-                _PRODUCER_FILE_PLACEHOLDER: producer_text,
+                PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
+                PRODUCER_FILE_PLACEHOLDER: producer_text,
             },
         )
     if definition.section_name is None:
@@ -160,9 +160,9 @@ def render_prompt(definition: ProducerPromptDefinition) -> str:
         producer_path=definition.producer_path,
     )
     replacements = {
-        _PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
-        _PRODUCER_SECTION_NAME_PLACEHOLDER: definition.section_name,
-        _PRODUCER_SECTION_PLACEHOLDER: producer_section,
+        PRODUCER_PATH_PLACEHOLDER: definition.producer_relative_path,
+        PRODUCER_SECTION_NAME_PLACEHOLDER: definition.section_name,
+        PRODUCER_SECTION_PLACEHOLDER: producer_section,
     }
     return _replace_known_placeholders_once(template, replacements)
 
