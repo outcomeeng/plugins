@@ -119,11 +119,9 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 <success_criteria>
 
-- repo-local Rust overlays were loaded when present
-- `/rust-test-standards` was loaded before behavior-changing implementation work
-- codebase discovery happened before implementation
-- behavior-changing work is backed by tests or an explicit review constraint
-- new code follows repository patterns for seams, ownership, errors, and modules
-- full validation passed before completion
+- The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.
+- The repository's canonical format, lint, and test commands pass; when none are published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets` pass.
+- Behavior-changing work has linked test evidence or an explicit audit requirement.
+- No temporary debug code, commented-out implementation, or TODO/FIXME escape hatch remains.
 
 </success_criteria>

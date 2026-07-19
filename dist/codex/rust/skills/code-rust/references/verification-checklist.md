@@ -55,5 +55,5 @@ If the repository publishes stricter wrapper commands in `AGENTS.md` or `README.
 - property claims use property-based tests
 - compile-time claims use compile-fail evidence where appropriate
 
-</test>
+</testing>
 </review_focus>
