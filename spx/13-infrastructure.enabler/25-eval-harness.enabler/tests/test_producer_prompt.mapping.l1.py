@@ -16,6 +16,8 @@ def test_cli_write_and_check_modes_map_to_prompt_state() -> None:
         assert observation.write_result.exit_code == os.EX_OK
         assert PROMPT_FILENAME in observation.write_result.output
         assert observation.check_result.exit_code == os.EX_OK
+        assert observation.checked_prompt == observation.materialized_prompt
+        assert observation.checked_mtime_ns == observation.materialized_mtime_ns
         assert observation.stale_result.exit_code != os.EX_OK
         assert PROMPT_FILENAME in observation.stale_result.output
         assert (

@@ -25,6 +25,7 @@ PRODUCER_PATH_PLACEHOLDER: Final = "{producer_path}"
 PRODUCER_SECTION_NAME_PLACEHOLDER: Final = "{producer_section_name}"
 PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
 PRODUCER_FILE_PLACEHOLDER: Final = "{producer_file}"
+UNMATCHED_STEP_DELIMITER_REASON: Final = "unmatched step closing delimiter"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
@@ -186,7 +187,7 @@ def extract_named_producer_section(
             continue
 
         if not open_sections:
-            msg = f"{producer_path}: unmatched step closing delimiter"
+            msg = f"{producer_path}: {UNMATCHED_STEP_DELIMITER_REASON}"
             raise ProducerPromptError(msg)
         section_start, open_attrs = open_sections.pop()
         section_text = producer_text[section_start : delimiter.end()]

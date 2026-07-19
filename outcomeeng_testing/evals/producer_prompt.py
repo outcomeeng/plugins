@@ -178,6 +178,8 @@ class CliMaterializationObservation:
     prompt_path: Path
     materialized_prompt: str
     materialized_mtime_ns: int
+    checked_prompt: str
+    checked_mtime_ns: int
     stale_prompt: str
     stale_mtime_ns: int
 
@@ -516,6 +518,8 @@ def cli_materialization_observation(tmp_path: Path) -> CliMaterializationObserva
     materialized_prompt = workspace.prompt_path.read_text(encoding="utf-8")
     materialized_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
     check_result = runner.invoke(main, [*command, "--check"])
+    checked_prompt = workspace.prompt_path.read_text(encoding="utf-8")
+    checked_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
     stale_prompt = f"{materialized_prompt}\nstale\n"
     workspace.prompt_path.write_text(stale_prompt, encoding="utf-8")
     stale_mtime_ns = workspace.prompt_path.stat().st_mtime_ns
@@ -527,6 +531,8 @@ def cli_materialization_observation(tmp_path: Path) -> CliMaterializationObserva
         prompt_path=workspace.prompt_path,
         materialized_prompt=materialized_prompt,
         materialized_mtime_ns=materialized_mtime_ns,
+        checked_prompt=checked_prompt,
+        checked_mtime_ns=checked_mtime_ns,
         stale_prompt=stale_prompt,
         stale_mtime_ns=stale_mtime_ns,
     )

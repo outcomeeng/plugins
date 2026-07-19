@@ -11,6 +11,7 @@ from outcomeeng_evals.producer_prompt import (
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
     TEMPLATE_FIELD,
+    UNMATCHED_STEP_DELIMITER_REASON,
 )
 from outcomeeng_testing.evals.producer_prompt import (
     NESTED_STEP_BODY,
@@ -97,6 +98,7 @@ def test_cli_enforces_producer_prompt_contract() -> None:
                 assert workspace.case.section_name in observation.result.output
             case ProducerWorkspaceCase.LITERAL_CLOSING_DELIMITER:
                 assert observation.result.exit_code != os.EX_OK
+                assert UNMATCHED_STEP_DELIMITER_REASON in observation.result.output
             case ProducerWorkspaceCase.NESTED_STEP:
                 assert observation.result.exit_code == os.EX_OK
                 prompt_text = workspace.prompt_path.read_text(encoding="utf-8")

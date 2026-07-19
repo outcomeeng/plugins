@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Final
 
 from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
@@ -30,6 +31,20 @@ TEST_FILE_PREFIX = "test_"
 # link resolves to ``eval.toml`` inside an ``evals/{rule}/`` directory.
 TESTS_DIRNAME = "tests"
 EVALS_DIRNAME = "evals"
+
+REASON_TARGET_MISSING: Final = "target does not exist"
+REASON_TARGET_NOT_FILE: Final = "target is not a file"
+REASON_EVAL_TARGET_OUTSIDE_EVALS_DIR: Final = (
+    f"target must live in an {EVALS_DIRNAME}/{{rule}}/ directory"
+)
+REASON_EVAL_TARGET_NOT_EVAL_TOML: Final = f"target must be a {EVAL_TOML_FILENAME} file"
+REASON_TEST_TARGET_OUTSIDE_TESTS_DIR: Final = (
+    f"target must live directly in a {TESTS_DIRNAME}/ directory"
+)
+REASON_TEST_TARGET_NOT_COLLECTABLE: Final = (
+    "target must be a pytest collectable "
+    f"(filename starts with {TEST_FILE_PREFIX!r} and ends in .py)"
+)
 
 _EVAL_LINK_PATTERN = re.compile(r"\[eval\]\(([^)]+)\)")
 _TEST_LINK_PATTERN = re.compile(r"\[test\]\(([^)]+)\)")
@@ -138,7 +153,7 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
                 BrokenEvalLink(
                     source=link.source,
                     target=link.target,
-                    reason="target does not exist",
+                    reason=REASON_TARGET_MISSING,
                 )
             )
             continue
@@ -147,7 +162,7 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
                 BrokenEvalLink(
                     source=link.source,
                     target=link.target,
-                    reason="target is not a file",
+                    reason=REASON_TARGET_NOT_FILE,
                 )
             )
             continue
@@ -156,9 +171,7 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
                 BrokenEvalLink(
                     source=link.source,
                     target=link.target,
-                    reason=(
-                        f"target must live in an {EVALS_DIRNAME}/{{rule}}/ directory"
-                    ),
+                    reason=REASON_EVAL_TARGET_OUTSIDE_EVALS_DIR,
                 )
             )
             continue
@@ -167,7 +180,7 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
                 BrokenEvalLink(
                     source=link.source,
                     target=link.target,
-                    reason=f"target must be a {EVAL_TOML_FILENAME} file",
+                    reason=REASON_EVAL_TARGET_NOT_EVAL_TOML,
                 )
             )
     return broken
@@ -191,7 +204,7 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
                 BrokenTestLink(
                     source=link.source,
                     target=link.target,
-                    reason="target does not exist",
+                    reason=REASON_TARGET_MISSING,
                 )
             )
             continue
@@ -200,7 +213,7 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
                 BrokenTestLink(
                     source=link.source,
                     target=link.target,
-                    reason="target is not a file",
+                    reason=REASON_TARGET_NOT_FILE,
                 )
             )
             continue
@@ -209,7 +222,7 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
                 BrokenTestLink(
                     source=link.source,
                     target=link.target,
-                    reason=f"target must live directly in a {TESTS_DIRNAME}/ directory",
+                    reason=REASON_TEST_TARGET_OUTSIDE_TESTS_DIR,
                 )
             )
             continue
@@ -220,10 +233,7 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
                 BrokenTestLink(
                     source=link.source,
                     target=link.target,
-                    reason=(
-                        "target must be a pytest collectable "
-                        f"(filename starts with {TEST_FILE_PREFIX!r} and ends in .py)"
-                    ),
+                    reason=REASON_TEST_TARGET_NOT_COLLECTABLE,
                 )
             )
     return broken
