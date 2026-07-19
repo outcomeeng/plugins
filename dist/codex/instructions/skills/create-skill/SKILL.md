@@ -52,17 +52,17 @@ What would you like to do?
 
 <routing>
 
-| Response                                 | Workflow                                        |
-| ---------------------------------------- | ----------------------------------------------- |
-| 1, "create", "new", "build"              | `${SKILL_DIR}/workflows/create-new-skill.md`    |
-| 2, "audit", "improve", "review", "check" | `${SKILL_DIR}/workflows/audit-skill.md`         |
-| 3, "add workflow"                        | `${SKILL_DIR}/workflows/add-workflow.md`        |
-| 4, "add reference"                       | `${SKILL_DIR}/workflows/add-reference.md`       |
-| 5, "add template"                        | `${SKILL_DIR}/workflows/add-template.md`        |
-| 6, "add script"                          | `${SKILL_DIR}/workflows/add-script.md`          |
-| 7, "upgrade to router"                   | `${SKILL_DIR}/workflows/upgrade-to-router.md`   |
-| 8, "patterns", "understand", "help"      | `${SKILL_DIR}/workflows/understand-patterns.md` |
-| 9, "verify content", "current"           | `${SKILL_DIR}/workflows/verify-skill.md`        |
+| Response                                         | Workflow                                        |
+| ------------------------------------------------ | ----------------------------------------------- |
+| 1, "create", "new", "build"                      | `${SKILL_DIR}/workflows/create-new-skill.md`    |
+| 2, "audit", "improve", "review", "check quality" | `${SKILL_DIR}/workflows/audit-skill.md`         |
+| 3, "add workflow"                                | `${SKILL_DIR}/workflows/add-workflow.md`        |
+| 4, "add reference"                               | `${SKILL_DIR}/workflows/add-reference.md`       |
+| 5, "add template"                                | `${SKILL_DIR}/workflows/add-template.md`        |
+| 6, "add script"                                  | `${SKILL_DIR}/workflows/add-script.md`          |
+| 7, "upgrade to router"                           | `${SKILL_DIR}/workflows/upgrade-to-router.md`   |
+| 8, "patterns", "understand", "help"              | `${SKILL_DIR}/workflows/understand-patterns.md` |
+| 9, "verify content", "current"                   | `${SKILL_DIR}/workflows/verify-skill.md`        |
 
 **Intent-based routing** (if user provides clear context):
 
@@ -128,6 +128,7 @@ All in `${SKILL_DIR}/templates/`:
 
 - Representative input selects exactly one intended workflow, and every routing target exists in `<workflows_index>`.
 - Each selected workflow loads only the standards and conditional references its route requires.
+- Each selected workflow produces the output declared by its own success criteria.
 - A produced or improved skill passes the target repository's deterministic skill checks and receives an `APPROVED` verdict from the typed `skill-auditor` over the complete bundle.
 
 </success_criteria>
