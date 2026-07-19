@@ -13,20 +13,14 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 TypeScript implementation code that makes its node's tests pass.
 </objective>
 
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
-
-```
-Base directory for this skill: ${CLAUDE_SKILL_DIR}
-```
-
-Use this path to access skill files:
+<bundled_files>
 
 - References: `${CLAUDE_SKILL_DIR}/references/`
 - Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
 
-**IMPORTANT**: Do NOT search the product directory for skill files.
-</accessing_skill_files>
+Never search the product directory for bundled skill files.
+
+</bundled_files>
 
 <reference_loading>
 Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root and apply each file that exists as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
@@ -45,9 +39,9 @@ Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/loc
 <mandatory_code_patterns>
 These patterns are enforced by the reviewer. Violations will be REJECTED.
 
-**Constants**
+**Domain-significant constants**
 
-All literal values (strings, numbers) must be module-level constants:
+Move domain-significant string and number literals whose meaning can drift to semantically named module-level constants. Keep typed literals inline when extraction adds no domain meaning, following `${CLAUDE_SKILL_DIR}/references/vocabulary-registry-pattern.md`.
 
 ```typescript
 // ❌ REJECTED: Magic values inline
@@ -408,6 +402,16 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 ```
 
 </tool_invocation>
+
+<failure_modes>
+
+**Selected a raw fallback to avoid wrapper approval**
+
+- **What happened:** Claude selected a preapproved raw `npx` command even though the repository declared a canonical wrapper outside `allowed-tools`.
+- **Why it failed:** `allowed-tools` defines commands that run without per-call approval; it does not override repository command authority.
+- **How to avoid:** Resolve repository commands first and use the runtime's normal per-call approval path for the canonical wrapper. Use raw fallbacks only when the repository declares no wrapper.
+
+</failure_modes>
 
 <success_criteria>
 The implementation is ready for review when:
