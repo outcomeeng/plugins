@@ -12,7 +12,10 @@ from outcomeeng_evals.settings import (
     DEFAULT_MAX_BUDGET_USD_TEXT,
     DEFAULT_TIMEOUT_SECONDS_TEXT,
 )
-from outcomeeng_testing.harnesses.eval_workspaces import with_temp_workspace
+from outcomeeng_testing.harnesses.eval_workspaces import (
+    with_temp_workspace,
+    with_temp_workspace_under,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -161,7 +164,7 @@ def assert_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None
     assert_printed_command_precedes_suite_result(completed)
 
 
-@with_temp_workspace
+@with_temp_workspace_under(REPO_ROOT)
 def assert_eval_materialize_prompts_recipe_writes_producer_prompt(
     tmp_path: Path,
 ) -> None:
@@ -179,7 +182,7 @@ def assert_eval_materialize_prompts_recipe_writes_producer_prompt(
     assert "pr_wait_and_reentry_policy" in prompt_path.read_text(encoding="utf-8")
 
 
-@with_temp_workspace
+@with_temp_workspace_under(REPO_ROOT)
 def assert_eval_materialize_prompts_check_recipe_accepts_current_prompt(
     tmp_path: Path,
 ) -> None:
