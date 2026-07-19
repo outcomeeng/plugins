@@ -310,6 +310,11 @@ def verify_prowl_mappings() -> list[str]:
             failures.append(
                 f"{terminal_kind.value} did not target the delegating agent"
             )
+        reduced = module.reduce_terminal(None, terminal)
+        if reduced != terminal:
+            failures.append(
+                f"{terminal_kind.value} did not reduce to one exact terminal outcome"
+            )
         delivery = module.delegation_delivery_request(terminal)
         delivery_arguments = cast(dict[str, object], delivery[module.ARGUMENTS_FIELD])
         if delivery_arguments[module.PANE_FIELD] != sender[module.PANE_FIELD]:
