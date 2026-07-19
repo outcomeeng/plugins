@@ -51,6 +51,7 @@ Run the product's own canonical commands when it documents them — a `AGENTS.md
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
 Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and imported by the governed tests. Never assume a package directory name.
+Set `{node_path}` to the canonical full node path established by the loaded spec-tree context.
 
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
