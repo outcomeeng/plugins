@@ -57,6 +57,20 @@ ROOT_PATH_FIELD = "root_path"
 BRANCH_FIELD = "branch"
 CLEAN_STATUS = "clean"
 FULL_HEAD_PATTERN = re.compile(r"[0-9a-f]{40}")
+TRANSPORT_SCHEMA_VERSION = 1
+TRANSPORT_OPERATION_FIELD = "operation"
+TRANSPORT_RESPONSE_FIELD = "response"
+TRANSPORT_SEND_OPERATION = "send"
+TRANSPORT_SUCCEEDED_STATUS = "succeeded"
+TRANSPORT_SUCCESS_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        TRANSPORT_OPERATION_FIELD,
+        STATUS_FIELD,
+        COMMAND_EXIT_CODE_FIELD,
+        TRANSPORT_RESPONSE_FIELD,
+    }
+)
 
 ENVELOPE_FIELDS = frozenset(
     {
@@ -662,6 +676,45 @@ def send_request(request: object, discovery: object) -> dict[str, object]:
     }
 
 
+def _checked_success_transport(
+    transport: object, command_exit_code: int | None
+) -> dict[str, object]:
+    value = _object(transport, TRANSPORT_FIELD)
+    if set(value) != TRANSPORT_SUCCESS_FIELDS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires the complete checked transport fields.",
+        )
+    if value.get(SCHEMA_VERSION_FIELD) != TRANSPORT_SCHEMA_VERSION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            f"Transport schema version must be {TRANSPORT_SCHEMA_VERSION}.",
+        )
+    if value.get(TRANSPORT_OPERATION_FIELD) != TRANSPORT_SEND_OPERATION:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires a checked send transport operation.",
+        )
+    if value.get(STATUS_FIELD) != TRANSPORT_SUCCEEDED_STATUS:
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires succeeded transport status.",
+        )
+    transport_exit_code = value.get(COMMAND_EXIT_CODE_FIELD)
+    if (
+        not isinstance(transport_exit_code, int)
+        or isinstance(transport_exit_code, bool)
+        or transport_exit_code != 0
+        or command_exit_code != transport_exit_code
+    ):
+        raise MessageError(
+            DeliveryStatus.INVALID_SCHEMA,
+            "A delivered result requires matching zero command exit codes.",
+        )
+    _object(value.get(TRANSPORT_RESPONSE_FIELD), f"{TRANSPORT_FIELD}.response")
+    return value
+
+
 def delivery_result(
     envelope: object,
     *,
@@ -671,11 +724,11 @@ def delivery_result(
     detail: str | None = None,
 ) -> dict[str, object]:
     value = validate_envelope(envelope)
-    if delivered and command_exit_code != 0:
-        raise MessageError(
-            DeliveryStatus.INVALID_SCHEMA,
-            "A delivered environment result requires commandExitCode equal to zero.",
-        )
+    checked_transport = (
+        _checked_success_transport(transport, command_exit_code)
+        if delivered
+        else transport
+    )
     result: dict[str, object] = {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: (
@@ -683,7 +736,7 @@ def delivery_result(
         ),
         COORDINATION_REFERENCE_FIELD: value[COORDINATION_REFERENCE_FIELD],
         COMMAND_EXIT_CODE_FIELD: command_exit_code,
-        TRANSPORT_FIELD: transport,
+        TRANSPORT_FIELD: checked_transport,
         ACKNOWLEDGED_FIELD: False,
         AGREED_FIELD: False,
         OWNERSHIP_ESTABLISHED_FIELD: False,

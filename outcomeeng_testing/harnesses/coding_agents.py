@@ -63,6 +63,16 @@ def _fact_envelope(
     )
 
 
+def _successful_transport(module: ModuleType) -> dict[str, object]:
+    return {
+        module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
+        module.TRANSPORT_OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
+        module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
+        module.COMMAND_EXIT_CODE_FIELD: 0,
+        module.TRANSPORT_RESPONSE_FIELD: {},
+    }
+
+
 def verify_agent_message_mappings() -> list[str]:
     module = _load("coding_agents_agent_message_mapping")
     failures: list[str] = []
@@ -173,7 +183,7 @@ def verify_agent_message_mappings() -> list[str]:
         envelope,
         delivered=True,
         command_exit_code=0,
-        transport={module.STATUS_FIELD: "source-preserved"},
+        transport=_successful_transport(module),
     )
     if failed[module.STATUS_FIELD] != module.DeliveryStatus.DELIVERY_FAILED:
         failures.append("delivery failure did not map to its distinct state")
@@ -206,12 +216,61 @@ def verify_agent_message_compliance() -> list[str]:
     if json.loads(cast(str, delivery[module.TEXT_FIELD])) != envelope:
         failures.append("semantic delivery rewrote the source-owned envelope")
 
+    successful_transport = _successful_transport(module)
     result = module.delivery_result(
         envelope,
         delivered=True,
         command_exit_code=0,
-        transport={module.STATUS_FIELD: "checked-environment-result"},
+        transport=successful_transport,
     )
+    invalid_transports: list[object] = [None]
+    invalid_transports.extend(
+        {
+            key: value
+            for key, value in successful_transport.items()
+            if key != omitted_field
+        }
+        for omitted_field in module.TRANSPORT_SUCCESS_FIELDS
+    )
+    invalid_transports.extend(
+        (
+            {
+                **successful_transport,
+                module.TRANSPORT_OPERATION_FIELD: (
+                    f"not-{module.TRANSPORT_SEND_OPERATION}"
+                ),
+            },
+            {
+                **successful_transport,
+                module.STATUS_FIELD: f"not-{module.TRANSPORT_SUCCEEDED_STATUS}",
+            },
+            {**successful_transport, module.COMMAND_EXIT_CODE_FIELD: 1},
+        )
+    )
+    for invalid_transport in invalid_transports:
+        try:
+            module.delivery_result(
+                envelope,
+                delivered=True,
+                command_exit_code=0,
+                transport=invalid_transport,
+            )
+            failures.append("delivery accepted incomplete or unchecked transport")
+        except module.MessageError as error:
+            if error.status != module.DeliveryStatus.INVALID_SCHEMA:
+                failures.append(f"invalid transport mapped to {error.status}")
+    try:
+        module.delivery_result(
+            envelope,
+            delivered=True,
+            command_exit_code=1,
+            transport=successful_transport,
+        )
+        failures.append("delivery accepted mismatched command exit code")
+    except module.MessageError as error:
+        if error.status != module.DeliveryStatus.INVALID_SCHEMA:
+            failures.append(f"mismatched transport exit mapped to {error.status}")
+
     if result[module.ACKNOWLEDGED_FIELD] or result[module.AGREED_FIELD]:
         failures.append("transport success established acknowledgement or agreement")
     if result[module.OWNERSHIP_ESTABLISHED_FIELD]:
@@ -507,7 +566,7 @@ def verify_agent_message_compliance() -> list[str]:
                     module.ENVELOPE_FIELD: envelope,
                     module.DELIVERED_FIELD: True,
                     module.COMMAND_EXIT_CODE_FIELD: 0,
-                    module.TRANSPORT_FIELD: {module.STATUS_FIELD: "checked"},
+                    module.TRANSPORT_FIELD: _successful_transport(module),
                 }
             )
         ),

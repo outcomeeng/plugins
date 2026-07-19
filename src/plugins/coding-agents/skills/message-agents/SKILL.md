@@ -21,7 +21,7 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
    - A `mutation-authorization` carries the checked target and observed state and targets that same live recipient. Any mismatch returns `invalid-identity` before delivery planning.
 6. Pass the discovery and message request to the bundled script's `build` operation. It returns the complete `envelope` and a semantic `delivery` containing `toPane` and `text`.
 7. Invoke `/operate-prowl` for one `send` operation using the delivery's complete pane, exact text, and immediate-return mode. NEVER construct environment command arguments outside that capability.
-8. Pass the envelope and the exact environment result to the bundled script's `result` operation. Set `delivered` true only when `/operate-prowl` returned `status: "succeeded"` and `commandExitCode: 0`; preserve the complete environment result under `transport`.
+8. Pass the envelope and the exact environment result to the bundled script's `result` operation. Set `delivered` true only when `/operate-prowl` returned a complete checked `send` result with `status: "succeeded"`, `commandExitCode: 0`, and its public response; preserve that complete result under `transport`. The bundled script rejects delivered status when any checked transport field is absent or inconsistent.
 9. Report the complete `coordinationReference`, checked `commandExitCode`, and delivery `status`. `delivered` means only that the environment capability accepted transport; it NEVER means acknowledged, agreed, authorized, or owned. Stop with the exact status and detail on `delivery-failed`, `invalid-identity`, `environment-unavailable`, or `invalid-schema`.
 
 </workflow>
