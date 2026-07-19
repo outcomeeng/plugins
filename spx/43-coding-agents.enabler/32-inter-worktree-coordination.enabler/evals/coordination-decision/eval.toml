@@ -11,6 +11,8 @@ owned_paths = [
   "src/plugins/coding-agents/skills/message-agents/**",
   "dist/claude/coding-agents/skills/coordinate-agents/**",
   "dist/claude/coding-agents/skills/message-agents/**",
+  "dist/codex/coding-agents/skills/coordinate-agents/**",
+  "dist/codex/coding-agents/skills/message-agents/**",
 ]
 smoke_cases = [
   "overlapping-paths-propose-ownership",
