@@ -5,8 +5,9 @@ The runner substitutes only the case's `input` object into `{input_json}`; grade
 ---
 name: audit-tests
 description: >-
-  Test-evidence audit methodology for judging behavior-coupled evidence against
-  spec assertions.
+  Test-evidence audit methodology — judges whether a spec node's tests provide
+  behavior-coupled evidence its assertions are fulfilled, covering predicate
+  ownership, source ownership, coupling, falsifiability, and full-chain coverage.
 model: sonnet
 allowed-tools: Read, Grep, Glob, Skill
 ---
@@ -141,7 +142,7 @@ Use language syntax while reading to enumerate declarations, then classify owner
 
 Do not treat casing or syntax as evidence. Renaming `MAPPING_RUNS` to `mappingRuns`, changing an assignment to destructuring, or receiving a value through a parameter does not change what the binding chooses.
 
-Use `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use `oracle-independence` with remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result.
+Use `predicate-ownership` with rule `assertion-seam` and remediation target `test-file` when infrastructure owns a predicate, matcher, expected-value parameter, assertion call, or verdict helper. Use `oracle-independence` with remediation target `independent-oracle` when an expected result derives from the production table, algorithm, parser, branch logic, or other implementation path that produces the actual result. Use `source-ownership` when the test copies a source-owned singleton shape or vocabulary. Use `declarations` for the remaining two REJECT rows — test-owned configuration and test-owned data — so a binding that chooses runner settings, seed policy, setup or lifecycle policy, hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains always reports one property name rather than an invented one.
 
 For property-based tests, verify seed and replay behavior by reading the imported harness or property wrapper. If a property test has no harness-owned seed policy and no failure output that includes the seed or replay path, REJECT with `test-owned configuration` or `missing property seed reporting`.
 
