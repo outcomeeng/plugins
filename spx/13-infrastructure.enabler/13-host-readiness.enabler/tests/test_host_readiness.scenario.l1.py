@@ -22,6 +22,7 @@ def test_load_becoming_ready_returns_from_the_same_invocation() -> None:
     assert run.result.status is run.module.Status.READY
     assert run.result.ready is run.declared_ready
     assert int(run.result.exit_code) == run.declared_exit_code
+    assert run.clock.sleeps
     assert run.result.wait_cycles == len(run.clock.sleeps)
     assert run.result.waited_seconds < run.module.MAXIMUM_WAIT_SECONDS
 
