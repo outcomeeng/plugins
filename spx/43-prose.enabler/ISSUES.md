@@ -1,5 +1,15 @@
 # Issues: Prose Plugin
 
+## `audit-internal-docs` emits no structured verdict, so its behavior is not gradeable
+
+`audit-internal-docs` produces a prose flag list and states no overall determination. Every other auditor in the marketplace emits a machine-readable verdict: `audit-python-code` returns `overall`, `rows[]`, and `findings[]` carrying `file`, `line`, `rule`, `severity`, `observed`, and `expected`; `audit-implementation` streams the same shape into the run journal through `spx verification run` and treats the rendered projection's `terminalStatus` as authoritative. `spx/21-spec-tree.enabler/16-verification.enabler` records that every agentic verification surface drives that one projection, and `spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md` names a prompt-only simulation of a producer's policy as invalid evidence for that producer.
+
+The consequence is that `[eval]` evidence cannot couple to this skill. An eval must grade a structured verdict the producer emits; with none available, a suite has to impose its own schema in the prompt template and grade that instead — which measures the prompt author's schema, not the skill. Routing evals built this way were removed rather than shipped as evidence that looks stronger than it is.
+
+**Resolution shape**: give `audit-internal-docs` a verdict contract in the `audit-python-code` shape — a binary overall determination plus structured findings — and decide whether it is a leaf concern returning results to a run driver or an agentic verification surface that records its own run. Then author `[eval]` evidence that grades that contract, and reconcile the `[audit]` assertions in `spx/43-prose.enabler/prose.md` against it. `audit-prose` carries the same gap and moves with it.
+
+This is larger than a routing-boundary change: it redesigns the skill's output contract, touches the sibling `audit-prose`, and changes what evidence class the node's assertions carry.
+
 ## Skill-delegation `Skill` allowed-tools gap — PR3 (prose half) (CLOSED)
 
 **Closed (branch `fix/skill-delegation-allowed-tools-develop-prose`, shipped with the develop half).**
