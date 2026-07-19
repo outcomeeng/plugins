@@ -74,6 +74,45 @@ FOUNDATION_POLICY_REQUIREMENTS: Final = (
     ("no-patch Git exemption", "no-patch Git status, history, and topology"),
     ("product-path follow guard", "Never follow paths from their output"),
 )
+AUTHORITY_HIERARCHY_POLICY_HEADING: Final = "## Authority Hierarchy"
+AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
+    (
+        "strong skill authority warning",
+        "BELOW THE OPERATOR, SKILLS ARE THE TOP-LEVEL AUTHORITY",
+    ),
+    ("central skill management", "SKILLS ARE CENTRALLY MANAGED AND CURRENT"),
+    ("repository staleness", "REPOSITORY CONTENT GOES STALE"),
+    (
+        "authority order",
+        "active skills → repository decisions and specs → tests → code",
+    ),
+    (
+        "skill conflict precedence",
+        "When repository content conflicts with an active skill, the skill wins",
+    ),
+    (
+        "higher-layer preservation",
+        "NEVER** weaken a higher layer to match a lower layer",
+    ),
+    (
+        "code reference prohibition",
+        "NEVER** reference Spec Tree specs or decisions from code comments or docstrings",
+    ),
+    (
+        "repo overlay selection",
+        "active skill load the matching `spx/local/*.md` overlay when that skill declares one",
+    ),
+    (
+        "repo overlay authority boundary",
+        "below the skill in authority and cannot replace, weaken, or contradict the skill",
+    ),
+    (
+        "nested harness guide",
+        "read the active harness guide in every directory before working there when the guide exists",
+    ),
+    ("Claude guide filename", "`CLAUDE.md` for Claude Code"),
+    ("Codex guide filename", "`AGENTS.md` for Codex"),
+)
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
     "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
     "ALWAYS invoke `/wait-for-load`.**"
@@ -260,6 +299,10 @@ class UnresolvedInstructionTemplateError(InstructionBlockRenderError):
 
 class FoundationAccessPolicyError(InstructionBlockRenderError):
     """Raised when a rendered router omits part of its foundation access policy."""
+
+
+class AuthorityHierarchyPolicyError(InstructionBlockRenderError):
+    """Raised when a rendered router omits part of its authority hierarchy."""
 
 
 class WaitForLoadPolicyError(InstructionBlockRenderError):
@@ -479,6 +522,30 @@ def validate_foundation_access_policy(
             )
 
 
+def validate_authority_hierarchy_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a rendered harness router with an incomplete authority hierarchy."""
+    for harness, document in blocks_by_harness.items():
+        router = managed_router_block(document)
+        try:
+            section = _markdown_section(router, AUTHORITY_HIERARCHY_POLICY_HEADING)
+        except FoundationAccessPolicyError as exc:
+            raise AuthorityHierarchyPolicyError(
+                f"missing router section: {AUTHORITY_HIERARCHY_POLICY_HEADING}"
+            ) from exc
+        missing = [
+            name
+            for name, required_text in AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS
+            if required_text not in section
+        ]
+        if missing:
+            details = ", ".join(missing)
+            raise AuthorityHierarchyPolicyError(
+                f"{harness} router authority hierarchy is incomplete: {details}"
+            )
+
+
 def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
     """Reject a rendered harness router that weakens the load-wait policy."""
     for harness, document in blocks_by_harness.items():
@@ -612,6 +679,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
         template_paths=paths,
     )
     validate_foundation_access_policy(rendered)
+    validate_authority_hierarchy_policy(rendered)
     validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_verifier_dispatch_policy(rendered)

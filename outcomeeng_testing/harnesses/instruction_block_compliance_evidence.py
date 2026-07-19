@@ -408,6 +408,26 @@ def rendered_wait_for_load_policy_document_sets() -> tuple[dict[str, str], ...]:
     )
 
 
+def _assert_authority_hierarchy_policy_is_complete() -> None:
+    """Challenge every authority-hierarchy requirement across all renders."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        dist.validate_authority_hierarchy_policy(documents)
+        for _, requirement in dist.AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS:
+            for agent_harness, document in documents.items():
+                invalid_document = document.replace(requirement, "", 1)
+                try:
+                    dist.validate_authority_hierarchy_policy(
+                        {agent_harness: invalid_document}
+                    )
+                except dist.AuthorityHierarchyPolicyError:
+                    pass
+                else:
+                    raise AssertionError(
+                        f"incomplete authority hierarchy was accepted: {requirement}"
+                    )
+
+
 def _assert_codex_router_enforces_operator_question_interrupt() -> None:
     """Challenge question policy across every declared language subset."""
     for enabled_languages in harness.template_language_subsets():
