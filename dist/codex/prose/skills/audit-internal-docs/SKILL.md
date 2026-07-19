@@ -30,7 +30,7 @@ Apply two tests before reviewing. Ownership first: when a repository or domain w
 
 2. Confirm ownership. Apply the `<artifact_ownership>` test: when a repository or domain workflow governs the document, stop and route the review to that workflow.
 
-3. Read the document being reviewed.
+3. Read the document under review — whatever the invoking turn names, pastes, or points to. When that turn names no document, ask which one before sweeping anything.
 
 4. Flag each violation. Name the specific pattern and the category it belongs to, drawing the category from the `<what_to_check>` sweep list.
 
@@ -78,6 +78,8 @@ Internal-doc categories, from its `<additional_rules>` and `<success_criteria>`:
 - Decisive language and action labels
 
 Overrides, from its `<overrides>`: parens that aid clarity, bold table-cell labels, bold inline paragraph introducers, and italic structural labels in repeated patterns. Read the override text before flagging any of these — the catalog permits them deliberately, so a flag against one is a false positive.
+
+Each override is bounded, and every use outside its bounds stays a violation to sweep. Flag parens carrying emphasis or redundant restatement, bold acting as general emphasis, and italics standing in for bold.
 </what_to_check>
 
 <success_criteria>

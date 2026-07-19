@@ -11,6 +11,11 @@ Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill
 Internal team documents that are scannable, decisive, and durable.
 </objective>
 
+<constraints>
+NEVER draft against these conventions before both `<artifact_ownership>` tests have run — a repository-governed artifact and an outward-facing draft each read as an internal doc until the tests separate them.
+NEVER apply these conventions to a document another workflow owns — its structure, voice, and required sections come from that workflow.
+</constraints>
+
 <artifact_ownership>
 Artifact ownership outranks audience. A document read only by colleagues still belongs to its governing workflow whenever a repository or domain owns it, so "it lives in a workspace" never routes an artifact here on its own.
 
@@ -20,11 +25,9 @@ Apply two tests before drafting. Ownership first: when a repository or domain wo
 </artifact_ownership>
 
 <why_internal_docs_are_different>
-External prose optimizes for first-read comprehension by a stranger. Internal docs optimize for repeated retrieval by colleagues who already have context. That changes what's helpful.
+A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references are worth the visual weight because they accelerate that retrieval, and the same patterns read as noise in prose a stranger meets once.
 
-A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references are worth the visual weight in internal docs because they accelerate retrieval. The same patterns can read as AI noise in external prose where the reader is meeting the content for the first time.
-
-The `/internal-doc-standards` catalog encodes this calibration. The inherited prose rules still apply for things that are unambiguously bad writing (em-dash overuse, significance adverbs, false suspense). The overrides apply for things prose-skills forbid that internal docs need.
+The `/internal-doc-standards` catalog encodes the calibration: inherited rules for what is unambiguously bad writing, overrides for what the prose skills forbid that internal docs need.
 </why_internal_docs_are_different>
 
 <workflow>

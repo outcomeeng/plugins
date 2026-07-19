@@ -25,7 +25,7 @@ The dividing line has two tests, applied in order. Ownership first: when a repos
 </scope>
 
 <inherited_rules>
-The following anti-patterns from `/prose-standards` apply unchanged. Read that catalog for the full descriptions and examples.
+The following anti-patterns from `/prose-standards` apply unchanged, condensed here to their names and briefest cues. Composing skills invoke `/prose-standards` through the runtime's skill-composition surface when they need the full descriptions and examples behind these names.
 
 Word choice. Avoid significance adverbs ("quietly", "deeply", "fundamentally"), authenticity adverbs ("genuinely", "truly", "actually"), overused vocabulary ("delve", "leverage" as a verb, "robust", "harness"), ornate nouns ("tapestry", "landscape", "paradigm"), and pompous verbs ("serves as", "stands as").
 
