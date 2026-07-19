@@ -542,6 +542,12 @@ def verify_prowl_compliance() -> list[str]:
         {},
         {module.RESULT_REFERENCE_FIELD: "result://missing-projection"},
         {module.PROJECTION_FIELD: "projection without reference"},
+        {
+            module.RESULT_REFERENCE_FIELD: "result://overlength-projection",
+            module.PROJECTION_FIELD: (
+                "x" * (module.MAX_RESULT_PROJECTION_CHARACTERS + 1)
+            ),
+        },
     )
     for invalid_fields in invalid_result_forms:
         try:

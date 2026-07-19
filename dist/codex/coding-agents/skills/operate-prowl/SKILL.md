@@ -104,7 +104,7 @@ A complete inline result uses `inlineResult`. A durable result uses `resultRefer
 <constraints>
 
 - ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination, status, conclusion, exit-code, and result-reference values.
-- ALWAYS use this skill's bundled script through `${SKILL_DIR}`; another skill invokes this capability by name and never imports or locates the script.
+- ALWAYS execute the bundled script through `${SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
 - NEVER invoke raw Prowl commands, Prowl command help, or an external environment-control skill.
 - NEVER mutate focus, keys, tabs, or panes without explicit authorization for the exact operation and target in the same turn.
 - NEVER scan transcripts, parse terminal presentation as identity, or poll for delegation completion.
@@ -120,7 +120,7 @@ Before release, import the bundled module with controlled `CommandRunner` implem
 
 <success_criteria>
 
-- Every public operation returns one checked versioned result without exposing Prowl command grammar to the invoking workflow.
+- A successful public operation is mechanically established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and a public `response` object without exposing Prowl command grammar.
 - Every positively identified Prowl participant retains complete public identities verbatim.
 - Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
 - Terminal results carry complete inline content or an exact durable reference with a bounded projection.
