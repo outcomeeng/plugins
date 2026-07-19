@@ -12,7 +12,9 @@ Artifact ownership decides that routing before audience does. A document a repos
 
 ### Compliance
 
-- ALWAYS: invoke `/write-prose` when generating articles, documentation, blog posts, specs, or any long-form text ([audit])
+- ALWAYS: invoke `/write-prose` when generating long-form text for readers outside the team — articles, public documentation, blog posts, and customer-facing release or marketing copy ([audit])
 - ALWAYS: route a document to the internal-doc skills only when no repository or domain workflow governs the artifact — artifact ownership outranks reader audience ([eval](evals/artifact-ownership-routing/eval.toml))
-- NEVER: write long-form text without the writing skill — unsupervised prose drifts toward formulaic patterns ([audit])
+- ALWAYS: `/write-internal-docs` declines a repository-governed artifact and routes it to the governing repository skill ([eval](evals/internal-doc-write-routing/eval.toml))
+- ALWAYS: `/audit-internal-docs` declines to review a repository-governed artifact and routes it to the governing repository skill ([eval](evals/internal-doc-audit-routing/eval.toml))
+- NEVER: write long-form text without the writing skill its artifact routes to — unsupervised prose drifts toward formulaic patterns ([audit])
 - NEVER: classify a repository-governed engineering artifact as an internal doc because colleagues read it or it lives in a workspace ([eval](evals/artifact-ownership-routing/eval.toml))
