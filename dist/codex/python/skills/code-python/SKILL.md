@@ -50,6 +50,8 @@ Run the product's own canonical commands when it documents them — a `AGENTS.md
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
+Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and imported by the governed tests. Never assume a package directory name.
+
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 
 ```bash
@@ -104,10 +106,10 @@ All tests MUST pass. If any fail, fix implementation and re-run.
 
 ```bash
 # Type checking
-python3 -m mypy product/
+python3 -m mypy <python-source-paths>
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check <python-source-paths>
 
 # Tests one more time
 python3 -m pytest {node_path}/tests/ -v
@@ -143,10 +145,10 @@ All must pass before declaring complete.
 python3 -m pytest {node_path}/tests/ -v
 
 # Type checking
-python3 -m mypy product/
+python3 -m mypy <python-source-paths>
 
 # Linting
-python3 -m ruff check product/
+python3 -m ruff check <python-source-paths>
 ```
 
 **Step 4 — Report what was fixed.**
