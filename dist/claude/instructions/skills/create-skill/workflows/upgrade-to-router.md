@@ -35,7 +35,7 @@ Identify duplicated, obsolete, and orphaned content before mutation.
 
 <step name="rewrite_bundle">
 
-Rewrite `SKILL.md` from the router template with `<objective>`, `<essential_principles>`, `<intake>`, `<routing>`, indexes, and `<success_criteria>`. Create each workflow with `<required_reading>`, `<process>`, named `<step>` elements, and `<success_criteria>`. Use pure XML structure and exact `${CLAUDE_SKILL_DIR}` paths for bundled files.
+Rewrite the bundle from `${CLAUDE_SKILL_DIR}/templates/router-skill.md` by applying `/skill-standards`'s router, workflow-file, XML, and bundled-path rules. Keep common principles in `SKILL.md` and route-specific procedure in the workflow that consumes it.
 
 </step>
 

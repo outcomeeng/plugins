@@ -26,7 +26,7 @@ Choose one source:
 
 <step name="write_reference">
 
-Create `references/{descriptive-name}.md` under the resolved target skill. Use semantic XML sections with no Markdown headings. Include only knowledge the consuming workflow needs, and keep any examples inside the section that owns them.
+Create `references/{descriptive-name}.md` under the resolved target skill by applying `/skill-standards`'s reference-file and XML rules. Include only knowledge the consuming workflow needs, and keep any examples inside the section that owns them.
 
 </step>
 
@@ -38,7 +38,7 @@ Add the file to the target skill's `<reference_index>`. Add it to `<required_rea
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body has pure XML structure, and a fresh typed `skill-auditor` verdict approves the complete bundle.
+Run the target repository's canonical skill build and deterministic checks. Confirm the file exists, every citation resolves, no bundled file is orphaned, the body passes the reference-file checks in `/skill-standards`, and a fresh typed `skill-auditor` verdict approves the complete bundle.
 
 </step>
 

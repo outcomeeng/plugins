@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-A {{subject}} analysis report with evidence-backed findings, priorities, and actionable recommendations.
+A {{subject}} analysis report that covers {{scope}} against {{criteria}} in the declared output shape.
 </objective>
 
 <quick_start>
@@ -43,8 +43,8 @@ A {{subject}} analysis report with evidence-backed findings, priorities, and act
 
 <summary>{{Overall conclusion and scope coverage.}}</summary>
 <findings>{{Each finding with evidence, impact, and priority.}}</findings>
-<recommendations>{{Specific action mapped to each valid finding.}}</recommendations>
-<unresolved>{{Evidence gaps that prevent a conclusion.}}</unresolved>
+<recommendations>{{Include only when the analysis contract requires recommendations; otherwise remove this row.}}</recommendations>
+<unresolved>{{Include only when evidence gaps are a declared output; otherwise remove this row.}}</unresolved>
 
 </output_format>
 
@@ -61,6 +61,6 @@ A {{subject}} analysis report with evidence-backed findings, priorities, and act
 
 - Every included scope item is covered or listed as unresolved with the missing evidence.
 - Every finding cites evidence and follows the declared priority rule.
-- Every recommendation maps to a valid finding.
+- Every included recommendation maps to a valid finding.
 
 </success_criteria>

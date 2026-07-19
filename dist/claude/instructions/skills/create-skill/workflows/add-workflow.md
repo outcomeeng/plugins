@@ -20,7 +20,7 @@ Name the distinct user intent, trigger phrases, observable output, required refe
 
 <step name="write_workflow">
 
-Create `workflows/{descriptive-name}.md` with `<required_reading>`, `<process>`, and `<success_criteria>`. Use named `<step>` elements inside `<process>` and pure XML structure throughout. Load only references required by this route.
+Create `workflows/{descriptive-name}.md` by applying `/skill-standards`'s workflow-file schema and XML rules. Load only references required by this route.
 
 </step>
 
@@ -41,7 +41,7 @@ Exercise the new trigger and its nearest adjacent trigger. Confirm each selects 
 <success_criteria>
 
 - The new route represents a distinct intent and produces an output named by its success criteria.
-- The workflow has pure XML structure and loads only required references.
+- The workflow conforms to `/skill-standards` and loads only required references.
 - Routing selects the new workflow for representative input without displacing adjacent routes.
 - Repository checks pass and a typed `skill-auditor` verdict approves the complete bundle.
 

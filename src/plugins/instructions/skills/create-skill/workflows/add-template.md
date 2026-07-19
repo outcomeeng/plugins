@@ -20,7 +20,7 @@ Name the artifact the template produces, the workflow that consumes it, the fiel
 
 <step name="write_template">
 
-Create `templates/{descriptive-name}.md` under the resolved skill. Use semantic XML for a skill or prompt template, with output-shaped `<objective>` and `<success_criteria>` sections when the rendered artifact is a `SKILL.md`. Keep placeholders explicit and avoid hidden repository-specific defaults.
+Create `templates/{descriptive-name}.md` under the resolved skill by applying the template and output-shape rules in `/skill-standards` and `/agent-prompt-standards`. Keep placeholders explicit and avoid hidden repository-specific defaults.
 
 </step>
 

@@ -43,7 +43,7 @@ Apply every must-fix item and every explicitly requested improvement through the
 
 <step name="validate_and_reaudit">
 
-For an explicit improvement request, confirm every accepted finding and same-class instance is repaired, frontmatter and XML structure are valid, every bundled citation resolves, and focused checks for the changed behavior pass. Run the target repository's canonical skill build and deterministic checks. Create a clean checkpoint after those checks pass and repeat the same audit route over the new head. Continue until the verdict is `APPROVED` or a concrete blocker remains.
+For an explicit improvement request, confirm every accepted finding and same-class instance is repaired, the complete bundle passes the applicable `/skill-standards` and `/agent-prompt-standards` checks, every bundled citation resolves, and focused checks for the changed behavior pass. Run the target repository's canonical skill build and deterministic checks. Create a clean checkpoint after those checks pass and repeat the same audit route over the new head. Continue until the verdict is `APPROVED` or a concrete blocker remains.
 
 </step>
 

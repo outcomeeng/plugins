@@ -66,17 +66,13 @@ Create only the directories the selected structure needs: `workflows/`, `referen
 
 <step name="author_skill">
 
-Write YAML frontmatter and the required `<objective>` and `<success_criteria>` sections. A non-router procedure uses `<workflow>` in `SKILL.md`; a router adds the router tags required by `/skill-standards`. Files under `workflows/` use `<required_reading>`, `<process>`, and `<success_criteria>`.
-
-Add `<quick_start>` only when `/skill-standards` permits an abbreviated on-demand path. Foundation, gate, validator, reference, and auditor skills omit it. Add `<context>` only for state-dependent inputs consumed on every load; ordinary intake and repository reading belong in the workflow.
-
-Keep domain detail in cited references one level below `SKILL.md`, without nested reference chains. When adding scripts, follow `/skill-standards`'s script rules, use the target repository's required implementation language, and test success and failure inputs before inclusion.
+Instantiate the selected template with the resolved requirements. Apply `/skill-standards` `<frontmatter>`, `<xml_structure>`, `<progressive_disclosure>`, `<templates_and_variables>`, and `<script_standards>` directly; do not reproduce those rules in this workflow. Route bundled-script implementation and testing through the target repository's required language workflows.
 
 </step>
 
 <step name="validate">
 
-Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `skill-auditor` over the complete skill bundle. If the role is unavailable or returns no complete structured verdict, return `BLOCKED`; never substitute an in-context `/audit-skills` invocation. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, verify frontmatter parsing, XML tag closure, bundled-link resolution, and directory/name agreement with its available validation surface before dispatching the audit.
+Run the target repository's canonical skill build and deterministic checks. Dispatch the typed `skill-auditor` over the complete skill bundle. If the role is unavailable or returns no complete structured verdict, return `BLOCKED`; never substitute an in-context `/audit-skills` invocation. Repair every must-fix finding before publication. When the target repository declares no deterministic skill check, apply the closest available validation surface to every applicable `/skill-standards` and `/agent-prompt-standards` check before dispatching the audit.
 
 </step>
 
@@ -91,10 +87,10 @@ Invoke the skill against representative input. Confirm that it selects the inten
 <success_criteria>
 
 - The skill lives at the repository-resolved authored source path and renders for every supported runtime.
-- Frontmatter matches the classified invocation path, and the body has valid pure-XML structure with output-shaped `<objective>` and `<success_criteria>` sections.
+- Frontmatter and body conform to the selected type, template, and applicable `/skill-standards` sections.
 - Every reviewed plugin skill has a naming-classification row, with only proven violations or explicit operator-directed names changed.
-- The selected structure follows the canonical progressive-disclosure rule, with every bundled file cited and no nested or orphaned references.
-- Tool permissions, arguments, dynamic context, and bundled paths match the runtime capability contract.
+- The complete bundle passes `/skill-standards` progressive-disclosure and reference-integrity checks.
+- The complete bundle passes `/skill-standards` command-capability checks.
 - Any bundled scripts pass success and failure tests, repository checks pass, and the typed `skill-auditor` verdict is `APPROVED`.
 
 </success_criteria>
