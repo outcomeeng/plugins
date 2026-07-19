@@ -46,11 +46,12 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
         contract = module.OPERATION_CONTRACTS[operation]
         for shape in contract.request_shapes:
             ordinal += 1
+            fields = shape.required_fields | shape.optional_fields
             arguments = {
                 argument_names[field_name]: _request_argument_value(
                     module, field_name, ordinal
                 )
-                for field_name in shape
+                for field_name in fields
             }
             requests.append(module.operation_request(operation, **arguments))
     return requests

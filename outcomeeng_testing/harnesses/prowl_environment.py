@@ -195,6 +195,64 @@ def verify_prowl_mappings() -> list[str]:
         if executed[module.RESPONSE_FIELD] != response:
             failures.append(f"{operation.value} checked result rewrote the response")
 
+        arguments = dict(cast(dict[str, object], request[module.ARGUMENTS_FIELD]))
+        selected = [field for field in module.SELECTOR_FIELDS if field in arguments]
+        if selected:
+            without_selector = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    field: value
+                    for field, value in arguments.items()
+                    if field not in module.SELECTOR_FIELDS
+                },
+            }
+            try:
+                module.command_for(without_selector)
+                failures.append(
+                    f"{operation.value} accepted a request without its required selector"
+                )
+            except module.ProwlEnvironmentError as error:
+                if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+                    failures.append(
+                        f"{operation.value} selector omission mapped to {error.status}"
+                    )
+
+            second_selector = next(
+                field for field in module.SELECTOR_FIELDS if field not in selected
+            )
+            combined_selectors = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    second_selector: f"combined-{second_selector}",
+                },
+            }
+            try:
+                module.command_for(combined_selectors)
+                failures.append(
+                    f"{operation.value} accepted conflicting target selectors"
+                )
+            except module.ProwlEnvironmentError as error:
+                if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+                    failures.append(
+                        f"{operation.value} selector conflict mapped to {error.status}"
+                    )
+
+        if operation is module.Operation.SEND and arguments.get(module.NO_WAIT_FIELD):
+            conflicting_send = {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    module.CAPTURE_FIELD: True,
+                },
+            }
+            try:
+                module.command_for(conflicting_send)
+                failures.append("send accepted conflicting no-wait and capture shapes")
+            except module.ProwlEnvironmentError as error:
+                if error.status != module.ExecutionStatus.INVALID_SCHEMA:
+                    failures.append(f"send shape conflict mapped to {error.status}")
+
     public_item = public_agent_item(module, ordinal=1)
     projected = module.participant_from_agent(public_item)
     if projected != agent_identity(module, ordinal=1):

@@ -177,28 +177,62 @@ MUTATING_OPERATIONS = frozenset(
 
 
 @dataclass(frozen=True)
+class RequestShape:
+    required_fields: frozenset[str] = frozenset()
+    optional_fields: frozenset[str] = frozenset()
+
+    def accepts(self, fields: frozenset[str]) -> bool:
+        return (
+            self.required_fields
+            <= fields
+            <= (self.required_fields | self.optional_fields)
+        )
+
+
+@dataclass(frozen=True)
 class OperationContract:
-    allowed_fields: frozenset[str]
-    request_shapes: tuple[frozenset[str], ...]
+    request_shapes: tuple[RequestShape, ...]
+
+    @property
+    def allowed_fields(self) -> frozenset[str]:
+        return frozenset(
+            field
+            for shape in self.request_shapes
+            for field in shape.required_fields | shape.optional_fields
+        )
 
 
-_SELECTORS = frozenset(SELECTOR_FIELDS)
+def _selector_shapes(
+    required_fields: frozenset[str], optional_fields: frozenset[str] = frozenset()
+) -> tuple[RequestShape, ...]:
+    return tuple(
+        RequestShape(required_fields | {selector}, optional_fields)
+        for selector in SELECTOR_FIELDS
+    )
+
+
+def _send_shapes() -> tuple[RequestShape, ...]:
+    shapes: list[RequestShape] = []
+    for selector in SELECTOR_FIELDS:
+        base = frozenset({selector, TEXT_FIELD})
+        shapes.extend(
+            (
+                RequestShape(base, frozenset({NO_ENTER_FIELD, TIMEOUT_FIELD})),
+                RequestShape(base | {NO_WAIT_FIELD}, frozenset({NO_ENTER_FIELD})),
+                RequestShape(base | {CAPTURE_FIELD}, frozenset({TIMEOUT_FIELD})),
+            )
+        )
+    return tuple(shapes)
+
+
 OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
-    Operation.LIST: OperationContract(frozenset(), (frozenset(),)),
-    Operation.AGENTS: OperationContract(frozenset(), (frozenset(),)),
+    Operation.LIST: OperationContract((RequestShape(),)),
+    Operation.AGENTS: OperationContract((RequestShape(),)),
     Operation.READ: OperationContract(
-        _SELECTORS
-        | {
-            LAST_FIELD,
-            WAIT_STABLE_FIELD,
-            STABLE_INTERVAL_FIELD,
-            STABLE_PERIOD_FIELD,
-            WAIT_TIMEOUT_FIELD,
-        },
-        (
+        _selector_shapes(
+            frozenset(),
             frozenset(
                 {
-                    PANE_FIELD,
                     LAST_FIELD,
                     WAIT_STABLE_FIELD,
                     STABLE_INTERVAL_FIELD,
@@ -206,49 +240,35 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
                     WAIT_TIMEOUT_FIELD,
                 }
             ),
-        ),
+        )
     ),
-    Operation.SEND: OperationContract(
-        _SELECTORS
-        | {
-            TEXT_FIELD,
-            NO_ENTER_FIELD,
-            NO_WAIT_FIELD,
-            CAPTURE_FIELD,
-            TIMEOUT_FIELD,
-        },
-        (
-            frozenset({PANE_FIELD, TEXT_FIELD, NO_ENTER_FIELD, NO_WAIT_FIELD}),
-            frozenset({TARGET_FIELD, TEXT_FIELD, CAPTURE_FIELD, TIMEOUT_FIELD}),
-        ),
-    ),
+    Operation.SEND: OperationContract(_send_shapes()),
     Operation.KEY: OperationContract(
-        _SELECTORS | {KEY_FIELD, REPEAT_FIELD, MUTATION_AUTHORIZED_FIELD},
-        (
-            frozenset(
-                {TARGET_FIELD, KEY_FIELD, REPEAT_FIELD, MUTATION_AUTHORIZED_FIELD}
-            ),
-        ),
+        _selector_shapes(
+            frozenset({KEY_FIELD, MUTATION_AUTHORIZED_FIELD}),
+            frozenset({REPEAT_FIELD}),
+        )
     ),
     Operation.FOCUS: OperationContract(
-        _SELECTORS | {MUTATION_AUTHORIZED_FIELD},
-        (frozenset({WORKTREE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+        _selector_shapes(frozenset({MUTATION_AUTHORIZED_FIELD}))
     ),
     Operation.TAB_CREATE: OperationContract(
-        _SELECTORS | {PATH_FIELD, MUTATION_AUTHORIZED_FIELD},
-        (frozenset({WORKTREE_FIELD, PATH_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+        _selector_shapes(
+            frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({PATH_FIELD})
+        )
     ),
     Operation.TAB_CLOSE: OperationContract(
-        _SELECTORS | {FORCE_FIELD, MUTATION_AUTHORIZED_FIELD},
-        (frozenset({TAB_FIELD, FORCE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+        _selector_shapes(
+            frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({FORCE_FIELD})
+        )
     ),
     Operation.PANE_CLOSE: OperationContract(
-        _SELECTORS | {FORCE_FIELD, MUTATION_AUTHORIZED_FIELD},
-        (frozenset({PANE_FIELD, FORCE_FIELD, MUTATION_AUTHORIZED_FIELD}),),
+        _selector_shapes(
+            frozenset({MUTATION_AUTHORIZED_FIELD}), frozenset({FORCE_FIELD})
+        )
     ),
     Operation.OPEN: OperationContract(
-        frozenset({PATH_FIELD}),
-        (frozenset({PATH_FIELD}), frozenset()),
+        (RequestShape(optional_fields=frozenset({PATH_FIELD})),)
     ),
 }
 INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
@@ -486,6 +506,23 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             ExecutionStatus.INVALID_SCHEMA,
             f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
         )
+    if (
+        operation in MUTATING_OPERATIONS
+        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
+    ):
+        raise ProwlEnvironmentError(
+            ExecutionStatus.MUTATION_UNAUTHORIZED,
+            f"{operation.value} requires mutationAuthorized: true before command construction.",
+        )
+    argument_fields = frozenset(arguments)
+    if not any(
+        shape.accepts(argument_fields)
+        for shape in OPERATION_CONTRACTS[operation].request_shapes
+    ):
+        raise ProwlEnvironmentError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{operation.value} arguments do not match a source-owned request shape.",
+        )
     _one_selector(arguments)
 
     if operation is Operation.SEND:
@@ -524,14 +561,6 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             _boolean(arguments[field], f"request.{ARGUMENTS_FIELD}.{field}")
     if PATH_FIELD in arguments:
         _text(arguments[PATH_FIELD], f"request.{ARGUMENTS_FIELD}.{PATH_FIELD}")
-    if (
-        operation in MUTATING_OPERATIONS
-        and arguments.get(MUTATION_AUTHORIZED_FIELD) is not True
-    ):
-        raise ProwlEnvironmentError(
-            ExecutionStatus.MUTATION_UNAUTHORIZED,
-            f"{operation.value} requires mutationAuthorized: true before command construction.",
-        )
     return operation, arguments
 
 
