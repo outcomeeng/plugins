@@ -40,19 +40,19 @@ A verdict on one {{! term('configured_agent') !}} configuration file ({!% if tar
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read `instructions:create-subagent` plus every guide that supplies an evaluation area:
-   - `references/subagents.md`
-   - `references/write-subagent-prompts.md`
-   - `references/evaluation-and-testing.md`
-   - `references/error-handling-and-recovery.md`
-   - `references/context-management.md`
-   - `references/orchestration-patterns.md`
-   - `references/debugging-agents.md`
-2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
+1. Read `instructions:create-subagent`. From that skill's `<reference>` index, follow the owning skill's links for every guide that supplies an evaluation area:
+   - `subagents.md`
+   - `write-subagent-prompts.md`
+   - `evaluation-and-testing.md`
+   - `error-handling-and-recovery.md`
+   - `context-management.md`
+   - `orchestration-patterns.md`
+   - `debugging-agents.md`
+2. Read `instructions:agent-prompt-standards` for voice, description style, constraint language, and anti-patterns.
 3. If `$configured_agent_path` is empty, STOP with `REJECTED` and a critical issue naming the missing required path argument.
 4. Before penalizing any missing section, search entire file for equivalent content under different tag names.
 5. Read the {{! term('configured_agent') !}} configuration file at `$configured_agent_path`.
-6. Evaluate against best practices from steps 1-4, focusing on functionality over formatting.
+6. Evaluate against the loaded skills and references, focusing on functionality over formatting.
 
 **Use ACTUAL patterns from references, not memory.**
 </audit_workflow>
