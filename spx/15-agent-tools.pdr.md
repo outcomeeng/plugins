@@ -1,6 +1,6 @@
 # Agent Tools
 
-Agent-facing tool interfaces present command forms by harness environment. Skills and agents that instruct Claude to call `spx`, `gh`, or any other CLI name the supported interactive and programmatic forms for payload input, waiting, and mutation, so users see reliable behavior across Claude Code, Codex, and hosted runner contexts.
+Agent-facing tool interfaces present command forms by harness environment. Skills and agents that instruct Claude to call `spx`, `gh`, or any other CLI name the supported interactive and programmatic forms for payload input, so users see reliable behavior across Claude Code, Codex, and hosted runner contexts.
 
 ## Rationale
 
