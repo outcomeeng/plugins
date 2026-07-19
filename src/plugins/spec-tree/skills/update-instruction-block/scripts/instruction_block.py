@@ -27,6 +27,7 @@ extensions, replaces symlinked root instruction files with regular files, remove
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
 
+Covered by ``just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/``.
 The deterministic modules ``test_instruction_block.scenario.l1.py``,
 ``test_instruction_block.mapping.l1.py``, ``test_instruction_block.property.l1.py``,
 ``test_instruction_block.compliance.l1.py``, ``test_language_override.property.l1.py``, and
