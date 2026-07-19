@@ -161,7 +161,7 @@ Structure the system prompt with pure XML tags. Remove ALL markdown headings fro
 ```text
 ---
 name: security-reviewer
-description: Reviews code for security vulnerabilities
+description: Reviews code for security vulnerabilities. Use after security-sensitive code changes or before release.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

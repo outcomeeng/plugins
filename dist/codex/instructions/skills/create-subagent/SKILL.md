@@ -153,7 +153,7 @@ Structure the developer instructions with pure XML tags. Remove ALL markdown hea
 
 ```toml
 name = "security_reviewer"
-description = "Reviews code for security vulnerabilities."
+description = "Reviews code for security vulnerabilities. Use after security-sensitive code changes or before release."
 sandbox_mode = "read-only"
 model = "gpt-5.4"
 developer_instructions = """
