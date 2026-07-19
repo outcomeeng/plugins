@@ -1,6 +1,6 @@
 <required_reading>
 
-Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md` and the script-standards reference named by `<script_standards>`. Read `spx/local/skills.md` when the target repository provides it. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
+Read `/skill-standards` and `/agent-prompt-standards`, including `/skill-standards`'s `references/runtime-variables.md` and the script-standards reference named by `<script_standards>`. Read `${SKILL_DIR}/references/technical-patterns.md` for executable-automation security, dependencies, failure handling, side effects, and cleanup. Read `spx/local/skills.md` when the target repository provides it. Load the target repository's implementation and test skills for the selected script language before writing code or tests.
 
 </required_reading>
 
