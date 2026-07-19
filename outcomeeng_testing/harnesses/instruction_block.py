@@ -507,6 +507,7 @@ def compliance_evidence_contract() -> tuple[str, ...]:
             for agent_harness in TEMPLATE_HARNESSES
         ),
         "unresolved_build_macro_is_rejected",
+        "wait_for_load_stop_trigger_policy",
     )
 
 

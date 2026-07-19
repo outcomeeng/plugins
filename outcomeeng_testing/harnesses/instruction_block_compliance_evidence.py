@@ -400,12 +400,52 @@ def _render_shipped_instruction_blocks(
     )
 
 
-def rendered_wait_for_load_policy_document_sets() -> tuple[dict[str, str], ...]:
-    """Render both shipped instruction blocks for every declared language subset."""
-    return tuple(
-        _render_shipped_instruction_blocks(enabled_languages)
-        for enabled_languages in harness.template_language_subsets()
-    )
+def _require_wait_for_load_policy_error(documents: dict[str, str]) -> None:
+    """Require the production validator to reject an invalid policy render."""
+    try:
+        dist.validate_wait_for_load_policy(documents)
+    except dist.WaitForLoadPolicyError:
+        return
+    raise AssertionError("invalid wait-for-load policy was accepted")
+
+
+def _assert_wait_for_load_stop_trigger_policy() -> None:
+    """Challenge every wait-for-load requirement across all renders."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        dist.validate_wait_for_load_policy(documents)
+        for _, requirement in dist.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
+            _require_wait_for_load_policy_error(
+                {
+                    agent_harness: document.replace(requirement, "", 1)
+                    for agent_harness, document in documents.items()
+                }
+            )
+            _require_wait_for_load_policy_error(
+                {
+                    agent_harness: document.replace(
+                        dist.managed_router_block(document),
+                        dist.managed_router_block(document)
+                        .replace(requirement, "", 1)
+                        .replace("\n", f"\n{requirement}\n", 1),
+                        1,
+                    )
+                    for agent_harness, document in documents.items()
+                }
+            )
+        for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
+            _require_wait_for_load_policy_error(
+                {
+                    agent_harness: document.replace(
+                        dist.managed_router_block(document),
+                        dist.managed_router_block(document).replace(
+                            "\n", f"\n{contradiction.violating_directive}\n", 1
+                        ),
+                        1,
+                    )
+                    for agent_harness, document in documents.items()
+                }
+            )
 
 
 def _assert_authority_hierarchy_policy_is_complete() -> None:
