@@ -285,7 +285,7 @@ Follow the file format specified above (YAML frontmatter + system prompt).
 ```bash
 claude --agents '{
   "code-reviewer": {
-    "description": "ALWAYS use this subagent after code changes.",
+    "description": "Reviews code quality, security, and best practices. Use after code changes.",
     "prompt": "Claude is a senior code reviewer. Focus on quality, security, and best practices.",
     "tools": ["Read", "Grep", "Glob", "Bash"],
     "model": "sonnet"
@@ -591,7 +591,7 @@ Create task-specific subagents, not generic helpers.
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "ALWAYS use this subagent after code changes involving authentication, data access, or user input."
+✅ Good: "Reviews code for security risks. Use after changes involving authentication, data access, or user input."
 </clear_triggers>
 
 <focused_tools>

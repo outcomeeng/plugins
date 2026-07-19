@@ -559,7 +559,7 @@ Create task-specific subagents, not generic helpers.
 Make the `description` clear about when to invoke:
 
 ❌ Bad: "Helps with code"
-✅ Good: "ALWAYS use this subagent after code changes involving authentication, data access, or user input."
+✅ Good: "Reviews code for security risks. Use after changes involving authentication, data access, or user input."
 </clear_triggers>
 
 <focused_tools>
