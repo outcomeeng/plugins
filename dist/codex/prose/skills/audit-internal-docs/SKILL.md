@@ -1,7 +1,7 @@
 ---
 name: audit-internal-docs
 description: >-
-  ALWAYS invoke this skill when auditing or reviewing internal team documents for cleanup. Use this whenever the user asks to review, audit, clean up, or check the writing of a Notion page, runbook, hiring rubric, scorecard, internal policy, decision record, design spec, competency model, onboarding guide, or any other doc that lives in a workspace and is read by colleagues. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use audit-prose for those instead. NEVER invoke for responses to the user, including long research summaries delivered in chat, or for agent-facing instructions like SKILL.md.
+  ALWAYS invoke this skill when auditing or reviewing internal team documents for cleanup. Use this whenever the user asks to review, audit, clean up, or check the writing of a Notion page, runbook, hiring rubric, scorecard, internal policy, competency model, onboarding guide, status page, or a workspace-native decision record or design spec that no repository or domain workflow already governs. NEVER invoke for repository-governed engineering artifacts that carry a dedicated domain workflow — AGENTS.md, spec-tree specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md — follow the governing repository skill instead; living in a workspace never overrides that ownership. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use audit-prose for those instead. NEVER invoke for responses to the user, including long research summaries delivered in chat.
 model: sonnet
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
@@ -12,16 +12,24 @@ Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill
 A list of internal-doc anti-patterns found, each flagged with its category and pattern name and paired with a concrete rewrite.
 </objective>
 
+<artifact_ownership>
+Reviewing a document follows the same ownership rules as writing it. Artifact ownership outranks audience, so "it lives in a workspace and colleagues read it" never routes a review here on its own.
+
+Repository-governed engineering artifacts — `AGENTS.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, `SKILL.md` — carry dedicated domain workflows that own their structure, voice, and required sections. Route their review to the governing repository skill. Auditing them against this catalog would flag conventions their governing workflow requires.
+</artifact_ownership>
+
 <workflow>
 1. Read `/internal-doc-standards` for the catalog.
 
-2. Read the document being reviewed.
+2. Confirm ownership. Apply the `<artifact_ownership>` test: when a repository or domain workflow governs the document, stop and route the review to that workflow.
 
-3. Flag each violation. Name the specific pattern and the category it belongs to. The category labels match the catalog sections: inherited word choice, inherited sentence structure, inherited tone, inherited composition, inherited formatting, internal-doc heading rules, internal-doc metadata rules, internal-doc cross-reference rules, internal-doc list and table rules.
+3. Read the document being reviewed.
 
-4. Propose a concrete rewrite for each flag. Don't just say "avoid X" — show the fixed text. The rewrite makes the suggestion actionable and lets the user accept or modify it directly.
+4. Flag each violation. Name the specific pattern and the category it belongs to. The category labels match the catalog sections: inherited word choice, inherited sentence structure, inherited tone, inherited composition, inherited formatting, internal-doc heading rules, internal-doc metadata rules, internal-doc cross-reference rules, internal-doc list and table rules.
 
-5. Summarize. Total violation count, most frequent category, overall assessment of doc quality. The summary lets the user prioritize their attention.
+5. Propose a concrete rewrite for each flag. Don't just say "avoid X" — show the fixed text. The rewrite makes the suggestion actionable and lets the user accept or modify it directly.
+
+6. Summarize. Total violation count, most frequent category, overall assessment of doc quality. The summary lets the user prioritize their attention.
 
 </workflow>
 

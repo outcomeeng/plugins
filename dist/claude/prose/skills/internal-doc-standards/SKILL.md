@@ -2,7 +2,7 @@
 name: internal-doc-standards
 user-invocable: false
 description: >-
-  Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, decision records, design specs, competency models). Reference skill loaded by other internal-doc skills, not invoked directly. Use write-internal-docs to write, or audit-internal-docs to review.
+  Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, competency models, and workspace-native decision records or design specs no repository or domain workflow governs). Excludes repository-governed engineering artifacts, which follow their governing repository skill. Reference skill loaded by other internal-doc skills, not invoked directly. Use write-internal-docs to write, or audit-internal-docs to review.
 allowed-tools: Read
 ---
 
@@ -15,11 +15,13 @@ This is a reference skill. Composing internal-doc skills load these standards ex
 </reference_note>
 
 <scope>
-USE this catalog for internal team docs that live in your workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content.
+USE this catalog for internal team docs that live in your workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content. Decision records and design specs belong here only as workspace-native documents that no repository or domain workflow already governs.
+
+DO NOT use this catalog for repository-governed engineering artifacts. `CLAUDE.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, and `SKILL.md` carry dedicated domain workflows that own their structure, voice, and required sections. Follow the governing repository skill and apply its conventions. This catalog states no authoring rules for those artifacts and never substitutes for that workflow.
 
 DO NOT use this catalog for external-facing prose. For READMEs published to GitHub, blog posts, web copy, customer-facing release notes, marketing material, or other prose written for strangers, use `/prose-standards` instead.
 
-The dividing line: internal docs assume the reader has context, can skim, and may return to a specific section later. External prose assumes the reader is meeting the content for the first time and reads top-to-bottom.
+The dividing line has two tests, applied in order. Ownership first: when a repository or domain workflow governs the artifact, that workflow wins regardless of who reads it — audience never overrides ownership. Audience second, among documents no such workflow governs: internal docs assume the reader has context, can skim, and may return to a specific section later, while external prose assumes the reader is meeting the content for the first time and reads top-to-bottom.
 </scope>
 
 <inherited_rules>

@@ -1,7 +1,7 @@
 ---
 name: write-internal-docs
 description: >-
-  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content. Use this skill whenever the user is creating a doc intended for colleagues who already have context, not for strangers reading it for the first time. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use write-prose for those instead. NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions like SKILL.md.
+  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, competency models, onboarding guides, status pages, internal wiki content, and workspace-native decision records or design specs that no repository or domain workflow already governs. Use this skill whenever the user is creating a doc intended for colleagues who already have context, not for strangers reading it for the first time. NEVER invoke for repository-governed engineering artifacts that carry a dedicated domain workflow — CLAUDE.md, spec-tree specs, ADRs, PDRs, PLAN.md, ISSUES.md, SKILL.md — follow the governing repository skill instead. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use write-prose for those instead. NEVER invoke for chat replies, commit messages, or code comments.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
@@ -10,6 +10,14 @@ Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill
 <objective>
 Internal team documents that are scannable, decisive, and durable.
 </objective>
+
+<artifact_ownership>
+Artifact ownership outranks audience. A document read only by colleagues still belongs to its governing workflow whenever a repository or domain owns it, so "it lives in a workspace" never routes an artifact here on its own.
+
+Repository-governed engineering artifacts — `CLAUDE.md`, spec-tree specs, ADRs, PDRs, `PLAN.md`, `ISSUES.md`, `SKILL.md` — carry dedicated domain workflows that own their structure, voice, and required sections. Write those through the governing repository skill. This skill's conventions do not apply to them and never substitute for that workflow.
+
+Apply this test before drafting: when a repository or domain workflow governs the artifact, stop and route there. Only documents no such workflow governs are internal docs.
+</artifact_ownership>
 
 <why_internal_docs_are_different>
 External prose optimizes for first-read comprehension by a stranger. Internal docs optimize for repeated retrieval by colleagues who already have context. That changes what's helpful.
@@ -22,7 +30,7 @@ The `/internal-doc-standards` catalog encodes this calibration. The inherited pr
 <workflow>
 1. Read `/internal-doc-standards` for the catalog of conventions and anti-patterns.
 
-2. Understand the document's purpose. Internal docs come in identifiable types: process documentation, decision record, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions. Identify the type before drafting.
+2. Confirm ownership before drafting. Apply the `<artifact_ownership>` test: when a repository or domain workflow governs the artifact, stop and route to that workflow. Then identify the type — process documentation, workspace-native decision record, reference page, competency model, scorecard, onboarding guide, status page. Each type has its own conventions.
 
 3. Identify canonical homes. For each concept the document will reference, locate its canonical home in the workspace. Plan inline hyperlinks to those homes; don't restate canonical content.
 
@@ -39,7 +47,7 @@ The `/internal-doc-standards` catalog encodes this calibration. The inherited pr
 <doc_type_conventions>
 Brief conventions for common internal-doc types.
 
-Decision records. Lead with the decision in one sentence. Then context, options considered, reasoning, consequences. Decisive language throughout; the doc encodes a decision that's been made.
+Workspace-native decision records. Lead with the decision in one sentence. Then context, options considered, reasoning, consequences. Decisive language throughout; the doc encodes a decision that's been made. These conventions cover only decision records no repository or domain workflow governs — an ADR or PDR follows its governing repository skill, not this shape.
 
 Hiring rubrics and scorecards. Lead with what the rubric measures. Then the scoring scale, then the items. Items are grouped by category. Each item has a behavioral indicator and a source. Scoring guidance is concrete (1 means X, 2 means Y, etc.).
 
