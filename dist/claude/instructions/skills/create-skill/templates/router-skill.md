@@ -51,6 +51,7 @@ What would you like to do?
 | ------------------- | ------------------------------- |
 | `{{workflow-1}}.md` | {{Distinct intent and output.}} |
 | `{{workflow-2}}.md` | {{Distinct intent and output.}} |
+| `{{workflow-3}}.md` | {{Distinct intent and output.}} |
 
 </workflows_index>
 
