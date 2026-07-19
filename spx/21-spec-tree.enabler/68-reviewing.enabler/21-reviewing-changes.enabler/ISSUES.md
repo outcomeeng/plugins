@@ -65,3 +65,23 @@ Required handling:
 - Restore prior-run context without copying prior scope events into the new run's authoritative coverage count.
 
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
+
+## 7. This branch is a rejected coherence unit — split before publication
+
+The `changeset-coherence-auditor` (shipped in spec-tree 0.79.0) audited this branch's changeset and returned `REJECTED`, `publication_authorized: false`. The changeset bundles seven independently mergeable semantic clusters across three independent dependency roots, so it cannot ship as one review unit.
+
+The recommended dependency-ordered split:
+
+1. **Eval-harness multi-producer (`producer-files`) rendering** — the `producer-coupled-skill-evals` ADR, `producer_prompt` capability, and `audit-eval-evidence` freshness rule. Independent root; every other unit below depends on it.
+2. **Runtime-token scanner ISSUES.md note** (`spx/15-validation.enabler/32-runtime-token.enabler`). Independent root; no coupling to any other unit.
+3. **ADR voice-eval rationale-temporal case** — depends on unit 1.
+4. **Instruction-block terminology + generator-migration ISSUES.md note** (`spx/21-spec-tree.enabler/43-instruction-block.enabler`). Independent root.
+5. **`audit-specs` stale eval-link fix** routing through the consolidated `structure` eval — depends on unit 1.
+6. **Audit coverage-by-artifact-ownership** classification (`audit.md`, `audit-implementation`, `audit-tests`) — depends on unit 1.
+7. **The review-finding-disposition rewrite itself** (`reviewing-changes`, `merging`, TypeScript remediation) — depends on units 1 and 6. This is the branch's anchor concern; the other six are separable capabilities it happens to consume.
+
+Required handling:
+
+- Split the branch into the seven review units above, publishing in dependency order (roots 1, 2, 4 first).
+- One `debt` finding to resolve during the split: the generated `.github/workflows/spec-tree-evals.yml` trigger block is regenerated jointly by units 6 and 7 (unit 6 adds the implementation-ownership `owned_paths`, unit 7 narrows the merging evals'), so that file's diff is not attributable to a single producer unit — keep both units' `owned_paths` edits together wherever that file lands.
+- The verdict binds to the branch tip current at audit time; re-run `changeset-coherence-auditor` against the branch to regenerate a current split if the branch advances.
