@@ -18,26 +18,26 @@ def test_instruction_block_compliance_evidence() -> None:
 
 
 def test_wait_for_load_stop_trigger_policy() -> None:
-    documents = evidence.rendered_wait_for_load_policy_documents()
-    source.validate_wait_for_load_policy(documents)
-    for _, requirement in source.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
-        with pytest.raises(source.WaitForLoadPolicyError):
-            source.validate_wait_for_load_policy(
-                {
-                    agent_harness: document.replace(requirement, "", 1)
-                    for agent_harness, document in documents.items()
-                }
-            )
-        with pytest.raises(source.WaitForLoadPolicyError):
-            source.validate_wait_for_load_policy(
-                {
-                    agent_harness: document.replace(
-                        source.managed_router_block(document),
-                        source.managed_router_block(document)
-                        .replace(requirement, "", 1)
-                        .replace("\n", f"\n{requirement}\n", 1),
-                        1,
-                    )
-                    for agent_harness, document in documents.items()
-                }
-            )
+    for documents in evidence.rendered_wait_for_load_policy_document_sets():
+        source.validate_wait_for_load_policy(documents)
+        for _, requirement in source.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
+            with pytest.raises(source.WaitForLoadPolicyError):
+                source.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(requirement, "", 1)
+                        for agent_harness, document in documents.items()
+                    }
+                )
+            with pytest.raises(source.WaitForLoadPolicyError):
+                source.validate_wait_for_load_policy(
+                    {
+                        agent_harness: document.replace(
+                            source.managed_router_block(document),
+                            source.managed_router_block(document)
+                            .replace(requirement, "", 1)
+                            .replace("\n", f"\n{requirement}\n", 1),
+                            1,
+                        )
+                        for agent_harness, document in documents.items()
+                    }
+                )

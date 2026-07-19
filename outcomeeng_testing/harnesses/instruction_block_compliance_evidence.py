@@ -400,9 +400,12 @@ def _render_shipped_instruction_blocks(
     )
 
 
-def rendered_wait_for_load_policy_documents() -> dict[str, str]:
-    """Render both shipped instruction blocks for policy assertions in tests."""
-    return _render_shipped_instruction_blocks()
+def rendered_wait_for_load_policy_document_sets() -> tuple[dict[str, str], ...]:
+    """Render both shipped instruction blocks for every declared language subset."""
+    return tuple(
+        _render_shipped_instruction_blocks(enabled_languages)
+        for enabled_languages in harness.template_language_subsets()
+    )
 
 
 def _assert_codex_router_enforces_operator_question_interrupt() -> None:
