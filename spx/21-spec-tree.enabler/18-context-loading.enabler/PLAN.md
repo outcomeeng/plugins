@@ -19,7 +19,8 @@ published JSON contract does not yet satisfy
 `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
 it emits `documents`, `methodology`, `productDir`, `siblings`, and `target`, but
 omits a cited governance decision observed for this node and exposes no
-citation provenance, guides, local overlays, bootstrap flag, or schema version.
+citation provenance, guides, local-overlay metadata, bootstrap flag, or schema
+version.
 The current skill-level cited-decision read therefore remains necessary while
 the dependency contract is completed.
 
@@ -36,7 +37,8 @@ From those two structures the structural read-set for any target is a pure
 function: walk `nodes` to the target for the ancestor chain; for each ancestor
 and the target, take its `{id}/{slug}.md` spec, the `decisions` whose `id` sits
 directly in that directory, and the lower-`order` sibling specs at that level;
-add product spec, coordination notes, and local overlays. The CLI then resolves
+add product spec and coordination notes, then enumerate local overlays as
+metadata. The CLI then resolves
 full-path ADR/PDR citations from the loaded specs and decisions, adding cited
 methodology-governance decisions to the read-set once with citing-file
 provenance. Coordination notes never drive citation loading.
@@ -104,11 +106,10 @@ Contract specifics:
   guide (`CLAUDE.md` for Claude Code or `AGENTS.md` for Codex, plus any
   same-runtime subdirectory guide on the path) is emitted in `guides` and the
   local overlays in `local_overlays`. Guides are read outside the
-  `read_order` loop; among `local_overlays`, only the lifecycle overlay
-  (`spx/local/merging.md`) is read, and the rest are listed for the skills that
-  consume them. The skill rewrite preserves the current product-guide and
-  `merging.md` reads rather than dropping them, and does not start reading the
-  other overlays.
+  `read_order` loop; every `local_overlays` entry is listed without being read.
+  Each governing standards skill consumes its own overlay;
+  `/merging-standards` remains the sole merge-lifecycle reader and interpreter
+  of `spx/local/merging.md`.
 - **Bootstrap**: a not-yet-existing target under an authoring operation returns
   `read_order` of the product spec only and `bootstrap: true`.
 - **Missing required spec** (an ancestor directory with no `{slug}.md`) is a
@@ -132,13 +133,12 @@ Once unblocked:
 - Rewrite `src/plugins/spec-tree/skills/contextualize/SKILL.md` Steps 1–3: replace
   the per-level "glob ADRs/PDRs, read every one, count must match" prose with
   "run `spx spec context <target> --json`; read every path in `read_order`, then
-  read the `guides` and the lifecycle overlay (`spx/local/merging.md`) outside the
-  `read_order` loop while listing the remaining `local_overlays` without reading
-  them; the `<SPEC_TREE_CONTEXT>` manifest enumerates exactly those paths and
-  cited-governance provenance."
-  Preserving the guide and `merging.md` reads keeps the product guide and
-  lifecycle overlay in every context load without pulling in unrelated skill
-  overlays. The agent no longer eyeballs the file set, so the skip and the
+  read the `guides` outside the `read_order` loop while listing every
+  `local_overlays` entry without reading it; the `<SPEC_TREE_CONTEXT>` manifest
+  enumerates exactly those paths and cited-governance provenance."
+  Preserving the guide read and overlay enumeration keeps product instructions
+  and configuration discovery in context without creating a second overlay
+  interpreter. The agent no longer eyeballs the file set, so the skip and the
   read-higher-index-sibling failures become structurally impossible.
 - Retag the read-completeness, lower-index-sibling, and determinism assertions in
   `context-loading.md` from `[audit]` to `[test]` against the CLI output — the
