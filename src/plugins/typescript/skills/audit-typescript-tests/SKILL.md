@@ -52,7 +52,7 @@ Use read-only `git diff` only when the supplied changeset scope requires confirm
 
 <structural_reading>
 
-Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding. Fold this reading observation into Gate 1 rather than running a naming-convention command.
+Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding carrying property `alignment` from the base `/audit-tests` enum — a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence. Fold this reading observation into Gate 1 rather than running a naming-convention command.
 
 </structural_reading>
 

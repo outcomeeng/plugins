@@ -12,8 +12,15 @@ The canonical Python ADR conventions — sections, how testability appears in Ve
 </objective>
 
 <success_criteria>
-Python ADR guidance follows this standard when `/python-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Python terms as Protocols, framework mocks are prohibited, every behavioral predicate remains in the linked test, and test-level references match `/python-test-standards`.
-</success_criteria>
+
+- `/python-standards` is loaded before this standard is applied.
+- The ADR uses only the authoritative sections.
+- Testability constraints live in `## Verification`'s `### Audit` subsection.
+- Dependency seams are expressed in Python terms as Protocols.
+- Framework mocks are prohibited.
+- Every behavioral predicate remains in the linked test.
+- Test-level references match `/python-test-standards`.
+  </success_criteria>
 
 <reference_note>
 This is a reference skill. Composing Python architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.
