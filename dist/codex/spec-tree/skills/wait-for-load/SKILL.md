@@ -16,7 +16,7 @@ A terminal host-readiness result produced by one silent foreground process that 
 python3 "${SKILL_DIR}/scripts/wait_for_load.py"
 ```
 
-2. Collect that process's completion. When the harness returns a running-process handle, continue collecting the same process; never re-read host load, calculate another interval, schedule a timer, or start another waiter while the original remains active. If the original waiter has exited and its handle or terminal result is irrecoverably lost, start one replacement waiter as recovery; never start any further waiter.
+2. Collect that process's completion. When the harness returns a running-process handle, continue collecting the same process; never re-read host load, calculate another interval, schedule a timer, or start another waiter while the original remains active. A waiter whose handle or terminal result is lost yields no terminal result, so it blocks for the operator under step 3's absent-output rule rather than permitting a replacement.
 3. Read the exit status and the one terminal JSON document:
    - Exit zero with `status: "ready"` and `ready: true` permits the resource-intensive command.
    - Exit 3 with `status: "not_ready"` reports that load stayed above capacity through the waiter's ten-minute window. Start one further waiter while fewer than ten invocations and less than one hour of total waiter time have elapsed; total waiter time is the sum of every invocation's reported `waited_seconds`. At either bound, stop the resource-intensive command and report the terminal JSON.
