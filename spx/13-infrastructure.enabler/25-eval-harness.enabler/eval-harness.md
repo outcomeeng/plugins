@@ -31,6 +31,7 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 ### Properties
 
 - For every runtime-derived producer section, changing content outside the selected section leaves the materialized prompt unchanged, while changing the selected section changes the prompt ([test](tests/test_producer_prompt.property.l1.py))
+- NEVER: prompt materialization writes a prompt at a non-canonical path — for every declared prompt filename other than `prompt.md`, the definition is rejected and no file is written ([test](tests/test_producer_prompt.property.l1.py))
 - NEVER: an `owned_paths` entry carries any character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs, so a character nobody thought to forbid would otherwise select a suite the CI job never starts ([test](tests/test_definition.property.l1.py))
 - ALWAYS: the derived trigger set is minimal — a pattern a recursive-glob sibling already covers is dropped — and minimization selects exactly the paths the un-minimized set selects ([test](tests/test_ci_triggers.property.l1.py))
 
