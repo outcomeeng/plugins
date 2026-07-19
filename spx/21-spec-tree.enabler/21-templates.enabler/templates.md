@@ -6,13 +6,10 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 
 ## Assertions
 
-### Scenarios
-
-- Given the understanding skill's templates directory, when listed, then template files exist for product, ADR, PDR, enabler, and outcome ([test](tests/test_templates.scenario.l1.py))
-- Given a node template (enabler or outcome), when its content is parsed, then it contains an Assertions section ([test](tests/test_templates.scenario.l1.py))
-
 ### Compliance
 
+- ALWAYS: the understanding skill provides templates for product specs, ADRs, PDRs, enabler nodes, and outcome nodes ([audit])
+- ALWAYS: the enabler and outcome templates contain an Assertions section ([audit])
 - ALWAYS: define required sections for each artifact type — skills derive their validation rules from these templates ([review])
 - ALWAYS: the ADR and PDR decision templates require each `### Testing` rule to carry a single assertion-type tag — one of scenario, mapping, conformance, property, compliance ([review])
 - NEVER: duplicate template content in downstream skills — skills reference templates, they do not copy them ([review])
