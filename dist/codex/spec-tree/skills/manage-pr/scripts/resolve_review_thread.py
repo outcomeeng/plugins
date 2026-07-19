@@ -217,7 +217,9 @@ def find_comment_in_page(comments: dict[str, object], comment_id: str) -> bool:
     if not isinstance(nodes, list):
         raise ValueError(ERROR_COMMENTS_NODES)
     for comment in nodes:
-        if isinstance(comment, dict) and comment_matches(comment, comment_id):
+        if not isinstance(comment, dict):
+            raise ValueError(ERROR_COMMENTS_NODES)
+        if comment_matches(comment, comment_id):
             return True
     return False
 
@@ -285,11 +287,13 @@ def iter_thread_comments(
         raise ValueError(ERROR_REVIEW_THREADS_NODES)
     for thread in threads:
         if not isinstance(thread, dict):
-            continue
+            raise ValueError(ERROR_REVIEW_THREADS_NODES)
         thread_id = validate_thread_id(str(thread.get(ID_FIELD)))
-        comments = thread.get(COMMENTS_FIELD)
-        if isinstance(comments, dict):
-            yield thread_id, comments
+        comments = require_object(
+            thread.get(COMMENTS_FIELD),
+            ERROR_NODE_COMMENTS,
+        )
+        yield thread_id, comments
 
 
 def next_threads_cursor(review_threads: dict[str, object]) -> str | None:

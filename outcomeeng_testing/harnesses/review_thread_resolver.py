@@ -526,6 +526,55 @@ def malformed_payload_shapes_return_errors() -> bool:
         )
         assert _payload_returns_error(
             _threads_payload(
+                {
+                    nodes_field: [None],
+                    page_info_field: {
+                        _source_string(module, "HAS_NEXT_PAGE_FIELD"): False,
+                        _source_string(module, "END_CURSOR_FIELD"): None,
+                    },
+                }
+            ),
+            _source_string(module, "ERROR_REVIEW_THREADS_NODES"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload(
+                _review_threads(
+                    [
+                        _thread_node(
+                            domain.thread_ids[8],
+                            {
+                                nodes_field: [None],
+                                page_info_field: {
+                                    _source_string(
+                                        module, "HAS_NEXT_PAGE_FIELD"
+                                    ): False,
+                                    _source_string(module, "END_CURSOR_FIELD"): None,
+                                },
+                            },
+                        )
+                    ]
+                )
+            ),
+            _source_string(module, "ERROR_COMMENTS_NODES"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload(
+                _review_threads(
+                    [
+                        {
+                            _source_string(module, "ID_FIELD"): domain.thread_ids[8],
+                            comments_field: None,
+                        }
+                    ]
+                )
+            ),
+            _source_string(module, "ERROR_NODE_COMMENTS"),
+            domain,
+        )
+        assert _payload_returns_error(
+            _threads_payload(
                 _review_threads(
                     [
                         _thread_node(
