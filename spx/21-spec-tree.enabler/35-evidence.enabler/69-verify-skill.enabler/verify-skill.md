@@ -16,8 +16,9 @@ CAN route every assertion to test, evaluate, or audit before a specialist choose
 
 ### Compliance
 
-- ALWAYS: select from exactly test, evaluate, and audit by the verdict the real assertion subject can produce; test assertion typing occurs only after test is selected ([eval](evals/routing/eval.toml))
-- ALWAYS: report a missing selected specialist as an explicit capability gap without implementing that specialist inside `/verify` ([eval](evals/routing/eval.toml))
+- ALWAYS: select from exactly test, evaluate, and audit by the verdict the real assertion subject can produce ([eval](evals/routing/eval.toml))
+- ALWAYS: test assertion typing occurs only after test is selected ([audit])
+- ALWAYS: report a missing selected specialist as an explicit capability gap ([eval](evals/routing/eval.toml))
 - NEVER: recognize, name, alias, or translate any tag outside the verification-type set ([eval](evals/routing/eval.toml))
 
 - ALWAYS: every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist ([audit])
