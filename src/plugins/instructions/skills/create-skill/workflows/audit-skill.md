@@ -10,7 +10,7 @@ Read `/skill-standards` and `/agent-prompt-standards` before evaluating or impro
 
 Use the target path supplied by the operator. When no path is supplied, ask for the exact `SKILL.md` or skill-directory path; never assume a runtime-specific home directory.
 
-Resolve the target to its `SKILL.md` plus every file recursively present under `references/`, `workflows/`, `templates/`, and `scripts/`, including uncited and orphaned bundled files.
+Resolve the target to its `SKILL.md` plus every file recursively present under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, including uncited and orphaned bundled files.
 
 </step>
 
