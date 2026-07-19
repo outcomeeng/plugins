@@ -11,6 +11,7 @@ import sys
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Thread
 from typing import Final, cast
 
 from outcomeeng.validation import (
@@ -136,7 +137,7 @@ def _read_grandchild_pid(pid_path: Path) -> int:
     while time.monotonic() < deadline:
         try:
             return int(pid_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
     raise AssertionError("child did not announce grandchild PID in time")
 
@@ -146,12 +147,45 @@ def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
     while time.monotonic() < deadline:
         try:
             delivered_signal = int(signal_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
             continue
         assert delivered_signal == int(signal.SIGTERM)
         return
     raise AssertionError("grandchild did not receive process-group SIGTERM")
+
+
+def _publish_marker_after_poll(marker_path: Path, value: int) -> None:
+    time.sleep(GROUP_MARKER_POLL_SECONDS)
+    marker_path.write_text(str(value), encoding="utf-8")
+
+
+def assert_marker_readers_wait_for_complete_content() -> None:
+    """Prove marker readers tolerate the create-before-write visibility window."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        marker_cases = (
+            (root / "grandchild.pid", os.getpid(), _read_grandchild_pid),
+            (
+                root / "grandchild.signal",
+                int(signal.SIGTERM),
+                _assert_grandchild_received_group_signal,
+            ),
+        )
+        for marker_path, marker_value, marker_reader in marker_cases:
+            marker_path.touch()
+            publisher = Thread(
+                target=_publish_marker_after_poll,
+                args=(marker_path, marker_value),
+            )
+            publisher.start()
+            try:
+                result = marker_reader(marker_path)
+            finally:
+                publisher.join(timeout=TERMINATION_DEADLINE_SECONDS)
+            assert not publisher.is_alive()
+            if result is not None:
+                assert result == marker_value
 
 
 def _terminate_child_group(child_pid: int | None) -> None:
