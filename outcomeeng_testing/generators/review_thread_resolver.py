@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
@@ -24,6 +25,54 @@ SCRIPT = (
 )
 
 
+@dataclass(frozen=True)
+class ResolverDomain:
+    """Generated valid values for resolver interaction mappings."""
+
+    repository: str
+    pr_number: int
+    host: str
+    thread_ids: tuple[str, ...]
+    comment_ids: tuple[str, ...]
+    database_ids: tuple[int, ...]
+    cursors: tuple[str, ...]
+
+
+def resolver_domains() -> SearchStrategy[ResolverDomain]:
+    """Variable valid domains used by resolver mapping harnesses."""
+
+    return st.builds(
+        ResolverDomain,
+        repository=_valid_repositories(),
+        pr_number=_valid_numbers().map(int),
+        host=_valid_hosts(),
+        thread_ids=st.lists(
+            _valid_thread_ids(),
+            min_size=10,
+            max_size=10,
+            unique=True,
+        ).map(tuple),
+        comment_ids=st.lists(
+            _valid_comment_ids(),
+            min_size=10,
+            max_size=10,
+            unique=True,
+        ).map(tuple),
+        database_ids=st.lists(
+            _valid_numbers().map(int),
+            min_size=10,
+            max_size=10,
+            unique=True,
+        ).map(tuple),
+        cursors=st.lists(
+            _valid_comment_ids(),
+            min_size=2,
+            max_size=2,
+            unique=True,
+        ).map(tuple),
+    )
+
+
 def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     """Generated malformed CLI argv domains for the resolver boundary."""
 
@@ -33,6 +82,20 @@ def malformed_resolver_argvs() -> SearchStrategy[tuple[str, ...]]:
     host_option = _source_string("HOST_OPTION")
 
     return st.one_of(
+        st.just(()),
+        _valid_repositories().map(lambda repository: (repository_option, repository)),
+        st.tuples(_valid_repositories(), _valid_numbers()).map(
+            lambda values: (
+                repository_option,
+                values[0],
+                pull_request_option,
+                values[1],
+            )
+        ),
+        _valid_numbers().map(lambda number: (pull_request_option, number)),
+        _valid_comment_ids().map(
+            lambda comment_id: (review_comment_id_option, comment_id)
+        ),
         _invalid_thread_ids().map(lambda value: (value,)),
         st.tuples(
             _invalid_repositories(),
@@ -136,6 +199,10 @@ def _valid_numbers() -> SearchStrategy[str]:
 
 def _valid_comment_ids() -> SearchStrategy[str]:
     return _strings_inside_pattern(_pattern("COMMENT_ID_PATTERN"))
+
+
+def _valid_hosts() -> SearchStrategy[str]:
+    return _strings_inside_pattern(_pattern("HOST_PATTERN"))
 
 
 def _strings_inside_pattern(pattern: re.Pattern[str]) -> SearchStrategy[str]:

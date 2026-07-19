@@ -49,11 +49,13 @@ THREAD_COMMENTS_QUERY = (
     "} "
     "}"
 )
-NODE_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{8,256}")
-REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+NODE_ID_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_=-]{7,255}")
+REPOSITORY_PATTERN = re.compile(
+    r"[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*"
+)
 NUMBER_PATTERN = re.compile(r"[1-9]\d*")
-COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{1,256}")
-HOST_PATTERN = re.compile(r"[A-Za-z0-9.-]+")
+COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_=-]{0,255}")
+HOST_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]*")
 THREAD_ID_ARGUMENT = "thread_id"
 REPOSITORY_OPTION = "--repo"
 HOST_OPTION = "--host"
@@ -104,6 +106,7 @@ ERROR_REVIEW_THREADS_END_CURSOR = (
 ERROR_COMMENT_NOT_FOUND = (
     "review comment was not found after complete review-thread pagination"
 )
+VALIDATION_ERROR_EXIT_CODE = 2
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -421,7 +424,7 @@ def main(
             thread_id = find_thread_id(owner, repo, pr_number, comment_id, host, runner)
     except ValueError as exc:
         print(exc, file=sys.stderr)
-        return 2
+        return VALIDATION_ERROR_EXIT_CODE
     completed = runner(
         graphql_argv(QUERY, {ID_FIELD: thread_id}, host, silent=True),
         check=False,
