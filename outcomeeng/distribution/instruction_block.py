@@ -175,6 +175,7 @@ CODEX_HARNESS: Final = "codex"
 ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
+    "codex-deferred-agent-discovery",
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -261,6 +262,30 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
         ),
     ),
 )
+DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — discover deferred agent tools before reporting an agent unavailable.**"
+DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
+    ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
+    ("complete registry", "complete deferred-tool registry"),
+    ("registry capability", "`functions.exec`/`ALL_TOOLS`"),
+    ("typed spawn schema", "typed `spawn_agent`"),
+    ("available roles", "`Available roles`"),
+    ("exact role authority", "exact match proves availability"),
+    (
+        "unavailability boundary",
+        "Report unavailable only when discovery finds no typed spawn capability or omits the exact role",
+    ),
+    ("discovery result", "include that result"),
+    (
+        "insufficient surfaces",
+        "Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence",
+    ),
+)
+DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
+    (
+        "lifecycle discovery",
+        "if `spawn_agent`, `wait_agent`, or `close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -331,6 +356,10 @@ class OperatorQuestionPolicyError(InstructionBlockRenderError):
 
 class VerifierDispatchPolicyError(InstructionBlockRenderError):
     """Raised when the Codex router weakens or contradicts verifier dispatch policy."""
+
+
+class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router omits deferred typed-agent discovery policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -679,6 +708,45 @@ def validate_verifier_dispatch_policy(
         )
 
 
+def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
+    """Return the Codex deferred-agent discovery heading and body."""
+    paragraphs = router.split("\n\n")
+    for index, paragraph in enumerate(paragraphs):
+        if DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in paragraph:
+            continue
+        if index + 1 == len(paragraphs):
+            return paragraph
+        return "\n\n".join(paragraphs[index : index + 2])
+    return None
+
+
+def validate_deferred_agent_discovery_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits deferred typed-agent discovery policy."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise DeferredAgentDiscoveryPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = deferred_agent_discovery_policy_paragraph(router) or ""
+    missing_policy = [
+        name
+        for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
+        if required_text not in policy
+    ]
+    missing_lifecycle = [
+        name
+        for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
+        if required_text not in router
+    ]
+    missing = [*missing_policy, *missing_lifecycle]
+    if missing:
+        details = ", ".join(missing)
+        raise DeferredAgentDiscoveryPolicyError(
+            f"Codex deferred-agent discovery policy is incomplete: {details}"
+        )
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -699,6 +767,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_verifier_dispatch_policy(rendered)
+    validate_deferred_agent_discovery_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 

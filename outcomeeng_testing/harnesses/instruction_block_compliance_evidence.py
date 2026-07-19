@@ -619,6 +619,52 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
+def _assert_codex_router_discovers_deferred_agent_tools() -> None:
+    """Challenge deferred typed-agent discovery across every language subset."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        codex_document = documents[harness.HARNESS_CODEX]
+        codex_router = dist.managed_router_block(codex_document)
+        policy = dist.deferred_agent_discovery_policy_paragraph(codex_router)
+        assert policy is not None
+        dist.validate_deferred_agent_discovery_policy(
+            {dist.CODEX_HARNESS: codex_document}
+        )
+
+        claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
+        assert dist.DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in claude_router
+
+        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS:
+            invalid_document = codex_document.replace(
+                policy, policy.replace(required_text, "", 1), 1
+            )
+            try:
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.DeferredAgentDiscoveryPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    "incomplete deferred-agent discovery policy was accepted: "
+                    f"{required_text}"
+                )
+
+        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
+            invalid_document = codex_document.replace(required_text, "", 1)
+            try:
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.DeferredAgentDiscoveryPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    "incomplete deferred-agent discovery policy was accepted: "
+                    f"{required_text}"
+                )
+
+
 def router_policy_evidence_run() -> harness.EvidenceRun:
     """Run every source-declared router-policy evidence obligation."""
     assertions = {
@@ -626,6 +672,9 @@ def router_policy_evidence_run() -> harness.EvidenceRun:
             0
         ]: _assert_all_routers_enforce_operator_question_interrupt,
         dist.ROUTER_POLICY_NAMES[1]: (_assert_codex_router_bounds_dispatched_verifiers),
+        dist.ROUTER_POLICY_NAMES[2]: (
+            _assert_codex_router_discovers_deferred_agent_tools
+        ),
     }
     executed: list[str] = []
     for policy_name in dist.ROUTER_POLICY_NAMES:

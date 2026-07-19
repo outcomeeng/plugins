@@ -485,6 +485,7 @@ def compliance_evidence_contract() -> tuple[str, ...]:
         "codex_role_input_uses_runtime_capability",
         "codex_router_bounds_dispatched_verifiers",
         "dist_template_copies_stay_equivalent",
+        "codex_router_discovers_deferred_agent_tools",
         "drift_gate_marks_untracked_root_file_intent_to_add",
         "drift_gate_reports_a_missing_root_instruction_file",
         "drift_gate_skips_missing_obsolete_spx_file",

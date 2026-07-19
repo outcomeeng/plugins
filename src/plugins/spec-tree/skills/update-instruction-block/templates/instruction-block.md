@@ -1,5 +1,5 @@
 ---
-template_version: "0.28.1"
+template_version: "0.29.0"
 template_source: spec-tree
 ---
 
@@ -165,6 +165,10 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 **Already-dispatched verifier boundary.** Apply the typed-spawn rules above only in the main authoring conversation. Once running as a named verifier or reviewer, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-verifier tools is expected inside the dispatched verifier and does not block direct execution.
 
+**STOP TRIGGER — discover deferred agent tools before reporting an agent unavailable.**
+
+If a named agent or lifecycle tool is absent from the initial list, inspect the runtime's complete deferred-tool registry via `functions.exec`/`ALL_TOOLS` or equivalent. Check typed `spawn_agent` and its `Available roles`; an exact match proves availability. Report unavailable only when discovery finds no typed spawn capability or omits the exact role, and include that result. Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence.
+
 **Use the exposed multi-agent tool schema exactly.** The examples below use the `multi_agent_v1` identifiers emitted by this Codex harness. When the runtime exposes different identifiers, discover the equivalent typed spawn, wait, send-input, and close capabilities and preserve the same fields and result contracts. The initial turn goes in `message`; use `items` only when the turn must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this harness, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. The role task is the spawn's initial `message`, so one spawn and one wait complete a role. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with the exposed wait capability and close the child immediately. Completed agents remain open until closed and can interfere with future spawns.
 
 ### Subagent lifecycle — preserve every handle and close every thread
@@ -240,7 +244,7 @@ Close a completed or no-longer-needed agent:
 }
 ```
 
-In the main authoring conversation, if `{{! tool('wait_agent', 'codex') !}}` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
+In the main authoring conversation, if `spawn_agent`, `wait_agent`, or `close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
 
 **Result collection for verifier and reviewer agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 
