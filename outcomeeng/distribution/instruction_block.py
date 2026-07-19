@@ -78,6 +78,9 @@ WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
     "🛑 **STOP TRIGGER — Before any test, eval, build, or validation command, "
     "ALWAYS invoke `/wait-for-load`.**"
 )
+WAIT_FOR_LOAD_POLICY_HEADING: Final = (
+    "### Before tests, evals, builds, or validation -> `/wait-for-load`"
+)
 WAIT_FOR_LOAD_READY_REQUIREMENT: Final = (
     "**ALWAYS** wait for `ready: true`, then run the selected command unchanged."
 )
@@ -454,10 +457,16 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
     """Reject a rendered harness router that weakens the load-wait policy."""
     for harness, document in blocks_by_harness.items():
         router = managed_router_block(document)
+        try:
+            section = _markdown_section(router, WAIT_FOR_LOAD_POLICY_HEADING)
+        except FoundationAccessPolicyError as exc:
+            raise WaitForLoadPolicyError(
+                f"missing router section: {WAIT_FOR_LOAD_POLICY_HEADING}"
+            ) from exc
         missing = [
             name
             for name, required_text in WAIT_FOR_LOAD_POLICY_REQUIREMENTS
-            if required_text not in router
+            if required_text not in section
         ]
         if missing:
             details = ", ".join(missing)
