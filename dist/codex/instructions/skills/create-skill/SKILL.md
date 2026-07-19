@@ -64,15 +64,6 @@ What would you like to do?
 | 8, "patterns", "understand", "help"              | `${SKILL_DIR}/workflows/understand-patterns.md` |
 | 9, "verify content", "current"                   | `${SKILL_DIR}/workflows/verify-skill.md`        |
 
-**Intent-based routing** (if user provides clear context):
-
-- "verify content is current" → `${SKILL_DIR}/workflows/verify-skill.md`
-- "audit this skill" → `${SKILL_DIR}/workflows/audit-skill.md`
-- "create skill for X" → `${SKILL_DIR}/workflows/create-new-skill.md`
-- "add a template" → `${SKILL_DIR}/workflows/add-template.md`
-- "add a script" → `${SKILL_DIR}/workflows/add-script.md`
-- "explain skill patterns" → `${SKILL_DIR}/workflows/understand-patterns.md`
-
 **After reading the workflow, follow it exactly.**
 
 </routing>

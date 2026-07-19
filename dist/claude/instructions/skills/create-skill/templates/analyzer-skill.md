@@ -2,6 +2,7 @@
 name: "{{skill-name}}"
 description: >-
   ALWAYS invoke this skill when analyzing {{triggers}}.
+allowed-tools: "{{least-privilege tool list required by this workflow}}"
 ---
 
 <objective>
