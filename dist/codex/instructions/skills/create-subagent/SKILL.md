@@ -25,6 +25,7 @@ A custom agent configured for an isolated, focused role — its developer instru
    - **model_reasoning_effort**: Optional reasoning setting
    - **sandbox_mode**, **mcp_servers**: Optional runtime configuration overrides
 3. Write the developer instructions with clear role, constraints, workflow, and output expectations.
+4. Include the post-skill invocation-check handoff from `<invocation_check_boundary>` in the result.
 
 </workflow>
 
@@ -282,12 +283,20 @@ The handoff names the configured `agent_type` and expected final-message fields 
 </invocation_check_boundary>
 
 <reference>
-**Core references**:
+Read only the reference group needed for the current task.
+
+**Configuration and prompt authoring**:
 
 - [subagents.md](${SKILL_DIR}/references/subagents.md): file format, configuration, skill injection, model selection, tool security, prompt caching, complete examples.
 - [write-subagent-prompts.md](${SKILL_DIR}/references/write-subagent-prompts.md): prompt structure, description routing, extended thinking, security constraints, success criteria.
+
+**Evaluation and recovery**:
+
 - [evaluation-and-testing.md](${SKILL_DIR}/references/evaluation-and-testing.md): evaluation metrics, testing strategies, evaluation-driven development, G-Eval.
 - [error-handling-and-recovery.md](${SKILL_DIR}/references/error-handling-and-recovery.md): failure causes, recovery strategies, observability, anti-patterns.
+
+**Context, orchestration, and debugging**:
+
 - [context-management.md](${SKILL_DIR}/references/context-management.md): memory architecture, context strategies, long-running tasks, prompt caching.
 - [orchestration-patterns.md](${SKILL_DIR}/references/orchestration-patterns.md): sequential, parallel, hierarchical, and coordinator patterns with model-selection guidance.
 - [debugging-agents.md](${SKILL_DIR}/references/debugging-agents.md): logging, tracing, hallucinations, format errors, tool misuse, diagnostic procedures.
