@@ -422,7 +422,7 @@ product/
 │   ├── adapters/       # External integrations
 │   ├── ports/          # Interfaces
 │   └── main.py         # Entry point
-├── mypackage_testing/      # Test utilities - INSTALLABLE
+├── mypackage_testing/      # Test infrastructure - INSTALLABLE
 │   ├── __init__.py
 │   ├── generators/         # Variable input domains
 │   ├── harnesses/          # Resource and boundary mediators

@@ -21,10 +21,10 @@ Different applications have different threat models. The ADR must specify which 
 | **Internal script** | Depends on deployment             | Validate format             | Depends on network       |
 | **Library/package** | Consumers are untrusted           | Validate everything         | N/A                      |
 
-### Example ADR Section
+### Example ADR Rationale
 
 ```markdown
-## Security Context
+## Rationale
 
 This is a **CLI tool** invoked by a trusted user.
 
