@@ -50,10 +50,10 @@ Step 1: Invoke `spec-tree:understand`.
 Step 2: Invoke `spec-tree:contextualize` for the target node, then read any dispatch-named decisions or test files before editing.
 Step 3: If architecture or decision work is requested, invoke the detected language's `architect-{lang}` skill and edit the decision/spec artifact first.
 Step 4: Add an `ARCHITECTURE_AUDIT_REQUIRED` handoff item for architecture work. Do not run the audit gate.
-Step 5: If evidence work is requested or implementation lacks evidence, invoke `spec-tree:verify` for the target node. Let it route selected test work through `test` to the detected language specialist and report any required eval capability before changing implementation.
+Step 5: If evidence work is requested or implementation lacks evidence, invoke `spec-tree:verify` for the target node. Before changing implementation, establish each selected path-bearing evidence definition: linked tests for test, and the eval definition, cases, prompt, and producer contract for evaluate. Record a pathless audit selection as an isolated-verifier requirement with no authored evidence artifact.
 Step 6: Add an `EVIDENCE_AUDIT_REQUIRED` handoff item for every applicable test or eval evidence type. Do not run the audit gate.
-Step 7: Invoke the detected language's `code-{lang}` skill before changing implementation. Change implementation only after the relevant tests exist.
-Step 8: Run the product's narrow deterministic verification command for the changed tests or implementation when the command is discoverable, then add an `IMPLEMENTATION_AUDIT_REQUIRED` handoff item. Do not run the audit gate.
+Step 7: Invoke the detected language's `code-{lang}` skill before changing implementation. Change implementation only after Step 5 establishes every selected evidence definition or pathless audit requirement.
+Step 8: Run the product's narrow deterministic verification commands for the selected test or eval evidence and changed implementation when the commands are discoverable. Require selected tests to pass and selected evals to meet their declared completion threshold, then add an `IMPLEMENTATION_AUDIT_REQUIRED` handoff item. Do not run the audit gate.
 
 Every audit handoff includes the decision from the `resolve-scope` step:
 
@@ -80,10 +80,10 @@ At Step 8, do not invoke `audit-{lang}-code`, `audit-{lang}-tests`, `audit-{lang
 - NEVER run an audit gate inside this phase runner
 - NEVER omit a required gate handoff from the aggregate report
 - NEVER narrow a cross-node or whole-changeset dispatch to node-local audit scope
-- NEVER write implementation code before tests (Step 7 comes after Step 5)
+- NEVER write implementation code before Step 5 establishes every selected evidence definition or pathless audit requirement
 - NEVER self-approve — only auditor agents produce audit verdicts
 - NEVER ask the user questions — work autonomously with available context
-- ALWAYS run tests after implementation to verify they pass
+- ALWAYS run every applicable deterministic check after implementation — selected tests pass and selected evals meet their declared completion threshold
 
 </constraints>
 

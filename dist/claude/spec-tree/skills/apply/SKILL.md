@@ -188,7 +188,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 Invoke `/verify` for the target node. It selects each assertion's verification type and routes selected test work through `/test` to the detected language specialist. It routes eval work through `/eval` when that capability is installed and records pathless audit requirements without producing their verdict.
 
-Complete every selected deterministic evidence artifact before implementation. Tests come before implementation — no exceptions.
+Establish every selected path-bearing evidence definition before implementation. When `/verify` selects test, the linked tests exist before implementation. When it selects evaluate, the eval definition, cases, prompt, and producer contract exist before implementation. A pathless audit selection records the isolated-verifier requirement and creates no preimplementation artifact.
 
 </step>
 
@@ -212,7 +212,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_che
 
 Invoke the coding skill for the detected language.
 
-Write implementation code. All tests from Step 5 must pass.
+Write implementation code, then run every applicable deterministic check selected in Step 5: selected tests pass and selected evals meet their declared completion threshold. Preserve each pathless audit requirement for its isolated verifier; never fabricate a test artifact for it.
 
 </step>
 
