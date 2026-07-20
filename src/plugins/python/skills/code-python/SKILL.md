@@ -263,6 +263,8 @@ def get_user(user_id: int) -> User | None:
 - Selected evidence: ✓ Pass
 - Types: ✓ Pass
 - Lint: ✓ Pass
+- Python standards audit: required
+- Standards: `/python-standards`; overlays: `<loaded spx/local/python*.md paths or none>`
 
 Ready for review.
 ```
@@ -281,6 +283,9 @@ Ready for review.
 ### Verification
 
 All checks pass. Ready for re-review.
+
+- Python standards audit: required
+- Standards: `/python-standards`; overlays: `<loaded spx/local/python*.md paths or none>`
 ```
 
 </output_format>
@@ -293,7 +298,7 @@ Implementation is ready for review when:
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
 - [ ] The `Audit requirements` report has one `preserved` row per audit routing row from `/verify`, or reports `none selected` when the routing result has none
-- [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
+- [ ] The readiness report carries `Python standards audit: required` and names `/python-standards` plus every loaded Python overlay path; after the implementation audit, publication requires the returned projection's exact `terminalStatus` to be `approved`
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 
 </success_criteria>
