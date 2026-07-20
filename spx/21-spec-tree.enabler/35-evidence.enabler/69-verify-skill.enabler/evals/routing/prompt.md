@@ -30,7 +30,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce, with unsupported input blocked before classification and specialist work invoked for every selected route.
+Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce.
 
 </objective>
 
@@ -139,7 +139,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce, with unsupported input blocked before classification and specialist work invoked for every selected route.
+Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce.
 
 </objective>
 
@@ -248,7 +248,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce, with unsupported input blocked before classification and specialist work invoked for every selected route.
+Validated spec assertions and decision verification rules routed to test, evaluate, or audit from the verdict their real subjects can produce.
 
 </objective>
 
