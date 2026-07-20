@@ -207,13 +207,12 @@ Before writing files, check:
 
 ```text
 spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
-├── {slug}.md        # Spec file
-└── tests/           # Empty directory for future tests
+└── {slug}.md        # Spec file
 ```
 
 1. Create the directory
 2. Write the spec file
-3. Create the `tests/` directory
+3. Leave `tests/` absent; the selected test specialist materializes it with the first test file.
 4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Apply the excluded-node convention provided by `/understand`.
 5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds.
 
@@ -370,15 +369,11 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 Authoring is complete when:
 
-- [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
-- [ ] Context loaded for placement (or bootstrap mode for empty tree)
-- [ ] Index and placement determined using ordering rules
-- [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
-- [ ] Content gathered from user (operator-owned gaps only)
-- [ ] Template read and filled with atemporal voice
-- [ ] New assertion and decision-rule text remains untagged and untyped for `/apply` to route through `/verify`
-- [ ] Validation checklist passes without requiring authoring to choose verification or assertion types
-- [ ] Files created in correct location
-- [ ] Next steps recommended
+- The artifact exists at its canonical path, its filename and node kind match that path, and its index preserves the loaded sibling ordering.
+- The artifact contains its template-required declaration shape in atemporal voice, and every node or decision citation is a full path from `spx/`.
+- New spec assertions sit directly under `## Assertions`, and new decision rules sit directly under `## Verification`; both remain untagged and untyped for `/apply` to route through `/verify`.
+- A newly authored node has no empty `tests/` directory; that directory appears only when the selected test specialist writes the first test file.
+- `spx validation markdown` exits zero and `spx spec status --format json` returns a valid projection for the authored tree.
+- When product truth, a decision, or an ancestor assertion changes, `/align` reports no unaligned first affected lower spec; any remaining downstream work is recorded in that lower node's `PLAN.md`.
 
 </success_criteria>
