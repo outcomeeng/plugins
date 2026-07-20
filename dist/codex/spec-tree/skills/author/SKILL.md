@@ -152,7 +152,7 @@ Use `request_user_input` for operator-owned gaps. Do not ask about information a
 
 **Step 5: Draft the artifact**
 
-Fill the appropriate canonical template provided by `/understand` using the gathered content. Draft new spec assertions directly under `## Assertions` and new decision rules directly under `## Verification`, without a type heading or tag; `/apply` invokes `/verify` to materialize the selected heading and tag.
+Use the appropriate canonical template provided by `/understand` for the artifact shell and final target shape. Its typed assertion examples describe the post-`/verify` artifact and are not copied into an authoring draft. Draft new spec assertions directly under `## Assertions` and new decision rules directly under `## Verification`, without a type heading or tag; `/apply` invokes `/verify` and the selected specialist to materialize the final heading and tag.
 
 **Voice rules** (from live `/understand` `<atemporal_voice>`):
 

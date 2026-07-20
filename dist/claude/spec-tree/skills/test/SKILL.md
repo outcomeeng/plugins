@@ -4,6 +4,7 @@ description: >-
   ALWAYS invoke this skill before writing or repairing deterministic tests for
   a spec assertion, selecting a decision Testing rule's assertion type, or when
   learning the testing approach.
+argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
@@ -37,6 +38,8 @@ Then follow the spec-tree workflow below.
 
 **Step 1: Load tree context**
 
+Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array.
+
 Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. If absent, invoke `/understand` and `/contextualize` first.
 
 For a spec target, this loads:
@@ -53,7 +56,7 @@ For a canonical ADR/PDR target supplied by `/verify`, use decision-rule mode. Re
 
 **Step 2: Extract assertions from the spec**
 
-For a spec target, parse the target spec node and extract only assertions already selected for `[test]` evidence and their test links:
+For a spec target, parse the target spec node and extract assertions already selected for `[test]` evidence plus the exact untagged assertions supplied to this invocation as selected test work. Ignore every other untagged assertion; verification-type selection remains outside `/test`. Extract any existing test links from the selected set:
 
 | Type            | Pattern in spec                                    | Test strategy   |
 | --------------- | -------------------------------------------------- | --------------- |
@@ -86,6 +89,8 @@ For each assertion:
 | **Missing link**  | `[test]` selected with no path          | Must add test evidence link                |
 | **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
 | **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
+
+Treat an explicitly supplied untagged test assertion as a missing-link assertion. It proceeds through assertion typing and scaffold generation; an untagged assertion absent from the supplied selected set remains outside this workflow.
 
 For a decision target, skip evidence-link and filename checks. Report a rule as covered when its existing assertion-type tag matches the type selected by the complete methodology procedure, and as needing update when the tag is absent or mismatched.
 
@@ -146,7 +151,7 @@ In decision-rule mode, update each `### Testing` rule with exactly one selected 
 
 **Step 6: Update spec assertion links**
 
-After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
+After creating test files, move each newly typed assertion under its canonical assertion-type heading and update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
 
 In decision-rule mode, add no evidence link to the ADR/PDR. The implementing specs own the linked executable evidence.
 
@@ -184,6 +189,7 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 Testing output is sound when:
 
 - Every decision `### Testing` rule carries exactly one assertion-type tag selected from its quantifier plus the universal claim's domain, contract-oracle, or violating-rule shape, and no executable evidence link.
+- Every explicitly supplied untagged test assertion is moved under its selected assertion-type heading and receives one canonical `[test](path)` link; unrelated untagged assertions remain unchanged.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
