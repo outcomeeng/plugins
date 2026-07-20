@@ -70,7 +70,7 @@ Record each assertion with:
 - Test link (if present) — path and whether it resolves
 - Test link status: exists / missing / stale
 
-For a decision target, extract only `### Testing` rules. Derive each rule's assertion type from its quantifier and record its existing assertion-type tag, if any. Ignore `### Eval` and `### Audit` rules; they remain with their selected specialists.
+For a decision target, extract only `### Testing` rules. Apply the complete assertion-type selection from the loaded methodology prerequisite: the quantifier separates existential scenario evidence from universal evidence, then the universal rule's finite source-owned domain, contract oracle, violating-rule boundary, or open domain selects mapping, conformance, compliance, or property. Record the existing assertion-type tag, if any. Ignore `### Eval` and `### Audit` rules; they remain with their selected specialists.
 
 </step>
 
@@ -87,7 +87,7 @@ For each assertion:
 | **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
 | **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
 
-For a decision target, skip evidence-link and filename checks. Report a rule as covered when its existing assertion-type tag matches the type derived from its quantifier, and as needing update when the tag is absent or mismatched.
+For a decision target, skip evidence-link and filename checks. Report a rule as covered when its existing assertion-type tag matches the type selected by the complete methodology procedure, and as needing update when the tag is absent or mismatched.
 
 **Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
@@ -183,7 +183,7 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 Testing output is sound when:
 
-- Every decision `### Testing` rule carries exactly one assertion-type tag derived from its quantifier and no executable evidence link.
+- Every decision `### Testing` rule carries exactly one assertion-type tag selected from its quantifier plus the universal claim's domain, contract-oracle, or violating-rule shape, and no executable evidence link.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
