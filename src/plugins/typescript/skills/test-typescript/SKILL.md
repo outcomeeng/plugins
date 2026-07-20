@@ -25,7 +25,7 @@ TypeScript test files that supply evidence for a node specification's assertions
 **Determine the current mode:**
 
 1. **WRITE mode** - Tests do not exist yet, or starting fresh
-   - Check: `ls $node_path/tests/*.ts` returns nothing or minimal files
+   - Check: Glob `$node_path/tests/*.ts`; no matches or only scaffold files means WRITE mode
    - Action: Follow full workflow below
 
 2. **FIX mode** - Tests exist but were rejected by reviewer

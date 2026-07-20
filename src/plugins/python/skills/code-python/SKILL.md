@@ -53,13 +53,9 @@ Run the product's own canonical commands when it documents them — a `{{! file(
 Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and imported by the governed tests. Never assume a package directory name.
 Set `{node_path}` to the canonical full node path established by the loaded spec-tree context.
 
-**Step 1 — Understand the tests.** Read the existing tests to understand:
+**Step 1 — Understand the tests.** Use Glob to list `{node_path}/tests/*.py`, then Read each existing test file. Run the tests to observe their failures:
 
 ```bash
-# Read test files
-cat {node_path}/tests/*.py
-
-# Run tests to see failures
 python3 -m pytest {node_path}/tests/ -v
 ```
 
