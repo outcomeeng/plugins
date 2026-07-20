@@ -502,11 +502,12 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
         assert isinstance(policy, Mapping)
         environment = policy["set"]
         assert isinstance(environment, Mapping)
-        assert len(environment) == 1
         assert all(
             isinstance(key, str) and isinstance(value, str)
             for key, value in environment.items()
         )
+        assert CODEX_AGENT_ENV_VAR == "OUTCOMEENG_CODEX_AGENT_NAME"
+        assert CODEX_AGENT_ENV_VAR in environment
 
         command_environment = dict(os.environ)
         command_environment.update(environment)
@@ -518,7 +519,7 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
             env=command_environment,
         )
         assert result.returncode == 0
-        assert result.stdout == next(iter(environment.values()))
+        assert result.stdout == environment[CODEX_AGENT_ENV_VAR]
         assert result.stderr == ""
 
 
