@@ -5,7 +5,7 @@ description: >-
   a spec assertion, selecting a decision Testing rule's assertion type, or when
   learning the testing approach.
 argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, request_user_input
 ---
 
 <objective>
