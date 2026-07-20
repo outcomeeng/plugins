@@ -319,10 +319,10 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 <success_criteria>
 
-- The completed work item conforms to its governing spec and decisions, and the product's touched-scope deterministic evidence passes.
-- Every applicable architecture, test-evidence, eval-evidence, and implementation audit approves the exact committed subject.
-- A cross-node changeset carries a sealed whole-changeset review with no unresolved valid finding.
-- The exact final head is committed and the worktree is clean.
-- The delivery boundary the user requested is achieved: default-branch work is merged to the default branch on origin and every declared release action is complete, unless the user explicitly selected a proposal, analysis, review, or local-only boundary, or an explicit lifecycle gate blocks with no independent action remaining.
+- Every product-declared touched-scope deterministic command exits zero on the final committed subject.
+- Each applicable architecture and test-evidence auditor returns `APPROVED`; each applicable eval-evidence auditor returns JSON `overall: PASS` with no `FAIL` or `UNKNOWN` row; and each implementation-audit run renders `terminalStatus: approved` for the exact committed subject.
+- A cross-node changeset carries a raw Step 9 review run token whose sealed projection renders successfully, with every finding fixed, tracked as a separate larger concern, or dropped as unbacked.
+- `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
+- The requested delivery boundary has observable completion: default-branch work has PR state `MERGED` on origin and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.
 
 </success_criteria>
