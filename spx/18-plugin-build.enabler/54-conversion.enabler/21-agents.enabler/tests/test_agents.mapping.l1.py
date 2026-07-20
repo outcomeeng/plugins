@@ -12,7 +12,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_missing_tool_allowlist_leaves_sandbox_to_runtime_default,
     assert_missing_tool_allowlist_leaves_web_search_to_runtime_default,
     assert_opus_model_maps_to_distinct_top_tier_codex_model,
-    assert_permission_mode_maps_when_codex_has_supported_equivalent,
+    assert_permission_modes_map_to_codex_sandbox_or_manual_review,
     assert_read_only_tool_allowlist_infers_read_only_sandbox,
     assert_read_only_web_tool_allowlist_infers_read_only_sandbox,
     assert_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default,
@@ -54,8 +54,8 @@ def test_source_effort_reaches_converted_codex_reasoning_effort() -> None:
     assert_source_effort_reaches_converted_codex_reasoning_effort()
 
 
-def test_permission_mode_maps_when_codex_has_supported_equivalent() -> None:
-    assert_permission_mode_maps_when_codex_has_supported_equivalent()
+def test_permission_modes_map_to_codex_sandbox_or_manual_review() -> None:
+    assert_permission_modes_map_to_codex_sandbox_or_manual_review()
 
 
 def test_supported_permission_mode_reaches_converted_codex_sandbox_mode() -> None:

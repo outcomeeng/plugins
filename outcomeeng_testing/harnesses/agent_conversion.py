@@ -13,8 +13,10 @@ from tempfile import TemporaryDirectory
 from typing import Final, cast
 
 from outcomeeng.distribution.agents import (
+    AGENT_SOURCE_DIRECTORY_NAME,
     ALL_TOOLS_SENTINEL,
     CODEX_AGENT_ENV_VAR,
+    CODEX_AGENT_ENV_SEPARATOR,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
     DEFAULT_SOURCE_ROOT,
@@ -29,7 +31,6 @@ from outcomeeng.distribution.agents import (
     SCRIPT_CAPABLE_TOOLS,
     TomlArrayTable,
     TomlMultilineString,
-    UNMAPPED_PERMISSION_MODE_EXAMPLE,
     WEB_CAPABLE_TOOLS,
     WEB_SEARCH_DISABLED,
     WRITE_CAPABLE_TOOLS,
@@ -59,8 +60,12 @@ REVIEWER_BODY: Final = "Review."
 WRITER_BODY: Final = "Write."
 REVIEWER_DESCRIPTION: Final = "Review."
 WRITER_DESCRIPTION: Final = "Write."
-REVIEWER_SOURCE_PATH: Final = Path("reviewer.md")
-WRITER_SOURCE_PATH: Final = Path("writer.md")
+REVIEWER_SOURCE_PATH: Final = (
+    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "reviewer.md"
+)
+WRITER_SOURCE_PATH: Final = (
+    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "writer.md"
+)
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 GENERATED_CODEX_AGENTS_DIRNAME: Final = "generated-codex-agents"
 CODEX_DIST_ROOT_PARTS: Final = ("dist", "codex")
@@ -98,11 +103,15 @@ MODEL_PREFIX_CASES: Final = tuple(
 )
 MODEL_CASES: Final = (*MODEL_PREFIX_CASES, (INHERIT_MODEL_VALUE, None))
 EFFORT_CASES: Final = tuple(EFFORT_MAPPINGS.items())
-PERMISSION_MODE_CASES: Final = (
-    *tuple(PERMISSION_MODE_MAPPINGS.items()),
-    (UNMAPPED_PERMISSION_MODE_EXAMPLE, None),
+PERMISSION_MODE_CASES: Final = tuple(PERMISSION_MODE_MAPPINGS.items())
+SUPPORTED_PERMISSION_MODE_CASES: Final = tuple(
+    (source, target)
+    for source, target in PERMISSION_MODE_MAPPINGS.items()
+    if target is not None
 )
-SUPPORTED_PERMISSION_MODE_CASES: Final = tuple(PERMISSION_MODE_MAPPINGS.items())
+UNMAPPED_PERMISSION_MODE_CASES: Final = tuple(
+    source for source, target in PERMISSION_MODE_MAPPINGS.items() if target is None
+)
 READ_ONLY_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS)
 READ_ONLY_WEB_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS)
 WEB_CAPABLE_TOOL_ALLOWLIST: Final = tuple(WEB_CAPABLE_TOOLS)
@@ -383,7 +392,10 @@ def converted_instruction_value(agent: CodexAgent) -> str:
 
 def source_agent_marker_candidate() -> SourceAgent:
     """Return a source agent with no plugin-derived path."""
-    return source_agent(name=GUARDED_WRITER_NAME)
+    return source_agent(
+        source_path=Path(GUARDED_WRITER_AGENT_FIXTURE),
+        name=GUARDED_WRITER_NAME,
+    )
 
 
 def invalid_generated_manifest_target(root: Path) -> tuple[Path, Path]:
@@ -463,16 +475,27 @@ def assert_folded_yaml_description_converts_to_text() -> None:
 
 def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     """Assert skill entries become Codex config and developer guidance."""
-    source = parse_agent_markdown(AGENT_CONVERSION_FIXTURES_DIR / SOURCE_AGENT_FIXTURE)
-    converted = convert_agent(source)
-
-    instructions = converted_instruction_value(converted)
-    assert "skills" in instructions
-    assert "prompt guidance" in instructions
-    assert "not a spawn-time preload guarantee" in instructions
-    assert converted_skill_config(converted) == tuple(
-        {"name": skill, "enabled": True} for skill in source.skills
+    sources = (
+        source_agent(),
+        *(parse_agent_markdown(path) for path in iter_agent_files(DEFAULT_SOURCE_ROOT)),
     )
+    assert any(not source.skills for source in sources)
+    assert any(len(source.skills) == 1 for source in sources)
+    assert any(len(source.skills) > 1 for source in sources)
+
+    for source in sources:
+        converted = convert_agent(source)
+        instructions = converted_instruction_value(converted)
+        if not source.skills:
+            assert "skills" not in converted.values
+            assert "prompt guidance" not in instructions
+            continue
+        assert "skills" in instructions
+        assert "prompt guidance" in instructions
+        assert "not a spawn-time preload guarantee" in instructions
+        assert converted_skill_config(converted) == tuple(
+            {"name": skill, "enabled": True} for skill in source.skills
+        )
 
 
 def assert_identity_preflight_precedes_source_role_instructions() -> None:
@@ -607,8 +630,8 @@ def assert_source_effort_reaches_converted_codex_reasoning_effort() -> None:
         assert converted.values["model_reasoning_effort"] == expected
 
 
-def assert_permission_mode_maps_when_codex_has_supported_equivalent() -> None:
-    """Assert every permission-mode case maps to the expected sandbox."""
+def assert_permission_modes_map_to_codex_sandbox_or_manual_review() -> None:
+    """Assert every source permission mode maps to its Codex representation."""
     for source, expected in PERMISSION_MODE_CASES:
         assert map_permission_mode(source) == expected
 
@@ -690,27 +713,26 @@ def assert_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> 
 
 
 def assert_explicit_unmapped_permission_mode_blocks_read_only_inference() -> None:
-    """Assert unmapped permission mode blocks sandbox inference."""
-    assert (
-        infer_sandbox_mode(READ_ONLY_TOOL_ALLOWLIST, UNMAPPED_PERMISSION_MODE_EXAMPLE)
-        is None
-    )
+    """Assert every unmapped permission mode blocks sandbox inference."""
+    for source in UNMAPPED_PERMISSION_MODE_CASES:
+        assert infer_sandbox_mode(READ_ONLY_TOOL_ALLOWLIST, source) is None
 
 
 def assert_unmapped_permission_mode_converts_to_manual_review_guidance() -> None:
-    """Assert unmapped permission mode becomes manual-review guidance."""
-    converted = convert_agent(
-        source_agent(
-            permission_mode=UNMAPPED_PERMISSION_MODE_EXAMPLE,
-            tools=READ_ONLY_TOOL_ALLOWLIST,
-            tools_declared=True,
+    """Assert every unmapped permission mode becomes manual-review guidance."""
+    for source in UNMAPPED_PERMISSION_MODE_CASES:
+        converted = convert_agent(
+            source_agent(
+                permission_mode=source,
+                tools=READ_ONLY_TOOL_ALLOWLIST,
+                tools_declared=True,
+            )
         )
-    )
-    instructions = converted_instruction_value(converted)
+        instructions = converted_instruction_value(converted)
 
-    assert "sandbox_mode" not in converted.values
-    assert f"permissionMode: {UNMAPPED_PERMISSION_MODE_EXAMPLE}" in instructions
-    assert "manual-review guidance" in instructions
+        assert "sandbox_mode" not in converted.values
+        assert f"permissionMode: {source}" in instructions
+        assert "manual-review guidance" in instructions
 
 
 def assert_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> None:
@@ -767,21 +789,39 @@ def assert_generated_toml_stays_outside_codex_plugin_manifest_content() -> None:
 
 
 def assert_environment_marker_is_namespaced_by_source_plugin() -> None:
-    """Assert generated environment markers include the source plugin namespace."""
+    """Assert markers contain the source plugin and exact generated agent type."""
     with TemporaryDirectory() as tmp:
-        markers = installed_environment_markers(Path(tmp))
+        root = Path(tmp)
+        markers = installed_environment_markers(root)
+        slugged_source_path = write_agent_source(
+            root,
+            PLUGIN_NAME,
+            Path(DUPLICATE_REVIEWER_BANG_FIXTURE).stem,
+            agent_conversion_fixture(DUPLICATE_REVIEWER_BANG_FIXTURE),
+        )
+        slugged_source = parse_agent_markdown(slugged_source_path)
+        slugged_agent = convert_agent(slugged_source)
 
     assert markers == {
-        f"alpha/{GUARDED_WRITER_NAME}",
-        f"beta/{READ_ONLY_REVIEWER_NAME}",
+        f"alpha{CODEX_AGENT_ENV_SEPARATOR}{GUARDED_WRITER_NAME}",
+        f"beta{CODEX_AGENT_ENV_SEPARATOR}{READ_ONLY_REVIEWER_NAME}",
     }
-
-
-def assert_environment_marker_without_source_plugin_uses_agent_name() -> None:
-    """Assert marker fallback uses the source agent name."""
-    assert (
-        agent_environment_marker(source_agent_marker_candidate()) == GUARDED_WRITER_NAME
+    assert agent_environment_marker(slugged_source) == (
+        f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{Path(slugged_agent.filename).stem}"
     )
+
+
+def assert_environment_marker_without_source_plugin_is_rejected() -> None:
+    """Assert a source path without a plugin namespace is rejected."""
+    try:
+        agent_environment_marker(source_agent_marker_candidate())
+    except AgentConversionError as exc:
+        assert "agent source path must be under <plugin>/agents" in str(exc)
+    else:
+        msg = (
+            "source path without a plugin namespace did not raise AgentConversionError"
+        )
+        raise AssertionError(msg)
 
 
 def assert_invalid_generated_manifest_uses_converter_error() -> None:
