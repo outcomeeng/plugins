@@ -6,7 +6,7 @@ Testability is an architectural concern. Design code so that testing is natural,
 
 - [Core Principle](#core-principle)
 - [When Would We Need a Test?](#when-would-we-need-a-test)
-- [Test Type Selection Guide](#test-type-selection-guide)
+- [Architectural Testability Guide](#architectural-testability-guide)
 - [Development Progression](#development-progression)
 - [Designing for Testability](#designing-for-testability)
 - [ADR Verification Rules for Testability](#adr-verification-rules-for-testability)
