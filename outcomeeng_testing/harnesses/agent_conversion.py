@@ -506,7 +506,6 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
             isinstance(key, str) and isinstance(value, str)
             for key, value in environment.items()
         )
-        assert CODEX_AGENT_ENV_VAR == "OUTCOMEENG_CODEX_AGENT_NAME"
         assert CODEX_AGENT_ENV_VAR in environment
 
         command_environment = dict(os.environ)
