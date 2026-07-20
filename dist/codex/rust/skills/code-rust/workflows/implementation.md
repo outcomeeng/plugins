@@ -47,7 +47,7 @@ For behavior changes, handle every type selected by `/verify`:
 
 1. Test: locate the co-located test home, write or extend the test, and run the focused target to confirm the new case fails for the expected reason.
 2. Evaluate: read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared threshold; run it to record the preimplementation score.
-3. Audit: preserve the pathless isolated-verifier requirement and identify the semantic constraint's real subject; create no deterministic artifact.
+3. Audit: apply `<audit_requirement_handoff>` from `SKILL.md` and identify the semantic constraint's real subject; create no deterministic artifact.
 
 </phase>
 
@@ -79,7 +79,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
 ```
 
-If the repository publishes stricter commands, use them. Also run every eval command selected by `/verify` and require its declared threshold; preserve every pathless audit requirement for the isolated verifier.
+If the repository publishes stricter commands, use them. Also run every eval command selected by `/verify` and require its declared threshold; require the `Audit requirements` row count and `preserved` statuses to match `/verify`'s audit routing rows.
 </phase>
 
 <phase name="summarize">
@@ -96,7 +96,7 @@ When the validation passes, summarize:
 <success_criteria>
 
 - the changed behavior, boundaries, and failure modes were identified before code edits
-- selected tests were written or extended first, selected evals meet their thresholds, and pathless audit requirements remain recorded
+- selected tests were written or extended first, selected evals meet their thresholds, and the `Audit requirements` report matches `/verify`'s audit routing rows
 - implementation follows existing repository seams and Rust type discipline
 - the repository validation sequence passed
 - the final summary names changed behavior, evidence, and remaining trade-offs

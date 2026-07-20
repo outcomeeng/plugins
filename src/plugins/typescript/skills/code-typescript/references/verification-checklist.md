@@ -10,7 +10,7 @@ Pre-submission verification checks for TypeScript implementation work.
 - [ ] The resolved product lint/format check command passes after the canonical auto-fix command runs when available
 - [ ] Every test command selected by `/verify` passes for the governed node or changeset
 - [ ] Every eval command selected by `/verify` meets its declared completion threshold
-- [ ] Every pathless audit requirement remains recorded for its isolated verifier
+- [ ] The completion report has one `Audit requirements` row with status `preserved` per audit row from `/verify`, or reports `none selected` when no audit row exists
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the resolved commands or loaded standards passes through those commands
 - [ ] Manual review confirms the implementation follows `/typescript-standards` and any loaded `spx/local/typescript.md` overlay
 
@@ -51,7 +51,7 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 | Product lint/format command passes  | Required               |
 | Selected test commands pass         | Required when selected |
 | Selected eval thresholds pass       | Required when selected |
-| Pathless audit requirements remain  | Required when selected |
+| Audit handoff rows match routing    | Required               |
 | Loaded standards are followed       | Required               |
 | Repo-local overlay is followed      | Required when present  |
 | Supplied reviewer findings resolved | Required in FIX mode   |
@@ -78,7 +78,7 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 - Tests selected by `/verify` exist and pass through the resolved product test command
 - Evals selected by `/verify` meet their declared thresholds through the resolved product eval command
-- Pathless audit requirements remain available to the applicable isolated verifier
+- `Audit requirements` rows preserve the exact routed subject and source path for the applicable isolated verifier
 - Test shape and mocking rules come from `/typescript-test-standards` and any loaded `spx/local/typescript-tests.md` overlay
 
 </testing>

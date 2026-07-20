@@ -97,6 +97,12 @@ Invoke `/verify` before adding or revising evidence. When it selects test, use `
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>
 
+<audit_requirement_handoff>
+
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+
+</audit_requirement_handoff>
+
 <context_loading>
 If this work belongs to a spec-tree node:
 
@@ -121,7 +127,7 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 - The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.
 - The repository's canonical format and lint commands pass; its regression test command passes; every test or eval command selected by `/verify` passes its declared criterion.
-- Behavior-changing work has selected test or eval evidence, or an explicit pathless audit requirement.
+- Behavior-changing work has selected test or eval evidence, or an `Audit requirements` report whose `preserved` rows match `/verify`'s audit routing rows.
 - No temporary debug code, commented-out implementation, or TODO/FIXME escape hatch remains.
 
 </success_criteria>

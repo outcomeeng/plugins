@@ -11,7 +11,7 @@ Before declaring implementation complete, confirm that mechanical checks and cod
 - [ ] no TODO or FIXME comments were added as escape hatches
 - [ ] new behavior carries the test, eval, or pathless audit evidence selected by `/verify`
 - [ ] every selected eval meets its declared completion threshold
-- [ ] every pathless audit requirement remains recorded for its isolated verifier
+- [ ] the completion report has one `Audit requirements` row with status `preserved` per audit row from `/verify`, or reports `none selected` when no audit row exists
 
 </required_checks>
 

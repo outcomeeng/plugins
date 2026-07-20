@@ -44,6 +44,24 @@ Before invoking this skill:
 If required evidence does not exist or lacks approval, return to the evidence workflow.
 </prerequisites>
 
+<audit_requirement_handoff>
+
+For every `/verify` routing row whose verification type is audit, the authoritative requirement is the exact assertion or decision-rule text in the routed spec or decision artifact carrying `([audit])`.
+
+Before reporting completion:
+
+1. Read the routed source artifact again and confirm the exact subject text still carries `([audit])`.
+2. Emit one row per audit routing row under `Audit requirements`:
+
+```text
+| Source artifact | Exact subject | Status |
+| <full spx/... path> | <exact assertion or rule text> | preserved |
+```
+
+The table's row count must equal the count of audit rows in `/verify`'s routing result. When that count is zero, report `Audit requirements: none selected` instead of an empty table.
+
+</audit_requirement_handoff>
+
 <write_mode_workflow>
 
 Run the product's own canonical commands when it documents them — a `AGENTS.md` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
@@ -62,7 +80,7 @@ python3 -m pytest {node_path}/tests/ -v
 ```
 
 - **Evaluate:** Read each linked eval definition, cases, materialized prompt, and real producer contract. Run the product's selected eval command to observe the current score and declared completion threshold before implementation.
-- **Audit:** Preserve the pathless isolated-verifier requirement and read the semantic constraint it will judge. Do not invent a test or eval artifact for it.
+- **Audit:** Apply `<audit_requirement_handoff>` to the pathless isolated-verifier requirement and read the semantic constraint it will judge. Do not invent a test or eval artifact for it.
 
 Identify the behavior each selected evidence artifact establishes, the expected interfaces, and the source path that implements the real subject.
 
@@ -94,7 +112,7 @@ Run the focused product test command for selected tests and the product eval com
 python3 -m pytest {node_path}/tests/ -v
 ```
 
-Every selected test must pass and every selected eval must meet its declared threshold. Preserve pathless audit requirements for the later isolated verifier.
+Every selected test must pass and every selected eval must meet its declared threshold. Record each pathless audit requirement through `<audit_requirement_handoff>` for the later isolated verifier.
 
 **Step 4 — Refactor.** Clean up while keeping every selected deterministic check passing:
 
@@ -151,7 +169,7 @@ python3 -m mypy <python-source-paths>
 python3 -m ruff check <python-source-paths>
 ```
 
-Run every selected eval command after the fix and require its declared threshold. Preserve each pathless audit requirement for re-review.
+Run every selected eval command after the fix and require its declared threshold. Rebuild and verify the `<audit_requirement_handoff>` rows for re-review.
 
 **Step 4 — Report what was fixed.**
 
@@ -167,7 +185,7 @@ Run every selected eval command after the fix and require its declared threshold
 
 ### Verification
 
-All selected deterministic evidence passes. Types and lint clean. Pathless audit requirements are preserved for re-review.
+All selected deterministic evidence passes. Types and lint clean. Every `Audit requirements` row reports `preserved` for re-review.
 ```
 
 </fix_mode_workflow>
@@ -274,7 +292,7 @@ Implementation is ready for review when:
 - [ ] Every selected Python test command passes and every selected eval command meets its declared threshold; a type absent from `/verify`'s routing result is not fabricated
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
-- [ ] Every pathless audit requirement remains recorded for the applicable isolated verifier
+- [ ] The `Audit requirements` report has one `preserved` row per audit routing row from `/verify`, or reports `none selected` when the routing result has none
 - [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 

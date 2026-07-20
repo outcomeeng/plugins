@@ -22,7 +22,7 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 4. Invoke `/verify` before adding or revising evidence, then handle every selected type:
    - test — write or update the co-located tests first using the assertion type chosen by `/test` and the TypeScript expression from `/typescript-test-standards`
    - evaluate — read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared completion threshold
-   - audit — preserve the pathless isolated-verifier requirement without fabricating a deterministic artifact
+   - audit — apply `<audit_requirement_handoff>` from `SKILL.md` without fabricating a deterministic artifact
 5. For selected tests, run the focused test command and confirm the new or changed test fails for the expected reason before implementation. For selected evals, run the selected product command and record the preimplementation score against its threshold.
 
 <gate name="red-evidence">
@@ -36,7 +36,7 @@ For selected tests, proceed only when the focused test fails because the declare
 
 <gate name="completion">
 
-Report completion only when every selected test passes, every selected eval meets its declared threshold, every pathless audit requirement remains recorded, and each repository-selected typecheck, lint, and validation command exits successfully. A missing command, skipped required check, or non-zero exit keeps the workflow incomplete and must be reported with the exact command and result.
+Report completion only when every selected test passes, every selected eval meets its declared threshold, the `Audit requirements` row count and `preserved` statuses match `/verify`'s audit routing rows, and each repository-selected typecheck, lint, and validation command exits successfully. A missing command, skipped required check, or non-zero exit keeps the workflow incomplete and must be reported with the exact command and result.
 
 </gate>
 
@@ -185,7 +185,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
 - The implementation follows the loaded specification and preserves source-owned contracts.
 - Selected tests exist, fail before the implementation change for the expected reason, and pass after the change.
-- Selected evals have a valid baseline and meet their declared completion thresholds after the change; pathless audit requirements remain recorded for their isolated verifier.
+- Selected evals have a valid baseline and meet their declared completion thresholds after the change; the `Audit requirements` report matches `/verify`'s audit routing rows.
 - Typecheck, lint, and every selected deterministic command pass through repository-selected wrappers or documented fallbacks.
 - No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.
 

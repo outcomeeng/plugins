@@ -235,6 +235,12 @@ Use `/test-typescript` for:
 When implementation changes affect test-owned interfaces, harnesses, or fixture boundaries, keep the production code aligned with both skills rather than re-declaring testing policy here.
 </testing_methodology>
 
+<audit_requirement_handoff>
+
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+
+</audit_requirement_handoff>
+
 <context_loading>
 **BEFORE ANY IMPLEMENTATION: Load complete specification context.**
 
@@ -418,7 +424,8 @@ The implementation is ready for review when:
 
 - [ ] The product's resolved TypeScript type-check command passes
 - [ ] The product's resolved TypeScript lint/format check command passes
-- [ ] The product's resolved TypeScript test command for the governed node or changeset passes
+- [ ] Every TypeScript test command selected by `/verify` passes and every selected eval command meets its declared threshold
+- [ ] The `Audit requirements` report has one `preserved` row per audit routing row from `/verify`, or reports `none selected` when the routing result has none
 - [ ] The implementation follows `/typescript-standards` and any `spx/local/typescript.md` overlay loaded for the repository
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
