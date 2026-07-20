@@ -115,13 +115,13 @@ Judge controlled implementations against `/test` exceptions:
 | 6. Observability         | capture struct for spans, logs, events, or serialized output    |
 | 7. Contract probes       | local stub validated against the same contract schema           |
 
-Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact.
+Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact. Such a rejection carries property `falsifiability` from the base `/audit-tests` enum — a severed seam means no production mutation can break the test.
 </step>
 
 <step name="oracle">
 Identify the source of every expected value.
 
-Reject with an `oracle` finding when the expected value is derived from the module under test. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
+Reject with an `oracle` finding carrying property `oracle-independence` and remediation target `independent-oracle` from the base `/audit-tests` enum when the expected value is derived from the module under test. This is distinct from `falsifiability`: an expected result computed by the same path that produces the actual result passes even when both are wrong. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
 </step>
 
 <step name="harness_chain">

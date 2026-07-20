@@ -20,7 +20,8 @@ The canonical Python ADR conventions — sections, how testability appears in Ve
 - Framework mocks are prohibited.
 - Every behavioral predicate remains in the linked test.
 - Test-level references match `/python-test-standards`.
-  </success_criteria>
+
+</success_criteria>
 
 <reference_note>
 This is a reference skill. Composing Python architecture skills load these conventions explicitly before authoring or auditing ADRs. It is not a standalone workflow.

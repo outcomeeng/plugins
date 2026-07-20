@@ -203,8 +203,9 @@ The test's own imports look clean when the mock lives in a harness, the hardcode
 
 Apply the supplements in `<typescript_supplements>` for each property:
 
-- **Coupling** — executable coupling categories (Direct / Indirect / Transitive / False / Partial / Severed), barrel resolution, type-only import handling.
-- **Falsifiability** — incorporates step 5 (mocks) and step 6 (oracle) judgments, plus snapshot rules.
+- **Coupling** — the nine executable coupling categories in `<typescript_supplements>`, barrel resolution, type-only import handling.
+- **Falsifiability** — incorporates step 5 (mocks) judgments, plus snapshot rules.
+- **Oracle independence** — step 6 (oracle) findings carry property `oracle-independence` and remediation target `independent-oracle`, matching the base `/audit-tests` enum. Do not fold them into Falsifiability: an expected result derived from the production path that produces the actual result is a distinct defect from a test that no mutation can break.
 - **Alignment** — incorporates step 2 (clause enumeration) and step 4 (assertion type).
 - **Coverage** — read whether the test drives execution into the assertion-relevant path; no coverage tooling is run.
 
