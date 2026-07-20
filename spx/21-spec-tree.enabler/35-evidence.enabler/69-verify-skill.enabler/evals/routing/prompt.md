@@ -36,10 +36,10 @@ Validated spec assertions and decision verification rules routed to test, evalua
 
 <essential_principles>
 
-- Validate the existing tag shape before reading the subject. Unsupported input returns `blocked` with no selected verification type, specialist, or evidence shape.
+- Validate any existing tag shape before reading the subject. An absent tag proceeds to classification; unsupported tagged input returns `blocked` with no selected verification type, specialist, or evidence shape.
 - For every validated assertion, select exactly one current verification type before any specialist chooses assertion type, level, language expression, producer specialization, or verifier.
 - Choose test when behavior has a deterministic verdict, evaluate when an LLM-driven producer emits structured output a deterministic grader can score, and audit when no deterministic or structural verdict exists.
-- For spec assertions, recognize only `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
+- For spec assertions, recognize only an absent tag, `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize an absent tag awaiting classification or the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test and eval assertions are path-bearing; spec audit assertions are pathless; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist. An absent specialist produces `capability-required`, never `routed`.
 - Keep routing acyclic: `/verify` invokes specialists; specialists never invoke `/verify`.
@@ -61,7 +61,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 <step name="validate-input">
 
-Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, the enclosing subsection and tag must match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
+Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
 Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
 
@@ -145,10 +145,10 @@ Validated spec assertions and decision verification rules routed to test, evalua
 
 <essential_principles>
 
-- Validate the existing tag shape before reading the subject. Unsupported input returns `blocked` with no selected verification type, specialist, or evidence shape.
+- Validate any existing tag shape before reading the subject. An absent tag proceeds to classification; unsupported tagged input returns `blocked` with no selected verification type, specialist, or evidence shape.
 - For every validated assertion, select exactly one current verification type before any specialist chooses assertion type, level, language expression, producer specialization, or verifier.
 - Choose test when behavior has a deterministic verdict, evaluate when an LLM-driven producer emits structured output a deterministic grader can score, and audit when no deterministic or structural verdict exists.
-- For spec assertions, recognize only `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
+- For spec assertions, recognize only an absent tag, `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize an absent tag awaiting classification or the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test and eval assertions are path-bearing; spec audit assertions are pathless; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist. An absent specialist produces `capability-required`, never `routed`.
 - Keep routing acyclic: `/verify` invokes specialists; specialists never invoke `/verify`.
@@ -170,7 +170,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 <step name="validate-input">
 
-Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, the enclosing subsection and tag must match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
+Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
 Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
 
@@ -254,10 +254,10 @@ Validated spec assertions and decision verification rules routed to test, evalua
 
 <essential_principles>
 
-- Validate the existing tag shape before reading the subject. Unsupported input returns `blocked` with no selected verification type, specialist, or evidence shape.
+- Validate any existing tag shape before reading the subject. An absent tag proceeds to classification; unsupported tagged input returns `blocked` with no selected verification type, specialist, or evidence shape.
 - For every validated assertion, select exactly one current verification type before any specialist chooses assertion type, level, language expression, producer specialization, or verifier.
 - Choose test when behavior has a deterministic verdict, evaluate when an LLM-driven producer emits structured output a deterministic grader can score, and audit when no deterministic or structural verdict exists.
-- For spec assertions, recognize only `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
+- For spec assertions, recognize only an absent tag, `[test](path)`, `[eval](path)`, and `[audit]`. For ADR/PDR rules, recognize an absent tag awaiting classification or the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit]` under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test and eval assertions are path-bearing; spec audit assertions are pathless; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist. An absent specialist produces `capability-required`, never `routed`.
 - Keep routing acyclic: `/verify` invokes specialists; specialists never invoke `/verify`.
@@ -279,7 +279,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 <step name="validate-input">
 
-Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, the enclosing subsection and tag must match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
+Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit]`.
 
 Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`; in structured output, set `verification_type`, `specialist`, and `evidence_shape` to `null`.
 
