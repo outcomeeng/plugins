@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, Agent, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Read
+allowed-tools: Skill, Agent, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git push:*), Bash(grep:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py":*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -88,6 +88,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - MUST select exactly one transport per `<transport_selection>` and delegate to that transport's skills — never run two transports, never reimplement a transport's internal protocol inline. The GitHub-PR lifecycle is `/manage-github-pr`'s; the direct-push lifecycle invokes `/commit-changes`, `/merging-standards`, and the `changes-reviewer` review.
 - MUST keep the four gates and the finding-disposition rule transport-neutral — /merge selects the transport and binds nothing about the gates. A transport binds only the gate predicates, per /merging-standards `<authority_gates>`.
 - MUST honor `spx/local/merging.md`: an explicit `transport:` selector wins over the changeset heuristic, and the per-transport configuration (merge command, deployment declarations, and release declarations) is the transport's, not /merge's.
+- MUST treat the narrow Bash grants in frontmatter as the approval-free execution surface, never as a prohibition on consumer-declared commands the harness approves per call; run required commands from the product's root guide or active merge specialization through normal per-call approval when they fall outside those grants, then continue the governed step. When the harness exposes no approval path, emit `MERGE_BLOCKED:project-command-approval-unavailable` with the command and declaring surface; never skip the command, widen `allowed-tools` during execution, or add repository-specific grants to this portable skill.
 - MUST proceed autonomously from the determined changeset by default; present a pre-mutation confirmation through the runtime's structured-question tool and obtain confirmation before any mutating action only when the merge overlay opts into it — for the direct-push path /merge presents it, for the GitHub-PR path `/manage-github-pr` presents it.
 - NEVER merge directly outside a transport's authority — the direct-push push executes only under `MERGE_READINESS`, and the GitHub-PR merge executes only through `/manage-pr`'s gates.
 - NEVER surface a `dirty_tree` base-sync outcome as a rebase conflict — commit the working changes through `/commit-changes`, then re-run `/sync-base`; never stash.

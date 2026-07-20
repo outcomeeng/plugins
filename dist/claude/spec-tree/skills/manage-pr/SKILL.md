@@ -3,7 +3,7 @@ name: manage-pr
 description: >-
   ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
 argument-hint: "[pr-number|url|branch]"
-allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git rebase:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(spx diagnose:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(just marketplace-source-root:*), Bash(just check-skills:*), Bash(just docs-check:*), Bash(just check:*), Bash(just check-full:*), Bash(printf:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*), Bash(printf:*)
 ---
 
 <objective>
@@ -188,17 +188,9 @@ Evidence: ...
 Required: ...
 EOF
 
-# Post a formal review comment (counts as a review), interactive harness form
-gh pr review <pr-number> --comment --body-file - <<'EOF'
-Summary of remaining items:
-- 1 BLOCKING ...
-- 2 DEBT ...
-EOF
-
-# Programmatic runner form for either payload-bearing gh command.
+# Programmatic runner form for the PR-level comment.
 # Keep each pipeline as one physical shell line; each printf argument is one body line.
 printf '%s\n' '### BLOCKING [consistency]: path/to/file:42' 'Reference: ...' 'Evidence: ...' 'Required: ...' | gh pr comment <pr-number> --body-file -
-printf '%s\n' 'Summary of remaining items:' '- 1 BLOCKING ...' '- 2 DEBT ...' | gh pr review <pr-number> --comment --body-file -
 
 # Reply within an existing review thread (line-level comment)
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
@@ -218,6 +210,12 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --r
 ```
 
 </commands_reference>
+
+<shell_scope>
+
+The narrow Bash grants in frontmatter authorize approval-free execution. Run required consumer-declared commands from the product's root guide or active merge specialization through normal harness per-call approval when they fall outside those grants, then continue the governed step without a separate lifecycle confirmation. When the harness exposes no approval path, emit `MERGE_BLOCKED:project-command-approval-unavailable`, naming the command and declaring surface; never skip the command, widen `allowed-tools` during execution, or add repository-specific grants to this portable skill.
+
+</shell_scope>
 
 <failure_modes>
 
