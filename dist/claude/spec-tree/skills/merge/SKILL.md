@@ -62,7 +62,7 @@ It prints the total and non-coordination-note counts over the full changed-file 
 
 <script_testing>
 
-`scripts/classify_changeset.py` is covered by the merging node's scenario evidence before release:
+`${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py` is covered by the merging node's scenario evidence before release:
 
 - A branch with one base-merged path, one branch path, and one working-tree path reports only the latter two in the complete changed-path set.
 - A coordination note under a path containing spaces remains unquoted and classifies as coordination-only.
