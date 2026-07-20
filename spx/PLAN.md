@@ -35,8 +35,9 @@ invocation.
 surface while `spx/68-coding-agents.enabler` declares the product boundary it implements. Direct
 spec ownership moves only with a separately reviewed tree refactor.
 
-**Parked scope.** Child decomposition for the two agent-harness surfaces and migration of custom-agent
-conversion and installation remain separate changes. This slice changes no test or eval evidence.
+**Parked scope.** Child decomposition for the two agent-harness surfaces, broader custom-agent
+conversion migration, and installation remain separate changes. This slice prepends the Codex identity
+preflight during conversion and adds mapping evidence for that behavior; it changes no eval evidence.
 
 **Verification route.** Format and validate the changed specs, audit each changed node and the
 instruction template, run focused and selected deterministic checks, review the exact committed
