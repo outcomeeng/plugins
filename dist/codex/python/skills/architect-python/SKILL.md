@@ -33,7 +33,7 @@ After reading those standards, check for `spx/local/python.md`, `spx/local/pytho
 Before creating ADRs, read:
 
 - **The node spec** — functional requirements, test strategy, outcomes, and architectural constraints from parent ADRs/PDRs.
-- **Product context** — the active root harness guide (`CLAUDE.md` for Claude Code or `AGENTS.md` for Codex) for navigation, node status, and sparse-integer index dependencies.
+- **Product context** — the active root harness guide for navigation, node status, and sparse-integer index dependencies.
 - **Existing decisions** — product-level `spx/{NN}-{slug}.adr.md` / `.pdr.md` and decisions interleaved within enabler/outcome nodes, so new ADRs stay consistent.
 
 </inputs>
