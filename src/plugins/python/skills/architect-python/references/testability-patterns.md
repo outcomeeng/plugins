@@ -91,35 +91,28 @@ class TestUserValidation:
 
 ---
 
-### Situation 4: Exploring Edge Cases
+### Situation 4: Enabling Open-Domain Property Evidence
 
-**When**: the obvious cases are covered but weird inputs need confidence.
+**When**: the spec asserts a falsifiable invariant over an open input space.
 
-**What's needed**: Property-based tests that explore the input space automatically.
+**What's needed**: Architecture that exposes a pure or observable function, a `product_testing/generators/` strategy that varies and shrinks the valid domain, and a `product_testing/harnesses/` property harness that owns Hypothesis settings, seeds, replay, and diagnostics. The linked test owns the invariant predicate.
 
-**Example**:
+**ADR constraint example**:
 
-```python
-from hypothesis import given, strategies as st
+```markdown
+### Audit
 
-
-@given(st.text())
-def test_parse_user_never_crashes_on_any_name(name: str) -> None:
-    """Confidence: Does parse_user handle ANY string as a name?"""
-    try:
-        result = parse_user({"name": name, "email": "test@test.com"})
-        assert isinstance(result.name, str)
-    except ValidationError:
-        pass  # Rejecting invalid input is fine
+- ALWAYS: user payload normalization is a pure function whose output satisfies the source-owned canonical-form predicate for every valid generated payload ([audit])
+- ALWAYS: property-run settings, seeds, replay, and failure diagnostics live in the property harness; executed assertion files own no Hypothesis policy ([audit])
 ```
 
-**Key property**: Explores unanticipated inputs. Finds edge cases automatically.
+**Key property**: The architecture makes a source-coupled invariant observable and leaves generation policy outside the assertion file.
 
 ---
 
-### Situation 5: Proving `l2` or `l3` Behavior
+### Situation 5: Enabling Real-Dependency Evidence
 
-**When**: real local dependencies (`l2`) or remote/credentialed dependencies (`l3`) are needed to prove the assertion.
+**When**: the assertion requires a real local, remote, shared, or credentialed dependency.
 
 **What's needed**: Scenario or conformance tests that exercise real interactions.
 
@@ -147,18 +140,17 @@ def test_user_service_creates_and_retrieves_user(
 
 ---
 
-## Test Type Selection Guide
+## Architectural Testability Guide
 
-Given a situation, select the appropriate test type.
+ADRs establish constraints that make evidence possible. `/test` selects assertion type and execution level from the spec assertion, operational environment, and those constraints.
 
-| Situation                      | Assertion type              | Level cue                             |
-| ------------------------------ | --------------------------- | ------------------------------------- |
-| Debugging during development   | `mapping` or `scenario`     | Usually `l1`                          |
-| Preventing known bugs          | `scenario` or `compliance`  | Lowest level that proves the failure  |
-| Documenting behavior           | `scenario`                  | Lowest level that proves the workflow |
-| Exploring edge cases           | `property`                  | Usually `l1`                          |
-| Real local dependency evidence | `scenario` or `conformance` | `l2`                                  |
-| Remote service evidence        | `scenario` or `conformance` | `l3`                                  |
+| Evidence need                   | ADR constraint                                                                                     |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Deterministic business rules    | Pure typed functions with source-owned inputs and observable outputs                               |
+| Known failure prevention        | Explicit error contracts and dependency boundaries that can produce the real failure               |
+| Open-domain invariants          | Pure or observable subjects plus generator and property-harness boundaries                         |
+| Real local dependency behavior  | Protocol-typed dependency injection with a real local implementation and lifecycle-owning harness  |
+| Remote or credentialed behavior | Safe, observable production boundary with credentials and mutation authorization outside test code |
 
 ---
 
@@ -233,36 +225,17 @@ def test_calculate_total_mixed_currencies_raises() -> None:
 
 ### Phase 4: Property-Based Tests (Confidence)
 
-Add property tests to explore the input space:
+Prepare architecture for property evidence without placing generation policy in the ADR or assertion file:
 
-```python
-from hypothesis import given, strategies as st
+```markdown
+### Audit
 
-from product.money import SUPPORTED_CURRENCIES
-
-
-@given(
-    st.lists(
-        st.builds(
-            OrderLine,
-            product_id=st.integers(min_value=1),
-            quantity=st.integers(min_value=0, max_value=1000),
-            price=st.builds(
-                Money,
-                amount=st.integers(min_value=0),
-                currency=st.sampled_from(SUPPORTED_CURRENCIES),
-            ),
-        )
-    )
-)
-def test_calculate_total_always_non_negative(items: list[OrderLine]) -> None:
-    """Property: Total is always non-negative for valid inputs."""
-    total = calculate_total(items)
-
-    assert total.amount >= 0
+- ALWAYS: total calculation is a pure typed function over source-owned money and order-line contracts ([audit])
+- ALWAYS: the order-line generator varies and shrinks valid quantities, prices, currencies, and list shapes from source-owned constraints ([audit])
+- ALWAYS: the property harness owns Hypothesis settings, seed selection, replay, and failure diagnostics ([audit])
 ```
 
-**Purpose**: Find unanticipated edge cases.
+`/test` selects property evidence from the assertion's open-domain quantifier and owns the linked invariant predicate.
 
 ---
 
@@ -359,7 +332,7 @@ def test_validate_config() -> None:
 
 ---
 
-### 4. Protocols Enable Test Doubles
+### 4. Protocols Enable Controlled Implementations
 
 ```python
 class Clock(Protocol):
@@ -375,8 +348,8 @@ class RealClock:
         return datetime.now()
 
 
-class FakeClock:
-    """Testing: Returns controlled time."""
+class ControlledClock:
+    """Controlled implementation for the time/concurrency exception."""
 
     def __init__(self, fixed_time: datetime) -> None:
         self._time = fixed_time
@@ -390,10 +363,10 @@ def create_timestamp(clock: Clock) -> str:
     return clock.now().isoformat()
 
 
-# Test with controlled time:
+# Test with controlled time only after /test selects the time exception:
 def test_create_timestamp() -> None:
-    fake_clock = FakeClock(datetime(2024, 1, 1, 12, 0, 0))
-    result = create_timestamp(fake_clock)
+    controlled_clock = ControlledClock(datetime(2024, 1, 1, 12, 0, 0))
+    result = create_timestamp(controlled_clock)
     assert result == "2024-01-01T12:00:00"
 ```
 
@@ -412,9 +385,9 @@ ADRs express testability through `### Audit` rules under `## Verification`, not 
 
 ### Audit
 
-- ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables `l1` `mapping` and `property` evidence ([audit])
-- ALWAYS: order persistence accepts a repository Protocol -- enables `l2` scenario evidence with the real database harness ([audit])
-- ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic `l1` evidence without patching globals ([audit])
+- ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables deterministic mapping or property evidence ([audit])
+- ALWAYS: order persistence accepts a repository Protocol -- enables scenario evidence with the real database harness ([audit])
+- ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic evidence through a controlled clock when `/test` selects the time exception ([audit])
 - NEVER: `unittest.mock.patch` replaces repository, payment, or clock dependencies ([audit])
 ```
 

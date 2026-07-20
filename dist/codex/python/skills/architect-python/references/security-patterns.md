@@ -171,17 +171,48 @@ Subprocess calls are a common attack vector. Handle carefully.
 2. **Path traversal**: User input used in file paths
 3. **Argument injection**: User input as command arguments
 
-### Safe Subprocess Pattern
+### Safe Subprocess Boundary
 
 ```python
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Protocol
+
+
+class CommandRunner(Protocol):
+    def run(
+        self,
+        args: Sequence[str],
+        *,
+        timeout_seconds: int,
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+class SubprocessCommandRunner:
+    """Production adapter bound at the composition edge."""
+
+    def run(
+        self,
+        args: Sequence[str],
+        *,
+        timeout_seconds: int,
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            list(args),
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=True,
+        )
 
 
 def run_rclone_sync(
     source: Path,
     dest: str,
     logger: Logger,
+    runner: CommandRunner,
+    timeout_seconds: int,
 ) -> subprocess.CompletedProcess[str]:
     """Run rclone sync safely.
 
@@ -205,14 +236,7 @@ def run_rclone_sync(
 
     logger.debug(f"Running: {' '.join(cmd)}")
 
-    # No shell=True, capture output, set timeout
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=3600,
-        check=True,
-    )
+    return runner.run(cmd, timeout_seconds=timeout_seconds)
 ```
 
 ### What Makes It Safe?
@@ -222,21 +246,13 @@ def run_rclone_sync(
 3. **Validated inputs**: `source` and `dest` validated by Pydantic before reaching here
 4. **Timeout**: Prevents hanging indefinitely
 5. **check=True**: Raises on non-zero exit
+6. **Injected runner**: Production binds the subprocess adapter at the composition edge; tests inject controlled implementations only under a `/test` exception
 
 ### Shell Invocation Is Prohibited
 
 Never use `shell=True`, including for hardcoded commands. Express pipelines as explicit subprocess stages with array arguments, or replace shell composition with Python standard-library operations. This keeps quoting, error handling, timeouts, and input boundaries explicit.
 
-### Noqa for False Positives
-
-In CLI tools where the user controls all inputs:
-
-```python
-result = subprocess.run(
-    cmd,  # noqa: S603 - CLI tool, user controls all inputs
-    capture_output=True,
-)
-```
+Security suppressions never replace the injected runner boundary. Any analyzer suppression belongs inside the production adapter, carries a concrete justification, and never appears on direct subprocess calls in domain or orchestration code.
 
 ---
 
