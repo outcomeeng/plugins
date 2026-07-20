@@ -38,9 +38,10 @@ When the work is described as a plan or proposal rather than a specific node or 
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
-1. Run Steps 1–9 on the node.
-2. Confirm the final gate subject is committed and the worktree is clean.
-3. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
+1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
+2. Run Steps 1–9 on the node.
+3. Confirm the final gate subject is committed and the worktree is clean.
+4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
 
 If a node's flow cannot reach its gate-specific passing state or a converged review within the retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
