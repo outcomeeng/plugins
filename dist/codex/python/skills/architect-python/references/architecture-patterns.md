@@ -204,7 +204,7 @@ def sync_files(source: Path, dest: Path) -> SyncResult:
 
 ### Why DI Matters
 
-1. **Testability**: Inject mocks for testing
+1. **Testability**: Inject real or controlled implementations that preserve the behavior boundary
 2. **Flexibility**: Swap implementations without code changes
 3. **Explicitness**: All dependencies visible in signature
 4. **No globals**: No hidden state

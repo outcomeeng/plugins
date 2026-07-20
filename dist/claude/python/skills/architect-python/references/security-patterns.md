@@ -223,24 +223,9 @@ def run_rclone_sync(
 4. **Timeout**: Prevents hanging indefinitely
 5. **check=True**: Raises on non-zero exit
 
-### When shell=True is Acceptable
+### Shell Invocation Is Prohibited
 
-Only with HARDCODED commands:
-
-```python
-# ACCEPTABLE - Hardcoded command, no user input
-result = subprocess.run(
-    "ls -la | head -10",
-    shell=True,
-    capture_output=True,
-)
-
-# FORBIDDEN - User input in shell command
-result = subprocess.run(
-    f"ls -la {user_provided_path}",  # INJECTION RISK
-    shell=True,
-)
-```
+Never use `shell=True`, including for hardcoded commands. Express pipelines as explicit subprocess stages with array arguments, or replace shell composition with Python standard-library operations. This keeps quoting, error handling, timeouts, and input boundaries explicit.
 
 ### Noqa for False Positives
 
