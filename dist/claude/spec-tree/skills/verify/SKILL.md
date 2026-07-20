@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a spec-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/>
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Edit, Skill
 ---
 
 <objective>
@@ -88,6 +88,15 @@ Report one row per subject:
 
 Use `routed`, `capability-required`, or `blocked` as status. Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
 
+Example:
+
+```text
+| Subject | Verification type | Specialist | Evidence path or requirement | Status |
+| Node A deterministic rule | test | /test | tests/test_rule.compliance.l1.py | routed |
+| Node B producer rule | evaluate | /eval | structured eval capability required | capability-required |
+| Node C unsupported input | — | — | — | blocked |
+```
+
 For the terminal unsupported-input guard, record no verification type, specialist, or evidence shape. Classification output must never accompany that blocked result.
 
 </step>
@@ -103,3 +112,19 @@ For the terminal unsupported-input guard, record no verification type, specialis
 - Specialist dependency direction is acyclic and no agentic verdict is produced in the authoring context.
 
 </success_criteria>
+
+<failure_modes>
+
+**Claude passed an aggregate target to a specialist**
+
+- **What happened:** Claude accepted `spx/` as a `/verify` target, then forwarded that aggregate target unchanged to `/test`, whose contract accepts one node or decision.
+- **Why it failed:** The router advertised a broader scope than its specialist interface could consume, so aggregate test work had no valid delegation path.
+- **How to avoid:** Partition aggregate subjects by owning canonical node or decision and invoke each path-bearing specialist once per owner.
+
+**Claude classified an unsupported tag before blocking it**
+
+- **What happened:** Claude read the subject and selected a verification type after encountering a tag outside the current grammar.
+- **Why it failed:** Classification leaked compatibility behavior and produced routing fields for input the workflow promises to leave unclassified.
+- **How to avoid:** Validate tag shape first and return the terminal blocked result with null verification type, specialist, and evidence shape before reading the subject.
+
+</failure_modes>
