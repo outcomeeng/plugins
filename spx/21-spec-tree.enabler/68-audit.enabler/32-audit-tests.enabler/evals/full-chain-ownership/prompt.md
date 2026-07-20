@@ -70,7 +70,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 
 **Step 0: Load shared test-evidence standards**
 
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
 
 </step>
 
@@ -314,7 +314,7 @@ Gate 2 is a composed-language concern. It applies when at least one language-spe
 
 - Return Gate 2 `FAIL` when any composed Gate 2 row contains a `REJECT` finding.
 - Return Gate 2 `PASS` when every applicable composed Gate 2 row passes.
-- Omit Gate 2 only when every composed language verdict omits it as non-applicable.
+- Omit Gate 2 only when every composed language verdict omits it — as non-applicable, or because that language's Gate 1 rejected the evidence, so its Gate 2 never ran.
 - Treat a malformed or unevaluated applicable Gate 2 row as failed `language-composition` evidence; never infer architectural approval.
 
 </step>
