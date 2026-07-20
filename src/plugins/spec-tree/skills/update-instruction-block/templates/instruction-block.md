@@ -290,7 +290,7 @@ Blocked or incomplete result shape:
 **Use raw scope only for the verified `changes-reviewer` role task.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. After identity preflight, pass only the raw scope token in the `send_input` role-task `message`: `HEAD` for the current worktree scope, `origin/<base>...HEAD` for a specific committed range, a branch name, or a PR reference. A `HEAD` review satisfies a gate only when the caller first confirms the worktree is clean; on a dirty tree it includes staged, unstaged, and untracked sections and is advisory.
 
 - ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, pass deterministic verification, create a local checkpoint commit, and leave the worktree clean so the reviewer judges an exact committed head. A review over a working diff is advisory and never satisfies a gate.
-- NEVER invoke the `spec-tree:review-changes` skill.
+- NEVER invoke the `spec-tree:review-changes` skill in the main authoring conversation; the verified `changes-reviewer` invokes it inside its isolated role workflow.
 - NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
 
 ```json
