@@ -239,7 +239,11 @@ For each rejection reason:
 
 **Verification**
 
-Tests run and fail for expected reasons (RED phase complete).
+- Test command: `<exact command>` — `<required RED or GREEN result>`
+- Type-check command: `<exact command>` — passed
+- Lint/format command: `<exact command>` — passed
+
+If a required command cannot pass, report the exact command and blocking cause instead of claiming the tests are ready for re-review.
 ```
 
 </fix_mode_workflow>
@@ -322,7 +326,11 @@ Tests fail as expected. Ready for review.
 
 **Verification**
 
-The checklist passes, and tests fail for the expected behavior. Ready for re-review.
+- Test command: `{exact command}` — `{required RED or GREEN result}`
+- Type-check command: `{exact command}` — passed
+- Lint/format command: `{exact command}` — passed
+
+The checklist and every required validation pass. Ready for re-review.
 ```
 
 </output_format>
@@ -335,5 +343,6 @@ Test evidence is ready for review when:
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
 - [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
+- [ ] In FIX mode, the product's resolved TypeScript type-check and lint/format commands pass; otherwise the report names each blocked command and its exact blocking cause and does not claim readiness
 
 </success_criteria>
