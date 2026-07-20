@@ -13,6 +13,8 @@ from typing import Final, cast
 from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
     CODEX_AGENT_ENV_VAR,
+    CODEX_IDENTITY_PREFLIGHT_COMMAND,
+    CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
     DEFAULT_SOURCE_ROOT,
@@ -39,6 +41,7 @@ from outcomeeng.distribution.agents import (
     convert_agents,
     infer_sandbox_mode,
     install_agents,
+    iter_agent_files,
     map_effort,
     map_model,
     map_permission_mode,
@@ -470,6 +473,29 @@ def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     assert converted_skill_config(converted) == tuple(
         {"name": skill, "enabled": True} for skill in source.skills
     )
+
+
+def assert_identity_preflight_precedes_source_role_instructions() -> None:
+    """Assert converted developer instructions handle identity before role work."""
+    sources = tuple(
+        parse_agent_markdown(path) for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
+    )
+    assert sources
+
+    for source in sources:
+        converted = convert_agent(source)
+        instructions = converted_instruction_value(converted)
+        assert instructions.startswith(
+            f"{CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS}\n\n{source.body.strip()}"
+        )
+        assert CODEX_IDENTITY_PREFLIGHT_COMMAND in instructions
+        policy = converted.values["shell_environment_policy"]
+        assert isinstance(policy, Mapping)
+        environment = policy["set"]
+        assert isinstance(environment, Mapping)
+        assert environment == {
+            CODEX_AGENT_ENV_VAR: agent_environment_marker(source),
+        }
 
 
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:

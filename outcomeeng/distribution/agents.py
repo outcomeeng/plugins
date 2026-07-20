@@ -57,6 +57,19 @@ UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+CODEX_IDENTITY_PREFLIGHT_UNSET: Final = "AGENT_IDENTITY_UNSET"
+CODEX_IDENTITY_PREFLIGHT_COMMAND: Final = (
+    f"printf '%s' \"${{{CODEX_AGENT_ENV_VAR}:-{CODEX_IDENTITY_PREFLIGHT_UNSET}}}\""
+)
+CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS: Final = (
+    "<identity_preflight>\n"
+    "When the initial user message identifies the turn as an identity preflight, "
+    f"run `{CODEX_IDENTITY_PREFLIGHT_COMMAND}` and return stdout exactly.\n"
+    "NEVER run the role workflow during the identity-preflight turn.\n"
+    "After the identity-preflight result, follow the source role instructions for "
+    "every later turn.\n"
+    "</identity_preflight>"
+)
 MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
 MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
 MANUAL_REVIEW_GUIDANCE_CLOSE: Final = f"</{MANUAL_REVIEW_GUIDANCE_TAG}>"
@@ -267,7 +280,7 @@ def infer_sandbox_mode(
 
 def render_developer_instructions(agent: SourceAgent) -> str:
     """Render the Codex developer-instruction body."""
-    sections = [agent.body.strip()]
+    sections = [CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS, agent.body.strip()]
     guidance: list[str] = []
 
     if agent.skills:
