@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import re
+import subprocess
 import tomllib
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -13,8 +15,6 @@ from typing import Final, cast
 from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
     CODEX_AGENT_ENV_VAR,
-    CODEX_IDENTITY_PREFLIGHT_COMMAND,
-    CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
     DEFAULT_SOURCE_ROOT,
@@ -485,17 +485,41 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
     for source in sources:
         converted = convert_agent(source)
         instructions = converted_instruction_value(converted)
-        assert instructions.startswith(
-            f"{CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS}\n\n{source.body.strip()}"
+        preflight, separator, later_instructions = instructions.partition(
+            "</identity_preflight>\n\n"
         )
-        assert CODEX_IDENTITY_PREFLIGHT_COMMAND in instructions
+        assert separator
+        assert preflight.startswith("<identity_preflight>\n")
+        assert later_instructions.startswith(source.body.strip())
+        assert "initial user message" in preflight
+        assert "return stdout exactly" in preflight
+        assert "NEVER run the role workflow" in preflight
+        assert "every later turn" in preflight
+
+        command_match = re.search(r"run `([^`]+)` and return stdout exactly", preflight)
+        assert command_match is not None
         policy = converted.values["shell_environment_policy"]
         assert isinstance(policy, Mapping)
         environment = policy["set"]
         assert isinstance(environment, Mapping)
-        assert environment == {
-            CODEX_AGENT_ENV_VAR: agent_environment_marker(source),
-        }
+        assert len(environment) == 1
+        assert all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in environment.items()
+        )
+
+        command_environment = dict(os.environ)
+        command_environment.update(environment)
+        result = subprocess.run(
+            ["/bin/sh", "-c", command_match.group(1)],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=command_environment,
+        )
+        assert result.returncode == 0
+        assert result.stdout == next(iter(environment.values()))
+        assert result.stderr == ""
 
 
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
