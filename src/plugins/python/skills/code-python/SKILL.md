@@ -290,6 +290,34 @@ All checks pass. Ready for re-review.
 
 </output_format>
 
+<failure_modes>
+
+**Claude forced a test workflow onto an eval-backed node.**
+
+What happened: Claude listed `{node_path}/tests/*.py` and required pytest RED/GREEN even though `/verify` selected evaluate for the governed behavior.
+
+Why it failed: the implementation workflow treated test as universal evidence and had no valid path for an LLM-driven producer whose structured output is scored by an eval.
+
+How to avoid: branch only on `/verify`'s routing rows. Run pytest RED/GREEN for selected tests, run the selected eval command and threshold for selected evals, and create neither artifact for an audit-only subject.
+
+**Claude dropped a pathless audit requirement after deterministic checks passed.**
+
+What happened: tests, mypy, and Ruff passed, then the readiness report omitted the audit-backed assertion the isolated verifier still had to judge.
+
+Why it failed: “preserve the audit requirement” named no source artifact or observable handoff.
+
+How to avoid: apply `<audit_requirement_handoff>`, re-read each routed `([audit])` subject, and require one `preserved` report row per audit routing row before readiness.
+
+**Claude self-attested Python standards compliance.**
+
+What happened: the readiness checklist claimed the implementation followed `/python-standards` without a deterministic result or isolated audit verdict.
+
+Why it failed: a subjective checkbox let the authoring context grade its own conformance.
+
+How to avoid: emit `Python standards audit: required` with the loaded standards and overlays; publication waits for the implementation-audit projection's exact `terminalStatus: approved`.
+
+</failure_modes>
+
 <success_criteria>
 
 Implementation is ready for review when:
