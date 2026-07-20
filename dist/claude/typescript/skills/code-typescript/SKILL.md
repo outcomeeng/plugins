@@ -10,7 +10,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript implementation code that makes its node's tests pass.
+TypeScript implementation code that satisfies its node's established evidence and passes every selected deterministic check.
 </objective>
 
 <bundled_files>
@@ -27,7 +27,7 @@ Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/loc
 </reference_loading>
 
 <essential_principles>
-**NO MOCKING. DEPENDENCY INJECTION. BEHAVIOR ONLY. TEST FIRST.**
+**NO MOCKING. DEPENDENCY INJECTION. BEHAVIOR ONLY. EVIDENCE FIRST.**
 
 - Use **dependency injection**, NEVER mocking frameworks
 - Test **behavior** (what the code does), not implementation (how it does it)
@@ -273,11 +273,11 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 1. **Spec Is Law**: The specification is the contract. Implement exactly what it says.
 
-2. **Test-Driven Development**: Write tests first or alongside code. Tests prove correctness.
+2. **Evidence-Driven Development**: Establish evidence through `/verify` before implementation. Use RED/GREEN when test is selected, run the declared threshold when evaluate is selected, and preserve pathless audit requirements for their isolated verifier.
 
 3. **Type Safety First**: Use strict TypeScript with `strict: true`. No `any` without justification.
 
-4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, test, and validation commands. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
+4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, validation, and every deterministic command selected by `/verify`. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
 
 5. **Humility**: The code must pass review. Write code that will survive adversarial review.
 
@@ -308,7 +308,7 @@ Determine the mode from the input, then follow the appropriate workflow.
 <what_not_to_do>
 **Never Self-Approve**: Always submit for review.
 
-**Never Skip Tests**: Write tests first. No exceptions.
+**Never Skip Selected Evidence**: Run every selected test and eval command, and preserve every pathless audit requirement. Never fabricate a test for an eval- or audit-backed assertion.
 
 **Never Ignore Type Errors**:
 

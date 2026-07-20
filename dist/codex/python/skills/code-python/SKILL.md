@@ -15,15 +15,15 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 </repo_local_overlay>
 
 <objective>
-Python implementation code that satisfies its node's established evidence and passes its deterministic tests.
+Python implementation code that satisfies its node's established evidence and passes every selected deterministic check.
 </objective>
 
 <mode_detection>
 **Determine the current mode:**
 
-1. **WRITE mode** - Implementation doesn't exist or tests are failing
-   - Check: Tests fail with ImportError or AssertionError
-   - Action: Write implementation to make tests pass
+1. **WRITE mode** - Implementation doesn't exist or selected deterministic evidence is failing
+   - Check: Selected tests fail, selected evals miss their declared threshold, or the governed implementation is absent
+   - Action: Write implementation to satisfy the selected evidence
 
 2. **FIX mode** - Implementation exists but was rejected by reviewer
    - Check: Recent `/audit-python-code` output shows REJECT with specific issues
@@ -50,22 +50,23 @@ Run the product's own canonical commands when it documents them — a `AGENTS.md
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
-Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and imported by the governed tests. Never assume a package directory name.
+Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and named by the governed test imports or eval producer contract. Never assume a package directory name.
 Set `{node_path}` to the canonical full node path established by the loaded spec-tree context.
 
-**Step 1 — Understand the tests.** Use Glob to list `{node_path}/tests/*.py`, then Read each existing test file. Run the tests to observe their failures:
+**Step 1 — Understand the selected evidence.** Read `/verify`'s routing result for the node and handle every selected type:
+
+- **Test:** Use Glob to list `{node_path}/tests/*.py`, Read each linked test file, and run the focused product test command to observe its failure before implementation. The raw fallback is:
 
 ```bash
 python3 -m pytest {node_path}/tests/ -v
 ```
 
-Understand:
+- **Evaluate:** Read each linked eval definition, cases, materialized prompt, and real producer contract. Run the product's selected eval command to observe the current score and declared completion threshold before implementation.
+- **Audit:** Preserve the pathless isolated-verifier requirement and read the semantic constraint it will judge. Do not invent a test or eval artifact for it.
 
-- What behaviors the tests verify
-- What interfaces are expected (function signatures, classes)
-- What the tests import (where implementation should live)
+Identify the behavior each selected evidence artifact establishes, the expected interfaces, and the source path that implements the real subject.
 
-**Step 2 — Write implementation (GREEN).** Write minimal code that makes tests pass.
+**Step 2 — Write implementation.** Write minimal code that satisfies the governed behavior and every selected evidence requirement.
 
 **Code standards (per `/python-standards`):**
 
@@ -85,15 +86,17 @@ class Deps:
     run_command: CommandRunner
 ```
 
-**Step 3 — Run tests (verify GREEN).**
+**Step 3 — Run selected deterministic evidence.**
+
+Run the focused product test command for selected tests and the product eval command for selected evals. The Python test fallback is:
 
 ```bash
 python3 -m pytest {node_path}/tests/ -v
 ```
 
-All tests MUST pass. If any fail, fix implementation and re-run.
+Every selected test must pass and every selected eval must meet its declared threshold. Preserve pathless audit requirements for the later isolated verifier.
 
-**Step 4 — Refactor (keep GREEN).** Clean up while keeping tests green:
+**Step 4 — Refactor.** Clean up while keeping every selected deterministic check passing:
 
 1. Move semantic values to the owning source module
 2. Simplify
@@ -108,11 +111,11 @@ python3 -m mypy <python-source-paths>
 # Linting
 python3 -m ruff check <python-source-paths>
 
-# Tests one more time
+# Selected tests, when present
 python3 -m pytest {node_path}/tests/ -v
 ```
 
-All must pass before declaring complete.
+Run selected eval commands here as well. Type checking, linting, every selected test, and every selected eval threshold must pass before declaring complete.
 
 </write_mode_workflow>
 
@@ -138,7 +141,7 @@ All must pass before declaring complete.
 **Step 3 — Verify fixes.**
 
 ```bash
-# Run tests
+# Run selected tests, when present
 python3 -m pytest {node_path}/tests/ -v
 
 # Type checking
@@ -147,6 +150,8 @@ python3 -m mypy <python-source-paths>
 # Linting
 python3 -m ruff check <python-source-paths>
 ```
+
+Run every selected eval command after the fix and require its declared threshold. Preserve each pathless audit requirement for re-review.
 
 **Step 4 — Report what was fixed.**
 
@@ -162,7 +167,7 @@ python3 -m ruff check <python-source-paths>
 
 ### Verification
 
-All tests pass. Types and lint clean. Ready for re-review.
+All selected deterministic evidence passes. Types and lint clean. Pathless audit requirements are preserved for re-review.
 ```
 
 </fix_mode_workflow>
@@ -237,7 +242,7 @@ def get_user(user_id: int) -> User | None:
 
 ### Verification
 
-- Tests: ✓ Pass
+- Selected evidence: ✓ Pass
 - Types: ✓ Pass
 - Lint: ✓ Pass
 
@@ -266,9 +271,10 @@ All checks pass. Ready for re-review.
 
 Implementation is ready for review when:
 
-- [ ] The product's resolved Python test command for the governed node or changeset passes
+- [ ] Every selected Python test command passes and every selected eval command meets its declared threshold; a type absent from `/verify`'s routing result is not fabricated
 - [ ] The product's resolved Python type-check command passes
 - [ ] The product's resolved Python lint/format check command passes
+- [ ] Every pathless audit requirement remains recorded for the applicable isolated verifier
 - [ ] The implementation follows `/python-standards` and any `spx/local/python.md` overlay loaded for the repository
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection
 

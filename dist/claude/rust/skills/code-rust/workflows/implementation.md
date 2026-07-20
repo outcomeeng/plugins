@@ -16,7 +16,7 @@ Before writing code:
 1. Read the user request, spec, ADR, or review feedback completely.
 2. Identify the behavior that must change.
 3. Identify interfaces, data types, and failure modes.
-4. Identify the tests that will prove the change.
+4. Identify the test, eval, or pathless audit evidence selected by `/verify`.
 
 If the requirement is unclear, resolve that before implementation.
 </phase>
@@ -42,20 +42,17 @@ Document before moving on:
 
 </phase>
 
-<phase name="write_or_extend_tests_first">
-For behavior changes:
+<phase name="establish_selected_evidence">
+For behavior changes, handle every type selected by `/verify`:
 
-1. Locate the right test home:
-   - `spx/.../tests/{subject}.{evidence}.l1.rs`
-   - `spx/.../tests/{subject}.{evidence}.l2.rs`
-   - inline `#[cfg(test)]` if the module already owns that evidence
-2. Write or extend the tests.
-3. Run the relevant test target to confirm the new case fails for the expected reason.
+1. Test: locate the co-located test home, write or extend the test, and run the focused target to confirm the new case fails for the expected reason.
+2. Evaluate: read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared threshold; run it to record the preimplementation score.
+3. Audit: preserve the pathless isolated-verifier requirement and identify the semantic constraint's real subject; create no deterministic artifact.
 
 </phase>
 
 <phase name="implement_the_code">
-Write the smallest coherent change that makes the test pass.
+Write the smallest coherent change that satisfies the governed behavior and selected evidence.
 
 Prefer:
 
@@ -82,7 +79,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
 ```
 
-If the repository publishes stricter commands, use them.
+If the repository publishes stricter commands, use them. Also run every eval command selected by `/verify` and require its declared threshold; preserve every pathless audit requirement for the isolated verifier.
 </phase>
 
 <phase name="summarize">
@@ -99,7 +96,7 @@ When the validation passes, summarize:
 <success_criteria>
 
 - the changed behavior, boundaries, and failure modes were identified before code edits
-- tests were written or extended first when behavior changed
+- selected tests were written or extended first, selected evals meet their thresholds, and pathless audit requirements remain recorded
 - implementation follows existing repository seams and Rust type discipline
 - the repository validation sequence passed
 - the final summary names changed behavior, evidence, and remaining trade-offs

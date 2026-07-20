@@ -9,7 +9,9 @@ Before declaring implementation complete, confirm that mechanical checks and cod
 - [ ] `cargo test --all-targets` passes
 - [ ] no temporary debug code remains
 - [ ] no TODO or FIXME comments were added as escape hatches
-- [ ] new behavior is covered by tests or an explicit review constraint
+- [ ] new behavior carries the test, eval, or pathless audit evidence selected by `/verify`
+- [ ] every selected eval meets its declared completion threshold
+- [ ] every pathless audit requirement remains recorded for its isolated verifier
 
 </required_checks>
 

@@ -8,7 +8,9 @@ Pre-submission verification checks for TypeScript implementation work.
 
 - [ ] The resolved product type-check command passes
 - [ ] The resolved product lint/format check command passes after the canonical auto-fix command runs when available
-- [ ] The resolved product test command passes for the governed node or changeset
+- [ ] Every test command selected by `/verify` passes for the governed node or changeset
+- [ ] Every eval command selected by `/verify` meets its declared completion threshold
+- [ ] Every pathless audit requirement remains recorded for its isolated verifier
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the resolved commands or loaded standards passes through those commands
 - [ ] Manual review confirms the implementation follows `/typescript-standards` and any loaded `spx/local/typescript.md` overlay
 
@@ -43,14 +45,16 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 <completion_criteria>
 
-| Criterion                           | Status                |
-| ----------------------------------- | --------------------- |
-| Product type-check command passes   | Required              |
-| Product lint/format command passes  | Required              |
-| Product test command passes         | Required              |
-| Loaded standards are followed       | Required              |
-| Repo-local overlay is followed      | Required when present |
-| Supplied reviewer findings resolved | Required in FIX mode  |
+| Criterion                           | Status                 |
+| ----------------------------------- | ---------------------- |
+| Product type-check command passes   | Required               |
+| Product lint/format command passes  | Required               |
+| Selected test commands pass         | Required when selected |
+| Selected eval thresholds pass       | Required when selected |
+| Pathless audit requirements remain  | Required when selected |
+| Loaded standards are followed       | Required               |
+| Repo-local overlay is followed      | Required when present  |
+| Supplied reviewer findings resolved | Required in FIX mode   |
 
 </completion_criteria>
 
@@ -72,7 +76,9 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 <testing>
 
-- Tests required by the governing spec assertions exist and pass through the resolved product test command
+- Tests selected by `/verify` exist and pass through the resolved product test command
+- Evals selected by `/verify` meet their declared thresholds through the resolved product eval command
+- Pathless audit requirements remain available to the applicable isolated verifier
 - Test shape and mocking rules come from `/typescript-test-standards` and any loaded `spx/local/typescript-tests.md` overlay
 
 </testing>

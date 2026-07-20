@@ -41,7 +41,7 @@ Do not search the product directory for skill files when the loading message alr
 
 <essential_principles>
 
-Behavior comes from specs and tests. Existing code is reference material, not authority.
+Behavior comes from specs and their selected test, eval, or audit evidence. Existing code is reference material, not authority.
 
 Prefer explicit ownership, typed errors, and narrow seams over framework-heavy indirection. Traits and function parameters are for real architectural boundaries, not for decoration.
 
@@ -61,7 +61,7 @@ Use guidance in this order:
 1. this skill and its loaded Rust standards
 2. loaded ADRs, PDRs, and spec-tree artifacts
 3. `AGENTS.md`, `README.md`, `docs/`, and other product documentation
-4. tests as executable evidence
+4. selected test, eval, or pathless audit evidence
 5. existing code as the lowest-layer reference
 
 When layers disagree, the higher authority wins.
@@ -92,7 +92,7 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/verify` before adding or revising evidence. When it selects test, use `/test-rust` for Rust expression. If the change alters behavior and no evidence already proves that behavior, establish the evidence first.
+Invoke `/verify` before adding or revising evidence. When it selects test, use `/test-rust` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>
@@ -120,8 +120,8 @@ If the work is outside the spec tree, proceed with the provided requirements and
 <success_criteria>
 
 - The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.
-- The repository's canonical format, lint, and test commands pass; when none are published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets` pass.
-- Behavior-changing work has linked test evidence or an explicit audit requirement.
+- The repository's canonical format and lint commands pass; its regression test command passes; every test or eval command selected by `/verify` passes its declared criterion.
+- Behavior-changing work has selected test or eval evidence, or an explicit pathless audit requirement.
 - No temporary debug code, commented-out implementation, or TODO/FIXME escape hatch remains.
 
 </success_criteria>
