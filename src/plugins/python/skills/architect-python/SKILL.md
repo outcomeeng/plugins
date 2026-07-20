@@ -6,6 +6,8 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
+{!% require_skill 'python:python-standards' %!}
+
 {!% require_skill 'python:python-architecture-standards' %!}
 
 {!% require_skill 'python:python-test-standards' %!}
@@ -31,7 +33,7 @@ After reading those standards, check for `spx/local/python.md`, `spx/local/pytho
 Before creating ADRs, read:
 
 - **The node spec** — functional requirements, test strategy, outcomes, and architectural constraints from parent ADRs/PDRs.
-- **Product context** — `{{! file('root_guide') !}}` for navigation, node status, and sparse-integer index dependencies. For evidence routing, invoke `/verify`; use `/python-test-standards` for standards and `/test-python` for patterns after test is selected.
+- **Product context** — the active root harness guide (`CLAUDE.md` for Claude Code or `AGENTS.md` for Codex) for navigation, node status, and sparse-integer index dependencies.
 - **Existing decisions** — product-level `spx/{NN}-{slug}.adr.md` / `.pdr.md` and decisions interleaved within enabler/outcome nodes, so new ADRs stay consistent.
 
 </inputs>
@@ -51,7 +53,7 @@ ADR numbering uses the sparse integer index [10, 99]; a lower index is a depende
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Read context.** Read the node spec completely; read `{{! file('root_guide') !}}`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); invoke `/verify` for verification-type routing; read `/python-test-standards` for level definitions and `/test-python` for Python-specific patterns after test is selected; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and represented by `/python-architecture-standards` `<adr_sections>`; author to that shape rather than reaching across plugins for the template file.
+**Phase 0 — Read context.** Read every `<inputs>` artifact, apply `<foundational_stance>`, and read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and represented by `/python-architecture-standards` `<adr_sections>`; author to that shape rather than reaching across plugins for the template file.
 
 **Phase 1 — Identify decisions needed.** For each requirement, ask what architectural choices it implies, what patterns to mandate, what constraints to impose, and what trade-offs are made. List the decisions before writing any ADR.
 
