@@ -112,7 +112,7 @@ After the operator selects `claude`, replace the complete `AGENTS.md` region bod
 <success_criteria>
 
 - The closing `--check` prints `current`, confirming both root files carry the installed-version router block, first in the file, with byte-identical `shared` regions and no divergence between the two files.
-- The Step 5 complete-file comparison confirms the rendered router carries the read-the-whole-file instruction, the opening markers record the detected languages, each root file carries only its own harness spans, and a section a newer template introduces appears in both.
+- The Step 5 complete-file comparison confirms each router contains every applicable section from the rendered installed template, including the read-the-whole-file instruction, the opening markers record the detected languages, and each root file carries only its own harness spans.
 - The `--reconcile` stdout names every recency-selected whole-side replacement, its nonzero stderr names every tie, one-sided region, malformed fence, or dirty file, and the closing `--check` prints `current` only after no divergence remains.
 - The Step 1/Step 5 comparison confirms established managed surfaces preserve independent content byte-for-byte; first-encounter surfaces wrap at most the exact biggest identical whole-line span above the 80% threshold while preserving every unfenced byte in its original file and order; a one-file start maps the recorded seed content into the same shared body; and a two-file-absent start creates no independent content. Successful `--write` followed by `--check` printing `current` confirms symlink replacement and retired `spx/` instruction-file removal.
 
