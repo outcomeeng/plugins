@@ -481,6 +481,7 @@ def compliance_evidence_contract() -> tuple[str, ...]:
     return (
         "all_routers_enforce_operator_question_interrupt",
         "authority_hierarchy_policy_is_complete",
+        "codex_role_input_uses_runtime_capability",
         "codex_router_bounds_dispatched_verifiers",
         "drift_gate_marks_untracked_root_file_intent_to_add",
         "drift_gate_reports_a_missing_root_instruction_file",

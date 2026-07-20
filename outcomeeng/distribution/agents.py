@@ -74,6 +74,30 @@ CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS: Final = (
     "every later turn.\n"
     "</identity_preflight>"
 )
+CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `skills` entries were preserved as prompt guidance. "
+    "The generated Codex `skills.config` entries enable these skills; "
+    "they are not a spawn-time preload guarantee. Invoke or load these "
+    "skills before relying on this agent's specialized behavior: {skills}."
+)
+CODEX_TOOLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `tools` allowlists can map only to Codex configuration "
+    "boundaries with matching semantics. Treat command-level meanings "
+    "inside allowed shell tools as manual-review guidance: {tools}."
+)
+CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `disallowedTools` deny lists do not enforce Codex permissions. "
+    "Treat these tools as manual-review guidance unless runtime policy "
+    "enforces them: {tools}."
+)
+CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE: Final = (
+    "Source `permissionMode: {permission_mode}` has no direct Codex mapping. "
+    "Choose the appropriate sandbox, permissions, MCP tool filters, or app "
+    "tool filters before relying on this agent for write or network behavior."
+)
+CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE: Final = (
+    "Review unsupported source agent fields manually: {fields}."
+)
 MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
 MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
 MANUAL_REVIEW_GUIDANCE_CLOSE: Final = f"</{MANUAL_REVIEW_GUIDANCE_TAG}>"
@@ -296,41 +320,37 @@ def render_developer_instructions(agent: SourceAgent) -> str:
 
     if agent.skills:
         guidance.append(
-            "Source `skills` entries were preserved as prompt guidance. "
-            "The generated Codex `skills.config` entries enable these skills; "
-            "they are not a spawn-time preload guarantee. Invoke or load these "
-            "skills before relying on this agent's specialized behavior: "
-            f"{', '.join(f'`{skill}`' for skill in agent.skills)}."
+            CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+                skills=", ".join(f"`{skill}`" for skill in agent.skills)
+            )
         )
 
     if agent.tools:
         guidance.append(
-            "Source `tools` allowlists can map only to Codex configuration "
-            "boundaries with matching semantics. Treat command-level meanings "
-            "inside allowed shell tools as manual-review guidance: "
-            f"{', '.join(f'`{tool}`' for tool in agent.tools)}."
+            CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+                tools=", ".join(f"`{tool}`" for tool in agent.tools)
+            )
         )
 
     if agent.disallowed_tools:
         guidance.append(
-            "Source `disallowedTools` deny lists do not enforce Codex permissions. "
-            "Treat these tools as manual-review guidance unless runtime policy "
-            "enforces them: "
-            f"{', '.join(f'`{tool}`' for tool in agent.disallowed_tools)}."
+            CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE.format(
+                tools=", ".join(f"`{tool}`" for tool in agent.disallowed_tools)
+            )
         )
 
     if agent.permission_mode and map_permission_mode(agent.permission_mode) is None:
         guidance.append(
-            f"Source `permissionMode: {agent.permission_mode}` has no direct "
-            "Codex mapping. Choose the appropriate sandbox, permissions, MCP "
-            "tool filters, or app tool filters before relying on this agent for "
-            "write or network behavior."
+            CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE.format(
+                permission_mode=agent.permission_mode
+            )
         )
 
     if agent.unsupported_fields:
         guidance.append(
-            "Review unsupported source agent fields manually: "
-            f"{', '.join(f'`{field}`' for field in agent.unsupported_fields)}."
+            CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE.format(
+                fields=", ".join(f"`{field}`" for field in agent.unsupported_fields)
+            )
         )
 
     if guidance:

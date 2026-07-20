@@ -21,7 +21,14 @@ from tempfile import TemporaryDirectory
 from typing import cast
 
 from outcomeeng.distribution import instruction_block as dist
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    RUNTIME_TOKEN_SEND_INPUT_CAPABILITY,
+    RUNTIME_TOKEN_SEND_INPUT_NAMES,
+    RUNTIME_TOKEN_TOOL_KIND,
+    Target,
+    format_runtime_token,
+)
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
@@ -398,6 +405,27 @@ def _render_shipped_instruction_blocks(
     return dist.render_instruction_blocks_from_harness_templates(
         _distribution_module(), templates, enabled_languages
     )
+
+
+def _assert_codex_role_input_uses_runtime_capability() -> None:
+    """Assert role-task submission renders through a discoverable runtime token."""
+    authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
+    token = format_runtime_token(
+        RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SEND_INPUT_CAPABILITY
+    )
+    runtime_name = RUNTIME_TOKEN_SEND_INPUT_NAMES[Target.CODEX.value]
+
+    assert token in authored
+    assert runtime_name not in authored
+
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
+    router = dist.managed_router_block(document)
+    assert token not in router
+    assert runtime_name in router
+    assert (
+        f"if `{runtime_name}` is not exposed, discover the multi-agent "
+        "input-submission tool with `tool_search`"
+    ) in router
 
 
 def _require_wait_for_load_policy_error(documents: dict[str, str]) -> None:

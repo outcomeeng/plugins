@@ -156,12 +156,14 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 <!-- harness:codex -->
 
+{!% if target == 'codex' %!}
+
 **Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files.
 
 - ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
 - NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use the runtime's exposed typed-subagent spawn capability (`multi_agent_v1.spawn_agent` when that identifier is available) for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. The main Codex conversation must NEVER run a verification skill (audit or review) itself to avoid biasing the result. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use the runtime's exposed typed-subagent spawn capability (`{{! tool('spawn_agent') !}}` when that identifier is available) for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent exposed by the current runtime — `changes-reviewer` for a changeset review, `implementation-auditor` for implementation audits, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. When the installed plugin set exposes the instructions-owned `skill-auditor` or `subagent-auditor` roles, use those matching subagents for skill-content and subagent-configuration audits. Act only on the result the subagent returns: audit agents return verdicts or verification-run projections, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch an exposed required named subagent. Harness approval prompts are separate: if the tool itself asks for approval, answer that prompt through the harness approval flow. The main Codex conversation must NEVER run a verification skill (audit or review) itself to avoid biasing the result. If an exposed required subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
 
 **Already-dispatched verifier boundary.** Apply the typed-spawn rules above only in the main authoring conversation. Once running as a named verifier or reviewer, treat the current context as the required isolation and execute the configured audit or review skill directly. NEVER search for or spawn another verifier, use `tool_search` to discover multi-agent tools, or invoke `codex exec`, `claude`, `pi`, or another agent CLI. Missing nested-verifier tools is expected inside the dispatched verifier and does not block direct execution.
 
@@ -171,11 +173,11 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 Treat every spawned subagent as an owned resource. Maintain a registry in the main conversation containing its exact `agent_id`, role or task, and lifecycle state. Record a successful spawn's returned id before issuing another spawn or making any unrelated tool call. Preserve every unresolved registry entry across interruption and compaction.
 
-**Acquire handles sequentially while agents execute concurrently.** Call `multi_agent_v1.spawn_agent` once per tool call. Several sequential spawn calls may occur within one main-agent tool-call sequence before control returns to the operator, and every agent already spawned may run concurrently while later calls are issued. NEVER place multiple spawn calls in `Promise.all`, another fail-fast combinator, or one parallel tool-call batch: one rejected call can suppress successful sibling results and lose their ids even though those agents remain open. Respect the runtime's configured `agents.max_threads` limit; NEVER hard-code a maximum such as eight and NEVER fill capacity with agents that are not required.
+**Acquire handles sequentially while agents execute concurrently.** Call `{{! tool('spawn_agent') !}}` once per tool call. Several sequential spawn calls may occur within one main-agent tool-call sequence before control returns to the operator, and every agent already spawned may run concurrently while later calls are issued. NEVER place multiple spawn calls in `Promise.all`, another fail-fast combinator, or one parallel tool-call batch: one rejected call can suppress successful sibling results and lose their ids even though those agents remain open. Respect the runtime's configured `agents.max_threads` limit; NEVER hard-code a maximum such as eight and NEVER fill capacity with agents that are not required.
 
 Before each spawn sequence, reconcile the registry: preserve any final results already returned, close their agents, and close work that has been abandoned or superseded. If a spawn fails, stop issuing new spawns, retain every id already acquired, and collect or close those known agents before retrying. A failed individual spawn yields no id for that call and does not erase ids returned by earlier calls.
 
-**Collect, preserve, then close.** Use `multi_agent_v1.wait_agent` with only exact ids from the registry. A timeout with no final status is non-final. When the result remains required, wait again; when the work is explicitly abandoned or superseded, close the agent. For every final status, preserve the complete final message, structured verdict, or journal token first. A successful identity-preflight result is the sole keep-open exception: record the verified identity and submit the role task to that same child. Immediately close the child after the role-task result, any failed or unexpected identity-preflight result, or any other terminal result, then mark it closed in the registry. A notification, pending handle, or open id is never a final result.
+**Collect, preserve, then close.** Use `{{! tool('wait_agent') !}}` with only exact ids from the registry. A timeout with no final status is non-final. When the result remains required, wait again; when the work is explicitly abandoned or superseded, close the agent. For every final status, preserve the complete final message, structured verdict, or journal token first. A successful identity-preflight result is the sole keep-open exception: record the verified identity and submit the role task to that same child. Immediately close the child after the role-task result, any failed or unexpected identity-preflight result, or any other terminal result, then mark it closed in the registry. A notification, pending handle, or open id is never a final result.
 
 Reconcile every registry entry at these checkpoints:
 
@@ -189,7 +191,7 @@ Reconcile every registry entry at these checkpoints:
 
 At a checkpoint, wait again for every still-required result and close every abandoned or superseded agent. Before merge, publication, or response end, every known id must be closed and every required result must already be preserved. Do not leave completed agents open; completed agents continue consuming thread capacity until closed.
 
-NEVER invent, shorten, or substitute an agent id, including an all-zero placeholder. NEVER assume `multi_agent_v1.list_agents` exists; if the runtime exposes a listing tool, use it only to reconcile the registry. The interactive `/agent` picker is operator-side recovery when registry reconstruction is impossible, never a substitute for preserving ids. If `multi_agent_v1.close_agent` returns `not_found`, record that exact result and do not call `multi_agent_v1.resume_agent` merely to close the id. Resume only when intentionally continuing a known closed agent's work.
+NEVER invent, shorten, or substitute an agent id, including an all-zero placeholder. NEVER assume `multi_agent_v1.list_agents` exists; if the runtime exposes a listing tool, use it only to reconcile the registry. The interactive `/agent` picker is operator-side recovery when registry reconstruction is impossible, never a substitute for preserving ids. If `{{! tool('close_agent') !}}` returns `not_found`, record that exact result and do not call `multi_agent_v1.resume_agent` merely to close the id. Resume only when intentionally continuing a known closed agent's work.
 
 **Prove the configured-agent identity before assigning role work.** A successful `spawn_agent` call proves that Codex created a child thread; its result carries an agent id and optional presentation nickname, without the configured `agent_type`. Every generated Codex custom agent carries its stable identity in `OUTCOMEENG_CODEX_AGENT_NAME` as `<plugin>/<agent-name>`. Use the child's first turn only for an identity preflight, and never include the expected marker value in that turn:
 
@@ -197,7 +199,7 @@ Spawn the requested verifier or reviewer with an identity-only initial turn:
 
 ```json
 {
-  "tool": "multi_agent_v1.spawn_agent",
+  "tool": "{{! tool('spawn_agent') !}}",
   "arguments": {
     "agent_type": "<exact-agent-type>",
     "message": "Identity preflight only. Run `printf '%s' \"${OUTCOMEENG_CODEX_AGENT_NAME:-AGENT_IDENTITY_UNSET}\"` and return stdout exactly. Do not run the role workflow."
@@ -211,7 +213,7 @@ After an exact identity match, submit the role task to the same verified agent i
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<agent-id-from-spawn-agent>",
     "message": "<role-task>"
@@ -219,13 +221,13 @@ After an exact identity match, submit the role task to the same verified agent i
 }
 ```
 
-Collect the role-task result with `multi_agent_v1.wait_agent` again. Identity preflight success authorizes only this child identity; the role task still passes only through its own output contract below.
+Collect the role-task result with `{{! tool('wait_agent') !}}` again. Identity preflight success authorizes only this child identity; the role task still passes only through its own output contract below.
 
 Wait once for one or more spawned agents. Use the 10-minute individual-file timeout for identity preflights and for subagents such as `implementation-auditor` or `spec-auditor`:
 
 ```json
 {
-  "tool": "multi_agent_v1.wait_agent",
+  "tool": "{{! tool('wait_agent') !}}",
   "arguments": {
     "targets": ["<agent-id-from-spawn-agent>"],
     "timeout_ms": 600000
@@ -237,7 +239,7 @@ Use the 30-minute changeset timeout only for `changes-reviewer` role work:
 
 ```json
 {
-  "tool": "multi_agent_v1.wait_agent",
+  "tool": "{{! tool('wait_agent') !}}",
   "arguments": {
     "targets": ["<agent-id-from-spawn-agent>"],
     "timeout_ms": 1800000
@@ -249,16 +251,16 @@ Close a completed or no-longer-needed agent:
 
 ```json
 {
-  "tool": "multi_agent_v1.close_agent",
+  "tool": "{{! tool('close_agent') !}}",
   "arguments": {
     "target": "<agent-id-from-spawn-agent>"
   }
 }
 ```
 
-In the main authoring conversation, if `wait_agent` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user') !}}` or any other tools as a substitute for result collection.
+In the main authoring conversation, if `{{! tool('send_input') !}}` is not exposed, discover the multi-agent input-submission tool with `tool_search`, then call the discovered input tool. If `{{! tool('wait_agent') !}}` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user') !}}` or any other tools as a substitute for result collection.
 
-**Result collection for verifier and reviewer agents.** The exposed typed wait capability (`multi_agent_v1.wait_agent` in the examples below) is the planned result-collection mechanism for both the identity preflight and the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
+**Result collection for verifier and reviewer agents.** The exposed typed wait capability (`{{! tool('wait_agent') !}}` in the examples below) is the planned result-collection mechanism for both the identity preflight and the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 
 Successful `changes-reviewer` result shape:
 
@@ -295,7 +297,7 @@ Blocked or incomplete result shape:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-changes-reviewer-agent-id>",
     "message": "HEAD"
@@ -305,7 +307,7 @@ Blocked or incomplete result shape:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-changes-reviewer-agent-id>",
     "message": "origin/<base>...HEAD"
@@ -313,13 +315,13 @@ Blocked or incomplete result shape:
 }
 ```
 
-**Use explicit prompts for verified audit-agent role tasks.** The `message` field comes from the `multi_agent_v1.send_input` schema after identity preflight. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
+**Use explicit prompts for verified audit-agent role tasks.** The `message` field comes from the `{{! tool('send_input') !}}` schema after identity preflight. This instruction block owns the prompt content below for required verifier roles. Keep the prompt narrow: repository path, governed artifact paths, governing node or decision, deterministic verification state when relevant, audit task, and output shape. Do not ask the subagent to edit files.
 
 Use this shape for an implementation audit:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-implementation-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nScope: <base>..<head> committed changeset scope\nLive file list: none for a gating audit; full modified and untracked paths only for an advisory pre-commit audit\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results>\nTask: Run the implementation audit through spx verification run. Return the run token and rendered projection; the complete blocked SPX diagnostic with run token or not-started, exact command, payload source, payload key, exit code, and stderr; or the complete pre-run skill-load diagnostic with run token not-started, required skill spec-tree:audit-implementation, and the exact load or availability failure."
@@ -337,7 +339,7 @@ Use this shape for test-evidence audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-test-evidence-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nTask: Audit whether the test evidence proves the listed assertions without weakening the selected verification type or test assertion type. Return only the audit-tests JSON verdict, with schema_version 1, skill audit-tests, overall APPROVED or REJECTED, rows, and metadata. Do not add prose outside the JSON object."
@@ -349,7 +351,7 @@ Use this shape for eval-evidence audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-eval-evidence-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full [eval] assertion text or exact spec file path plus assertion headings>\nEval artifacts: <full paths to eval.toml, prompt.md, cases.jsonl, and history.jsonl>\nProducer artifacts: <full paths to the producing skill, agent, classifier, script, or command source>\nTask: Audit whether the eval evidence proves the listed assertions without replacing the real producer with a prompt-only simulation. Return the JSON verdict specified by audit-eval-evidence, with overall PASS, FAIL, or UNKNOWN and row findings for failed evidence properties. Do not add prose outside the JSON object."
@@ -361,7 +363,7 @@ Use this shape for spec-node audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-spec-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with full spx/... paths, governing rule, and required fix."
@@ -373,7 +375,7 @@ Use this shape for decision audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-adr-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nAudit scope: <exact committed changeset or artifact scope>\nScope classification: <language-neutral | implementation-language partitions: comma-separated languages>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, and every language-specific architecture concern required by the scope classification. Return only the structured JSON verdict specified by audit-adr, with no prose outside the JSON object."
@@ -383,7 +385,7 @@ Use this shape for decision audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-pdr-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
@@ -395,7 +397,7 @@ Use this shape for skill audits:
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-skill-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nSkill content: <full paths to every changed artifact governing the skill surface, including SKILL.md files, skill subdirectory files, authored shared fragments, and generated runtime copies>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed skill content for skill-authoring standards, agent-prompt standards, progressive disclosure, portability, voice, and structure. Return only the structured JSON verdict specified by instructions:audit-skills, with no prose outside the JSON object."
@@ -407,13 +409,15 @@ Use this shape for one subagent audit. When several custom-agent configurations 
 
 ```json
 {
-  "tool": "multi_agent_v1.send_input",
+  "tool": "{{! tool('send_input') !}}",
   "arguments": {
     "target": "<verified-subagent-auditor-agent-id>",
     "message": "Repository: <absolute-repository-path>\nCustom agent file: <full path to one changed .codex/agents/*.toml or ~/.codex/agents/*.toml file>\nGoverning node(s): <full spx/... path(s) when known>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the changed custom agent configuration for subagent-authoring standards, prompt voice, tool boundaries, model settings, skill preloads, and output contract. Return only the structured JSON verdict specified by instructions:audit-subagents, with no prose outside the JSON object."
   }
 }
 ```
+
+{!% endif %!}
 
 <!-- /harness:codex -->
 

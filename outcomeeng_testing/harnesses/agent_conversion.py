@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 import tomllib
 from collections.abc import Iterator, Mapping
@@ -17,12 +16,21 @@ from outcomeeng.distribution.agents import (
     ALL_TOOLS_SENTINEL,
     CODEX_AGENT_ENV_VAR,
     CODEX_AGENT_ENV_SEPARATOR,
+    CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE,
+    CODEX_IDENTITY_PREFLIGHT_COMMAND,
+    CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS,
+    CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE,
+    CODEX_SKILLS_GUIDANCE_TEMPLATE,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
+    CODEX_TOOLS_GUIDANCE_TEMPLATE,
+    CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE,
     DEFAULT_SOURCE_ROOT,
     EFFORT_MAPPINGS,
     GENERATED_MANIFEST_FILENAME,
     INHERIT_MODEL_VALUE,
+    MANUAL_REVIEW_GUIDANCE_CLOSE,
+    MANUAL_REVIEW_GUIDANCE_OPEN,
     MODEL_MAPPINGS,
     MODEL_PREFIX_EXAMPLE_SUFFIX,
     PERMISSION_MODE_MAPPINGS,
@@ -298,16 +306,24 @@ def working_directory(path: Path) -> Iterator[None]:
         os.chdir(previous)
 
 
-def installed_guarded_writer_toml(root: Path) -> dict[str, object]:
-    """Install the guarded-writer fixture and return parsed TOML."""
+def installed_guarded_writer_toml(
+    root: Path,
+) -> tuple[SourceAgent, dict[str, object]]:
+    """Install the guarded-writer fixture and return source plus parsed TOML."""
     source_root = write_agent_tree(
         root,
         PLUGIN_NAME,
         {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
+    source = parse_agent_markdown(
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{GUARDED_WRITER_NAME}.md"
+    )
     target_root = root / CODEX_AGENTS_DIRNAME
     (installed_path,) = install_agents(source_root, target_root)
-    return tomllib.loads(installed_path.read_text(encoding="utf-8"))
+    return source, tomllib.loads(installed_path.read_text(encoding="utf-8"))
 
 
 def write_codex_plugin_manifest(root: Path) -> Path:
@@ -509,13 +525,15 @@ def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     for source in sources:
         converted = convert_agent(source)
         instructions = converted_instruction_value(converted)
+        guidance = CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+            skills=", ".join(f"`{skill}`" for skill in source.skills)
+        )
         if not source.skills:
             assert "skills" not in converted.values
-            assert "prompt guidance" not in instructions
+            guidance_prefix = CODEX_SKILLS_GUIDANCE_TEMPLATE.partition("{skills}")[0]
+            assert guidance_prefix not in instructions
             continue
-        assert "skills" in instructions
-        assert "prompt guidance" in instructions
-        assert "not a spawn-time preload guarantee" in instructions
+        assert guidance in instructions
         assert converted_skill_config(converted) == tuple(
             {"name": skill, "enabled": True} for skill in source.skills
         )
@@ -535,15 +553,10 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
             "</identity_preflight>\n\n"
         )
         assert separator
-        assert preflight.startswith("<identity_preflight>\n")
+        assert (
+            f"{preflight}</identity_preflight>" == CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS
+        )
         assert later_instructions.startswith(source.body.strip())
-        assert "initial user message" in preflight
-        assert "return stdout exactly" in preflight
-        assert "NEVER run the role workflow" in preflight
-        assert "every later turn" in preflight
-
-        command_match = re.search(r"run `([^`]+)` and return stdout exactly", preflight)
-        assert command_match is not None
         policy = converted.values["shell_environment_policy"]
         assert isinstance(policy, Mapping)
         environment = policy["set"]
@@ -557,7 +570,7 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
         command_environment = dict(os.environ)
         command_environment.update(environment)
         result = subprocess.run(
-            ["/bin/sh", "-c", command_match.group(1)],
+            ["/bin/sh", "-c", CODEX_IDENTITY_PREFLIGHT_COMMAND],
             check=False,
             capture_output=True,
             text=True,
@@ -771,26 +784,41 @@ def assert_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> 
         )
     )
     instructions = converted_instruction_value(converted)
+    guidance = CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+        tools=", ".join(f"`{tool}`" for tool in SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST)
+    )
 
     assert "sandbox_mode" not in converted.values
-    assert "command-level meanings" in instructions
-    assert "manual-review guidance" in instructions
+    assert guidance in instructions
 
 
 def assert_manual_guidance_preserves_source_only_fields() -> None:
     """Assert source-only fields remain as manual-review guidance."""
     with TemporaryDirectory() as tmp:
-        parsed = installed_guarded_writer_toml(Path(tmp))
+        source, parsed = installed_guarded_writer_toml(Path(tmp))
 
     instructions = toml_string(parsed, "developer_instructions")
+    expected_guidance = (
+        CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+            skills=", ".join(f"`{skill}`" for skill in source.skills)
+        ),
+        CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+            tools=", ".join(f"`{tool}`" for tool in source.tools)
+        ),
+        CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE.format(
+            tools=", ".join(f"`{tool}`" for tool in source.disallowed_tools)
+        ),
+        CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE.format(
+            permission_mode=source.permission_mode
+        ),
+        CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE.format(
+            fields=", ".join(f"`{field}`" for field in source.unsupported_fields)
+        ),
+    )
     assert parsed["model"] == CODEX_STRONG_MODEL
-    assert "tools" in instructions
-    assert "disallowedTools" in instructions
-    assert "skills" in instructions
-    assert "permissionMode: bypassPermissions" in instructions
-    assert "unknownField" in instructions
-    assert "<manual_review_guidance>" in instructions
-    assert "</manual_review_guidance>" in instructions
+    assert all(guidance in instructions for guidance in expected_guidance)
+    assert MANUAL_REVIEW_GUIDANCE_OPEN in instructions
+    assert MANUAL_REVIEW_GUIDANCE_CLOSE in instructions
     assert "##" not in instructions
     assert "sandbox_mode" not in parsed
 

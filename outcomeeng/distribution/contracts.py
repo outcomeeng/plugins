@@ -93,6 +93,7 @@ RUNTIME_TOKEN_KIND_GUARD_ENFORCEMENT: Final[dict[str, bool]] = {
 
 RUNTIME_TOKEN_ASK_USER_CAPABILITY: Final = "ask_user"
 RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY: Final = "spawn_agent"
+RUNTIME_TOKEN_SEND_INPUT_CAPABILITY: Final = "send_input"
 RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY: Final = "wait_agent"
 RUNTIME_TOKEN_CLOSE_AGENT_CAPABILITY: Final = "close_agent"
 RUNTIME_TOKEN_SCHEDULE_WAKEUP_CAPABILITY: Final = "schedule_wakeup"
@@ -122,6 +123,9 @@ RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
 RUNTIME_TOKEN_SPAWN_AGENT_NAMES: Final[dict[str, str]] = {
     Target.CODEX.value: "multi_agent_v1.spawn_agent",
 }
+RUNTIME_TOKEN_SEND_INPUT_NAMES: Final[dict[str, str]] = {
+    Target.CODEX.value: "multi_agent_v1.send_input",
+}
 RUNTIME_TOKEN_WAIT_AGENT_NAMES: Final[dict[str, str]] = {
     Target.CODEX.value: "multi_agent_v1.wait_agent",
 }
@@ -141,6 +145,9 @@ RUNTIME_TOKEN_REQUIRED_NAMES: Final[dict[tuple[str, str], dict[str, str]]] = {
     ),
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY): (
         RUNTIME_TOKEN_SPAWN_AGENT_NAMES
+    ),
+    (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SEND_INPUT_CAPABILITY): (
+        RUNTIME_TOKEN_SEND_INPUT_NAMES
     ),
     (RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_WAIT_AGENT_CAPABILITY): (
         RUNTIME_TOKEN_WAIT_AGENT_NAMES
