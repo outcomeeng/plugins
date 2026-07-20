@@ -37,6 +37,16 @@ Remaining drift (agent-concept "runtime" usage, distinct from generic "at runtim
 
 **Resolution shape**: a whole-tree sweep aligning agent-concept "runtime" usage to "agent" / "agent harness" per `spx/12-agent-harness.pdr.md`, distinguishing it from generic execution-time "runtime". Because node names carry the term, the sweep includes `/refactor` node renames and is therefore a structural change, not a text-only pass — deferred from the scoped marketplace-state/diagnose terminology fix that surfaced it, by operator decision.
 
+## rust-test-standards renders no language-specific shared-litmus section
+
+`src/plugins/python/skills/python-test-standards/SKILL.md` and `src/plugins/typescript/skills/typescript-test-standards/SKILL.md` each carry a section that applies every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`, then renders the language-specific form of those items while deferring to the shared set as complete. `src/plugins/rust/skills/rust-test-standards/SKILL.md` carries no equivalent section and no reference to `/test-evidence-standards`.
+
+**Status against the standard.** This is parity, not a contradiction. rust-test-standards holds no inline litmus, predicate-seam, semantic-binding, oracle-independence, case-provenance, or mutation content, so the shared standard duplicates nothing there and invalidates none of its guidance. The Rust audit path still receives the shared litmus through the base `/audit-tests`, which invokes `/test-evidence-standards` for every language. The gap is only that Rust authors reading rust-test-standards do not get the Rust-specific rendering their Python and TypeScript counterparts get.
+
+**Evidence.** Surfaced while wiring the shared `test-evidence-standards` skill into the Python and TypeScript authoring standards. The seam changeset touches the Rust auditor (`audit-rust-tests`) and Rust test skill (`test-rust`) but not `rust-test-standards`, so the file lies outside the changeset.
+
+**Resolution shape**: add a shared-litmus section to `rust-test-standards` mirroring the Python and TypeScript siblings — apply the complete `/test-evidence-standards` litmus and mutation set, then render the Rust-specific form (borrow/lifetime bindings, `#[cfg(test)]` module ownership, trait-object doubles) without replacing or bounding the shared set. Run `instructions:skill-auditor` over `rust-test-standards` afterward.
+
 ## 26 bundled reference files over 100 lines carry no table of contents
 
 `/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, "so partial reads still see the full scope". Twenty-six files across seven plugins exceed the threshold without one, ranging from 108 to 971 lines:
