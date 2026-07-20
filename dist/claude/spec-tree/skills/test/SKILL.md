@@ -2,12 +2,13 @@
 name: test
 description: >-
   ALWAYS invoke this skill before writing or repairing deterministic tests for
-  a spec assertion or when learning the testing approach.
+  a spec assertion, selecting a decision Testing rule's assertion type, or when
+  learning the testing approach.
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
-Spec-tree assertion tests that are canonically named, assertion-typed, source-contract-coupled, language-routed, and reproducible for property failures.
+Spec-tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
 </objective>
 
 <prerequisite>
@@ -38,11 +39,13 @@ Then follow the spec-tree workflow below.
 
 Check for `<SPEC_TREE_FOUNDATION>` and `<SPEC_TREE_CONTEXT>` markers. If absent, invoke `/understand` and `/contextualize` first.
 
-This loads:
+For a spec target, this loads:
 
 - The target spec node and its assertions
 - Ancestor ADRs/PDRs that constrain the testing approach
 - Lower-index sibling specs that provide context
+
+For a canonical ADR/PDR target supplied by `/verify`, use decision-rule mode. Require context for the containing node, or `spx/` for a product-level decision, and read only that decision's `### Testing` rules for assertion typing. The implementing specs own executable evidence and evidence links.
 
 </step>
 
@@ -50,7 +53,7 @@ This loads:
 
 **Step 2: Extract assertions from the spec**
 
-Parse the target spec node. Extract only assertions already selected for `[test]` evidence and their test links:
+For a spec target, parse the target spec node and extract only assertions already selected for `[test]` evidence and their test links:
 
 | Type            | Pattern in spec                                    | Test strategy   |
 | --------------- | -------------------------------------------------- | --------------- |
@@ -67,6 +70,8 @@ Record each assertion with:
 - Test link (if present) — path and whether it resolves
 - Test link status: exists / missing / stale
 
+For a decision target, extract only `### Testing` rules. Derive each rule's assertion type from its quantifier and record its existing assertion-type tag, if any. Ignore `### Eval` and `### Audit` rules; they remain with their selected specialists.
+
 </step>
 
 <step name="analyze_gaps">
@@ -81,6 +86,8 @@ For each assertion:
 | **Missing link**  | `[test]` selected with no path          | Must add test evidence link                |
 | **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
 | **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
+
+For a decision target, skip evidence-link and filename checks. Report a rule as covered when its existing assertion-type tag matches the type derived from its quantifier, and as needing update when the tag is absent or mismatched.
 
 **Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
@@ -111,6 +118,8 @@ For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SK
 
 Document the routing decision for each assertion.
 
+In decision-rule mode, stop after assertion-type selection. Execution level, language expression, test files, and evidence links belong to the implementing spec assertion that realizes the rule.
+
 </step>
 
 <step name="generate_scaffolds">
@@ -127,6 +136,8 @@ For each assertion needing a new test:
 
 Delegate language-specific structure to `/test-python` or `/test-rust` or `/test-typescript`.
 
+In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
+
 **Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. Use `/understand`'s excluded-node guidance for the convention.
 
 </step>
@@ -136,6 +147,8 @@ Delegate language-specific structure to `/test-python` or `/test-rust` or `/test
 **Step 6: Update spec assertion links**
 
 After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
+
+In decision-rule mode, add no evidence link to the ADR/PDR. The implementing specs own the linked executable evidence.
 
 </step>
 
@@ -170,6 +183,7 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 Testing output is sound when:
 
+- Every decision `### Testing` rule carries exactly one assertion-type tag derived from its quantifier and no executable evidence link.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
