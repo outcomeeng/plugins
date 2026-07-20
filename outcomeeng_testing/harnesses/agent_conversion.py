@@ -50,6 +50,15 @@ from outcomeeng.distribution.agents import (
     parse_agent_markdown,
     render_agent_toml,
 )
+from outcomeeng.distribution.contracts import (
+    CODEX_PLUGIN_SUBDIR_NAME,
+    PLUGINS_DIR_NAME,
+    SOURCE_ROOT_NAME,
+)
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DIST_CODEX_PLUGINS_DIR,
+)
 from outcomeeng_testing.harnesses.src_tree import write_agent_source, write_agent_tree
 
 PLUGIN_NAME: Final = "sample"
@@ -68,15 +77,21 @@ WRITER_SOURCE_PATH: Final = (
 )
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 GENERATED_CODEX_AGENTS_DIRNAME: Final = "generated-codex-agents"
-CODEX_DIST_ROOT_PARTS: Final = ("dist", "codex")
-CODEX_PLUGIN_MANIFEST_PARTS: Final = ("dist", "codex", PLUGIN_NAME, ".codex-plugin")
-CODEX_PLUGIN_MANIFEST_FILENAME: Final = "plugin.json"
+CODEX_PLUGIN_MANIFEST_PARTS: Final = (
+    *DIST_CODEX_PLUGINS_DIR.parts,
+    PLUGIN_NAME,
+    CODEX_PLUGIN_SUBDIR_NAME,
+)
 CODEX_PLUGIN_MANIFEST_BODY: Final = '{"name": "sample", "version": "0.0.1"}\n'
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
 )
 SPEC_TREE_AGENT_SOURCE_DIR: Final = (
-    Path(__file__).resolve().parents[2] / "src" / "plugins" / "spec-tree" / "agents"
+    Path(__file__).resolve().parents[2]
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
+    / "spec-tree"
+    / AGENT_SOURCE_DIRECTORY_NAME
 )
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
@@ -208,7 +223,10 @@ def converted_default_codex_source_root_toml(
         {CHANGES_REVIEWER_NAME: agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE)},
     )
     source = parse_agent_markdown(
-        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{CHANGES_REVIEWER_NAME}.md"
     )
     with working_directory(root):
         (converted,) = convert_agents()
@@ -226,7 +244,10 @@ def converted_codex_agent_with_yaml_mcp_toml(
         {CHANGES_REVIEWER_NAME: source},
     )
     source_agent_path = (
-        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{CHANGES_REVIEWER_NAME}.md"
     )
     parsed_source = parse_agent_markdown(source_agent_path)
     (converted,) = convert_agent_tree(source_root)
@@ -256,9 +277,11 @@ def write_dist_codex_agent_tree(
     agents: Mapping[str, str],
 ) -> Path:
     """Materialize a generated dist/codex plugin agent tree."""
-    source_root = root.joinpath(*CODEX_DIST_ROOT_PARTS)
+    source_root = root / DIST_CODEX_PLUGINS_DIR
     for agent_name, content in agents.items():
-        agent_path = source_root / plugin_name / "agents" / f"{agent_name}.md"
+        agent_path = (
+            source_root / plugin_name / AGENT_SOURCE_DIRECTORY_NAME / f"{agent_name}.md"
+        )
         agent_path.parent.mkdir(parents=True, exist_ok=True)
         agent_path.write_text(content, encoding="utf-8")
     return source_root
@@ -290,7 +313,7 @@ def installed_guarded_writer_toml(root: Path) -> dict[str, object]:
 def write_codex_plugin_manifest(root: Path) -> Path:
     """Write a sample Codex plugin manifest and return its path."""
     manifest_dir = root.joinpath(*CODEX_PLUGIN_MANIFEST_PARTS)
-    manifest_path = manifest_dir / CODEX_PLUGIN_MANIFEST_FILENAME
+    manifest_path = manifest_dir / CODEX_PLUGIN_MANIFEST.name
     manifest_dir.mkdir(parents=True)
     manifest_path.write_text(CODEX_PLUGIN_MANIFEST_BODY, encoding="utf-8")
     return manifest_path
@@ -400,7 +423,7 @@ def source_agent_marker_candidate() -> SourceAgent:
 
 def invalid_generated_manifest_target(root: Path) -> tuple[Path, Path]:
     """Create an invalid generated manifest and return source and target roots."""
-    source_root = root.joinpath(*CODEX_DIST_ROOT_PARTS)
+    source_root = root / DIST_CODEX_PLUGINS_DIR
     target_root = root / CODEX_AGENTS_DIRNAME
     target_root.mkdir()
     manifest_path = target_root / GENERATED_MANIFEST_FILENAME
