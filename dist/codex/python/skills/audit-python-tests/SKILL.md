@@ -65,6 +65,11 @@ Before Gate 1, read each in-scope test filename. Canonical Python evidence files
 Apply the base `/audit-tests` semantic binding screen before coupling. Python assignments, annotated assignments, named expressions, loop bindings, context-manager bindings, exception bindings, pattern bindings, pytest fixture parameters, and property-generated parameters are valid when they only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. In particular, accept `tmp_path`, `observations = harness_call(...)`, and assertion-local comprehensions over those observations; none chooses a case, expectation, or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` when a binding chooses runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` when it chooses hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct; collapsing them loses the difference between a configuration defect and a data defect. Local functions are findings when they own those choices or move a predicate or assertion call out of the linked test function or callback.
 </test_file_declarations>
 
+<gate_1_assertion>
+Entry point is the spec, not the test file.
+
+Judge every in-scope assertion against each audit below. A `REJECT` finding from any audit rejects the assertion it names and moves to the next assertion. An audit whose subject is an imported artifact rather than an assertion — a generator, a harness, an inert fixture, or a `conftest.py` shim — attributes its finding to every in-scope assertion whose evidence chain reaches that artifact, so each finding carries the `assertion` field the base schema requires. The `<structural_reading>` and `<test_file_declarations>` observations above are folded into this gate rather than reported as a separate deterministic gate.
+
 <coupling_audit>
 Classify imports by runtime coupling:
 
@@ -199,6 +204,16 @@ Rejected content:
 
 </conftest_audit>
 
+Gate 1 status:
+
+- PASS if no Gate 1 finding carries severity `REJECT`.
+- FAIL if any Gate 1 finding carries severity `REJECT`.
+
+</gate_1_assertion>
+
+<gate_2_architectural>
+Runs only if Gate 1 is PASS.
+
 <architectural_dry_audit>
 When two or more in-scope tests repeat setup or infrastructure logic, reject the duplication and identify the canonical destination:
 
@@ -213,6 +228,13 @@ When two or more in-scope tests repeat setup or infrastructure logic, reject the
 Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructure modules, or fixture body code in `conftest.py`.
 </architectural_dry_audit>
 
+Gate 2 status:
+
+- PASS if no repeated setup or infrastructure pattern appears in two or more in-scope tests.
+- FAIL if any repeated setup or infrastructure pattern appears in two or more in-scope tests.
+
+</gate_2_architectural>
+
 </audit_workflow>
 
 <verdict_format>
@@ -220,7 +242,7 @@ This skill composes the base `/audit-tests` verdict: the row names (`gate-1-asse
 
 Every finding carries a `property` drawn from the base enum. Python-specific concerns map onto it rather than extending it: a harness that leaks a temporary directory or leaves a session open is `coupling` when it severs the asserted behavior and `declarations` when it owns setup policy; a `conftest.py` discovery defect is `evidence-chain-completeness`; a strategy that collapses to a single example is `falsifiability`; a case or vocabulary copied from the module under test is `source-ownership`; and an expected value computed by the same production path that produces the actual value is `oracle-independence` with remediation target `independent-oracle` — the two properties `<source_ownership_audit>` exists to judge. A concern with no home in the base enum is a signal to extend that enum in `/audit-tests`, never to invent a value here.
 
-For each finding, include:
+Each finding carries the base nine-field record. These Python-specific details accompany that record rather than replacing any of its fields:
 
 - Exact file and line
 - The imported chain when the defect is outside the test file
@@ -310,10 +332,10 @@ How to avoid: Derive applicability from current spec links first; return `NOT_AP
 <success_criteria>
 The Python test verdict is sound when:
 
-- Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- Every in-scope test was judged on all evidence properties this skill owns with none skipped — coupling, falsifiability, alignment, source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`); coverage is judged by the base `/audit-tests` step that owns it and is never claimed here. Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
 - Every deleted test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
 - Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
-- Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
+- Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, the gate that raised it, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>

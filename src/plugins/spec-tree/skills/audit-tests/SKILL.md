@@ -310,7 +310,7 @@ Gate 2 is a composed-language concern. It applies when at least one language-spe
 
 - Return Gate 2 `FAIL` when any composed Gate 2 row contains a `REJECT` finding.
 - Return Gate 2 `PASS` when every applicable composed Gate 2 row passes.
-- Omit Gate 2 only when every composed language verdict omits it as non-applicable.
+- Omit Gate 2 only when every composed language verdict omits it — as non-applicable, or because that language's Gate 1 rejected the evidence, so its Gate 2 never ran.
 - Treat a malformed or unevaluated applicable Gate 2 row as failed `language-composition` evidence; never infer architectural approval.
 
 </step>
