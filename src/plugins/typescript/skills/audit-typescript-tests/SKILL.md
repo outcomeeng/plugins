@@ -288,7 +288,7 @@ If the test imports from a barrel and the assertion-relevant symbol is a sibling
 
 <supplement property="falsifiability">
 
-Apply step 5 (mocks) and step 6 (oracle).
+Apply step 5 (mocks). Step 6 (oracle) is judged separately and filed under `oracle-independence`, never folded in here.
 
 For each codebase import, name a concrete mutation to the imported module that would cause this test to fail. Record the mutation in the assertion's finding detail:
 
