@@ -12,7 +12,7 @@ A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or 
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which routes type selection to `/test`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the assertion or decision-rule text without a tag or type subsection; never select which type it resolves to, and never write the test or implementation behind it. Tagging new text with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
 
 </stop_triggers>
 
@@ -20,14 +20,14 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understand` first.
 
-Templates and examples live in the sibling understanding skill directory:
+Use the canonical templates and examples provided by `/understand`:
 
-- `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.pdr.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/examples/` — filled specs for reference
+- product spec template
+- ADR template
+- PDR template
+- enabler template
+- outcome template
+- filled ADR, PDR, enabler, and outcome examples
 
 Read the appropriate template before drafting.
 
@@ -152,7 +152,7 @@ Use `AskUserQuestion` for operator-owned gaps. Do not ask about information alre
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/`. Fill it using the gathered content.
+Use the appropriate canonical template provided by `/understand` for the artifact shell and final target shape. Its typed assertion examples describe the post-`/verify` artifact and are not copied into an authoring draft. Draft new spec assertions directly under `## Assertions` and new decision rules directly under `## Verification`, without a type heading or tag; `/apply` invokes `/verify` and the selected specialist to materialize the final heading and tag.
 
 **Voice rules** (from live `/understand` `<atemporal_voice>`):
 
@@ -163,9 +163,8 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/
 **Assertion rules** (from live `/understand` `<assertion_model>`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
-- `/test` (with `/test-{language}`) selects each assertion's verification type and, under testing, its assertion type — authoring does not pick either
-- Test targets don't need to exist yet — the link is a contract for what will be created
+- Each new assertion remains untagged until `/apply` invokes `/verify`; an untagged authoring draft is the input to verification selection, not an invalid authoring result
+- `/verify` selects each assertion's verification type; when it selects test, `/test` and `/test-{language}` select the assertion type and language expression. Authoring chooses neither.
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -193,11 +192,9 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
-- [ ] Verification type and assertion type are left to `/test` — authoring does not select them
-- [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an assertion type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
-- [ ] Spec compliance assertions use the correct verification-type tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
-- [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
+- [ ] New spec assertions sit directly under `## Assertions` without a verification tag or assertion-type heading; `/apply` invokes `/verify` to select both before evidence construction
+- [ ] New ADR/PDR rules sit directly under `## Verification` in ALWAYS/NEVER form without a verification subsection or tag; `/verify` selects the subsection and tag before the selected specialist proceeds
+- [ ] Authoring has not independently selected a verification type, test assertion type, evidence path, or language expression
 - [ ] No content misplacement (per live `/understand` `<common_misplacements>`)
 
 </step>
@@ -210,15 +207,14 @@ Before writing files, check:
 
 ```text
 spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
-├── {slug}.md        # Spec file
-└── tests/           # Empty directory for future tests
+└── {slug}.md        # Spec file
 ```
 
 1. Create the directory
 2. Write the spec file
-3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Read `${CLAUDE_SKILL_DIR}/../understand/references/excluded-nodes.md` for the convention.
-5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
+3. Leave `tests/` absent; the selected test specialist materializes it with the first test file.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Apply the excluded-node convention provided by `/understand`.
+5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds.
 
 **For decision records:**
 
@@ -266,7 +262,7 @@ Recommend next steps based on artifact type:
 | ADR/PDR                      | Verify compliance in affected nodes with `/align` |
 | Enabler                      | Author dependent outcome nodes                    |
 | Outcome with many assertions | Decompose with `/decompose`                       |
-| Outcome with few assertions  | Write tests with `/test`                          |
+| Outcome with few assertions  | Establish evidence with `/verify`                 |
 
 </step>
 
@@ -282,7 +278,7 @@ How to avoid: After drafting, apply the read-aloud test from live `/understand` 
 
 **Failure 2: Assertions placed in ADRs**
 
-Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR states the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The authoring draft states the untagged rule directly under `## Verification`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway"; `/apply` invokes `/verify` to select its verification subsection and tag.
 
 How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
 
@@ -319,11 +315,11 @@ A container name must describe what the container contains. If the name would ac
 
 How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
-**Failure 7: Testable MUST/NEVER placed under `### Audit` instead of `### Testing`**
+**Failure 7: Authoring preselected `### Audit` instead of leaving verification routing to `/verify`**
 
-Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors any level 1 test can falsify — write a test that simulates a crash between temp-write and rename, diff the resulting settings.json against the pre-state; run `install` twice and diff. An `### Audit` rule an automated test can falsify is a rejection-worthy audit finding — it means the rule will not be enforced by CI and will silently regress.
+Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
 
-How to avoid: before placing a rule under `### Audit`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, the rule belongs under `### Testing` with the assertion type `/test` selects — write it and link it from the implementing spec. Reserve `### Audit` (`[audit]`) for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[audit]` tags there rot silently.
+How to avoid: write each new rule directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify`, which classifies the real subject; `/test` selects the assertion type only after test is selected. Authoring never performs that classification itself.
 
 **Failure 8: Over-multiplying decision records in small trees**
 
@@ -363,7 +359,7 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 **Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Keep indices packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
-**Placing testable MUST/NEVER rules under `### Audit`.** An `[audit]` tag silences CI enforcement — any rule under `### Audit` will not fail a build when violated. If a concrete automated test can falsify the rule, it belongs under `### Testing` with the assertion type `/test` selects, and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they never go under `### Audit`. Reserve `### Audit` for semantic constraints no automated check can falsify.
+**Preselecting a verification subsection or tag.** Write new rules directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify` to choose test, evaluate, or audit from the real subject; authoring never makes that choice.
 
 **Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's coordination notes and delegates to `/decompose <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
@@ -373,14 +369,11 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 Authoring is complete when:
 
-- [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
-- [ ] Context loaded for placement (or bootstrap mode for empty tree)
-- [ ] Index and placement determined using ordering rules
-- [ ] Multi-sibling requests delegated to `/decompose <node-address>` with intent captured in node-local coordination notes
-- [ ] Content gathered from user (operator-owned gaps only)
-- [ ] Template read and filled with atemporal voice
-- [ ] Validation checklist passes
-- [ ] Files created in correct location
-- [ ] Next steps recommended
+- The artifact exists at its canonical path, its filename and node kind match that path, and its index preserves the loaded sibling ordering.
+- The artifact contains its template-required declaration shape in atemporal voice, and every node or decision citation is a full path from `spx/`.
+- New spec assertions sit directly under `## Assertions`, and new decision rules sit directly under `## Verification`; both remain untagged and untyped for `/apply` to route through `/verify`.
+- A newly authored node has no empty `tests/` directory; that directory appears only when the selected test specialist writes the first test file.
+- `spx validation markdown` exits zero and `spx spec status --format json` returns a valid projection for the authored tree.
+- When product truth, a decision, or an ancestor assertion changes, `/align` reports no unaligned first affected lower spec; any remaining downstream work is recorded in that lower node's `PLAN.md`.
 
 </success_criteria>

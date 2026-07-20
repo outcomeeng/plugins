@@ -23,7 +23,7 @@ Claude left the path of the spec-tree `/apply` flow. One or more of these happen
 
 Those ad hoc commands take the same effort as writing a proper test. But they require user permission (this is how the user noticed the ad hoc work) and block progress toward the goal.
 
-A proper test written with the `/test-{language}` skill would serve Claude and other agents again in the future. The debugging or exploration just done without following `/apply` will need to be reworked from scratch when the spec changes — a monumental waste of effort.
+Evidence established through `/verify` would serve Claude and other agents again in the future; when `/verify` selects test, it delegates generic test decisions through `/test` before language-specific expression. The debugging or exploration just done without following `/apply` will need to be reworked from scratch when the spec changes — a monumental waste of effort.
 
 </diagnosis>
 

@@ -204,7 +204,7 @@ def sync_files(source: Path, dest: Path) -> SyncResult:
 
 ### Why DI Matters
 
-1. **Testability**: Inject mocks for testing
+1. **Testability**: Inject real or controlled implementations that preserve the behavior boundary
 2. **Flexibility**: Swap implementations without code changes
 3. **Explicitness**: All dependencies visible in signature
 4. **No globals**: No hidden state
@@ -422,13 +422,13 @@ product/
 │   ├── adapters/       # External integrations
 │   ├── ports/          # Interfaces
 │   └── main.py         # Entry point
-├── mypackage_testing/      # Test utilities - INSTALLABLE
+├── mypackage_testing/      # Test infrastructure - INSTALLABLE
 │   ├── __init__.py
 │   ├── generators/         # Variable input domains
 │   ├── harnesses/          # Resource and boundary mediators
 │   └── fixtures/           # Inert data files consumed by path
 └── spx/                    # Specs as durable map (Outcome Engineering framework)
-    ├── AGENTS.md           # Navigation and work item management
+    ├── <root-harness-guide>      # Active root harness guide
     └── NN-{slug}.enabler/
         └── NN-{slug}.outcome/
             └── tests/      # Co-located tests with evidence/level naming

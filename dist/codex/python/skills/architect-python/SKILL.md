@@ -6,6 +6,8 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
+Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
 Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -19,7 +21,7 @@ Standards are pre-loaded by the `require_skill` directives above. `/python-archi
 
 - An ADR follows the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification.
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules — never in a separate Testing Strategy section.
-- Before writing any ADR, consult `/test`, `/test-python`, and `/python-test-standards` for methodology and Python-specific test standards.
+- Before writing any ADR, consult `/verify`, `/test-python`, and `/python-test-standards` for verification routing and Python-specific test standards.
 
 </foundational_stance>
 
@@ -27,65 +29,11 @@ Standards are pre-loaded by the `require_skill` directives above. `/python-archi
 After reading those standards, check for `spx/local/python.md`, `spx/local/python-tests.md`, and `spx/local/python-architecture.md` at the repository root. Read each file that exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
-<authority_model>
-The architect skill produces ADRs; the architecture reviewer must approve them before implementation begins:
-
-```
-architect-python  --produces ADRs-->  audit-python-architecture
-                                              | REJECT -> fix and resubmit
-                                              | APPROVE
-                                              v
-                                         code-python  -->  audit-python-code
-```
-
-- **code-python** implements exactly what the ADR specifies and fixes issues within ADR constraints — it does not choose alternative approaches or refactor the architecture.
-- **audit-python-code** rejects code that deviates from the ADR — it does not suggest architectural alternatives.
-- When a downstream skill hits a situation the architecture does not cover, it ABORTS: stop, document what failed, escalate with the structured message in `<abort_protocol>`, and wait for a revised ADR. It does not improvise a workaround.
-
-</authority_model>
-
-<abort_protocol>
-When a downstream skill must abort, it returns this structured message:
-
-```markdown
-## ABORT: Architectural Assumption Failed
-
-### Skill
-
-{code-python | audit-python-code}
-
-### ADR Reference
-
-`spx/{NN}-{slug}.adr.md` or the decision interleaved within an enabler/outcome node
-
-### What Was Attempted
-
-{the implementation or review step}
-
-### What Failed
-
-{the specific failure}
-
-### Architectural Assumption Violated
-
-{quote the ADR decision that does not hold}
-
-### Evidence
-
-{error messages, test failures, or logical contradictions}
-
-### Request
-
-Re-evaluation by architect-python required before proceeding.
-```
-
-</abort_protocol>
-
 <inputs>
 Before creating ADRs, read:
 
 - **The node spec** — functional requirements, test strategy, outcomes, and architectural constraints from parent ADRs/PDRs.
-- **Product context** — `AGENTS.md` for navigation, node status, and sparse-integer index dependencies. For testing methodology, invoke `/test` (foundational), `/python-test-standards` (standards), and `/test-python` (patterns).
+- **Product context** — the active root harness guide for navigation, node status, and sparse-integer index dependencies.
 - **Existing decisions** — product-level `spx/{NN}-{slug}.adr.md` / `.pdr.md` and decisions interleaved within enabler/outcome nodes, so new ADRs stay consistent.
 
 </inputs>
@@ -105,7 +53,7 @@ ADR numbering uses the sparse integer index [10, 99]; a lower index is a depende
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Read context.** Read the node spec completely; read `AGENTS.md`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); consult `/test` for level definitions and principles; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
+**Phase 0 — Read context.** Read every `<inputs>` artifact, apply `<foundational_stance>`, and read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and represented by `/python-architecture-standards` `<adr_sections>`; author to that shape rather than reaching across plugins for the template file.
 
 **Phase 1 — Identify decisions needed.** For each requirement, ask what architectural choices it implies, what patterns to mandate, what constraints to impose, and what trade-offs are made. List the decisions before writing any ADR.
 
@@ -120,7 +68,7 @@ Execute these phases in order.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
-**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, dispatch the generic `adr-auditor` agent — it judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for the Python-specific concerns (DI, no-mocking, level accuracy) against `/test` principles. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
+**Phase 5 — Return authored ADRs.** Report each canonical ADR path, decision summary, and binding architecture constraints. Audit dispatch and implementation sequencing remain outside this skill.
 
 Common violations to avoid: a phantom Testing Strategy section, `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in `## Verification` (`### Audit`), and any mocking language in the ADR.
 </adr_creation_protocol>
@@ -131,28 +79,21 @@ These principles guide every ADR. Each links to the reference carrying the full 
 - **Type safety first** — modern syntax (`X | None`, `list[str]`), no unjustified `Any`, protocols for structural typing, Pydantic at boundaries. See `${SKILL_DIR}/references/type-system-patterns.md`.
 - **Clean architecture** — DDD entities/value objects/aggregates, dependency injection through parameters not globals, single responsibility, no circular imports. See `${SKILL_DIR}/references/architecture-patterns.md`.
 - **Security by design** — validate at boundaries, no hardcoded secrets, array-arg subprocess (never `shell=True`), context-aware threat modeling. See `${SKILL_DIR}/references/security-patterns.md`.
-- **Testability by design** — design for dependency injection (no mocking), assign a test level to each component, prefer pure functions for `l1`, and choose the minimum level that gives confidence. See `${SKILL_DIR}/references/testability-patterns.md`, `/test`, and `/test-python`.
+- **Testability by design** — design for dependency injection (no mocking), prefer pure functions and observable boundaries, and establish constraints that let `/test` select the minimum execution level that gives confidence. ADRs never assign execution levels. See `${SKILL_DIR}/references/testability-patterns.md`, `/python-test-standards`, and `/test-python`.
 
 </architectural_principles>
 
 <constraints>
 - NEVER write implementation code — write ADRs that constrain implementation.
-- NEVER review code — that is `audit-python-code`.
-- NEVER fix bugs — that is `code-python` in remediation mode.
-- NEVER create work items — the orchestrator does that, informed by the ADRs.
-- NEVER approve the skill's own ADRs for implementation — the architecture reviewer approves, and the orchestrator decides when to proceed.
+- NEVER review code or repair implementation defects — this skill authors ADRs only.
 
 </constraints>
 
 <output_format>
-ONLY after the architecture reviewer has APPROVED, output:
+Output:
 
 ```markdown
 ## Architectural Decisions Created
-
-### Reviewer Status
-
-✅ APPROVED by the architecture reviewer
 
 ### ADRs Written
 
@@ -160,19 +101,12 @@ ONLY after the architecture reviewer has APPROVED, output:
 | --------------------------- | ------- | --------------------------- |
 | [{ADR Name}]({path to ADR}) | {scope} | {one-line decision summary} |
 
-### Key Constraints for Downstream Skills
+### Binding Constraints
 
-1. code-python must: {constraint from the ADR}
-2. audit-python-code must verify: {verification from the ADR}
-
-### Abort Conditions
-
-If any of these assumptions fail, downstream skills must ABORT:
-
-1. {assumption from the ADR}
+1. {constraint from the ADR}
+2. {verification rule from the ADR}
 ```
 
-Architecture that is APPROVED is complete; per the autonomous flow the next action is `/code-python`.
 </output_format>
 
 <adr_patterns>
@@ -235,12 +169,34 @@ See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full patte
 
 </reference_guides>
 
+<failure_modes>
+
+**Claude assigned execution levels inside an ADR**
+
+- **What happened:** Claude assigned `l1`, `l2`, or `l3` to components while authoring the architecture decision.
+- **Why it failed:** Execution level depends on a spec assertion's evidence and operational environment; `/test` owns that selection after the ADR establishes architectural constraints.
+- **How to avoid:** Write dependency-injection, observability, safety, and boundary constraints in the ADR and leave execution-level selection to `/test`.
+
+**Claude introduced a noncanonical ADR section**
+
+- **What happened:** Claude added Security Context, Testing Strategy, Purpose, Context, or Trade-offs as a separate ADR section.
+- **Why it failed:** The authoritative template's section list is complete; extra sections produce decisions the structural auditor rejects.
+- **How to avoid:** Fold business, threat-model, and trade-off reasoning into the decision statement and Rationale, then place enforceable rules under Verification.
+
+**Claude reintroduced mocking-positive guidance**
+
+- **What happened:** Claude described Protocols or dependency injection as a way to inject mocks and used mock-named collaborators in examples.
+- **Why it failed:** The architecture then recommends a testing mechanism its own no-mocking rules reject.
+- **How to avoid:** Describe injected real or controlled implementations, recording collaborators, and spies that preserve the behavior boundary.
+
+</failure_modes>
+
 <success_criteria>
 
 - Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
 - Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
 - No mocking language anywhere; external SaaS services are never assigned `l2`.
-- Every ADR is submitted to the `adr-auditor` agent (which composes `audit-python-architecture`) and returns APPROVED before output.
+- ADRs establish architecture constraints without assigning execution levels.
 - ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.
 
 </success_criteria>

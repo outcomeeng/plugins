@@ -29,9 +29,9 @@ Read the conditional operational sources below before composing. Use the live in
 - Live `/understand` `<node_model>` — enabler/outcome structure and nesting rules
 - Live `/understand` `<ordering_model>` — the context-loading meaning of an index and the inverse assignment rule
 - Live `/understand` `<artifact_placement>` — artifact taxonomy, test-infrastructure governance, and placement rules
-- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
-- `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
+- `/understand` product-domain-shapes classifier and examples
+- `/understand` canonical enabler template
+- `/understand` canonical outcome template
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -245,10 +245,10 @@ For each child node:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
-3. Use the applicable template under `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/`.
+3. Use the applicable canonical node template provided by `/understand`.
 4. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
-Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/test` or `/apply` writes the first test file.
+Do not create an empty `tests/` directory at composition — a node has no tests yet, git does not track empty directories, and the `tests/` directory materializes when `/verify` or `/apply` writes the first test file.
 
 Revise the parent spec so it summarizes the child structure without narrating the refactor. Remove moved assertions and keep cross-cutting assertions.
 

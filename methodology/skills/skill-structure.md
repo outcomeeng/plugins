@@ -9,8 +9,8 @@ All skills in this document belong to the `spec-tree` plugin. Skill names have n
 Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/SKILL.md`](../../src/plugins/spec-tree/skills/understand/SKILL.md) for the authoritative inline foundation.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
-2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
-3. **Apply** — write implementation code that makes tests pass. Node becomes Passing.
+2. **Spec** — establish test, evaluate, or audit evidence that makes assertions verifiable. Node becomes Specified.
+3. **Apply** — write implementation code that makes deterministic evidence pass and satisfies agentic evidence. Node becomes Passing.
 
 Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not durable artifacts.
 
@@ -20,7 +20,8 @@ Within these steps:
 - `understand` is the single shared library: methodology, structure, templates.
 - `contextualize` handles deterministic context injection from tree structure.
 - Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
-- `test` and `audit-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
+- `verify` is the public evidence entry point and selects test, evaluate, or audit from the real subject's verdict.
+- `test` remains the generic deterministic-evidence specialist invoked after `verify` selects test; `eval` owns generic eval authoring after its follow-on implementation.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
 - `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
 - `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
@@ -29,9 +30,9 @@ Within these steps:
 
 ## Spec Tree methodology
 
-Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec and its tests. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-test drift.
+Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec and its path-bearing evidence. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-evidence drift.
 
-Every node begins with an outcome hypothesis — a belief about what change it will produce. Assertions define testable claims about the output. Nodes progress through four states: **Declared** (spec only), **Specified** (spec + tests, implementation not started), **Failing** (implementation exists but tests fail), and **Passing** (tests pass).
+Every outcome begins with a hypothesis about user behavior; every enabler declares a deterministic shared capability. Assertions define verifiable claims about the output. Nodes progress through four states: **Declared** (spec only), **Specified** (spec + evidence, implementation not started), **Failing** (implementation exists but evidence fails), and **Passing** (evidence passes).
 
 The tree structure enables deterministic context injection: the path from root to any node defines exactly what context an agent receives, replacing heuristic search with curated, reviewable context.
 
@@ -59,7 +60,8 @@ Nodes are nestable at any depth. The tree is not limited to three levels.
 Every node directory contains:
 
 - `{slug}.md` -- the spec file (no type suffix, no numeric prefix)
-- `tests/` -- co-located test files
+- `tests/` -- co-located test files when the first `[test]` assertion exists
+- `evals/{rule-slug}/` -- co-located eval artifacts when the first `[eval]` assertion exists
 
 Enabler specs open with `PROVIDES ... SO THAT ... CAN ...`. Outcome specs open with `WE BELIEVE THAT ... WILL ... CONTRIBUTING TO ...`. Both are followed by `## Assertions` with typed test links:
 
@@ -73,7 +75,7 @@ We believe that [hypothesis].
 - Assertion text ([test](tests/file.scenario.l1.test.ts))
 ```
 
-Every assertion must link to at least one test file.
+Every assertion carries exactly one current evidence tag. Test and eval tags link to co-located evidence; audit remains pathless.
 
 ### Product file
 
@@ -109,12 +111,12 @@ Fractional indexing (e.g., `20.5-slug`) is the escape hatch when integer gaps ar
 
 A node's state is derived from what exists and whether tests pass:
 
-| State         | Condition                                  | What it means                        |
-| ------------- | ------------------------------------------ | ------------------------------------ |
-| **Declared**  | Spec exists, no tests                      | Intent defined, no evidence yet      |
-| **Specified** | Spec + tests exist, implementation doesn't | Tests excluded via `spx/EXCLUDE`     |
-| **Failing**   | Spec + tests + implementation, tests fail  | Reality hasn't caught up to the spec |
-| **Passing**   | Spec + tests + implementation, tests pass  | Evidence confirms the spec           |
+| State         | Condition                                         | What it means                         |
+| ------------- | ------------------------------------------------- | ------------------------------------- |
+| **Declared**  | Spec exists, no evidence                          | Intent defined, no evidence yet       |
+| **Specified** | Spec + evidence exist, implementation does not    | Evidence is declared ahead of code    |
+| **Failing**   | Spec + evidence + implementation, evidence fails  | Reality has not caught up to the spec |
+| **Passing**   | Spec + evidence + implementation, evidence passes | Evidence confirms the spec            |
 
 Specified and failing are natural, healthy states. They are not problems to fix urgently.
 
@@ -162,33 +164,40 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 6a. Clarify/augment/align/deconflict artifacts while preserving product truth.
 
-### Spec — write tests that make assertions verifiable
+### Spec — establish evidence that makes assertions verifiable
 
-#### 7. Write tests driven by spec assertions
+#### 7. Route evidence driven by spec assertions
 
-7a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
-7b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are broken.
-7c. Generate test scaffolds from assertion types, delegating methodology to `test/test` and language patterns to language-specific skills.
-7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
+7a. Select test, evaluate, or audit from the verdict the real assertion subject can produce.
+7b. Route deterministic behavior to `test`, structured LLM-driven output to `eval`, and semantic constraints without a structural verdict to an isolated audit requirement.
+7c. Analyze evidence gaps across a subtree — which assertions lack current evidence, which path-bearing links are broken.
+7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before establishing evidence.
 
-#### 8. Review test evidence against spec assertions
+#### 8. Write tests after test verification is selected
 
-8a. Adversarial review: how could tests pass while assertions remain unfulfilled?
-8b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
-8c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
-8d. Decision record compliance from full ancestor chain.
+8a. Extract routed `[test]` assertions and derive the assertion type from each claim's quantifier.
+8b. Select execution level and any permitted test-double exception independently of assertion type.
+8c. Generate generic test ceremony before delegating language expression to the applicable language skill.
+8d. Keep predicates in the linked test file while harnesses expose controlled observations, generators own variable domains, and fixtures remain inert whole-payload inputs.
+
+#### 9. Review test evidence against spec assertions
+
+9a. Adversarial review: how could tests pass while assertions remain unfulfilled?
+9b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
+9c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
+9d. Decision record compliance from full ancestor chain.
 
 ### Apply — write implementation and commit
 
-#### 9. Implement work items using TDD flow
+#### 10. Implement work items using spec-driven verification
 
-9a. Orchestrate architecture → test → code steps with review gates.
-9b. Load methodology and work item context as prerequisites.
-9c. Delegate to language-specific plugins for each step.
+10a. Orchestrate architecture → evidence → code steps with agentic gates.
+10b. Load methodology and work item context as prerequisites.
+10c. Delegate language-specific expression only after generic evidence routing.
 
-#### 10. Commit changes
+#### 11. Commit changes
 
-10a. Stage changes selectively by concern, write Conventional Commits messages.
+11a. Stage changes selectively by concern, write Conventional Commits messages.
 
 ## Skill map
 
@@ -219,14 +228,17 @@ Action skills do the work. Before starting, they check conversation history for 
 
 ### Spec
 
-Skills for writing tests that make assertions verifiable. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
+Skills for selecting and establishing evidence. `verify` is the public router; evidence specialists own their mechanism after selection.
 
-| Skill         | Use case | Scope                                                        | Builds on          | Status      |
-| ------------- | -------- | ------------------------------------------------------------ | ------------------ | ----------- |
-| `test`        | 7        | Write tests driven by spec assertions, evidence gap analysis | `test/test`        | Implemented |
-| `audit-tests` | 8        | Adversarial review of test evidence against spec assertions  | `test/audit-tests` | Implemented |
+| Skill         | Use case | Scope                                                             | Invoked by       | Status      |
+| ------------- | -------- | ----------------------------------------------------------------- | ---------------- | ----------- |
+| `verify`      | 7        | Select test, evaluate, or audit and route the selected specialist | Public entry     | Implemented |
+| `test`        | 8        | Generic deterministic test ceremony and language delegation       | `verify`         | Implemented |
+| `eval`        | 7        | Generic eval authoring and producer-specialist delegation         | `verify`         | Planned     |
+| `eval-skill`  | 7        | Skill-producer eval specialization                                | `eval`           | Planned     |
+| `audit-tests` | 9        | Adversarial review of test evidence against spec assertions       | Auditor workflow | Implemented |
 
-`spec-tree:test` is a **superset** of `test/test`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:test`; a non-spec-tree user invokes `test/test`. No cross-plugin dependency at runtime.
+`spec-tree:verify` is the public evidence surface. It classifies the real subject before any specialist chooses assertion type, execution level, language expression, producer specialization, or verifier. After test is selected, `spec-tree:test` owns generic test decisions and delegates only language-specific expression to the applicable language skill. The planned `spec-tree:eval` follows the same generic-to-specialist direction for eval authoring.
 
 `spec-tree:audit-tests` is a **superset** of `test/audit-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
 
@@ -236,11 +248,11 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 | Skill              | Use case | Scope                                                                       | Status      |
 | ------------------ | -------- | --------------------------------------------------------------------------- | ----------- |
-| `apply`            | 9        | Orchestrator: declare → spec → apply with audit gates                       | Implemented |
-| `commit-changes`   | 10       | Conventional Commits with selective staging and atomic commits              | Implemented |
-| `manage-github-pr` | 10       | Route shipping intent through commit, PR open, PR management, and merge     | Implemented |
-| `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`                   | Implemented |
-| `manage-pr`        | 10       | Internal open-PR management and merge protocol loaded by `manage-github-pr` | Implemented |
+| `apply`            | 10       | Orchestrator: declare → spec → apply with audit gates                       | Implemented |
+| `commit-changes`   | 11       | Conventional Commits with selective staging and atomic commits              | Implemented |
+| `manage-github-pr` | 11       | Route shipping intent through commit, PR open, PR management, and merge     | Implemented |
+| `open-pr`          | 11       | Internal PR-opening protocol loaded by `manage-github-pr`                   | Implemented |
+| `manage-pr`        | 11       | Internal open-PR management and merge protocol loaded by `manage-github-pr` | Implemented |
 
 ## Ownership model
 
@@ -262,6 +274,11 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 ### Spec
 
+- **`verify`** owns verification-type selection and evidence routing:
+  - Classifies only test, evaluate, or audit from the real subject's verdict
+  - Invokes `test` for deterministic behavior and `eval` for structured LLM-driven output
+  - Records a pathless isolated-verifier requirement for audit
+  - Contains no language-specific test ceremony or producer-specific eval ceremony
 - **`test`** owns spec-tree test writing (superset of `test/test`):
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
   - Extracts typed assertions from spec nodes, determines what evidence is demanded
@@ -296,10 +313,10 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
 
-| Marker                                   | Emitted by      | Checked by                         | Meaning                              |
-| ---------------------------------------- | --------------- | ---------------------------------- | ------------------------------------ |
-| `<SPEC_TREE_FOUNDATION>`                 | `understand`    | Declare action skills, spec skills | Methodology and templates are loaded |
-| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualize` | Declare action skills, spec skills | Target artifacts are loaded          |
+| Marker                                   | Emitted by      | Checked by                                            | Meaning                              |
+| ---------------------------------------- | --------------- | ----------------------------------------------------- | ------------------------------------ |
+| `<SPEC_TREE_FOUNDATION>`                 | `understand`    | Declare action skills, `verify`, evidence specialists | Methodology and templates are loaded |
+| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualize` | Declare action skills, `verify`, evidence specialists | Target artifacts are loaded          |
 
 **Decision rule:**
 
@@ -353,7 +370,7 @@ Declare action skills follow this interaction contract:
 3. **Target context gate** -- Check for `<SPEC_TREE_CONTEXT>` matching target; invoke `contextualize` if absent or mismatched. Context is injected deterministically from tree structure. Abort with explicit remediation if required artifacts are missing.
 4. **Plan** -- Present concise execution plan and expected outputs.
 5. **Execute** -- Perform workflow steps. Keep user in the loop at major decision points.
-6. **Evidence gate** -- Verify spec assertions have test evidence. (Placeholder — not yet active.)
+6. **Evidence gate** -- Invoke `verify` so every assertion routes to current test, evaluate, or audit evidence.
 7. **Deliver** -- Summarize changes, decisions, and next actions.
 
 `apply` has its own 8-step flow that reuses steps 1–3 internally. `commit-changes` has no dependency on spec-tree foundations.
@@ -425,14 +442,15 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 #### `test`
 
-Superset of `test/test`. Incorporates the full methodology, adds tree-specific concerns.
+Generic deterministic-evidence specialist invoked after `verify` selects test.
 
 1. Load methodology and tree context via foundation skills.
-2. Extract typed assertions from target spec node(s) — Scenario, Property, Mapping, Conformance, Compliance.
-3. For each assertion, determine what test evidence is demanded (assertion type → test pattern).
-4. Analyze evidence gaps: which assertions have test links? Which links resolve? Which are stale?
-5. For assertions lacking tests, generate scaffolds using assertion type to select test pattern. Delegate methodology decisions (level, doubles) to the 5-stage router. Delegate language patterns to language-specific skills.
-6. Report evidence summary: which assertions have tests, which don't, which are stale.
+2. Accept only assertions already routed to `[test]` by `verify`.
+3. Extract typed assertions from target spec node(s) — Scenario, Property, Mapping, Conformance, Compliance.
+4. For each assertion, determine what test evidence is demanded (assertion type → test pattern).
+5. Analyze evidence gaps: which assertions have test links? Which links resolve? Which are stale?
+6. For assertions lacking tests, generate generic ceremony using assertion type to select the test pattern, then delegate language expression to the applicable language skill.
+7. Report evidence summary: which assertions have tests, which do not, and which are stale.
 
 #### `audit-tests`
 
@@ -456,7 +474,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 2. Load work item context via `contextualize` (every node).
 3. Architect: produce ADR via language-specific `/architect-[language]` skill.
 4. Review architecture via `/audit-[language]-architecture` — loop until APPROVED.
-5. Test: write tests via `/test-[language]` skill.
+5. Verify: invoke `/verify`; when it selects test, `/test` completes generic test decisions before delegating language expression to `/test-[language]`.
 6. Review tests via `/audit-[language]-tests` — loop until APPROVED.
 7. Implement: write code via `/code-[language]` skill.
 8. Review code via `/audit-[language]-code` — loop until APPROVED.

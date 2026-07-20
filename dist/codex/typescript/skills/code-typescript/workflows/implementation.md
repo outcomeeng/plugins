@@ -9,7 +9,7 @@
 
 <process>
 
-1. Identify deliverables, public interfaces, edge cases, error behavior, and the tests that prove correctness. If the specification is missing or unclear, stop and ask for clarification before writing code.
+1. Identify deliverables, public interfaces, edge cases, error behavior, and the evidence selected by `/verify`. If the specification or routing result is missing or unclear, stop and resolve it before writing code.
 2. Discover existing contracts and reusable artifacts before writing code: package dependencies, source-owned constants, registries, constructors, harnesses, fixtures, generators, entrypoints, and neighboring modules.
 3. Record the discovery result in the working notes: libraries already available, authoritative rules loaded, reusable artifacts found, and commands selected from repository wrappers.
 
@@ -19,21 +19,24 @@ Proceed only when the specification, source contracts, reusable test infrastruct
 
 </gate>
 
-4. Write or update the co-located spec-tree tests first, following `/typescript-test-standards` and the evidence type chosen by the `/test` router.
-5. Run the focused test command and confirm the new or changed test fails for the expected reason before implementation.
+4. Invoke `/verify` before adding or revising evidence, then handle every selected type:
+   - test — write or update the co-located tests first using the assertion type chosen by `/test` and the TypeScript expression from `/typescript-test-standards`
+   - evaluate — read the eval definition, cases, materialized prompt, real producer contract, selected product command, and declared completion threshold
+   - audit — apply `<audit_requirement_handoff>` from `SKILL.md` without fabricating a deterministic artifact
+5. For selected tests, run the focused test command and confirm the new or changed test fails for the expected reason before implementation. For selected evals, run the selected product command and record the preimplementation score against its threshold.
 
 <gate name="red-evidence">
 
-Proceed to implementation only when the focused test fails because the declared behavior is absent or incorrect. Stop and repair the test or source contract when it passes before implementation, fails during setup, or fails for an unrelated reason.
+For selected tests, proceed only when the focused test fails because the declared behavior is absent or incorrect. Stop and repair the test or source contract when it passes before implementation, fails during setup, or fails for an unrelated reason. For selected evals, require a valid baseline score; for audit-only work, require the pathless audit constraint and its real subject to be identified.
 
 </gate>
 
-6. Implement the smallest TypeScript change that satisfies the tests while preserving dependency injection, explicit types, source-owned contracts, and repository import rules.
-7. Run the focused test, typecheck, lint, and repository-selected validation commands. Use raw tool fallbacks only when no repository wrapper exists.
+6. Implement the smallest TypeScript change that satisfies the governed behavior while preserving dependency injection, explicit types, source-owned contracts, and repository import rules.
+7. Run every selected test and eval command, then typecheck, lint, and repository-selected validation commands. Require selected evals to meet their declared thresholds and preserve pathless audit requirements. Use raw tool fallbacks only when no repository wrapper exists.
 
 <gate name="completion">
 
-Report completion only when the focused test passes and every repository-selected typecheck, lint, and validation command exits successfully. A missing command, skipped required check, or non-zero exit keeps the workflow incomplete and must be reported with the exact command and result.
+Report completion only when every selected test passes, every selected eval meets its declared threshold, the `Audit requirements` row count and `preserved` statuses match `/verify`'s audit routing rows, and each repository-selected typecheck, lint, and validation command exits successfully. A missing command, skipped required check, or non-zero exit keeps the workflow incomplete and must be reported with the exact command and result.
 
 </gate>
 
@@ -181,8 +184,9 @@ for (let attempt = 0; attempt < 3; attempt++) {
 <success_criteria>
 
 - The implementation follows the loaded specification and preserves source-owned contracts.
-- Required tests exist, fail before the implementation change for the expected reason, and pass after the change.
-- Typecheck, lint, and the focused test command pass through repository-selected wrappers or documented fallbacks.
+- Selected tests exist, fail before the implementation change for the expected reason, and pass after the change.
+- Selected evals have a valid baseline and meet their declared completion thresholds after the change; the `Audit requirements` report matches `/verify`'s audit routing rows.
+- Typecheck, lint, and every selected deterministic command pass through repository-selected wrappers or documented fallbacks.
 - No new dependency, command, import shape, or test-infrastructure placement contradicts `/typescript-standards`, `/typescript-test-standards`, or loaded repository authority.
 
 </success_criteria>

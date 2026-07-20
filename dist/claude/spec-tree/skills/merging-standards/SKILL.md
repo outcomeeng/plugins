@@ -105,7 +105,7 @@ Local deterministic verification is the author-side validation and testing predi
 - **Testing**: run the node, package, module, or language test commands that exercise the assertions, source contracts, and implementation files the changeset touched.
 - **Escalation**: run broader local validation/testing only when the overlay, governing node, or risk evidence requires it — for example a change to validation infrastructure, test runner wiring, generated distribution, package manager config, shared runtime code, or a broad refactor whose touched-scope commands cannot cover the contract.
 
-CI owns full-repository deterministic regression detection. The author still owns all verification types locally: validate, test, review, and audit run before publication, but local validate/test are scoped while review/audit inspect the changeset and the touched node(s).
+CI owns full-repository deterministic regression detection. The author still owns all verification types locally: validate, test, evaluate, review, and audit run before publication, but local validate/test/evaluate are scoped while review/audit inspect the changeset and the touched node(s).
 
 Run long or verbose deterministic commands with complete stdout/stderr redirected to a temporary log path, then inspect the summary, exit status, and failing sections. Do not stream passing-test logs through the session transcript. Keep the log path only when a failure requires later inspection; a passing run needs the command, exit code, and concise summary.
 

@@ -1,7 +1,7 @@
 ---
 name: code-rust
 description: ALWAYS invoke this skill when writing or fixing implementation code for Rust. NEVER write or repair Rust implementation code without this skill.
-allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
+allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(cargo fmt --check:*), Bash(cargo clippy:*), Bash(cargo test:*)
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -27,23 +27,21 @@ Use this path to access skill files:
 Do not search the product directory for skill files when the loading message already provides the base path.
 </accessing_skill_files>
 
-<reference_loading>
-**Standards are pre-loaded above.** After loading, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-</reference_loading>
-
 <quick_start>
 
 1. Read `/rust-standards`, `/rust-test-standards`, and repo-local Rust overlays when present.
 2. If this is a spec-tree work item, invoke `spec-tree:contextualize` before editing code.
 3. Read `${SKILL_DIR}/workflows/implementation.md` for new work or `${SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. Use `/test-rust` when behavior changes require new or revised tests.
+4. Invoke `/verify` when behavior changes require new or revised evidence; use `/test-rust` for Rust expression after test is selected.
 5. Finish with the repository validation sequence or, if none is published, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-targets`.
+
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
 </quick_start>
 
 <essential_principles>
 
-Behavior comes from specs and tests. Existing code is reference material, not authority.
+Behavior comes from specs and their selected test, eval, or audit evidence. Existing code is reference material, not authority.
 
 Prefer explicit ownership, typed errors, and narrow seams over framework-heavy indirection. Traits and function parameters are for real architectural boundaries, not for decoration.
 
@@ -60,13 +58,13 @@ After loading `/rust-standards` and `/rust-test-standards`, check for `spx/local
 <hierarchy_of_authority>
 Use guidance in this order:
 
-1. `README.md`, `docs/`, and other product documentation
-2. `AGENTS.md`
-3. ADRs, PDRs, and spec-tree artifacts
-4. this skill and its helper files
-5. existing code as reference only
+1. this skill and its loaded Rust standards
+2. loaded ADRs, PDRs, and spec-tree artifacts
+3. `AGENTS.md`, `README.md`, `docs/`, and other product documentation
+4. selected test, eval, or pathless audit evidence
+5. existing code as the lowest-layer reference
 
-When documentation and code disagree, documentation wins.
+When layers disagree, the higher authority wins.
 </hierarchy_of_authority>
 
 <codebase_discovery>
@@ -94,10 +92,16 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Invoke `/test-rust` before adding or revising tests. If the change alters behavior and no test already proves that behavior, write or extend tests first.
+Invoke `/verify` before adding or revising evidence. When it selects test, use `/test-rust` for Rust expression and follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>
+
+<audit_requirement_handoff>
+
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+
+</audit_requirement_handoff>
 
 <context_loading>
 If this work belongs to a spec-tree node:
@@ -121,11 +125,9 @@ If the work is outside the spec tree, proceed with the provided requirements and
 
 <success_criteria>
 
-- repo-local Rust overlays were loaded when present
-- `/rust-test-standards` was loaded before behavior-changing implementation work
-- codebase discovery happened before implementation
-- behavior-changing work is backed by tests or an explicit review constraint
-- new code follows repository patterns for seams, ownership, errors, and modules
-- full validation passed before completion
+- The Rust implementation satisfies its governed evidence with no unresolved implementation-audit finding.
+- The repository's canonical format and lint commands pass; its regression test command passes; every test or eval command selected by `/verify` passes its declared criterion.
+- Behavior-changing work has selected test or eval evidence, or an `Audit requirements` report whose `preserved` rows match `/verify`'s audit routing rows.
+- No temporary debug code, commented-out implementation, or TODO/FIXME escape hatch remains.
 
 </success_criteria>

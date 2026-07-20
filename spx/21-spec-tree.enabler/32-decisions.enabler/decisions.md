@@ -8,4 +8,4 @@ CAN govern architecture and product behavior through enforceable, auditable deci
 
 ### Compliance
 
-- ALWAYS: a decision record groups its rules under `## Verification` by verification type — `### Testing`, `### Eval`, `### Audit`; a `### Testing` rule carries an assertion type that `/test` selects from the rule's quantifier (scenario, mapping, conformance, property, compliance), an `### Eval` rule carries `[eval]`, and an `### Audit` rule carries `[audit]` ([audit])
+- ALWAYS: a decision record groups its rules under `## Verification` by verification type — `### Testing`, `### Eval`, `### Audit`; `/verify` selects the verification type, a `### Testing` rule carries an assertion type that `/test` selects from the rule's quantifier (scenario, mapping, conformance, property, compliance), an `### Eval` rule carries `[eval]`, and an `### Audit` rule carries `[audit]` ([audit])

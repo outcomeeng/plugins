@@ -9,7 +9,9 @@ Before declaring implementation complete, confirm that mechanical checks and cod
 - [ ] `cargo test --all-targets` passes
 - [ ] no temporary debug code remains
 - [ ] no TODO or FIXME comments were added as escape hatches
-- [ ] new behavior is covered by tests or an explicit review constraint
+- [ ] new behavior carries the test, eval, or pathless audit evidence selected by `/verify`
+- [ ] every selected eval meets its declared completion threshold
+- [ ] the completion report has one `Audit requirements` row with status `preserved` per audit row from `/verify`, or reports `none selected` when no audit row exists
 
 </required_checks>
 
@@ -55,5 +57,5 @@ If the repository publishes stricter wrapper commands in `{{! file('root_guide')
 - property claims use property-based tests
 - compile-time claims use compile-fail evidence where appropriate
 
-</test>
+</testing>
 </review_focus>

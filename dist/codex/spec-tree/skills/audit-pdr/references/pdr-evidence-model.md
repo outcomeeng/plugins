@@ -1,8 +1,8 @@
 <overview>
 
-Detailed evidence model for PDR auditing. Read this before auditing any PDR.
+Detailed boundary guidance for PDR content classification, property quality, and tag validity. Read this before auditing any PDR.
 
-Five properties define PDR evidence: content classification, property quality, tag validity, atemporal voice, consistency. This reference provides detailed definitions, boundary cases, and concrete examples for each.
+The audit skill owns the complete five-property workflow, including atemporal voice and consistency. This reference defines the three properties whose classification boundaries require extended examples.
 
 </overview>
 
@@ -10,7 +10,7 @@ Five properties define PDR evidence: content classification, property quality, t
 
 - `<content_classification>` — observable product behavior versus architecture, grounded in the product document's declared audience and interaction surfaces, with tooling-product examples
 - `<property_quality>` — observable, falsifiable, stable product properties
-- `<tag_validity>` — per-rule verification tag and evidence-type fit
+- `<tag_validity>` — per-rule verification tag and assertion-type fit
 
 </contents>
 
@@ -109,10 +109,10 @@ Product properties are guarantees users can rely on. They must be:
 
 <tag_validity>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule carries a tag valid for its subsection, and a `### Testing` rule's evidence type fits the claim:
+Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule carries a tag valid for its subsection, and a `### Testing` rule's assertion type fits the claim:
 
-1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. A bare mechanism (`([review])`/`([test])`), a missing tag, more than one tag, or a tag that disagrees with its subsection is `invalid-tag`.
-2. **Evidence-type fit** — a `### Testing` rule's evidence type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `evidence-type-mismatch`, since a single case cannot establish a universal.
+1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed assertion type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. An unsupported bare mechanism tag, a missing tag, more than one tag, or a tag that disagrees with its subsection is `invalid-tag`.
+2. **Assertion-type fit** — a `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `assertion-type-mismatch`, since a single case cannot establish a universal.
 
 A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
 

@@ -122,7 +122,7 @@ def sync_files(
 
 - No inheritance coupling
 - Works with any compatible object
-- Enables easy mocking in tests
+- Enables dependency-injected implementations and recording collaborators in tests
 - Documents the interface explicitly
 
 ---

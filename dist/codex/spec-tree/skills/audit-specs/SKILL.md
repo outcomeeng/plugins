@@ -18,7 +18,7 @@ A verdict on one spec node — an enabler or outcome `{slug}.md` — against the
 
 **VERIFICATION TYPE MUST FIT THE CLAIM.**
 
-Every assertion carries exactly one verification-type tag — `[test]`, `[eval]`, or `[audit]` (`[review]` is the legacy spelling of `[audit]`). `/test` selects the tag; this audit verifies the selection fits the claim — an audit that accepts any present tag verifies nothing. Two checks decide fitness:
+Every assertion carries exactly one verification-type tag — `[test]`, `[eval]`, or `[audit]`. `/verify` selects the verification type; after test is selected, `/test` selects the test assertion type. This audit verifies both selections fit the claim — an audit that accepts any present tag verifies nothing. Two checks decide fitness:
 
 - Under a `[test]` tag, the assertion type (scenario, mapping, conformance, property, compliance) fits the claim's quantifier. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction.
 - The tag is reachable for the claim's subject. A claim whose subject is the content of an authored prose or documentation artifact — text the product authors and maintains in a document, not executable behavior — is never `[test]`. Behavioral evidence cannot verify it: the only evidence available reads the authored text and asserts on it, which proves the prose was authored, not that code behaves — whether the read is direct or laundered through test infrastructure. Such a claim's tag is `[eval]` or `[audit]`.
@@ -46,7 +46,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 <constraints>
 
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- ALWAYS judge each assertion's tag against the `/test` router and the verification-type model — never accept a present tag as valid by its mere presence.
+- ALWAYS judge each assertion's verification type against `/verify` and each test assertion type against `/test` — never accept a present tag as valid by its mere presence.
 - ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
 
@@ -106,11 +106,11 @@ Check EVERY section for temporal language:
 
 For each assertion under `## Assertions`:
 
-1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design, and `([review])` is its legacy spelling, also bare. A missing tag, a tag carried more than once, or a `[test]` or `[eval]` mechanism tag with no path is invalid; a bare `([audit])` or `([review])` is valid.
+1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design. A missing tag, a tag carried more than once, an unsupported tag, or a `[test]` or `[eval]` mechanism tag with no path is invalid; only bare `([audit])` is valid without a path.
 2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
 3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
-**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
+**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "assertion-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
 
 </step>
 
@@ -157,7 +157,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
+Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
 
 </verdict_format>
 

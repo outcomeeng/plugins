@@ -19,3 +19,11 @@ smoke_cases = [
 ]
 threshold = 0.85
 trials = 1
+
+[prompt_source]
+kind = "producer-files"
+producers = [
+  "src/plugins/spec-tree/skills/audit-pdr/SKILL.md",
+  "src/plugins/spec-tree/skills/audit-pdr/references/pdr-evidence-model.md",
+]
+template = "prompt.template.md"

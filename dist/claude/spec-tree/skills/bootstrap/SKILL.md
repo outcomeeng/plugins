@@ -57,7 +57,7 @@ Invoke `/interview` and apply its methodology (one question at a time, `AskUserQ
 
 Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping — `/decompose spx/` owns structure.
 
-When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, read `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` for the shared classifier and examples.
+When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, apply the product-domain-shapes classifier and examples provided by `/understand`.
 
 **Brownfield guard — existing code present.** When Step 1 found an implemented codebase, derive top-level intent from the product dimensions above — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout. Pre-analysis of existing code informs vocabulary, constraints, and open decisions; it does not set the partition. Candidate areas named after code components (`config`, `model`, `parser`, `layout`, …) repeat the implementation's filing in the tree and invert the truth hierarchy. `/decompose` enforces the same rule — "decompose by user-facing concern, not implementation layer" — so apply it here and code-shaped intent never reaches it.
 
@@ -97,7 +97,7 @@ Wait for user confirmation before creating files.
 
 1. Create `spx/` directory if it doesn't exist.
 
-2. Write `spx/{product-name}.product.md` using the template from `${CLAUDE_SKILL_DIR}/../understand/templates/product/product-name.product.md`. Fill every section from the interview — leave no `{placeholder}` unresolved:
+2. Write `spx/{product-name}.product.md` using the canonical product template provided by `/understand`. Fill every section from the interview — leave no `{placeholder}` unresolved:
    - Product name
    - Why this product exists
    - Consumers and jobs, Surfaces, and Actors and sidedness — from the product-dimension coverage areas
@@ -137,7 +137,7 @@ Recommend next steps:
 
 - "Compose top-level nodes with `/decompose spx/`"
 - "Fill in assertions for created nodes with `/author`"
-- "When assertions are ready, write tests with `/test`"
+- "When assertions are ready, establish evidence with `/verify`"
 
 </step>
 

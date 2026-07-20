@@ -6,8 +6,8 @@ This product is a Claude Code and Codex plugin marketplace delivering the Spec T
 
 ## Product hypothesis
 
-WE BELIEVE THAT a plugin marketplace delivering Spec Tree methodology through Codex and Claude Code plugins for context loading, spec authoring, testing, and TDD implementation
-WILL reduce implementation rework by enforcing complete context and test-driven flows before any code is written
+WE BELIEVE THAT a plugin marketplace delivering Spec Tree methodology through Codex and Claude Code plugins for context loading, spec authoring, verification, and spec-driven implementation
+WILL reduce implementation rework by enforcing complete context and evidence-driven flows before any code is written
 CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted development
 
 ### Evidence of success
@@ -24,7 +24,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 
 - Spec Tree methodology (`/understand`, `/contextualize`, `/author`, `/decompose`, `/refactor`, `/align`)
 - Shared Claude Code and Codex plugin surfaces from the same source tree
-- Testing and audit skills (`/test`, `/audit-tests`) as supersets of standalone methodology
+- Verification and evidence skills (`/verify`, `/test`, `/audit-tests`) as supersets of standalone methodology
 - TDD flow orchestration (`/apply`) with language-specific delegation
 - Commit workflow (`/commit-changes`) with Conventional Commits
 - Language-specific plugins (Python, TypeScript, Rust) for architecture, tests, code, and review

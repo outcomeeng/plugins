@@ -11,7 +11,7 @@
 
 1. Validate each finding against its cited rule, then classify it as valid in-scope, unbacked, or a separate larger concern according to the governing verifier and merge contracts. Preserve the verifier's concrete file and line references.
 2. Group repeated findings by root cause. A single wrong return type, missing source contract, or invalid abstraction can surface as many local failures.
-3. Identify the actual layer in violation: implementation, test evidence, source contract, or specification alignment. Do not change tests to make implementation defects disappear.
+3. Identify the actual layer in violation: implementation, selected test or eval evidence, a pathless audit requirement, source contract, or specification alignment. Do not change evidence to make implementation defects disappear.
 4. For complex fixes, write a brief local plan before editing:
 
 ```text
@@ -31,8 +31,8 @@ Issue: {description}
 
 5. Apply fixes systematically, keeping changes bounded to the rejected defect class and any same-class instances in the touched node.
 6. Use `@ts-expect-error` or lint suppression only with a precise reason and only when the governing rules allow the exception.
-7. Add or correct tests when the rejection identifies missing or weak evidence. The added test names the behavior and fails for the original defect.
-8. Run the focused test, typecheck, lint, and repository-selected validation commands. Repeat the fix loop until all selected commands pass.
+7. When the rejection identifies missing or weak evidence, return to `/verify` and its selected specialist. Add a regression test only when test is selected; extend eval evidence only through the eval specialist; preserve pathless audit requirements for their isolated verifier.
+8. Run every selected test and eval command, then typecheck, lint, and repository-selected validation commands. Require selected evals to meet their declared thresholds. Repeat the fix loop until all selected commands pass.
 9. Prepare the re-review summary with original issue, fix applied, and verification command output.
 
 Common remediation patterns:
@@ -110,8 +110,8 @@ This fix is ready for re-review.
 <success_criteria>
 
 - Every verifier finding has a traced root cause and a bounded disposition.
-- Implementation defects are fixed in implementation, test-evidence defects are fixed in evidence, and specs are not weakened to match broken lower layers.
+- Implementation defects are fixed in implementation, evidence defects route through `/verify` and the selected specialist, and specs are not weakened to match broken lower layers.
 - Same-class defects across the touched node have been swept.
-- Focused tests, typecheck, lint, and selected validation pass through repository-selected commands.
+- Selected tests pass, selected evals meet their thresholds, pathless audit requirements remain recorded, and typecheck, lint, and selected validation pass through repository-selected commands.
 
 </success_criteria>

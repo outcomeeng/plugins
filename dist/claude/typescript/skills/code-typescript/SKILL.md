@@ -2,7 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
-allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
+allowed-tools: Read, Write, Glob, Grep, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -10,30 +10,24 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-TypeScript implementation code that makes its node's tests pass.
+TypeScript implementation code that satisfies its node's established evidence and passes every selected deterministic check.
 </objective>
 
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
-
-```
-Base directory for this skill: ${CLAUDE_SKILL_DIR}
-```
-
-Use this path to access skill files:
+<bundled_files>
 
 - References: `${CLAUDE_SKILL_DIR}/references/`
 - Workflows: `${CLAUDE_SKILL_DIR}/workflows/`
 
-**IMPORTANT**: Do NOT search the product directory for skill files.
-</accessing_skill_files>
+Never search the product directory for bundled skill files.
+
+</bundled_files>
 
 <reference_loading>
 Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root and apply each file that exists as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </reference_loading>
 
 <essential_principles>
-**NO MOCKING. DEPENDENCY INJECTION. BEHAVIOR ONLY. TEST FIRST.**
+**NO MOCKING. DEPENDENCY INJECTION. BEHAVIOR ONLY. EVIDENCE FIRST.**
 
 - Use **dependency injection**, NEVER mocking frameworks
 - Test **behavior** (what the code does), not implementation (how it does it)
@@ -45,9 +39,9 @@ Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/loc
 <mandatory_code_patterns>
 These patterns are enforced by the reviewer. Violations will be REJECTED.
 
-**Constants**
+**Domain-significant constants**
 
-All literal values (strings, numbers) must be module-level constants:
+Move domain-significant string and number literals whose meaning can drift to semantically named module-level constants. Keep typed literals inline when extraction adds no domain meaning, following `${CLAUDE_SKILL_DIR}/references/vocabulary-registry-pattern.md`.
 
 ```typescript
 // ❌ REJECTED: Magic values inline
@@ -221,7 +215,7 @@ Before writing code, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-**For TypeScript testing guidance, load both `/typescript-test-standards` and `/test-typescript`.**
+Invoke `/verify` before adding or revising evidence. When it selects test, load both `/typescript-test-standards` and `/test-typescript` for TypeScript expression.
 
 Use `/typescript-test-standards` as the canonical source for:
 
@@ -240,6 +234,12 @@ Use `/test-typescript` for:
 
 When implementation changes affect test-owned interfaces, harnesses, or fixture boundaries, keep the production code aligned with both skills rather than re-declaring testing policy here.
 </testing_methodology>
+
+<audit_requirement_handoff>
+
+For each `/verify` routing row whose verification type is audit, re-read the routed spec or decision artifact and confirm the exact subject still carries `([audit])`. The completion report includes one `Audit requirements` row per audit routing row with the full `spx/...` source path, exact subject text, and status `preserved`. The row count must equal the routing result's audit-row count; when that count is zero, report `Audit requirements: none selected`.
+
+</audit_requirement_handoff>
 
 <context_loading>
 **BEFORE ANY IMPLEMENTATION: Load complete specification context.**
@@ -279,11 +279,11 @@ Determine the mode from the input, then follow the appropriate workflow.
 
 1. **Spec Is Law**: The specification is the contract. Implement exactly what it says.
 
-2. **Test-Driven Development**: Write tests first or alongside code. Tests prove correctness.
+2. **Evidence-Driven Development**: Establish evidence through `/verify` before implementation. Use RED/GREEN when test is selected, run the declared threshold when evaluate is selected, and preserve pathless audit requirements for their isolated verifier.
 
 3. **Type Safety First**: Use strict TypeScript with `strict: true`. No `any` without justification.
 
-4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, test, and validation commands. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
+4. **Self-Verification**: Before declaring completion, run the repository-selected typecheck, lint, validation, and every deterministic command selected by `/verify`. Use raw `tsc`, `eslint`, and `vitest` commands only when the repository defines no wrapper.
 
 5. **Humility**: The code must pass review. Write code that will survive adversarial review.
 
@@ -314,7 +314,7 @@ Determine the mode from the input, then follow the appropriate workflow.
 <what_not_to_do>
 **Never Self-Approve**: Always submit for review.
 
-**Never Skip Tests**: Write tests first. No exceptions.
+**Never Skip Selected Evidence**: Run every selected test and eval command, and preserve every pathless audit requirement. Never fabricate a test for an eval- or audit-backed assertion.
 
 **Never Ignore Type Errors**:
 
@@ -382,6 +382,7 @@ import { treeBuilder } from "@testing/harnesses/tree-builder";
 <command_resolution>
 Resolve commands from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Use raw tool commands only when the repository has no validation wrapper.
 When sources conflict, resolve in this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback.
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 </command_resolution>
 
 ```bash
@@ -408,12 +409,23 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 </tool_invocation>
 
+<failure_modes>
+
+**Selected a raw fallback to avoid wrapper approval**
+
+- **What happened:** Claude selected a preapproved raw `npx` command even though the repository declared a canonical wrapper outside `allowed-tools`.
+- **Why it failed:** `allowed-tools` defines commands that run without per-call approval; it does not override repository command authority.
+- **How to avoid:** Resolve repository commands first and use the runtime's normal per-call approval path for the canonical wrapper. Use raw fallbacks only when the repository declares no wrapper.
+
+</failure_modes>
+
 <success_criteria>
 The implementation is ready for review when:
 
 - [ ] The product's resolved TypeScript type-check command passes
 - [ ] The product's resolved TypeScript lint/format check command passes
-- [ ] The product's resolved TypeScript test command for the governed node or changeset passes
+- [ ] Every TypeScript test command selected by `/verify` passes and every selected eval command meets its declared threshold
+- [ ] The `Audit requirements` report has one `preserved` row per audit routing row from `/verify`, or reports `none selected` when the routing result has none
 - [ ] The implementation follows `/typescript-standards` and any `spx/local/typescript.md` overlay loaded for the repository
 - [ ] Any coverage, documentation, TODO, logging, or security threshold enforced by the product's resolved commands or loaded standards passes through those commands
 - [ ] FIX mode addresses every supplied reviewer finding with a code change or a stated evidence-based rejection

@@ -3,7 +3,7 @@ name: test-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
   NEVER write or fix Python tests without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash(python3 -m pytest:*), Bash(python3 -m mypy:*), Bash(python3 -m ruff:*)
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -32,7 +32,7 @@ NEVER create a test workaround for code that lacks source-owned contracts, typed
 Run this workflow for new Python tests:
 
 1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
-2. For each assertion, use `/test` to select the assertion type, execution level, and any Stage 5 exception.
+2. Receive the assertion type, execution level, and any Stage 5 exception already selected through `/verify` and `/test`; do not route evidence from the language specialist.
 3. Apply the source-contract-first gate in `<source_contract_gate>`: inspect the code under test and identify the production contract the test will exercise.
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
@@ -74,6 +74,8 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 
 <verification>
 Run the product's canonical test, lint, and type commands — the ones its `AGENTS.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
+
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
 ```bash
 python3 -m pytest <node-path>/tests/ -v

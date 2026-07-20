@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
 argument-hint: "<full-spx-node-path>"
 arguments: node_path
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(npx tsc:*), Bash(npx eslint:*), Bash(npx vitest:*)
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -25,7 +25,7 @@ TypeScript test files that supply evidence for a node specification's assertions
 **Determine the current mode:**
 
 1. **WRITE mode** - Tests do not exist yet, or starting fresh
-   - Check: `ls $node_path/tests/*.ts` returns nothing or minimal files
+   - Check: Glob `$node_path/tests/*.ts`; no matches or only scaffold files means WRITE mode
    - Action: Follow full workflow below
 
 2. **FIX mode** - Tests exist but were rejected by reviewer
@@ -40,9 +40,11 @@ TypeScript test files that supply evidence for a node specification's assertions
 
 **Output:** Test files written to `$node_path/tests/` directory
 
-**Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
+**Prerequisites:** Standards and the `/test` router are pre-loaded above. After `/verify` selects test, `/test` chooses the assertion type and level; this skill implements those decisions in TypeScript.
 
 **Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
+
+`allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
 **Workflow:**
 
@@ -237,7 +239,11 @@ For each rejection reason:
 
 **Verification**
 
-Tests run and fail for expected reasons (RED phase complete).
+- Test command: `<exact command>` — `<required RED or GREEN result>`
+- Type-check command: `<exact command>` — passed
+- Lint/format command: `<exact command>` — passed
+
+If a required command cannot pass, report the exact command and blocking cause instead of claiming the tests are ready for re-review.
 ```
 
 </fix_mode_workflow>
@@ -320,7 +326,11 @@ Tests fail as expected. Ready for review.
 
 **Verification**
 
-Tests pass checklist. Ready for re-review.
+- Test command: `{exact command}` — `{required RED or GREEN result}`
+- Type-check command: `{exact command}` — passed
+- Lint/format command: `{exact command}` — passed
+
+The checklist and every required validation pass. Ready for re-review.
 ```
 
 </output_format>
@@ -333,5 +343,6 @@ Test evidence is ready for review when:
 - [ ] The test filenames and assertion mapping follow `/typescript-test-standards` and any `spx/local/typescript-tests.md` overlay loaded for the repository
 - [ ] The product's resolved TypeScript test command demonstrates the required RED or GREEN phase result for the governed node or changeset
 - [ ] FIX mode addresses every supplied reviewer finding with a test change or a stated evidence-based rejection
+- [ ] In FIX mode, the product's resolved TypeScript type-check and lint/format commands pass; otherwise the report names each blocked command and its exact blocking cause and does not claim readiness
 
 </success_criteria>
