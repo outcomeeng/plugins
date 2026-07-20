@@ -277,7 +277,7 @@ Edit custom agent files directly:
 <invocation_check_boundary>
 Include a target-specific invocation-check handoff with every created or edited configuration. Keep the invocation outside this skill's restricted execution; its `allowed-tools` intentionally omit custom agent-spawn authority.
 
-The handoff names the configured `agent_type`, the expected final-message fields or sections, and the `completed` result required from `spawn_agent`.
+The handoff names the configured `agent_type` and expected final-message fields or sections. It requires `spawn_agent` to return an `agent_id`, preserves that exact identifier, collects `wait_agent` until the identifier reaches `completed`, validates the completed final message, and closes the completed thread with `close_agent`.
 
 </invocation_check_boundary>
 
@@ -312,7 +312,7 @@ A well-configured custom agent has:
 - A TOML file with `name`, `description`, and `developer_instructions` that a fresh Codex session loads without a configuration error and exposes by name in `spawn_agent`'s `agent_type` values
 - A `developer_instructions` containing XML-structured role, workflow, constraints, and output expectations
 - Every sandbox and tool capability mapped to at least one workflow step, with no workflow step requiring an undeclared capability
-- A post-skill `spawn_agent` invocation record produced from the handoff, using the configured name as `agent_type` and reaching `completed`; its final message contains every field or section declared by the output expectations
+- A post-skill invocation record produced from the handoff: `spawn_agent` uses the configured name as `agent_type` and returns an `agent_id`; `wait_agent` preserves that exact identifier and reaches `completed`; the completed final message contains every field or section declared by the output expectations; `close_agent` then closes the completed thread
 
 - A description that states both what the custom agent does and when to invoke it
 - A model identifier accepted by the target harness and consistent with the configuration's stated capability, cost, and reproducibility requirements
