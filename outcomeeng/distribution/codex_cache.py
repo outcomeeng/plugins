@@ -176,7 +176,8 @@ class CacheRefreshResult:
 
 
 def default_cache_root() -> Path:
-    return Path.home() / ".codex" / "plugins" / "cache"
+    codex_home_root = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    return codex_home_root / "plugins" / "cache"
 
 
 def run_command(

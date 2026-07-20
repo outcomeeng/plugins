@@ -35,6 +35,7 @@ from outcomeeng.distribution.codex_cache import (
     CODEX_LIST_COMMAND,
     CommandRunner,
     codex_cache_topology_errors,
+    default_cache_root as codex_cache_root,
     run_command_capture,
 )
 from outcomeeng.distribution.marketplace_sources import (
@@ -59,10 +60,6 @@ WORKING_TREE_KIND = "resolves from working tree"
 
 def claude_cache_root() -> Path:
     return Path.home() / ".claude" / "plugins" / "cache"
-
-
-def codex_cache_root() -> Path:
-    return Path.home() / ".codex" / "plugins" / "cache"
 
 
 def codex_marketplace_source_root(
