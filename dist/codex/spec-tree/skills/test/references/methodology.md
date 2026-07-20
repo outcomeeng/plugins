@@ -29,7 +29,7 @@ This file is the local methodology payload for the `test` skill. Keep it self-co
 - Route every assertion through all five stages. Do not skip ahead.
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the shape of the assertion, never from the section a rule appears in. A MUST/NEVER rule under a `## Compliance` heading does not imply the `compliance` assertion type.
-- `/verify` selects the verification type. This test specialist is the single authority for selecting the assertion type, execution level, and controlled-implementation exception after test evidence has been selected.
+- Verification routing selects the verification type. This test specialist is the single authority for selecting the assertion type, execution level, and controlled-implementation exception after test evidence has been selected.
 
 ## Why tests exist
 

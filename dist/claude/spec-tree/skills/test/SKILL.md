@@ -48,7 +48,7 @@ For a spec target, this loads:
 - Ancestor ADRs/PDRs that constrain the testing approach
 - Lower-index sibling specs that provide context
 
-For a canonical ADR/PDR target supplied by `/verify`, use decision-rule mode. Require context for the containing node, or `spx/` for a product-level decision, and read only that decision's `### Testing` rules for assertion typing. The implementing specs own executable evidence and evidence links.
+For a canonical ADR/PDR target, use decision-rule mode. Require context for the containing node, or `spx/` for a product-level decision, and read only that decision's `### Testing` rules for assertion typing. The implementing specs own executable evidence and evidence links.
 
 </step>
 
