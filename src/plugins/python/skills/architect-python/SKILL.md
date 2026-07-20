@@ -105,7 +105,7 @@ ADR numbering uses the sparse integer index [10, 99]; a lower index is a depende
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Read context.** Read the node spec completely; read `{{! file('root_guide') !}}`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); invoke `/verify` for evidence routing and consume its test-specialist result for level definitions and principles; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
+**Phase 0 — Read context.** Read the node spec completely; read `{{! file('root_guide') !}}`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); invoke `/verify` for verification-type routing; read `/python-test-standards` for level definitions and `/test-python` for Python-specific patterns after test is selected; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
 
 **Phase 1 — Identify decisions needed.** For each requirement, ask what architectural choices it implies, what patterns to mandate, what constraints to impose, and what trade-offs are made. List the decisions before writing any ADR.
 
@@ -120,7 +120,7 @@ Execute these phases in order.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
-**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, dispatch the generic `adr-auditor` agent — it judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for the Python-specific concerns (DI, no-mocking, level accuracy) against `/verify`-routed test principles. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
+**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, dispatch the generic `adr-auditor` agent — it judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for the Python-specific concerns (DI, no-mocking, level accuracy) against `/python-test-standards`. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
 
 Common violations to avoid: a phantom Testing Strategy section, `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in `## Verification` (`### Audit`), and any mocking language in the ADR.
 </adr_creation_protocol>
@@ -131,7 +131,7 @@ These principles guide every ADR. Each links to the reference carrying the full 
 - **Type safety first** — modern syntax (`X | None`, `list[str]`), no unjustified `Any`, protocols for structural typing, Pydantic at boundaries. See `${CLAUDE_SKILL_DIR}/references/type-system-patterns.md`.
 - **Clean architecture** — DDD entities/value objects/aggregates, dependency injection through parameters not globals, single responsibility, no circular imports. See `${CLAUDE_SKILL_DIR}/references/architecture-patterns.md`.
 - **Security by design** — validate at boundaries, no hardcoded secrets, array-arg subprocess (never `shell=True`), context-aware threat modeling. See `${CLAUDE_SKILL_DIR}/references/security-patterns.md`.
-- **Testability by design** — design for dependency injection (no mocking), assign a test level to each component, prefer pure functions for `l1`, and choose the minimum level that gives confidence. See `${CLAUDE_SKILL_DIR}/references/testability-patterns.md`, `/verify`, and `/test-python`.
+- **Testability by design** — design for dependency injection (no mocking), assign a test level to each component, prefer pure functions for `l1`, and choose the minimum level that gives confidence. See `${CLAUDE_SKILL_DIR}/references/testability-patterns.md`, `/python-test-standards`, and `/test-python`.
 
 </architectural_principles>
 
