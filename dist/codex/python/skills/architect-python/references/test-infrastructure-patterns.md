@@ -2,6 +2,18 @@
 
 Test infrastructure is an architectural concern. Design it once in ADRs, not ad-hoc during implementation.
 
+## Contents
+
+- [Core Principle](#core-principle)
+- [Running Tests And The Environment](#running-tests-and-the-environment)
+- [Test-Infrastructure Packaging](#test-infrastructure-packaging)
+- [pytest Configuration for Complex Layouts](#pytest-configuration-for-complex-layouts)
+- [Excluding Out-of-Scope Code](#excluding-out-of-scope-code)
+- [ADR Verification: Test Infrastructure](#adr-verification-test-infrastructure)
+- [Verification](#verification)
+- [Verification Checklist](#verification-checklist)
+- [Key Principles](#key-principles)
+
 ## Core Principle
 
 > **Test infrastructure is production code. Package it properly. Verify the environment before running tests.**

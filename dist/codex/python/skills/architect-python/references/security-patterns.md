@@ -2,6 +2,21 @@
 
 Security is an architectural concern. These patterns must be enforced by ADRs.
 
+## Contents
+
+- [Core Principle](#core-principle)
+- [Context-Aware Threat Modeling](#context-aware-threat-modeling)
+- [Security Context](#security-context)
+- [Input Validation at Boundaries](#input-validation-at-boundaries)
+- [No Hardcoded Secrets](#no-hardcoded-secrets)
+- [Subprocess Safety](#subprocess-safety)
+- [No eval/exec](#no-evalexec)
+- [SSL Verification](#ssl-verification)
+- [Error Handling Security](#error-handling-security)
+- [File Path Safety](#file-path-safety)
+- [Pickle Safety](#pickle-safety)
+- [Key Principles](#key-principles)
+
 ## Core Principle
 
 > **Validate at boundaries. Trust nothing from outside. Fail securely.**

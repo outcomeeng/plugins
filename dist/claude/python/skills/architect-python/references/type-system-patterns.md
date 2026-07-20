@@ -2,6 +2,20 @@
 
 Python's type system, when used strictly, provides compile-time safety comparable to statically typed languages. These patterns are MANDATORY for high-assurance Python.
 
+## Contents
+
+- [Core Principle](#core-principle)
+- [Modern Python Syntax (3.10+)](#modern-python-syntax-310)
+- [The `Any` Problem](#the-any-problem)
+- [Protocols for Structural Typing](#protocols-for-structural-typing)
+- [TypeVar and Generics](#typevar-and-generics)
+- [TYPE_CHECKING for Import Cycles](#type_checking-for-import-cycles)
+- [Pydantic at Boundaries](#pydantic-at-boundaries)
+- [Type Narrowing](#type-narrowing)
+- [Dataclasses for Domain Objects](#dataclasses-for-domain-objects)
+- [Mypy Configuration](#mypy-configuration)
+- [Key Principles](#key-principles)
+
 ## Core Principle
 
 > **Type annotations are not optional. They are architectural constraints.**
