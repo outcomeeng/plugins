@@ -66,7 +66,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 
 **Step 0: Load shared test-evidence standards**
 
-Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
+Invoke the `spec-tree:test-evidence-standards` skill through the runtime skill-composition surface before proceeding. Apply its complete predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, and mutation litmus rules. A missing reference blocks the audit because `/test` and `/audit-tests` must judge from the same standards.
 
 </step>
 

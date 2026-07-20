@@ -8,19 +8,19 @@ argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array]
 allowed-tools: Read, Glob, Grep, Write, Edit, Skill, AskUserQuestion
 ---
 
+<objective>
+Spec-tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
+</objective>
+
 <prerequisites>
 
 Invoke the `spec-tree:test-evidence-standards` skill before proceeding. If that skill is unavailable, report the missing skill and stop before writing test evidence.
 
 </prerequisites>
 
-<objective>
-Spec-tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
-</objective>
-
 <shared_standards>
 
-`/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type, and mutation litmus rules that test authoring and test auditing both apply. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
+`/test-evidence-standards` authoritatively owns the predicate-seam, semantic-binding, case-provenance, oracle-independence, assertion-type-litmus, and mutation litmus rules that test authoring and test auditing both apply. It owns the assertion-type litmus (the reject-condition checks), not assertion-type selection — this skill's routing retains that. Where the inlined methodology below and that shared standard both speak to binding ownership or oracle independence, the shared standard governs.
 
 </shared_standards>
 
@@ -68,7 +68,7 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 - source-owned values: protocol tokens, status values, command names, route names, schema fields, rule identifiers, message identifiers, registries, constructors, typed factories, or public vocabulary
 - observable behavior: pure functions, constructors, dataclasses, enums, schemas, protocols, typed collaborators, emitted artifacts, or side-effect boundaries
-- oracle: expected output derived from the input, an independent reference, a source-owned contract, or a real system response
+- oracle: expected output derived from the input through an independently owned computation, an independent reference, a source-owned contract, or a real system response — never recomputed by the production path under test
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or replace behavior the assertion claims to verify.
 
