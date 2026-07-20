@@ -168,6 +168,8 @@ Invoke the architecting skill for the detected language.
 
 Produce the ADR(s) for the work item. The architecture must be complete before audit.
 
+Before the architecture audit, invoke `/verify` separately for every new or changed ADR/PDR path. This moves each decision rule into its canonical verification subsection and supplies that subsection's tag before the auditor judges the decision. Keep target-node assertion routing in Step 5; this pre-audit decision routing creates no executable evidence link inside the decision record.
+
 </step>
 
 <step number="4" name="Architecture audit" gate="true">

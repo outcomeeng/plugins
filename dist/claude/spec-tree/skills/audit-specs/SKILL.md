@@ -110,7 +110,7 @@ For each assertion under `## Assertions`:
 2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
 3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
-**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
+**A missing tag, a duplicate tag, or a bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "assertion-type-mismatch." `[test]` on a claim whose subject is authored prose content → REJECT — "prose-coupling."**
 
 </step>
 
@@ -157,7 +157,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
+Every finding carries the section or assertion in `location`, the violation pattern in `rule` (`missing-section`, `malformed-kind-statement`, `heading-mismatch`, `temporal-voice`, `invalid-tag`, `assertion-type-mismatch`, or `prose-coupling`), the quoted artifact basis in `evidence`, a one-line `message`, and `severity`. A passing row carries an empty `findings` array.
 
 </verdict_format>
 
