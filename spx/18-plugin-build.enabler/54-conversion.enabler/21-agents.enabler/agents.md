@@ -14,6 +14,7 @@ CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manife
 ### Mappings
 
 - Source `skills` entries map in source order to enabled Codex `skills.config` entries and developer-instruction guidance that states enablement is not a spawn-time preload guarantee ([test](tests/test_agents.mapping.l1.py))
+- Every converted agent maps to developer instructions that place a Codex identity-preflight exception before the source role body: an identity-only first turn returns the exact generated environment marker without running the role workflow, and later turns follow the source role instructions ([test](tests/test_agents.mapping.l1.py))
 - Source `model` and `effort` frontmatter map to Codex `model` and `model_reasoning_effort` fields using the converter's model mapping ([test](tests/test_agents.mapping.l1.py))
 - Source `permissionMode` values with supported Codex equivalents map to `sandbox_mode`, and unsupported values map to manual-review guidance in `developer_instructions` ([test](tests/test_agents.mapping.l1.py))
 - Source tool allowlists that omit web-capable tools map to `web_search = "disabled"`, while absent `tools` frontmatter, the `all` tool sentinel, and allowlists that include any web-capable tool leave web search unset for runtime defaults ([test](tests/test_agents.mapping.l1.py))
