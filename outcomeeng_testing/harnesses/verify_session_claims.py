@@ -160,12 +160,34 @@ def load_verify_session_claims_module() -> ModuleType:
 
 
 def claim_mapping_observations() -> tuple[ClaimMappingObservation, ...]:
-    """Exercise every source-owned claim-kind/relation pair."""
+    """Exercise every claim-kind/relation condition this harness can arrange."""
     module = load_verify_session_claims_module()
     return tuple(
         _exercise_claim_relation(module, kind, relation)
-        for kind, relations in module.CLAIM_KIND_RELATIONS.items()
+        for kind, relations in _arrangeable_claim_conditions(module)
         for relation in relations
+    )
+
+
+def _arrangeable_claim_conditions(
+    module: ModuleType,
+) -> tuple[tuple[object, tuple[object, ...]], ...]:
+    """Pair each claim kind with the conditions the arrangement ladder builds.
+
+    The pairing states what this harness can stage, not what the verifier's own
+    validity table permits. Reading that table instead would let a narrowed
+    table delete a case rather than fail one.
+    """
+    matches_differs = (module.ClaimRelation.MATCHES, module.ClaimRelation.DIFFERS)
+    observed = (module.ClaimRelation.OBSERVED,)
+    unavailable = (module.ClaimRelation.UNAVAILABLE,)
+    return (
+        (module.ClaimKind.SESSION_METADATA, unavailable),
+        (module.ClaimKind.GIT_REF, matches_differs + unavailable),
+        (module.ClaimKind.INJECTED_PATH, matches_differs),
+        (module.ClaimKind.NODE_STATUS, observed + unavailable),
+        (module.ClaimKind.UNCOMMITTED_STATE, matches_differs + unavailable),
+        (module.ClaimKind.EXTERNAL_ID, observed + unavailable),
     )
 
 
