@@ -147,6 +147,13 @@ EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
     ("bypassPermissions", None),
     ("plan", "read-only"),
 )
+# The DUPLICATE_REVIEWER_BANG_FIXTURE source names the agent `reviewer!`. Its
+# generated agent type is written out here for the same reason as the mapping
+# correspondences above: deriving it from the converted agent's own filename
+# would route the expectation back through the slugify path under test, and the
+# comparison would hold for any slug the implementation produced.
+EXPECTED_SLUGGED_AGENT_TYPE: Final = "reviewer"
+EXPECTED_SLUGGED_AGENT_FILENAME: Final = f"{EXPECTED_SLUGGED_AGENT_TYPE}.toml"
 EXPECTED_READ_ONLY_TOOLS: Final = ("Glob", "Grep", "Read")
 EXPECTED_SCRIPT_CAPABLE_TOOLS: Final = ("Bash", "Skill")
 EXPECTED_WEB_CAPABLE_TOOLS: Final = ("WebFetch", "WebSearch")
@@ -960,8 +967,9 @@ def assert_environment_marker_is_namespaced_by_source_plugin() -> None:
         f"alpha{CODEX_AGENT_ENV_SEPARATOR}{GUARDED_WRITER_NAME}",
         f"beta{CODEX_AGENT_ENV_SEPARATOR}{READ_ONLY_REVIEWER_NAME}",
     }
+    assert slugged_agent.filename == EXPECTED_SLUGGED_AGENT_FILENAME
     assert agent_environment_marker(slugged_source) == (
-        f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{Path(slugged_agent.filename).stem}"
+        f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{EXPECTED_SLUGGED_AGENT_TYPE}"
     )
 
 
