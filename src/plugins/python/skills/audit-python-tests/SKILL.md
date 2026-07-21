@@ -151,7 +151,7 @@ For each test case, name the source. REJECT against the missing source when:
 
 When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it.
 
-A case or value copied from the module under test carries property `source-ownership`; an expected output computed by the same production path that produces the actual output carries property `oracle-independence`, remediation target `independent-oracle`. These are the two base-enum properties this audit judges.
+A case or value copied from the module under test carries property `source-ownership`, rule `source-ownership`, remediation target `source-contract`; an expected output computed by the same production path that produces the actual output carries property `oracle-independence`, remediation target `independent-oracle`. These are the two base-enum properties this audit judges.
 
 Pass only when every case is traceable to a source independent of the author and every value lives in its proper home.
 </source_ownership_audit>
@@ -166,7 +166,7 @@ Audit every imported generator:
 
 Property evidence requires a meaningful property. `@given` that only checks for lack of exceptions is insufficient.
 
-A strategy that collapses to a single example or checks only for the absence of exceptions carries property `falsifiability`; a generator that duplicates source-owned vocabulary carries property `source-ownership`; an expected output derived from the module under test carries property `oracle-independence`, remediation target `independent-oracle`.
+A strategy that collapses to a single example or checks only for the absence of exceptions carries property `falsifiability`; a generator that duplicates source-owned vocabulary carries property `source-ownership`, rule `source-ownership`, remediation target `source-contract`; an expected output derived from the module under test carries property `oracle-independence`, remediation target `independent-oracle`.
 </generator_audit>
 
 <harness_audit>
