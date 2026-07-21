@@ -23,3 +23,27 @@ untracked paths) distinct from the tracked-file dirty check, plus an ADR/spec
 refinement of the untracked-file claim. Tracked rather than fixed in the
 introducing change because it is a separable detection mechanism, not a bounded
 edit to the current diff.
+
+## Synchronizer extraction awaits a published SPX CLI capability
+
+`src/plugins/spec-tree/skills/sync-base/scripts/sync_base.py` runs to 785 lines
+— base-ref and remote-tracking resolution, behind-base detection, the
+attached-branch rebase and the detached-head advance, the dirty-tree
+precondition, structured conflict reporting, and the readiness-preservation
+proof. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script
+debt whose logic moves into the SPX CLI once the script proves its value; the
+synchronizer has proven its value in use, so extraction is what it owes.
+
+The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product,
+and the plugins product may depend on the resulting capability only once it is
+published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts
+the fix outside any changeset confined to this repository.
+
+**Resolution shape**: port base movement, conflict structuring, and the
+preservation proof into the SPX CLI, publish it, advance the floor, and reduce
+the shipped skill to its instruction with no script. The derivation this script
+shares with its siblings extracts with the primitives tracked in
+`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/ISSUES.md`.
+Carry the rebase-never-reset invariant and the untracked-collision gap above
+into the ported surface rather than leaving either behind. Revisit when the
+capability publishes.
