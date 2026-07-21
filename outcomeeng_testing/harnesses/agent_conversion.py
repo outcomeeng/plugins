@@ -51,7 +51,6 @@ from outcomeeng.distribution.agents import (
     convert_agents,
     infer_sandbox_mode,
     install_agents,
-    iter_agent_files,
     map_effort,
     map_model,
     map_permission_mode,
@@ -152,6 +151,7 @@ EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
 # correspondences above: deriving it from the converted agent's own filename
 # would route the expectation back through the slugify path under test, and the
 # comparison would hold for any slug the implementation produced.
+EXPECTED_TOP_TIER_MODEL: Final = "gpt-5.5"
 EXPECTED_SLUGGED_AGENT_TYPE: Final = "reviewer"
 EXPECTED_SLUGGED_AGENT_FILENAME: Final = f"{EXPECTED_SLUGGED_AGENT_TYPE}.toml"
 EXPECTED_READ_ONLY_TOOLS: Final = ("Glob", "Grep", "Read")
@@ -625,23 +625,25 @@ def assert_folded_yaml_description_converts_to_text() -> None:
     assert parsed["description"] == FOLDED_DESCRIPTION_TEXT
 
 
+# The skills domain is synthesized here rather than scanned out of the live
+# generated tree. Scanning it made this node's mapping evidence depend on which
+# agents other plugins happen to ship: an unrelated plugin changing its skill
+# counts could fail this test, and a missing generated tree could let it pass
+# with an empty domain. The three cardinalities the mapping spans - none, one,
+# and several - are enumerated instead.
+SKILLS_DOMAIN: Final = (
+    (source_agent(skills=()), ()),
+    (source_agent(skills=("alpha:one",)), ("alpha:one",)),
+    (
+        source_agent(skills=("alpha:one", "beta:two", "gamma:three")),
+        ("alpha:one", "beta:two", "gamma:three"),
+    ),
+)
+
+
 def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     """Assert skill entries become Codex config and developer guidance."""
-    sources_and_expected_skills = (
-        (source_agent(), ()),
-        *(
-            (
-                parse_agent_markdown(path),
-                oracle_strings(agent_document_oracle(path), "skills"),
-            )
-            for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
-        ),
-    )
-    assert any(not skills for _, skills in sources_and_expected_skills)
-    assert any(len(skills) == 1 for _, skills in sources_and_expected_skills)
-    assert any(len(skills) > 1 for _, skills in sources_and_expected_skills)
-
-    for source, expected_skills in sources_and_expected_skills:
+    for source, expected_skills in SKILLS_DOMAIN:
         converted = convert_agent(source)
         instructions = converted_instruction_value(converted)
         guidance = CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
@@ -749,7 +751,7 @@ def assert_opus_model_maps_to_distinct_top_tier_codex_model() -> None:
     """Assert opus maps to the configured top-tier Codex model."""
     converted = convert_agent(source_agent(model="opus"))
 
-    assert converted.values["model"] == CODEX_STRONG_MODEL
+    assert converted.values["model"] == EXPECTED_TOP_TIER_MODEL
     assert str(CODEX_STRONG_MODEL) != str(CODEX_STANDARD_MODEL)
 
 
