@@ -7,7 +7,7 @@
 
 [[relation]]
 outputs = ["dist/claude/**", "dist/codex/**"]
-sources = ["src/plugins/**"]
+sources = ["src/plugins/**", "dprint.jsonc"]
 generator = ["outcomeeng/distribution/**"]
 regenerate = "just build-skills"
 
