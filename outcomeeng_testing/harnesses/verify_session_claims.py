@@ -46,6 +46,9 @@ VERIFY_MODULE_PATH = (
 
 type ScriptMap = dict[tuple[str, ...], tuple[int, str, str]]
 
+_GIT_FATAL_EXIT = 128
+"""Git's fatal-error status, distinct from a runner launch failure."""
+
 
 class ClaimVerdictLike(Protocol):
     kind: object
@@ -110,6 +113,14 @@ class ReadOnlyVerificationObservation:
     calls: tuple[tuple[str, ...], ...]
     status_before: str
     status_after: str
+
+
+@dataclass(frozen=True)
+class GitUnavailableObservation:
+    """One staged git failure status and the git-ref verdict it produced."""
+
+    exit_code: int
+    actual: ClaimVerdictLike
 
 
 @dataclass(frozen=True)
@@ -183,6 +194,37 @@ def claim_mapping_observations() -> tuple[ClaimMappingObservation, ...]:
         for kind, relations in _arrangeable_claim_conditions(module)
         for relation in relations
     )
+
+
+def git_unavailable_observations() -> tuple[GitUnavailableObservation, ...]:
+    """Stage each way git can fail the ref check: launch failure and fatal exit."""
+    module = load_verify_session_claims_module()
+    return tuple(
+        _git_unavailable_observation(module, exit_code)
+        for exit_code in (module.COMMAND_UNAVAILABLE_EXIT, _GIT_FATAL_EXIT)
+    )
+
+
+def _git_unavailable_observation(
+    module: ModuleType, exit_code: int
+) -> GitUnavailableObservation:
+    with accepted_git_context() as repo:
+        session_id = generated_token()
+        # A branch-shaped ref keeps the verdict on the branch lookup; a
+        # commit-shaped one would fall through to the commit-existence check
+        # and mask which lookup reported the failure.
+        scripts = _session_command_scripts(
+            module, session_id, git_ref=generated_token()
+        ) | {
+            tuple(module.GIT_VERIFY_REF_COMMAND): (exit_code, "", generated_token()),
+        }
+        actual = _observation_for_kind(
+            module.verify(
+                session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
+            ),
+            module.ClaimKind.GIT_REF,
+        )
+        return GitUnavailableObservation(exit_code=exit_code, actual=actual)
 
 
 def unloadable_session_observations() -> tuple[UnloadableSessionObservation, ...]:
@@ -833,15 +875,19 @@ __all__ = [
     "BranchReferenceObservation",
     "ClaimHarnessError",
     "ClaimMappingObservation",
+    "GitUnavailableObservation",
     "MetadataLoadingObservation",
     "NodeStatusObservation",
     "ObservedStateObservation",
     "ReadOnlyVerificationObservation",
     "RecordingRunner",
+    "SpecEntryObservation",
+    "UnloadableSessionObservation",
     "absent_node_status_observation",
     "branch_reference_observations",
     "claim_mapping_observations",
     "default_runner_failure_observations",
+    "git_unavailable_observations",
     "load_verify_session_claims_module",
     "metadata_loading_observation",
     "node_status_observations",
@@ -849,9 +895,11 @@ __all__ = [
     "projection_spec_path",
     "read_only_verification_observation",
     "script_import_roots",
+    "spec_entry_observation",
     "spec_status_records",
     "spec_status_stdout",
     "spec_tree_root_name",
     "subprocess_call_owners",
+    "unloadable_session_observations",
     "verify_parameters",
 ]

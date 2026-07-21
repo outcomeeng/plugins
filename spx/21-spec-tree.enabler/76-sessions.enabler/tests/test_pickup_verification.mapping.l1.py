@@ -3,6 +3,7 @@
 from outcomeeng_testing.harnesses.verify_session_claims import (
     branch_reference_observations,
     claim_mapping_observations,
+    git_unavailable_observations,
     load_verify_session_claims_module,
     observed_state_observation,
 )
@@ -43,6 +44,15 @@ def test_git_branch_reachability_maps_to_verdict() -> None:
             not observation.present_on_origin
             and observation.actual.verdict is module.Verdict.DISCREPANCY
         ), f"{observation.git_ref} emitted {observation.actual.verdict}"
+
+
+def test_git_failure_statuses_map_to_unverifiable() -> None:
+    module = load_verify_session_claims_module()
+
+    for observation in git_unavailable_observations():
+        assert observation.actual.verdict is module.Verdict.UNVERIFIABLE, (
+            f"git exit {observation.exit_code} emitted {observation.actual.verdict}"
+        )
 
 
 def test_observed_claims_surface_current_values() -> None:
