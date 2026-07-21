@@ -11,8 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.contracts import CODEX_IDENTITY_PREFLIGHT_SENTINEL
-
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         "name",
@@ -63,20 +61,6 @@ MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
-CODEX_IDENTITY_PREFLIGHT_UNSET: Final = "AGENT_IDENTITY_UNSET"
-CODEX_IDENTITY_PREFLIGHT_COMMAND: Final = (
-    f"printf '%s' \"${{{CODEX_AGENT_ENV_VAR}:-{CODEX_IDENTITY_PREFLIGHT_UNSET}}}\""
-)
-CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS: Final = (
-    "<identity_preflight>\n"
-    "Only when the initial user message equals "
-    f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}` exactly, "
-    f"run `{CODEX_IDENTITY_PREFLIGHT_COMMAND}` and return stdout exactly.\n"
-    "NEVER run the source role workflow for that exact sentinel message.\n"
-    "For every other message, including a longer message that mentions "
-    f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}`, follow the source role instructions.\n"
-    "</identity_preflight>"
-)
 CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
     "Source `skills` entries were preserved as prompt guidance. "
     "The generated Codex `skills.config` entries enable these skills; "
@@ -318,7 +302,7 @@ def infer_sandbox_mode(
 
 def render_developer_instructions(agent: SourceAgent) -> str:
     """Render the Codex developer-instruction body."""
-    sections = [CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS, agent.body.strip()]
+    sections = [agent.body.strip()]
     guidance: list[str] = []
 
     if agent.skills:

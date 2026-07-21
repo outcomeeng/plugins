@@ -8,7 +8,6 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_explicit_empty_tool_allowlist_disables_web_search,
     assert_explicit_empty_tool_allowlist_infers_read_only_sandbox,
     assert_explicit_unmapped_permission_mode_blocks_read_only_inference,
-    assert_identity_preflight_precedes_source_role_instructions,
     assert_missing_tool_allowlist_leaves_sandbox_to_runtime_default,
     assert_missing_tool_allowlist_leaves_web_search_to_runtime_default,
     assert_opus_model_maps_to_distinct_top_tier_codex_model,
@@ -36,10 +35,6 @@ def test_source_model_maps_to_codex_model() -> None:
 
 def test_skills_are_preserved_as_codex_config_and_guidance() -> None:
     assert_skills_are_preserved_as_codex_config_and_guidance()
-
-
-def test_identity_preflight_precedes_source_role_instructions() -> None:
-    assert_identity_preflight_precedes_source_role_instructions()
 
 
 def test_opus_model_maps_to_distinct_top_tier_codex_model() -> None:

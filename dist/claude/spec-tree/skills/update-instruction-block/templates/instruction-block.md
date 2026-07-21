@@ -160,7 +160,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 <!-- harness:claude -->
 
-**Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the role-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate. The configured type binds the child to its agent definition, so Claude Code needs no separate identity-preflight turn.
+**Use the `Agent` tool for every configured verifier or reviewer.** Launch in the foreground with `subagent_type` set to the exact configured agent type and `prompt` set to the role-task body from the shared contracts below. The completed `Agent` tool result is that configured agent's final message; apply the matching output contract to that message. An error, missing final message, or output outside the matching contract blocks the gate.
 
 <!-- /harness:claude -->
 

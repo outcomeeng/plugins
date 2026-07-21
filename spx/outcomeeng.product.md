@@ -55,8 +55,6 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Pre-commit validation infrastructure for plugin and skill quality
 - Repository-scoped marketplace synchronization and install verification, governed by `spx/12-marketplace-state.adr.md`
 - Interface surfaces (browser) that render the spec tree from the SPX CLI projection and support interactive review and restructuring
-- Agentic-execution semantics shared by configured agents across coding-agent surfaces
-- Claude Code and Codex surfaces with native configured-agent grammar, rendering, invocation, and protocol
 
 ### What's excluded
 

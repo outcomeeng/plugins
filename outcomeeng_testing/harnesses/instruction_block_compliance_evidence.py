@@ -22,10 +22,9 @@ from typing import cast
 
 from outcomeeng.distribution import instruction_block as dist
 from outcomeeng.distribution.contracts import (
-    CODEX_IDENTITY_PREFLIGHT_SENTINEL,
     DIST_DIR_NAME,
-    RUNTIME_TOKEN_SEND_INPUT_CAPABILITY,
-    RUNTIME_TOKEN_SEND_INPUT_NAMES,
+    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
     RUNTIME_TOKEN_TOOL_KIND,
     Target,
     format_runtime_token,
@@ -412,9 +411,9 @@ def _assert_codex_role_input_uses_runtime_capability() -> None:
     """Assert role-task submission renders through a discoverable runtime token."""
     authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
     token = format_runtime_token(
-        RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SEND_INPUT_CAPABILITY
+        RUNTIME_TOKEN_TOOL_KIND, RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY
     )
-    runtime_name = RUNTIME_TOKEN_SEND_INPUT_NAMES[Target.CODEX.value]
+    runtime_name = RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]
 
     assert token in authored
     assert runtime_name not in authored
@@ -424,22 +423,16 @@ def _assert_codex_role_input_uses_runtime_capability() -> None:
     assert token not in router
     assert runtime_name in router
     assert (
-        f"if `{runtime_name}` is not exposed, discover the multi-agent "
-        "input-submission tool with `tool_search`"
+        "**Spawn each verifier or reviewer with its role task as the initial turn.**"
     ) in router
 
 
 def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
-    """Assert Claude keeps native dispatch without the Codex preflight protocol."""
+    """Assert Claude keeps native configured-agent dispatch."""
     document = _render_shipped_instruction_blocks()[harness.HARNESS_CLAUDE]
     router = dist.managed_router_block(document)
 
     assert "Use the `Agent` tool for every configured verifier or reviewer." in router
-    assert (
-        "The configured type binds the child to its agent definition, so Claude Code "
-        "needs no separate identity-preflight turn."
-    ) in router
-    assert CODEX_IDENTITY_PREFLIGHT_SENTINEL not in router
     assert "OUTCOMEENG_CODEX_AGENT_NAME" not in router
 
 

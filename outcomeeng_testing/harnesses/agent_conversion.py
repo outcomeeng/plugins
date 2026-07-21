@@ -20,8 +20,6 @@ from outcomeeng.distribution.agents import (
     CODEX_AGENT_ENV_VAR,
     CODEX_AGENT_ENV_SEPARATOR,
     CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE,
-    CODEX_IDENTITY_PREFLIGHT_COMMAND,
-    CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS,
     CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE,
     CODEX_SKILLS_GUIDANCE_TEMPLATE,
     CODEX_STANDARD_MODEL,
@@ -63,7 +61,6 @@ from outcomeeng.distribution.agents import (
     render_agent_toml,
 )
 from outcomeeng.distribution.contracts import (
-    CODEX_IDENTITY_PREFLIGHT_SENTINEL,
     CODEX_PLUGIN_SUBDIR_NAME,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
@@ -617,56 +614,6 @@ def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
         assert converted_skill_config(converted) == tuple(
             {"name": skill, "enabled": True} for skill in expected_skills
         )
-
-
-def assert_identity_preflight_precedes_source_role_instructions() -> None:
-    """Assert converted developer instructions handle identity before role work."""
-    sources = tuple(
-        (parse_agent_markdown(path), agent_document_oracle(path))
-        for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
-    )
-    assert sources
-
-    for source, expected in sources:
-        converted = convert_agent(source)
-        instructions = converted_instruction_value(converted)
-        preflight, separator, later_instructions = instructions.partition(
-            "</identity_preflight>\n\n"
-        )
-        assert separator
-        assert (
-            f"{preflight}</identity_preflight>" == CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS
-        )
-        assert later_instructions.startswith(expected.body)
-        ordinary_role_message = f"{CODEX_IDENTITY_PREFLIGHT_SENTINEL} with context"
-        assert ordinary_role_message != CODEX_IDENTITY_PREFLIGHT_SENTINEL
-        assert f"equals `{CODEX_IDENTITY_PREFLIGHT_SENTINEL}` exactly" in preflight
-        assert (
-            "For every other message, including a longer message that mentions "
-            f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}`"
-        ) in preflight
-        policy = converted.values["shell_environment_policy"]
-        assert isinstance(policy, Mapping)
-        environment = policy["set"]
-        assert isinstance(environment, Mapping)
-        assert all(
-            isinstance(key, str) and isinstance(value, str)
-            for key, value in environment.items()
-        )
-        assert CODEX_AGENT_ENV_VAR in environment
-
-        command_environment = dict(os.environ)
-        command_environment.update(environment)
-        result = subprocess.run(
-            ["/bin/sh", "-c", CODEX_IDENTITY_PREFLIGHT_COMMAND],
-            check=False,
-            capture_output=True,
-            text=True,
-            env=command_environment,
-        )
-        assert result.returncode == 0
-        assert result.stdout == environment[CODEX_AGENT_ENV_VAR]
-        assert result.stderr == ""
 
 
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
