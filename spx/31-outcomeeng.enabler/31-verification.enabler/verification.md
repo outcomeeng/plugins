@@ -9,6 +9,7 @@ CAN share one verification model across deterministic tests, deterministic evals
 ### Compliance
 
 - ALWAYS: verification terminology, verdict modes, verification types, assertion tags, and local-versus-CI responsibility derive from `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
+- ALWAYS: generated-source attribution — the declaration of generated extents, their producing relations, and the disposition of generated content in verification scope — derives from `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` ([audit])
 - ALWAYS: specs outside this subtree that implement verification behavior cite `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` when they rely on its taxonomy, dispatcher, scope, or verifier-responsibility rules ([audit])
 - ALWAYS: agentic-verification governance lives under `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/agentic-verification.md` when it concerns the agent-adapter contract for invoking a coding-agent runtime on behalf of a verification surface ([audit])
 - ALWAYS: test-verification governance lives under `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` when it concerns deterministic test evidence, test-infrastructure ownership, or test-evidence audit semantics ([audit])
