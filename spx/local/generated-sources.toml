@@ -36,7 +36,10 @@ outputs = [
   { file = "AGENTS.md", begin = "<!-- SPEC-TREE:shared", end = "<!-- /SPEC-TREE:shared" },
 ]
 sources = ["CLAUDE.md", "AGENTS.md"]
-generator = ["outcomeeng/distribution/instruction_block.py"]
+generator = [
+  "outcomeeng/distribution/instruction_block.py",
+  "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+]
 regenerate = "just build-instructions"
 
 [[relation]]
