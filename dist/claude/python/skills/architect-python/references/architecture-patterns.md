@@ -2,6 +2,18 @@
 
 These patterns ensure Python code is maintainable, testable, and scalable.
 
+## Contents
+
+- [Core Principle](#core-principle)
+- [Domain-Driven Design (DDD)](#domain-driven-design-ddd)
+- [Hexagonal Architecture (Ports & Adapters)](#hexagonal-architecture-ports--adapters)
+- [Dependency Injection](#dependency-injection)
+- [Single Responsibility Principle](#single-responsibility-principle)
+- [No Circular Imports](#no-circular-imports)
+- [Pure Functions](#pure-functions)
+- [Directory Structure](#directory-structure)
+- [Key Principles](#key-principles)
+
 ## Core Principle
 
 > **Separate what changes from what doesn't. Inject dependencies. Keep functions pure.**

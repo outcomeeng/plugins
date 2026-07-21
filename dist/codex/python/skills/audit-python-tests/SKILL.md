@@ -57,26 +57,43 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. Spend the whole audit on reading the evidence chain.
 </no_deterministic_verification>
 
+<structural_reading>
+Before Gate 1, read each in-scope test filename. Canonical Python evidence files match `test_<subject>.<evidence>.<level>[.<runner>].py`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject the legacy suffixes `/python-test-standards` names — `.unit.py`, `.integration.py`, `.e2e.py`, `.spec.py` — as a Gate 1 `filename_policy` finding carrying property `alignment` from the base `/audit-tests` enum, since a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence. The project's validation owns the convention; fold this reading observation into Gate 1 rather than running a naming-convention command.
+</structural_reading>
+
 <test_file_declarations>
-Apply the base `/audit-tests` declaration screen before coupling. Any Python assignment, annotated assignment, named expression, loop binding, context-manager binding, exception binding, pattern binding, pytest fixture parameter, or property-generated parameter in an executed test file is a `test_owned_declaration` finding. Local functions are findings when they own setup, reusable cases, fixture handling, generator selection, harness behavior, diagnostics, or source vocabulary. Name the right owner for the value or configuration: production source contract, `<package>_testing.harnesses.*`, `<package>_testing.generators.*`, inert fixture data, or eval case data.
+Apply the base `/audit-tests` semantic binding screen before coupling. Python assignments, annotated assignments, named expressions, loop bindings, context-manager bindings, exception bindings, pattern bindings, pytest fixture parameters, and property-generated parameters are valid when they only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. In particular, accept `tmp_path`, `observations = harness_call(...)`, and assertion-local comprehensions over those observations; none chooses a case, expectation, or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` when a binding chooses runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` when it chooses hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct; collapsing them loses the difference between a configuration defect and a data defect. Local functions are findings when they own those choices — property `declarations` — or when they move a predicate or assertion call out of the linked test function or callback — property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
 </test_file_declarations>
 
-<coupling_audit>
-Classify imports by runtime coupling:
+<gate_1_assertion>
+Entry point is the spec, not the test file.
 
-| Import pattern                                           | Classification                          |
-| -------------------------------------------------------- | --------------------------------------- |
-| `import pytest`                                          | Framework, does not count               |
-| `from hypothesis import given`                           | Framework, does not count               |
-| `import json`                                            | Stdlib, does not count                  |
-| `from typing import TYPE_CHECKING`                       | Type-only, does not count               |
-| `from product.config import parse_config`                | Production coupling                     |
-| `from <package>_testing.harnesses import config_harness` | Indirect coupling through harness       |
-| `from <package>_testing.generators import valid_config`  | Input-domain provider, audit separately |
+Judge every in-scope assertion against each audit below. A `REJECT` finding from any audit rejects the assertion it names and moves to the next assertion. An audit whose subject is an imported artifact rather than an assertion — a generator, a harness, an inert fixture, or a `conftest.py` shim — attributes its finding to every in-scope assertion whose evidence chain reaches that artifact, so each finding carries the `assertion` field the base schema requires. The `<structural_reading>` and `<test_file_declarations>` observations above are folded into this gate rather than reported as a separate deterministic gate.
+
+<coupling_audit>
+A `<package>_testing.generators` import is an input-domain provider, audited in `<generator_audit>` rather than classified as coupling here.
 
 Imports inside `if TYPE_CHECKING:` do not create runtime coupling. A test with only framework, stdlib, and type-only imports is a tautology unless it reaches production through a harness that itself reaches production.
 
 When a test imports a harness, inspect the harness and verify it calls the production behavior the assertion is about. A harness that builds expected values without exercising production is severed coupling.
+
+Specialize each category of the coupling taxonomy `/audit-tests` owns to Python imports. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
+
+| Category           | Python-specific definition                                                                                                                      | Verdict                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test imports and calls the governed Python module, function, or class                                                                           | Proceed                                         |
+| Indirect           | Test imports a `<package>_testing.harnesses` module that calls the governed path                                                                | Proceed after harness tracing                   |
+| Transitive         | Test imports a public consumer of the governed module                                                                                           | Proceed if the level matches                    |
+| Laundered indirect | Imports a `<package>_testing` module that exists only to expose hardcoded values back to the test                                               | REJECT — laundering                             |
+| False              | Test imports the module but never calls the assertion-relevant symbols                                                                          | REJECT                                          |
+| Partial            | Test calls the module with the wrong inputs or path, missing the assertion-relevant behavior                                                    | REJECT                                          |
+| None               | Test imports only pytest, Hypothesis, stdlib, or type-only symbols, with zero production coupling                                               | REJECT — tautology                              |
+| Severed            | Test or harness replaces the governed behavior with `unittest.mock`, `MagicMock`, `mocker.patch`, monkeypatch, or an alternate import           | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body (skill, spec, prompt) and asserts its content, directly or through a harness constant or infrastructure reader | REJECT — couples to authored text, not behavior |
+
+Framework and stdlib imports such as `pytest`, `hypothesis`, `json`, and `pathlib` do not count as coupling by themselves. The Prose-coupling row is the table-side form of a test reading a `src/` or authored-doc body; both reach the same REJECT.
+
+A severed, false, partial, or absent coupling carries property `coupling` from the base enum.
 </coupling_audit>
 
 <falsifiability_audit>
@@ -99,6 +116,8 @@ Accept explicit test doubles only when they are passed through dependency inject
 | Combinatorial cost    | Configurable class mirroring real behavior |
 | Observability         | Class capturing hidden boundary details    |
 | Contract probes       | Stub validated against a real schema       |
+
+Replacing the behavior under test carries property `falsifiability` from the base enum — a severed seam means no production mutation can break the test.
 
 </falsifiability_audit>
 
@@ -138,6 +157,8 @@ For each test case, name the source. REJECT against the missing source when:
 
 When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it.
 
+A case or value copied from the module under test carries property `source-ownership`, rule `source-ownership`, remediation target `source-contract`; an expected output computed by the same production path that produces the actual output carries property `oracle-independence`, remediation target `independent-oracle`. These are the two base-enum properties this audit judges.
+
 Pass only when every case is traceable to a source independent of the author and every value lives in its proper home.
 </source_ownership_audit>
 
@@ -150,6 +171,8 @@ Audit every imported generator:
 - It derives expected outputs from generated inputs, an independent oracle, or a source outside the module under test
 
 Property evidence requires a meaningful property. `@given` that only checks for lack of exceptions is insufficient.
+
+A strategy that collapses to a single example or checks only for the absence of exceptions carries property `falsifiability`; a generator that duplicates source-owned vocabulary carries property `source-ownership`, rule `source-ownership`, remediation target `source-contract`; an expected output derived from the module under test carries property `oracle-independence`, remediation target `independent-oracle`.
 </generator_audit>
 
 <harness_audit>
@@ -160,6 +183,8 @@ Audit every imported harness:
 - It does not replace the behavior under test with framework mocks, monkeypatches, environment stubs, network fakes, or alternate imports
 - It cleans up temp dirs, subprocesses, services, Docker resources, browsers, databases, and environment changes
 - It does not own arbitrary test data that belongs in source modules or generators
+
+A harness that severs the asserted behavior — replacing it or failing to reach production — carries property `coupling`; a harness that owns setup policy, resource-tuning values, or arbitrary test data carries property `declarations`.
 
 Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. They belong under `<package>_testing.harnesses.*`.
 </harness_audit>
@@ -193,7 +218,19 @@ Rejected content:
 - Star imports from test infrastructure packages
 - Mocking, monkeypatching, or import-path mutation
 
+A rejected `conftest.py` discovery defect carries property `evidence-chain-completeness` from the base enum — the shim breaks the chain from the assertion to the imported infrastructure.
+
 </conftest_audit>
+
+Gate 1 status:
+
+- PASS if no Gate 1 finding carries severity `REJECT`.
+- FAIL if any Gate 1 finding carries severity `REJECT`.
+
+</gate_1_assertion>
+
+<gate_2_architectural>
+Runs only if Gate 1 is PASS.
 
 <architectural_dry_audit>
 When two or more in-scope tests repeat setup or infrastructure logic, reject the duplication and identify the canonical destination:
@@ -209,14 +246,22 @@ When two or more in-scope tests repeat setup or infrastructure logic, reject the
 Do not recommend `tests/helpers`, `tests/support`, node-local test-infrastructure modules, or fixture body code in `conftest.py`.
 </architectural_dry_audit>
 
+Gate 2 status:
+
+- PASS if no repeated setup or infrastructure pattern appears in two or more in-scope tests.
+- FAIL if any repeated setup or infrastructure pattern appears in two or more in-scope tests.
+
+</gate_2_architectural>
+
 </audit_workflow>
 
 <verdict_format>
-This skill contributes Python-specific findings to the base `/audit-tests` verdict and inherits its JSON schema. Put coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, and pytest discovery safety findings in `gate-1-assertion`. Put repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`), the JSON schema, and the closed `property` enum are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows. Put evidence-property findings in `gate-1-assertion` and repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
 
-For each finding, include:
+Every finding carries a `property` drawn from the base `/audit-tests` enum, attributed inline at the audit above that raised it — this skill never re-enumerates the enum or remaps its members here. A Python concern with no home in the base enum is a signal to extend that enum in `/audit-tests`, never to invent a value here.
 
-- Verdict property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
+Each finding carries the base nine-field record. These Python-specific details accompany that record rather than replacing any of its fields:
+
 - Exact file and line
 - The imported chain when the defect is outside the test file
 - Required fix
@@ -305,10 +350,10 @@ How to avoid: Derive applicability from current spec links first; return `NOT_AP
 <success_criteria>
 The Python test verdict is sound when:
 
-- Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- Every in-scope test was judged on all evidence properties this skill owns with none skipped — coupling, falsifiability, alignment, source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`); coverage is judged by the base `/audit-tests` step that owns it and is never claimed here. Gate 2 was judged when Gate 1 passed and omitted only when Gate 1 rejected the evidence.
 - Every deleted test or test-infrastructure path was classified from current spec links and current evidence chains, with retired evidence returned as `NOT_APPLICABLE` and current broken `[test]` links reported as missing evidence.
 - Applicable scope states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated; a composition-only retired-path scope emits the defined `NOT_APPLICABLE` result.
-- Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
+- Each finding with inherited severity `REJECT` is falsifiable: it names the assertion or evidence artifact, the failed property, the gate that raised it, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary. The overall verdict remains `REJECTED`.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>

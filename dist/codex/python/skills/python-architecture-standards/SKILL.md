@@ -12,7 +12,15 @@ The canonical Python ADR conventions — sections, how testability appears in Ve
 </objective>
 
 <success_criteria>
-Python ADR guidance follows this standard when `/python-standards` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Python terms as Protocols, and test-level references match `/python-test-standards`.
+
+- `/python-standards` is loaded before this standard is applied.
+- The ADR uses only the authoritative sections.
+- Testability constraints live in `## Verification`'s `### Audit` subsection.
+- Dependency seams are expressed in Python terms as Protocols.
+- Framework mocks are prohibited.
+- Every behavioral predicate remains in the linked test.
+- Test-level references match `/python-test-standards`.
+
 </success_criteria>
 
 <reference_note>
@@ -46,7 +54,7 @@ The ADR template (from `/understand`) is decision-first — the decision is stat
 
 ADRs do not assign testing levels. They establish constraints that *make levels achievable*. The `/test` skill assigns levels when it reads spec assertions alongside ADR constraints. This separation follows the truth hierarchy: ADR governs, spec declares, test verifies.
 
-**The mechanism:** Verification rules under `### Audit` that mandate DI, prohibit mocking, and require observable Protocol interfaces.
+**The mechanism:** Verification rules under `### Audit` that mandate DI, prohibit mocking, require observable Protocol interfaces, and keep every predicate in the linked test.
 
 **Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
@@ -55,7 +63,8 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 
 ### Audit
 
-- ALWAYS: external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables isolated testing without mocking ([audit])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables controlled implementations that preserve the real boundary ([audit])
+- ALWAYS: recording collaborators expose observations only; linked tests own every predicate and assertion call ([audit])
 - ALWAYS: configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([audit])
 - NEVER: `unittest.mock.patch` for any dependency -- violates reality principle ([audit])
 - NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
@@ -155,8 +164,10 @@ The auditor checks for these violations in ADR text:
 - `unittest.mock.patch` or `respx.mock` mentioned as an approach -- reject
 - "mock at boundary" or "mock the API calls" -- reject
 - "stub" or "fake" without referencing a `/test` exception case -- reject
+- matcher-driven spies or helpers such as `was_called_with` and `assert_called` -- reject
+- controlled collaborators that accept expected outcomes, call assertion APIs, or return verdicts -- reject
 
-Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept X as a parameter implementing the Y Protocol."
+Correct ADR language: "Use dependency injection to isolate X from Y", "Accept X as a parameter implementing the Y Protocol", or "Inject a recording Y implementation that exposes observations while the linked test owns the predicate."
 
 </di_patterns>
 

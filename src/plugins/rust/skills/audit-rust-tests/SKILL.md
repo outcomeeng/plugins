@@ -51,10 +51,10 @@ Use read-only `git diff` only when the supplied changeset scope requires confirm
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
-- **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a finding, do not re-validate it.
-- **Test-file bindings** — apply the base `/audit-tests` declaration screen before coupling. Any `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter binding generated data or fixture state in an executed Rust test file is a `test_owned_declaration` finding. Name the right owner: production source contract, `<product>-testing` harness, `<product>-testing` generator, inert fixture data, or eval case data.
+- **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a `filename_policy` finding carrying property `alignment` from the base `/audit-tests` enum — a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence — and do not re-validate it.
+- **Test-file bindings** — apply the base `/audit-tests` semantic binding screen before coupling. A `const`, `static`, `let`, framework fixture parameter, property-generated parameter, or macro/closure parameter is valid when it only receives an actual result, source-owned contract, generated value, harness observation, callback input, resource handle, or fixture path and introduces no data or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` for runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` for hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct. Keep every predicate and assertion macro in the linked test function or callback; a binding, closure, or helper that moves a predicate or assertion macro out carries property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
 - **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Inert fixture data is read by path from `<product>-testing/fixtures/`; co-located `spx/.../tests/` remains the home of typed assertion files. When a loaded overlay points to a governing product spec or decision that explicitly amends this contract, follow that declaration; the overlay does not redefine fixture placement itself.
-- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. A reasoned `#[ignore = "..."]` is acceptable in a `.l3.rs` file only when a loaded product spec or decision declares that credentialed Level 3 lane; otherwise disabled evidence rejects. Outside `.l3.rs`, reasoned ignore is misplaced.
+- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1 carrying property `coverage` from the base `/audit-tests` enum, since execution never reaches the assertion-relevant path. A reasoned `#[ignore = "..."]` is acceptable in a `.l3.rs` file only when a loaded product spec or decision declares that credentialed Level 3 lane; otherwise disabled evidence rejects. Outside `.l3.rs`, reasoned ignore is misplaced.
 - **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
 
 </structural_reading>
@@ -71,7 +71,7 @@ Challenge the assertion:
 - Is the assertion type correct for the claim?
 - Does it overlap with another assertion in the same node or parent?
 
-Record challenge findings and continue unless the assertion type is invalid.
+Record challenge findings and continue unless the assertion type is invalid. A `challenge` finding carries property `alignment` from the base `/audit-tests` enum — the claim itself is malformed or misaligned with its governing decision.
 </step>
 
 <step name="scope">
@@ -83,7 +83,7 @@ Example:
 | -------------------------------------------------- | ---------------------------------------------------- |
 | "MUST exit 0 with no stdout for invalid hook JSON" | (1) invalid JSON input, (2) exit 0, (3) empty stdout |
 
-The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding.
+The linked tests must exercise every clause with an assertion. A single assertion for a multi-clause claim is a `scope` finding carrying property `coverage` from the base `/audit-tests` enum — clauses of the claim go unexercised.
 </step>
 
 <step name="evidence">
@@ -115,13 +115,13 @@ Judge controlled implementations against `/test` exceptions:
 | 6. Observability         | capture struct for spans, logs, events, or serialized output    |
 | 7. Contract probes       | local stub validated against the same contract schema           |
 
-Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact.
+Generated mock frameworks, fake modules, or stubs that bypass the governed seam reject the assertion unless a Stage 5 exception applies and the real interface or protocol remains intact. Such a rejection carries property `falsifiability` from the base `/audit-tests` enum — a severed seam means no production mutation can break the test.
 </step>
 
 <step name="oracle">
 Identify the source of every expected value.
 
-Reject with an `oracle` finding when the expected value is derived from the module under test. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
+Reject with an `oracle` finding carrying property `oracle-independence` and remediation target `independent-oracle` from the base `/audit-tests` enum when the expected value is derived from the module under test. This is distinct from `falsifiability`: an expected result computed by the same path that produces the actual result passes even when both are wrong. Proceed when the expected value comes from an independent source: the spec, a public constant owned by a different module, an external protocol/schema, a fixture transcript, or a value hand-computed in the test.
 </step>
 
 <step name="harness_chain">
@@ -191,16 +191,21 @@ Applied during Gate 1.
 
 <supplement property="coupling">
 
-| Category   | Definition                                                                                                            | Verdict                       |
-| ---------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| Direct     | Test calls the governed Rust function, type, module, or binary                                                        | Proceed                       |
-| Indirect   | Test calls test infrastructure that calls the governed path                                                           | Proceed after harness tracing |
-| Transitive | Test calls a public consumer of the governed path                                                                     | Proceed if the level matches  |
-| False      | Test imports the module but never calls assertion-relevant symbols                                                    | REJECT                        |
-| Partial    | Test calls the right module with wrong inputs or wrong path                                                           | REJECT                        |
-| Severed    | Test or harness replaces the governed behavior with a mock, fake, generated mock, alternate module, or bypassing stub | REJECT                        |
+This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to Rust paths. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
-Framework/library imports such as `std`, `tempfile`, `assert_cmd`, `predicates`, `insta`, `tokio`, `proptest`, and `quickcheck` do not count as coupling by themselves. `assert_cmd::Command::cargo_bin(...)` counts as coupling to the named binary contract.
+| Category           | Definition                                                                                                                 | Verdict                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test calls the governed Rust function, type, module, or binary                                                             | Proceed                                         |
+| Indirect           | Test calls test infrastructure that calls the governed path                                                                | Proceed after harness tracing                   |
+| Transitive         | Test calls a public consumer of the governed path                                                                          | Proceed if the level matches                    |
+| Laundered indirect | Calls a `<product>_testing` module that exists only to expose hardcoded values back to the test                            | REJECT — laundering                             |
+| False              | Test imports the module but never calls assertion-relevant symbols                                                         | REJECT                                          |
+| Partial            | Test calls the right module with wrong inputs or wrong path                                                                | REJECT                                          |
+| None               | Test imports only its test framework or dev-dependency crates, with zero product-crate coupling                            | REJECT — tautology                              |
+| Severed            | Test or harness replaces the governed behavior with a mock, fake, generated mock, alternate module, or bypassing stub      | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content, including through a harness constant or an infrastructure reader | REJECT — couples to authored text, not behavior |
+
+Framework/library imports such as `std`, `tempfile`, `assert_cmd`, `predicates`, `insta`, `tokio`, `proptest`, and `quickcheck` do not count as coupling by themselves. `assert_cmd::Command::cargo_bin(...)` counts as coupling to the named binary contract. The Prose-coupling row is the table-side form of the source-file read that `<structural_reading>` screens for; both reach the same REJECT.
 
 </supplement>
 

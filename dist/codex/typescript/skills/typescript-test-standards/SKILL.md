@@ -165,17 +165,36 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define those doubles in `@testing/harnesses/*`; the executed test file imports the harness assertion.
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above. Define controlled implementations and recording collaborators in `@testing/harnesses/*`; the linked test imports their observations and owns the assertion.
 
 ```typescript
-import { assertPaymentGatewayRecordsCharge } from "@testing/harnesses/payments";
+import { createPaymentRecordingContext } from "@testing/harnesses/payments";
 
 test("records charge requests", async () => {
-  await assertPaymentGatewayRecordsCharge(PaymentProcessor);
+  const { processor, request, recordingGateway } = createPaymentRecordingContext(PaymentProcessor);
+
+  await processor.charge(request);
+
+  expect(recordingGateway.recordedCharges).toContainEqual(request);
 });
 ```
 
 </dependency_injection>
+
+<predicate_and_oracle_litmus>
+
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is TypeScript-specific and never replace or bound it.
+
+- Invert the `expect` matcher. Only the linked test changes; no harness or collaborator code changes.
+- Read the test callback alone. Every pass/fail predicate is visible there.
+- Trace each case to the spec scenario, complete source-owned mapping, `fast-check` arbitrary, external conformance oracle, governing compliance rule, or inert whole-payload fixture.
+- Trace each expected result to an oracle outside the production table, algorithm, parser, branch logic, or collaborator verdict method under test.
+- Mutate the assertion-relevant production behavior. The test fails.
+- Read each harness and factory. It returns observations, state, or handles — never a verdict, and never a `*Succeeds`, `isValid`, or `wasCalledWith` method.
+- Read a failure message. It reports actual against expected at the `expect` site, not `expect(helper()).toBe(true)`.
+- Ask whether the same harness could serve a test claiming the opposite about the same observation. It can when the predicate is test-owned.
+
+</predicate_and_oracle_litmus>
 
 <property_based_testing>
 Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
@@ -200,7 +219,7 @@ If a test can only be written by copying source literals, pinning arbitrary exam
 <data_ownership_decision>
 Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
-Executed TypeScript test files do not declare `const`, `let`, or `var` bindings, framework fixture parameters, or property-generated parameters. Every value or configuration choice those bindings would carry belongs in a source contract, `@testing/harnesses/*`, `@testing/generators/*`, an inert fixture read by path, or justified eval case data.
+Executed TypeScript test functions and callbacks own every predicate and assertion API call. A `const`, `let`, `var`, framework fixture parameter, or property-generated parameter may receive an actual result, source-owned contract, generated value, harness observation, callback input, resource handle, or fixture path when it introduces no data or policy. Bindings that choose cases, expected results, configuration, setup policy, generator domains, fixture contents, or verdict rules belong in their semantic owner.
 
 1. **Data that the source imports or should import**
    ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
@@ -452,7 +471,8 @@ TypeScript test guidance follows this standard when:
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
-- Executed test files declare no `const`, `let`, or `var` bindings, fixture parameters, or property-generated parameters
+- Executed test functions and callbacks own every predicate and assertion API call
+- Test-file bindings introduce no case data, expectation, configuration, setup policy, generator domain, fixture content, or verdict rule
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
 - Property assertions use meaningful `fast-check` properties through a seed-reporting wrapper
 - Source-owned values come from the owning production module

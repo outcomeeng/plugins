@@ -4,14 +4,27 @@ prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
   "spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/**",
+  "spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/32-test-data-ownership.enabler/**",
   "src/plugins/spec-tree/skills/audit-tests/SKILL.md",
   "dist/claude/spec-tree/skills/audit-tests/SKILL.md",
+  "src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md",
+  "dist/claude/spec-tree/skills/test-evidence-standards/SKILL.md",
+  "dist/codex/spec-tree/skills/test-evidence-standards/SKILL.md",
+  "src/plugins/python/skills/python-test-standards/SKILL.md",
+  "dist/claude/python/skills/python-test-standards/SKILL.md",
+  "src/plugins/python/skills/audit-python-tests/SKILL.md",
+  "dist/claude/python/skills/audit-python-tests/SKILL.md",
 ]
 smoke_cases = [
   "rejects-harness-owned-protocol",
   "approves-source-owned-protocol",
   "rejects-unread-import",
   "rejects-rust-generator-owned-protocol",
+  "rejects-fixture-owned-protocol",
+  "rejects-discovery-owned-protocol",
+  "rejects-production-derived-oracle",
+  "approves-independent-conformance-oracle",
+  "rejects-harness-owned-predicate",
 ]
 threshold = 0.85
 trials = 1

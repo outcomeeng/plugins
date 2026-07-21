@@ -52,7 +52,7 @@ Use read-only `git diff` only when the supplied changeset scope requires confirm
 
 <structural_reading>
 
-Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding. Fold this reading observation into Gate 1 rather than running a naming-convention command.
+Before Gate 1, read each in-scope test filename. Canonical TypeScript evidence files match `<subject>.<evidence>.<level>[.<runner>].test.ts`, where `<evidence>` is `scenario`, `mapping`, `conformance`, `property`, or `compliance` and `<level>` is `l1`, `l2`, or `l3`. Reject `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, and `.spec.ts` as a Gate 1 `filename_policy` finding carrying property `alignment` from the base `/audit-tests` enum — a filename that misdeclares its evidence type or level misaligns the file with the assertion it claims to evidence. Fold this reading observation into Gate 1 rather than running a naming-convention command.
 
 </structural_reading>
 
@@ -71,9 +71,9 @@ A test literal that re-declares a production-owned value instead of importing it
 
 <test_file_declarations>
 
-Executed TypeScript test files are typed assertion files. Before judging the assertion method, read the test file for `const`, `let`, `var`, framework fixture parameters, property-generated parameters, and local `function` declarations. Reject every `const`, `let`, or `var` declaration as test-file state; reject fixture and generated-case parameters as test-file bindings. Name the right owner for the value it binds: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert whole-payload fixture, or eval case data. Reject local `function` declarations when they own setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, credential loading, or source-owned singleton shapes.
+Executed TypeScript test files are typed assertion files. Before judging the assertion method, read every `const`, `let`, `var`, framework fixture parameter, property-generated parameter, local function, predicate, and assertion API call. Accept bindings that only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. Reject bindings that choose cases, expectations, configuration, setup policy, generator domains, fixture contents, or verdict rules. Reject local functions when they own those choices — property `declarations` — or when they move a predicate or assertion call out of the linked test function or callback — property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
 
-Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count. The finding code is `test_owned_declaration`; the message names the right owner: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert fixture path, or eval case data.
+Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count, and all are valid when they only alias an observation selected elsewhere. The finding carries property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` or `test-owned data` — and the message names the right semantic owner.
 
 Property-based tests must route the property assertion through a harness or wrapper that owns seed selection, `numRuns`, and replay diagnostics. A TypeScript property test is rejected when failure output would not include the seed and replay path, or when the test file owns the seed/run-count itself.
 
@@ -93,7 +93,7 @@ For each assertion in the spec's Assertions section, execute steps 1–8 in orde
 - Is the assertion type (Scenario / Mapping / Conformance / Property / Compliance) the right one for the claim? A behavioral rule is not a Scenario.
 - Does the assertion overlap with another assertion in the same node or a parent (redundancy)?
 
-Record any issue as a `challenge` finding and continue to step 2 — challenge issues do not short-circuit the remaining steps unless the assertion type is provably wrong (which invalidates step 4).
+Record any issue as a `challenge` finding carrying property `alignment` from the base `/audit-tests` enum — the claim itself is malformed or misaligned with its governing decision — and continue to step 2. Challenge issues do not short-circuit the remaining steps unless the assertion type is provably wrong (which invalidates step 4).
 
 </step>
 
@@ -108,7 +108,7 @@ Decompose the assertion text into testable clauses. Examples:
 | "MUST reject expired requests with HTTP 410 and an error-schema body" | (1) reject, (2) HTTP 410, (3) body schema conforms          |
 | "Outputs OKLCH colors meeting WCAG AA at AA-Large text weights"       | (1) OKLCH format, (2) WCAG AA contrast, (3) AA-Large sizing |
 
-The test must exercise every clause with at least one `expect`. Single `expect` for a multi-clause assertion → REJECT this assertion with a `scope` finding.
+The test must exercise every clause with at least one `expect`. Single `expect` for a multi-clause assertion → REJECT this assertion with a `scope` finding carrying property `coverage` from the base `/audit-tests` enum — clauses of the claim go unexercised.
 
 </step>
 
@@ -116,7 +116,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 **Step 3 — Test-file declarations**
 
-Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, framework fixture parameter, or property-generated parameter is a `test_owned_declaration` finding. Any local `function` declaration that owns data, configuration, setup, reusable cases, fixtures, generators, harness behavior, diagnostics, credentials, or source vocabulary is also a `test_owned_declaration` finding. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
+Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, framework fixture parameter, or property-generated parameter that chooses data or policy is a `declarations` finding, ruled `test-owned configuration` for runner, seed, retry, setup, or lifecycle policy and `test-owned data` for hand-picked data, expectations, fixture contents, or generator domains. Any local `function` declaration that owns data, configuration, setup, reusable cases, fixtures, generators, harness behavior, diagnostics, credentials, or source vocabulary carries the same property and whichever of the two labels fits. A local `function` that instead moves a predicate or assertion call out of the linked test is a `predicate-ownership` finding, ruled `assertion-seam` with remediation target `test-file`. For property assertions, missing seed/replay reporting is a `missing property seed reporting` finding, spelled as the base skill spells it.
 
 </step>
 
@@ -188,7 +188,7 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `@testin
 3. If the import targets `@testing/fixtures/*`, REJECT with a `fixture_import` finding. Fixtures are inert files: tests may read, copy, or pass fixture paths, but executed tests must not import fixture modules or consume fixture exports.
 4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
 5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
-6. If a property harness or wrapper owns `numRuns` or seed policy, verify it reports seed and replay details on failure; otherwise REJECT with `missing_property_seed_reporting`.
+6. If a property harness or wrapper owns `numRuns` or seed policy, verify it reports seed and replay details on failure; otherwise REJECT with `missing property seed reporting`, spelled as the base skill spells it.
 7. If the test-infrastructure file imports another test-infrastructure file, trace one level at a time until the chain terminates at a non-test module.
 
 If an executed test imports a local test-adjacent module that carries harness, generator, or fixture behavior outside the canonical `@testing/` path, REJECT with a `noncanonical_test_infrastructure` finding. Spec-tree `tests/` directories contain typed assertion files only.
@@ -203,8 +203,9 @@ The test's own imports look clean when the mock lives in a harness, the hardcode
 
 Apply the supplements in `<typescript_supplements>` for each property:
 
-- **Coupling** — executable coupling categories (Direct / Indirect / Transitive / False / Partial / Severed), barrel resolution, type-only import handling.
-- **Falsifiability** — incorporates step 5 (mocks) and step 6 (oracle) judgments, plus snapshot rules.
+- **Coupling** — the nine executable coupling categories in `<typescript_supplements>`, barrel resolution, type-only import handling.
+- **Falsifiability** — incorporates step 5 (mocks) judgments, plus snapshot rules.
+- **Oracle independence** — step 6 (oracle) findings carry property `oracle-independence` and remediation target `independent-oracle`, matching the base `/audit-tests` enum. Do not fold them into Falsifiability: an expected result derived from the production path that produces the actual result is a distinct defect from a test that no mutation can break.
 - **Alignment** — incorporates step 2 (clause enumeration) and step 4 (assertion type).
 - **Coverage** — read whether the test drives execution into the assertion-relevant path; no coverage tooling is run.
 
@@ -248,16 +249,21 @@ Applied at step 8 of Gate 1.
 
 <supplement property="coupling">
 
-Restate the executable coupling categories this supplement applies to TypeScript imports — do not delegate to `/audit-tests`:
+This supplement specializes each category of the coupling taxonomy `/audit-tests` owns to TypeScript imports. Classify from the table below rather than restating a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
 
-| Category   | Definition                                                                       | Verdict                           |
-| ---------- | -------------------------------------------------------------------------------- | --------------------------------- |
-| Direct     | Test imports the module under test                                               | Proceed                           |
-| Indirect   | Test imports a harness wrapping the module                                       | Proceed — step 7 traced the chain |
-| Transitive | Test imports a consumer of the module                                            | Proceed — verify test level       |
-| False      | Imports the module but never calls assertion-relevant symbols                    | REJECT                            |
-| Partial    | Calls functions on wrong inputs or wrong code paths                              | REJECT                            |
-| Severed    | Imports the module and replaces behavior with `vi.mock`, stubbed spies, or fakes | REJECT                            |
+| Category           | Definition                                                                                         | Verdict                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test imports the module under test                                                                 | Proceed                                         |
+| Indirect           | Test imports a harness wrapping the module                                                         | Proceed — step 7 traced the chain               |
+| Transitive         | Test imports a consumer of the module                                                              | Proceed — verify test level                     |
+| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test  | REJECT — laundering                             |
+| False              | Imports the module but never calls assertion-relevant symbols                                      | REJECT                                          |
+| Partial            | Calls functions on wrong inputs or wrong code paths                                                | REJECT                                          |
+| None               | Test imports only its test framework — `vitest`, `@testing-library/*` — with zero codebase imports | REJECT — tautology                              |
+| Severed            | Imports the module and replaces behavior with `vi.mock`, stubbed spies, or fakes                   | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                           | REJECT — couples to authored text, not behavior |
+
+Prose-coupling holds full-chain in TypeScript as elsewhere: a harness that exposes the authored path as a constant, or a reader function performing the `readFile` inside test infrastructure, does not convert a prose assertion into behavioral coupling. Follow the read to its source and classify by what is ultimately exercised. Reading an authored *source* file for a structural lint that exercises a rule is not prose-coupling.
 
 **Type-only imports do not count.**
 
@@ -282,7 +288,7 @@ If the test imports from a barrel and the assertion-relevant symbol is a sibling
 
 <supplement property="falsifiability">
 
-Apply step 5 (mocks) and step 6 (oracle).
+Apply step 5 (mocks). Step 6 (oracle) is judged separately and filed under `oracle-independence`, never folded in here.
 
 For each codebase import, name a concrete mutation to the imported module that would cause this test to fail. Record the mutation in the assertion's finding detail:
 
