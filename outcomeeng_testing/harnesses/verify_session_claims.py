@@ -400,7 +400,7 @@ def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
 
 
 def branch_reference_observations() -> tuple[BranchReferenceObservation, ...]:
-    """Exercise the complete present/absent origin-branch domain."""
+    """Exercise the origin-branch domain, including a commit-shaped branch name."""
     module = load_verify_session_claims_module()
     observations: list[BranchReferenceObservation] = []
     with handoff_git_env() as env:
@@ -409,6 +409,14 @@ def branch_reference_observations() -> tuple[BranchReferenceObservation, ...]:
                 module,
                 env.root,
                 env.push_work_branch(generated_token()),
+                present_on_origin=True,
+            )
+        )
+        observations.append(
+            _git_ref_observation(
+                module,
+                env.root,
+                env.push_work_branch(generated_sha()),
                 present_on_origin=True,
             )
         )

@@ -135,8 +135,9 @@ def test_explicit_work_branch_is_recorded() -> None:
 
 def test_absent_work_branch_is_refused() -> None:
     with handoff_git_env() as env:
+        absent_branch = f"{env.default_branch}-{generated_token()}"
         with session_commands(env.linked_at_origin_tip()) as commands:
-            result = commands.handoff(work_branch=env.head_sha())
+            result = commands.handoff(work_branch=absent_branch)
 
             assert result.returncode != 0
             assert not commands.session_files()
