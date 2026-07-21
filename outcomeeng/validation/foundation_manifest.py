@@ -33,8 +33,10 @@ from typing import Final
 
 from outcomeeng.distribution.contracts import (
     DIST_DIR_NAME,
+    PLUGINS_DIR_NAME,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
+    SOURCE_ROOT_NAME,
     Target,
 )
 
@@ -194,11 +196,21 @@ def manifest_violations(plugin_root: Path) -> list[str]:
     return violations
 
 
+def authored_plugin_root(repo_root: Path) -> Path:
+    """The authored spec-tree plugin root whose manifest ships verbatim."""
+    return repo_root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME / SPEC_TREE_PLUGIN_NAME
+
+
+def shipped_plugin_root(repo_root: Path, target: Target) -> Path:
+    """The generated spec-tree plugin root for one build target."""
+    return repo_root / DIST_DIR_NAME / target.value / SPEC_TREE_PLUGIN_NAME
+
+
 def iter_tree_violations(repo_root: Path) -> list[str]:
     """Check the spec-tree plugin's manifest in each generated tree under a root."""
     violations: list[str] = []
     for target in sorted(Target):
-        plugin_root = repo_root / DIST_DIR_NAME / target.value / SPEC_TREE_PLUGIN_NAME
+        plugin_root = shipped_plugin_root(repo_root, target)
         violations.extend(
             f"{plugin_root.relative_to(repo_root).as_posix()}/{violation}"
             for violation in manifest_violations(plugin_root)

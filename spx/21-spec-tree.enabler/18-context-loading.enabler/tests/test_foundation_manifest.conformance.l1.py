@@ -17,20 +17,21 @@ from outcomeeng.distribution.contracts import Target
 from outcomeeng.validation.foundation_manifest import (
     CORE_DOCUMENT_RELATIVE_PATH,
     MANIFEST_RELATIVE_PATH,
-    SPEC_TREE_PLUGIN_NAME,
     SUPPORTED_SCHEMA_VERSION,
+    authored_plugin_root,
     manifest_violations,
     parse_foundation_manifest,
+    shipped_plugin_root,
 )
-from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
 
 
 def _shipped_plugin_root(target: Target) -> Path:
-    reader = DistTreeReader(root=marketplace_root_for_spec_tree_root_test(__file__))
-    return reader.target_root(target) / SPEC_TREE_PLUGIN_NAME
+    return shipped_plugin_root(
+        marketplace_root_for_spec_tree_root_test(__file__), target
+    )
 
 
 @pytest.mark.parametrize("target", sorted(Target))
@@ -65,3 +66,13 @@ def test_shipped_manifest_catalogs_carry_package_relative_paths(
 @pytest.mark.parametrize("target", sorted(Target))
 def test_shipped_manifest_passes_the_package_checks(target: Target) -> None:
     assert manifest_violations(_shipped_plugin_root(target)) == []
+
+
+@pytest.mark.parametrize("target", sorted(Target))
+def test_shipped_manifest_is_byte_identical_to_the_authored_manifest(
+    target: Target,
+) -> None:
+    repo_root = marketplace_root_for_spec_tree_root_test(__file__)
+    authored = authored_plugin_root(repo_root) / MANIFEST_RELATIVE_PATH
+    shipped = _shipped_plugin_root(target) / MANIFEST_RELATIVE_PATH
+    assert shipped.read_bytes() == authored.read_bytes()
