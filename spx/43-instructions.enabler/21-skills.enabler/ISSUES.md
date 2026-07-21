@@ -46,3 +46,30 @@ skill audit before publication.
 
 Source: PR 458 review comment `3610850053`, classified as `DEBT` in the `evidence`
 category after merge.
+
+## Consolidate the create-subagent bundle
+
+The approved complete-bundle skill audit at
+`401712deec4ee7eb307c4a02947b31f5850ea72d` identified two maintenance
+recommendations after the invocation-check repair converged:
+
+- `src/plugins/instructions/skills/create-subagent/SKILL.md` repeats prompt
+  structure, XML, invocation, and management guidance that also appears in
+  `references/write-subagent-prompts.md` and `references/subagents.md`; the
+  authored overview remains under the 500-line limit at 472 lines, but the
+  duplication leaves little room for future required guidance.
+- `references/subagents.md`, `references/orchestration-patterns.md`,
+  `references/error-handling-and-recovery.md`, and
+  `references/debugging-agents.md` contain fast-moving benchmark or runtime
+  performance figures that do not define stable authoring behavior.
+
+Required handling: map each duplicated overview section to its owning reference,
+retain only trigger-time and fast-path guidance in `SKILL.md`, replace unstable
+figures with durable decision guidance or current authoritative citations, and
+exercise the affected create/edit paths in fresh contexts. Regenerate both runtime
+trees, run the focused skill checks, and obtain a complete-bundle
+`instructions:skill-auditor` verdict before publication.
+
+This is a separate content-consolidation refactor across the overview and five
+references. It does not block the current rename and invocation-lifecycle repair,
+which the same audit approved with no must-fix findings.
