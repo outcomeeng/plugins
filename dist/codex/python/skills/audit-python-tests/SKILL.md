@@ -87,6 +87,22 @@ Imports inside `if TYPE_CHECKING:` do not create runtime coupling. A test with o
 
 When a test imports a harness, inspect the harness and verify it calls the production behavior the assertion is about. A harness that builds expected values without exercising production is severed coupling.
 
+Specialize each category of the coupling taxonomy `/audit-tests` owns to Python imports. Classify from the table below rather than a subset of it; every category the canonical taxonomy names appears here, so a category missing from this table would silently narrow the verdict.
+
+| Category           | Python-specific definition                                                                                                                      | Verdict                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Direct             | Test imports and calls the governed Python module, function, or class                                                                           | Proceed                                         |
+| Indirect           | Test imports a `<package>_testing.harnesses` module that calls the governed path                                                                | Proceed after harness tracing                   |
+| Transitive         | Test imports a public consumer of the governed module                                                                                           | Proceed if the level matches                    |
+| Laundered indirect | Imports a `<package>_testing` module that exists only to expose hardcoded values back to the test                                               | REJECT — laundering                             |
+| False              | Test imports the module but never calls the assertion-relevant symbols                                                                          | REJECT                                          |
+| Partial            | Test calls the module with the wrong inputs or path, missing the assertion-relevant behavior                                                    | REJECT                                          |
+| None               | Test imports only pytest, Hypothesis, stdlib, or type-only symbols, with zero production coupling                                               | REJECT — tautology                              |
+| Severed            | Test or harness replaces the governed behavior with `unittest.mock`, `MagicMock`, `mocker.patch`, monkeypatch, or an alternate import           | REJECT — coupling severed                       |
+| Prose-coupling     | Reads an authored prose/doc body (skill, spec, prompt) and asserts its content, directly or through a harness constant or infrastructure reader | REJECT — couples to authored text, not behavior |
+
+Framework and stdlib imports such as `pytest`, `hypothesis`, `json`, and `pathlib` do not count as coupling by themselves. The Prose-coupling row is the table-side form of a test reading a `src/` or authored-doc body; both reach the same REJECT.
+
 A severed, false, partial, or absent coupling carries property `coupling` from the base enum.
 </coupling_audit>
 
