@@ -32,16 +32,6 @@ The test-verification foundation (`spx/31-outcomeeng.enabler/31-verification.ena
 
 **Evidence.** Surfaced by the CI reviewer on the TypeScript-alignment changeset as a cross-language `[consistency]` divergence: aligning one language subtree ahead of the others makes the sibling standards disagree until the others catch up. Each language subtree is a distinct, comparably sized slice, outside the scope of any single language's alignment change.
 
-## Verification gates do not detect cross-language spec drift
-
-The changeset reviewer (`spec-tree:changes-reviewer`), the per-language artifact auditors (`audit-{python,rust,typescript}-{tests,code,architecture}`), and `/align` each judge one node or one changeset in isolation. None compares the equivalent seam and standards rules across the sibling language nodes `spx/43-python.enabler`, `spx/43-rust.enabler`, and `spx/43-typescript.enabler`. A multi-language changeset can therefore express the same rule three times and let those expressions diverge over successive edits while every gate passes — the duplication and drift that motivated the seam-rule superset reached the default branch unflagged.
-
-The superset refactor (`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md` as the language-neutral ancestor, each language node reduced to a delta that cites it) removes the current drift and makes a restated ancestor rule a citable violation. It adds no gate that *detects* a language node diverging from the ancestor superset or from its siblings: nothing fails when a future edit reintroduces a restatement or lets two language nodes disagree.
-
-**Resolution shape** (fix deferred by operator decision, to be scoped in the skill and agent specialization discussion): add cross-sibling equivalence detection to the gate set — candidates are an `/align` check that every language test-standard node cites the ancestor and declares only deltas, an audit assertion on each language node verifying its content is delta-only against the cited superset, or a review dimension that compares sibling language standards. The enabling precedent is the superset ancestor at `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
-
-**Evidence.** Named by the operator after observing that the seam specs of all three languages were extremely repetitive and that no auditor or changeset reviewer flagged the repetition across the changeset that carried it.
-
 ## Align tree-wide agent/runtime terminology with the SPX agent-harness PDR
 
 The SPX product's `spx/12-agent-harness.pdr.md` (in the `@outcomeeng/spx` repo) fixes the vocabulary for agent concepts: **agent harness** (the SPX-managed repository behavior around agents), **agent** (a selectable coding agent — Codex, Claude Code), **agent adapter**, and **agent session**, and forbids collapsing those roles into one term. "Runtime" is not in that vocabulary. `spx/12-marketplace-state.adr.md` and the diagnostics node (`spx/21-spec-tree.enabler/79-diagnostics.enabler/13-diagnose-engine.adr.md`, `15-version-floor.adr.md`, `diagnostics.md`, and `PLAN.md`) are aligned; the rest of this product's tree still uses "runtime" / "per-runtime" / "coding-agent runtime" / "runtime-divergent" for agent concepts.
