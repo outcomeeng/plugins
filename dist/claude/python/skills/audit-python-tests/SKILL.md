@@ -86,6 +86,8 @@ Classify imports by runtime coupling:
 Imports inside `if TYPE_CHECKING:` do not create runtime coupling. A test with only framework, stdlib, and type-only imports is a tautology unless it reaches production through a harness that itself reaches production.
 
 When a test imports a harness, inspect the harness and verify it calls the production behavior the assertion is about. A harness that builds expected values without exercising production is severed coupling.
+
+A severed, false, partial, or absent coupling carries property `coupling` from the base enum.
 </coupling_audit>
 
 <falsifiability_audit>
@@ -108,6 +110,8 @@ Accept explicit test doubles only when they are passed through dependency inject
 | Combinatorial cost    | Configurable class mirroring real behavior |
 | Observability         | Class capturing hidden boundary details    |
 | Contract probes       | Stub validated against a real schema       |
+
+Replacing the behavior under test carries property `falsifiability` from the base enum — a severed seam means no production mutation can break the test.
 
 </falsifiability_audit>
 
@@ -161,6 +165,8 @@ Audit every imported generator:
 - It derives expected outputs from generated inputs, an independent oracle, or a source outside the module under test
 
 Property evidence requires a meaningful property. `@given` that only checks for lack of exceptions is insufficient.
+
+A strategy that collapses to a single example or checks only for the absence of exceptions carries property `falsifiability`; a generator that duplicates source-owned vocabulary carries property `source-ownership`; an expected output derived from the module under test carries property `oracle-independence`, remediation target `independent-oracle`.
 </generator_audit>
 
 <harness_audit>
@@ -171,6 +177,8 @@ Audit every imported harness:
 - It does not replace the behavior under test with framework mocks, monkeypatches, environment stubs, network fakes, or alternate imports
 - It cleans up temp dirs, subprocesses, services, Docker resources, browsers, databases, and environment changes
 - It does not own arbitrary test data that belongs in source modules or generators
+
+A harness that severs the asserted behavior — replacing it or failing to reach production — carries property `coupling`; a harness that owns setup policy, resource-tuning values, or arbitrary test data carries property `declarations`.
 
 Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. They belong under `<package>_testing.harnesses.*`.
 </harness_audit>
