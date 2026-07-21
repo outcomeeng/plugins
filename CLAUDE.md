@@ -518,7 +518,7 @@ enabled = false
 
 `spx/local/generated-sources.toml` is the committed declaration of every generated extent in this repository — whole generated files by path pattern and generated regions of authored files by marker pair — with each relation's authored sources, generator, and regeneration command. It is governed by `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` and is the single source of generated-source attribution: never infer generated status from path names.
 
-- Agentic verification (review, audit) excludes declared generated extents from judgment and records them as skipped — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence.
+- Agentic verification (review, audit) excludes declared generated extents from judgment and names the skipped extents in its verdict — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence. Journal-recorded skip evidence arrives with the `spx` verification scope projection; until then the exclusion binds through this instruction alone.
 - Findings about generated content resolve to the relation's sources; never hand-edit a generated extent.
 - Deterministic verification covers the complete changeset; each relation's regeneration command backs regeneration parity — rerunning it leaves the committed generated extents byte-identical.
 - Generation inputs and generator implementations are authored files judged in their generation role — template directives are template syntax, never defective final output.
