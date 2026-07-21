@@ -10,11 +10,11 @@ No runtime is the source language. Authoring in one agent's tool and field names
 
 ## Verification
 
-- ALWAYS: the build renders each plugin's agent definitions into every target's native agent format, and no generated target tree carries an agent artifact that target cannot read
-- ALWAYS: a target whose agent namespace is flat receives agent filenames and names carrying the plugin as slug prefix, `<plugin>_<agent>`, rendering the namespaced `<plugin>:<agent>` identity; a target that namespaces plugin agents carries the bare agent name
-- ALWAYS: each target's agent format, filename shape, and namespace behavior resolve from a source-owned per-target agent-capability registry, distinct from the runtime-token registry because it parameterizes emission rather than rendering a name into authored text — adding a target adds a registry entry rather than amending this decision
-
 ### Testing
+
+- ALWAYS: the build renders each plugin's agent definitions into every target's native agent format, and no generated target tree carries an agent artifact that target cannot read ([compliance])
+- ALWAYS: a target whose agent namespace is flat receives agent filenames and names carrying the plugin as slug prefix, `<plugin>_<agent>`, rendering the namespaced `<plugin>:<agent>` identity; a target that namespaces plugin agents carries the bare agent name ([compliance])
+- ALWAYS: each target's agent format, filename shape, and namespace behavior resolve from a source-owned per-target agent-capability registry, distinct from the runtime-token registry because it parameterizes emission rather than rendering a name into authored text — adding a target adds a registry entry rather than amending this decision ([compliance])
 
 - ALWAYS: every committed `dist/` file traces to a `src/` ancestor through the build — no orphan dist content ([compliance])
 
@@ -22,7 +22,7 @@ No runtime is the source language. Authoring in one agent's tool and field names
 
 - ALWAYS: use Jinja2 with custom delimiters (`{!% %!}` and `{{! !}}`) for template processing — collision-free syntax in the presence of meta-skill content ([audit])
 - ALWAYS: place all canonical shared content under `src/_shared/<scope>/<topic>/` — a single home for each shared fragment ([audit])
-- ALWAYS: emit committed outputs into both `dist/claude/` and `dist/codex/` for every plugin published in either marketplace catalog ([audit])
+- ALWAYS: emit committed outputs into every registered target's generated tree for every plugin published to that target's marketplace catalog — a new target is covered by this rule rather than by rewriting it ([audit])
 - ALWAYS: run `just build-skills` from a lefthook pre-commit hook that fails the commit when `dist/` would change — stale dist is the failure mode this decision prevents ([audit])
 - ALWAYS: external formatter execution in the build accepts injected discovery and runner seams, with test doubles limited to `/test` Stage 5 exception 1 (failure simulation) for unavailable or failing formatters and exception 2 (interaction protocols) for recording the command shape, so tests cover missing-tool and formatter-failure behavior without patching global process APIs ([audit])
 - NEVER: edit `dist/claude/` or `dist/codex/` by hand — the build is the only writer; manual edits desynchronize the source-output contract ([audit])

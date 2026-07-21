@@ -14,14 +14,14 @@ Agent definitions are materialized into the checkout because an agent whose plug
 
 ## Verification
 
-- ALWAYS: for an agent whose plugin manifest cannot declare agents, that plugin's agent definitions ship inside the plugin's own declared skill surface and are materialized into the checkout's agent directory by the plugin's lifecycle skill — no manifest path delivers them
-- ALWAYS: a plugin's lifecycle skill places and prunes only within the namespace its own plugin owns, leaving agent definitions authored by the developer or provided by another plugin untouched
-- NEVER: a plugin's agent definitions ship through a directory the plugin manifest does not declare — an undeclared surface reaching the consumer is incidental, not contractual
-
 ### Testing
+
+- ALWAYS: for an agent whose plugin manifest cannot declare agents, that plugin's agent definitions ship inside the plugin's own declared skill surface and are materialized into the checkout's agent directory by the plugin's lifecycle skill — no manifest path delivers them ([compliance])
+- ALWAYS: a plugin's lifecycle skill places and prunes only within the namespace its own plugin owns, leaving agent definitions authored by the developer or provided by another plugin untouched ([compliance])
+- NEVER: a plugin's agent definitions ship through a directory the plugin manifest does not declare — an undeclared surface reaching the consumer is incidental, not contractual ([compliance])
 
 - NEVER: marketplace synchronization mutates a path outside the invocation checkout — a developer's user-scope marketplace registrations, plugin caches, and agent directories are unchanged after every run ([compliance])
 - ALWAYS: each agent's marketplace registration and plugin selection is declared in committed agent-harness configuration of the checkout — Codex in `.agents/plugins/marketplace.json` and `.codex/config.toml`, Claude Code in `.claude-plugin/marketplace.json` and project-scope `.claude/settings.json` ([conformance])
 - ALWAYS: for an agent whose plugin manifest cannot declare agents, converted agent definitions are committed repository content under that agent's directory in the checkout ([conformance])
 - ALWAYS: marketplace-install diagnosis derives expected plugin state from the checkout's committed per-agent agent-harness configuration rather than from a plugin catalog embedded in shipped diagnostic output ([compliance])
-- ALWAYS: install completeness — every catalog plugin installed and enabled for both agents — is verified by an isolated installation harness that provisions real `claude` and `codex` agents in disposable homes and mutates no user-scope state ([compliance])
+- ALWAYS: install completeness — every catalog plugin installed and enabled for every agent the checkout registers — is verified by an isolated installation harness that provisions each registered agent in a disposable home and mutates no user-scope state ([compliance])
