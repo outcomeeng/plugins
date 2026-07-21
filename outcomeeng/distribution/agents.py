@@ -30,7 +30,6 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         "disallowedTools",
     }
 )
-GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
 # Authored agent sources. The build converts each agent as it renders it, so a
 # tree-wide conversion reads the authored source rather than a generated tree —
 # no generated tree carries agent markdown once conversion moved into the build.
@@ -397,58 +396,6 @@ def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent,
         seen.add(converted_agent.filename)
         converted.append(converted_agent)
     return tuple(converted)
-
-
-def install_agents(
-    source_root: Path,
-    target_root: Path,
-    *,
-    manifest_name: str = GENERATED_MANIFEST_FILENAME,
-) -> tuple[Path, ...]:
-    """Install converted agents and remove stale generated files."""
-    converted = convert_agents(source_root)
-    target_root.mkdir(parents=True, exist_ok=True)
-    manifest_path = target_root / manifest_name
-    previous = _read_generated_manifest(manifest_path)
-    current_files = frozenset(agent.filename for agent in converted)
-
-    for filename in sorted(previous - current_files):
-        stale_path = target_root / filename
-        if stale_path.exists():
-            stale_path.unlink()
-
-    written: list[Path] = []
-    generated_owned = set(previous)
-    for agent in converted:
-        target_path = target_root / agent.filename
-        rendered = render_agent_toml(agent)
-        if target_path.exists() and agent.filename not in generated_owned:
-            raise AgentConversionError(
-                f"refusing to overwrite user-owned Codex agent: {target_path}"
-            )
-        target_path.write_text(rendered, encoding="utf-8")
-        written.append(target_path)
-
-    manifest_path.write_text(
-        json.dumps({"generated": sorted(current_files)}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return tuple(written)
-
-
-def _read_generated_manifest(path: Path) -> frozenset[str]:
-    if not path.is_file():
-        return frozenset()
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise AgentConversionError(f"invalid generated-agent manifest: {path}") from exc
-    generated = data.get("generated", [])
-    if not isinstance(generated, list) or not all(
-        isinstance(item, str) for item in generated
-    ):
-        raise AgentConversionError(f"invalid generated-agent manifest: {path}")
-    return frozenset(generated)
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, object], str]:
@@ -963,7 +910,6 @@ __all__ = [
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
     "EFFORT_MAPPINGS",
-    "GENERATED_MANIFEST_FILENAME",
     "INHERIT_MODEL_VALUE",
     "MODEL_MAPPINGS",
     "MODEL_PREFIX_EXAMPLE_SUFFIX",
@@ -983,7 +929,6 @@ __all__ = [
     "convert_agents",
     "generated_agent_type",
     "infer_sandbox_mode",
-    "install_agents",
     "iter_agent_files",
     "map_effort",
     "map_model",

@@ -25,9 +25,7 @@ from outcomeeng.distribution.agents import (
     CODEX_STRONG_MODEL,
     CODEX_TOOLS_GUIDANCE_TEMPLATE,
     CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE,
-    DEFAULT_SOURCE_ROOT,
     EFFORT_MAPPINGS,
-    GENERATED_MANIFEST_FILENAME,
     INHERIT_MODEL_VALUE,
     MANUAL_REVIEW_GUIDANCE_CLOSE,
     MANUAL_REVIEW_GUIDANCE_OPEN,
@@ -50,7 +48,6 @@ from outcomeeng.distribution.agents import (
     convert_agent,
     convert_agents,
     infer_sandbox_mode,
-    install_agents,
     map_effort,
     map_model,
     map_permission_mode,
@@ -84,7 +81,6 @@ WRITER_SOURCE_PATH: Final = (
     Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "writer.md"
 )
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
-GENERATED_CODEX_AGENTS_DIRNAME: Final = "generated-codex-agents"
 CODEX_PLUGIN_MANIFEST_PARTS: Final = (
     *DIST_CODEX_PLUGINS_DIR.parts,
     PLUGIN_NAME,
@@ -105,14 +101,11 @@ SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
 CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
 CODEX_FLOW_MCP_AGENT_FIXTURE: Final = "codex-flow-mcp-agent.txt"
-DUPLICATE_REVIEWER_FIXTURE: Final = "duplicate-reviewer.md"
 DUPLICATE_REVIEWER_BANG_FIXTURE: Final = "duplicate-reviewer-bang.md"
 EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
 FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
 GUARDED_WRITER_AGENT_FIXTURE: Final = "guarded-writer-agent.md"
 READ_ONLY_REVIEWER_AGENT_FIXTURE: Final = "read-only-reviewer-agent.md"
-INVALID_MANIFEST_BODY: Final = "{"
-STALE_GENERATED_CONTENT: Final = "user-visible stale generated content\n"
 FOLDED_DESCRIPTION_TEXT: Final = (
     "Review working changes against a base ref. "
     "Accept optional PR, branch, or range inputs."
@@ -426,11 +419,28 @@ def installed_guarded_writer_toml(
         / AGENT_SOURCE_DIRECTORY_NAME
         / f"{GUARDED_WRITER_NAME}.md"
     )
-    target_root = root / CODEX_AGENTS_DIRNAME
-    (installed_path,) = install_agents(source_root, target_root)
+    (installed_path,) = _write_converted_agents(
+        source_root, root / CODEX_AGENTS_DIRNAME
+    )
     return agent_document_oracle(source_path), tomllib.loads(
         installed_path.read_text(encoding="utf-8")
     )
+
+
+def _write_converted_agents(source_root: Path, target_root: Path) -> tuple[Path, ...]:
+    """Convert every agent under ``source_root`` and write the TOML to disk.
+
+    Mirrors what the build writes into a generated tree, so a harness can read
+    a converted agent back through the filesystem without the retired
+    install-time model.
+    """
+    target_root.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for agent in convert_agents(source_root):
+        path = target_root / agent.filename
+        path.write_text(render_agent_toml(agent), encoding="utf-8")
+        written.append(path)
+    return tuple(written)
 
 
 def write_codex_plugin_manifest(root: Path) -> Path:
@@ -467,7 +477,7 @@ def installed_environment_markers(root: Path) -> set[str]:
             )
         },
     )
-    installed_paths = install_agents(source_root, root / CODEX_AGENTS_DIRNAME)
+    installed_paths = _write_converted_agents(source_root, root / CODEX_AGENTS_DIRNAME)
     return {
         toml_string(
             toml_table(
@@ -542,51 +552,6 @@ def source_agent_marker_candidate() -> SourceAgent:
         source_path=Path(GUARDED_WRITER_AGENT_FIXTURE),
         name=GUARDED_WRITER_NAME,
     )
-
-
-def invalid_generated_manifest_target(root: Path) -> tuple[Path, Path]:
-    """Create an invalid generated manifest and return source and target roots."""
-    source_root = root / DIST_CODEX_PLUGINS_DIR
-    target_root = root / CODEX_AGENTS_DIRNAME
-    target_root.mkdir()
-    manifest_path = target_root / GENERATED_MANIFEST_FILENAME
-    manifest_path.write_text(INVALID_MANIFEST_BODY, encoding="utf-8")
-    return source_root, target_root
-
-
-def untracked_identical_agent_install_roots(root: Path) -> tuple[Path, Path]:
-    """Create a user-owned file matching generated content."""
-    source_root = source_root_with_guarded_writer(root)
-    generated_root = root / GENERATED_CODEX_AGENTS_DIRNAME
-    target_root = root / CODEX_AGENTS_DIRNAME
-    (generated_path,) = install_agents(source_root, generated_root)
-    target_root.mkdir()
-    target_path = target_root / generated_path.name
-    target_path.write_text(generated_path.read_text(encoding="utf-8"), encoding="utf-8")
-    return source_root, target_root
-
-
-def rewritten_generated_owned_agent(root: Path) -> Path:
-    """Rewrite a manifest-owned generated file and return the rewritten path."""
-    source_root = source_root_with_guarded_writer(root)
-    target_root = root / CODEX_AGENTS_DIRNAME
-    (installed_path,) = install_agents(source_root, target_root)
-    installed_path.write_text(STALE_GENERATED_CONTENT, encoding="utf-8")
-    (rewritten_path,) = install_agents(source_root, target_root)
-    return rewritten_path
-
-
-def duplicate_filename_roots(root: Path) -> tuple[Path, Path]:
-    """Create duplicate-slug source agents and return install roots."""
-    source_root = write_agent_tree(
-        root,
-        PLUGIN_NAME,
-        {
-            "reviewer": agent_conversion_fixture(DUPLICATE_REVIEWER_FIXTURE),
-            "reviewer-bang": agent_conversion_fixture(DUPLICATE_REVIEWER_BANG_FIXTURE),
-        },
-    )
-    return source_root, root / CODEX_AGENTS_DIRNAME
 
 
 def assert_agent_frontmatter_and_body_convert_to_codex_toml() -> None:
@@ -934,18 +899,13 @@ def assert_manual_guidance_preserves_source_only_fields() -> None:
     assert "sandbox_mode" not in parsed
 
 
-def assert_default_source_root_uses_rendered_codex_agents() -> None:
-    """Assert the default converter source root is generated Codex output."""
-    assert DEFAULT_SOURCE_ROOT == Path("dist") / "codex"
-
-
 def assert_generated_toml_stays_outside_codex_plugin_manifest_content() -> None:
-    """Assert local generated TOML does not mutate plugin manifest content."""
+    """Assert converting an agent to TOML does not mutate plugin manifest content."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         source_root = source_root_with_guarded_writer(root)
         manifest_path = write_codex_plugin_manifest(root)
-        install_agents(source_root, root / CODEX_AGENTS_DIRNAME)
+        _write_converted_agents(source_root, root / CODEX_AGENTS_DIRNAME)
         assert not tuple(manifest_path.parent.parent.rglob("*.toml"))
         assert manifest_path.read_text(encoding="utf-8") == CODEX_PLUGIN_MANIFEST_BODY
 
@@ -985,51 +945,3 @@ def assert_environment_marker_without_source_plugin_is_rejected() -> None:
             "source path without a plugin namespace did not raise AgentConversionError"
         )
         raise AssertionError(msg)
-
-
-def assert_invalid_generated_manifest_uses_converter_error() -> None:
-    """Assert invalid generated-agent manifests raise converter errors."""
-    with TemporaryDirectory() as tmp:
-        source_root, target_root = invalid_generated_manifest_target(Path(tmp))
-        try:
-            install_agents(source_root, target_root)
-        except AgentConversionError as exc:
-            assert "invalid generated-agent manifest" in str(exc)
-        else:
-            msg = "invalid generated-agent manifest did not raise AgentConversionError"
-            raise AssertionError(msg)
-
-
-def assert_install_refuses_to_claim_untracked_identical_agent() -> None:
-    """Assert untracked matching files remain user-owned."""
-    with TemporaryDirectory() as tmp:
-        source_root, target_root = untracked_identical_agent_install_roots(Path(tmp))
-        try:
-            install_agents(source_root, target_root)
-        except AgentConversionError as exc:
-            assert "refusing to overwrite user-owned Codex agent" in str(exc)
-        else:
-            msg = "untracked identical agent did not raise AgentConversionError"
-            raise AssertionError(msg)
-        assert not (target_root / GENERATED_MANIFEST_FILENAME).exists()
-
-
-def assert_install_overwrites_generated_owned_agent_from_manifest() -> None:
-    """Assert manifest-owned generated files can be updated."""
-    with TemporaryDirectory() as tmp:
-        rewritten_path = rewritten_generated_owned_agent(Path(tmp))
-        assert STALE_GENERATED_CONTENT not in rewritten_path.read_text(encoding="utf-8")
-
-
-def assert_duplicate_generated_agent_filename_fails_before_install_writes() -> None:
-    """Assert duplicate generated filenames fail before target writes."""
-    with TemporaryDirectory() as tmp:
-        source_root, target_root = duplicate_filename_roots(Path(tmp))
-        try:
-            install_agents(source_root, target_root)
-        except AgentConversionError as exc:
-            assert "multiple source agents convert" in str(exc)
-        else:
-            msg = "duplicate generated filename did not raise AgentConversionError"
-            raise AssertionError(msg)
-        assert not target_root.exists()
