@@ -118,31 +118,67 @@ FOLDED_DESCRIPTION_TEXT: Final = (
     "Review working changes against a base ref. "
     "Accept optional PR, branch, or range inputs."
 )
-MODEL_PREFIX_CASES: Final = tuple(
-    (source_prefix, target_model) for source_prefix, target_model in MODEL_MAPPINGS
-) + tuple(
+# Every correspondence below is written out here rather than derived from the
+# production tables the converter reads. Deriving them would make the expected
+# value and the case domain the same object, so repointing a mapping target
+# would move both and no test could fail for a wrong value. These literals are
+# the oracle; `assert_mapping_oracles_cover_production_tables` separately proves
+# they still span the production key sets, so a new production entry cannot slip
+# through untested.
+EXPECTED_MODEL_CORRESPONDENCE: Final = (
+    ("claude-opus", "gpt-5.5"),
+    ("opus", "gpt-5.5"),
+    ("claude-sonnet", "gpt-5.4"),
+    ("sonnet", "gpt-5.4"),
+    ("claude-haiku", "gpt-5.4-mini"),
+    ("haiku", "gpt-5.4-mini"),
+)
+EXPECTED_EFFORT_CORRESPONDENCE: Final = (
+    ("low", "low"),
+    ("medium", "medium"),
+    ("high", "high"),
+    ("max", "xhigh"),
+)
+EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
+    ("default", None),
+    ("acceptEdits", "workspace-write"),
+    ("auto", None),
+    ("dontAsk", None),
+    ("bypassPermissions", None),
+    ("plan", "read-only"),
+)
+EXPECTED_READ_ONLY_TOOLS: Final = ("Glob", "Grep", "Read")
+EXPECTED_SCRIPT_CAPABLE_TOOLS: Final = ("Bash", "Skill")
+EXPECTED_WEB_CAPABLE_TOOLS: Final = ("WebFetch", "WebSearch")
+EXPECTED_WRITE_CAPABLE_TOOLS: Final = ("Edit", "NotebookEdit", "Write")
+
+MODEL_PREFIX_CASES: Final = EXPECTED_MODEL_CORRESPONDENCE + tuple(
     (f"{source_prefix}{MODEL_PREFIX_EXAMPLE_SUFFIX}", target_model)
-    for source_prefix, target_model in MODEL_MAPPINGS
+    for source_prefix, target_model in EXPECTED_MODEL_CORRESPONDENCE
     if source_prefix.startswith("claude-")
 )
 MODEL_CASES: Final = (*MODEL_PREFIX_CASES, (INHERIT_MODEL_VALUE, None))
-EFFORT_CASES: Final = tuple(EFFORT_MAPPINGS.items())
-PERMISSION_MODE_CASES: Final = tuple(PERMISSION_MODE_MAPPINGS.items())
+EFFORT_CASES: Final = EXPECTED_EFFORT_CORRESPONDENCE
+PERMISSION_MODE_CASES: Final = EXPECTED_PERMISSION_MODE_CORRESPONDENCE
 SUPPORTED_PERMISSION_MODE_CASES: Final = tuple(
     (source, target)
-    for source, target in PERMISSION_MODE_MAPPINGS.items()
+    for source, target in EXPECTED_PERMISSION_MODE_CORRESPONDENCE
     if target is not None
 )
 UNMAPPED_PERMISSION_MODE_CASES: Final = tuple(
-    source for source, target in PERMISSION_MODE_MAPPINGS.items() if target is None
+    source
+    for source, target in EXPECTED_PERMISSION_MODE_CORRESPONDENCE
+    if target is None
 )
-READ_ONLY_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS)
-READ_ONLY_WEB_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS)
-WEB_CAPABLE_TOOL_ALLOWLIST: Final = tuple(WEB_CAPABLE_TOOLS)
+READ_ONLY_TOOL_ALLOWLIST: Final = EXPECTED_READ_ONLY_TOOLS
+READ_ONLY_WEB_TOOL_ALLOWLIST: Final = (
+    EXPECTED_READ_ONLY_TOOLS + EXPECTED_WEB_CAPABLE_TOOLS
+)
+WEB_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_WEB_CAPABLE_TOOLS
 ALL_TOOLS_ALLOWLIST: Final = (ALL_TOOLS_SENTINEL,)
-WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(WRITE_CAPABLE_TOOLS)
-SCRIPT_CAPABLE_TOOL_ALLOWLIST: Final = tuple(SCRIPT_CAPABLE_TOOLS)
-SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(sorted(WRITE_CAPABLE_TOOLS))
+WRITE_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_WRITE_CAPABLE_TOOLS
+SCRIPT_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_SCRIPT_CAPABLE_TOOLS
+SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(sorted(EXPECTED_WRITE_CAPABLE_TOOLS))
 EMPTY_TOOL_ALLOWLIST: Final = ()
 
 
@@ -677,6 +713,23 @@ def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config
 
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert parsed["sandbox_mode"] == READ_ONLY_SANDBOX_MODE
+
+
+def assert_mapping_oracles_cover_production_tables() -> None:
+    """Assert the independent oracles span every production mapping key."""
+    assert {source for source, _ in EXPECTED_MODEL_CORRESPONDENCE} == {
+        source for source, _ in MODEL_MAPPINGS
+    }
+    assert {source for source, _ in EXPECTED_EFFORT_CORRESPONDENCE} == set(
+        EFFORT_MAPPINGS
+    )
+    assert {source for source, _ in EXPECTED_PERMISSION_MODE_CORRESPONDENCE} == set(
+        PERMISSION_MODE_MAPPINGS
+    )
+    assert set(EXPECTED_READ_ONLY_TOOLS) == READ_ONLY_TOOLS
+    assert set(EXPECTED_SCRIPT_CAPABLE_TOOLS) == SCRIPT_CAPABLE_TOOLS
+    assert set(EXPECTED_WEB_CAPABLE_TOOLS) == WEB_CAPABLE_TOOLS
+    assert set(EXPECTED_WRITE_CAPABLE_TOOLS) == WRITE_CAPABLE_TOOLS
 
 
 def assert_source_model_maps_to_codex_model() -> None:

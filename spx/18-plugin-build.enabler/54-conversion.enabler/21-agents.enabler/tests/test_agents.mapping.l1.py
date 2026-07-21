@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_explicit_empty_tool_allowlist_disables_web_search,
     assert_explicit_empty_tool_allowlist_infers_read_only_sandbox,
     assert_explicit_unmapped_permission_mode_blocks_read_only_inference,
+    assert_mapping_oracles_cover_production_tables,
     assert_missing_tool_allowlist_leaves_sandbox_to_runtime_default,
     assert_missing_tool_allowlist_leaves_web_search_to_runtime_default,
     assert_opus_model_maps_to_distinct_top_tier_codex_model,
@@ -27,6 +28,10 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_write_capable_tool_allowlist_converts_to_manual_review_guidance,
     assert_write_capable_tool_allowlist_leaves_sandbox_to_runtime_default,
 )
+
+
+def test_mapping_oracles_cover_production_tables() -> None:
+    assert_mapping_oracles_cover_production_tables()
 
 
 def test_source_model_maps_to_codex_model() -> None:
