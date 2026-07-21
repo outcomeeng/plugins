@@ -8,6 +8,7 @@ CAN distinguish source contracts from generated input domains and avoid hiding l
 
 ### Compliance
 
+- ALWAYS: every test case — input and expected output — derives from a source independent of the test author's invention: the spec assertion text (scenarios), a finite source-owned enumeration (mappings), a generator over a domain (properties), an external oracle (conformance), the decision record being enforced (compliance), or an inert fixture file — the provenance of every case is auditable to a source outside the author's head ([audit])
 - ALWAYS: values that the source imports or should import come from the runtime, framework, protocol package, or production module that owns them — tests do not define local stand-ins for source vocabulary ([audit])
 - ALWAYS: values that the code under test owns are exposed by source-owned registries, tuples, constructors, typed factories, schemas, or structured metadata — tests consume source contracts instead of duplicating them ([audit])
 - ALWAYS: values that only the test needs are generated when they represent a variable input domain such as paths, names, identifiers, option sets, file contents, encodings, counts, or product shapes — generated values expand the exercised space ([audit])
