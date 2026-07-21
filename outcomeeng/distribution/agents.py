@@ -1,11 +1,14 @@
-"""Convert rendered plugin agent definitions into local Codex custom agents."""
+"""Convert rendered plugin agent definitions into a target's native artifact.
+
+The build owns conversion: it renders each authored agent, converts it here, and
+writes the artifact into the plugin's generated tree. Placement into a checkout
+belongs to the plugin's shipped lifecycle script, so this module exposes
+conversion and placement helpers but no command-line entry point."""
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +31,10 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     }
 )
 GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
-DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
+# Authored agent sources. The build converts each agent as it renders it, so a
+# tree-wide conversion reads the authored source rather than a generated tree —
+# no generated tree carries agent markdown once conversion moved into the build.
+DEFAULT_SOURCE_ROOT: Final = Path("src") / "plugins"
 AGENT_SOURCE_DIRECTORY_NAME: Final = "agents"
 CODEX_STRONG_MODEL: Final = "gpt-5.5"
 CODEX_STANDARD_MODEL: Final = "gpt-5.4"
@@ -428,47 +434,6 @@ def install_agents(
         encoding="utf-8",
     )
     return tuple(written)
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    """CLI entrypoint."""
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    try:
-        if args.command == "install":
-            installed = install_agents(
-                args.source_root,
-                args.target_root,
-                manifest_name=args.manifest_name,
-            )
-            print(f"installed {len(installed)} Codex agent(s) into {args.target_root}")
-            return 0
-        converted = convert_agents(args.source_root)
-        for agent in converted:
-            sys.stdout.write(f"# {agent.filename}\n")
-            sys.stdout.write(render_agent_toml(agent))
-        return 0
-    except AgentConversionError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="outcomeeng.distribution.agents",
-        description="Convert rendered plugin agents into Codex custom-agent TOML.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    install = subparsers.add_parser("install")
-    install.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
-    install.add_argument("--target-root", type=Path, required=True)
-    install.add_argument(
-        "--manifest-name",
-        default=GENERATED_MANIFEST_FILENAME,
-        help="Generated-file manifest stored under the target root.",
-    )
-    parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
-    return parser
 
 
 def _read_generated_manifest(path: Path) -> frozenset[str]:
@@ -1020,7 +985,6 @@ __all__ = [
     "infer_sandbox_mode",
     "install_agents",
     "iter_agent_files",
-    "main",
     "map_effort",
     "map_model",
     "map_permission_mode",
@@ -1028,7 +992,3 @@ __all__ = [
     "parse_agent_markdown",
     "render_agent_toml",
 ]
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

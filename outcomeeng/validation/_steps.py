@@ -142,10 +142,15 @@ def _reference_files() -> tuple[str, ...]:
 
 
 def runtime_token_files() -> tuple[str, ...]:
-    # Authored source the build renders or inlines: plugin content and the
-    # shared fragments plugin files include. A raw runtime token in either ships
-    # into a generated target, so both are enforced.
-    roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
+    # Authored source the build renders or inlines: plugin content, the shared
+    # fragments plugin files include, and the per-plugin templates that fan out
+    # into every plugin's generated tree. A raw runtime token in any of them
+    # ships into a generated target, so all three are enforced.
+    roots = (
+        _REPO_ROOT / "src" / "plugins",
+        _REPO_ROOT / "src" / "_shared",
+        _REPO_ROOT / "src" / "templates",
+    )
     return tuple(
         sorted(
             str(path)

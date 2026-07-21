@@ -327,7 +327,7 @@ def converted_folded_description_toml(root: Path) -> dict[str, object]:
 def converted_default_codex_source_root_toml(
     root: Path,
 ) -> tuple[AgentDocumentOracle, dict[str, object]]:
-    """Convert a rendered Codex fixture through the default source root."""
+    """Convert a rendered Codex-target agent fixture from its own tree."""
     source_root = write_dist_codex_agent_tree(
         root,
         PLUGIN_NAME,
@@ -339,8 +339,7 @@ def converted_default_codex_source_root_toml(
         / AGENT_SOURCE_DIRECTORY_NAME
         / f"{CHANGES_REVIEWER_NAME}.md"
     )
-    with working_directory(root):
-        (converted,) = convert_agents()
+    (converted,) = convert_agents(source_root)
     return agent_document_oracle(source_path), tomllib.loads(
         render_agent_toml(converted)
     )
