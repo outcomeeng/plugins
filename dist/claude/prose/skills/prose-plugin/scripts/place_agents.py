@@ -17,7 +17,7 @@ def main(argv: list[str] | None = None) -> int:
 
     placement_file = AGENTS_DIR / PLACEMENT_FILENAME
     if not placement_file.is_file():
-        print("this plugin ships no agent definitions; nothing to place")
+        print("no checkout placement applies for this plugin on this agent")
         return 0
 
     placement = json.loads(placement_file.read_text(encoding="utf-8"))

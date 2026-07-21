@@ -22,7 +22,7 @@ Select one verb from the invocation. `help` is the default when none is given.
 | `upgrade` | The placed definitions brought to this version, retiring any a later version dropped |
 | `check`   | Whether the checkout's placed definitions match this version, changing nothing       |
 
-`init`, `upgrade`, and `check` operate only where this plugin ships agent definitions. When it ships none, they report that and change nothing — the plugin has no consumer-side footprint to manage.
+This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.
 
 </verbs>
 
@@ -40,7 +40,7 @@ That path is relative to this skill's own directory, so it resolves inside which
 
 <placement>
 
-Placement runs the bundled script, which writes every agent definition this plugin ships into the checkout's agent directory for an agent whose plugin manifest cannot declare agents:
+Placement does not apply on this agent: its plugin manifest declares the plugin's agents, so the installer delivers them and no file is written into the checkout. The bundled script reports that and exits without changing anything.
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py" --checkout <repository-root>
