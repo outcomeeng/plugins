@@ -181,6 +181,48 @@ def parse_agent_markdown(path: Path) -> SourceAgent:
     )
 
 
+def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
+    """Parse rendered plugin agent markdown already held as text.
+
+    The build renders an agent's source before converting it, so conversion
+    reads the rendered text rather than re-reading the authored file. ``name``
+    is the converted agent's identity, which the caller derives from the target
+    namespace — a flat namespace carries the plugin slug as a prefix.
+    """
+    frontmatter, body = _split_frontmatter(text)
+    description = _optional_string(frontmatter, "description") or (
+        f"Converted source agent from {source_path.name}."
+    )
+    unsupported_fields = tuple(
+        sorted(key for key in frontmatter if key not in SUPPORTED_FRONTMATTER_FIELDS)
+    )
+    return SourceAgent(
+        source_path=source_path,
+        name=name,
+        description=description,
+        body=body,
+        model=_optional_string(frontmatter, "model"),
+        model_reasoning_effort=_optional_string(frontmatter, "model_reasoning_effort"),
+        effort=_optional_string(frontmatter, "effort"),
+        sandbox_mode=_optional_string(frontmatter, "sandbox_mode"),
+        nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
+        mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
+        permission_mode=_optional_string(frontmatter, "permissionMode"),
+        skills=_string_tuple(frontmatter, "skills"),
+        tools=_string_tuple(frontmatter, "tools"),
+        tools_declared="tools" in frontmatter,
+        disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
+        unsupported_fields=unsupported_fields,
+    )
+
+
+def convert_agent_markdown(text: str, *, source_path: Path, name: str) -> str:
+    """Return the target-native agent artifact for rendered agent markdown."""
+    return render_agent_toml(
+        convert_agent(parse_agent_text(text, source_path=source_path, name=name))
+    )
+
+
 def convert_agent(agent: SourceAgent) -> CodexAgent:
     """Convert one rendered plugin agent into a Codex custom-agent representation."""
     values: dict[str, object] = {

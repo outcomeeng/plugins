@@ -18,7 +18,9 @@ CAN locate sources predictably and express shared-content includes uniformly.
 
 ### Compliance
 
-- ALWAYS: `src/` contains `src/plugins/<plugin>/{skills,agents}/` mirroring the authored plugin structure and `src/_shared/<scope>/<topic>/` holding canonical shared content — a single source tree houses all authored plugin material ([test](tests/test_source_and_templating.compliance.l1.py))
+- ALWAYS: `src/` contains `src/plugins/<plugin>/{skills,agents}/` mirroring the authored plugin structure, `src/_shared/<scope>/<topic>/` holding canonical shared content, and `src/templates/<template>/` holding per-plugin skill templates — a single source tree houses all authored plugin material ([test](tests/test_source_and_templating.compliance.l1.py))
+- ALWAYS: a `src/templates/<template>/` source renders once per plugin with that plugin's slug substituted, emitting one skill into every plugin's generated tree from a single authored body — a template is authored once and never copied per plugin ([test](tests/test_source_and_templating.compliance.l1.py))
+- NEVER: a per-plugin template body names one plugin — a template that hardcodes a plugin slug renders that plugin's identity into every other plugin's generated skill ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: source-tree validation applies the plugin-subdirectory allowlist only to directories, so ordinary files under `src/plugins/<plugin>/` do not fail the build ([test](tests/test_source_and_templating.compliance.l1.py))
 - NEVER: source-tree validation accepts a plugin subdirectory outside the source-owned plugin-subdirectory allowlist ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: shared content directories under `src/_shared/<scope>/<topic>/` contain a `fragment.md` body file and any reference subtrees that travel with it into an including skill — fragments are the unit of inclusion ([test](tests/test_source_and_templating.compliance.l1.py))

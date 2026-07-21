@@ -40,6 +40,7 @@ from outcomeeng_testing.generators.plugin_build import (
     plugin_build_sources,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng.distribution.build import TEMPLATES_DIR_NAME
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
     REPOSITORY_ROOT,
@@ -264,6 +265,31 @@ def _formatter_probe(host_root: Path) -> FormatterProbe:
     return probe
 
 
+def _template_source_for(parts: tuple[str, ...]) -> Path | None:
+    """Return the per-plugin template source behind a generated skill path.
+
+    A template renders into the skill directory ``<plugin>-<template>``, and its
+    converted agent artifacts and placement manifest live beneath that directory,
+    so every one of them traces back to that template's own source files.
+    """
+    plugin, skill_dir = parts[0], parts[2]
+    prefix = f"{plugin}-"
+    if not skill_dir.startswith(prefix):
+        return None
+    template_root = (
+        CANONICAL_SOURCE_ROOT / TEMPLATES_DIR_NAME / skill_dir[len(prefix) :]
+    )
+    if not template_root.is_dir():
+        return None
+    candidate = template_root / Path(*parts[3:])
+    if candidate.is_file():
+        return candidate
+    # A converted agent or placement manifest is derived from the plugin's own
+    # agent sources plus the template that carries them, so the template's
+    # SKILL.md is the ancestor that put it in the tree.
+    return template_root / SKILL_FILENAME
+
+
 def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:
     path = Path(relative_path)
     if not path.parts or path.parts[0] not in {target.value for target in Target}:
@@ -277,6 +303,10 @@ def _source_ancestor_for_dist_path(relative_path: str) -> Path | None:
     parts = plugin_relative.parts
     if len(parts) < 4 or parts[1] != SKILLS_SUBDIR_NAME:
         return None
+
+    template_source = _template_source_for(parts)
+    if template_source is not None:
+        return template_source
     source_skill = (
         CANONICAL_SOURCE_ROOT
         / PLUGINS_DIR_NAME

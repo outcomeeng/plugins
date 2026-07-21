@@ -3,6 +3,10 @@
 !.claude/settings.json
 .codex/*
 !.codex/config.toml
+# Agent definitions an agent whose plugin manifest cannot declare agents reads
+# from the checkout. Placed by each plugin's lifecycle skill and committed, so
+# hosted environments that run no placement step still receive them.
+!.codex/agents/
 # Project-local skills stay local; shipped skills route through src/plugins/ -> dist/
 .agents/skills/
 .pi/*

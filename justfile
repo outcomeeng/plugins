@@ -86,7 +86,10 @@ check-manifests:
 
 # Check skill Markdown formatting and SKILL.md frontmatter
 check-skills:
-    dprint check --config dprint.jsonc "src/plugins/**/skills/**/*.md" "dist/claude/**/skills/**/*.md" "dist/codex/**/skills/**/*.md"
+    dprint check --config dprint.jsonc "src/plugins/**/skills/**/*.md" "src/templates/**/*.md" "dist/claude/**/skills/**/*.md" "dist/codex/**/skills/**/*.md"
+    # src/templates is formatted but not frontmatter-validated: an unrendered
+    # template carries build tokens in place of values, so only its per-plugin
+    # renders under dist/ are real skill frontmatter.
     find src/plugins dist/claude dist/codex -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
 
 # Regenerate committed runtime plugin trees
