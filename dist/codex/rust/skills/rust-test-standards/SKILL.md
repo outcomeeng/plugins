@@ -142,7 +142,7 @@ If `/test` reaches a Stage 5 exception, the double must still preserve coupling 
 
 <predicate_and_oracle_litmus>
 
-Apply every question in `/test-evidence-standards` `<common_litmus_questions>` and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is Rust-specific and never replace or bound it.
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, every per-assertion-type source-and-oracle rule in its `<assertion_type_litmus>`, and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is Rust-specific and never replace or bound it.
 
 - Invert the `assert!`/`assert_eq!` expression. Only the linked `#[test]` changes; no harness, generator, or collaborator code changes.
 - Read the test function alone. Every pass/fail predicate is visible there.
