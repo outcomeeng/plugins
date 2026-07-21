@@ -7,7 +7,7 @@
 
 [[relation]]
 outputs = ["dist/claude/**", "dist/codex/**"]
-sources = ["src/plugins/**", "dprint.jsonc"]
+sources = ["src/plugins/**", "dprint.jsonc", "outcomeeng/validation/spx_version.py"]
 generator = ["outcomeeng/distribution/**"]
 regenerate = "just build-skills"
 
@@ -20,7 +20,10 @@ sources = [
   "dist/claude/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
   "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
 ]
-generator = ["outcomeeng/distribution/instruction_block.py"]
+generator = [
+  "outcomeeng/distribution/instruction_block.py",
+  "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+]
 regenerate = "just build-instructions"
 
 [[relation]]
