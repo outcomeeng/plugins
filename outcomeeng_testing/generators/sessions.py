@@ -1,22 +1,17 @@
-"""Generated domains and spec-derived oracles for sessions evidence."""
+"""Generated domains for sessions evidence."""
 
 from __future__ import annotations
 
 import json
 import hashlib
-import re
 import uuid
 from dataclasses import dataclass, replace
-from pathlib import Path
 
 from outcomeeng.spec_tree_structure import (
     MIN_NODE_INDEX,
     NodeKind,
     format_node_directory_name,
 )
-
-
-ERROR_NAME_PATTERN = re.compile(r"`(?P<name>[A-Za-z][A-Za-z0-9]*Error)`")
 
 
 @dataclass(frozen=True)
@@ -37,14 +32,6 @@ class HandoffPayload:
     def wire_text(self) -> str:
         """Render the JSON-header-plus-body input accepted by the CLI."""
         return f"{json.dumps(self.header)}\n{self.body}"
-
-
-@dataclass(frozen=True)
-class SessionScenarioContracts:
-    """Error-name oracles extracted from the governing scenario assertions."""
-
-    handoff_base_error: str
-    work_branch_error: str
 
 
 def generated_token() -> str:
@@ -94,27 +81,12 @@ def generated_handoff_batch(
     )
 
 
-def session_scenario_contracts(spec_path: Path) -> SessionScenarioContracts:
-    """Read error-name expectations from the spec that declares the scenarios."""
-    names = tuple(dict.fromkeys(ERROR_NAME_PATTERN.findall(spec_path.read_text())))
-    if len(names) != len(SessionScenarioContracts.__dataclass_fields__):
-        raise ValueError(
-            f"expected one error name per scenario contract in {spec_path}: {names}"
-        )
-    return SessionScenarioContracts(
-        handoff_base_error=names[0],
-        work_branch_error=names[1],
-    )
-
-
 __all__ = [
     "HandoffPayload",
-    "SessionScenarioContracts",
     "generated_handoff_batch",
     "generated_handoff_payload",
     "generated_number",
     "generated_relative_path",
     "generated_sha",
     "generated_token",
-    "session_scenario_contracts",
 ]

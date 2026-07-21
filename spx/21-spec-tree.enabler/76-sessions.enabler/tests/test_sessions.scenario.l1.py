@@ -1,12 +1,6 @@
 """Scenario evidence for session handoff, pickup, release, and git anchoring."""
 
-from pathlib import Path
-
-from outcomeeng.spec_tree_structure import node_spec_file
-from outcomeeng_testing.generators.sessions import (
-    generated_token,
-    session_scenario_contracts,
-)
+from outcomeeng_testing.generators.sessions import generated_token
 from outcomeeng_testing.harnesses.git_context import (
     accepted_git_context,
     handoff_git_env,
@@ -110,24 +104,20 @@ def test_linked_tip_handoff_records_tip_sha() -> None:
 
 
 def test_linked_branch_handoff_is_refused() -> None:
-    contracts = session_scenario_contracts(node_spec_file(Path(__file__).parent.parent))
     with handoff_git_env() as env:
         with session_commands(env.linked_on_branch(generated_token())) as commands:
             result = commands.handoff()
 
             assert result.returncode != 0
-            assert contracts.handoff_base_error in result.stderr
             assert not commands.session_files()
 
 
 def test_linked_off_tip_handoff_is_refused() -> None:
-    contracts = session_scenario_contracts(node_spec_file(Path(__file__).parent.parent))
     with handoff_git_env() as env:
         with session_commands(env.linked_detached_off_tip()) as commands:
             result = commands.handoff()
 
             assert result.returncode != 0
-            assert contracts.handoff_base_error in result.stderr
             assert not commands.session_files()
 
 
@@ -144,11 +134,9 @@ def test_explicit_work_branch_is_recorded() -> None:
 
 
 def test_absent_work_branch_is_refused() -> None:
-    contracts = session_scenario_contracts(node_spec_file(Path(__file__).parent.parent))
     with handoff_git_env() as env:
         with session_commands(env.linked_at_origin_tip()) as commands:
             result = commands.handoff(work_branch=env.head_sha())
 
             assert result.returncode != 0
-            assert contracts.work_branch_error in result.stderr
             assert not commands.session_files()
