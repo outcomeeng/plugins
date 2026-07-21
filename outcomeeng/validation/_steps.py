@@ -69,6 +69,13 @@ HOOK_SAFETY_ARGV: Final = (
     "-m",
     "outcomeeng.validation.hook_safety",
 )
+FOUNDATION_MANIFEST_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.foundation_manifest",
+)
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
 # Generated eval artifacts. Both derive from `eval.toml` definitions and the
@@ -215,6 +222,10 @@ VALIDATION_STEPS: Final = (
     Step(
         label="hook-safety",
         argv=HOOK_SAFETY_ARGV,
+    ),
+    Step(
+        label="foundation-manifest",
+        argv=FOUNDATION_MANIFEST_ARGV,
     ),
     Step(
         label="docs-check",
