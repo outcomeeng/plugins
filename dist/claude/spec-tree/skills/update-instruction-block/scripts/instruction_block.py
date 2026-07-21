@@ -866,10 +866,11 @@ def _validated_template_path(raw_template: str) -> pathlib.Path:
     a faulty or hostile argument that points at a symlink or a non-regular file is rejected
     rather than read, keeping the read from escaping into an unintended file.
     """
-    if pathlib.Path(raw_template).is_symlink():
+    template = pathlib.Path(raw_template).expanduser()
+    if template.is_symlink():
         raise CliInputError(f"--template is a symlink: {raw_template}")
     try:
-        template = pathlib.Path(raw_template).expanduser().resolve(strict=True)
+        template = template.resolve(strict=True)
     except OSError as exc:
         raise CliInputError(f"--template does not exist: {raw_template}") from exc
     if not template.is_file():

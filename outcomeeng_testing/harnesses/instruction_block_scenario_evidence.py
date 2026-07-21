@@ -13,6 +13,7 @@ from __future__ import annotations
 import pathlib
 import inspect
 import io
+import os
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
@@ -150,23 +151,32 @@ def _assert_newer_template_adds_section_preserving_shared_region(
 
 
 def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
-    real = tmp_path / "template-target"
-    real.mkdir()
-    link = tmp_path / "link-template.md"
-    link.symlink_to(real, target_is_directory=True)
+    home = tmp_path / "home"
+    home.mkdir()
+    real = _template(home)
+    link = home / "link-template.md"
+    link.symlink_to(real)
     repo = tmp_path / "repo"
     repo.mkdir()
-    code = MODULE.main(
-        [
-            "--template",
-            str(link),
-            "--repo-root",
-            str(repo),
-            "--languages",
-            harness.LANG_PRIMARY,
-            "--write",
-        ]
-    )
+    previous_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(home)
+    try:
+        code = MODULE.main(
+            [
+                "--template",
+                "~/link-template.md",
+                "--repo-root",
+                str(repo),
+                "--languages",
+                harness.LANG_PRIMARY,
+                "--write",
+            ]
+        )
+    finally:
+        if previous_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = previous_home
     assert code == 2
 
 
