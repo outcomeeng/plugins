@@ -8,8 +8,10 @@ CAN install plugin content from committed generated trees that match each coding
 
 ### Compliance
 
-- ALWAYS: every `src/plugins/<plugin>/.../` source file produces exactly one corresponding output in `dist/claude/<plugin>/` and one in `dist/codex/<plugin>/` — a coverage gap means a plugin is missing from a coding-agent output tree ([test](tests/test_target_emission.compliance.l1.py))
-- ALWAYS: `dist/<target>/<plugin>/` mirrors the `src/plugins/<plugin>/` subtree structure for both generated targets — output structure follows source structure ([test](tests/test_target_emission.compliance.l1.py))
+- ALWAYS: every `src/plugins/<plugin>/.../` source file produces at least one corresponding output in `dist/claude/<plugin>/` and at least one in `dist/codex/<plugin>/` — a source that emits into no target tree is a coverage gap, while a fan-out source emits once per plugin it renders for ([test](tests/test_target_emission.compliance.l1.py))
+- ALWAYS: `dist/<target>/<plugin>/` mirrors the `src/plugins/<plugin>/` subtree structure except where the target's agent-capability registry directs an artifact elsewhere — structure follows source unless a target reads that artifact class from a different location ([test](tests/test_target_emission.compliance.l1.py))
+- ALWAYS: a target's native agent format, agent filename shape, and flat-versus-namespaced agent namespace resolve from a source-owned per-target agent-capability registry — adding a target adds a registry entry rather than editing emission logic ([test](tests/test_target_emission.compliance.l1.py))
+- NEVER: a generated target tree carries an agent artifact in a format that target cannot read — each target receives its own native agent artifact and no foreign one ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: `${CLAUDE_SKILL_DIR}/...` paths in source appear verbatim in `dist/claude/` output — Claude Code resolves the variable during skill execution ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: unescaped `${CLAUDE_SKILL_DIR}/...` execution paths in source appear as `${SKILL_DIR}/...` paths in `dist/codex/` output — Codex resolves bundled skill files through its skill-directory variable ([test](tests/test_target_emission.compliance.l1.py))
 - ALWAYS: source lines marked with the skill-directory rewrite escape emit `${CLAUDE_SKILL_DIR}` verbatim in both generated targets — authoring guidance can teach the canonical Claude Code source token while normal executable paths still translate per target ([test](tests/test_target_emission.compliance.l1.py))
