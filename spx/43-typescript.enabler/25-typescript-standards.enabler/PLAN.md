@@ -4,6 +4,35 @@ Coordination note for the TypeScript-only slice. Reconcile against current specs
 decisions, and the plugins-e foundation before acting — a note is a stale-prone input,
 not authority.
 
+## Progress
+
+The evidence foundation advanced beyond the plan below. plugins-e's PR #468
+(`ce11687f8`) shipped the shared `test-evidence-standards` (prose-only, named XML
+sections), rebuilt `audit-typescript-tests` (composes `/audit-tests`, specializes the
+9-category coupling supplement inline, attributes predicate-ownership), and fixed the
+`<dependency_injection>` exemplar. #468 also rewrote the cited governance
+(`test-verification.md`, `15-test-infrastructure.pdr.md`) to the semantic-binding-ownership
+model. `audit-typescript-architecture` was already pure enforcement.
+
+Remaining TypeScript work, in order:
+
+1. **Spec alignment (this slice) — DONE on branch `work/ts-spec-foundation-alignment`.**
+   The 8 spec files aligned to the semantic-binding foundation: the old absolute "NEVER
+   declare variables or constants" replaced by semantic-binding ownership citing
+   `test-verification.md`; 65 `[review]` → `[audit]`; "evidence type" → "assertion type";
+   parent/child facet split (parent owns the predicate seam, `32-test-data-ownership` owns
+   binding-by-data-choice), and the paired predicate-seam audit assertion in
+   `43-test-infrastructure-auditing`. Gated APPROVED by per-node `spec-auditor` runs.
+2. **Property predicate-seam reconciliation.** `typescript-test-standards`
+   `<property_based_testing>` and `audit-typescript-tests:132` still say the invariant lives
+   in the imported property harness, contradicting the shared `<assertion_type_litmus>`
+   ("the invariant remains in the linked test"). Reopens plugins-e's just-merged skills.
+3. **`audit-typescript-code`** — heaviest of the three auditors; minor alignment to the
+   pure-enforcement shape at most.
+
+The Goal/Foundation sections below predate #468 and are retained as the derivation trail;
+treat the Progress list above as current.
+
 ## Goal
 
 Three coupled corrections, driven by the PR 459 evidence-routing foundation (see
@@ -160,8 +189,11 @@ retracted as contrary to `<ordering_model>` and `<declarations>`.
 - **`[review]` → `[audit]`** on every edited node (65 occurrences). Foundation-mandated by
   `verify-skill.md:22` (closed tag set), not just legacy spelling. Text unchanged, tag only;
   gate each with the spec auditor.
-- **"evidence type" → "verification type"/"assertion type"** wherever it appears
-  (`typescript-tests.md:3,11`, and any skill body) — retired term per `35-evidence/ISSUES.md:11`.
+- **"evidence type" → "assertion type"** in the touched spec files (`typescript-tests.md:3,11`)
+  — retired term per `35-evidence/ISSUES.md:11`. One skill-body residue remains outside this
+  spec-only slice — `audit-typescript-tests/SKILL.md:55` ("misdeclares its evidence type") —
+  retired in the property predicate-seam slice above, which already edits that skill under
+  the skill-auditor gate.
 - From this node's ISSUES.md: "Top-Level Specs Restate Methodology" (the three top-level
   child specs use generic methodology-layer assertions) and "[eval] Coverage Beyond the
   Slice" (candidates for `[review]`→`[eval]` migration once the auditor emits structural
