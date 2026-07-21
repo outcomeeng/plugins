@@ -16,6 +16,7 @@ from pathlib import Path
 
 from outcomeeng.validation.foundation_manifest import (
     CATALOG_DIRECTORIES,
+    CORE_DOCUMENT_RELATIVE_PATH,
     CORE_FIELD,
     EXAMPLES_FIELD,
     MANIFEST_RELATIVE_PATH,
@@ -32,7 +33,7 @@ def _payload(
     references: tuple[str, ...],
     templates: tuple[str, ...],
     examples: tuple[str, ...],
-    core: object = "skills/understand/SKILL.md",
+    core: object = CORE_DOCUMENT_RELATIVE_PATH,
     schema_version: object = SUPPORTED_SCHEMA_VERSION,
 ) -> dict[str, object]:
     return {
@@ -72,7 +73,7 @@ def _valid_plugin(root: Path) -> Path:
     return _write_plugin(
         root,
         json.dumps(payload),
-        files=("skills/understand/SKILL.md", reference),
+        files=(CORE_DOCUMENT_RELATIVE_PATH, reference),
     )
 
 
@@ -85,7 +86,7 @@ def test_missing_manifest_file_is_flagged(tmp_path: Path) -> None:
 
 
 def test_malformed_json_is_flagged(tmp_path: Path) -> None:
-    root = _write_plugin(tmp_path, "{not json", files=("skills/understand/SKILL.md",))
+    root = _write_plugin(tmp_path, "{not json", files=(CORE_DOCUMENT_RELATIVE_PATH,))
     assert manifest_violations(root)
 
 
@@ -97,7 +98,7 @@ def test_unsupported_schema_version_is_flagged(tmp_path: Path) -> None:
         schema_version=SUPPORTED_SCHEMA_VERSION + 1,
     )
     root = _write_plugin(
-        tmp_path, json.dumps(payload), files=("skills/understand/SKILL.md",)
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
     )
     assert manifest_violations(root)
 
@@ -105,7 +106,7 @@ def test_unsupported_schema_version_is_flagged(tmp_path: Path) -> None:
 def test_non_integer_schema_version_is_flagged(tmp_path: Path) -> None:
     payload = _payload(references=(), templates=(), examples=(), schema_version="one")
     root = _write_plugin(
-        tmp_path, json.dumps(payload), files=("skills/understand/SKILL.md",)
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
     )
     assert manifest_violations(root)
 
@@ -126,10 +127,10 @@ def test_more_than_one_core_entry_is_flagged(tmp_path: Path) -> None:
         references=(),
         templates=(),
         examples=(),
-        core=["skills/understand/SKILL.md", "skills/understand/other.md"],
+        core=[CORE_DOCUMENT_RELATIVE_PATH, "skills/understand/other.md"],
     )
     root = _write_plugin(
-        tmp_path, json.dumps(payload), files=("skills/understand/SKILL.md",)
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
     )
     assert manifest_violations(root)
 
@@ -139,7 +140,7 @@ def test_content_bearing_extra_field_is_flagged(tmp_path: Path) -> None:
     payload = _payload(references=(), templates=(), examples=())
     payload["body"] = "TRUTH FLOWS DOWN."
     root = _write_plugin(
-        tmp_path, json.dumps(payload), files=("skills/understand/SKILL.md",)
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
     )
     assert manifest_violations(root)
 
@@ -147,7 +148,7 @@ def test_content_bearing_extra_field_is_flagged(tmp_path: Path) -> None:
 def test_unresolved_declared_path_is_flagged(tmp_path: Path) -> None:
     payload = _payload(references=(_reference("absent.md"),), templates=(), examples=())
     root = _write_plugin(
-        tmp_path, json.dumps(payload), files=("skills/understand/SKILL.md",)
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
     )
     assert manifest_violations(root)
 
@@ -158,7 +159,7 @@ def test_duplicate_path_within_a_catalog_is_flagged(tmp_path: Path) -> None:
     root = _write_plugin(
         tmp_path,
         json.dumps(payload),
-        files=("skills/understand/SKILL.md", reference),
+        files=(CORE_DOCUMENT_RELATIVE_PATH, reference),
     )
     assert manifest_violations(root)
 
@@ -169,7 +170,7 @@ def test_duplicate_path_across_catalogs_is_flagged(tmp_path: Path) -> None:
     root = _write_plugin(
         tmp_path,
         json.dumps(payload),
-        files=("skills/understand/SKILL.md", reference),
+        files=(CORE_DOCUMENT_RELATIVE_PATH, reference),
     )
     assert manifest_violations(root)
 
