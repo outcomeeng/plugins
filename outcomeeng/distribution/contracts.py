@@ -65,10 +65,16 @@ def build_variable_token(variable: str) -> str:
     return f"{BUILD_VARIABLE_DELIMITER_START} {variable} {BUILD_VARIABLE_DELIMITER_END}"
 
 
-def format_runtime_token(kind: str, capability: str) -> str:
-    """Return the authored template token for one runtime registry capability."""
+def format_runtime_token(kind: str, capability: str, runtime: str | None = None) -> str:
+    """Return the authored template token for one runtime registry capability.
+
+    Mirrors the template global's own signature: the default form renders the
+    build target's name, while a runtime-explicit second argument renders the
+    named runtime's name regardless of target.
+    """
+    arguments = f"{capability!r}" if runtime is None else f"{capability!r}, {runtime!r}"
     return (
-        f"{BUILD_VARIABLE_DELIMITER_START} {kind}({capability!r}) "
+        f"{BUILD_VARIABLE_DELIMITER_START} {kind}({arguments}) "
         f"{BUILD_VARIABLE_DELIMITER_END}"
     )
 
