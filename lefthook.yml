@@ -18,6 +18,11 @@ pre-commit:
       run: just build-skills && uv run python -m outcomeeng.distribution.dist_diff
       stage_fixed: true
       priority: 20
+    place-agents:
+      glob: "{src/plugins/*/agents/*.md,src/templates/**}"
+      run: just place-agents
+      stage_fixed: true
+      priority: 22
     regenerate-instruction-blocks:
       glob: "{src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md,src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py,spx/**/tests/*}"
       run: just build-instructions

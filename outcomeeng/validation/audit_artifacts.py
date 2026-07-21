@@ -5,6 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.build import (
+    AGENT_CAPABILITY_REGISTRY,
+    LIFECYCLE_TEMPLATE_NAME,
+    agent_slug,
+)
+from outcomeeng.distribution.contracts import MARKDOWN_FILE_SUFFIX
 from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
@@ -22,7 +28,8 @@ AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 AUDIT_SKILL_PREFIX: Final = "audit-"
-IMPLEMENTATION_AUDITOR_FILENAME: Final = "implementation-auditor.md"
+IMPLEMENTATION_AUDITOR_STEM: Final = "implementation-auditor"
+IMPLEMENTATION_AUDITOR_FILENAME: Final = f"{IMPLEMENTATION_AUDITOR_STEM}.md"
 RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES: Final = (
     "auditor.md",
     "audit-orchestrator.md",
@@ -79,6 +86,47 @@ def audit_contract_surfaces(root: Path) -> tuple[Path, ...]:
     return present_surfaces
 
 
+def agent_surface_paths(surface: Path) -> tuple[Path, ...]:
+    """Return every agent artifact a plugin surface carries.
+
+    A surface whose target declares agents in its plugin manifest keeps them as
+    authored markdown under ``<plugin>/agents/``. A surface for a target whose
+    manifest cannot declare agents carries converted artifacts inside each
+    plugin's lifecycle skill instead, so the contract check follows the same
+    per-target agent capability the build emits from.
+    """
+    capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
+    if capability is None or capability.manifest_declares_agents:
+        return tuple(surface.glob(f"*/{AGENTS_DIR_NAME}/*.md"))
+    return tuple(
+        surface.glob(f"*/{SKILLS_DIR_NAME}/*/{AGENTS_DIR_NAME}/*{capability.suffix}")
+    )
+
+
+def agent_artifact_name(surface: Path, plugin: str, agent_stem: str) -> str:
+    """Return one agent's artifact filename on ``surface``."""
+    capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
+    if capability is None or capability.manifest_declares_agents:
+        return f"{agent_stem}{MARKDOWN_FILE_SUFFIX}"
+    return f"{agent_slug(plugin, agent_stem, capability=capability)}{capability.suffix}"
+
+
+def agent_artifact_path(surface: Path, plugin: str, agent_stem: str) -> Path:
+    """Return where ``surface`` carries one plugin agent."""
+    capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
+    filename = agent_artifact_name(surface, plugin, agent_stem)
+    if capability is None or capability.manifest_declares_agents:
+        return surface / plugin / AGENTS_DIR_NAME / filename
+    return (
+        surface
+        / plugin
+        / SKILLS_DIR_NAME
+        / f"{plugin}-{LIFECYCLE_TEMPLATE_NAME}"
+        / AGENTS_DIR_NAME
+        / filename
+    )
+
+
 def check_audit_runtime_surface(surface: Path) -> list[str]:
     """Return audit-runtime violations for one plugin surface."""
     errors = check_runtime_surface(surface)
@@ -110,12 +158,13 @@ def check_runtime_surface(surface: Path) -> list[str]:
 def check_wrapper_surface(surface: Path) -> list[str]:
     """Return implementation-wrapper violations for one plugin surface."""
     errors: list[str] = []
-    agents_dir = surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME
-    wrapper_path = agents_dir / IMPLEMENTATION_AUDITOR_FILENAME
+    wrapper_path = agent_artifact_path(
+        surface, SPEC_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
+    )
     if not wrapper_path.is_file():
         errors.append(f"{wrapper_path}: wrapper missing")
 
-    agent_paths = tuple(surface.glob(f"*/{AGENTS_DIR_NAME}/*.md"))
+    agent_paths = agent_surface_paths(surface)
     errors.extend(
         f"{path}: retired wrapper exists"
         for path in agent_paths

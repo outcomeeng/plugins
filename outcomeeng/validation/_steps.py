@@ -55,6 +55,8 @@ MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 DIST_DIFF_STEP_LABEL: Final = "dist-diff"
+PLACE_AGENTS_STEP_LABEL: Final = "place-agents-check"
+PLACE_AGENTS_ARGV: Final = ("just", PLACE_AGENTS_STEP_LABEL)
 SPX_VERSION_FLOOR_ARGV: Final = (
     "uv",
     "run",
@@ -162,6 +164,7 @@ PREFLIGHT_STEPS: Final = (
 VALIDATION_STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label=DIST_DIFF_STEP_LABEL, argv=DIST_DIFF_ARGV),
+    Step(label=PLACE_AGENTS_STEP_LABEL, argv=PLACE_AGENTS_ARGV),
     Step(label="instructions-diff", argv=INSTRUCTION_BLOCK_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=FMT_CHECK_ARGV),
