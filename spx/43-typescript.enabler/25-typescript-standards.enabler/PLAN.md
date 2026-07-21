@@ -188,8 +188,11 @@ retracted as contrary to `<ordering_model>` and `<declarations>`.
 - **`[review]` → `[audit]`** on every edited node (65 occurrences). Foundation-mandated by
   `verify-skill.md:22` (closed tag set), not just legacy spelling. Text unchanged, tag only;
   gate each with the spec auditor.
-- **"evidence type" → "verification type"/"assertion type"** wherever it appears
-  (`typescript-tests.md:3,11`, and any skill body) — retired term per `35-evidence/ISSUES.md:11`.
+- **"evidence type" → "assertion type"** in the touched spec files (`typescript-tests.md:3,11`)
+  — retired term per `35-evidence/ISSUES.md:11`. One skill-body residue remains outside this
+  spec-only slice — `audit-typescript-tests/SKILL.md:55` ("misdeclares its evidence type") —
+  retired in the property predicate-seam slice above, which already edits that skill under
+  the skill-auditor gate.
 - From this node's ISSUES.md: "Top-Level Specs Restate Methodology" (the three top-level
   child specs use generic methodology-layer assertions) and "[eval] Coverage Beyond the
   Slice" (candidates for `[review]`→`[eval]` migration once the auditor emits structural
