@@ -1,0 +1,9 @@
+# Plan: agentic-verification placeholder
+
+This node and its two runtime children are declared placeholders: the opening declarations exist, and no decision records, assertions, tests, or implementation exist yet. Pending work, in dependency order:
+
+- **Adapter-contract ADR** — define the runtime adapter contract: skill selector, session-trace (JSONL) input, trial count, bounded invocation (budget and timeout ceilings), structured machine-verifiable output envelope, and cost/cache telemetry. The contract generalizes the `ModelRunner` seam described in `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md` from a per-case model call to a full runtime invocation.
+- **Trace-provenance decision** — decide where session-trace inputs come from (captured real sessions, curated fixtures, or generated traces) and how a trace's runtime-specific format is owned by the matching runtime child node.
+- **Prompt-caching re-derivation** — relocate and re-derive `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md` under this node. Its gate condition is stale: `anthropics/claude-code#34629` closed without resolution and the fork-session cache regression persists, so the three realization paths — the community request interceptor, partial amortization within one session, or staying single-turn — are an operator decision recorded when the decision re-derives here.
+- **Codex headless invocation spike** — establish the Codex adapter's bounded headless invocation shape before `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-codex-invocation.enabler` gains assertions.
+- **Skills-update gate** — the python and test skills are updated before any adapter implementation; implementation code in this subtree is blocked until that gate clears.

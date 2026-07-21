@@ -1,4 +1,19 @@
-# Eval Harness: Plan — prompt-caching implementation (gated)
+# Eval Harness: Plan — relocation and prompt-caching background
+
+## Relocation
+
+The eval-harness redesign re-homes this concern: eval-verification governance
+moves to `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/`
+(harness vocabulary under its `21-eval-harness.enabler` child), and the runtime
+adapter contract the redesigned harness delegates to lives under
+`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/`.
+New eval-harness decisions and specs land there; this node's specs, decisions,
+and evidence stay authoritative for the shipped harness until the
+implementation cutover named in the new subtree's `PLAN.md` files, after which
+this node retires. The prompt-caching plan below predates the redesign: its
+gate condition is stale (`anthropics/claude-code#34629` closed without
+resolution and the regression persists), and the caching decision re-derives at
+the new location rather than being implemented here.
 
 `.github/workflows/spec-tree-evals.yml` is authored and lint-clean. It
 collects changed paths, then delegates planning and execution to
@@ -22,7 +37,7 @@ the token account can bypass `main` branch protection for commit-back pushes.
 
 Deferred follow-ups tracked in `ISSUES.md` include cross-suite parallelism.
 
-## Prompt-caching implementation (decided; gated on CLI regression #34629)
+## Prompt-caching background (re-derived at the relocated subtree)
 
 The prompt-caching decision is reconciled.
 `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`
@@ -36,38 +51,24 @@ conclusion corrected from the earlier single-turn-only reading); the empirical
 fixed-prefix payoff is `prototypes/eval-cache-amortization/FINDINGS.md` (5.45× per
 call, ~73–80% per suite).
 
-Realization is gated on an upstream CLI regression: since v2.1.69
-(`anthropics/claude-code#34629`; installed CLI 2.1.185 is affected),
-`claude --print --resume`/`--fork-session` stops reusing the cached conversation
-history, so a forked case cold-writes the prefix exactly as the current
-single-turn shape does. The harness keeps its current single-turn invocation
-until the regression clears. The telemetry that makes a run's caching observable
-already ships (the per-run cache read and creation token aggregates in
-`cost_summary` and `history.jsonl`).
+The fork-session cache regression persists: since v2.1.69
+(`anthropics/claude-code#34629`, closed without resolution; current CLI
+releases remain affected), `claude --print --resume`/`--fork-session` stops
+reusing the cached conversation history, so a forked case cold-writes the
+prefix exactly as the current single-turn shape does. The harness keeps its
+current single-turn invocation while the regression persists. The telemetry
+that makes a run's caching observable already ships (the per-run cache read
+and creation token aggregates in `cost_summary` and `history.jsonl`).
 
-When the regression clears — upstream fix, a pinned pre-regression CLI (v2.1.68),
-or the published community cache fix — implement and validate:
-
-1. **Validate fork-per-case empirically.** Extend
-   `prototypes/eval-cache-amortization/measure.py` to load a base session with the
-   plugin, fork it per case with *differing* questions, and confirm each fork reads
-   the plugin prefix warm (read ≈ full prefix, write ≈ question only). This is the
-   one claim the existing measurements do not yet cover directly — Result 1 used an
-   identical prompt; real cases vary the question.
-2. **Build the base-session-fork-per-case runner.** Load every plugin once into a
-   base session, then fork it per case so each case reads the shared prefix warm
-   and writes only its suffix; keep cases independent (fork the same clean base,
-   never accumulate). The path-bearing `[test]` assertions (one shared warm prefix;
-   warmth from the server cache, not a resident process) land in `eval-harness.md`
-   (likely a co-located child node, EXCLUDE'd until green) when `/apply` builds it.
-3. **Pack invocations within the time-to-live** so the shared prefix is not evicted
-   and re-written mid-run.
-4. **Retire the prototype once the measurement migrates.** When the harness (or the
-   SPX CLI) reproduces the amortization measurement, remove
-   `prototypes/eval-cache-amortization/` — its `FINDINGS.md`/`investigation.md` are
-   the durable record; `measure.py` is the throwaway measurement tool, kept only
-   until the harness absorbs it, per the prove-then-migrate-or-remove lifecycle in
-   `spx/12-shipped-scripting.adr.md`.
+No fork-per-case implementation happens in this node. Per the Relocation
+section above, the caching decision re-derives under
+`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/`,
+where its `PLAN.md` records the realization paths (community interceptor,
+partial amortization, single-turn) as an operator decision. The
+`prototypes/eval-cache-amortization/` prototype stays in place as the durable
+measurement record (`FINDINGS.md`, `investigation.md`) until the relocated
+subtree absorbs or retires it per the prove-then-migrate-or-remove lifecycle
+in `spx/12-shipped-scripting.adr.md`.
 
 ## References
 

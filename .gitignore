@@ -3,6 +3,8 @@
 !.claude/settings.json
 .codex/*
 !.codex/config.toml
+# Project-local skills stay local; shipped skills route through src/plugins/ -> dist/
+.agents/skills/
 .pi/*
 !.pi/claude-plugins.json
 
