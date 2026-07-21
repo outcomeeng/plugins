@@ -1,4 +1,4 @@
-# Eval Harness: Plan — prompt-caching implementation (gated)
+# Eval Harness: Plan — relocation and prompt-caching background
 
 ## Relocation
 
