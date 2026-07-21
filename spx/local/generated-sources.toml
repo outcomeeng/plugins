@@ -6,7 +6,9 @@
 # trailing content only where the begin or end is a prefix of a version- or
 # name-bearing marker line (router and shared fences). A marker quoted in
 # prose or an example fence bounds nothing, and a relation's generator fence
-# matching is authoritative where stricter. Extents span begin through end
+# matching is authoritative where stricter. The eval-trigger generator does
+# not itself enforce line-start anchoring; the declared line-start rule
+# governs attribution for that relation. Extents span begin through end
 # inclusive, for every such pair in the file.
 
 [[relation]]
@@ -23,6 +25,7 @@ outputs = [
 sources = [
   "dist/claude/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
   "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
+  "spx/**/tests/*",
 ]
 generator = [
   "outcomeeng/distribution/instruction_block.py",
