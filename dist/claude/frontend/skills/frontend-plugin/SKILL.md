@@ -2,6 +2,7 @@
 name: frontend-plugin
 description: >-
   ALWAYS invoke this skill to operate the frontend plugin's own lifecycle in a checkout — report its version, install or refresh the agent definitions it provides when they are missing, and check its footprint. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
+argument-hint: "[help|version|init|upgrade|check]"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
 ---
 
@@ -11,7 +12,7 @@ The frontend plugin's consumer-side footprint reported, placed, or refreshed in 
 
 <verbs>
 
-Claude selects one verb from the invocation. `help` is the default when none is given.
+Select one verb from the invocation. `help` is the default when none is given.
 
 | Verb      | Result                                                                               |
 | --------- | ------------------------------------------------------------------------------------ |
@@ -27,7 +28,13 @@ Claude selects one verb from the invocation. `help` is the default when none is 
 
 <version_reporting>
 
-`version` reports the version of the plugin directory the session actually resolved, read from the manifest beside this skill. A session may resolve a plugin from its marketplace source tree or from a versioned cache snapshot, and those diverge — so the version a reader needs is the one backing the running session, never the newest on disk elsewhere.
+`version` reports the version of the plugin directory the session actually resolved. Read exactly one file:
+
+```text
+${CLAUDE_SKILL_DIR}/../../.claude-plugin/plugin.json
+```
+
+That path is relative to this skill's own directory, so it resolves inside whichever plugin copy the session loaded. A session may resolve a plugin from its marketplace source tree or from a versioned cache snapshot, and those diverge — so the version a reader needs is the one backing the running session, never the newest on disk elsewhere. Every plugin tree carries both manifest directories; read the one named above and never the other, because only that one is authoritative for the agent this copy was rendered for.
 
 </version_reporting>
 
@@ -61,14 +68,14 @@ The definitions were placed by hand from the skill directory, so pruning never r
 
 **Claude reported the version from a manifest elsewhere on disk.**
 
-A marketplace source tree and a cache snapshot both carry a manifest, and they diverge. The reported version described a plugin the session was not running. Read the manifest beside this skill.
+A marketplace source tree and a cache snapshot both carry a manifest, and they diverge, and each plugin tree carries a manifest directory per agent. The reported version described a plugin the session was not running. Read the one skill-directory-relative path `<version_reporting>` names, resolving it rather than searching for a manifest.
 
 </failure_modes>
 
 <success_criteria>
 
 - Exactly one verb runs per invocation, defaulting to `help`.
-- `version` reports the manifest beside this skill, never another copy on disk.
+- `version` reads only the skill-directory-relative manifest path named above, never another copy on disk.
 - Placement and pruning happen through the bundled script, never by hand.
 - Every file written or removed carries this plugin's namespace prefix; no other file in the agent directory changes.
 - `check` writes nothing and reports drift.
