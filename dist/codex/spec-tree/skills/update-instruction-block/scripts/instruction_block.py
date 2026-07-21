@@ -27,17 +27,6 @@ extensions, replaces symlinked root instruction files with regular files, remove
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
 
-Covered by ``just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/``.
-The deterministic modules ``test_instruction_block.scenario.l1.py``,
-``test_instruction_block.mapping.l1.py``, ``test_instruction_block.property.l1.py``,
-``test_instruction_block.compliance.l1.py``, ``test_language_override.property.l1.py``, and
-``test_router_spacing.mapping.l1.py`` cover the render, write, check, and reconcile paths. Their
-cases assert both root files are regenerated without changing independent content, check maps
-absent/stale/current inputs to the matching status, reconcile refuses dirty, tied, one-sided, and
-malformed shared regions, invalid symlink/path/language inputs exit nonzero, and repeated writes
-are idempotent. The evidence harness allocates each temporary product through
-``TemporaryDirectory`` and synthesizes per-case subdirectories inside it; the context manager owns
-cleanup.
 """
 
 from __future__ import annotations
