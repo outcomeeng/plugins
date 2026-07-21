@@ -33,9 +33,12 @@ COMMAND_UNAVAILABLE_EXIT: Final = 127
 SPX_SESSION_SHOW_COMMAND: Final = ("spx", "session", "show")
 SPX_SESSION_SHOW_JSON_FLAG: Final = "--json"
 SPX_SPEC_STATUS_COMMAND: Final = ("spx", "spec", "status")
+SPX_FORMAT_FLAG: Final = "--format"
+SPX_JSON_FORMAT: Final = "json"
 GIT_VERIFY_REF_COMMAND: Final = ("git", "rev-parse", "--verify", "--quiet")
 GIT_STATUS_COMMAND: Final = ("git", "status", "--porcelain")
 GH_PR_VIEW_COMMAND: Final = ("gh", "pr", "view")
+GH_JSON_FLAG: Final = "--json"
 GH_PR_STATE_FIELD: Final = "state"
 
 SESSION_GIT_REF_FIELD: Final = "git_ref"
@@ -49,14 +52,10 @@ SESSION_REQUIRED_FIELDS: Final = (
     SESSION_SPECS_FIELD,
     SESSION_FILES_FIELD,
 )
-NODE_STATUS_SCALAR_FIELDS: Final = (
-    "node",
-    "path",
-    "spec",
-    "status",
-    "state",
-    "result",
-)
+SPEC_TREE_ROOT_DIR: Final = "spx"
+SPEC_STATUS_NODES_FIELD: Final = "nodes"
+NODE_RECORD_ID_FIELD: Final = "id"
+NODE_RECORD_CHILDREN_FIELD: Final = "children"
 type JsonScalar = str | int | float | bool | None
 
 
@@ -346,19 +345,32 @@ def check_paths(session: Session, repo: Path) -> list[ClaimVerdict]:
 
 
 def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerdict]:
+    if not session.specs:
+        return []
+    code, out, err = runner.run(
+        [*SPX_SPEC_STATUS_COMMAND, SPX_FORMAT_FLAG, SPX_JSON_FORMAT]
+    )
     verdicts: list[ClaimVerdict] = []
     for spec in session.specs:
         node = str(Path(spec).parent)
-        code, out, err = runner.run(
-            [*SPX_SPEC_STATUS_COMMAND, node, "--format", "json"]
-        )
         if code != 0:
             verdicts.append(
                 claim_verdict(
                     ClaimKind.NODE_STATUS,
                     node,
                     ClaimRelation.UNAVAILABLE,
-                    f"spx spec status unavailable: {err.strip() or 'non-zero exit'}",
+                    f"spx spec status unavailable: {_detail(err)}",
+                )
+            )
+            continue
+        record = _node_record(node, out)
+        if record is None:
+            verdicts.append(
+                claim_verdict(
+                    ClaimKind.NODE_STATUS,
+                    node,
+                    ClaimRelation.UNAVAILABLE,
+                    f"node absent from the spx spec status projection: {node}",
                 )
             )
             continue
@@ -367,29 +379,49 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
                 ClaimKind.NODE_STATUS,
                 node,
                 ClaimRelation.OBSERVED,
-                _node_status_evidence(node, out),
+                json.dumps(record, sort_keys=True),
             )
         )
     return verdicts
 
 
-def _node_status_evidence(node: str, stdout: str) -> str:
+def node_tree_id(node: str) -> str:
+    """Address a node the way the spec-status projection keys it."""
+    parts = PurePosixPath(node).parts
+    if parts and parts[0] == SPEC_TREE_ROOT_DIR:
+        parts = parts[1:]
+    return str(PurePosixPath(*parts)) if parts else ""
+
+
+def _node_record(node: str, stdout: str) -> dict[str, JsonScalar] | None:
     try:
         payload = json.loads(stdout)
     except json.JSONDecodeError:
-        return stdout.strip()
+        return None
     if not isinstance(payload, dict):
-        return stdout.strip()
-    summary: dict[str, JsonScalar] = {}
-    for key in NODE_STATUS_SCALAR_FIELDS:
-        if key not in payload:
+        return None
+    record = _find_node_record(payload.get(SPEC_STATUS_NODES_FIELD), node_tree_id(node))
+    if record is None:
+        return None
+    return {
+        key: value
+        for key, value in record.items()
+        if key != NODE_RECORD_CHILDREN_FIELD and _is_json_scalar(value)
+    }
+
+
+def _find_node_record(nodes: object, node_id: str) -> dict[str, object] | None:
+    if not isinstance(nodes, list):
+        return None
+    for entry in nodes:
+        if not isinstance(entry, dict):
             continue
-        value = payload.get(key)
-        if _is_json_scalar(value):
-            summary[key] = value
-    if "node" not in summary:
-        summary["node"] = node
-    return json.dumps(summary, sort_keys=True)
+        if entry.get(NODE_RECORD_ID_FIELD) == node_id:
+            return entry
+        found = _find_node_record(entry.get(NODE_RECORD_CHILDREN_FIELD), node_id)
+        if found is not None:
+            return found
+    return None
 
 
 def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
@@ -421,7 +453,7 @@ def check_external_ids(session: Session, runner: CommandRunner) -> list[ClaimVer
     verdicts: list[ClaimVerdict] = []
     for number in session.pr_numbers:
         code, out, err = runner.run(
-            [*GH_PR_VIEW_COMMAND, number, "--json", GH_PR_STATE_FIELD]
+            [*GH_PR_VIEW_COMMAND, number, GH_JSON_FLAG, GH_PR_STATE_FIELD]
         )
         if code != 0:
             verdicts.append(

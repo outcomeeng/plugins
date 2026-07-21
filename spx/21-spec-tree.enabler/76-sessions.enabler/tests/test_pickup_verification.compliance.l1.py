@@ -1,13 +1,15 @@
 """Compliance evidence for pickup claim verification."""
 
 import __future__
+import json
 import sys
 
 from outcomeeng_testing.harnesses.verify_session_claims import (
+    absent_node_status_observation,
     default_runner_failure_observations,
     load_verify_session_claims_module,
     metadata_loading_observation,
-    node_status_observation,
+    node_status_observations,
     read_only_verification_observation,
     script_import_roots,
     subprocess_call_owners,
@@ -68,16 +70,31 @@ def test_verification_is_read_only_and_uses_source_commands() -> None:
     assert observation.status_after == observation.status_before
 
 
-def test_node_status_evidence_keeps_target_node_scalar_fields_only() -> None:
+def test_node_status_evidence_is_the_target_node_record_without_children() -> None:
     module = load_verify_session_claims_module()
-    observation = node_status_observation()
 
-    assert isinstance(observation.evidence, dict)
-    assert observation.evidence == {
-        field: observation.payload[field]
-        for field in module.NODE_STATUS_SCALAR_FIELDS
-        if field in observation.payload
-    }
+    for observation in node_status_observations():
+        assert observation.actual.verdict is module.Verdict.CONFIRMED
+        evidence = json.loads(observation.actual.evidence)
+        record = observation.projected_record
+
+        assert (
+            evidence[module.NODE_RECORD_ID_FIELD] == record[module.NODE_RECORD_ID_FIELD]
+        ), f"{observation.node_path} surfaced another node's record"
+        assert module.NODE_RECORD_CHILDREN_FIELD not in evidence
+        assert evidence == {
+            key: value
+            for key, value in record.items()
+            if not isinstance(value, list | dict)
+        }, f"{observation.node_path} evidence departs from its projection record"
+
+
+def test_absent_node_resolves_to_unverifiable_naming_the_node() -> None:
+    module = load_verify_session_claims_module()
+    observation = absent_node_status_observation()
+
+    assert observation.actual.verdict is module.Verdict.UNVERIFIABLE
+    assert observation.node_path in observation.actual.evidence
 
 
 def test_metadata_loading_does_not_require_local_session_file_body() -> None:

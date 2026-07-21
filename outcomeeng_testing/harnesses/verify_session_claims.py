@@ -78,9 +78,9 @@ class BranchReferenceObservation:
 
 @dataclass(frozen=True)
 class ObservedStateObservation:
-    """Generated live values and the product outputs that surfaced them."""
+    """Current live values and the product outputs that surfaced them."""
 
-    node_state: str
+    node_values: tuple[str, ...]
     node: ClaimVerdictLike
     external_state: str
     external: ClaimVerdictLike
@@ -88,10 +88,19 @@ class ObservedStateObservation:
 
 @dataclass(frozen=True)
 class NodeStatusObservation:
-    """Raw node-status payload paired with parsed verifier evidence."""
+    """A real projection record paired with the verifier's node-status verdict."""
 
-    payload: dict[str, object]
-    evidence: object
+    node_path: str
+    projected_record: dict[str, object]
+    actual: ClaimVerdictLike
+
+
+@dataclass(frozen=True)
+class AbsentNodeObservation:
+    """A node absent from the real projection and the verdict it produced."""
+
+    node_path: str
+    actual: ClaimVerdictLike
 
 
 @dataclass(frozen=True)
@@ -182,9 +191,8 @@ def _exercise_claim_relation(
                 (repo / relative_path).write_text(generated_token())
             files = (relative_path,)
         elif kind is module.ClaimKind.NODE_STATUS:
-            spec = generated_relative_path()
-            specs = (spec,)
-            scripts = _node_status_arrangement(module, spec, relation)
+            specs = (projection_spec_path(),)
+            scripts = _node_status_arrangement(module, relation)
         elif kind is module.ClaimKind.UNCOMMITTED_STATE:
             git_status = module.GitStatus.CLEAN
             if relation is module.ClaimRelation.DIFFERS:
@@ -243,17 +251,9 @@ def _git_ref_arrangement(
     raise ClaimHarnessError(f"unhandled git-ref relation: {relation}")
 
 
-def _node_status_arrangement(
-    module: ModuleType, spec: str, relation: object
-) -> ScriptMap:
+def _node_status_arrangement(module: ModuleType, relation: object) -> ScriptMap:
     if relation is module.ClaimRelation.OBSERVED:
-        return {
-            tuple(module.SPX_SPEC_STATUS_COMMAND): (
-                0,
-                _node_status_json(module, spec),
-                "",
-            )
-        }
+        return _projection_script(module)
     if relation is module.ClaimRelation.UNAVAILABLE:
         return {
             tuple(module.SPX_SPEC_STATUS_COMMAND): (
@@ -263,6 +263,120 @@ def _node_status_arrangement(
             )
         }
     raise ClaimHarnessError(f"unhandled node-status relation: {relation}")
+
+
+def projection_spec_path() -> str:
+    """Return a spec path under a node the real projection carries."""
+    node_id = sorted(spec_status_records())[0]
+    return f"{spec_tree_root_name()}/{node_id}/{generated_token()}.md"
+
+
+def _projection_script(module: ModuleType) -> ScriptMap:
+    return {tuple(module.SPX_SPEC_STATUS_COMMAND): (0, spec_status_stdout(), "")}
+
+
+def spec_status_stdout() -> str:
+    """Return the real projection the installed spx CLI emits for this tree."""
+    module = load_verify_session_claims_module()
+    proc = subprocess.run(
+        [
+            *module.SPX_SPEC_STATUS_COMMAND,
+            module.SPX_FORMAT_FLAG,
+            module.SPX_JSON_FORMAT,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return proc.stdout
+
+
+def spec_status_records() -> dict[str, dict[str, object]]:
+    """Flatten every node record the real projection carries, keyed by its id."""
+    module = load_verify_session_claims_module()
+    payload = json.loads(spec_status_stdout())
+    records: dict[str, dict[str, object]] = {}
+
+    def collect(nodes: object) -> None:
+        if not isinstance(nodes, list):
+            return
+        for entry in nodes:
+            if not isinstance(entry, dict):
+                continue
+            records[str(entry[module.NODE_RECORD_ID_FIELD])] = entry
+            collect(entry.get(module.NODE_RECORD_CHILDREN_FIELD))
+
+    collect(payload[module.SPEC_STATUS_NODES_FIELD])
+    if not records:
+        raise ClaimHarnessError("the spec-status projection carries no node records")
+    return records
+
+
+def spec_tree_root_name() -> str:
+    """Return the tree directory the product spec sits in, read from disk."""
+    roots = sorted({path.parent.name for path in REPO_ROOT.glob("*/*.product.md")})
+    if len(roots) != 1:
+        raise ClaimHarnessError(f"expected one spec-tree root, observed: {roots}")
+    return roots[0]
+
+
+def node_status_observations() -> tuple[NodeStatusObservation, ...]:
+    """Observe verdicts for a parent and a leaf node of the real projection."""
+    module = load_verify_session_claims_module()
+    records = spec_status_records()
+    children_field = module.NODE_RECORD_CHILDREN_FIELD
+    parents = [item for item in sorted(records.items()) if item[1].get(children_field)]
+    leaves = [
+        item for item in sorted(records.items()) if not item[1].get(children_field)
+    ]
+    if not parents or not leaves:
+        raise ClaimHarnessError("the projection carries no parent and leaf node pair")
+    return tuple(
+        _node_status_observation(module, node_id, record)
+        for node_id, record in (parents[0], leaves[0])
+    )
+
+
+def _node_status_observation(
+    module: ModuleType, node_id: str, record: dict[str, object]
+) -> NodeStatusObservation:
+    node_path = f"{spec_tree_root_name()}/{node_id}"
+    return NodeStatusObservation(
+        node_path=node_path,
+        projected_record=record,
+        actual=_projection_verdict(module, node_path),
+    )
+
+
+def absent_node_status_observation() -> AbsentNodeObservation:
+    """Observe the verdict for a node the real projection does not carry."""
+    module = load_verify_session_claims_module()
+    records = spec_status_records()
+    while True:
+        candidate = generated_relative_path()
+        if candidate not in records:
+            break
+    node_path = f"{spec_tree_root_name()}/{candidate}"
+    return AbsentNodeObservation(
+        node_path=node_path,
+        actual=_projection_verdict(module, node_path),
+    )
+
+
+def _projection_verdict(module: ModuleType, node_path: str) -> ClaimVerdictLike:
+    with accepted_git_context() as repo:
+        session_id = generated_token()
+        spec = f"{node_path}/{generated_token()}.md"
+        scripts = _session_command_scripts(
+            module, session_id, specs=(spec,)
+        ) | _projection_script(module)
+        return _observation_for_kind(
+            module.verify(
+                session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
+            ),
+            module.ClaimKind.NODE_STATUS,
+        )
 
 
 def _external_arrangement(module: ModuleType, relation: object) -> ScriptMap:
@@ -333,69 +447,53 @@ def _git_ref_observation(
 
 
 def observed_state_observation() -> ObservedStateObservation:
-    """Return generated current values and their emitted evidence strings."""
+    """Return the real node state, a generated PR state, and their evidence."""
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = generated_token()
-        spec = generated_relative_path()
+        spec = projection_spec_path()
         number = generated_number()
-        node_state = generated_token()
+        node_values = _projected_scalar_values(module, spec)
         external_state = generated_token()
-        scripts = _session_command_scripts(
-            module,
-            session_id,
-            specs=(spec,),
-            pr_numbers=(number,),
-        ) | {
-            tuple(module.SPX_SPEC_STATUS_COMMAND): (
-                0,
-                _node_status_json(module, spec, status=node_state),
-                "",
-            ),
-            tuple(module.GH_PR_VIEW_COMMAND): (
-                0,
-                json.dumps({module.GH_PR_STATE_FIELD: external_state}),
-                "",
-            ),
-        }
+        scripts = (
+            _session_command_scripts(
+                module,
+                session_id,
+                specs=(spec,),
+                pr_numbers=(number,),
+            )
+            | _projection_script(module)
+            | {
+                tuple(module.GH_PR_VIEW_COMMAND): (
+                    0,
+                    json.dumps({module.GH_PR_STATE_FIELD: external_state}),
+                    "",
+                ),
+            }
+        )
         verdicts = module.verify(
             session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
         )
         node = _observation_for_kind(verdicts, module.ClaimKind.NODE_STATUS)
         external = _observation_for_kind(verdicts, module.ClaimKind.EXTERNAL_ID)
         return ObservedStateObservation(
-            node_state=node_state,
+            node_values=node_values,
             node=node,
             external_state=external_state,
             external=external,
         )
 
 
-def node_status_observation() -> NodeStatusObservation:
-    """Return a nested status payload and the verifier's parsed evidence."""
-    module = load_verify_session_claims_module()
-    with accepted_git_context() as repo:
-        session_id = generated_token()
-        spec = generated_relative_path()
-        status = generated_token()
-        payload = _node_status_payload(module, spec, status=status)
-        generated_child_key = generated_token()
-        generated_non_scalar_key = generated_token()
-        payload[generated_child_key] = [{generated_token(): generated_token()}]
-        payload[generated_non_scalar_key] = {generated_token(): generated_token()}
-        scripts = _session_command_scripts(module, session_id, specs=(spec,)) | {
-            tuple(module.SPX_SPEC_STATUS_COMMAND): (0, json.dumps(payload), "")
-        }
-        actual = _observation_for_kind(
-            module.verify(
-                session_id, repo, RecordingRunner(repo=repo, scripted=scripts)
-            ),
-            module.ClaimKind.NODE_STATUS,
-        )
-        return NodeStatusObservation(
-            payload=payload,
-            evidence=json.loads(actual.evidence),
-        )
+def _projected_scalar_values(module: ModuleType, spec: str) -> tuple[str, ...]:
+    """Render the real record's scalar values as they appear in JSON output."""
+    node_id = str(pathlib.PurePosixPath(spec).parent.relative_to(spec_tree_root_name()))
+    record = spec_status_records()[node_id]
+    return tuple(
+        json.dumps(value)
+        for key, value in record.items()
+        if key != module.NODE_RECORD_CHILDREN_FIELD
+        and not isinstance(value, list | dict)
+    )
 
 
 def verify_parameters() -> tuple[inspect.Parameter, ...]:
@@ -459,28 +557,27 @@ def read_only_verification_observation() -> ReadOnlyVerificationObservation:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
         session_id = generated_token()
-        spec = generated_relative_path()
+        spec = projection_spec_path()
         number = generated_number()
         before = _git_status(repo)
-        scripts = _session_command_scripts(
-            module,
-            session_id,
-            git_ref=_unreachable_sha(repo),
-            git_status=module.GitStatus.CLEAN,
-            specs=(spec,),
-            pr_numbers=(number,),
-        ) | {
-            tuple(module.SPX_SPEC_STATUS_COMMAND): (
-                0,
-                _node_status_json(module, spec),
-                "",
-            ),
-            tuple(module.GH_PR_VIEW_COMMAND): (
-                0,
-                json.dumps({module.GH_PR_STATE_FIELD: generated_token()}),
-                "",
-            ),
-        }
+        scripts = (
+            _session_command_scripts(
+                module,
+                session_id,
+                git_ref=_unreachable_sha(repo),
+                git_status=module.GitStatus.CLEAN,
+                specs=(spec,),
+                pr_numbers=(number,),
+            )
+            | _projection_script(module)
+            | {
+                tuple(module.GH_PR_VIEW_COMMAND): (
+                    0,
+                    json.dumps({module.GH_PR_STATE_FIELD: generated_token()}),
+                    "",
+                ),
+            }
+        )
         runner = RecordingRunner(repo=repo, scripted=scripts)
         module.verify(session_id, repo, runner)
         return ReadOnlyVerificationObservation(
@@ -562,26 +659,6 @@ def _session_show_command(module: ModuleType, session_id: str) -> list[str]:
     return [*module.SPX_SESSION_SHOW_COMMAND, session_id]
 
 
-def _node_status_payload(
-    module: ModuleType, spec: str, *, status: str | None = None
-) -> dict[str, object]:
-    fields = tuple(module.NODE_STATUS_SCALAR_FIELDS)
-    return {
-        fields[0]: str(pathlib.PurePosixPath(spec).parent),
-        fields[1]: spec,
-        fields[2]: spec,
-        fields[3]: status if status is not None else generated_token(),
-        fields[4]: generated_token(),
-        fields[5]: True,
-    }
-
-
-def _node_status_json(
-    module: ModuleType, spec: str, *, status: str | None = None
-) -> str:
-    return json.dumps(_node_status_payload(module, spec, status=status))
-
-
 def _observation_for_kind(
     verdicts: Iterable[ClaimVerdictLike], kind: object
 ) -> ClaimVerdictLike:
@@ -620,6 +697,7 @@ def _unreachable_sha(repo: pathlib.Path) -> str:
 
 
 __all__ = [
+    "AbsentNodeObservation",
     "BranchReferenceObservation",
     "ClaimHarnessError",
     "ClaimMappingObservation",
@@ -628,15 +706,20 @@ __all__ = [
     "ObservedStateObservation",
     "ReadOnlyVerificationObservation",
     "RecordingRunner",
+    "absent_node_status_observation",
     "branch_reference_observations",
     "claim_mapping_observations",
     "default_runner_failure_observations",
     "load_verify_session_claims_module",
     "metadata_loading_observation",
-    "node_status_observation",
+    "node_status_observations",
     "observed_state_observation",
+    "projection_spec_path",
     "read_only_verification_observation",
     "script_import_roots",
+    "spec_status_records",
+    "spec_status_stdout",
+    "spec_tree_root_name",
     "subprocess_call_owners",
     "verify_parameters",
 ]

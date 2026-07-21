@@ -48,5 +48,9 @@ def test_git_branch_reachability_maps_to_verdict() -> None:
 def test_observed_claims_surface_current_values() -> None:
     observation = observed_state_observation()
 
-    assert observation.node_state in observation.node.evidence
+    assert observation.node_values
+    for value in observation.node_values:
+        assert value in observation.node.evidence, (
+            f"{value} is absent from the surfaced node status"
+        )
     assert observation.external_state in observation.external.evidence
