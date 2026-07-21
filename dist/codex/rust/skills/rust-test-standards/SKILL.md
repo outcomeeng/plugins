@@ -15,6 +15,9 @@ Rust test guidance follows this standard when:
 - `/test` determines the assertion type, execution level, and exception path before implementation
 - `/rust-standards` is loaded before this reference
 - co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
+- executed `#[test]`/`#[tokio::test]` functions own every predicate and assertion macro; harnesses and collaborators expose observations without verdict logic
+- test-file bindings introduce no data or policy — `let`/`const`/`static`/parameter bindings are valid only when they receive values selected by their semantic owner
+- every case and expected result passes the assertion-type provenance and oracle-independence litmus in `<predicate_and_oracle_litmus>`
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
 - property assertions run through a harness that owns `proptest` / `quickcheck` runner policy and emits replay evidence
 - compile-time claims use compile-fail evidence
@@ -132,8 +135,25 @@ Reject by default:
 - spying on the function or method under test instead of exercising it
 - replacing the module under test with a fake implementation
 
+A controlled implementation or recording collaborator implements the same trait boundary as production and exposes observations only. It NEVER accepts an expected outcome, calls an assertion macro, exposes a matcher-style verdict method (`is_valid`, `succeeds`, `was_called_with`), or returns a pass/fail verdict — the linked test asserts against the observations it exposes.
+
 If `/test` reaches a Stage 5 exception, the double must still preserve coupling to the real interface or protocol. The exception explains why a controlled implementation is needed; it does not justify severing the seam.
 </acceptable_doubles>
+
+<predicate_and_oracle_litmus>
+
+Apply every question in `/test-evidence-standards` `<common_litmus_questions>`, every per-assertion-type source-and-oracle rule in its `<assertion_type_litmus>`, and every mutation in its `<mutation_litmus>`. That shared set is the complete list; the items below render the ones whose form is Rust-specific and never replace or bound it.
+
+- Invert the `assert!`/`assert_eq!` expression. Only the linked `#[test]` changes; no harness, generator, or collaborator code changes.
+- Read the test function alone. Every pass/fail predicate is visible there.
+- Trace each case to the spec scenario, complete source-owned enumeration, `proptest`/`quickcheck` domain, external conformance oracle, governing compliance rule, or inert whole-payload fixture.
+- Trace each expected result to an oracle outside the production table, algorithm, parser, branch logic, or collaborator verdict method under test.
+- Mutate the assertion-relevant production behavior. The test fails.
+- Read each fixture and harness. It returns observations, state, or handles — never a verdict, and never an `is_valid`, `succeeds`, `was_called_with`, or `assert_*` method.
+- Read a failure message. It reports actual against expected at the `assert_eq!` site, not `assert!(helper(...))`.
+- Ask whether the same fixture or harness could serve a test claiming the opposite about the same observation. It can when the predicate is test-owned.
+
+</predicate_and_oracle_litmus>
 
 <tooling>
 Use the lightest Rust-native tool that preserves evidence:
@@ -164,9 +184,9 @@ Snapshot tests are valid only when the textual or structured output surface is i
 | Harness-managed    | Infrastructure mediates interaction with an external resource | `<product>-testing/src/harnesses/`  |
 | Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file             |
 
-**THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
+**TEST FILES OWN NO DATA OR POLICY.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
-Executed Rust test files are typed assertion files. They do not declare `const`, `static`, or `let` bindings; every value or configuration choice those declarations would bind belongs in the `<product>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
+Executed Rust test files are typed assertion files: the `#[test]`/`#[tokio::test]` function or its callbacks own every behavioral predicate and assertion macro. A `let`, `const`, `static`, closure parameter, or macro parameter is valid when it only receives or renames an actual result, source-owned contract, generated value, harness observation, or resource handle and introduces no data or policy. A binding that chooses case data, an expected output, a runner setting, a seed, setup policy, a fixture payload, or a generator domain belongs in the `<product>-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
 
 **1. Source-owned values**
 
@@ -411,18 +431,19 @@ Keep deterministic measurement and audit-time evidence judgment distinct:
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                            | Why it fails                                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------------- |
-| generated mocks for the main seam       | severs evidence from the real interface                                          |
-| snapshots of hand-written values        | proves serialization of the fixture more than governed logic                     |
-| example-only tests for property claims  | misses the universal claim stated by the spec                                    |
-| async tests holding locks across await  | creates deadlocks and hides the real concurrency design                          |
-| browser tooling for non-browser code    | adds cost without stronger evidence                                              |
-| compile-time claims tested at runtime   | misses the actual contract                                                       |
-| source text read from tests             | proves implementation text rather than behavior                                  |
-| missing harness cleanup                 | leaves shared state that changes later test outcomes                             |
-| test-file-local bindings and parameters | source contracts, harnesses, generators, inert fixtures, or eval data own values |
-| property runner tuning in a test file   | the property harness owns seed, case count, persistence, and replay diagnostics  |
+| Anti-pattern                                                                       | Why it fails                                                                                        |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| generated mocks for the main seam                                                  | severs evidence from the real interface                                                             |
+| snapshots of hand-written values                                                   | proves serialization of the fixture more than governed logic                                        |
+| example-only tests for property claims                                             | misses the universal claim stated by the spec                                                       |
+| async tests holding locks across await                                             | creates deadlocks and hides the real concurrency design                                             |
+| browser tooling for non-browser code                                               | adds cost without stronger evidence                                                                 |
+| compile-time claims tested at runtime                                              | misses the actual contract                                                                          |
+| source text read from tests                                                        | proves implementation text rather than behavior                                                     |
+| missing harness cleanup                                                            | leaves shared state that changes later test outcomes                                                |
+| test-file bindings that choose data, expectations, configuration, or verdict rules | valid bindings only receive values selected by source contracts, harnesses, generators, or fixtures |
+| predicate or assertion macro moved into a harness, generator, or collaborator      | the linked `#[test]` function owns every predicate and assertion macro                              |
+| property runner tuning in a test file                                              | the property harness owns seed, case count, persistence, and replay diagnostics                     |
 
 Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 

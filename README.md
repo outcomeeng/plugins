@@ -270,7 +270,7 @@ Python engineering: /test-python, /code-python, /audit-python-code, /audit-pytho
 
 ### rust
 
-Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust
+Rust engineering: /test-rust, /code-rust, /audit-rust-code, /audit-rust-tests, /audit-rust-architecture, /architect-rust, rust-simplifier agent
 
 | Type  | Name                           | Purpose                                                                                                                         |
 | ----- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
