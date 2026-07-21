@@ -491,6 +491,16 @@ def _assert_wait_for_load_stop_trigger_policy() -> None:
                     for agent_harness, document in documents.items()
                 }
             )
+        codex_document = documents[harness.HARNESS_CODEX]
+        claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
+        for _, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
+            assert requirement not in claude_router
+            _require_wait_for_load_policy_error(
+                {
+                    **documents,
+                    harness.HARNESS_CODEX: codex_document.replace(requirement, "", 1),
+                }
+            )
         for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
             _require_wait_for_load_policy_error(
                 {

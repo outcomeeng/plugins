@@ -172,6 +172,30 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
     ),
 )
 CODEX_HARNESS: Final = "codex"
+WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
+    (
+        "standalone waiter call",
+        "Invoke `/wait-for-load` in its own top-level `functions.exec` call.",
+    ),
+    (
+        "visible ready result",
+        "returned output visibly contains the terminal JSON with `ready: true`",
+    ),
+    (
+        "separate selected-command call",
+        "Start the selected command in a separate top-level `functions.exec` call.",
+    ),
+    (
+        "nested command collection",
+        "set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin`",
+    ),
+    (
+        "combined-script and nested-wait prohibition",
+        "**NEVER** place the waiter and selected command in the same "
+        "`functions.exec` script or use `functions.wait` as the planned collector "
+        "for a nested selected command.",
+    ),
+)
 ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
@@ -658,10 +682,11 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
             raise WaitForLoadPolicyError(
                 f"missing router section: {WAIT_FOR_LOAD_POLICY_HEADING}"
             ) from exc
+        requirements = list(WAIT_FOR_LOAD_POLICY_REQUIREMENTS)
+        if harness == CODEX_HARNESS:
+            requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
-            name
-            for name, required_text in WAIT_FOR_LOAD_POLICY_REQUIREMENTS
-            if required_text not in section
+            name for name, required_text in requirements if required_text not in section
         ]
         if missing:
             details = ", ".join(missing)
