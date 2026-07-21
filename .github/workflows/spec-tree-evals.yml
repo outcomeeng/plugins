@@ -70,8 +70,6 @@ on:
       - "dist/claude/spec-tree/skills/review-changes/**"
       - "dist/claude/spec-tree/skills/test-evidence-standards/SKILL.md"
       - "dist/claude/spec-tree/skills/understand/**"
-      - "dist/claude/typescript/skills/test-typescript/**"
-      - "dist/claude/typescript/skills/typescript-test-standards/**"
       - "dist/codex/spec-tree/agents/changeset-coherence-auditor.md"
       - "dist/codex/spec-tree/skills/audit-changeset-coherence/**"
       - "dist/codex/spec-tree/skills/audit-tests/SKILL.md"
@@ -103,7 +101,6 @@ on:
       - "spx/21-spec-tree.enabler/spec-tree.md"
       - "spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/**"
       - "spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/32-test-data-ownership.enabler/**"
-      - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
       - "spx/local/merging.md"
       - "src/plugins/python/skills/audit-python-tests/SKILL.md"
       - "src/plugins/python/skills/python-test-standards/SKILL.md"
@@ -120,8 +117,6 @@ on:
       - "src/plugins/spec-tree/skills/review-changes/**"
       - "src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md"
       - "src/plugins/spec-tree/skills/understand/**"
-      - "src/plugins/typescript/skills/test-typescript/**"
-      - "src/plugins/typescript/skills/typescript-test-standards/**"
       # END eval-trigger-paths
   push:
     branches: [main]
@@ -147,8 +142,6 @@ on:
       - "dist/claude/spec-tree/skills/review-changes/**"
       - "dist/claude/spec-tree/skills/test-evidence-standards/SKILL.md"
       - "dist/claude/spec-tree/skills/understand/**"
-      - "dist/claude/typescript/skills/test-typescript/**"
-      - "dist/claude/typescript/skills/typescript-test-standards/**"
       - "dist/codex/spec-tree/agents/changeset-coherence-auditor.md"
       - "dist/codex/spec-tree/skills/audit-changeset-coherence/**"
       - "dist/codex/spec-tree/skills/audit-tests/SKILL.md"
@@ -180,7 +173,6 @@ on:
       - "spx/21-spec-tree.enabler/spec-tree.md"
       - "spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/**"
       - "spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/32-test-data-ownership.enabler/**"
-      - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
       - "spx/local/merging.md"
       - "src/plugins/python/skills/audit-python-tests/SKILL.md"
       - "src/plugins/python/skills/python-test-standards/SKILL.md"
@@ -197,8 +189,6 @@ on:
       - "src/plugins/spec-tree/skills/review-changes/**"
       - "src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md"
       - "src/plugins/spec-tree/skills/understand/**"
-      - "src/plugins/typescript/skills/test-typescript/**"
-      - "src/plugins/typescript/skills/typescript-test-standards/**"
       # END eval-trigger-paths
   schedule:
     # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
