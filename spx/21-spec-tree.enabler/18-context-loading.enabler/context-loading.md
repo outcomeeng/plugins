@@ -6,7 +6,7 @@ CAN operate with complete, verified context before any work begins
 
 ## Assertions
 
-- The spec-tree plugin package ships the foundation-resource manifest governed by `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.pdr.md` at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths
+- The spec-tree plugin package ships the foundation-resource manifest governed by `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths
 - Package checks reject a shipped foundation-resource manifest whose declared paths do not all resolve, whose catalogs carry a duplicate path, or whose catalogs omit a shipped reference, template, or example file
 
 ### Properties
