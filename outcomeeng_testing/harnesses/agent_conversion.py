@@ -6,28 +6,40 @@ import os
 import tomllib
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
+import yaml
+
 from outcomeeng.distribution.agents import (
+    AGENT_SOURCE_DIRECTORY_NAME,
     ALL_TOOLS_SENTINEL,
     CODEX_AGENT_ENV_VAR,
+    CODEX_AGENT_ENV_SEPARATOR,
+    CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE,
+    CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE,
+    CODEX_SKILLS_GUIDANCE_TEMPLATE,
     CODEX_STANDARD_MODEL,
     CODEX_STRONG_MODEL,
+    CODEX_TOOLS_GUIDANCE_TEMPLATE,
+    CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE,
     DEFAULT_SOURCE_ROOT,
     EFFORT_MAPPINGS,
     GENERATED_MANIFEST_FILENAME,
     INHERIT_MODEL_VALUE,
+    MANUAL_REVIEW_GUIDANCE_CLOSE,
+    MANUAL_REVIEW_GUIDANCE_OPEN,
     MODEL_MAPPINGS,
     MODEL_PREFIX_EXAMPLE_SUFFIX,
     PERMISSION_MODE_MAPPINGS,
     READ_ONLY_SANDBOX_MODE,
     READ_ONLY_TOOLS,
     SCRIPT_CAPABLE_TOOLS,
+    SUPPORTED_FRONTMATTER_FIELDS,
     TomlArrayTable,
     TomlMultilineString,
-    UNMAPPED_PERMISSION_MODE_EXAMPLE,
     WEB_CAPABLE_TOOLS,
     WEB_SEARCH_DISABLED,
     WRITE_CAPABLE_TOOLS,
@@ -46,6 +58,15 @@ from outcomeeng.distribution.agents import (
     parse_agent_markdown,
     render_agent_toml,
 )
+from outcomeeng.distribution.contracts import (
+    CODEX_PLUGIN_SUBDIR_NAME,
+    PLUGINS_DIR_NAME,
+    SOURCE_ROOT_NAME,
+)
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DIST_CODEX_PLUGINS_DIR,
+)
 from outcomeeng_testing.harnesses.src_tree import write_agent_source, write_agent_tree
 
 PLUGIN_NAME: Final = "sample"
@@ -56,19 +77,29 @@ REVIEWER_BODY: Final = "Review."
 WRITER_BODY: Final = "Write."
 REVIEWER_DESCRIPTION: Final = "Review."
 WRITER_DESCRIPTION: Final = "Write."
-REVIEWER_SOURCE_PATH: Final = Path("reviewer.md")
-WRITER_SOURCE_PATH: Final = Path("writer.md")
+REVIEWER_SOURCE_PATH: Final = (
+    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "reviewer.md"
+)
+WRITER_SOURCE_PATH: Final = (
+    Path(PLUGIN_NAME) / AGENT_SOURCE_DIRECTORY_NAME / "writer.md"
+)
 CODEX_AGENTS_DIRNAME: Final = "codex-agents"
 GENERATED_CODEX_AGENTS_DIRNAME: Final = "generated-codex-agents"
-CODEX_DIST_ROOT_PARTS: Final = ("dist", "codex")
-CODEX_PLUGIN_MANIFEST_PARTS: Final = ("dist", "codex", PLUGIN_NAME, ".codex-plugin")
-CODEX_PLUGIN_MANIFEST_FILENAME: Final = "plugin.json"
+CODEX_PLUGIN_MANIFEST_PARTS: Final = (
+    *DIST_CODEX_PLUGINS_DIR.parts,
+    PLUGIN_NAME,
+    CODEX_PLUGIN_SUBDIR_NAME,
+)
 CODEX_PLUGIN_MANIFEST_BODY: Final = '{"name": "sample", "version": "0.0.1"}\n'
 AGENT_CONVERSION_FIXTURES_DIR: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_conversion"
 )
 SPEC_TREE_AGENT_SOURCE_DIR: Final = (
-    Path(__file__).resolve().parents[2] / "src" / "plugins" / "spec-tree" / "agents"
+    Path(__file__).resolve().parents[2]
+    / SOURCE_ROOT_NAME
+    / PLUGINS_DIR_NAME
+    / "spec-tree"
+    / AGENT_SOURCE_DIRECTORY_NAME
 )
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
@@ -86,28 +117,135 @@ FOLDED_DESCRIPTION_TEXT: Final = (
     "Review working changes against a base ref. "
     "Accept optional PR, branch, or range inputs."
 )
-MODEL_PREFIX_CASES: Final = tuple(
-    (source_prefix, target_model) for source_prefix, target_model in MODEL_MAPPINGS
-) + tuple(
+# Every correspondence below is written out here rather than derived from the
+# production tables the converter reads. Deriving them would make the expected
+# value and the case domain the same object, so repointing a mapping target
+# would move both and no test could fail for a wrong value. These literals are
+# the oracle; `assert_mapping_oracles_cover_production_tables` separately proves
+# they still span the production key sets, so a new production entry cannot slip
+# through untested.
+EXPECTED_MODEL_CORRESPONDENCE: Final = (
+    ("claude-opus", "gpt-5.5"),
+    ("opus", "gpt-5.5"),
+    ("claude-sonnet", "gpt-5.4"),
+    ("sonnet", "gpt-5.4"),
+    ("claude-haiku", "gpt-5.4-mini"),
+    ("haiku", "gpt-5.4-mini"),
+)
+EXPECTED_EFFORT_CORRESPONDENCE: Final = (
+    ("low", "low"),
+    ("medium", "medium"),
+    ("high", "high"),
+    ("max", "xhigh"),
+)
+EXPECTED_PERMISSION_MODE_CORRESPONDENCE: Final = (
+    ("default", None),
+    ("acceptEdits", "workspace-write"),
+    ("auto", None),
+    ("dontAsk", None),
+    ("bypassPermissions", None),
+    ("plan", "read-only"),
+)
+# The DUPLICATE_REVIEWER_BANG_FIXTURE source names the agent `reviewer!`. Its
+# generated agent type is written out here for the same reason as the mapping
+# correspondences above: deriving it from the converted agent's own filename
+# would route the expectation back through the slugify path under test, and the
+# comparison would hold for any slug the implementation produced.
+EXPECTED_TOP_TIER_MODEL: Final = "gpt-5.5"
+EXPECTED_SLUGGED_AGENT_TYPE: Final = "reviewer"
+EXPECTED_SLUGGED_AGENT_FILENAME: Final = f"{EXPECTED_SLUGGED_AGENT_TYPE}.toml"
+EXPECTED_READ_ONLY_TOOLS: Final = ("Glob", "Grep", "Read")
+EXPECTED_SCRIPT_CAPABLE_TOOLS: Final = ("Bash", "Skill")
+EXPECTED_WEB_CAPABLE_TOOLS: Final = ("WebFetch", "WebSearch")
+EXPECTED_WRITE_CAPABLE_TOOLS: Final = ("Edit", "NotebookEdit", "Write")
+
+MODEL_PREFIX_CASES: Final = EXPECTED_MODEL_CORRESPONDENCE + tuple(
     (f"{source_prefix}{MODEL_PREFIX_EXAMPLE_SUFFIX}", target_model)
-    for source_prefix, target_model in MODEL_MAPPINGS
+    for source_prefix, target_model in EXPECTED_MODEL_CORRESPONDENCE
     if source_prefix.startswith("claude-")
 )
 MODEL_CASES: Final = (*MODEL_PREFIX_CASES, (INHERIT_MODEL_VALUE, None))
-EFFORT_CASES: Final = tuple(EFFORT_MAPPINGS.items())
-PERMISSION_MODE_CASES: Final = (
-    *tuple(PERMISSION_MODE_MAPPINGS.items()),
-    (UNMAPPED_PERMISSION_MODE_EXAMPLE, None),
+EFFORT_CASES: Final = EXPECTED_EFFORT_CORRESPONDENCE
+PERMISSION_MODE_CASES: Final = EXPECTED_PERMISSION_MODE_CORRESPONDENCE
+SUPPORTED_PERMISSION_MODE_CASES: Final = tuple(
+    (source, target)
+    for source, target in EXPECTED_PERMISSION_MODE_CORRESPONDENCE
+    if target is not None
 )
-SUPPORTED_PERMISSION_MODE_CASES: Final = tuple(PERMISSION_MODE_MAPPINGS.items())
-READ_ONLY_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS)
-READ_ONLY_WEB_TOOL_ALLOWLIST: Final = tuple(READ_ONLY_TOOLS | WEB_CAPABLE_TOOLS)
-WEB_CAPABLE_TOOL_ALLOWLIST: Final = tuple(WEB_CAPABLE_TOOLS)
+UNMAPPED_PERMISSION_MODE_CASES: Final = tuple(
+    source
+    for source, target in EXPECTED_PERMISSION_MODE_CORRESPONDENCE
+    if target is None
+)
+READ_ONLY_TOOL_ALLOWLIST: Final = EXPECTED_READ_ONLY_TOOLS
+READ_ONLY_WEB_TOOL_ALLOWLIST: Final = (
+    EXPECTED_READ_ONLY_TOOLS + EXPECTED_WEB_CAPABLE_TOOLS
+)
+WEB_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_WEB_CAPABLE_TOOLS
 ALL_TOOLS_ALLOWLIST: Final = (ALL_TOOLS_SENTINEL,)
-WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(WRITE_CAPABLE_TOOLS)
-SCRIPT_CAPABLE_TOOL_ALLOWLIST: Final = tuple(SCRIPT_CAPABLE_TOOLS)
-SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(sorted(WRITE_CAPABLE_TOOLS))
+WRITE_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_WRITE_CAPABLE_TOOLS
+SCRIPT_CAPABLE_TOOL_ALLOWLIST: Final = EXPECTED_SCRIPT_CAPABLE_TOOLS
+SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(sorted(EXPECTED_WRITE_CAPABLE_TOOLS))
 EMPTY_TOOL_ALLOWLIST: Final = ()
+
+
+@dataclass(frozen=True)
+class AgentDocumentOracle:
+    """Independent YAML-frontmatter and Markdown-body observation."""
+
+    frontmatter: Mapping[str, object]
+    body: str
+
+
+def agent_document_oracle(path: Path) -> AgentDocumentOracle:
+    """Read an agent document through PyYAML instead of the production parser."""
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        raise AssertionError(f"{path}: expected YAML frontmatter opener")
+    frontmatter_text, separator, body = text.removeprefix("---\n").partition("\n---\n")
+    if not separator:
+        raise AssertionError(f"{path}: expected YAML frontmatter closer")
+    loaded = yaml.safe_load(frontmatter_text)
+    if not isinstance(loaded, Mapping) or not all(
+        isinstance(key, str) for key in loaded
+    ):
+        raise AssertionError(f"{path}: expected string-keyed YAML mapping")
+    return AgentDocumentOracle(
+        frontmatter=cast("Mapping[str, object]", loaded),
+        body=body.strip(),
+    )
+
+
+def oracle_string(document: AgentDocumentOracle, key: str) -> str:
+    """Return one required string from an independent document observation."""
+    value = document.frontmatter[key]
+    assert isinstance(value, str)
+    return value
+
+
+def oracle_optional_string(document: AgentDocumentOracle, key: str) -> str | None:
+    """Return one optional string from an independent document observation."""
+    value = document.frontmatter.get(key)
+    assert value is None or isinstance(value, str)
+    return value
+
+
+def oracle_strings(document: AgentDocumentOracle, key: str) -> tuple[str, ...]:
+    """Return one comma-delimited or YAML-sequence string field."""
+    value = document.frontmatter.get(key)
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return tuple(item.strip() for item in value.split(",") if item.strip())
+    assert isinstance(value, list) and all(isinstance(item, str) for item in value)
+    return tuple(cast("list[str]", value))
+
+
+def oracle_mapping(document: AgentDocumentOracle, key: str) -> Mapping[str, object]:
+    """Return one required nested mapping from an independent observation."""
+    value = document.frontmatter[key]
+    assert isinstance(value, Mapping)
+    return cast("Mapping[str, object]", value)
 
 
 def source_agent(
@@ -161,7 +299,7 @@ def agent_conversion_fixture(name: str) -> str:
 
 def converted_source_agent_toml(
     root: Path,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Render the baseline source-agent fixture through the converter."""
     source_path = write_agent_source(
         root,
@@ -171,7 +309,7 @@ def converted_source_agent_toml(
     )
     source = parse_agent_markdown(source_path)
     rendered = render_agent_toml(convert_agent(source))
-    return source, tomllib.loads(rendered)
+    return agent_document_oracle(source_path), tomllib.loads(rendered)
 
 
 def converted_folded_description_toml(root: Path) -> dict[str, object]:
@@ -188,25 +326,30 @@ def converted_folded_description_toml(root: Path) -> dict[str, object]:
 
 def converted_default_codex_source_root_toml(
     root: Path,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a rendered Codex fixture through the default source root."""
     source_root = write_dist_codex_agent_tree(
         root,
         PLUGIN_NAME,
         {CHANGES_REVIEWER_NAME: agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE)},
     )
-    source = parse_agent_markdown(
-        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
+    source_path = (
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{CHANGES_REVIEWER_NAME}.md"
     )
     with working_directory(root):
         (converted,) = convert_agents()
-    return source, tomllib.loads(render_agent_toml(converted))
+    return agent_document_oracle(source_path), tomllib.loads(
+        render_agent_toml(converted)
+    )
 
 
 def converted_codex_agent_with_yaml_mcp_toml(
     root: Path,
     source: str,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a Codex target fixture with YAML MCP mapping syntax."""
     source_root = write_agent_tree(
         root,
@@ -214,11 +357,15 @@ def converted_codex_agent_with_yaml_mcp_toml(
         {CHANGES_REVIEWER_NAME: source},
     )
     source_agent_path = (
-        source_root / PLUGIN_NAME / "agents" / f"{CHANGES_REVIEWER_NAME}.md"
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{CHANGES_REVIEWER_NAME}.md"
     )
-    parsed_source = parse_agent_markdown(source_agent_path)
     (converted,) = convert_agent_tree(source_root)
-    return parsed_source, tomllib.loads(render_agent_toml(converted))
+    return agent_document_oracle(source_agent_path), tomllib.loads(
+        render_agent_toml(converted)
+    )
 
 
 def converted_empty_tools_toml(root: Path) -> dict[str, object]:
@@ -244,9 +391,11 @@ def write_dist_codex_agent_tree(
     agents: Mapping[str, str],
 ) -> Path:
     """Materialize a generated dist/codex plugin agent tree."""
-    source_root = root.joinpath(*CODEX_DIST_ROOT_PARTS)
+    source_root = root / DIST_CODEX_PLUGINS_DIR
     for agent_name, content in agents.items():
-        agent_path = source_root / plugin_name / "agents" / f"{agent_name}.md"
+        agent_path = (
+            source_root / plugin_name / AGENT_SOURCE_DIRECTORY_NAME / f"{agent_name}.md"
+        )
         agent_path.parent.mkdir(parents=True, exist_ok=True)
         agent_path.write_text(content, encoding="utf-8")
     return source_root
@@ -263,22 +412,32 @@ def working_directory(path: Path) -> Iterator[None]:
         os.chdir(previous)
 
 
-def installed_guarded_writer_toml(root: Path) -> dict[str, object]:
-    """Install the guarded-writer fixture and return parsed TOML."""
+def installed_guarded_writer_toml(
+    root: Path,
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
+    """Install the guarded-writer fixture and return source plus parsed TOML."""
     source_root = write_agent_tree(
         root,
         PLUGIN_NAME,
         {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
+    source_path = (
+        source_root
+        / PLUGIN_NAME
+        / AGENT_SOURCE_DIRECTORY_NAME
+        / f"{GUARDED_WRITER_NAME}.md"
+    )
     target_root = root / CODEX_AGENTS_DIRNAME
     (installed_path,) = install_agents(source_root, target_root)
-    return tomllib.loads(installed_path.read_text(encoding="utf-8"))
+    return agent_document_oracle(source_path), tomllib.loads(
+        installed_path.read_text(encoding="utf-8")
+    )
 
 
 def write_codex_plugin_manifest(root: Path) -> Path:
     """Write a sample Codex plugin manifest and return its path."""
     manifest_dir = root.joinpath(*CODEX_PLUGIN_MANIFEST_PARTS)
-    manifest_path = manifest_dir / CODEX_PLUGIN_MANIFEST_FILENAME
+    manifest_path = manifest_dir / CODEX_PLUGIN_MANIFEST.name
     manifest_dir.mkdir(parents=True)
     manifest_path.write_text(CODEX_PLUGIN_MANIFEST_BODY, encoding="utf-8")
     return manifest_path
@@ -380,12 +539,15 @@ def converted_instruction_value(agent: CodexAgent) -> str:
 
 def source_agent_marker_candidate() -> SourceAgent:
     """Return a source agent with no plugin-derived path."""
-    return source_agent(name=GUARDED_WRITER_NAME)
+    return source_agent(
+        source_path=Path(GUARDED_WRITER_AGENT_FIXTURE),
+        name=GUARDED_WRITER_NAME,
+    )
 
 
 def invalid_generated_manifest_target(root: Path) -> tuple[Path, Path]:
     """Create an invalid generated manifest and return source and target roots."""
-    source_root = root.joinpath(*CODEX_DIST_ROOT_PARTS)
+    source_root = root / DIST_CODEX_PLUGINS_DIR
     target_root = root / CODEX_AGENTS_DIRNAME
     target_root.mkdir()
     manifest_path = target_root / GENERATED_MANIFEST_FILENAME
@@ -431,23 +593,28 @@ def duplicate_filename_roots(root: Path) -> tuple[Path, Path]:
 def assert_agent_frontmatter_and_body_convert_to_codex_toml() -> None:
     """Assert baseline frontmatter and body conversion."""
     with TemporaryDirectory() as tmp:
-        source, parsed = converted_source_agent_toml(Path(tmp))
+        expected, parsed = converted_source_agent_toml(Path(tmp))
+    expected_name = oracle_string(expected, "name")
+    expected_skills = oracle_strings(expected, "skills")
+    expected_tools = oracle_strings(expected, "tools")
 
-    assert parsed["name"] == source.name
-    assert parsed["description"] == source.description
-    assert parsed["model"] == map_model(source.model)
+    assert parsed["name"] == expected_name
+    assert parsed["description"] == oracle_string(expected, "description")
+    assert parsed["model"] == map_model(oracle_optional_string(expected, "model"))
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert "sandbox_mode" not in parsed
     assert toml_table(toml_table(parsed, "shell_environment_policy"), "set") == {
-        CODEX_AGENT_ENV_VAR: agent_environment_marker(source)
+        CODEX_AGENT_ENV_VAR: (
+            f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{expected_name}"
+        )
     }
     instructions = toml_string(parsed, "developer_instructions")
-    assert source.body in instructions
-    assert all(skill in instructions for skill in source.skills)
+    assert expected.body in instructions
+    assert all(skill in instructions for skill in expected_skills)
     assert parsed_toml_skill_config(parsed) == [
-        {"name": skill, "enabled": True} for skill in source.skills
+        {"name": skill, "enabled": True} for skill in expected_skills
     ]
-    assert all(tool in instructions for tool in source.tools)
+    assert all(tool in instructions for tool in expected_tools)
 
 
 def assert_folded_yaml_description_converts_to_text() -> None:
@@ -458,65 +625,92 @@ def assert_folded_yaml_description_converts_to_text() -> None:
     assert parsed["description"] == FOLDED_DESCRIPTION_TEXT
 
 
+# The skills domain is synthesized here rather than scanned out of the live
+# generated tree. Scanning it made this node's mapping evidence depend on which
+# agents other plugins happen to ship: an unrelated plugin changing its skill
+# counts could fail this test, and a missing generated tree could let it pass
+# with an empty domain. The three cardinalities the mapping spans - none, one,
+# and several - are enumerated instead.
+SKILLS_DOMAIN: Final = (
+    (source_agent(skills=()), ()),
+    (source_agent(skills=("alpha:one",)), ("alpha:one",)),
+    (
+        source_agent(skills=("alpha:one", "beta:two", "gamma:three")),
+        ("alpha:one", "beta:two", "gamma:three"),
+    ),
+)
+
+
 def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     """Assert skill entries become Codex config and developer guidance."""
-    source = parse_agent_markdown(AGENT_CONVERSION_FIXTURES_DIR / SOURCE_AGENT_FIXTURE)
-    converted = convert_agent(source)
-
-    instructions = converted_instruction_value(converted)
-    assert "skills" in instructions
-    assert "prompt guidance" in instructions
-    assert "not a spawn-time preload guarantee" in instructions
-    assert converted_skill_config(converted) == tuple(
-        {"name": skill, "enabled": True} for skill in source.skills
-    )
+    for source, expected_skills in SKILLS_DOMAIN:
+        converted = convert_agent(source)
+        instructions = converted_instruction_value(converted)
+        guidance = CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+            skills=", ".join(f"`{skill}`" for skill in expected_skills)
+        )
+        if not expected_skills:
+            assert "skills" not in converted.values
+            guidance_prefix = CODEX_SKILLS_GUIDANCE_TEMPLATE.partition("{skills}")[0]
+            assert guidance_prefix not in instructions
+            continue
+        assert guidance in instructions
+        assert converted_skill_config(converted) == tuple(
+            {"name": skill, "enabled": True} for skill in expected_skills
+        )
 
 
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
     """Assert rendered Codex target agents preserve Codex runtime overrides."""
     with TemporaryDirectory() as tmp:
-        source, parsed = converted_default_codex_source_root_toml(Path(tmp))
+        expected, parsed = converted_default_codex_source_root_toml(Path(tmp))
+    expected_skills = oracle_strings(expected, "skills")
 
-    assert parsed["name"] == source.name
-    assert parsed["description"] == source.description
-    assert parsed["model"] == source.model
-    assert parsed["model_reasoning_effort"] == source.model_reasoning_effort
-    assert parsed["sandbox_mode"] == source.sandbox_mode
-    assert parsed["nickname_candidates"] == list(source.nickname_candidates)
-    assert isinstance(source.mcp_servers, Mapping)
-    source_docs_server = source.mcp_servers["docs"]
+    assert parsed["name"] == oracle_string(expected, "name")
+    assert parsed["description"] == oracle_string(expected, "description")
+    assert parsed["model"] == oracle_string(expected, "model")
+    assert parsed["model_reasoning_effort"] == oracle_string(
+        expected, "model_reasoning_effort"
+    )
+    assert parsed["sandbox_mode"] == oracle_string(expected, "sandbox_mode")
+    assert parsed["nickname_candidates"] == list(
+        oracle_strings(expected, "nickname_candidates")
+    )
+    source_docs_server = oracle_mapping(expected, "mcp_servers")["docs"]
     assert isinstance(source_docs_server, Mapping)
     parsed_docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
     assert parsed_docs_server["command"] == source_docs_server["command"]
     source_args = source_docs_server["args"]
-    assert isinstance(source_args, tuple)
-    assert parsed_docs_server["args"] == list(source_args)
+    assert isinstance(source_args, list)
+    assert parsed_docs_server["args"] == source_args
     instructions = toml_string(parsed, "developer_instructions")
-    assert source.body in instructions
-    assert all(skill in instructions for skill in source.skills)
+    assert expected.body in instructions
+    assert all(skill in instructions for skill in expected_skills)
     assert parsed_toml_skill_config(parsed) == [
-        {"name": skill, "enabled": True} for skill in source.skills
+        {"name": skill, "enabled": True} for skill in expected_skills
     ]
 
 
 def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
     """Assert YAML mapping syntax for MCP servers preserves nested config."""
     with TemporaryDirectory() as tmp:
-        block_source, block_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        block_expected, block_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
             agent_conversion_fixture(CODEX_BLOCK_MCP_AGENT_FIXTURE),
         )
-        flow_source, flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        flow_expected, flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
             agent_conversion_fixture(CODEX_FLOW_MCP_AGENT_FIXTURE),
         )
 
-    for source, parsed in (
-        (block_source, block_parsed),
-        (flow_source, flow_parsed),
+    for expected, parsed in (
+        (block_expected, block_parsed),
+        (flow_expected, flow_parsed),
     ):
-        assert isinstance(source.mcp_servers, Mapping)
-        assert toml_table(parsed, "mcp_servers") == toml_compatible(source.mcp_servers)
+        expected_mcp_servers = oracle_mapping(expected, "mcp_servers")
+        assert toml_table(parsed, "mcp_servers") == toml_compatible(
+            expected_mcp_servers
+        )
 
 
 def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config() -> (
@@ -530,6 +724,23 @@ def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config
     assert parsed["sandbox_mode"] == READ_ONLY_SANDBOX_MODE
 
 
+def assert_mapping_oracles_cover_production_tables() -> None:
+    """Assert the independent oracles span every production mapping key."""
+    assert {source for source, _ in EXPECTED_MODEL_CORRESPONDENCE} == {
+        source for source, _ in MODEL_MAPPINGS
+    }
+    assert {source for source, _ in EXPECTED_EFFORT_CORRESPONDENCE} == set(
+        EFFORT_MAPPINGS
+    )
+    assert {source for source, _ in EXPECTED_PERMISSION_MODE_CORRESPONDENCE} == set(
+        PERMISSION_MODE_MAPPINGS
+    )
+    assert set(EXPECTED_READ_ONLY_TOOLS) == READ_ONLY_TOOLS
+    assert set(EXPECTED_SCRIPT_CAPABLE_TOOLS) == SCRIPT_CAPABLE_TOOLS
+    assert set(EXPECTED_WEB_CAPABLE_TOOLS) == WEB_CAPABLE_TOOLS
+    assert set(EXPECTED_WRITE_CAPABLE_TOOLS) == WRITE_CAPABLE_TOOLS
+
+
 def assert_source_model_maps_to_codex_model() -> None:
     """Assert every source model case maps to the expected Codex model."""
     for source, expected in MODEL_CASES:
@@ -540,7 +751,7 @@ def assert_opus_model_maps_to_distinct_top_tier_codex_model() -> None:
     """Assert opus maps to the configured top-tier Codex model."""
     converted = convert_agent(source_agent(model="opus"))
 
-    assert converted.values["model"] == CODEX_STRONG_MODEL
+    assert converted.values["model"] == EXPECTED_TOP_TIER_MODEL
     assert str(CODEX_STRONG_MODEL) != str(CODEX_STANDARD_MODEL)
 
 
@@ -557,8 +768,8 @@ def assert_source_effort_reaches_converted_codex_reasoning_effort() -> None:
         assert converted.values["model_reasoning_effort"] == expected
 
 
-def assert_permission_mode_maps_when_codex_has_supported_equivalent() -> None:
-    """Assert every permission-mode case maps to the expected sandbox."""
+def assert_permission_modes_map_to_codex_sandbox_or_manual_review() -> None:
+    """Assert every source permission mode maps to its Codex representation."""
     for source, expected in PERMISSION_MODE_CASES:
         assert map_permission_mode(source) == expected
 
@@ -640,27 +851,26 @@ def assert_script_capable_tool_allowlist_leaves_sandbox_to_runtime_default() -> 
 
 
 def assert_explicit_unmapped_permission_mode_blocks_read_only_inference() -> None:
-    """Assert unmapped permission mode blocks sandbox inference."""
-    assert (
-        infer_sandbox_mode(READ_ONLY_TOOL_ALLOWLIST, UNMAPPED_PERMISSION_MODE_EXAMPLE)
-        is None
-    )
+    """Assert every unmapped permission mode blocks sandbox inference."""
+    for source in UNMAPPED_PERMISSION_MODE_CASES:
+        assert infer_sandbox_mode(READ_ONLY_TOOL_ALLOWLIST, source) is None
 
 
 def assert_unmapped_permission_mode_converts_to_manual_review_guidance() -> None:
-    """Assert unmapped permission mode becomes manual-review guidance."""
-    converted = convert_agent(
-        source_agent(
-            permission_mode=UNMAPPED_PERMISSION_MODE_EXAMPLE,
-            tools=READ_ONLY_TOOL_ALLOWLIST,
-            tools_declared=True,
+    """Assert every unmapped permission mode becomes manual-review guidance."""
+    for source in UNMAPPED_PERMISSION_MODE_CASES:
+        converted = convert_agent(
+            source_agent(
+                permission_mode=source,
+                tools=READ_ONLY_TOOL_ALLOWLIST,
+                tools_declared=True,
+            )
         )
-    )
-    instructions = converted_instruction_value(converted)
+        instructions = converted_instruction_value(converted)
 
-    assert "sandbox_mode" not in converted.values
-    assert f"permissionMode: {UNMAPPED_PERMISSION_MODE_EXAMPLE}" in instructions
-    assert "manual-review guidance" in instructions
+        assert "sandbox_mode" not in converted.values
+        assert f"permissionMode: {source}" in instructions
+        assert "manual-review guidance" in instructions
 
 
 def assert_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> None:
@@ -676,26 +886,51 @@ def assert_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> 
         )
     )
     instructions = converted_instruction_value(converted)
+    guidance = CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+        tools=", ".join(f"`{tool}`" for tool in SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST)
+    )
 
     assert "sandbox_mode" not in converted.values
-    assert "command-level meanings" in instructions
-    assert "manual-review guidance" in instructions
+    assert guidance in instructions
 
 
 def assert_manual_guidance_preserves_source_only_fields() -> None:
     """Assert source-only fields remain as manual-review guidance."""
     with TemporaryDirectory() as tmp:
-        parsed = installed_guarded_writer_toml(Path(tmp))
+        expected, parsed = installed_guarded_writer_toml(Path(tmp))
+    expected_skills = oracle_strings(expected, "skills")
+    expected_tools = oracle_strings(expected, "tools")
+    expected_disallowed_tools = oracle_strings(expected, "disallowedTools")
+    expected_unsupported_fields = tuple(
+        sorted(
+            field
+            for field in expected.frontmatter
+            if field not in SUPPORTED_FRONTMATTER_FIELDS
+        )
+    )
 
     instructions = toml_string(parsed, "developer_instructions")
+    expected_guidance = (
+        CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+            skills=", ".join(f"`{skill}`" for skill in expected_skills)
+        ),
+        CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+            tools=", ".join(f"`{tool}`" for tool in expected_tools)
+        ),
+        CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE.format(
+            tools=", ".join(f"`{tool}`" for tool in expected_disallowed_tools)
+        ),
+        CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE.format(
+            permission_mode=oracle_string(expected, "permissionMode")
+        ),
+        CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE.format(
+            fields=", ".join(f"`{field}`" for field in expected_unsupported_fields)
+        ),
+    )
     assert parsed["model"] == CODEX_STRONG_MODEL
-    assert "tools" in instructions
-    assert "disallowedTools" in instructions
-    assert "skills" in instructions
-    assert "permissionMode: bypassPermissions" in instructions
-    assert "unknownField" in instructions
-    assert "<manual_review_guidance>" in instructions
-    assert "</manual_review_guidance>" in instructions
+    assert all(guidance in instructions for guidance in expected_guidance)
+    assert MANUAL_REVIEW_GUIDANCE_OPEN in instructions
+    assert MANUAL_REVIEW_GUIDANCE_CLOSE in instructions
     assert "##" not in instructions
     assert "sandbox_mode" not in parsed
 
@@ -717,21 +952,40 @@ def assert_generated_toml_stays_outside_codex_plugin_manifest_content() -> None:
 
 
 def assert_environment_marker_is_namespaced_by_source_plugin() -> None:
-    """Assert generated environment markers include the source plugin namespace."""
+    """Assert markers contain the source plugin and exact generated agent type."""
     with TemporaryDirectory() as tmp:
-        markers = installed_environment_markers(Path(tmp))
+        root = Path(tmp)
+        markers = installed_environment_markers(root)
+        slugged_source_path = write_agent_source(
+            root,
+            PLUGIN_NAME,
+            Path(DUPLICATE_REVIEWER_BANG_FIXTURE).stem,
+            agent_conversion_fixture(DUPLICATE_REVIEWER_BANG_FIXTURE),
+        )
+        slugged_source = parse_agent_markdown(slugged_source_path)
+        slugged_agent = convert_agent(slugged_source)
 
     assert markers == {
-        f"alpha/{GUARDED_WRITER_NAME}",
-        f"beta/{READ_ONLY_REVIEWER_NAME}",
+        f"alpha{CODEX_AGENT_ENV_SEPARATOR}{GUARDED_WRITER_NAME}",
+        f"beta{CODEX_AGENT_ENV_SEPARATOR}{READ_ONLY_REVIEWER_NAME}",
     }
-
-
-def assert_environment_marker_without_source_plugin_uses_agent_name() -> None:
-    """Assert marker fallback uses the source agent name."""
-    assert (
-        agent_environment_marker(source_agent_marker_candidate()) == GUARDED_WRITER_NAME
+    assert slugged_agent.filename == EXPECTED_SLUGGED_AGENT_FILENAME
+    assert agent_environment_marker(slugged_source) == (
+        f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{EXPECTED_SLUGGED_AGENT_TYPE}"
     )
+
+
+def assert_environment_marker_without_source_plugin_is_rejected() -> None:
+    """Assert a source path without a plugin namespace is rejected."""
+    try:
+        agent_environment_marker(source_agent_marker_candidate())
+    except AgentConversionError as exc:
+        assert "agent source path must be under <plugin>/agents" in str(exc)
+    else:
+        msg = (
+            "source path without a plugin namespace did not raise AgentConversionError"
+        )
+        raise AssertionError(msg)
 
 
 def assert_invalid_generated_manifest_uses_converter_error() -> None:

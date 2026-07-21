@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 from click.testing import CliRunner, Result
 from hypothesis import given, seed, settings
 

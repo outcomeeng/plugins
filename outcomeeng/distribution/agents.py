@@ -30,6 +30,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
 GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
 DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
 DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
+AGENT_SOURCE_DIRECTORY_NAME: Final = "agents"
 CODEX_STRONG_MODEL: Final = "gpt-5.5"
 CODEX_STANDARD_MODEL: Final = "gpt-5.4"
 CODEX_FAST_MODEL: Final = "gpt-5.4-mini"
@@ -47,16 +48,43 @@ EFFORT_MAPPINGS: Final = {
     "high": "high",
     "max": "xhigh",
 }
-PERMISSION_MODE_MAPPINGS: Final = {
+PERMISSION_MODE_MAPPINGS: Final[Mapping[str, str | None]] = {
+    "default": None,
     "acceptEdits": "workspace-write",
-    "readOnly": "read-only",
+    "auto": None,
+    "dontAsk": None,
+    "bypassPermissions": None,
+    "plan": "read-only",
 }
 INHERIT_MODEL_VALUE: Final = "inherit"
 MODEL_PREFIX_EXAMPLE_SUFFIX: Final = "-example"
-UNMAPPED_PERMISSION_MODE_EXAMPLE: Final = "bypassPermissions"
 ALL_TOOLS_SENTINEL: Final = "all"
 CODEX_AGENT_ENV_VAR: Final = "OUTCOMEENG_CODEX_AGENT_NAME"
 CODEX_AGENT_ENV_SEPARATOR: Final = "/"
+CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `skills` entries were preserved as prompt guidance. "
+    "The generated Codex `skills.config` entries enable these skills; "
+    "they are not a spawn-time preload guarantee. Invoke or load these "
+    "skills before relying on this agent's specialized behavior: {skills}."
+)
+CODEX_TOOLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `tools` allowlists can map only to Codex configuration "
+    "boundaries with matching semantics. Treat command-level meanings "
+    "inside allowed shell tools as manual-review guidance: {tools}."
+)
+CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `disallowedTools` deny lists do not enforce Codex permissions. "
+    "Treat these tools as manual-review guidance unless runtime policy "
+    "enforces them: {tools}."
+)
+CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE: Final = (
+    "Source `permissionMode: {permission_mode}` has no direct Codex mapping. "
+    "Choose the appropriate sandbox, permissions, MCP tool filters, or app "
+    "tool filters before relying on this agent for write or network behavior."
+)
+CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE: Final = (
+    "Review unsupported source agent fields manually: {fields}."
+)
 MANUAL_REVIEW_GUIDANCE_TAG: Final = "manual_review_guidance"
 MANUAL_REVIEW_GUIDANCE_OPEN: Final = f"<{MANUAL_REVIEW_GUIDANCE_TAG}>"
 MANUAL_REVIEW_GUIDANCE_CLOSE: Final = f"</{MANUAL_REVIEW_GUIDANCE_TAG}>"
@@ -195,7 +223,7 @@ def convert_agent(agent: SourceAgent) -> CodexAgent:
     values["developer_instructions"] = TomlMultilineString(
         render_developer_instructions(agent)
     )
-    return CodexAgent(filename=f"{_slugify(agent.name)}.toml", values=values)
+    return CodexAgent(filename=f"{generated_agent_type(agent)}.toml", values=values)
 
 
 def map_model(model: str | None) -> str | None:
@@ -212,8 +240,15 @@ def agent_environment_marker(agent: SourceAgent) -> str:
     """Return the stable Codex policy marker for a converted agent."""
     plugin_name = _source_plugin_name(agent.source_path)
     if plugin_name is None:
-        return agent.name
-    return f"{plugin_name}{CODEX_AGENT_ENV_SEPARATOR}{agent.name}"
+        raise AgentConversionError(
+            f"agent source path must be under <plugin>/agents: {agent.source_path}"
+        )
+    return f"{plugin_name}{CODEX_AGENT_ENV_SEPARATOR}{generated_agent_type(agent)}"
+
+
+def generated_agent_type(agent: SourceAgent) -> str:
+    """Return the generated Codex agent type for a source agent."""
+    return _slugify(agent.name)
 
 
 def map_effort(effort: str | None) -> str | None:
@@ -272,41 +307,37 @@ def render_developer_instructions(agent: SourceAgent) -> str:
 
     if agent.skills:
         guidance.append(
-            "Source `skills` entries were preserved as prompt guidance. "
-            "The generated Codex `skills.config` entries enable these skills; "
-            "they are not a spawn-time preload guarantee. Invoke or load these "
-            "skills before relying on this agent's specialized behavior: "
-            f"{', '.join(f'`{skill}`' for skill in agent.skills)}."
+            CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
+                skills=", ".join(f"`{skill}`" for skill in agent.skills)
+            )
         )
 
     if agent.tools:
         guidance.append(
-            "Source `tools` allowlists can map only to Codex configuration "
-            "boundaries with matching semantics. Treat command-level meanings "
-            "inside allowed shell tools as manual-review guidance: "
-            f"{', '.join(f'`{tool}`' for tool in agent.tools)}."
+            CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
+                tools=", ".join(f"`{tool}`" for tool in agent.tools)
+            )
         )
 
     if agent.disallowed_tools:
         guidance.append(
-            "Source `disallowedTools` deny lists do not enforce Codex permissions. "
-            "Treat these tools as manual-review guidance unless runtime policy "
-            "enforces them: "
-            f"{', '.join(f'`{tool}`' for tool in agent.disallowed_tools)}."
+            CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE.format(
+                tools=", ".join(f"`{tool}`" for tool in agent.disallowed_tools)
+            )
         )
 
     if agent.permission_mode and map_permission_mode(agent.permission_mode) is None:
         guidance.append(
-            f"Source `permissionMode: {agent.permission_mode}` has no direct "
-            "Codex mapping. Choose the appropriate sandbox, permissions, MCP "
-            "tool filters, or app tool filters before relying on this agent for "
-            "write or network behavior."
+            CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE.format(
+                permission_mode=agent.permission_mode
+            )
         )
 
     if agent.unsupported_fields:
         guidance.append(
-            "Review unsupported source agent fields manually: "
-            f"{', '.join(f'`{field}`' for field in agent.unsupported_fields)}."
+            CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE.format(
+                fields=", ".join(f"`{field}`" for field in agent.unsupported_fields)
+            )
         )
 
     if guidance:
@@ -843,7 +874,7 @@ def _slugify(value: str) -> str:
 
 
 def _source_plugin_name(path: Path) -> str | None:
-    if path.parent.name != "agents":
+    if path.parent.name != AGENT_SOURCE_DIRECTORY_NAME:
         return None
     plugin_dir = path.parent.parent
     if plugin_dir == path.parent:
@@ -937,6 +968,7 @@ def _format_toml_multiline(value: str) -> str:
 
 
 __all__ = [
+    "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
@@ -951,7 +983,6 @@ __all__ = [
     "READ_ONLY_SANDBOX_MODE",
     "READ_ONLY_TOOLS",
     "SCRIPT_CAPABLE_TOOLS",
-    "UNMAPPED_PERMISSION_MODE_EXAMPLE",
     "WEB_CAPABLE_TOOLS",
     "WEB_SEARCH_DISABLED",
     "WRITE_CAPABLE_TOOLS",
@@ -962,6 +993,7 @@ __all__ = [
     "agent_environment_marker",
     "convert_agent",
     "convert_agents",
+    "generated_agent_type",
     "infer_sandbox_mode",
     "install_agents",
     "iter_agent_files",

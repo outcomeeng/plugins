@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-import yaml  # type: ignore[import-untyped]
-from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode  # type: ignore[import-untyped]
+import yaml
+from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR: Final = REPO_ROOT / ".github" / "workflows"

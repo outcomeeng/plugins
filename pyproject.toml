@@ -17,6 +17,7 @@ dev = [
   "pytest-cov>=5.0",
   "pyyaml>=6.0",
   "ruff>=0.15",
+  "types-pyyaml>=6.0",
 ]
 
 [build-system]

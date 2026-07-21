@@ -4,6 +4,29 @@
 
 This product is a Claude Code and Codex plugin marketplace delivering the Spec Tree methodology — human-written specifications as the authoritative source of truth — together with the affordances that facilitate agent–user interaction while authoring, refactoring, and maintaining a product's spec tree: the SPX CLI and a local browser surface. It ships into every consumer team's own repository, in languages and domains unknown at design time; this repository is only the dogfood instance, the least important of those consumers.
 
+## Consumers and jobs
+
+| Consumer / persona      | Job to be done                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Product engineers       | Apply the Spec Tree methodology through their coding agent while preserving their repository's language and domain conventions |
+| Plugin authors          | Create portable methodology, language, and craft plugins from one authored source                                              |
+| Marketplace maintainers | Build, inspect, install, and publish agent-harness-native plugin artifacts from the shared marketplace                         |
+
+## Surfaces
+
+- Claude Code plugins — product engineers invoke skills and configured agents through Claude Code-native plugin artifacts.
+- Codex plugins — product engineers invoke skills and configured agents through Codex-native plugin artifacts.
+- SPX CLI — product engineers and automation inspect and operate on spec-tree structure and verification state.
+- Local browser — product engineers inspect and restructure the SPX CLI's spec-tree projection interactively.
+
+## Actors and sidedness
+
+The marketplace serves plugin producers and plugin consumers.
+
+- Plugin authors provide authored methodology, language, and craft behavior.
+- Marketplace maintainers render and publish agent-harness-native plugin artifacts.
+- Product engineers consume those artifacts inside their own repositories.
+
 ## Product hypothesis
 
 WE BELIEVE THAT a plugin marketplace delivering Spec Tree methodology through Codex and Claude Code plugins for context loading, spec authoring, verification, and spec-driven implementation

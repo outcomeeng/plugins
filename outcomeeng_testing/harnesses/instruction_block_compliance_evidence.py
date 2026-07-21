@@ -21,7 +21,14 @@ from tempfile import TemporaryDirectory
 from typing import cast
 
 from outcomeeng.distribution import instruction_block as dist
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+    RUNTIME_TOKEN_TOOL_KIND,
+    Target,
+    format_runtime_token,
+)
 from outcomeeng_testing.harnesses import instruction_block as harness
 
 MODULE = harness.load_instruction_block_module()
@@ -398,6 +405,57 @@ def _render_shipped_instruction_blocks(
     return dist.render_instruction_blocks_from_harness_templates(
         _distribution_module(), templates, enabled_languages
     )
+
+
+def _assert_codex_role_input_uses_runtime_capability() -> None:
+    """Assert role-task submission renders through a discoverable runtime token."""
+    authored = dist.AUTHORED_TEMPLATE_PATH.read_text(encoding="utf-8")
+    token = format_runtime_token(
+        RUNTIME_TOKEN_TOOL_KIND,
+        RUNTIME_TOKEN_SPAWN_AGENT_CAPABILITY,
+        Target.CODEX.value,
+    )
+    runtime_name = RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]
+
+    assert token in authored
+    assert runtime_name not in authored
+
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CODEX]
+    router = dist.managed_router_block(document)
+    assert token not in router
+    assert runtime_name in router
+    assert (
+        "**Spawn each verifier or reviewer with its role task as the initial turn.**"
+    ) in router
+
+
+def _assert_dist_template_copies_stay_equivalent() -> None:
+    """Assert both dist template copies carry the same complete harness spans."""
+    templates = dist.load_harness_templates(_distribution_module())
+    claude_copy = templates[harness.HARNESS_CLAUDE]
+    codex_copy = templates[harness.HARNESS_CODEX]
+
+    assert claude_copy == codex_copy
+
+    for marker in (
+        "<!-- harness:codex -->",
+        "<!-- harness:claude -->",
+        "multi_agent_v1.spawn_agent",
+        "**Collect, preserve, then close.**",
+        "**Spawn each verifier or reviewer with its role task as the initial turn.**",
+        "Use the `Agent` tool for every configured verifier or reviewer.",
+    ):
+        assert marker in claude_copy
+        assert marker in codex_copy
+
+
+def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
+    """Assert Claude keeps native configured-agent dispatch."""
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CLAUDE]
+    router = dist.managed_router_block(document)
+
+    assert "Use the `Agent` tool for every configured verifier or reviewer." in router
+    assert "OUTCOMEENG_CODEX_AGENT_NAME" not in router
 
 
 def _require_wait_for_load_policy_error(documents: dict[str, str]) -> None:
