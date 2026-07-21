@@ -22,3 +22,9 @@ Revisit condition: update `outcomeeng.validation.selected_gate` and the
 selected-gate tests so selecting a full validation surface does not
 automatically imply untargeted pytest for Markdown-only or other
 non-pytest-bearing changes.
+
+## Gate-step path selection duplicates the generated-sources declaration
+
+`outcomeeng/validation/selected_gate.py` selects gate steps from hardcoded `dist/claude/**`, `dist/codex/**`, and instruction-block path lists that duplicate relations 1 and 2 of `spx/local/generated-sources.toml`, while `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` makes the committed declaration the single source of generated-path knowledge for verifiers and consumers.
+
+**Resolution shape**: derive the selector's generated-path patterns from `spx/local/generated-sources.toml`. The migration and the superseding `spx` verification scope projection are tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
