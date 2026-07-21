@@ -17,3 +17,11 @@ Rust currently has only the top-level Rust node for these concerns, so this note
 ## Revisit condition
 
 Pick this up after the `review-changes` vocabulary boundary is clarified, so Rust standards work is reviewed with the corrected distinction between review and audit.
+
+## Decomposition disposition — flat node carries the full test-evidence seam set (interim)
+
+The test-evidence seam alignment added six Compliance assertions to `rust.md` (predicate ownership, semantic-binding-by-choice, controlled-implementation rules, case provenance, oracle independence), taking its Compliance section to 15 assertions — past the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md` and beyond the sibling nodes `spx/43-python.enabler/python.md` (7) and `spx/43-typescript.enabler/typescript.md` (6). Those siblings stay small because Python holds these rules in the decomposed `25-python-standards.enabler/25-python-tests.enabler` subtree; Rust has no equivalent subtree yet.
+
+**Disposition: defer decomposition; keep the assertions inline as the interim home.** The seam assertions are correct product truth the alignment needed now, and they must live somewhere until the subtree exists. Decomposing `rust.md` into a dedicated Rust test-standards subtree that mirrors Python's structure is a separate structural `/decompose` — it creates new nodes, relocates the roughly ten test-standard assertions, and assigns ordering evidence — larger than the seam-alignment scope and already the direction this PLAN anticipates. When that subtree is created, move the seam and test-infrastructure assertions into it and shrink `rust.md` back below the signal.
+
+Recorded so the decomposition signal is dispositioned, not silently carried forward on the next edit. Surfaced by `changes-reviewer` (rule `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md:ALWAYS:1`) during the Rust seam alignment.
