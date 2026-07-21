@@ -23,7 +23,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TextIO, cast
+from typing import Final, TextIO, cast
 
 from hypothesis import given, seed, settings
 
@@ -148,6 +148,7 @@ PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
 FAILING_CHILD_OUTPUT_PREFIX = "failing validator output line"
+DECLARED_SIGNAL_GRACE_SECONDS: Final = 2.0
 SPAWN_FAILURE_MESSAGE = "missing executable"
 HIGH_VOLUME_CHILD_OUTPUT = "\n".join("captured child output" for _ in range(200))
 PYTEST_TARGET_ARG = (
@@ -535,7 +536,7 @@ def assert_gate_compliance_contract() -> None:
         f"(the production adapter); found: {importers}"
     )
 
-    assert_signal_shutdown_waits_are_bounded()
+    _assert_signal_shutdown_waits_are_bounded()
 
     source_text = validation_package_source_text()
     assert "gh run watch" not in source_text
@@ -1556,7 +1557,8 @@ class BoundedAdvancingClock:
         self.current += seconds
 
 
-def assert_signal_shutdown_waits_are_bounded() -> None:
+def _assert_signal_shutdown_waits_are_bounded() -> None:
+    assert SIGNAL_GRACE_SECONDS == DECLARED_SIGNAL_GRACE_SECONDS
     grace_sleep_calls = math.ceil(SIGNAL_GRACE_SECONDS / SIGNAL_POLL_INTERVAL_SECONDS)
     sleep_budget = grace_sleep_calls + POST_KILL_REAP_ATTEMPTS
     clock = BoundedAdvancingClock(max_sleep_calls=sleep_budget)
@@ -1581,7 +1583,6 @@ __all__ = [
     "RecordingSpawner",
     "SignalRaisingSpawner",
     "SpawnFailingSpawner",
-    "assert_signal_shutdown_waits_are_bounded",
 ]
 
 

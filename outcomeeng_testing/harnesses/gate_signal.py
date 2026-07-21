@@ -23,9 +23,6 @@ from outcomeeng.validation import (
     SUMMARY_KEY_STEPS,
     SUMMARY_PATH_LABEL,
 )
-from outcomeeng_testing.harnesses.gate import (
-    assert_signal_shutdown_waits_are_bounded,
-)
 
 ORCHESTRATOR_STARTUP_SECONDS: Final = 8.0
 TERMINATION_DEADLINE_SECONDS: Final = 6.0
@@ -44,13 +41,9 @@ def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]
         f"pid_marker = pathlib.Path({str(pid_path)!r})\n"
         f"signal_marker = pathlib.Path({str(signal_path)!r})\n"
         "def handle_term(signum, _frame):\n"
-        "    signal_marker.touch()\n"
-        f"    time.sleep({GROUP_MARKER_POLL_SECONDS})\n"
         "    signal_marker.write_text(str(signum), encoding='utf-8')\n"
         "    raise SystemExit(0)\n"
         "signal.signal(signal.SIGTERM, handle_term)\n"
-        "pid_marker.touch()\n"
-        f"time.sleep({GROUP_MARKER_POLL_SECONDS})\n"
         "pid_marker.write_text(str(os.getpid()), encoding='utf-8')\n"
         f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})\n"
     )
@@ -100,9 +93,7 @@ sys.exit(run(spawner=PidPrintingSpawner(), sink=sys.stdout, steps=steps))
 
 
 def _spawn_signal_wrapper_program(
-    delivered_signal: signal.Signals,
-    pid_path: Path,
-    signal_path: Path,
+    delivered_signal: signal.Signals, pid_path: Path, signal_path: Path
 ) -> str:
     """Return a wrapper that raises a forwarded signal during production spawn."""
     return f"""
@@ -118,15 +109,9 @@ class SignalDuringSpawnSpawner:
         sys.stderr.flush()
         marker = pathlib.Path({str(pid_path)!r})
         deadline = time.monotonic() + {GROUP_MARKER_WAIT_SECONDS!r}
-        grandchild_pid = None
-        while time.monotonic() < deadline:
-            try:
-                grandchild_pid = int(marker.read_text(encoding="utf-8"))
-            except (FileNotFoundError, ValueError):
-                time.sleep({GROUP_MARKER_POLL_SECONDS!r})
-            else:
-                break
-        if grandchild_pid is None:
+        while time.monotonic() < deadline and not marker.exists():
+            time.sleep({GROUP_MARKER_POLL_SECONDS!r})
+        if not marker.exists():
             raise RuntimeError("grandchild did not become signal-ready")
         signal.raise_signal({int(delivered_signal)})
         return handle
@@ -151,7 +136,7 @@ def _read_grandchild_pid(pid_path: Path) -> int:
     while time.monotonic() < deadline:
         try:
             return int(pid_path.read_text(encoding="utf-8"))
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError:
             time.sleep(GROUP_MARKER_POLL_SECONDS)
     raise AssertionError("child did not announce grandchild PID in time")
 
@@ -161,7 +146,7 @@ def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
     while time.monotonic() < deadline:
         try:
             delivered_signal = int(signal_path.read_text(encoding="utf-8"))
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError:
             time.sleep(GROUP_MARKER_POLL_SECONDS)
             continue
         assert delivered_signal == int(signal.SIGTERM)
@@ -262,7 +247,6 @@ def _assert_failed_signal_summary(
 
 def assert_signals_terminate_process_groups_within_grace() -> None:
     """Exercise every forwarded signal against a real in-flight child group."""
-    assert_signal_shutdown_waits_are_bounded()
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -292,7 +276,6 @@ def assert_signals_terminate_process_groups_within_grace() -> None:
 
 def assert_spawn_window_signals_reach_child_groups() -> None:
     """Exercise every forwarded signal raised during production child spawn."""
-    assert_signal_shutdown_waits_are_bounded()
     for delivered_signal in FORWARDED_SIGNALS:
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -301,9 +284,7 @@ def assert_spawn_window_signals_reach_child_groups() -> None:
             orchestrator = _spawn_wrapper(
                 root / "spawn_signal_wrapper.py",
                 _spawn_signal_wrapper_program(
-                    delivered_signal,
-                    grandchild_pid_path,
-                    grandchild_signal_path,
+                    delivered_signal, grandchild_pid_path, grandchild_signal_path
                 ),
             )
             child_pid: int | None = None
