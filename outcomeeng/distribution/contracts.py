@@ -22,6 +22,9 @@ STANDARD_JINJA_VARIABLE_DELIMITER_END: Final = "}}"
 BUILD_TARGET_VARIABLE: Final = "target"
 SPX_FLOOR_VARIABLE: Final = "spx_floor"
 PLUGIN_NAME_VARIABLE: Final = "plugin_name"
+IDENTITY_PREFLIGHT_SENTINEL_VARIABLE: Final = (
+    "configured_agent_identity_preflight_sentinel"
+)
 DIST_DIR_NAME: Final = "dist"
 PLUGINS_DIR_NAME: Final = "plugins"
 SKILLS_SUBDIR_NAME: Final = "skills"
@@ -115,6 +118,8 @@ RUNTIME_TOKEN_CONFIGURED_AGENT_FAST_OR_STANDARD_MODELS_CAPABILITY: Final = (
     "configured_agent_fast_or_standard_models"
 )
 RUNTIME_TOKEN_ROOT_GUIDE_CAPABILITY: Final = "root_guide"
+
+CODEX_IDENTITY_PREFLIGHT_SENTINEL: Final = "OUTCOMEENG_IDENTITY_PREFLIGHT_V1"
 
 RUNTIME_TOKEN_ASK_USER_NAMES: Final[dict[str, str]] = {
     Target.CLAUDE.value: "AskUserQuestion",

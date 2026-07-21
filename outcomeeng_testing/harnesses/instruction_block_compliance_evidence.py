@@ -22,6 +22,7 @@ from typing import cast
 
 from outcomeeng.distribution import instruction_block as dist
 from outcomeeng.distribution.contracts import (
+    CODEX_IDENTITY_PREFLIGHT_SENTINEL,
     DIST_DIR_NAME,
     RUNTIME_TOKEN_SEND_INPUT_CAPABILITY,
     RUNTIME_TOKEN_SEND_INPUT_NAMES,
@@ -426,6 +427,20 @@ def _assert_codex_role_input_uses_runtime_capability() -> None:
         f"if `{runtime_name}` is not exposed, discover the multi-agent "
         "input-submission tool with `tool_search`"
     ) in router
+
+
+def _assert_claude_router_uses_native_configured_agent_dispatch() -> None:
+    """Assert Claude keeps native dispatch without the Codex preflight protocol."""
+    document = _render_shipped_instruction_blocks()[harness.HARNESS_CLAUDE]
+    router = dist.managed_router_block(document)
+
+    assert "Use the `Agent` tool for every configured verifier or reviewer." in router
+    assert (
+        "The configured type binds the child to its agent definition, so Claude Code "
+        "needs no separate identity-preflight turn."
+    ) in router
+    assert CODEX_IDENTITY_PREFLIGHT_SENTINEL not in router
+    assert "OUTCOMEENG_CODEX_AGENT_NAME" not in router
 
 
 def _require_wait_for_load_policy_error(documents: dict[str, str]) -> None:

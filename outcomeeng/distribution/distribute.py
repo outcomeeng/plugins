@@ -21,7 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from outcomeeng.distribution.contracts import (
     CLAUDE_DIST_RELATIVE,

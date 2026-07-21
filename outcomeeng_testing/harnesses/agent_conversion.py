@@ -7,9 +7,12 @@ import subprocess
 import tomllib
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
+
+import yaml
 
 from outcomeeng.distribution.agents import (
     AGENT_SOURCE_DIRECTORY_NAME,
@@ -37,6 +40,7 @@ from outcomeeng.distribution.agents import (
     READ_ONLY_SANDBOX_MODE,
     READ_ONLY_TOOLS,
     SCRIPT_CAPABLE_TOOLS,
+    SUPPORTED_FRONTMATTER_FIELDS,
     TomlArrayTable,
     TomlMultilineString,
     WEB_CAPABLE_TOOLS,
@@ -59,6 +63,7 @@ from outcomeeng.distribution.agents import (
     render_agent_toml,
 )
 from outcomeeng.distribution.contracts import (
+    CODEX_IDENTITY_PREFLIGHT_SENTINEL,
     CODEX_PLUGIN_SUBDIR_NAME,
     PLUGINS_DIR_NAME,
     SOURCE_ROOT_NAME,
@@ -145,6 +150,65 @@ SORTED_WRITE_CAPABLE_TOOL_ALLOWLIST: Final = tuple(sorted(WRITE_CAPABLE_TOOLS))
 EMPTY_TOOL_ALLOWLIST: Final = ()
 
 
+@dataclass(frozen=True)
+class AgentDocumentOracle:
+    """Independent YAML-frontmatter and Markdown-body observation."""
+
+    frontmatter: Mapping[str, object]
+    body: str
+
+
+def agent_document_oracle(path: Path) -> AgentDocumentOracle:
+    """Read an agent document through PyYAML instead of the production parser."""
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        raise AssertionError(f"{path}: expected YAML frontmatter opener")
+    frontmatter_text, separator, body = text.removeprefix("---\n").partition("\n---\n")
+    if not separator:
+        raise AssertionError(f"{path}: expected YAML frontmatter closer")
+    loaded = yaml.safe_load(frontmatter_text)
+    if not isinstance(loaded, Mapping) or not all(
+        isinstance(key, str) for key in loaded
+    ):
+        raise AssertionError(f"{path}: expected string-keyed YAML mapping")
+    return AgentDocumentOracle(
+        frontmatter=cast("Mapping[str, object]", loaded),
+        body=body.strip(),
+    )
+
+
+def oracle_string(document: AgentDocumentOracle, key: str) -> str:
+    """Return one required string from an independent document observation."""
+    value = document.frontmatter[key]
+    assert isinstance(value, str)
+    return value
+
+
+def oracle_optional_string(document: AgentDocumentOracle, key: str) -> str | None:
+    """Return one optional string from an independent document observation."""
+    value = document.frontmatter.get(key)
+    assert value is None or isinstance(value, str)
+    return value
+
+
+def oracle_strings(document: AgentDocumentOracle, key: str) -> tuple[str, ...]:
+    """Return one comma-delimited or YAML-sequence string field."""
+    value = document.frontmatter.get(key)
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return tuple(item.strip() for item in value.split(",") if item.strip())
+    assert isinstance(value, list) and all(isinstance(item, str) for item in value)
+    return tuple(cast("list[str]", value))
+
+
+def oracle_mapping(document: AgentDocumentOracle, key: str) -> Mapping[str, object]:
+    """Return one required nested mapping from an independent observation."""
+    value = document.frontmatter[key]
+    assert isinstance(value, Mapping)
+    return cast("Mapping[str, object]", value)
+
+
 def source_agent(
     *,
     source_path: Path = REVIEWER_SOURCE_PATH,
@@ -196,7 +260,7 @@ def agent_conversion_fixture(name: str) -> str:
 
 def converted_source_agent_toml(
     root: Path,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Render the baseline source-agent fixture through the converter."""
     source_path = write_agent_source(
         root,
@@ -206,7 +270,7 @@ def converted_source_agent_toml(
     )
     source = parse_agent_markdown(source_path)
     rendered = render_agent_toml(convert_agent(source))
-    return source, tomllib.loads(rendered)
+    return agent_document_oracle(source_path), tomllib.loads(rendered)
 
 
 def converted_folded_description_toml(root: Path) -> dict[str, object]:
@@ -223,14 +287,14 @@ def converted_folded_description_toml(root: Path) -> dict[str, object]:
 
 def converted_default_codex_source_root_toml(
     root: Path,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a rendered Codex fixture through the default source root."""
     source_root = write_dist_codex_agent_tree(
         root,
         PLUGIN_NAME,
         {CHANGES_REVIEWER_NAME: agent_conversion_fixture(CODEX_RENDERED_AGENT_FIXTURE)},
     )
-    source = parse_agent_markdown(
+    source_path = (
         source_root
         / PLUGIN_NAME
         / AGENT_SOURCE_DIRECTORY_NAME
@@ -238,13 +302,15 @@ def converted_default_codex_source_root_toml(
     )
     with working_directory(root):
         (converted,) = convert_agents()
-    return source, tomllib.loads(render_agent_toml(converted))
+    return agent_document_oracle(source_path), tomllib.loads(
+        render_agent_toml(converted)
+    )
 
 
 def converted_codex_agent_with_yaml_mcp_toml(
     root: Path,
     source: str,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Convert a Codex target fixture with YAML MCP mapping syntax."""
     source_root = write_agent_tree(
         root,
@@ -257,9 +323,10 @@ def converted_codex_agent_with_yaml_mcp_toml(
         / AGENT_SOURCE_DIRECTORY_NAME
         / f"{CHANGES_REVIEWER_NAME}.md"
     )
-    parsed_source = parse_agent_markdown(source_agent_path)
     (converted,) = convert_agent_tree(source_root)
-    return parsed_source, tomllib.loads(render_agent_toml(converted))
+    return agent_document_oracle(source_agent_path), tomllib.loads(
+        render_agent_toml(converted)
+    )
 
 
 def converted_empty_tools_toml(root: Path) -> dict[str, object]:
@@ -308,14 +375,14 @@ def working_directory(path: Path) -> Iterator[None]:
 
 def installed_guarded_writer_toml(
     root: Path,
-) -> tuple[SourceAgent, dict[str, object]]:
+) -> tuple[AgentDocumentOracle, dict[str, object]]:
     """Install the guarded-writer fixture and return source plus parsed TOML."""
     source_root = write_agent_tree(
         root,
         PLUGIN_NAME,
         {GUARDED_WRITER_NAME: agent_conversion_fixture(GUARDED_WRITER_AGENT_FIXTURE)},
     )
-    source = parse_agent_markdown(
+    source_path = (
         source_root
         / PLUGIN_NAME
         / AGENT_SOURCE_DIRECTORY_NAME
@@ -323,7 +390,9 @@ def installed_guarded_writer_toml(
     )
     target_root = root / CODEX_AGENTS_DIRNAME
     (installed_path,) = install_agents(source_root, target_root)
-    return source, tomllib.loads(installed_path.read_text(encoding="utf-8"))
+    return agent_document_oracle(source_path), tomllib.loads(
+        installed_path.read_text(encoding="utf-8")
+    )
 
 
 def write_codex_plugin_manifest(root: Path) -> Path:
@@ -485,23 +554,28 @@ def duplicate_filename_roots(root: Path) -> tuple[Path, Path]:
 def assert_agent_frontmatter_and_body_convert_to_codex_toml() -> None:
     """Assert baseline frontmatter and body conversion."""
     with TemporaryDirectory() as tmp:
-        source, parsed = converted_source_agent_toml(Path(tmp))
+        expected, parsed = converted_source_agent_toml(Path(tmp))
+    expected_name = oracle_string(expected, "name")
+    expected_skills = oracle_strings(expected, "skills")
+    expected_tools = oracle_strings(expected, "tools")
 
-    assert parsed["name"] == source.name
-    assert parsed["description"] == source.description
-    assert parsed["model"] == map_model(source.model)
+    assert parsed["name"] == expected_name
+    assert parsed["description"] == oracle_string(expected, "description")
+    assert parsed["model"] == map_model(oracle_optional_string(expected, "model"))
     assert parsed["web_search"] == WEB_SEARCH_DISABLED
     assert "sandbox_mode" not in parsed
     assert toml_table(toml_table(parsed, "shell_environment_policy"), "set") == {
-        CODEX_AGENT_ENV_VAR: agent_environment_marker(source)
+        CODEX_AGENT_ENV_VAR: (
+            f"{PLUGIN_NAME}{CODEX_AGENT_ENV_SEPARATOR}{expected_name}"
+        )
     }
     instructions = toml_string(parsed, "developer_instructions")
-    assert source.body in instructions
-    assert all(skill in instructions for skill in source.skills)
+    assert expected.body in instructions
+    assert all(skill in instructions for skill in expected_skills)
     assert parsed_toml_skill_config(parsed) == [
-        {"name": skill, "enabled": True} for skill in source.skills
+        {"name": skill, "enabled": True} for skill in expected_skills
     ]
-    assert all(tool in instructions for tool in source.tools)
+    assert all(tool in instructions for tool in expected_tools)
 
 
 def assert_folded_yaml_description_converts_to_text() -> None:
@@ -514,39 +588,46 @@ def assert_folded_yaml_description_converts_to_text() -> None:
 
 def assert_skills_are_preserved_as_codex_config_and_guidance() -> None:
     """Assert skill entries become Codex config and developer guidance."""
-    sources = (
-        source_agent(),
-        *(parse_agent_markdown(path) for path in iter_agent_files(DEFAULT_SOURCE_ROOT)),
+    sources_and_expected_skills = (
+        (source_agent(), ()),
+        *(
+            (
+                parse_agent_markdown(path),
+                oracle_strings(agent_document_oracle(path), "skills"),
+            )
+            for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
+        ),
     )
-    assert any(not source.skills for source in sources)
-    assert any(len(source.skills) == 1 for source in sources)
-    assert any(len(source.skills) > 1 for source in sources)
+    assert any(not skills for _, skills in sources_and_expected_skills)
+    assert any(len(skills) == 1 for _, skills in sources_and_expected_skills)
+    assert any(len(skills) > 1 for _, skills in sources_and_expected_skills)
 
-    for source in sources:
+    for source, expected_skills in sources_and_expected_skills:
         converted = convert_agent(source)
         instructions = converted_instruction_value(converted)
         guidance = CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
-            skills=", ".join(f"`{skill}`" for skill in source.skills)
+            skills=", ".join(f"`{skill}`" for skill in expected_skills)
         )
-        if not source.skills:
+        if not expected_skills:
             assert "skills" not in converted.values
             guidance_prefix = CODEX_SKILLS_GUIDANCE_TEMPLATE.partition("{skills}")[0]
             assert guidance_prefix not in instructions
             continue
         assert guidance in instructions
         assert converted_skill_config(converted) == tuple(
-            {"name": skill, "enabled": True} for skill in source.skills
+            {"name": skill, "enabled": True} for skill in expected_skills
         )
 
 
 def assert_identity_preflight_precedes_source_role_instructions() -> None:
     """Assert converted developer instructions handle identity before role work."""
     sources = tuple(
-        parse_agent_markdown(path) for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
+        (parse_agent_markdown(path), agent_document_oracle(path))
+        for path in iter_agent_files(DEFAULT_SOURCE_ROOT)
     )
     assert sources
 
-    for source in sources:
+    for source, expected in sources:
         converted = convert_agent(source)
         instructions = converted_instruction_value(converted)
         preflight, separator, later_instructions = instructions.partition(
@@ -556,7 +637,14 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
         assert (
             f"{preflight}</identity_preflight>" == CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS
         )
-        assert later_instructions.startswith(source.body.strip())
+        assert later_instructions.startswith(expected.body)
+        ordinary_role_message = f"{CODEX_IDENTITY_PREFLIGHT_SENTINEL} with context"
+        assert ordinary_role_message != CODEX_IDENTITY_PREFLIGHT_SENTINEL
+        assert f"equals `{CODEX_IDENTITY_PREFLIGHT_SENTINEL}` exactly" in preflight
+        assert (
+            "For every other message, including a longer message that mentions "
+            f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}`"
+        ) in preflight
         policy = converted.values["shell_environment_policy"]
         assert isinstance(policy, Mapping)
         environment = policy["set"]
@@ -584,48 +672,54 @@ def assert_identity_preflight_precedes_source_role_instructions() -> None:
 def assert_rendered_codex_agent_tree_converts_to_codex_toml() -> None:
     """Assert rendered Codex target agents preserve Codex runtime overrides."""
     with TemporaryDirectory() as tmp:
-        source, parsed = converted_default_codex_source_root_toml(Path(tmp))
+        expected, parsed = converted_default_codex_source_root_toml(Path(tmp))
+    expected_skills = oracle_strings(expected, "skills")
 
-    assert parsed["name"] == source.name
-    assert parsed["description"] == source.description
-    assert parsed["model"] == source.model
-    assert parsed["model_reasoning_effort"] == source.model_reasoning_effort
-    assert parsed["sandbox_mode"] == source.sandbox_mode
-    assert parsed["nickname_candidates"] == list(source.nickname_candidates)
-    assert isinstance(source.mcp_servers, Mapping)
-    source_docs_server = source.mcp_servers["docs"]
+    assert parsed["name"] == oracle_string(expected, "name")
+    assert parsed["description"] == oracle_string(expected, "description")
+    assert parsed["model"] == oracle_string(expected, "model")
+    assert parsed["model_reasoning_effort"] == oracle_string(
+        expected, "model_reasoning_effort"
+    )
+    assert parsed["sandbox_mode"] == oracle_string(expected, "sandbox_mode")
+    assert parsed["nickname_candidates"] == list(
+        oracle_strings(expected, "nickname_candidates")
+    )
+    source_docs_server = oracle_mapping(expected, "mcp_servers")["docs"]
     assert isinstance(source_docs_server, Mapping)
     parsed_docs_server = toml_table(toml_table(parsed, "mcp_servers"), "docs")
     assert parsed_docs_server["command"] == source_docs_server["command"]
     source_args = source_docs_server["args"]
-    assert isinstance(source_args, tuple)
-    assert parsed_docs_server["args"] == list(source_args)
+    assert isinstance(source_args, list)
+    assert parsed_docs_server["args"] == source_args
     instructions = toml_string(parsed, "developer_instructions")
-    assert source.body in instructions
-    assert all(skill in instructions for skill in source.skills)
+    assert expected.body in instructions
+    assert all(skill in instructions for skill in expected_skills)
     assert parsed_toml_skill_config(parsed) == [
-        {"name": skill, "enabled": True} for skill in source.skills
+        {"name": skill, "enabled": True} for skill in expected_skills
     ]
 
 
 def assert_yaml_mcp_server_mappings_convert_to_codex_toml() -> None:
     """Assert YAML mapping syntax for MCP servers preserves nested config."""
     with TemporaryDirectory() as tmp:
-        block_source, block_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        block_expected, block_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
             agent_conversion_fixture(CODEX_BLOCK_MCP_AGENT_FIXTURE),
         )
-        flow_source, flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
+        flow_expected, flow_parsed = converted_codex_agent_with_yaml_mcp_toml(
             Path(tmp),
             agent_conversion_fixture(CODEX_FLOW_MCP_AGENT_FIXTURE),
         )
 
-    for source, parsed in (
-        (block_source, block_parsed),
-        (flow_source, flow_parsed),
+    for expected, parsed in (
+        (block_expected, block_parsed),
+        (flow_expected, flow_parsed),
     ):
-        assert isinstance(source.mcp_servers, Mapping)
-        assert toml_table(parsed, "mcp_servers") == toml_compatible(source.mcp_servers)
+        expected_mcp_servers = oracle_mapping(expected, "mcp_servers")
+        assert toml_table(parsed, "mcp_servers") == toml_compatible(
+            expected_mcp_servers
+        )
 
 
 def assert_explicit_empty_tools_frontmatter_converts_to_restrictive_codex_config() -> (
@@ -795,24 +889,34 @@ def assert_write_capable_tool_allowlist_converts_to_manual_review_guidance() -> 
 def assert_manual_guidance_preserves_source_only_fields() -> None:
     """Assert source-only fields remain as manual-review guidance."""
     with TemporaryDirectory() as tmp:
-        source, parsed = installed_guarded_writer_toml(Path(tmp))
+        expected, parsed = installed_guarded_writer_toml(Path(tmp))
+    expected_skills = oracle_strings(expected, "skills")
+    expected_tools = oracle_strings(expected, "tools")
+    expected_disallowed_tools = oracle_strings(expected, "disallowedTools")
+    expected_unsupported_fields = tuple(
+        sorted(
+            field
+            for field in expected.frontmatter
+            if field not in SUPPORTED_FRONTMATTER_FIELDS
+        )
+    )
 
     instructions = toml_string(parsed, "developer_instructions")
     expected_guidance = (
         CODEX_SKILLS_GUIDANCE_TEMPLATE.format(
-            skills=", ".join(f"`{skill}`" for skill in source.skills)
+            skills=", ".join(f"`{skill}`" for skill in expected_skills)
         ),
         CODEX_TOOLS_GUIDANCE_TEMPLATE.format(
-            tools=", ".join(f"`{tool}`" for tool in source.tools)
+            tools=", ".join(f"`{tool}`" for tool in expected_tools)
         ),
         CODEX_DISALLOWED_TOOLS_GUIDANCE_TEMPLATE.format(
-            tools=", ".join(f"`{tool}`" for tool in source.disallowed_tools)
+            tools=", ".join(f"`{tool}`" for tool in expected_disallowed_tools)
         ),
         CODEX_PERMISSION_MODE_GUIDANCE_TEMPLATE.format(
-            permission_mode=source.permission_mode
+            permission_mode=oracle_string(expected, "permissionMode")
         ),
         CODEX_UNSUPPORTED_FIELDS_GUIDANCE_TEMPLATE.format(
-            fields=", ".join(f"`{field}`" for field in source.unsupported_fields)
+            fields=", ".join(f"`{field}`" for field in expected_unsupported_fields)
         ),
     )
     assert parsed["model"] == CODEX_STRONG_MODEL

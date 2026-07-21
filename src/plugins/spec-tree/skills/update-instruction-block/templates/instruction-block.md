@@ -202,7 +202,7 @@ Spawn the requested verifier or reviewer with an identity-only initial turn:
   "tool": "{{! tool('spawn_agent') !}}",
   "arguments": {
     "agent_type": "<exact-agent-type>",
-    "message": "Identity preflight only. Run `printf '%s' \"${OUTCOMEENG_CODEX_AGENT_NAME:-AGENT_IDENTITY_UNSET}\"` and return stdout exactly. Do not run the role workflow."
+    "message": "{{! configured_agent_identity_preflight_sentinel !}}"
   }
 }
 ```

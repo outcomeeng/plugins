@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from outcomeeng.catalog.plugin_catalog import (
     BEGIN_SENTINEL,

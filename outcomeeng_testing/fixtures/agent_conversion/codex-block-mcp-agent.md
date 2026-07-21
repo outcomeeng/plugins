@@ -14,7 +14,7 @@ mcp_servers:
         source: remote
     args:
       - -y
-      - @modelcontextprotocol/server-docs
+      - "@modelcontextprotocol/server-docs"
 ---
 
 Review the diff and report findings.

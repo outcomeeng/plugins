@@ -10,7 +10,7 @@ mcp_servers:
     command: npx
     args:
       - -y
-      - @modelcontextprotocol/server-docs
+      - "@modelcontextprotocol/server-docs"
 skills:
   - spec-tree:review-changes
 tools: Read

@@ -45,6 +45,8 @@ from outcomeeng.distribution.contracts import (
     BUILD_TARGET_VARIABLE,
     BUILD_VARIABLE_DELIMITER_END,
     BUILD_VARIABLE_DELIMITER_START,
+    CODEX_IDENTITY_PREFLIGHT_SENTINEL,
+    IDENTITY_PREFLIGHT_SENTINEL_VARIABLE,
     PLUGIN_NAME_VARIABLE,
     PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
@@ -611,6 +613,7 @@ def _render_variables(
     """
     variables = {
         BUILD_TARGET_VARIABLE: target.value,
+        IDENTITY_PREFLIGHT_SENTINEL_VARIABLE: CODEX_IDENTITY_PREFLIGHT_SENTINEL,
         SPX_FLOOR_VARIABLE: REQUIRED_SPX_VERSION,
         **diagnose_manifest_render_variables(),
     }

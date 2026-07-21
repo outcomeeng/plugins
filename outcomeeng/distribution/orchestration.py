@@ -7,7 +7,7 @@ import shlex
 from pathlib import Path, PurePosixPath
 from typing import Any, Final, cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV as _BUILD_COMMAND_ARGV,

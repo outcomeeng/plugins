@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Final, cast
 
 from hypothesis import given, seed, settings
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from outcomeeng.distribution.contracts import (
     CLAUDE_DIST_RELATIVE,

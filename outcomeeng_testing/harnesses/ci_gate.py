@@ -6,8 +6,7 @@ import tomllib
 from pathlib import Path
 from typing import Any, Final, cast
 
-# PyYAML ships without inline types; this harness owns the cast boundary.
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,

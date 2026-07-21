@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.contracts import CODEX_IDENTITY_PREFLIGHT_SENTINEL
+
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         "name",
@@ -67,11 +69,12 @@ CODEX_IDENTITY_PREFLIGHT_COMMAND: Final = (
 )
 CODEX_IDENTITY_PREFLIGHT_INSTRUCTIONS: Final = (
     "<identity_preflight>\n"
-    "When the initial user message identifies the turn as an identity preflight, "
+    "Only when the initial user message equals "
+    f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}` exactly, "
     f"run `{CODEX_IDENTITY_PREFLIGHT_COMMAND}` and return stdout exactly.\n"
-    "NEVER run the role workflow during the identity-preflight turn.\n"
-    "After the identity-preflight result, follow the source role instructions for "
-    "every later turn.\n"
+    "NEVER run the source role workflow for that exact sentinel message.\n"
+    "For every other message, including a longer message that mentions "
+    f"`{CODEX_IDENTITY_PREFLIGHT_SENTINEL}`, follow the source role instructions.\n"
     "</identity_preflight>"
 )
 CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
