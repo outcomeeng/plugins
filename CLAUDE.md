@@ -520,7 +520,7 @@ enabled = false
 
 - Agentic verification (review, audit) excludes declared generated extents from judgment and records them as skipped — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence.
 - Findings about generated content resolve to the relation's sources; never hand-edit a generated extent.
-- Deterministic verification covers the complete changeset; each relation's regeneration command backs parity.
+- Deterministic verification covers the complete changeset; each relation's regeneration command backs regeneration parity — rerunning it leaves the committed generated extents byte-identical.
 - Generation inputs and generator implementations are authored files judged in their generation role — template directives are template syntax, never defective final output.
 
 This section is the interim consumer of the declaration; the `spx` verification scope projection supersedes it when that capability ships.
