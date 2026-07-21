@@ -29,7 +29,6 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
 )
 GENERATED_MANIFEST_FILENAME: Final = ".outcomeeng-generated-agents.json"
 DEFAULT_SOURCE_ROOT: Final = Path("dist") / "codex"
-DEFAULT_TARGET_ROOT: Final = Path.home() / ".codex" / "agents"
 AGENT_SOURCE_DIRECTORY_NAME: Final = "agents"
 CODEX_STRONG_MODEL: Final = "gpt-5.5"
 CODEX_STANDARD_MODEL: Final = "gpt-5.4"
@@ -412,8 +411,8 @@ def convert_agents(source_root: Path = DEFAULT_SOURCE_ROOT) -> tuple[CodexAgent,
 
 
 def install_agents(
-    source_root: Path = DEFAULT_SOURCE_ROOT,
-    target_root: Path = DEFAULT_TARGET_ROOT,
+    source_root: Path,
+    target_root: Path,
     *,
     manifest_name: str = GENERATED_MANIFEST_FILENAME,
 ) -> tuple[Path, ...]:
@@ -479,7 +478,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
     install = subparsers.add_parser("install")
     install.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
-    install.add_argument("--target-root", type=Path, default=DEFAULT_TARGET_ROOT)
+    install.add_argument("--target-root", type=Path, required=True)
     install.add_argument(
         "--manifest-name",
         default=GENERATED_MANIFEST_FILENAME,
@@ -1015,7 +1014,6 @@ __all__ = [
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
-    "DEFAULT_TARGET_ROOT",
     "EFFORT_MAPPINGS",
     "GENERATED_MANIFEST_FILENAME",
     "INHERIT_MODEL_VALUE",
