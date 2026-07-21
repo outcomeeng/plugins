@@ -2,6 +2,14 @@
 
 Known follow-ups for the merging node. Coordination note; not spec truth.
 
+## Transport classifier extraction awaits a published SPX CLI capability
+
+`src/plugins/spec-tree/skills/merge/scripts/classify_changeset.py` runs to 161 lines — the coordination-note-only classification over the full changed-file set, committed branch scope plus uncommitted working-tree changes, with counts computed over the whole set so a large changeset is never misclassified from a truncated sample. Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the classifier has proven its value in use, so extraction is what it owes.
+
+The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+
+**Resolution shape**: port the classification into the SPX CLI together with the base-ref and branch-scope derivation it routes through, tracked in `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/ISSUES.md`; publish, advance the floor, and reduce the shipped skill to its instruction with no script. Keep whole-set counting across the move — the truncation guard is the classifier's correctness property, not an implementation detail. The transport-selection wording entry below governs how the result is reported, so it applies to the ported surface too. Revisit when the capability publishes.
+
 ## Transport-selection status message exposes classifier internals
 
 `/merge` can report the selected transport with raw classifier counts and a mechanical delegation sentence:

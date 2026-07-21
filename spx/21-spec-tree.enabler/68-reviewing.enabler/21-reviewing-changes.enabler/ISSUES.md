@@ -93,4 +93,19 @@ Required handling:
 
 The sibling reference skill `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler` needs no pin: `scope-changeset` is `user-invocable: false` with `allowed-tools: Read`, supplying deterministic script primitives rather than a model-judged verdict.
 
+## 9. Four shipped review scripts await extraction into the SPX CLI
+
+The `review-changes` skill ships four scripts past the fifty-line threshold:
+
+- `src/plugins/spec-tree/skills/review-changes/scripts/review_run.py` (645 lines) — the single command surface owning diff-bundle scratch storage, journal command invocation, state passing between verbs, and run sealing.
+- `src/plugins/spec-tree/skills/review-changes/scripts/review_result.py` (610 lines) — the canonical `review-result` schema: wire-format version, the `Severity` and `Concern` vocabularies, and the document shape.
+- `src/plugins/spec-tree/skills/review-changes/scripts/journal_emit.py` (508 lines) — the adapter bridging the review-result schema to the shared run-journal projection.
+- `src/plugins/spec-tree/skills/review-changes/scripts/compute_diff.py` (423 lines) — base-ref and head-ref precedence resolution plus the committed, staged, unstaged, and untracked diff bundle.
+
+Past fifty lines `spx/12-shipped-scripting.adr.md` makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; all four have proven their value in use, so extraction is what they owe. `21-script-decomposition.adr.md` already names `compute_diff.py`, `journal_emit.py`, and `review_result.py` as stop-gap modules, so their extraction completes a decomposition this node has already decided rather than opening a new one.
+
+The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+
+**Resolution shape**: port the runner, the result schema, the journal adapter, and diff computation into the SPX CLI, publish it, advance the floor, and reduce the shipped skill to its instruction with no scripts. Entry 3 above already routes review-finding validation to that boundary, and the projection scripts extract with it per `spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/ISSUES.md`, so the four move as one surface rather than piecemeal. Revisit when the capability publishes.
+
 Revisit entries 5 and 6 when review moves from `spx journal --type review` to `spx verification run`. Exercise the migration with an in-progress inspection before seal, repeated inspection of one file, restored prior-run context, and a final projection whose unique covered-unit count equals the changeset scope.
