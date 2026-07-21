@@ -151,33 +151,16 @@ def iter_agent_files(source_root: Path) -> tuple[Path, ...]:
 
 
 def parse_agent_markdown(path: Path) -> SourceAgent:
-    """Parse one rendered plugin agent markdown file."""
-    frontmatter, body = _split_frontmatter(path.read_text(encoding="utf-8"))
+    """Parse one rendered plugin agent markdown file.
+
+    Reads the file and delegates to the text parser, so the frontmatter-to-
+    SourceAgent mapping has one implementation. The agent's own name defaults to
+    the filename stem when the frontmatter declares none.
+    """
+    text = path.read_text(encoding="utf-8")
+    frontmatter, _body = _split_frontmatter(text)
     name = _optional_string(frontmatter, "name") or path.stem
-    description = _optional_string(frontmatter, "description") or (
-        f"Converted source agent from {path.name}."
-    )
-    unsupported_fields = tuple(
-        sorted(key for key in frontmatter if key not in SUPPORTED_FRONTMATTER_FIELDS)
-    )
-    return SourceAgent(
-        source_path=path,
-        name=name,
-        description=description,
-        body=body,
-        model=_optional_string(frontmatter, "model"),
-        model_reasoning_effort=_optional_string(frontmatter, "model_reasoning_effort"),
-        effort=_optional_string(frontmatter, "effort"),
-        sandbox_mode=_optional_string(frontmatter, "sandbox_mode"),
-        nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
-        mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
-        permission_mode=_optional_string(frontmatter, "permissionMode"),
-        skills=_string_tuple(frontmatter, "skills"),
-        tools=_string_tuple(frontmatter, "tools"),
-        tools_declared="tools" in frontmatter,
-        disallowed_tools=_string_tuple(frontmatter, "disallowedTools"),
-        unsupported_fields=unsupported_fields,
-    )
+    return parse_agent_text(text, source_path=path, name=name)
 
 
 def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:

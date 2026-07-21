@@ -155,6 +155,23 @@ def check_runtime_surface(surface: Path) -> list[str]:
     return [f"{runtime_dir}: expected only {SKILL_FILENAME}, found {sorted(entries)}"]
 
 
+def agent_owner(surface: Path, path: Path) -> tuple[str, str]:
+    """Return the owning plugin and bare agent name for one agent artifact.
+
+    A namespaced target carries the bare agent name as the filename stem. A flat
+    target prefixes the plugin slug, so the prefix is stripped to recover the
+    agent's own name — the value every wrapper rule is written against.
+    """
+    plugin = path.relative_to(surface).parts[0]
+    capability = AGENT_CAPABILITY_REGISTRY.get(surface.name)
+    stem = path.stem
+    if capability is not None and not capability.manifest_declares_agents:
+        prefix = f"{plugin}_"
+        if stem.startswith(prefix):
+            stem = stem[len(prefix) :]
+    return plugin, stem
+
+
 def check_wrapper_surface(surface: Path) -> list[str]:
     """Return implementation-wrapper violations for one plugin surface."""
     errors: list[str] = []
@@ -165,23 +182,29 @@ def check_wrapper_surface(surface: Path) -> list[str]:
         errors.append(f"{wrapper_path}: wrapper missing")
 
     agent_paths = agent_surface_paths(surface)
+    # Compare on the agent's own name rather than the artifact filename: a
+    # target whose agent namespace is flat prefixes the plugin slug and uses its
+    # own artifact suffix, so a filename comparison is inert on that surface and
+    # would let a retired or language-specific wrapper through unseen.
+    owners = {path: agent_owner(surface, path) for path in agent_paths}
     errors.extend(
         f"{path}: retired wrapper exists"
-        for path in agent_paths
-        if path.name in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
+        for path, (_plugin, stem) in owners.items()
+        if f"{stem}{MARKDOWN_FILE_SUFFIX}" in RETIRED_IMPLEMENTATION_AUDITOR_FILENAMES
     )
     language_names = frozenset(
         (
             *implementation_languages(surface),
-            *(path.parent.parent.name for path in agent_paths),
+            *(plugin for _path, (plugin, _stem) in owners.items()),
         )
     )
     errors.extend(
         f"{path}: language-specific auditor exists"
-        for path in agent_paths
-        if is_language_specific_auditor_filename(path.name)
+        for path, (_plugin, stem) in owners.items()
+        if is_language_specific_auditor_filename(f"{stem}{MARKDOWN_FILE_SUFFIX}")
         or any(
-            path.name in language_specific_auditor_filenames(language)
+            f"{stem}{MARKDOWN_FILE_SUFFIX}"
+            in language_specific_auditor_filenames(language)
             for language in language_names
         )
     )

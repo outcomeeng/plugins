@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng.distribution.build import (
     AGENT_CAPABILITY_REGISTRY,
     EmissionAction,
     agent_capability,
     agent_slug,
+    plugin_names,
+    template_source_files,
 )
 from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
 from outcomeeng_testing.harnesses.target_emission import (
@@ -32,9 +35,20 @@ def test_every_source_file_emits_to_both_target_trees() -> None:
     counts = source_emission_counts()
     sources = planned_sources()
     assert sources
+    template_sources = set(template_source_files(CANONICAL_SOURCE_ROOT))
+    plugin_count = len(plugin_names(CANONICAL_SOURCE_ROOT))
     for target, per_source in counts.items():
         missing = [source for source in sources if per_source[source] < 1]
         assert not missing, f"{target.value} emits nothing for {missing}"
+        # An ordinary source emits exactly once per target; only a per-plugin
+        # template fans out, and then exactly once per plugin. Requiring only
+        # "at least one" would let a duplicate emission pass unnoticed.
+        for source in sources:
+            expected = plugin_count if source in template_sources else 1
+            assert per_source[source] == expected, (
+                f"{target.value} emits {per_source[source]} outputs for {source}, "
+                f"expected {expected}"
+            )
 
     for target, inventory in planned_versus_emitted().items():
         assert inventory.planned_paths == inventory.emitted_paths, (

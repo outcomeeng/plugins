@@ -93,13 +93,23 @@ def source_emission_counts() -> dict[Target, Counter[Path]]:
     A source normally produces one output per target tree. A per-plugin
     template produces one per plugin, so the count is a coverage observation
     rather than a verdict: the caller owns the predicate over it.
+
+    Counts a source's own outputs — rendered, copied, or converted. A fanned-out
+    shared fragment and a placement manifest are derived artifacts attributed to
+    a source they do not correspond one-to-one with, so counting them would
+    conflate derivation with emission.
     """
+    counted = {
+        EmissionAction.RENDER,
+        EmissionAction.COPY,
+        EmissionAction.CONVERT_AGENT,
+    }
     snapshot = _canonical_emission_snapshot()
     return {
         target: Counter(
             emission.source
             for emission in snapshot.plan.for_target(target)
-            if emission.action is not EmissionAction.FAN_OUT
+            if emission.action in counted
         )
         for target in Target
     }

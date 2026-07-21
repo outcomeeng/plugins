@@ -1278,23 +1278,6 @@ def _copy_unrendered_file(
     shutil.copy2(emission.source, destination)
 
 
-def render_source_text(
-    source_file: Path,
-    *,
-    target: _Target,
-    src_root: Path,
-) -> str:
-    """Render one authored text file before target-specific translation."""
-    return render_text(
-        source_file.read_text(encoding="utf-8"),
-        shared_root=src_root / SHARED_DIR_NAME,
-        variables=_render_variables(
-            target,
-            plugin_name=source_plugin_name(source_file, src_root=src_root),
-        ),
-    )
-
-
 def render_planned_emission_text(
     emission: PlannedEmission,
     *,
