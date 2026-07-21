@@ -107,7 +107,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 <!-- harness:codex -->
 
-**Codex execution boundary.** Invoke `/wait-for-load` in its own top-level `functions.exec` call. Treat readiness as established only when that call's returned output visibly contains the terminal JSON with `ready: true`; an internal nested exit-code branch or a successfully completed outer cell is insufficient. Start the selected command in a separate top-level `functions.exec` call. When a nested `exec_command` may outlive that call, set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin`. **NEVER** place the waiter and selected command in the same `functions.exec` script or use `functions.wait` as the planned collector for a nested selected command.
+**Codex execution boundary.** Invoke `/wait-for-load` in its own top-level `functions.exec` call. Treat readiness as established only when that call's returned output visibly contains the terminal JSON with `ready: true`; an internal nested exit-code branch or a successfully completed outer cell is insufficient. Start the selected command in a separate top-level `functions.exec` call. When a nested `exec_command` may outlive that call, set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin` in later top-level calls whose outer yield window exceeds the nested `write_stdin` yield. **NEVER** place the waiter and selected command in the same `functions.exec` script or use `functions.wait` as the planned collector for a nested selected command.
 
 <!-- /harness:codex -->
 

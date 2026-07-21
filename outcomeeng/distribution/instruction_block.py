@@ -187,7 +187,11 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     ),
     (
         "nested command collection",
-        "set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin`",
+        "set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin` in later top-level calls",
+    ),
+    (
+        "collector yield containment",
+        "outer yield window exceeds the nested `write_stdin` yield",
     ),
     (
         "combined-script and nested-wait prohibition",
