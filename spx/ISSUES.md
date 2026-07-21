@@ -64,6 +64,19 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagents` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
 
+## Upgrade language test-data-ownership predicate-ownership and oracle-independence assertions to `[eval]` evidence
+
+The Python node `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/32-test-data-ownership.enabler/test-data-ownership.md` backs its predicate-ownership assertion (`:15`) and its oracle-independence assertion (`:26`) with `[eval]` links to the shared `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler/evals/full-chain-ownership/eval.toml`. The equivalent TypeScript node (`spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/test-data-ownership.md`) and the Rust node carry the same concepts only as parent-level `[audit]` rules, so the three language subtrees disagree on the evidence mechanism for the identical seam concept derived from the same governing node. Rendering the TypeScript pair as node-local `[audit]` would duplicate the parent `typescript-tests.md:19` predicate-ownership rule and the existing oracle-independence ALWAYS, so the mechanism upgrade — not a plain restatement — is what makes those two assertions non-duplicative.
+
+Two currency facts block adding the `[eval]` links to any further language node today, surfaced by the `eval-evidence-auditor` agent on the TypeScript rendering:
+
+- The eval has **no passing run for its current definition**: its newest passing `history.jsonl` row (2026-07-19) predates the 2026-07-21 commits that rewrote `cases.jsonl`, re-materialized `prompt.md`, and edited the `audit-tests` producer skill. Gate-5 (run-evidence) rejects any new `[eval]` link until the eval is re-run against the current definition.
+- The eval's `eval.toml` `owned_paths` lists the Python node but not the TypeScript or Rust nodes, even though 9 of 10 cases are TypeScript-shaped — so a future edit to a TS/Rust test-data-ownership assertion would not re-trigger the eval in CI.
+
+**Resolution shape** (one coordinated pass owned by the shared `audit-tests` node, not split across language slices): re-run `full-chain-ownership` against the current producer/cases to record a passing `history.jsonl` row; add both the TypeScript and Rust `32-test-data-ownership.enabler/**` paths to the eval's `owned_paths`; run `just build-eval-triggers` to regenerate the CI trigger block; then add the predicate-ownership `[eval]` and oracle-independence `[eval]` assertions to the TypeScript and Rust nodes together. Doing this in one pass avoids two worktrees re-running and editing the same shared eval concurrently.
+
+**Evidence.** Deferred from the TypeScript seam-concept parity slice by operator decision: the slice shipped the two TypeScript-only `[audit]` additions (a `source-testability` controlled-double faithfulness assertion and the per-assertion-type provenance assertion) and held the two `[eval]`-backed assertions because they depend on shared-audit-subtree currency work spanning the Python, Rust, and TypeScript nodes, and because `plugins-c` is scoped to TypeScript.
+
 ## Agent-specific behavior is enumerated inside product-level decisions
 
 Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
