@@ -1,5 +1,20 @@
 # Eval Harness: Plan — prompt-caching implementation (gated)
 
+## Relocation
+
+The eval-harness redesign re-homes this concern: eval-verification governance
+moves to `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/`
+(harness vocabulary under its `21-eval-harness.enabler` child), and the runtime
+adapter contract the redesigned harness delegates to lives under
+`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/`.
+New eval-harness decisions and specs land there; this node's specs, decisions,
+and evidence stay authoritative for the shipped harness until the
+implementation cutover named in the new subtree's `PLAN.md` files, after which
+this node retires. The prompt-caching plan below predates the redesign: its
+gate condition is stale (`anthropics/claude-code#34629` closed without
+resolution and the regression persists), and the caching decision re-derives at
+the new location rather than being implemented here.
+
 `.github/workflows/spec-tree-evals.yml` is authored and lint-clean. It
 collects changed paths, then delegates planning and execution to
 `outcomeeng-evals ci`: PRs use changed paths plus `owned_paths` and
