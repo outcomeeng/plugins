@@ -72,12 +72,12 @@ Review scope is the raw changed-file set, so a changeset that edits authored plu
 
 This is a separate larger concern rather than a bounded fix: the changeset definition is declared at product level in `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` as `the files changed between the base ref and HEAD`, governing all five verification types, so narrowing review scope amends a decision above this node rather than a script inside it. It also runs against `spx/15-merging.pdr.md` and this node's own rule that the reviewer resolves its own scope and treats caller-supplied scope as non-authoritative — a generated-path exclusion must be established as the reviewer's own derivation, never a caller filter, and the two must be told apart in the declaration. `dist/` is this repository's generated root; a consumer's differs, so the exclusion has to be a declared property of the project rather than a hardcoded path, and `spx/12-shipped-scripting.adr.md` sends a shipped script's logic to the SPX CLI once it passes fifty lines and proves its value.
 
+Governing decision settled: `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` amends the product-level scope model — the exclusion is a property of agentic verification only (deterministic verification keeps the complete changeset), the generated roots are a committed project-supplied declaration at `spx/local/generated-sources.toml` (never a hardcoded `dist/`), and findings about generated content resolve to the declaring relation's sources.
+
 Required handling:
 
-- Decide whether generated-artifact exclusion is a property of the changeset definition (all verification types) or of review scope alone, and amend the governing decision before any lower layer adopts it.
-- Declare the generated roots as a project-supplied property; never hardcode `dist/`.
-- Distinguish reviewer-owned scope derivation from a caller-supplied scope filter in the declaration, so the exclusion does not weaken the caller-independence rule this node already carries.
-- Keep audit and base-sync scope unaffected unless the amended decision covers them — `branch_scope` serves all three consumers, and base sync needs the real changed-file set.
+- Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
+- Keep base-sync scope on the real changed-file set — the governing decision widens no exclusion beyond agentic verification.
 
 ## 8. The review-changes skill omits an explicit model pin
 

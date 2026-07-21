@@ -75,3 +75,9 @@ secret is visible to `outcomeeng/plugins`, and the token account can bypass
 ## Drop `[review]` once the `[audit]` migration completes
 
 `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng/validation/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in inline `/understand` `<assertion_model>` and `<verification_model>`, and any validator or lint rule that enumerates the lane set.
+
+## CI-trigger marker regex lacks line-start anchoring
+
+`outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`.
+
+**Resolution shape**: anchor the block pattern to the start of a line and cover the anchoring in the node's ci-trigger tests, then drop the deviation note from `spx/local/generated-sources.toml`.

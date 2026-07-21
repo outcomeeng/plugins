@@ -23,3 +23,7 @@ The Compliance section holds eleven assertions, above the guideline that a node 
 The decomposition guideline's other trigger — a coordination note carrying structure intent — is this file, whose intent is the persistence migration above rather than a child-node boundary.
 
 Re-evaluate when the node gains an assertion that does not belong to the classification contract, or when the persistence migration lands and the projection contract separates from the classification contract.
+
+## Generated-source evidence from the committed declaration
+
+`changeset-coherence.md` and the shipped `src/plugins/spec-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` or citing `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`, which settles that declaration. Pending: resolve generated-source evidence from the declaration and add the citation — plugin-distribution work (skill edit, version bump, skill-audit gate) tracked with the other consumer migrations in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
