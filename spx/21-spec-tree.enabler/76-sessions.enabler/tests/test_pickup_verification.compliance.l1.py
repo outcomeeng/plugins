@@ -12,7 +12,9 @@ from outcomeeng_testing.harnesses.verify_session_claims import (
     node_status_observations,
     read_only_verification_observation,
     script_import_roots,
+    spec_entry_observation,
     subprocess_call_owners,
+    unloadable_session_observations,
     verify_parameters,
 )
 
@@ -95,6 +97,27 @@ def test_absent_node_resolves_to_unverifiable_naming_the_node() -> None:
 
     assert observation.actual.verdict is module.Verdict.UNVERIFIABLE
     assert observation.node_path in observation.actual.evidence
+
+
+def test_unloadable_session_resolves_to_one_unverifiable_verdict() -> None:
+    module = load_verify_session_claims_module()
+
+    for observation in unloadable_session_observations():
+        assert len(observation.verdicts) == 1, (
+            f"{observation.condition} produced {len(observation.verdicts)} verdicts"
+        )
+        assert observation.verdicts[0].kind is module.ClaimKind.SESSION_METADATA
+        assert observation.verdicts[0].verdict is module.Verdict.UNVERIFIABLE, (
+            f"{observation.condition} emitted {observation.verdicts[0].verdict}"
+        )
+
+
+def test_spec_entry_emits_both_path_and_node_status() -> None:
+    module = load_verify_session_claims_module()
+    observation = spec_entry_observation()
+
+    assert module.ClaimKind.INJECTED_PATH in observation.kinds
+    assert module.ClaimKind.NODE_STATUS in observation.kinds
 
 
 def test_metadata_loading_does_not_require_local_session_file_body() -> None:

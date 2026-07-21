@@ -350,9 +350,10 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
     code, out, err = runner.run(
         [*SPX_SPEC_STATUS_COMMAND, SPX_FORMAT_FLAG, SPX_JSON_FORMAT]
     )
+    nodes = _projection_nodes(out)
     verdicts: list[ClaimVerdict] = []
     for spec in session.specs:
-        node = str(Path(spec).parent)
+        node = str(PurePosixPath(spec).parent)
         if code != 0:
             verdicts.append(
                 claim_verdict(
@@ -363,7 +364,7 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
                 )
             )
             continue
-        record = _node_record(node, out)
+        record = _node_record(nodes, node)
         if record is None:
             verdicts.append(
                 claim_verdict(
@@ -393,14 +394,19 @@ def node_tree_id(node: str) -> str:
     return str(PurePosixPath(*parts)) if parts else ""
 
 
-def _node_record(node: str, stdout: str) -> dict[str, JsonScalar] | None:
+def _projection_nodes(stdout: str) -> object | None:
+    """Parse the spec-status projection once for the whole call."""
     try:
         payload = json.loads(stdout)
     except json.JSONDecodeError:
         return None
     if not isinstance(payload, dict):
         return None
-    record = _find_node_record(payload.get(SPEC_STATUS_NODES_FIELD), node_tree_id(node))
+    return payload.get(SPEC_STATUS_NODES_FIELD)
+
+
+def _node_record(nodes: object, node: str) -> dict[str, JsonScalar] | None:
+    record = _find_node_record(nodes, node_tree_id(node))
     if record is None:
         return None
     return {

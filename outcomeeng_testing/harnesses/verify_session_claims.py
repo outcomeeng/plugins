@@ -113,6 +113,22 @@ class ReadOnlyVerificationObservation:
 
 
 @dataclass(frozen=True)
+class UnloadableSessionObservation:
+    """One staged session-loading rejection and every verdict it produced."""
+
+    condition: str
+    verdicts: tuple[ClaimVerdictLike, ...]
+
+
+@dataclass(frozen=True)
+class SpecEntryObservation:
+    """The verdict kinds one recorded spec entry produced."""
+
+    spec_path: str
+    kinds: tuple[object, ...]
+
+
+@dataclass(frozen=True)
 class MetadataLoadingObservation:
     """Commands and git-ref verdict observed during session loading."""
 
@@ -167,6 +183,92 @@ def claim_mapping_observations() -> tuple[ClaimMappingObservation, ...]:
         for kind, relations in _arrangeable_claim_conditions(module)
         for relation in relations
     )
+
+
+def unloadable_session_observations() -> tuple[UnloadableSessionObservation, ...]:
+    """Stage every session-loading rejection this harness can arrange."""
+    module = load_verify_session_claims_module()
+    return tuple(
+        _unloadable_observation(module, condition, stdout)
+        for condition, stdout in _unloadable_session_payloads(module)
+    )
+
+
+def _unloadable_session_payloads(module: ModuleType) -> tuple[tuple[str, str], ...]:
+    """Pair each rejection condition with the stdout that triggers it.
+
+    The conditions are what this harness can stage against a successful
+    ``spx session show --json`` call, not a reading of the verifier's own
+    rejection branches.
+    """
+    ref = module.SESSION_GIT_REF_FIELD
+    specs = module.SESSION_SPECS_FIELD
+    files = module.SESSION_FILES_FIELD
+    well_formed: dict[str, object] = {ref: None, specs: [], files: []}
+    non_string = len(generated_token())
+    return (
+        ("unparseable json", "{" + generated_token()),
+        ("empty record list", json.dumps([])),
+        ("multiple record entries", json.dumps([well_formed, well_formed])),
+        ("non-object record entry", json.dumps([generated_token()])),
+        ("absent required field", json.dumps({specs: [], files: []})),
+        ("non-string git ref", json.dumps(well_formed | {ref: non_string})),
+        ("non-list specs", json.dumps(well_formed | {specs: generated_token()})),
+        ("non-string path item", json.dumps(well_formed | {files: [non_string]})),
+        (
+            "absolute path",
+            json.dumps(well_formed | {specs: [f"/{generated_relative_path()}"]}),
+        ),
+        (
+            "parent-escaping path",
+            json.dumps(well_formed | {files: [f"../{generated_relative_path()}"]}),
+        ),
+        ("empty path", json.dumps(well_formed | {specs: [""]})),
+    )
+
+
+def _unloadable_observation(
+    module: ModuleType, condition: str, stdout: str
+) -> UnloadableSessionObservation:
+    with accepted_git_context() as repo:
+        session_id = generated_token()
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={
+                (
+                    *module.SPX_SESSION_SHOW_COMMAND,
+                    module.SPX_SESSION_SHOW_JSON_FLAG,
+                    session_id,
+                ): (0, stdout, ""),
+                (*module.SPX_SESSION_SHOW_COMMAND, session_id): (
+                    0,
+                    generated_token(),
+                    "",
+                ),
+            },
+        )
+        return UnloadableSessionObservation(
+            condition=condition,
+            verdicts=tuple(module.verify(session_id, repo, runner)),
+        )
+
+
+def spec_entry_observation() -> SpecEntryObservation:
+    """Record which verdict kinds one recorded spec entry produces."""
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session_id = generated_token()
+        spec = projection_spec_path()
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=_session_command_scripts(module, session_id, specs=(spec,)),
+        )
+        return SpecEntryObservation(
+            spec_path=spec,
+            kinds=tuple(
+                verdict.kind for verdict in module.verify(session_id, repo, runner)
+            ),
+        )
 
 
 def _arrangeable_claim_conditions(
