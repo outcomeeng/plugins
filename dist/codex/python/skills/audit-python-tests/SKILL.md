@@ -71,17 +71,7 @@ Entry point is the spec, not the test file.
 Judge every in-scope assertion against each audit below. A `REJECT` finding from any audit rejects the assertion it names and moves to the next assertion. An audit whose subject is an imported artifact rather than an assertion — a generator, a harness, an inert fixture, or a `conftest.py` shim — attributes its finding to every in-scope assertion whose evidence chain reaches that artifact, so each finding carries the `assertion` field the base schema requires. The `<structural_reading>` and `<test_file_declarations>` observations above are folded into this gate rather than reported as a separate deterministic gate.
 
 <coupling_audit>
-Classify imports by runtime coupling:
-
-| Import pattern                                           | Classification                          |
-| -------------------------------------------------------- | --------------------------------------- |
-| `import pytest`                                          | Framework, does not count               |
-| `from hypothesis import given`                           | Framework, does not count               |
-| `import json`                                            | Stdlib, does not count                  |
-| `from typing import TYPE_CHECKING`                       | Type-only, does not count               |
-| `from product.config import parse_config`                | Production coupling                     |
-| `from <package>_testing.harnesses import config_harness` | Indirect coupling through harness       |
-| `from <package>_testing.generators import valid_config`  | Input-domain provider, audit separately |
+A `<package>_testing.generators` import is an input-domain provider, audited in `<generator_audit>` rather than classified as coupling here.
 
 Imports inside `if TYPE_CHECKING:` do not create runtime coupling. A test with only framework, stdlib, and type-only imports is a tautology unless it reaches production through a harness that itself reaches production.
 
