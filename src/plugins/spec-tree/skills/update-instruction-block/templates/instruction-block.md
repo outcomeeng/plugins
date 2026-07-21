@@ -244,7 +244,7 @@ Close a completed or no-longer-needed agent:
 }
 ```
 
-In the main authoring conversation, if `spawn_agent`, `wait_agent`, or `close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user') !}}` or any other tools as a substitute for result collection.
+In the main authoring conversation, if `spawn_agent`, `wait_agent`, or `close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry before concluding the capability or role is unavailable. Accept a subagent notification only when the harness delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `{{! tool('ask_user', 'codex') !}}` or any other tools as a substitute for result collection.
 
 **Result collection for verifier and reviewer agents.** The exposed typed wait capability (`{{! tool('wait_agent', 'codex') !}}` in the examples below) is the planned result-collection mechanism for the role task. Read its returned JSON, keyed by the spawned subagent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the turn result; when that final status carries a final message, that message is the turn output. Do not infer success from a subagent notification, a pending handle, or an open subagent id.
 

@@ -664,6 +664,24 @@ def _assert_codex_router_discovers_deferred_agent_tools() -> None:
                     f"{required_text}"
                 )
 
+        for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
+            invalid_document = codex_document.replace(
+                MODULE.ROUTER_BLOCK_END,
+                f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
+                1,
+            )
+            try:
+                dist.validate_deferred_agent_discovery_policy(
+                    {dist.CODEX_HARNESS: invalid_document}
+                )
+            except dist.DeferredAgentDiscoveryPolicyError:
+                pass
+            else:
+                raise AssertionError(
+                    "contradictory deferred-agent discovery directive was accepted: "
+                    f"{contradiction.name}"
+                )
+
 
 def router_policy_evidence_run() -> harness.EvidenceRun:
     """Run every source-declared router-policy evidence obligation."""

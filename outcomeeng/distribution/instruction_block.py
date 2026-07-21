@@ -291,6 +291,61 @@ DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
 
 
 @dataclass(frozen=True)
+class DeferredAgentDiscoveryContradiction:
+    """A prohibited availability directive and a representative router violation."""
+
+    name: str
+    pattern: re.Pattern[str]
+    violating_directive: str
+
+
+DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS: Final = (
+    DeferredAgentDiscoveryContradiction(
+        name="initial tool list as availability authority",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r"(?=.*\b(?:initially visible|initial|visible)\b)"
+            r"(?=.*\b(?:tool list|tool surface|catalog|roster)\b)"
+            r"(?=.*\b(?:sufficient|authoritative|conclusive)\b)"
+            r"(?=.*\b(?:availability|available|unavailable)\b).*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "The initially visible tool list is sufficient evidence that a named agent "
+            "is unavailable."
+        ),
+    ),
+    DeferredAgentDiscoveryContradiction(
+        name="deferred registry bypass",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r"(?=.*\breport(?:ed|ing)?\b.*\bunavailable\b)"
+            r"(?=.*\bwithout\b.*\bdeferred(?:-tool)?\s+registry\b).*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "A named agent may be reported unavailable without checking the deferred-tool "
+            "registry."
+        ),
+    ),
+    DeferredAgentDiscoveryContradiction(
+        name="local agent file as runtime authority",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r".*\blocal\b.*\bagents?/\*\.md\b.{0,120}"
+            r"\b(?:proves?|authoritative|conclusive)\b.{0,120}"
+            r"\b(?:active|available|provisioned)\b.*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "A local `agents/*.md` file proves that the role is active in the current "
+            "runtime."
+        ),
+    ),
+)
+
+
+@dataclass(frozen=True)
 class RefreshWorkflowContract:
     """Source-owned selectors and commands for instruction-block refresh workflow checks."""
 
@@ -725,7 +780,7 @@ def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
 def validate_deferred_agent_discovery_policy(
     blocks_by_harness: Mapping[str, str],
 ) -> None:
-    """Reject a Codex router that omits deferred typed-agent discovery policy."""
+    """Reject a Codex router that omits or contradicts deferred agent discovery."""
     document = blocks_by_harness.get(CODEX_HARNESS)
     if document is None:
         raise DeferredAgentDiscoveryPolicyError("missing Codex router")
@@ -746,6 +801,16 @@ def validate_deferred_agent_discovery_policy(
         details = ", ".join(missing)
         raise DeferredAgentDiscoveryPolicyError(
             f"Codex deferred-agent discovery policy is incomplete: {details}"
+        )
+    contradictions = [
+        rule.name
+        for rule in DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS
+        if rule.pattern.search(router)
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise DeferredAgentDiscoveryPolicyError(
+            f"Codex deferred-agent discovery policy is contradictory: {details}"
         )
 
 
