@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng.distribution.build import agent_capability
+from outcomeeng.distribution.build import AGENT_CAPABILITY_REGISTRY, agent_capability
 from outcomeeng.distribution.contracts import SKILLS_SUBDIR_NAME, Target
 from outcomeeng_testing.harnesses.target_emission import (
     claude_output_preserves_skill_dir_token,
@@ -16,6 +16,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     repeated_include_emits_shared_source_once,
     skill_dir_escape_preserves_authoring_guidance,
     source_emission_counts,
+    agent_artifact_paths,
     structure_deviations,
     synthetic_inventory_is_complete,
     target_scoped_includes_emit_only_to_matching_tree,
@@ -85,3 +86,43 @@ def test_frontmatter_strip_is_idempotent() -> None:
 
 def test_outputs_do_not_contain_execution_time_skill_content_injection() -> None:
     assert outputs_exclude_execution_time_injection()
+
+
+def test_agent_capabilities_resolve_from_the_source_owned_registry() -> None:
+    for target in Target:
+        capability = agent_capability(target)
+        assert capability.suffix.startswith("."), (
+            f"{target.value} declares no native agent artifact suffix"
+        )
+        if capability.manifest_declares_agents:
+            assert capability.checkout_directory is None, (
+                f"{target.value} declares agents in its manifest, so it needs no "
+                "checkout placement directory"
+            )
+        else:
+            assert capability.checkout_directory, (
+                f"{target.value} cannot declare agents in its manifest, so it must "
+                "name the checkout directory its agents are placed into"
+            )
+
+
+def test_no_target_tree_carries_an_agent_artifact_it_cannot_read() -> None:
+    foreign_suffixes = {
+        target: {
+            other.suffix
+            for name, other in AGENT_CAPABILITY_REGISTRY.items()
+            if name != target.value
+        }
+        - {agent_capability(target).suffix}
+        for target in Target
+    }
+    for target in Target:
+        capability = agent_capability(target)
+        for path in agent_artifact_paths(target):
+            assert path.suffix == capability.suffix, (
+                f"{target.value} carries {path}, whose suffix is not this "
+                f"target's native agent format {capability.suffix}"
+            )
+            assert path.suffix not in foreign_suffixes[target], (
+                f"{target.value} carries a foreign agent artifact: {path}"
+            )

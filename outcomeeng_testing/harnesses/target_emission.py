@@ -9,6 +9,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.build import (
+    AGENT_CAPABILITY_REGISTRY,
+    PLACEMENT_MANIFEST_FILENAME,
     BuildPlan,
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -34,6 +36,7 @@ from outcomeeng.distribution.build import (
     strip_frontmatter_fields,
 )
 from outcomeeng.distribution.contracts import (
+    AGENTS_SUBDIR_NAME,
     BUILD_TARGET_VARIABLE,
     DIST_DIR_NAME,
     MARKDOWN_FILE_SUFFIX,
@@ -140,6 +143,25 @@ def structure_deviations() -> dict[Target, tuple[Path, ...]]:
                 found.append(emission.relative_path)
         deviations[target] = tuple(sorted(found))
     return deviations
+
+
+def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
+    """Return every agent artifact one generated target tree carries.
+
+    Reads the committed tree rather than the plan, so the observation reflects
+    what a consumer installs rather than what the build intended.
+    """
+    tree = REPOSITORY_ROOT / DIST_DIR_NAME / target.value
+    capability = AGENT_CAPABILITY_REGISTRY[target.value]
+    if capability.manifest_declares_agents:
+        return tuple(sorted(tree.glob(f"*/{AGENTS_SUBDIR_NAME}/*")))
+    return tuple(
+        sorted(
+            path
+            for path in tree.glob(f"*/{SKILLS_SUBDIR_NAME}/*/{AGENTS_SUBDIR_NAME}/*")
+            if path.name != PLACEMENT_MANIFEST_FILENAME
+        )
+    )
 
 
 def synthetic_inventory_is_complete() -> bool:

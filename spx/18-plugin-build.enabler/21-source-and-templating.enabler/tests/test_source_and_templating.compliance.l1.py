@@ -1,5 +1,13 @@
 """Compliance evidence for source-tree and template contracts."""
 
+import re
+
+from outcomeeng.distribution.build import (
+    plugin_names,
+    template_relative_path,
+    template_source_files,
+)
+from outcomeeng_testing.harnesses.distribution import CANONICAL_SOURCE_ROOT
 from outcomeeng_testing.harnesses.source_and_templating import (
     bare_conditional_renders_per_target,
     implementation_is_ready,
@@ -82,3 +90,35 @@ def test_require_skill_expands_identically_across_targets() -> None:
 
 def test_include_directive_uses_fragment_file_contract() -> None:
     assert include_uses_fragment_file_contract()
+
+
+def test_per_plugin_template_renders_once_into_every_plugin() -> None:
+    plugins = plugin_names(CANONICAL_SOURCE_ROOT)
+    templates = template_source_files(CANONICAL_SOURCE_ROOT)
+    assert plugins
+    assert templates
+    for source in templates:
+        rendered_for = {
+            template_relative_path(
+                source, src_root=CANONICAL_SOURCE_ROOT, plugin=plugin
+            ).parts[0]
+            for plugin in plugins
+        }
+        assert rendered_for == set(plugins), (
+            f"{source} does not reach every plugin: {sorted(rendered_for)}"
+        )
+
+
+def test_per_plugin_template_body_names_no_single_plugin() -> None:
+    plugins = plugin_names(CANONICAL_SOURCE_ROOT)
+    for source in template_source_files(CANONICAL_SOURCE_ROOT):
+        body = source.read_text(encoding="utf-8")
+        # Whole-word only: a plugin slug is a false positive as a substring of
+        # an unrelated token, such as "python" inside the "python3" interpreter.
+        named = [
+            plugin for plugin in plugins if re.search(rf"\b{re.escape(plugin)}\b", body)
+        ]
+        assert not named, (
+            f"{source} hardcodes plugin name(s) {named}; a template body must "
+            "reach every plugin through the plugin-name build variable"
+        )
