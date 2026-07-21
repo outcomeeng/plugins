@@ -142,9 +142,10 @@ Once unblocked:
   read-higher-index-sibling failures become structurally impossible.
 - Retag the read-completeness, lower-index-sibling, and determinism assertions in
   `context-loading.md` from `[audit]` to `[test]` against the CLI output — the
-  enumeration is now code, so the determinism claim gains a real grader. This is
-  the node's first `[test]` evidence; until the complete contract publishes, the
-  ADR's rules and these assertions stay `[audit]`.
+  enumeration is now code, so the determinism claim gains a real grader. Until
+  the complete contract publishes, those CLI-output assertions and the governing
+  ADR's rules stay `[audit]`; the node's foundation-manifest assertions carry
+  their own `[test]` evidence independently of this consumption slice.
 - `just build-skills`, then `instructions:skill-auditor` on the edited skill plus the
   spec and test-evidence auditor gates.
 
