@@ -7,7 +7,11 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.build import SHARED_DIR_NAME, SHARED_FRAGMENT_FILENAME
+from outcomeeng.distribution.build import (
+    SHARED_DIR_NAME,
+    SHARED_FRAGMENT_FILENAME,
+    TEMPLATES_DIR_NAME,
+)
 from outcomeeng.distribution.contracts import (
     PLUGINS_DIR_NAME,
     SKILL_FILENAME,
@@ -177,6 +181,7 @@ def authored_tree_default_enforcement_matches_contract() -> bool:
     roots = (
         source_root / PLUGINS_DIR_NAME,
         source_root / SHARED_DIR_NAME,
+        source_root / TEMPLATES_DIR_NAME,
     )
     expected_files = {
         path.resolve()

@@ -41,6 +41,14 @@ def test_generated_toml_stays_outside_codex_plugin_manifest_content() -> None:
     assert_generated_toml_stays_outside_codex_plugin_manifest_content()
 
 
+def test_environment_marker_is_namespaced_by_source_plugin() -> None:
+    assert_environment_marker_is_namespaced_by_source_plugin()
+
+
+def test_environment_marker_without_source_plugin_is_rejected() -> None:
+    assert_environment_marker_without_source_plugin_is_rejected()
+
+
 def test_two_sources_claiming_one_output_fail_before_the_build_writes(
     tmp_path: Path,
 ) -> None:
