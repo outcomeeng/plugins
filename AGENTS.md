@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.29.1 langs:python -->
+<!-- SPEC-TREE v0.30.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -150,6 +150,8 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 ## Quick Reference: Skills and Agents
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
+
+**If a plugin's agents are missing, run that plugin's `/<plugin>-plugin init`.** For an agent whose plugin manifest cannot declare agents, a plugin's agent definitions reach a session only once they are materialized into the checkout's agent directory, and every plugin ships a lifecycle skill that places them. When dispatching an agent finds no such agent, invoke the owning plugin's `/<plugin>-plugin init` and retry — `/spec-tree-plugin init` for a spec-tree agent, `/instructions-plugin init` for an instructions agent. This is repair on the failure path, not a check to run at session start.
 
 **Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files.
 
