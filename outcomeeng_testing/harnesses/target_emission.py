@@ -111,14 +111,30 @@ def planned_sources() -> tuple[Path, ...]:
     return tuple(sorted({emission.source for emission in snapshot.plan.emissions}))
 
 
-def planned_matches_emitted() -> dict[Target, bool]:
-    """Return whether each target's planned paths equal what the build wrote."""
+@dataclass(frozen=True)
+class PlannedVersusEmitted:
+    """One target's planned output inventory beside what the build wrote."""
+
+    planned_paths: frozenset[Path]
+    emitted_paths: frozenset[Path]
+    planned_directories: frozenset[Path]
+    emitted_directories: frozenset[Path]
+
+
+def planned_versus_emitted() -> dict[Target, PlannedVersusEmitted]:
+    """Return each target's planned and emitted inventories, undecided.
+
+    The caller compares them; this returns the two sets rather than their
+    equality so the predicate stays in the test that links the assertion.
+    """
     snapshot = _canonical_emission_snapshot()
     return {
-        target: _planned_paths(snapshot.plan, target)
-        == {path for path, _content in snapshot.target(target)}
-        and _planned_directories(snapshot.plan, target)
-        == _parent_directories(snapshot.target(target))
+        target: PlannedVersusEmitted(
+            planned_paths=frozenset(_planned_paths(snapshot.plan, target)),
+            emitted_paths=frozenset(path for path, _content in snapshot.target(target)),
+            planned_directories=frozenset(_planned_directories(snapshot.plan, target)),
+            emitted_directories=frozenset(_parent_directories(snapshot.target(target))),
+        )
         for target in Target
     }
 
@@ -164,9 +180,53 @@ def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
     )
 
 
-def synthetic_inventory_is_complete() -> bool:
-    """Return whether the synthetic fixture covers every emission behavior."""
-    return _synthetic_inventory_is_complete()
+@dataclass(frozen=True)
+class SyntheticInventory:
+    """What the synthetic fixture covers, for the caller to judge."""
+
+    covered_subdirs: frozenset[str]
+    expected_subdirs: frozenset[str]
+    covered_actions: frozenset[EmissionAction]
+    source_paths: tuple[Path, ...]
+    per_source_counts: dict[Target, Counter[Path]]
+    planned_versus_emitted: dict[Target, PlannedVersusEmitted]
+
+
+def synthetic_inventory() -> SyntheticInventory:
+    """Return the synthetic fixture's coverage observations, undecided."""
+    snapshot = _synthetic_emission_snapshot()
+    source_paths = tuple(path for path, _content in snapshot.source)
+    plugins_root = snapshot.src_root / PLUGINS_DIR_NAME
+    return SyntheticInventory(
+        covered_subdirs=frozenset(
+            path.parts[1] for path in source_paths if len(path.parts) > 2
+        ),
+        expected_subdirs=frozenset(PLUGIN_SUBDIRS),
+        covered_actions=frozenset(
+            emission.action for emission in snapshot.plan.emissions
+        ),
+        source_paths=source_paths,
+        per_source_counts={
+            target: Counter(
+                emission.source.relative_to(plugins_root)
+                for emission in snapshot.plan.for_target(target)
+                if emission.action is not EmissionAction.FAN_OUT
+                and emission.source.is_relative_to(plugins_root)
+            )
+            for target in Target
+        },
+        planned_versus_emitted={
+            target: PlannedVersusEmitted(
+                planned_paths=frozenset(_planned_paths(snapshot.plan, target)),
+                emitted_paths=frozenset(
+                    path for path, _content in snapshot.target(target)
+                ),
+                planned_directories=frozenset(),
+                emitted_directories=frozenset(),
+            )
+            for target in Target
+        },
+    )
 
 
 def repeated_include_emits_shared_source_once() -> bool:
@@ -584,39 +644,6 @@ def _synthetic_emission_snapshot() -> TargetEmissionSnapshot:
         codex=outputs[Target.CODEX],
         plan=plan,
         src_root=builder.src_root,
-    )
-
-
-def _synthetic_inventory_is_complete() -> bool:
-    snapshot = _synthetic_emission_snapshot()
-    source_paths = tuple(path for path, _content in snapshot.source)
-    covered_subdirs = {path.parts[1] for path in source_paths if len(path.parts) > 2}
-    plugins_root = snapshot.src_root / PLUGINS_DIR_NAME
-    direct_outputs = {
-        target: Counter(
-            emission.source.relative_to(plugins_root)
-            for emission in snapshot.plan.for_target(target)
-            if emission.action is not EmissionAction.FAN_OUT
-            and emission.source.is_relative_to(plugins_root)
-        )
-        for target in Target
-    }
-    covered_actions = {emission.action for emission in snapshot.plan.emissions}
-    return (
-        covered_subdirs == PLUGIN_SUBDIRS
-        and any(len(path.parts) == 2 for path in source_paths)
-        and {
-            EmissionAction.FAN_OUT,
-            EmissionAction.CONVERT_AGENT,
-            EmissionAction.PLACEMENT_MANIFEST,
-        }
-        <= covered_actions
-        and all(
-            all(direct_outputs[target][path] >= 1 for path in source_paths)
-            and _planned_paths(snapshot.plan, target)
-            == {path for path, _content in snapshot.target(target)}
-            for target in Target
-        )
     )
 
 
