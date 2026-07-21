@@ -1,4 +1,4 @@
-# Plan: strip TypeScript auditors to pure standards enforcement
+# Plan: align TypeScript standards subtree to the evidence-routing foundation
 
 Coordination note for the TypeScript-only slice. Reconcile against current specs,
 decisions, and the plugins-e foundation before acting — a note is a stale-prone input,
@@ -6,143 +6,181 @@ not authority.
 
 ## Goal
 
-Two coupled corrections to the shipped TypeScript plugin skills:
+Three coupled corrections, driven by the PR 459 evidence-routing foundation (see
+"Foundation reshaping" below):
 
-1. **Strip the auditors to pure enforcement.** `audit-typescript-code`,
-   `audit-typescript-tests`, and `audit-typescript-architecture` must contain only what
-   *enforces* `typescript-standards`, `typescript-test-standards`, and
-   `typescript-architecture-standards`. Everything an auditor restates — its own rule
-   lists, coupling taxonomies, evidence-property tables — is deleted; the auditor refers
-   to the standard that owns the list and judges by the criterion the standard states.
-2. **Fix the assertion-delegation exemplars in `typescript-test-standards`.** The skill
+1. **Make author and auditor consume ONE standard.** `/test-typescript` (author) and
+   `/audit-typescript-tests` (auditor) must both consume the same independently loadable
+   test-evidence standard for every rule they both enforce. The auditor stops restating
+   rule lists, coupling taxonomies, and evidence-property tables; it refers to the shared
+   standard and judges by the criterion the standard states. Same shape for
+   `audit-typescript-code`/`architecture` against their standards.
+2. **Reduce the TypeScript specs and skills to language EXPRESSION.** Generic
+   concerns — assertion typing, execution-level selection, source-contract and oracle
+   gates, evidence-property checks, exception classification, naming — belong to the
+   generic `/test` and the shared standard, not to TypeScript. The TypeScript subtree
+   keeps only TypeScript-specific expression (`@testing/` path mapping, `fast-check`,
+   `vitest`/`playwright`, tsconfig mechanics) and delegates the rest.
+3. **Fix the assertion-delegation exemplars in `typescript-test-standards`.** The skill
    teaches that executed test files should delegate assertion flow into harnesses, which
-   contradicts the governing decision (below). Correct the exemplars so the executed test
-   file owns the assertion flow.
+   contradicts `test-verification.md:12` ("executed test files contain assertion flow
+   only"). Correct the exemplars so the executed test file owns the assertion flow.
+
+## Foundation reshaping — PR 459 evidence-routing (merged, `4c89e84e9` + `/verify`)
+
+Read `spx/21-spec-tree.enabler/35-evidence.enabler/{evidence.md, 39-test-skill.enabler/test-skill.md, 69-verify-skill.enabler/verify-skill.md, PLAN.md, ISSUES.md}`.
+This is the change plugins-e missed; it moves the basis of the whole TypeScript subtree.
+
+- **One independently loadable standard, consumed by both author and auditor.**
+  `evidence.md:14` — "an evidence-authoring workflow and its evidence auditor consume the
+  same independently loadable standards source for every rule they both enforce."
+  `test-skill.md:12` — "test authoring and test auditing consume one independently loadable
+  standard for coupling, falsifiability, alignment, coverage, source ownership, domain
+  variation, oracle independence, and controlled implementations." The author/judge
+  symmetry below is now foundation law, not inference. That single standard is plugins-e's
+  `test-evidence-standards` (NOT yet on `origin/main`).
+- **Generic vs language-EXPRESSION split.** `test-skill.md:11` — the generic `/test` owns
+  assertion typing, execution-level selection, source-contract/oracle gates,
+  evidence-property checks, exception classification, naming. `35-evidence/PLAN.md:37-39` —
+  those move out of language workers; "language skills carry only language-specific
+  expression and commands."
+- **Verification-type routing through `/verify`.** `verify-skill.md:24` — every workflow
+  that delegates verification-type selection invokes `/verify`, then test→`/test`,
+  eval→`/eval`, audit→pathless isolated verifier. `/test` is now the generic specialist.
+- **Vocabulary retired.** `35-evidence/ISSUES.md:11` retires "evidence type", "evidence
+  lane", "evidence mechanism", "evidence mode", and "claim" as a structural term. Canonical:
+  **verification type** (test/evaluate/audit) and **assertion type** (scenario/mapping/
+  conformance/property/compliance, testing only).
+- **Tag set closed.** `verify-skill.md:22` — "NEVER: recognize, name, alias, or translate
+  any tag outside the verification-type set" {test, eval, audit}. `[review]` is outside the
+  set: the migration below is foundation-mandated, not hygiene.
 
 ## Node set (ascending index order — /apply work queue)
 
-Counts are `[review]` assertions in each node spec on the merged base (`origin/main` at
-`6414f1b4`). Total: 65 `[review]`, 1 `[eval]`, 0 `[audit]`.
+Counts are `[review]` assertions on `origin/main` at `9fef3cd1b`. Total: 65 `[review]`,
+1 `[eval]`, 0 `[audit]`. The **RECLASSIFY** tag marks nodes that currently restate generic
+concerns and must be reduced to TypeScript expression per the split above.
 
 ```text
-spx/43-typescript.enabler/25-typescript-standards.enabler                                   (3 review)
-  21-typescript-architecture.enabler                                                        (6 review)
-  25-typescript-tests.enabler                                                              (12 review)
-    21-source-testability.enabler                                                           (6 review)
-    32-test-data-ownership.enabler                                                    (12 review, 1 eval)
-    43-test-infrastructure-auditing.enabler                                                (11 review)
-    54-execution-level-guidance.enabler                                                     (8 review)
-  29-typescript-code.enabler                                                                (7 review)
+spx/43-typescript.enabler/25-typescript-standards.enabler                        (3 review)
+  21-typescript-architecture.enabler                                             (6 review)
+  25-typescript-tests.enabler                                                   (12 review)
+    21-source-testability.enabler                              (6 review)   RECLASSIFY
+    32-test-data-ownership.enabler                       (12 review, 1 eval)  RECLASSIFY (partial)
+    43-test-infrastructure-auditing.enabler                   (11 review)   RECLASSIFY
+    54-execution-level-guidance.enabler                        (8 review)   RECLASSIFY
+  29-typescript-code.enabler                                                     (7 review)
 ```
 
-## Governing decisions (loaded, merged base)
+RECLASSIFY basis: `source-testability`, `execution-level-guidance`, and
+`test-infrastructure-auditing` restate generic testability, level-selection, and
+evidence-chain-audit rules that `test-skill.md:11-12` assigns to the generic specialist and
+shared standard. `test-data-ownership` mixes generic ownership rules (generic) with the
+`@testing/`-mapped homes and `fast-check` specifics (TypeScript expression, retained).
+The precise per-assertion generic-vs-expression split is done at execution time against the
+merged shared standard.
 
-- `spx/21-spec-tree.enabler/17-audit.adr.md` — the auditor composition model. The language
-  auditor holds **only** language-specific concerns; generic decision-record judgment
-  (section structure, atemporal voice, tag validity) is the artifact-type auditor's, and
-  language-specific examples/commands/patterns belong in the `audit-{lang}-*` skill, not in
-  orchestration. This ADR is the spine of correction (1): the strip-to-enforcement work
-  *enforces* it.
+## Governing decisions (loaded, `origin/main` at `9fef3cd1b`)
+
+- `spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md` — single-loadable-standard
+  mandate (`:14`), one-verification-type-selection-first (`:13`), acyclic routing (`:15`).
+- `spx/21-spec-tree.enabler/35-evidence.enabler/39-test-skill.enabler/test-skill.md` —
+  generic test specialist owns generic decisions (`:11`); one standard for author+auditor
+  (`:12`); language specialist never repeats a generic decision (`:13`).
+- `spx/21-spec-tree.enabler/35-evidence.enabler/69-verify-skill.enabler/verify-skill.md` —
+  `/verify` routing; closed tag set (`:22`).
+- `spx/21-spec-tree.enabler/17-audit.adr.md` — auditor composition: the language auditor
+  holds only language-specific concerns; generic decision-record judgment is the
+  artifact-type auditor's; language examples belong in `audit-{lang}-*`.
 - `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`
-  — line 12: "executed test files contain assertion flow only; values, expected outputs,
-  reusable cases, property-test settings, setup policy, and lifecycle policy live in source
-  contracts, spec-governed harnesses, spec-governed generators, inert whole-payload
-  fixtures, or curated eval cases." Line 16: "NEVER: a test file declaration, variable
-  binding, fixture parameter, property-generated parameter, or renamed constant changes
-  ownership." This is the decision correction (2)'s exemplars contradict.
+  — `:12` "executed test files contain assertion flow only"; `:16` bans a binding that
+  *changes ownership* (laundering), not all bindings. The exemplar defects contradict `:12`.
 - `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`
-  — harnesses manage context/resources and property-run configuration; they do **not** own
-  domain truth or replace the behavior under test. The DI exemplar defect (below) makes a
-  harness own the assertion, which this PDR forbids.
+  — harnesses manage resources and property-run config; do not own truth or replace behavior.
 - `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` — five-type
-  taxonomy; `[audit]` verdicts run in an isolated verifier context. Constrains how the
-  auditors are invoked, not their content.
+  taxonomy; `[audit]` verdicts run in an isolated verifier context.
 
 ## The two exemplar defects in typescript-test-standards (src/plugins/typescript/skills/typescript-test-standards/SKILL.md)
 
-Verify line numbers against the current file before editing — the pre-compaction reading
-was line ~168–176 (`<dependency_injection>`) and ~183–188 (`<property_based_testing>`);
-the file was not in the PR 459 base delta but re-confirm.
+Verify line numbers against the current file before editing — pre-compaction reading was
+`<dependency_injection>` ~168-176 and `<property_based_testing>` ~183-188; the file was not
+in the PR 459 base delta but re-confirm.
 
-- `<dependency_injection>` exemplar: the executed test body is a single harness call
-  (`await assertPaymentGatewayRecordsCharge(PaymentProcessor);`) with **zero `expect` in
-  the test file** — the harness owns the assertion. Contradicts test-verification.md:12,16
-  and 15-test-infrastructure.pdr.md (harness owns resources, not truth). Correct so the
-  test file owns the assertion flow; the harness provides the resource/double only.
-- `<property_based_testing>` exemplars: every required pattern
-  (`assertProperty(parserRoundtripProperty())`) pre-builds the predicate **outside** the
-  test file. The property predicate is assertion flow and belongs in the executed test; the
-  generator/harness supplies the domain and run configuration. Correct accordingly.
-- Line ~203 ("Executed TypeScript test files do not declare `const`, `let`, or `var`
-  bindings, framework fixture parameters, or property-generated parameters") is
-  absolute-sounding and reads as banning assertion-flow locals — reconcile with
-  test-verification.md:16, which bans *ownership laundering*, not all bindings.
+- `<dependency_injection>` exemplar: executed test body is a single harness call
+  (`await assertPaymentGatewayRecordsCharge(PaymentProcessor);`) with **zero `expect`** —
+  the harness owns the assertion. Contradicts `test-verification.md:12` and
+  `15-test-infrastructure.pdr.md`. Fix: test file owns the assertion flow; harness provides
+  the resource/double only.
+- `<property_based_testing>` exemplars: `assertProperty(parserRoundtripProperty())`
+  pre-builds the predicate outside the test file. The predicate is assertion flow and
+  belongs in the test; the generator/harness supplies domain and run config.
+- Line ~203 ("Executed TypeScript test files do not declare `const`/`let`/`var`…") is
+  absolute and reads as banning assertion-flow locals — reconcile with `test-verification.md:16`
+  (bans ownership laundering, not all bindings). NOTE the SAME over-broad rule is asserted at
+  the SPEC layer: `typescript-tests.md:19`, `test-data-ownership.md:21`,
+  `test-infrastructure-auditing.md:21` all say "NEVER declare variables or constants". These
+  spec assertions must be reconciled to the foundation in the same slice — this is the
+  "TypeScript skills AND spec alignment" scope.
 
-## Author/judge asymmetry (the measured root cause)
+## Author/judge symmetry (now foundation law)
 
-An agent writing a TypeScript test cannot see the criteria it will be judged by:
-`audit-typescript-tests` loads `spec-tree:audit-tests` (the rulebook); `test-typescript`
-does not. Correct model: the **standard** owns every rule, every list, and the criterion
-for determining the rule is met; author skills and auditor skills both reference the same
-standard. Re-measure `test-typescript`'s loaded skill set after the `/test`→`/verify`
-relegation that PR 459 landed (`test/SKILL.md` and `test/references/methodology.md`
-changed) before treating the asymmetry numbers as current.
+Pre-compaction measurement: `audit-typescript-tests` loads `spec-tree:audit-tests`;
+`test-typescript` does not — so a TypeScript-test author cannot see the criteria it will be
+judged by. `evidence.md:14`/`test-skill.md:12` now mandate the fix: both consume the one
+shared standard. Re-measure `test-typescript`'s loaded skill set after the `/test`→`/verify`
+relegation (`test/SKILL.md`, `test/references/methodology.md` changed in PR 459) before
+treating the old numbers as current.
 
 ## Coupling-taxonomy drift
 
-`audit-typescript-tests` restates a 6-row coupling table against the 9 rows in
-`/audit-tests`, silently dropping **Laundered indirect**, **None**, and **Prose-coupling**.
-Under the corrected model the table is not restated at all — the auditor refers to the
-standard's list.
+`audit-typescript-tests` restates a 6-row coupling table against 9 rows in `/audit-tests`,
+dropping **Laundered indirect**, **None**, **Prose-coupling**. Under the single-standard
+model the table is not restated at all — the auditor refers to the shared standard's list.
 
-## Auditor-as-loop target shape (~70–90 lines, from ~448)
+## Auditor-as-loop target shape (~70-90 lines, from ~448)
 
 ```text
 <objective> <constraints> <prerequisites> <audit_scope>
 <audit_loop>
-  For each rule in the referenced standard:
+  For each rule in the referenced (shared + language-expression) standard:
     1. applicable to this subject? -> no: NOT_APPLICABLE + why
     2. judge by the rule's own stated criterion
     3. emit PASS | FAIL with rule address, artifact, evidence
-  Then delegate language-neutral evidence properties to /audit-tests; merge by name.
+  Then delegate generic evidence properties to the generic test-evidence audit; merge by name.
 <verdict_format> <success_criteria>
 ```
 
 The auditor MUST NOT enumerate a list of its own (a second inventory drifts). Rule
-addressing follows the spec-tree-native positional form (containing skill + section +
+addressing uses the spec-tree-native positional form (containing skill + section +
 sibling-local index), not a flat global id registry — a tombstone/global-id scheme was
-retracted this session as contrary to `<ordering_model>` and `<declarations>`.
+retracted as contrary to `<ordering_model>` and `<declarations>`.
 
 ## Touched-file debt (fix-now on every node this slice edits)
 
-Every node spec above carries `([review])`, the legacy spelling of `([audit])`. Product
-ISSUES.md tracks the tree-wide migration; per touched-file debt, migrate `[review]` →
-`[audit]` (text unchanged, tag only) on each node the slice edits, gating each with the
-spec auditor. Do not defer this for edited nodes.
-
-Also in scope when their files are touched (from this node's ISSUES.md):
-
-- "Top-Level Specs Restate Methodology" — the three top-level child specs use generic
-  methodology-layer compliance assertions; rewrite to TypeScript-specific product truth
-  referencing the shared methodology skill/PDR.
-- "[eval] Coverage Beyond the Slice" — candidates for `[review]`→`[eval]` migration as
-  `audit-typescript-tests` gains structural-verdict output the grader can match.
+- **`[review]` → `[audit]`** on every edited node (65 occurrences). Foundation-mandated by
+  `verify-skill.md:22` (closed tag set), not just legacy spelling. Text unchanged, tag only;
+  gate each with the spec auditor.
+- **"evidence type" → "verification type"/"assertion type"** wherever it appears
+  (`typescript-tests.md:3,11`, and any skill body) — retired term per `35-evidence/ISSUES.md:11`.
+- From this node's ISSUES.md: "Top-Level Specs Restate Methodology" (the three top-level
+  child specs use generic methodology-layer assertions) and "[eval] Coverage Beyond the
+  Slice" (candidates for `[review]`→`[eval]` migration once the auditor emits structural
+  verdicts the grader can match).
 
 ## Dependency — do not start before this clears
 
-The slice delegates TypeScript standards *to* a shared methodology surface still being
-finalized in a sibling worktree. Merge order: plugins-n (PR 459, MERGED) → plugins-e →
-plugins-c. Start only on plugins-e's merge, which carries:
+The slice delegates the TypeScript standards *to* the single shared test-evidence standard
+(plugins-e's `test-evidence-standards`, confirmed NOT on `origin/main`). Merge order:
+plugins-n (PR 459, MERGED) → plugins-e → plugins-c. Start only on plugins-e's merge, which
+carries:
 
-- final section list of `src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md`
-  (what the TypeScript standards reference);
-- whether it ships explicit rule addresses (so the auditor's `for each rule` loop can cite
-  them) or prose-only;
-- settled state of `test/SKILL.md`, `test/references/methodology.md`, `evidence.md`, and
+- final section list of `src/plugins/spec-tree/skills/test-evidence-standards/SKILL.md` and
+  whether it ships explicit rule addresses (so the auditor loop can cite them) or prose-only;
+- settled state of `test/SKILL.md`, `test/references/methodology.md`, and
   `test-typescript/SKILL.md` after the `/test`→`/verify` relegation.
 
 ## Revisit condition
 
-Replace this plan with the executed slice once plugins-e merges and
-`test-evidence-standards` is on `origin/main`. Re-run `/contextualize` on this node after
-that merge — the delegation target and the `/test` skill will have changed.
+Replace this plan with the executed slice once `test-evidence-standards` is on
+`origin/main`. Re-run `/contextualize` on this node after that merge — the delegation
+target and the `/test` skill will have changed again.
