@@ -10,6 +10,6 @@ The three children of this enabler — `21-typescript-architecture.enabler` (ADR
 
 ### Compliance
 
-- ALWAYS: the three child enablers cover non-overlapping facets of TypeScript standards: architecture decisions, test evidence rules, and code-style rules — facet overlap forces standards to drift between sibling specs ([review])
-- ALWAYS: TypeScript-specific standards live here, while marketplace-wide methodology (atemporal voice, ADR section structure, evidence mechanisms) lives at the spec-tree root or under `spx/21-spec-tree.enabler/` — duplication would force language-specific specs to restate the methodology ([review])
-- NEVER: place execution-lane or methodology rules under this enabler — those are governed by `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and the spec-tree methodology references; this enabler scopes only TypeScript-specific concerns ([review])
+- ALWAYS: the three child enablers cover non-overlapping facets of TypeScript standards: architecture decisions, test evidence rules, and code-style rules — facet overlap forces standards to drift between sibling specs ([audit])
+- ALWAYS: TypeScript-specific standards live here, while marketplace-wide methodology (atemporal voice, ADR section structure, evidence mechanisms) lives at the spec-tree root or under `spx/21-spec-tree.enabler/` — duplication would force language-specific specs to restate the methodology ([audit])
+- NEVER: place execution-lane or methodology rules under this enabler — those are governed by `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` and the spec-tree methodology references; this enabler scopes only TypeScript-specific concerns ([audit])
