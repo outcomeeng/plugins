@@ -62,7 +62,7 @@ Before Gate 1, read each in-scope test filename. Canonical Python evidence files
 </structural_reading>
 
 <test_file_declarations>
-Apply the base `/audit-tests` semantic binding screen before coupling. Python assignments, annotated assignments, named expressions, loop bindings, context-manager bindings, exception bindings, pattern bindings, pytest fixture parameters, and property-generated parameters are valid when they only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. In particular, accept `tmp_path`, `observations = harness_call(...)`, and assertion-local comprehensions over those observations; none chooses a case, expectation, or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` when a binding chooses runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` when it chooses hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct; collapsing them loses the difference between a configuration defect and a data defect. Local functions are findings when they own those choices or move a predicate or assertion call out of the linked test function or callback.
+Apply the base `/audit-tests` semantic binding screen before coupling. Python assignments, annotated assignments, named expressions, loop bindings, context-manager bindings, exception bindings, pattern bindings, pytest fixture parameters, and property-generated parameters are valid when they only receive actual results, source-owned contracts, generated values, harness observations, callback inputs, resource handles, or fixture paths and introduce no data or policy. In particular, accept `tmp_path`, `observations = harness_call(...)`, and assertion-local comprehensions over those observations; none chooses a case, expectation, or policy. Emit a finding carrying property `declarations` and the base `/audit-tests` rule label the choice matches — `test-owned configuration` when a binding chooses runner settings, seed policy, retries, setup policy, or lifecycle policy, and `test-owned data` when it chooses hand-picked data, boundary bags, expected outputs, fixture contents, or generator domains. Keep the two labels distinct; collapsing them loses the difference between a configuration defect and a data defect. Local functions are findings when they own those choices — property `declarations` — or when they move a predicate or assertion call out of the linked test function or callback — property `predicate-ownership`, rule `assertion-seam`, remediation target `test-file`.
 </test_file_declarations>
 
 <gate_1_assertion>
@@ -147,6 +147,8 @@ For each test case, name the source. REJECT against the missing source when:
 
 When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it.
 
+A case or value copied from the module under test carries property `source-ownership`; an expected output computed by the same production path that produces the actual output carries property `oracle-independence`, remediation target `independent-oracle`. These are the two base-enum properties this audit judges.
+
 Pass only when every case is traceable to a source independent of the author and every value lives in its proper home.
 </source_ownership_audit>
 
@@ -202,6 +204,8 @@ Rejected content:
 - Star imports from test infrastructure packages
 - Mocking, monkeypatching, or import-path mutation
 
+A rejected `conftest.py` discovery defect carries property `evidence-chain-completeness` from the base enum — the shim breaks the chain from the assertion to the imported infrastructure.
+
 </conftest_audit>
 
 Gate 1 status:
@@ -240,7 +244,7 @@ Gate 2 status:
 <verdict_format>
 This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`), the JSON schema, and the closed `property` enum are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows. Put evidence-property findings in `gate-1-assertion` and repeated setup or test-infrastructure extraction findings from `<architectural_dry_audit>` in `gate-2-architectural`. Append findings to the matching base rows; never replace a row or emit `gate-0-deterministic`.
 
-Every finding carries a `property` drawn from the base enum. Python-specific concerns map onto it rather than extending it: a harness that leaks a temporary directory or leaves a session open is `coupling` when it severs the asserted behavior and `declarations` when it owns setup policy; a `conftest.py` discovery defect is `evidence-chain-completeness`; a strategy that collapses to a single example is `falsifiability`; a case or vocabulary copied from the module under test is `source-ownership`; and an expected value computed by the same production path that produces the actual value is `oracle-independence` with remediation target `independent-oracle` — the two properties `<source_ownership_audit>` exists to judge. A concern with no home in the base enum is a signal to extend that enum in `/audit-tests`, never to invent a value here.
+Every finding carries a `property` drawn from the base `/audit-tests` enum, attributed inline at the audit above that raised it — this skill never re-enumerates the enum or remaps its members here. A Python concern with no home in the base enum is a signal to extend that enum in `/audit-tests`, never to invent a value here.
 
 Each finding carries the base nine-field record. These Python-specific details accompany that record rather than replacing any of its fields:
 
