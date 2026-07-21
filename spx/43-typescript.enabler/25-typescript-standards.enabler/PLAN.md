@@ -21,7 +21,8 @@ Remaining TypeScript work, in order:
    declare variables or constants" replaced by semantic-binding ownership citing
    `test-verification.md`; 65 `[review]` → `[audit]`; "evidence type" → "assertion type";
    parent/child facet split (parent owns the predicate seam, `32-test-data-ownership` owns
-   binding-by-data-choice). Gated APPROVED by three `spec-auditor` runs.
+   binding-by-data-choice), and the paired predicate-seam audit assertion in
+   `43-test-infrastructure-auditing`. Gated APPROVED by per-node `spec-auditor` runs.
 2. **Property predicate-seam reconciliation.** `typescript-test-standards`
    `<property_based_testing>` and `audit-typescript-tests:132` still say the invariant lives
    in the imported property harness, contradicting the shared `<assertion_type_litmus>`
