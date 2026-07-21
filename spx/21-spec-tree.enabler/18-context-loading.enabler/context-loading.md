@@ -6,8 +6,9 @@ CAN operate with complete, verified context before any work begins
 
 ## Assertions
 
-- The spec-tree plugin package ships the foundation-resource manifest governed by `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths
-- Package checks reject a shipped foundation-resource manifest whose declared paths do not all resolve, whose catalogs carry a duplicate path, or whose catalogs omit a shipped reference, template, or example file
+### Conformance
+
+- The spec-tree plugin package ships the foundation-resource manifest governed by `spx/21-spec-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md` at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths ([test](tests/test_foundation_manifest.conformance.l1.py))
 
 ### Properties
 
@@ -15,6 +16,7 @@ CAN operate with complete, verified context before any work begins
 
 ### Compliance
 
+- Package checks reject a shipped foundation-resource manifest whose declared paths do not all resolve, whose catalogs carry a duplicate path, or whose catalogs omit a shipped reference, template, or example file ([test](tests/test_foundation_manifest.compliance.l1.py))
 - ALWAYS: the `/contextualize` skill brings a behind-base branch current through sync-base (`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md`) before reading product or spec context, so loaded context reflects current product truth rather than a stale branch ([audit])
 - ALWAYS: when sync-base reports `already_current` or `rebased`, the `/contextualize` skill records the sync status only as context-load state and continues directly to locating the same target before answering or doing branch lifecycle work; loading the skill and completing sync-base are prerequisites, not context ([audit])
 - ALWAYS: when sync-base reports `dirty_tree`, the `/contextualize` skill aborts before reading product truth, routes the tracked changes through `/commit-changes`, re-runs sync-base, and restarts context loading for the same target, so every emitted context marker comes from a clean checkout whose currency is established ([audit])
