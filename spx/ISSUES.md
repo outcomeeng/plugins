@@ -63,3 +63,33 @@ A table of contents is satisfied by a `## Contents` section, an XML `<contents>`
 **Resolution shape**: add a table of contents to each file in the form its surrounding skill already uses — `## Contents` for markdown-structured references, `<contents>` for XML-structured ones — listing every top-level section. Run `instructions:skill-auditor` over each affected skill afterward. The sweep divides cleanly by plugin, so it can land as one changeset per plugin rather than one large one.
 
 **Revisit condition.** Resolve per plugin when that plugin next needs a reference-file change, or as one dedicated sweep. `create-subagents` is the highest-value single target: seven files, 4,646 lines, the largest partial-read exposure in the marketplace.
+
+## Agent-specific behavior is enumerated inside product-level decisions
+
+Product-level decisions carry per-agent facts inline, so adding an agent harness edits decisions
+whose subject is not that harness. `spx/12-marketplace-state.adr.md` enumerates each agent's
+committed configuration paths twice — in the decision body and in the registration conformance
+assertion — naming Codex's `.agents/plugins/marketplace.json` and `.codex/config.toml` beside Claude
+Code's `.claude-plugin/marketplace.json` and project-scope `.claude/settings.json`. A third agent
+harness therefore churns a product-level decision that governs state ownership rather than agent
+identity.
+
+**Resolution shape**: author a `coding-agents` node with one child per agent, each child declaring
+its own agent's capabilities and configuration locations — whether its plugin manifest can declare
+agents, whether its agent namespace is flat, its native agent format and filename shape, and the
+committed configuration it reads. The product-level decision then collapses to capability
+assertions of the form `ALWAYS: each agent declares capability X, verified by that agent's node` and
+`NEVER: agent-specific behavior is decided outside that agent's node`, so a new harness adds a child
+rather than amending a decision. The node's location is undetermined and depends on concept
+ownership and context-loading reach, so placement routes through `/decompose` rather than being
+chosen when the node is authored.
+
+**Evidence.** Surfaced while making `spx/12-marketplace-state.adr.md` and
+`spx/18-plugin-build.enabler/15-build-architecture.adr.md` capability-keyed for committed agent
+delivery. The build decision now resolves per-target agent format, filename shape, and namespace
+behavior from the source-owned per-target registry, so a new target is a registry entry; the
+configuration enumeration in the marketplace-state decision is the remaining per-agent coupling.
+
+**Revisit condition.** Resolve before a third agent harness ships, since that is the change the
+coupling taxes. Related to the agent-harness terminology sweep recorded above, which the same
+decomposition can carry.

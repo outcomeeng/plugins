@@ -56,9 +56,10 @@ repository files is left without agents as well.
   `spx/18-plugin-build.enabler/15-build-architecture.adr.md` to capability-keyed principles. *(applied)*
 - Align this node and `spx/18-plugin-build.enabler/54-conversion.enabler/conversion.md`. *(applied)*
 - Align `spx/13-infrastructure.enabler/32-installation.enabler` for coherence over the committed set.
-- Operator decision, held open: whether ADR 12's per-agent config-path enumeration (body and the
-  registration conformance assertion) generalizes to "each agent's committed harness configuration"
-  with concrete paths moving to the registry. It is the remaining per-agent coupling in that decision.
+- ADR 12's per-agent config-path enumeration stays as authored in this changeset. It is tracked in
+  `spx/ISSUES.md` as the `coding-agents` decomposition: one child node per agent declaring that
+  agent's capabilities and configuration, with the decision collapsing to capability assertions. That
+  is a structural change routed through `/decompose`, out of scope here.
 
 ### Phase 2 — Capability registry
 
@@ -73,8 +74,6 @@ repository files is left without agents as well.
   native agent artifact, applying the slug prefix for flat-namespace targets and omitting any
   artifact a target cannot read.
 - Reuse the existing conversion functions rather than duplicating mapping logic.
-- Confirm the README catalog generator still resolves agent frontmatter after the Codex-tree format
-  change; it reads agent markdown, which the Claude tree retains.
 
 ### Phase 4 — Placement and committed agents
 
