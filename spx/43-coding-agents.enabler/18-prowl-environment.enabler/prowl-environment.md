@@ -15,6 +15,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 ### Conformance
 
 - Every operation emits a versioned JSON result conforming to its source-owned schema while preserving Prowl identity, status, conclusion, and exit-code values verbatim ([test](tests/test_prowl_environment.conformance.l1.py))
+- A Prowl operation with no explicit input isolates the child command from the adapter request stream, while explicit input reaches the child unchanged ([test](tests/test_prowl_environment.conformance.l1.py))
 
 ### Properties
 
