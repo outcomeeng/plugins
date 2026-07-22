@@ -13,6 +13,7 @@ from __future__ import annotations
 import pathlib
 import inspect
 import io
+import os
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
@@ -150,12 +151,14 @@ def _assert_newer_template_adds_section_preserving_shared_region(
 
 
 def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
-    real = _template(tmp_path)
-    link = tmp_path / "link-template.md"
+    home = tmp_path / "home"
+    home.mkdir()
+    real = _template(home)
+    link = home / "link-template.md"
     link.symlink_to(real)
     repo = tmp_path / "repo"
     repo.mkdir()
-    code = MODULE.main(
+    direct_code = MODULE.main(
         [
             "--template",
             str(link),
@@ -166,7 +169,52 @@ def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
             "--write",
         ]
     )
+    assert direct_code == 2
+    previous_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(home)
+    try:
+        code = MODULE.main(
+            [
+                "--template",
+                "~/link-template.md",
+                "--repo-root",
+                str(repo),
+                "--languages",
+                harness.LANG_PRIMARY,
+                "--write",
+            ]
+        )
+    finally:
+        if previous_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = previous_home
     assert code == 2
+
+
+def _assert_cli_rejects_template_without_frontmatter_version(
+    tmp_path: pathlib.Path, capsys: _OutputCapture
+) -> None:
+    template = tmp_path / "versionless-template.md"
+    delimiter_line = f"{MODULE.FRONTMATTER_DELIMITER}\n"
+    template_text = harness.build_template(harness.NEW_VERSION)
+    _, after_open = template_text.split(delimiter_line, maxsplit=1)
+    _, template_body = after_open.split(delimiter_line, maxsplit=1)
+    template.write_text(
+        MODULE.router_marker(harness.NEW_VERSION, (harness.LANG_PRIMARY,))
+        + "\n"
+        + template_body,
+        encoding="utf-8",
+    )
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    code = MODULE.main(
+        ["--template", str(template), "--repo-root", str(repo), "--write"]
+    )
+    assert code == 2
+    assert MODULE.MISSING_TEMPLATE_VERSION_ERROR in capsys.readouterr().err
+    assert not (repo / harness.INSTRUCTION_CLAUDE).exists()
+    assert not (repo / harness.INSTRUCTION_AGENTS).exists()
 
 
 def _assert_cli_rejects_missing_repo_root(

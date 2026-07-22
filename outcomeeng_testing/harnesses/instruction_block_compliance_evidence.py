@@ -491,6 +491,16 @@ def _assert_wait_for_load_stop_trigger_policy() -> None:
                     for agent_harness, document in documents.items()
                 }
             )
+        codex_document = documents[harness.HARNESS_CODEX]
+        claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
+        for _, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
+            assert requirement not in claude_router
+            _require_wait_for_load_policy_error(
+                {
+                    **documents,
+                    harness.HARNESS_CODEX: codex_document.replace(requirement, "", 1),
+                }
+            )
         for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
             _require_wait_for_load_policy_error(
                 {
@@ -619,6 +629,69 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
+def _require_deferred_agent_discovery_policy_error(
+    document: str, accepted_message: str
+) -> None:
+    """Require the production validator to reject a deferred-discovery render."""
+    try:
+        dist.validate_deferred_agent_discovery_policy({dist.CODEX_HARNESS: document})
+    except dist.DeferredAgentDiscoveryPolicyError:
+        return
+    raise AssertionError(accepted_message)
+
+
+def _assert_codex_router_discovers_deferred_agent_tools() -> None:
+    """Challenge deferred typed-agent discovery across every language subset."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = _render_shipped_instruction_blocks(enabled_languages)
+        codex_document = documents[harness.HARNESS_CODEX]
+        codex_router = dist.managed_router_block(codex_document)
+        policy = dist.deferred_agent_discovery_policy_paragraph(codex_router)
+        assert policy is not None
+        dist.validate_deferred_agent_discovery_policy(
+            {dist.CODEX_HARNESS: codex_document}
+        )
+
+        claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
+        assert dist.DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in claude_router
+
+        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS:
+            invalid_document = codex_document.replace(
+                policy, policy.replace(required_text, "", 1), 1
+            )
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
+                    "incomplete deferred-agent discovery policy was accepted: "
+                    f"{required_text}"
+                ),
+            )
+
+        for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
+            invalid_document = codex_document.replace(required_text, "", 1)
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
+                    "incomplete deferred-agent discovery policy was accepted: "
+                    f"{required_text}"
+                ),
+            )
+
+        for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
+            invalid_document = codex_document.replace(
+                MODULE.ROUTER_BLOCK_END,
+                f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
+                1,
+            )
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
+                    "contradictory deferred-agent discovery directive was accepted: "
+                    f"{contradiction.name}"
+                ),
+            )
+
+
 def router_policy_evidence_run() -> harness.EvidenceRun:
     """Run every source-declared router-policy evidence obligation."""
     assertions = {
@@ -626,6 +699,9 @@ def router_policy_evidence_run() -> harness.EvidenceRun:
             0
         ]: _assert_all_routers_enforce_operator_question_interrupt,
         dist.ROUTER_POLICY_NAMES[1]: (_assert_codex_router_bounds_dispatched_verifiers),
+        dist.ROUTER_POLICY_NAMES[2]: (
+            _assert_codex_router_discovers_deferred_agent_tools
+        ),
     }
     executed: list[str] = []
     for policy_name in dist.ROUTER_POLICY_NAMES:

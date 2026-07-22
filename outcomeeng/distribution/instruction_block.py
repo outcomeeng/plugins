@@ -26,7 +26,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
 
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+    Target,
+)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GENERATOR_RELATIVE_PATH: Final = Path(
@@ -172,9 +178,58 @@ WAIT_FOR_LOAD_POLICY_CONTRADICTIONS: Final = (
     ),
 )
 CODEX_HARNESS: Final = "codex"
+WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
+    (
+        "standalone waiter call",
+        "Invoke `/wait-for-load` in its own top-level `functions.exec` call.",
+    ),
+    (
+        "visible ready result",
+        "top-level call visibly returns the terminal JSON with `ready: true`",
+    ),
+    (
+        "separate selected-command call",
+        "Start the selected command in a separate top-level `functions.exec` call.",
+    ),
+    (
+        "nested waiter yield containment",
+        "set a nested `exec_command` yield below the outer call's yield window",
+    ),
+    (
+        "nested waiter collection",
+        "preserve that exact id and collect the same waiter with `write_stdin`",
+    ),
+    (
+        "collector yield containment",
+        "outer yield window exceeds the nested `write_stdin` yield",
+    ),
+    (
+        "owned process lifecycle",
+        "Every nested `exec_command` that returns a `session_id` creates an owned process handle.",
+    ),
+    (
+        "owned process reconciliation",
+        "reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end",
+    ),
+    (
+        "abandoned process termination",
+        "interrupt that process and collect its terminal result",
+    ),
+    (
+        "dangling process prohibition",
+        "never permits leaving its background terminal dangling",
+    ),
+    (
+        "combined-script and nested-wait prohibition",
+        "**NEVER** place the waiter and selected command in the same "
+        "`functions.exec` script or use `functions.wait` as the planned collector "
+        "for a nested waiter or selected command.",
+    ),
+)
 ROUTER_POLICY_NAMES: Final = (
     "operator-question-interrupt",
     "codex-verifier-dispatch",
+    "codex-deferred-agent-discovery",
 )
 OPERATOR_QUESTION_POLICY_OPEN: Final = "<operator_question_interrupt>"
 OPERATOR_QUESTION_POLICY_CLOSE: Final = "</operator_question_interrupt>"
@@ -261,6 +316,93 @@ CODEX_VERIFIER_DISPATCH_CONTRADICTIONS: Final = (
         ),
     ),
 )
+DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR: Final = "**STOP TRIGGER — in the main authoring conversation, discover deferred agent tools before reporting an agent unavailable.**"
+DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
+    ("stop trigger", DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR),
+    ("complete registry", "complete deferred-tool registry"),
+    ("top-level registry capability", "top-level `functions.exec`"),
+    ("deferred registry", "inspect `ALL_TOOLS`"),
+    ("nested shell distinction", "Treat `exec_command` as the nested shell tool"),
+    (
+        "typed spawn schema",
+        f"typed `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`",
+    ),
+    ("available roles", "`Available roles`"),
+    ("exact role authority", "exact match proves availability"),
+    (
+        "unavailability boundary",
+        "Report unavailable only when discovery finds no typed spawn capability or omits the exact role",
+    ),
+    ("discovery result", "include that result"),
+    (
+        "insufficient surfaces",
+        "Visible catalogs, initial tools, generated rosters, and local `agents/*.md` files are not availability evidence",
+    ),
+)
+DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
+    (
+        "lifecycle discovery",
+        f"if `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`, "
+        f"`{RUNTIME_TOKEN_WAIT_AGENT_NAMES[Target.CODEX.value]}`, or "
+        f"`{RUNTIME_TOKEN_CLOSE_AGENT_NAMES[Target.CODEX.value]}` is not initially "
+        "exposed, discover it through the runtime's complete deferred-tool registry",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class DeferredAgentDiscoveryContradiction:
+    """A prohibited availability directive and a representative router violation."""
+
+    name: str
+    pattern: re.Pattern[str]
+    violating_directive: str
+
+
+DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS: Final = (
+    DeferredAgentDiscoveryContradiction(
+        name="initial tool list as availability authority",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r"(?=.*\b(?:initially visible|initial|visible)\b)"
+            r"(?=.*\b(?:tool list|tool surface|catalog|roster)\b)"
+            r"(?=.*\b(?:sufficient|authoritative|conclusive)\b)"
+            r"(?=.*\b(?:availability|available|unavailable)\b).*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "The initially visible tool list is sufficient evidence that a named agent "
+            "is unavailable."
+        ),
+    ),
+    DeferredAgentDiscoveryContradiction(
+        name="deferred registry bypass",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r"(?=.*\breport(?:ed|ing)?\b.*\bunavailable\b)"
+            r"(?=.*\bwithout\b.*\bdeferred(?:-tool)?\s+registry\b).*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "A named agent may be reported unavailable without checking the deferred-tool "
+            "registry."
+        ),
+    ),
+    DeferredAgentDiscoveryContradiction(
+        name="local agent file as runtime authority",
+        pattern=re.compile(
+            r"^(?!.*\b(?:never|do not|don't|must not|may not|should not|cannot|can't)\b)"
+            r".*\blocal\b.*\bagents?/\*\.md\b.{0,120}"
+            r"\b(?:proves?|authoritative|conclusive)\b.{0,120}"
+            r"\b(?:active|available|provisioned)\b.*$",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        violating_directive=(
+            "A local `agents/*.md` file proves that the role is active in the current "
+            "runtime."
+        ),
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -331,6 +473,10 @@ class OperatorQuestionPolicyError(InstructionBlockRenderError):
 
 class VerifierDispatchPolicyError(InstructionBlockRenderError):
     """Raised when the Codex router weakens or contradicts verifier dispatch policy."""
+
+
+class DeferredAgentDiscoveryPolicyError(InstructionBlockRenderError):
+    """Raised when the Codex router omits deferred typed-agent discovery policy."""
 
 
 class InstructionBlockModule(Protocol):
@@ -572,10 +718,11 @@ def validate_wait_for_load_policy(blocks_by_harness: Mapping[str, str]) -> None:
             raise WaitForLoadPolicyError(
                 f"missing router section: {WAIT_FOR_LOAD_POLICY_HEADING}"
             ) from exc
+        requirements = list(WAIT_FOR_LOAD_POLICY_REQUIREMENTS)
+        if harness == CODEX_HARNESS:
+            requirements.extend(WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS)
         missing = [
-            name
-            for name, required_text in WAIT_FOR_LOAD_POLICY_REQUIREMENTS
-            if required_text not in section
+            name for name, required_text in requirements if required_text not in section
         ]
         if missing:
             details = ", ".join(missing)
@@ -679,6 +826,55 @@ def validate_verifier_dispatch_policy(
         )
 
 
+def deferred_agent_discovery_policy_paragraph(router: str) -> str | None:
+    """Return the Codex deferred-agent discovery heading and body."""
+    paragraphs = router.split("\n\n")
+    for index, paragraph in enumerate(paragraphs):
+        if DEFERRED_AGENT_DISCOVERY_POLICY_ANCHOR not in paragraph:
+            continue
+        if index + 1 == len(paragraphs):
+            return paragraph
+        return "\n\n".join(paragraphs[index : index + 2])
+    return None
+
+
+def validate_deferred_agent_discovery_policy(
+    blocks_by_harness: Mapping[str, str],
+) -> None:
+    """Reject a Codex router that omits or contradicts deferred agent discovery."""
+    document = blocks_by_harness.get(CODEX_HARNESS)
+    if document is None:
+        raise DeferredAgentDiscoveryPolicyError("missing Codex router")
+    router = managed_router_block(document)
+    policy = deferred_agent_discovery_policy_paragraph(router) or ""
+    missing_policy = [
+        name
+        for name, required_text in DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS
+        if required_text not in policy
+    ]
+    missing_lifecycle = [
+        name
+        for name, required_text in DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS
+        if required_text not in router
+    ]
+    missing = [*missing_policy, *missing_lifecycle]
+    if missing:
+        details = ", ".join(missing)
+        raise DeferredAgentDiscoveryPolicyError(
+            f"Codex deferred-agent discovery policy is incomplete: {details}"
+        )
+    contradictions = [
+        rule.name
+        for rule in DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS
+        if rule.pattern.search(router)
+    ]
+    if contradictions:
+        details = ", ".join(contradictions)
+        raise DeferredAgentDiscoveryPolicyError(
+            f"Codex deferred-agent discovery policy is contradictory: {details}"
+        )
+
+
 def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     """Render both root instruction files in place from committed harness dist templates."""
     module = load_instruction_block_module()
@@ -699,6 +895,7 @@ def regenerate_instruction_blocks(*, repo_root: Path = REPO_ROOT) -> None:
     validate_wait_for_load_policy(rendered)
     validate_operator_question_policy(rendered)
     validate_verifier_dispatch_policy(rendered)
+    validate_deferred_agent_discovery_policy(rendered)
     module.write_root_instruction_files(repo_root, rendered)
     module.remove_obsolete_spx_instruction_files(repo_root)
 

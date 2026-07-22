@@ -27,16 +27,6 @@ extensions, replaces symlinked root instruction files with regular files, remove
 ``spx/`` instruction files, reads committed git state for the recency reconcile, and writes both
 root files.
 
-The deterministic modules ``test_instruction_block.scenario.l1.py``,
-``test_instruction_block.mapping.l1.py``, ``test_instruction_block.property.l1.py``,
-``test_instruction_block.compliance.l1.py``, ``test_language_override.property.l1.py``, and
-``test_router_spacing.mapping.l1.py`` cover the render, write, check, and reconcile paths. Their
-cases assert both root files are regenerated without changing independent content, check maps
-absent/stale/current inputs to the matching status, reconcile refuses dirty, tied, one-sided, and
-malformed shared regions, invalid symlink/path/language inputs exit nonzero, and repeated writes
-are idempotent. The evidence harness allocates each temporary product through
-``TemporaryDirectory`` and synthesizes per-case subdirectories inside it; the context manager owns
-cleanup.
 """
 
 from __future__ import annotations
@@ -865,10 +855,11 @@ def _validated_template_path(raw_template: str) -> pathlib.Path:
     a faulty or hostile argument that points at a symlink or a non-regular file is rejected
     rather than read, keeping the read from escaping into an unintended file.
     """
-    if pathlib.Path(raw_template).is_symlink():
+    template = pathlib.Path(raw_template).expanduser()
+    if template.is_symlink():
         raise CliInputError(f"--template is a symlink: {raw_template}")
     try:
-        template = pathlib.Path(raw_template).expanduser().resolve(strict=True)
+        template = template.resolve(strict=True)
     except OSError as exc:
         raise CliInputError(f"--template does not exist: {raw_template}") from exc
     if not template.is_file():
