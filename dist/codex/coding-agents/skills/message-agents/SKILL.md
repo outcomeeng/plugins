@@ -33,15 +33,25 @@ A source-owned coordination envelope delivered through `/operate-prowl` to one c
 Pass every payload over stdin. When the shell accepts multiline input:
 
 ```bash
+python3 "${SKILL_DIR}/scripts/agent_message.py" discover <<'JSON'
+{"agents":[],"environment":{"PROWL_PANE_ID":"<complete-pane-uuid>"}}
+JSON
+
 python3 "${SKILL_DIR}/scripts/agent_message.py" build <<'JSON'
 {"discovery":{},"messageRequest":{}}
+JSON
+
+python3 "${SKILL_DIR}/scripts/agent_message.py" result <<'JSON'
+{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}
 JSON
 ```
 
 When the runner requires one physical command line:
 
 ```bash
+printf '%s\n' '{"agents":[],"environment":{"PROWL_PANE_ID":"<complete-pane-uuid>"}}' | python3 "${SKILL_DIR}/scripts/agent_message.py" discover
 printf '%s\n' '{"discovery":{},"messageRequest":{}}' | python3 "${SKILL_DIR}/scripts/agent_message.py" build
+printf '%s\n' '{"envelope":{},"delivered":false,"commandExitCode":1,"transport":{},"detail":"<exact-environment-detail>"}' | python3 "${SKILL_DIR}/scripts/agent_message.py" result
 ```
 
 </command_forms>

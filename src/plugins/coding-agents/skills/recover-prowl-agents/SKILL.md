@@ -2,6 +2,7 @@
 name: recover-prowl-agents
 description: >-
   ALWAYS invoke this skill when preparing or executing recovery of coding-agent sessions after Prowl restarts.
+argument-hint: "<JSON recovery candidates>"
 allowed-tools: Read, Skill, Bash(printf:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py":*), {{! tool('ask_user') !}}
 ---
 
@@ -14,13 +15,13 @@ A bounded recovery plan for exact restored Prowl panes whose expected native ses
 - Python 3.13+, the plugin's published shipped-script interpreter floor.
 - `/operate-prowl` for every public Prowl operation.
 - `spx agent resume --latest` as the sole native runtime selector inside the source-owned recovery input.
-- One caller-owned durable candidate record containing complete pane, worktree, native-session, evidence, role, and secondary-authorization values.
+- One durable candidate record supplied through `$ARGUMENTS`, containing complete pane, worktree, native-session, evidence, role, and secondary-authorization values.
 
 </dependencies>
 
 <workflow>
 
-1. Load the caller-owned durable candidate record captured before restart. Each candidate MUST contain complete `paneId`, absolute `worktreePath`, `sessionId`, `evidence`, `role`, and `secondaryAuthorized` fields. `evidence` is `live-process` only when the pre-restart observation proved a running native process; use `operator-confirmed` only when the operator explicitly identifies that exact pane and session.
+1. Interpret `$ARGUMENTS` as the durable candidate record captured before restart. Each candidate MUST contain complete `paneId`, absolute `worktreePath`, `sessionId`, `evidence`, `role`, and `secondaryAuthorized` fields. `evidence` is `live-process` only when the pre-restart observation proved a running native process; use `operator-confirmed` only when the operator explicitly identifies that exact pane and session.
 2. Reject a candidate derived only from a pane roster entry, terminal presentation, saved transcript, rollout path, session-file recency, or post-restart inference. Those observations preserve possible recovery context but prove neither prior liveness nor intent to resume.
 3. Reconcile candidates by worktree before mutation. One candidate is `primary`. Multiple candidates for one worktree require exactly one primary, distinct complete session identities, and `secondaryAuthorized: true` on every secondary after explicit operator authorization. Otherwise stop with the complete conflicting identities.
 4. Invoke `/operate-prowl` for `list` and `agents`. Require a checked successful result from each and preserve their complete public response values. Prowl remains the sole authority for restored topology.
@@ -43,12 +44,22 @@ When the shell accepts multiline input:
 python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" recover --pane <complete-pane-uuid> <<'JSON'
 {"items":[],"agents":[],"candidates":[]}
 JSON
+
+python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" settle <<'JSON'
+{"plan":{},"deliveryResults":[]}
+JSON
+
+python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" verify --pane <complete-pane-uuid> <<'JSON'
+{"items":[],"agents":[],"candidates":[]}
+JSON
 ```
 
 When the runner requires one physical command line:
 
 ```bash
 printf '%s\n' '{"items":[],"agents":[],"candidates":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" recover --pane <complete-pane-uuid>
+printf '%s\n' '{"plan":{},"deliveryResults":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" settle
+printf '%s\n' '{"items":[],"agents":[],"candidates":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" verify --pane <complete-pane-uuid>
 ```
 
 </command_forms>
