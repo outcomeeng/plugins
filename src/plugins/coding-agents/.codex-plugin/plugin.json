@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Coding Agents",
     "shortDescription": "Operate and coordinate coding agents across Prowl panes",
-    "longDescription": "Operate the public Prowl environment, delegate bounded work with terminal handbacks, recover SPX-selected native sessions, deliver source-owned messages, and coordinate independent coding-agent workflows.",
+    "longDescription": "Operate the public Prowl environment, delegate bounded work with terminal handbacks, prepare and recover exact native sessions, deliver source-owned messages, and coordinate independent coding-agent workflows.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": [

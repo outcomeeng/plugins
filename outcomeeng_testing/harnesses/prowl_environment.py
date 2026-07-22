@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Protocol, cast
 
@@ -367,6 +370,42 @@ def verify_prowl_mappings() -> list[str]:
     return failures
 
 
+def _verify_cli_stdin_isolation(module: ModuleType) -> str | None:
+    request = module.operation_request(module.Operation.LIST)
+    with TemporaryDirectory() as temporary_directory:
+        executable = Path(temporary_directory) / module.PROWL_COMMAND
+        executable.write_text(
+            """#!/usr/bin/env python3
+import json
+import os
+import stat
+
+if not stat.S_ISCHR(os.fstat(0).st_mode):
+    print(json.dumps({"ok": False, "error": {"message": "inherited request stream"}}))
+else:
+    print(json.dumps({"ok": True, "data": {}, "schema_version": "prowl.cli.list.v1"}))
+""",
+            encoding="utf-8",
+        )
+        executable.chmod(0o700)
+        environment = {**os.environ, "PATH": f"{temporary_directory}:{os.environ['PATH']}"}
+        completed = subprocess.run(
+            [sys.executable, str(PROWL_ENVIRONMENT_PATH), module.CliOperation.RUN.value],
+            input=json.dumps(request),
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        return f"stdin-isolation probe emitted malformed JSON: {error.msg}"
+    if completed.returncode != 0 or result.get(module.STATUS_FIELD) != module.ExecutionStatus.SUCCEEDED:
+        return "default subprocess runner inherited the adapter request stream"
+    return None
+
+
 def verify_prowl_conformance() -> list[str]:
     module = _load()
     failures: list[str] = []
@@ -415,6 +454,10 @@ def verify_prowl_conformance() -> list[str]:
             failures.append(f"{operation.value} public response values were rewritten")
         if validated[module.COMMAND_EXIT_CODE_FIELD] != 0:
             failures.append(f"{operation.value} command exit code was not preserved")
+
+    stdin_isolation_failure = _verify_cli_stdin_isolation(module)
+    if stdin_isolation_failure is not None:
+        failures.append(stdin_isolation_failure)
 
     request = module.operation_request(module.Operation.LIST)
     failure_cases = (

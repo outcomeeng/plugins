@@ -403,6 +403,7 @@ class SubprocessRunner:
             completed = subprocess.run(
                 argv,
                 input=stdin,
+                stdin=subprocess.DEVNULL if stdin is None else None,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
