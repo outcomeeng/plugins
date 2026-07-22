@@ -36,13 +36,14 @@ Required handling:
 
 A local `changes-reviewer` run token `2026-06-30_12-22-01-921-462d1675edbf` was written under `.spx/branch/head-b5180223/review/runs/`, while `spx journal render review 2026-06-30_12-22-01-921-462d1675edbf` and `spx journal read review 2026-06-30_12-22-01-921-462d1675edbf` could not locate it from branch `feat/issue-cross-repo-followup` at head `3b21c057b07f87df2b6516c1e160df992447fa76`. The review gate then required direct JSONL inspection to recover the approved result and one debt finding.
 
-The failure repeated on 2026-07-22 from branch `work/unconditional-checkpoint-sync`. Three distinct `changes-reviewer` agents returned raw tokens that `render_review_run.py` could not resolve and reported as `journal run not found; open the run before operating on it`:
+The failure repeated on 2026-07-22 from branch `work/unconditional-checkpoint-sync`. Four distinct `changes-reviewer` agents returned raw tokens that `render_review_run.py` could not resolve and reported as `journal run not found; open the run before operating on it`:
 
 - agent `019f8b95-6543-7a41-93c4-aa802ae3631a`, token `2026-07-22_20-47-56-571-8d1c3ca4f544`;
 - agent `019f8b9f-28d0-7bf3-b1e9-68cd944e31ba`, token `2026-07-22_20-58-34-471-ffe381ade072`;
-- agent `019f8ba9-60aa-7a43-8b48-83ca80eb5e22`, token `2026-07-22_21-09-40-615-1ed65024e00f`.
+- agent `019f8ba9-60aa-7a43-8b48-83ca80eb5e22`, token `2026-07-22_21-09-40-615-1ed65024e00f`;
+- agent `019f8bbb-31d8-71f3-bce3-0db7b80a63ca`, token `2026-07-22_21-29-15-940-8390c8f3a5fe`.
 
-The helper's current-scope render and sealed-run fallback found no matching run, so none of the three tokens produced an admissible review projection.
+The helper's current-scope render and sealed-run fallback found no matching run, so none of the four tokens produced an admissible review projection.
 
 Required handling:
 
