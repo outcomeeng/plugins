@@ -125,6 +125,7 @@ SKILL_PATTERNS: Final = (
     "src/templates/**",
     "dist/claude/**",
     "dist/codex/**",
+    ".codex/agents/**",
     ".claude-plugin/**",
     ".agents/plugins/**",
 )

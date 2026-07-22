@@ -19,7 +19,7 @@ pre-commit:
       stage_fixed: true
       priority: 20
     place-agents:
-      glob: "{src/plugins/*/agents/*.md,src/templates/**}"
+      glob: "{src/plugins/*/agents/*.md,src/templates/**,outcomeeng/distribution/agents.py,outcomeeng/distribution/build.py}"
       run: just place-agents
       stage_fixed: true
       priority: 22
