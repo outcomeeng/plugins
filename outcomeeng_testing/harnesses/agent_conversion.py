@@ -378,13 +378,26 @@ def convert_agent_tree(source_root: Path) -> tuple[CodexAgent, ...]:
     return convert_agents(source_root)
 
 
-def assert_two_sources_converting_to_one_filename_fail(root: Path) -> None:
-    """Assert conversion rejects two sources that slugify to one filename.
+@dataclass(frozen=True)
+class ConvertedFilenameCollision:
+    """What conversion produced for two sources that slugify to one filename.
 
-    The pair collides only after slugification, so the guard compares converted
-    filenames rather than source names. Without it conversion returns two
-    agents claiming one filename, and the writer that materializes them drops
-    the earlier definition.
+    Carries the outcome rather than a verdict on it: ``error`` holds the
+    conversion failure when one was raised, and ``filenames`` holds the agent
+    filenames conversion returned when it completed instead.
+    """
+
+    filenames: tuple[str, ...]
+    error: str | None
+
+
+def converting_sources_that_slugify_alike(root: Path) -> ConvertedFilenameCollision:
+    """Convert two sources whose names slugify to one filename, undecided.
+
+    The pair differs only outside the slug alphabet, so the collision appears
+    after slugification rather than between source names. Returns what
+    conversion did — the agent filenames it produced and the error it raised —
+    so the linked test owns every comparison the assertion claims.
     """
     for fixture in (DUPLICATE_REVIEWER_FIXTURE, DUPLICATE_REVIEWER_BANG_FIXTURE):
         write_agent_source(
@@ -395,12 +408,13 @@ def assert_two_sources_converting_to_one_filename_fail(root: Path) -> None:
         )
     source_root = root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
     try:
-        convert_agents(source_root)
+        converted = convert_agents(source_root)
     except AgentConversionError as exc:
-        assert "multiple source agents convert to" in str(exc)
-    else:
-        msg = "two sources converting to one filename did not raise"
-        raise AssertionError(msg)
+        return ConvertedFilenameCollision(filenames=(), error=str(exc))
+    return ConvertedFilenameCollision(
+        filenames=tuple(agent.filename for agent in converted),
+        error=None,
+    )
 
 
 def write_dist_codex_agent_tree(

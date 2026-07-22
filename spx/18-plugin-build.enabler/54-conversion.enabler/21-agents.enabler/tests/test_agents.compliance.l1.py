@@ -30,7 +30,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_environment_marker_without_source_plugin_is_rejected,
     assert_generated_toml_stays_outside_codex_plugin_manifest_content,
     assert_manual_guidance_preserves_source_only_fields,
-    assert_two_sources_converting_to_one_filename_fail,
+    converting_sources_that_slugify_alike,
 )
 
 
@@ -54,7 +54,18 @@ def test_two_sources_converting_to_one_filename_fail(tmp_path: Path) -> None:
     # The build-level path-collision check below guards the generated tree.
     # This guards conversion itself, which the harnesses call directly, so a
     # colliding pair cannot silently reduce to one written definition.
-    assert_two_sources_converting_to_one_filename_fail(tmp_path)
+    collision = converting_sources_that_slugify_alike(tmp_path)
+
+    assert collision.error is not None, (
+        "conversion returned instead of failing, so the pair reduced to the "
+        f"filenames {collision.filenames}, dropping a definition"
+    )
+    assert "multiple source agents convert to" in collision.error, (
+        f"conversion failed for an unrelated reason: {collision.error}"
+    )
+    assert not collision.filenames, (
+        f"a failed conversion still reported converted filenames: {collision.filenames}"
+    )
 
 
 def test_two_sources_claiming_one_output_fail_before_the_build_writes(
