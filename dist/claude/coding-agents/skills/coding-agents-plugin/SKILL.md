@@ -1,7 +1,7 @@
 ---
 name: coding-agents-plugin
 description: >-
-  ALWAYS invoke this skill to operate the coding-agents plugin's own lifecycle in a checkout — report its version, install or refresh the agent definitions it provides when they are missing, and check its footprint. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
+  ALWAYS invoke this skill to operate the coding-agents plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
 argument-hint: "[help|version|init|upgrade|check]"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/place_agents.py":*)
 ---
@@ -14,13 +14,13 @@ The coding-agents plugin's consumer-side footprint reported, placed, or refreshe
 
 Select one verb from the invocation. `help` is the default when none is given.
 
-| Verb      | Result                                                                               |
-| --------- | ------------------------------------------------------------------------------------ |
-| `help`    | This plugin's verbs and what each one changes                                        |
-| `version` | The plugin version the running session resolved                                      |
-| `init`    | The plugin's agent definitions placed into the checkout's agent directory            |
-| `upgrade` | The placed definitions brought to this version, retiring any a later version dropped |
-| `check`   | Whether the checkout's placed definitions match this version, changing nothing       |
+| Verb      | Result                                                                             |
+| --------- | ---------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs and what each one changes                                      |
+| `version` | The plugin version the running session resolved                                    |
+| `init`    | This plugin's checkout footprint established for this version                      |
+| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped |
+| `check`   | Whether the checkout's footprint matches this version, changing nothing            |
 
 This agent's plugin manifest declares the plugin's agents, so they reach a session through the manifest and no checkout placement applies. `init`, `upgrade`, and `check` report that and change nothing here; they carry the footprint work only for an agent whose manifest cannot declare agents.
 

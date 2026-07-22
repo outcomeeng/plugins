@@ -1,7 +1,7 @@
 ---
 name: rust-plugin
 description: >-
-  ALWAYS invoke this skill to operate the rust plugin's own lifecycle in a checkout — report its version, install or refresh the agent definitions it provides when they are missing, and check its footprint. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
+  ALWAYS invoke this skill to operate the rust plugin's own lifecycle in a checkout — report its version, manage whatever checkout footprint this plugin owns on the running agent, and check that footprint. Invoke it when this plugin's agents are missing from a session. NEVER hand-copy a plugin's agent definitions into a checkout or hand-edit them once placed.
 argument-hint: "[help|version|init|upgrade|check]"
 allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/place_agents.py":*)
 ---
@@ -14,13 +14,13 @@ The rust plugin's consumer-side footprint reported, placed, or refreshed in the 
 
 Select one verb from the invocation. `help` is the default when none is given.
 
-| Verb      | Result                                                                               |
-| --------- | ------------------------------------------------------------------------------------ |
-| `help`    | This plugin's verbs and what each one changes                                        |
-| `version` | The plugin version the running session resolved                                      |
-| `init`    | The plugin's agent definitions placed into the checkout's agent directory            |
-| `upgrade` | The placed definitions brought to this version, retiring any a later version dropped |
-| `check`   | Whether the checkout's placed definitions match this version, changing nothing       |
+| Verb      | Result                                                                             |
+| --------- | ---------------------------------------------------------------------------------- |
+| `help`    | This plugin's verbs and what each one changes                                      |
+| `version` | The plugin version the running session resolved                                    |
+| `init`    | This plugin's checkout footprint established for this version                      |
+| `upgrade` | This plugin's checkout footprint brought to this version, retiring what it dropped |
+| `check`   | Whether the checkout's footprint matches this version, changing nothing            |
 
 This agent's plugin manifest cannot declare agents, so `init`, `upgrade`, and `check` own this plugin's checkout footprint. When the plugin ships no agent definitions, they report that and change nothing.
 
