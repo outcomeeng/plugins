@@ -13,6 +13,7 @@ from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import (
     agent_item,
+    message_content,
     mutation_target,
     observed_mutation_state,
 )
@@ -49,15 +50,16 @@ def _fact_envelope(
     sender: dict[str, str],
     recipient: dict[str, str],
 ) -> dict[str, object]:
+    content = message_content(module.MessageKind.FACT, 1)
     return cast(
         dict[str, object],
         module.build_envelope(
             kind=module.MessageKind.FACT,
             sender=sender,
             recipient=recipient,
-            subject="checked fact",
-            facts=["the checked source value is preserved"],
-            request=None,
+            subject=content.subject,
+            facts=list(content.facts),
+            request=content.request,
             uuid_factory=lambda: uuid.UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
         ),
     )
@@ -71,6 +73,31 @@ def _successful_transport(module: ModuleType) -> dict[str, object]:
         module.COMMAND_EXIT_CODE_FIELD: 0,
         module.TRANSPORT_RESPONSE_FIELD: {},
     }
+
+
+def _generated_envelope(
+    module: ModuleType,
+    *,
+    kind: object,
+    sender: dict[str, str],
+    recipient: dict[str, str],
+    ordinal: int,
+    request_required: bool = False,
+    **fields: object,
+) -> dict[str, object]:
+    content = message_content(kind, ordinal, request_required=request_required)
+    return cast(
+        dict[str, object],
+        module.build_envelope(
+            kind=kind,
+            sender=sender,
+            recipient=recipient,
+            subject=content.subject,
+            facts=list(content.facts),
+            request=content.request,
+            **fields,
+        ),
+    )
 
 
 def verify_agent_message_mappings() -> list[str]:
@@ -135,16 +162,18 @@ def verify_agent_message_mappings() -> list[str]:
         ),
     )
     observed_states: set[object] = set()
-    for (kind, reference, target, state, accepted), expected_state in zip(
-        cases, module.MessageState, strict=True
-    ):
+    for ordinal, (
+        (kind, reference, target, state, accepted),
+        expected_state,
+    ) in enumerate(zip(cases, module.MessageState, strict=True), start=2):
+        content = message_content(kind, ordinal)
         envelope = module.build_envelope(
             kind=kind,
             sender=sender,
             recipient=recipient,
-            subject="mapping evidence",
-            facts=["source-owned state remains distinct"],
-            request=None,
+            subject=content.subject,
+            facts=list(content.facts),
+            request=content.request,
             active_reference=reference,
             mutation_target=target,
             observed_state=state,
@@ -169,13 +198,14 @@ def verify_agent_message_mappings() -> list[str]:
         observed_states.add(envelope[module.MESSAGE_STATE_FIELD])
     if len(observed_states) != len(module.MessageKind):
         failures.append("message kinds did not map to distinct states")
+    rejected_content = message_content(module.MessageKind.ACKNOWLEDGEMENT, 7)
     rejected_acknowledgement = module.build_envelope(
         kind=module.MessageKind.ACKNOWLEDGEMENT,
         sender=recipient,
         recipient=sender,
-        subject="ownership response",
-        facts=["the ownership proposal was rejected"],
-        request=None,
+        subject=rejected_content.subject,
+        facts=list(rejected_content.facts),
+        request=rejected_content.request,
         active_reference=active,
         accepted=False,
     )
@@ -295,26 +325,24 @@ def verify_agent_message_compliance() -> list[str]:
                 key: value for key, value in identity.items() if key != identity_field
             }
             try:
-                module.build_envelope(
+                _generated_envelope(
+                    module,
                     kind=module.MessageKind.FACT,
                     sender=invalid if label == module.SENDER_FIELD else sender,
                     recipient=invalid if label == module.RECIPIENT_FIELD else recipient,
-                    subject="invalid identity",
-                    facts=["identity is incomplete"],
-                    request=None,
+                    ordinal=20,
                 )
                 failures.append(f"message accepted {label} without {identity_field}")
             except module.MessageError:
                 pass
         invalid_run = {**identity, module.RUN_FIELD: ""}
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.FACT,
                 sender=invalid_run if label == module.SENDER_FIELD else sender,
                 recipient=invalid_run if label == module.RECIPIENT_FIELD else recipient,
-                subject="invalid run identity",
-                facts=["run identity must be complete when present"],
-                request=None,
+                ordinal=21,
             )
             failures.append(f"message accepted malformed {label} run identity")
         except module.MessageError:
@@ -325,23 +353,30 @@ def verify_agent_message_compliance() -> list[str]:
     sender_target = mutation_target(module, sender, ordinal=1)
     recipient_state = observed_mutation_state(module, recipient, ordinal=2)
     sender_state = observed_mutation_state(module, sender, ordinal=1)
+    proposal_content = message_content(
+        module.MessageKind.OWNERSHIP_PROPOSAL, 10, request_required=True
+    )
+    state_content = message_content(module.MessageKind.MUTATION_STATE, 11)
+    authorization_content = message_content(
+        module.MessageKind.MUTATION_AUTHORIZATION, 12, request_required=True
+    )
     mutation_envelopes = (
         module.build_envelope(
             kind=module.MessageKind.OWNERSHIP_PROPOSAL,
             sender=sender,
             recipient=recipient,
-            subject="mutation target",
-            facts=["target identity is checked"],
-            request="report exact state",
+            subject=proposal_content.subject,
+            facts=list(proposal_content.facts),
+            request=proposal_content.request,
             mutation_target=recipient_target,
         ),
         module.build_envelope(
             kind=module.MessageKind.MUTATION_STATE,
             sender=sender,
             recipient=recipient,
-            subject="mutation state",
-            facts=["state is checked"],
-            request=None,
+            subject=state_content.subject,
+            facts=list(state_content.facts),
+            request=state_content.request,
             active_reference=active_reference,
             mutation_target=sender_target,
             observed_state=sender_state,
@@ -350,9 +385,9 @@ def verify_agent_message_compliance() -> list[str]:
             kind=module.MessageKind.MUTATION_AUTHORIZATION,
             sender=sender,
             recipient=recipient,
-            subject="mutation authorization",
-            facts=["target and state match"],
-            request="perform only the authorized mutation",
+            subject=authorization_content.subject,
+            facts=list(authorization_content.facts),
+            request=authorization_content.request,
             active_reference=active_reference,
             mutation_target=recipient_target,
             observed_state=recipient_state,
@@ -373,13 +408,13 @@ def verify_agent_message_compliance() -> list[str]:
             identity_field: sender[identity_field],
         }
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.OWNERSHIP_PROPOSAL,
                 sender=sender,
                 recipient=recipient,
-                subject="mismatched target",
-                facts=["target must match"],
-                request="report state",
+                ordinal=22,
+                request_required=True,
                 mutation_target=mismatched,
             )
             failures.append(f"mismatched mutation target {identity_field} was accepted")
@@ -393,13 +428,13 @@ def verify_agent_message_compliance() -> list[str]:
     )
     for invalid_target in invalid_proposal_targets:
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.OWNERSHIP_PROPOSAL,
                 sender=sender,
                 recipient=recipient,
-                subject="stale target state",
-                facts=["target HEAD and status must be complete"],
-                request="report exact state",
+                ordinal=23,
+                request_required=True,
                 mutation_target=invalid_target,
             )
             failures.append("proposal accepted stale target HEAD or status")
@@ -413,13 +448,12 @@ def verify_agent_message_compliance() -> list[str]:
     )
     for stale_target in stale_authorization_targets:
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.MUTATION_AUTHORIZATION,
                 sender=sender,
                 recipient=recipient,
-                subject="stale authorization target",
-                facts=["target must match the reported state"],
-                request=None,
+                ordinal=24,
                 active_reference=active_reference,
                 mutation_target=stale_target,
                 observed_state=recipient_state,
@@ -444,13 +478,12 @@ def verify_agent_message_compliance() -> list[str]:
             state_field: mismatched_value,
         }
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.MUTATION_AUTHORIZATION,
                 sender=sender,
                 recipient=recipient,
-                subject="mismatched state",
-                facts=["state must match target"],
-                request=None,
+                ordinal=25,
                 active_reference=active_reference,
                 mutation_target=recipient_target,
                 observed_state=mismatched_state,
@@ -466,13 +499,12 @@ def verify_agent_message_compliance() -> list[str]:
     )
     for stale_target in stale_state_targets:
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.MUTATION_STATE,
                 sender=sender,
                 recipient=recipient,
-                subject="stale mutation-state target",
-                facts=["reported state must match its target"],
-                request=None,
+                ordinal=26,
                 active_reference=active_reference,
                 mutation_target=stale_target,
                 observed_state=sender_state,
@@ -493,13 +525,12 @@ def verify_agent_message_compliance() -> list[str]:
             )
         mismatched_state = {**sender_state, state_field: mismatched_value}
         try:
-            module.build_envelope(
+            _generated_envelope(
+                module,
                 kind=module.MessageKind.MUTATION_STATE,
                 sender=sender,
                 recipient=recipient,
-                subject="mismatched mutation state",
-                facts=["reported state must match its target"],
-                request=None,
+                ordinal=27,
                 active_reference=active_reference,
                 mutation_target=sender_target,
                 observed_state=mismatched_state,
@@ -509,12 +540,13 @@ def verify_agent_message_compliance() -> list[str]:
             if error.status != module.DeliveryStatus.INVALID_IDENTITY:
                 failures.append(f"mismatched mutation-state mapped to {error.status}")
 
+    request_content = message_content(module.MessageKind.FACT, 28)
     valid_request = module.build_request(
         to_pane=recipient[module.PANE_FIELD],
         kind=module.MessageKind.FACT,
-        subject="exact targeting",
-        facts=["pane UUID selects the recipient"],
-        request=None,
+        subject=request_content.subject,
+        facts=list(request_content.facts),
+        request=request_content.request,
     )
     built = module.send_request(valid_request, discovery)
     invalid_discoveries = (

@@ -6,6 +6,7 @@ import importlib.util
 import json
 import sys
 from collections.abc import Callable
+from copy import deepcopy
 from io import StringIO
 from pathlib import Path
 from types import ModuleType
@@ -16,7 +17,9 @@ from hypothesis import example, given, seed, settings
 from outcomeeng_testing.generators.native_agent_recovery import (
     OPERATIONAL_RECOVERY_ROSTER,
     RecoveryRosterCase,
+    invalid_recovery_evidence,
     non_native_agent_types,
+    recovery_candidates,
     roster_cases,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -70,10 +73,12 @@ def _agent_item(
     worktree: Path,
     pane_id: str,
     agent_type: str,
+    session_id: str,
 ) -> dict[str, object]:
     return {
         module.TYPE_FIELD: agent_type,
         module.STATUS_FIELD: "idle",
+        module.SESSION_FIELD: {module.ID_FIELD: session_id},
         module.WORKTREE_FIELD: {
             module.ID_FIELD: str(worktree),
             module.PATH_FIELD: str(worktree),
@@ -107,16 +112,31 @@ def _rosters(
                 if correlated_type is not None
                 else native_types[index % len(native_types)]
             ),
+            session_id,
         )
-        for index, (pane_id, worktree) in enumerate(
+        for index, (pane_id, worktree, session_id) in enumerate(
             zip(
                 roster.pane_ids[:count],
                 roster.worktree_paths[:count],
+                roster.session_ids[:count],
                 strict=True,
             )
         )
     ]
     return pane_items, agent_items
+
+
+def _candidate_subset(
+    module: ModuleType,
+    roster: RecoveryRosterCase,
+    pane_ids: tuple[str, ...],
+) -> list[dict[str, object]]:
+    selected = set(pane_ids)
+    return [
+        candidate
+        for candidate in recovery_candidates(module, roster)
+        if candidate[module.PANE_ID_FIELD] in selected
+    ]
 
 
 def _post_launch_rosters(
@@ -130,9 +150,15 @@ def _post_launch_rosters(
             worktree,
             pane_id,
             native_types[index % len(native_types)],
+            session_id,
         )
-        for index, (pane_id, worktree) in enumerate(
-            zip(roster.pane_ids, roster.worktree_paths, strict=True)
+        for index, (pane_id, worktree, session_id) in enumerate(
+            zip(
+                roster.pane_ids,
+                roster.worktree_paths,
+                roster.session_ids,
+                strict=True,
+            )
         )
     ]
     return panes, agents
@@ -151,7 +177,8 @@ def verify_native_agent_recovery_mappings() -> list[str]:
     failures: list[str] = []
     roster = OPERATIONAL_RECOVERY_ROSTER
     panes, agents = _rosters(module, roster)
-    result = module.recover(roster.pane_ids, panes, agents)
+    candidates = recovery_candidates(module, roster)
+    result = module.recover(roster.pane_ids, panes, agents, candidates)
     targets = cast(list[dict[str, object]], result[module.TARGETS_FIELD])
     statuses = {
         cast(str, target[module.PANE_ID_FIELD]): target[module.STATUS_FIELD]
@@ -173,19 +200,61 @@ def verify_native_agent_recovery_mappings() -> list[str]:
 
     unknown_status = _error_status(
         module,
-        lambda: module.recover((roster.unknown_pane_id,), panes, agents),
+        lambda: module.recover((roster.unknown_pane_id,), panes, agents, []),
     )
     if unknown_status != module.ResultStatus.INVALID_TARGET:
         failures.append("unknown pane did not map to invalid-target")
     duplicate_status = _error_status(
         module,
-        lambda: module.recover(roster.duplicate_selection, panes, agents),
+        lambda: module.recover(roster.duplicate_selection, panes, agents, candidates),
     )
     if duplicate_status != module.ResultStatus.INVALID_TARGET:
         failures.append("duplicate selection did not map to invalid-target")
 
+    shared_panes = deepcopy(panes[:2])
+    shared_candidates = deepcopy(candidates[:2])
+    first_worktree = cast(dict[str, object], shared_panes[0][module.WORKTREE_FIELD])
+    second_worktree = cast(dict[str, object], shared_panes[1][module.WORKTREE_FIELD])
+    second_worktree[module.ID_FIELD] = first_worktree[module.ID_FIELD]
+    second_worktree[module.PATH_FIELD] = first_worktree[module.PATH_FIELD]
+    second_worktree[module.ROOT_PATH_FIELD] = first_worktree[module.ROOT_PATH_FIELD]
+    shared_candidates[1][module.WORKTREE_PATH_FIELD] = first_worktree[module.PATH_FIELD]
+    duplicate_worktree_status = _error_status(
+        module,
+        lambda: module.recover(
+            roster.pane_ids[:2], shared_panes, [], shared_candidates
+        ),
+    )
+    if duplicate_worktree_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("duplicate worktree primaries did not require reconciliation")
+    shared_candidates[1][module.ROLE_FIELD] = module.RecoveryRole.SECONDARY
+    shared_candidates[1][module.SECONDARY_AUTHORIZED_FIELD] = True
+    reconciled = module.recover(
+        roster.pane_ids[:2], shared_panes, [], shared_candidates
+    )
+    if reconciled[module.STATUS_FIELD] != module.ResultStatus.RESUMED:
+        failures.append("authorized worktree secondary did not map to resumed")
+
+    duplicate_session_candidates = deepcopy(candidates[:2])
+    duplicate_session_candidates[1][module.SESSION_ID_FIELD] = (
+        duplicate_session_candidates[0][module.SESSION_ID_FIELD]
+    )
+    duplicate_session_status = _error_status(
+        module,
+        lambda: module.recover(
+            roster.pane_ids[:2], panes[:2], [], duplicate_session_candidates
+        ),
+    )
+    if duplicate_session_status != module.ResultStatus.INVALID_TARGET:
+        failures.append("duplicate native session identity was accepted")
+
     duplicate_agents = [*agents, {**agents[0]}]
-    occupied = module.recover((roster.pane_ids[0],), panes, duplicate_agents)
+    occupied = module.recover(
+        (roster.pane_ids[0],),
+        panes,
+        duplicate_agents,
+        _candidate_subset(module, roster, (roster.pane_ids[0],)),
+    )
     if occupied[module.STATUS_FIELD] != module.ResultStatus.PANE_OCCUPIED:
         failures.append("multiple correlations did not map to pane-occupied")
     if occupied[module.DELIVERIES_FIELD]:
@@ -201,7 +270,12 @@ def verify_native_agent_recovery_mappings() -> list[str]:
             correlated_count=roster.non_native_occupied_count,
             correlated_type=agent_type,
         )
-        generated = module.recover(roster.pane_ids, generated_panes, generated_agents)
+        generated = module.recover(
+            roster.pane_ids,
+            generated_panes,
+            generated_agents,
+            recovery_candidates(module, roster),
+        )
         if generated[module.STATUS_FIELD] != module.ResultStatus.PANE_OCCUPIED:
             failures.append(f"non-native {agent_type} did not map to pane-occupied")
         if generated[module.DELIVERIES_FIELD]:
@@ -231,7 +305,12 @@ def verify_native_agent_recovery_properties() -> list[str]:
                 correlated_count=len(roster.pane_ids),
                 correlated_type=agent_type,
             )
-            result = module.recover(roster.pane_ids, panes, agents)
+            result = module.recover(
+                roster.pane_ids,
+                panes,
+                agents,
+                recovery_candidates(module, roster),
+            )
             if result[module.STATUS_FIELD] != module.ResultStatus.ALREADY_CURRENT:
                 failures.append(
                     "fully correlated roster did not map to already-current"
@@ -244,6 +323,31 @@ def verify_native_agent_recovery_properties() -> list[str]:
         seed_value=RECOVERY_PROPERTY_SEED,
         replay_path=RECOVERY_PROPERTY_REPLAY_PATH,
     )
+
+    @seed(RECOVERY_PROPERTY_SEED)
+    @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        evidence=invalid_recovery_evidence(
+            tuple(kind.value for kind in module.EvidenceKind)
+        )
+    )
+    def generated_invalid_evidence(evidence: str) -> None:
+        roster = OPERATIONAL_RECOVERY_ROSTER
+        panes, _ = _rosters(module, roster, correlated_count=0)
+        candidates = _candidate_subset(module, roster, (roster.pane_ids[0],))
+        candidates[0][module.EVIDENCE_FIELD] = evidence
+        status = _error_status(
+            module,
+            lambda: module.recover((roster.pane_ids[0],), panes, [], candidates),
+        )
+        if status != module.ResultStatus.INVALID_SCHEMA:
+            failures.append("unsupported candidate evidence was accepted")
+
+    run_replayable_property(
+        generated_invalid_evidence,
+        seed_value=RECOVERY_PROPERTY_SEED,
+        replay_path=RECOVERY_PROPERTY_REPLAY_PATH,
+    )
     return failures
 
 
@@ -252,12 +356,22 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     failures: list[str] = []
     roster = OPERATIONAL_RECOVERY_ROSTER
     panes, agents = _rosters(module, roster)
-    plan = module.recover(roster.pane_ids, panes, agents)
+    candidates = recovery_candidates(module, roster)
+    plan = module.recover(roster.pane_ids, panes, agents, candidates)
     deliveries = cast(list[dict[str, object]], plan[module.DELIVERIES_FIELD])
     expected_deliveries = [
         {
             module.PANE_ID_FIELD: pane_id,
-            module.TEXT_FIELD: module.RECOVERY_INPUT,
+            module.TEXT_FIELD: module.recovery_input(
+                module.candidate_from_item(
+                    next(
+                        candidate
+                        for candidate in candidates
+                        if candidate[module.PANE_ID_FIELD] == pane_id
+                    ),
+                    f"candidate[{pane_id}]",
+                )
+            ),
         }
         for pane_id in roster.unoccupied_pane_ids
     ]
@@ -288,11 +402,23 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         failures.append("failed environment delivery did not map to command-failed")
 
     post_panes, post_agents = _post_launch_rosters(module, roster)
-    verified = module.verify(roster.pane_ids, post_panes, post_agents)
+    verified = module.verify(roster.pane_ids, post_panes, post_agents, candidates)
     if verified[module.STATUS_FIELD] != module.ResultStatus.VERIFIED:
         failures.append("complete post-launch roster did not map to verified")
     if verified[module.VERIFIED_FIELD] != len(roster.pane_ids):
         failures.append("verification count did not preserve the selected target count")
+    mismatched_agents = deepcopy(post_agents)
+    cast(dict[str, object], mismatched_agents[0][module.SESSION_FIELD])[
+        module.ID_FIELD
+    ] = roster.session_ids[1]
+    mismatched_verification = module.verify(
+        roster.pane_ids, post_panes, mismatched_agents, candidates
+    )
+    if (
+        mismatched_verification[module.STATUS_FIELD]
+        != module.ResultStatus.CORRELATION_INCOMPLETE
+    ):
+        failures.append("mismatched resumed session identity verified successfully")
     correlations = cast(list[dict[str, object]], verified[module.CORRELATIONS_FIELD])
     if any(
         frozenset(correlation) != module.CORRELATION_FIELDS
@@ -307,7 +433,13 @@ def verify_native_agent_recovery_compliance() -> list[str]:
             *(value for pane_id in roster.pane_ids for value in ("--pane", pane_id)),
         ],
         stdin=StringIO(
-            json.dumps({module.ITEMS_FIELD: panes, module.AGENTS_FIELD: agents})
+            json.dumps(
+                {
+                    module.ITEMS_FIELD: panes,
+                    module.AGENTS_FIELD: agents,
+                    module.CANDIDATES_FIELD: candidates,
+                }
+            )
         ),
         stdout=recover_stdout,
     )
@@ -342,7 +474,11 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         ],
         stdin=StringIO(
             json.dumps(
-                {module.ITEMS_FIELD: post_panes, module.AGENTS_FIELD: post_agents}
+                {
+                    module.ITEMS_FIELD: post_panes,
+                    module.AGENTS_FIELD: post_agents,
+                    module.CANDIDATES_FIELD: candidates,
+                }
             )
         ),
         stdout=verify_stdout,
@@ -369,12 +505,20 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         verbatim_cwd
     )
     verbatim_agent = _agent_item(
-        module, roster.worktree_paths[0], pane_id, min(module.NATIVE_AGENT_TYPES)
+        module,
+        roster.worktree_paths[0],
+        pane_id,
+        min(module.NATIVE_AGENT_TYPES),
+        roster.session_ids[0],
     )
     cast(dict[str, object], verbatim_agent[module.WORKTREE_FIELD])[
         module.PATH_FIELD
     ] = verbatim_path
-    verbatim = module.recover((pane_id,), [verbatim_pane], [verbatim_agent])
+    verbatim_candidates = _candidate_subset(module, roster, (pane_id,))
+    verbatim_candidates[0][module.WORKTREE_PATH_FIELD] = verbatim_path
+    verbatim = module.recover(
+        (pane_id,), [verbatim_pane], [verbatim_agent], verbatim_candidates
+    )
     target = cast(list[dict[str, object]], verbatim[module.TARGETS_FIELD])[0]
     if target[module.WORKTREE_PATH_FIELD] != verbatim_path:
         failures.append("worktree path identity was normalized")
@@ -388,7 +532,13 @@ def verify_native_agent_recovery_compliance() -> list[str]:
         "relative"
     )
     relative_status = _error_status(
-        module, lambda: module.recover((pane_id,), [relative_pane], [])
+        module,
+        lambda: module.recover(
+            (pane_id,),
+            [relative_pane],
+            [],
+            _candidate_subset(module, roster, (pane_id,)),
+        ),
     )
     if relative_status != module.ResultStatus.INVALID_SCHEMA:
         failures.append("relative public path did not map to invalid-schema")

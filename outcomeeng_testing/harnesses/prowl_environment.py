@@ -17,11 +17,12 @@ from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.prowl_environment import (
-    PUBLIC_PROWL_OPERATION_NAMES,
     agent_identity,
     coordination_references,
+    delegation_text_case,
     operation_requests,
     public_agent_item,
+    public_prowl_operation_names,
     result_forms,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -83,12 +84,8 @@ def _load() -> ModuleType:
 
 def _selector(module: ModuleType, arguments: dict[str, object]) -> list[str]:
     command: list[str] = []
-    for field_name, public_option in (
-        (module.TARGET_FIELD, "--target"),
-        (module.WORKTREE_FIELD, "--worktree"),
-        (module.TAB_FIELD, "--tab"),
-        (module.PANE_FIELD, "--pane"),
-    ):
+    for field_name in module.SELECTOR_FIELDS:
+        public_option = module.PUBLIC_PROWL_SELECTOR_OPTIONS[field_name]
         value = arguments.get(field_name)
         if value is not None:
             command.extend((public_option, cast(str, value)))
@@ -100,60 +97,70 @@ def _expected_command(
 ) -> tuple[str, ...]:
     operation = module.Operation(request[module.OPERATION_FIELD])
     arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
-    if operation is module.Operation.LIST:
-        return ("prowl", "list", "--json")
-    if operation is module.Operation.AGENTS:
-        return ("prowl", "agents", "--json")
+    command = list(module.PUBLIC_PROWL_COMMAND_PREFIXES[operation])
+    if operation in {module.Operation.LIST, module.Operation.AGENTS}:
+        return (*command, module.PUBLIC_PROWL_JSON_OPTION)
     if operation is module.Operation.OPEN:
-        command = ["prowl", "open", "--json"]
+        command.append(module.PUBLIC_PROWL_JSON_OPTION)
         if arguments.get(module.PATH_FIELD) is not None:
             command.append(cast(str, arguments[module.PATH_FIELD]))
         return tuple(command)
 
-    if operation is module.Operation.TAB_CREATE:
-        command = ["prowl", "tab", "create"]
-    elif operation is module.Operation.TAB_CLOSE:
-        command = ["prowl", "tab", "close"]
-    elif operation is module.Operation.PANE_CLOSE:
-        command = ["prowl", "pane", "close"]
-    else:
-        command = ["prowl", operation.value]
     command.extend(_selector(module, arguments))
-    command.append("--json")
+    command.append(module.PUBLIC_PROWL_JSON_OPTION)
 
     if operation is module.Operation.READ:
-        for field_name, public_option in (
-            (module.LAST_FIELD, "--last"),
-            (module.STABLE_INTERVAL_FIELD, "--stable-interval"),
-            (module.STABLE_PERIOD_FIELD, "--stable-period"),
-            (module.WAIT_TIMEOUT_FIELD, "--wait-timeout"),
+        for field_name in (
+            module.LAST_FIELD,
+            module.STABLE_INTERVAL_FIELD,
+            module.STABLE_PERIOD_FIELD,
+            module.WAIT_TIMEOUT_FIELD,
         ):
+            public_option = module.PUBLIC_PROWL_ARGUMENT_OPTIONS[field_name]
             value = arguments.get(field_name)
             if value is not None:
                 command.extend((public_option, str(value)))
         if arguments.get(module.WAIT_STABLE_FIELD) is True:
-            command.append("--wait-stable")
+            command.append(
+                module.PUBLIC_PROWL_ARGUMENT_OPTIONS[module.WAIT_STABLE_FIELD]
+            )
     elif operation is module.Operation.SEND:
-        for field_name, public_option in (
-            (module.NO_ENTER_FIELD, "--no-enter"),
-            (module.NO_WAIT_FIELD, "--no-wait"),
-            (module.CAPTURE_FIELD, "--capture"),
+        for field_name in (
+            module.NO_ENTER_FIELD,
+            module.NO_WAIT_FIELD,
+            module.CAPTURE_FIELD,
         ):
+            public_option = module.PUBLIC_PROWL_ARGUMENT_OPTIONS[field_name]
             if arguments.get(field_name) is True:
                 command.append(public_option)
         if arguments.get(module.TIMEOUT_FIELD) is not None:
-            command.extend(("--timeout", str(arguments[module.TIMEOUT_FIELD])))
+            command.extend(
+                (
+                    module.PUBLIC_PROWL_ARGUMENT_OPTIONS[module.TIMEOUT_FIELD],
+                    str(arguments[module.TIMEOUT_FIELD]),
+                )
+            )
         command.append(cast(str, arguments[module.TEXT_FIELD]))
     elif operation is module.Operation.KEY:
         if arguments.get(module.REPEAT_FIELD) is not None:
-            command.extend(("--repeat", str(arguments[module.REPEAT_FIELD])))
+            command.extend(
+                (
+                    module.PUBLIC_PROWL_ARGUMENT_OPTIONS[module.REPEAT_FIELD],
+                    str(arguments[module.REPEAT_FIELD]),
+                )
+            )
         command.append(cast(str, arguments[module.KEY_FIELD]))
     elif operation is module.Operation.TAB_CREATE:
         if arguments.get(module.PATH_FIELD) is not None:
-            command.extend(("--path", cast(str, arguments[module.PATH_FIELD])))
+            command.extend(
+                (
+                    module.PUBLIC_PROWL_ARGUMENT_OPTIONS[module.PATH_FIELD],
+                    cast(str, arguments[module.PATH_FIELD]),
+                )
+            )
     elif operation in {module.Operation.TAB_CLOSE, module.Operation.PANE_CLOSE}:
         if arguments.get(module.FORCE_FIELD) is True:
-            command.append("--force")
+            command.append(module.PUBLIC_PROWL_ARGUMENT_OPTIONS[module.FORCE_FIELD])
     return tuple(command)
 
 
@@ -161,7 +168,7 @@ def verify_prowl_mappings() -> list[str]:
     module = _load()
     failures: list[str] = []
     requests = operation_requests(module)
-    required_operations = set(PUBLIC_PROWL_OPERATION_NAMES)
+    required_operations = set(public_prowl_operation_names(module))
     declared_operations = {operation.value for operation in module.Operation}
     if declared_operations != required_operations:
         failures.append(
@@ -303,18 +310,19 @@ def verify_prowl_mappings() -> list[str]:
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
     reference = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    delegation_text = delegation_text_case(1)
     delegation = module.delegation_request(
         sender=sender,
         recipient=recipient,
-        subject="run bounded audits",
-        instruction="return the exact audit results",
+        subject=delegation_text.subject,
+        instruction=delegation_text.instruction,
         coordination_reference=reference,
     )
     for terminal_kind in module.TerminalKind:
         terminal = module.terminal_handback(
             delegation,
             terminal_kind,
-            inline_result=f"{terminal_kind.value} result",
+            inline_result=f"{delegation_text.inline_result}: {terminal_kind.value}",
         )
         if terminal[module.COORDINATION_REFERENCE_FIELD] != reference:
             failures.append(f"{terminal_kind.value} did not preserve correlation")
@@ -340,14 +348,18 @@ def verify_prowl_mappings() -> list[str]:
         durable = module.terminal_handback(
             delegation,
             terminal_kind,
-            result_reference=f"result://{terminal_kind.value}",
-            projection=f"bounded {terminal_kind.value} projection",
+            result_reference=(
+                f"{delegation_text.result_reference}-{terminal_kind.value}"
+            ),
+            projection=f"{delegation_text.projection}: {terminal_kind.value}",
         )
-        if durable[module.RESULT_REFERENCE_FIELD] != f"result://{terminal_kind.value}":
+        if durable[module.RESULT_REFERENCE_FIELD] != (
+            f"{delegation_text.result_reference}-{terminal_kind.value}"
+        ):
             failures.append(f"{terminal_kind.value} did not preserve durable reference")
         if (
             durable[module.PROJECTION_FIELD]
-            != f"bounded {terminal_kind.value} projection"
+            != f"{delegation_text.projection}: {terminal_kind.value}"
         ):
             failures.append(
                 f"{terminal_kind.value} did not preserve bounded projection"
@@ -449,6 +461,7 @@ def verify_prowl_properties() -> list[str]:
     failures: list[str] = []
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
+    property_text = delegation_text_case(2)
 
     @seed(PROPERTY_SEED)
     @settings(max_examples=PROPERTY_EXAMPLES, deadline=None, print_blob=True)
@@ -466,8 +479,8 @@ def verify_prowl_properties() -> list[str]:
         delegation = module.delegation_request(
             sender=sender,
             recipient=recipient,
-            subject="property delegation",
-            instruction="return terminal evidence",
+            subject=property_text.subject,
+            instruction=property_text.instruction,
             coordination_reference=reference,
         )
         terminal = module.terminal_handback(
@@ -487,7 +500,7 @@ def verify_prowl_properties() -> list[str]:
         conflict = module.terminal_handback(
             delegation,
             conflicting_kind,
-            inline_result="conflicting terminal result",
+            inline_result=property_text.inline_result,
         )
         conflicts = (
             conflict,
@@ -497,14 +510,14 @@ def verify_prowl_properties() -> list[str]:
                 inline_result=(
                     f"{inline_result}!"
                     if inline_result is not None
-                    else "different inline result"
+                    else property_text.inline_result
                 ),
             ),
             module.terminal_handback(
                 delegation,
                 terminal_kind,
-                result_reference="result://different-terminal-payload",
-                projection="different bounded projection",
+                result_reference=property_text.result_reference,
+                projection=property_text.projection,
             ),
         )
         for conflicting_terminal in conflicts:
@@ -554,11 +567,12 @@ def verify_prowl_compliance() -> list[str]:
 
     sender = agent_identity(module, ordinal=1)
     recipient = agent_identity(module, ordinal=2)
+    compliance_text = delegation_text_case(3)
     delegation = module.delegation_request(
         sender=sender,
         recipient=recipient,
-        subject="result-shape evidence",
-        instruction="return one terminal result",
+        subject=compliance_text.subject,
+        instruction=compliance_text.instruction,
         coordination_reference=str(uuid.UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")),
     )
     invalid_result_forms: tuple[dict[str, str], ...] = (

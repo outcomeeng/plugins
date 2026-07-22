@@ -2,24 +2,35 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import combinations
 from types import ModuleType
-from typing import Final
 
 from hypothesis import strategies as st
 
-PUBLIC_PROWL_OPERATION_NAMES: Final[tuple[str, ...]] = (
-    "list",
-    "agents",
-    "read",
-    "send",
-    "key",
-    "focus",
-    "tab-create",
-    "tab-close",
-    "pane-close",
-    "open",
-)
+
+@dataclass(frozen=True)
+class DelegationTextCase:
+    subject: str
+    instruction: str
+    inline_result: str
+    result_reference: str
+    projection: str
+
+
+def delegation_text_case(ordinal: int) -> DelegationTextCase:
+    suffix = str(ordinal)
+    return DelegationTextCase(
+        subject=f"bounded delegation {suffix}",
+        instruction=f"return terminal evidence {suffix}",
+        inline_result=f"terminal result {suffix}",
+        result_reference=f"result://terminal-{suffix}",
+        projection=f"bounded terminal projection {suffix}",
+    )
+
+
+def public_prowl_operation_names(module: ModuleType) -> tuple[str, ...]:
+    return tuple(operation.value for operation in module.PUBLIC_PROWL_COMMAND_PREFIXES)
 
 
 def coordination_references() -> st.SearchStrategy[str]:
@@ -57,7 +68,7 @@ def operation_requests(module: ModuleType) -> list[dict[str, object]]:
     argument_names = {field: name for name, field in module.ARGUMENT_NAMES.items()}
     requests: list[dict[str, object]] = []
     ordinal = 0
-    for operation_name in PUBLIC_PROWL_OPERATION_NAMES:
+    for operation_name in public_prowl_operation_names(module):
         operation = module.Operation(operation_name)
         contract = module.OPERATION_CONTRACTS[operation]
         for shape in contract.request_shapes:

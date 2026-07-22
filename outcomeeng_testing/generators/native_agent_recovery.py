@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
@@ -22,6 +23,7 @@ class RecoveryRosterShape:
 class RecoveryRosterCase:
     pane_ids: tuple[str, ...]
     worktree_paths: tuple[Path, ...]
+    session_ids: tuple[str, ...]
     correlated_count: int
     unknown_pane_id: str
     non_native_occupied_count: int
@@ -56,9 +58,13 @@ def recovery_roster_case(
     worktree_paths = tuple(
         root / f"worktree-{index}" for index in range(shape.pane_count)
     )
+    session_ids = tuple(
+        f"22222222-2222-4222-8222-{index:012d}" for index in range(shape.pane_count)
+    )
     return RecoveryRosterCase(
         pane_ids=pane_ids,
         worktree_paths=worktree_paths,
+        session_ids=session_ids,
         correlated_count=shape.correlated_count,
         unknown_pane_id="99999999-9999-4999-8999-999999999999",
         non_native_occupied_count=1,
@@ -98,6 +104,38 @@ def recovery_roster_cases(draw: st.DrawFn) -> RecoveryRosterCase:
 
 def roster_cases() -> SearchStrategy[RecoveryRosterCase]:
     return recovery_roster_cases()
+
+
+def recovery_candidates(
+    module: ModuleType,
+    roster: RecoveryRosterCase,
+) -> list[dict[str, object]]:
+    return [
+        {
+            module.PANE_ID_FIELD: pane_id,
+            module.WORKTREE_PATH_FIELD: str(worktree),
+            module.SESSION_ID_FIELD: session_id,
+            module.EVIDENCE_FIELD: module.EvidenceKind.LIVE_PROCESS,
+            module.ROLE_FIELD: module.RecoveryRole.PRIMARY,
+            module.SECONDARY_AUTHORIZED_FIELD: False,
+        }
+        for pane_id, worktree, session_id in zip(
+            roster.pane_ids,
+            roster.worktree_paths,
+            roster.session_ids,
+            strict=True,
+        )
+    ]
+
+
+def invalid_recovery_evidence(
+    evidence_kinds: tuple[str, ...],
+) -> SearchStrategy[str]:
+    return st.text(
+        alphabet=st.characters(min_codepoint=97, max_codepoint=122),
+        min_size=1,
+        max_size=16,
+    ).filter(lambda evidence: evidence not in evidence_kinds)
 
 
 def non_native_agent_types(
