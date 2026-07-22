@@ -634,9 +634,7 @@ def _require_deferred_agent_discovery_policy_error(
 ) -> None:
     """Require the production validator to reject a deferred-discovery render."""
     try:
-        dist.validate_deferred_agent_discovery_policy(
-            {dist.CODEX_HARNESS: document}
-        )
+        dist.validate_deferred_agent_discovery_policy({dist.CODEX_HARNESS: document})
     except dist.DeferredAgentDiscoveryPolicyError:
         return
     raise AssertionError(accepted_message)
