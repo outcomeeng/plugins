@@ -1,0 +1,8 @@
+# Plan: conformance-verification
+
+Pending work, in dependency order:
+
+- **Verification routing** — the assertions in this node's specs and the rules in `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/15-skill-instrumentation.pdr.md`, `spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`, and `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md` are untagged; `/verify` selects each rule's verification type before evidence work begins.
+- **Component realization** — emitter reference implementation, contract schema, checker, inference, and aggregation are built in the external component per `spx/31-outcomeeng.enabler/31-verification.enabler/18-verification-component.adr.md`; the component's own build plan owns the runner bake-off and golden-trace corpus (one frozen trace per violation code, authored before the checker). Component repository naming and bootstrap await operator direction.
+- **First instrumented skill** — restructure one shipped skill so every contract-relevant state is a script call, with stdout-cleanliness evidence, before contracts are authored for further skills.
+- **Skill-authoring standards wiring** — the instrumentation policy reaches the skill-authoring standards (the instructions plugin) as a cross-plugin changeset so new skills are designed with script-realized states.
