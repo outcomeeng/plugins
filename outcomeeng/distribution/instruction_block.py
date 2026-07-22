@@ -26,7 +26,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Protocol, cast
 
-from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.contracts import (
+    DIST_DIR_NAME,
+    RUNTIME_TOKEN_CLOSE_AGENT_NAMES,
+    RUNTIME_TOKEN_SPAWN_AGENT_NAMES,
+    RUNTIME_TOKEN_WAIT_AGENT_NAMES,
+    Target,
+)
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GENERATOR_RELATIVE_PATH: Final = Path(
@@ -297,7 +303,10 @@ DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
     ("top-level registry capability", "top-level `functions.exec`"),
     ("deferred registry", "inspect `ALL_TOOLS`"),
     ("nested shell distinction", "Treat `exec_command` as the nested shell tool"),
-    ("typed spawn schema", "typed `multi_agent_v1.spawn_agent`"),
+    (
+        "typed spawn schema",
+        f"typed `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`",
+    ),
     ("available roles", "`Available roles`"),
     ("exact role authority", "exact match proves availability"),
     (
@@ -313,7 +322,10 @@ DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
 DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
     (
         "lifecycle discovery",
-        "if `multi_agent_v1.spawn_agent`, `multi_agent_v1.wait_agent`, or `multi_agent_v1.close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry",
+        f"if `{RUNTIME_TOKEN_SPAWN_AGENT_NAMES[Target.CODEX.value]}`, "
+        f"`{RUNTIME_TOKEN_WAIT_AGENT_NAMES[Target.CODEX.value]}`, or "
+        f"`{RUNTIME_TOKEN_CLOSE_AGENT_NAMES[Target.CODEX.value]}` is not initially "
+        "exposed, discover it through the runtime's complete deferred-tool registry",
     ),
 )
 
