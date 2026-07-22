@@ -20,13 +20,13 @@ Live repository state for mode detection, read at invocation.
 !`git branch --show-current || echo '(not a git repo)'`
 
 **Working tree (empty = clean):**
-!`git status --porcelain || echo '(not a git repo)'`
+!`git status --porcelain 2>/dev/null | head -100`
 
 **Unstaged diff (name/status):**
-!`git diff --name-status || echo '(none)'`
+!`git diff --name-status 2>/dev/null | head -100`
 
 **Staged diff (name/status):**
-!`git diff --cached --name-status || echo '(none)'`
+!`git diff --cached --name-status 2>/dev/null | head -100`
 
 **Commits ahead of base (default branch):**
 !`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); echo "base: ${base}"; git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`

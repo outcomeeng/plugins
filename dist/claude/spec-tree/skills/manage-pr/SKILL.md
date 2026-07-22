@@ -10,6 +10,12 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(gh auth status:
 The pull request merged into the base branch on origin with one stable closeout-ready result, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
+<input>
+
+`$ARGUMENTS` is the optional PR pointer. When non-empty, treat its complete trimmed value as a PR number, PR URL, or branch name and pass that same value to every pointer-bearing inspection command. When empty, resolve the PR from the current branch with bare `gh pr view`.
+
+</input>
+
 <step name="pr_wait_and_reentry_policy">
 
 `/manage-pr` is the re-entry point for an open pull request. When the user asks to manage, wait on, or continue a PR lifecycle, invoke `/manage-pr <pr-number|url|branch>` and inspect live GitHub and repository state before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
@@ -42,7 +48,7 @@ Walk these steps on each management pass. Routine steps — inspect, classify, r
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understand first. Then invoke /merging-standards (shared vocabulary) and /commit-changes (commit format for any follow-up commits) via the Skill tool.
 
-**Step 1 — Identify the PR.** Resolve the PR from the passed pointer before inspecting state. A pointer may be a PR number, PR URL, or branch name. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when no pointer was passed and the current branch is the intended PR branch.
+**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the `<pr_identity_fields>` command field set. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
 
 ```bash
 gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
