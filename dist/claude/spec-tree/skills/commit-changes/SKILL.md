@@ -3,23 +3,23 @@ name: commit-changes
 description: >-
   ALWAYS invoke this skill when committing changes or when user says "commit".
   NEVER run git commit without this skill.
-allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 <objective>
-Effective git commit messages following the Conventional Commits standard, with selective staging, atomic commits, and domain-specific type conventions.
+Atomic local commits with selectively staged concerns, Conventional Commits messages, preserved unrelated work, and an explicit verification state.
 </objective>
 
 <success_criteria>
 
-A successful commit has:
+A successful commit is observable when:
 
-- Concerns classified before staging (type+scope grouping applied)
-- One concern per commit (split when types or scopes differ)
-- Selective staging (specific files, not `git add .`)
-- Conventional Commits format (type, optional scope, imperative description)
-- No debug code or unintended files
-- Clean diff review confirms expected changes only
+- `git commit` exits zero and the full `HEAD` commit ID differs from its pre-commit value.
+- The committed concern contains only the explicitly staged paths and leaves unrelated tracked, untracked, and staged work untouched.
+- `git diff --cached --name-only` is empty for the committed concern after the commit.
+- The commit message follows Conventional Commits with one type-and-scope concern and an imperative subject.
+- The result reports the full commit ID, committed paths, remaining paths, and verification state: `passing`, `failing`, or `not-run`.
+- Pre-commit hooks ran normally; a hook rejection returns the exact failure and creates no successful-commit claim.
 
 </success_criteria>
 
@@ -56,17 +56,17 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 
 **When invoked before or after a review or audit gate** (e.g., from `/apply` or after `audit-python-code` findings):
 
-This skill creates either a local verification checkpoint before the gate or a publication-ready commit after the gate. In that context:
+This skill creates either a local checkpoint before a gate or a publication-ready commit after the gate. In that context:
 
-1. **Checkpoint before verification** — Commit deterministic-passing work before a persisted audit or review so the gate binds to an immutable head. Approval governs publication and merge readiness, not whether the local gate subject may be committed.
+1. **Checkpoint at any verification state** — Commit stabilized work whether deterministic verification is passing, failing, or not run. Approval and green verification govern gate dispatch, publication, and merge readiness; they never govern whether a local checkpoint may exist.
 2. **New checkpoint after repair** — When a gate rejects the subject, fix the defect class, rerun deterministic verification, and create a new commit. Do not amend the audited checkpoint while its run remains prior context.
 3. **Scope to work item** — Stage only files from the work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
 4. **Include work item reference** — Add a `Refs:` footer using the node path format from the verification context (e.g. `Refs: spx/55-example.enabler/21-bar.outcome`)
-5. **Verify the touched scope** — The repository's focused deterministic checks must pass before committing. An aggregate gate whose generated-output drift check requires committed files runs after the checkpoint, when the lifecycle requires it.
+5. **Record verification state** — Read the latest focused deterministic result from workflow state as `passing`, `failing`, or `not-run`. A failing or not-run checkpoint is available for base sync, recovery, and collaboration while remaining ineligible for verification-readiness gates.
 
-The calling workflow provides the specific file list, work item context, and whether the commit is a pre-gate checkpoint or a post-gate publication commit.
+Resolve the specific file list, work item context, and checkpoint purpose from the invocation inputs and repository state.
 
 </review_workflow_context>
 
@@ -117,9 +117,9 @@ Changed files:
 
 <verification_protocol>
 
-**Step 0: Confirm Product-Specific Validation (BEFORE Staging)**
+**Step 0: Record Product-Specific Validation State**
 
-Before staging any files, check CLAUDE.md for product-specific validation commands and confirm the active workflow has current green validation for the changeset. This skill is git-only: if validation is missing, stop and return the required command to the caller instead of committing.
+Before staging any files, check CLAUDE.md for product-specific validation commands and record the latest applicable result as `passing`, `failing`, or `not-run`. This skill is git-only and never runs those commands itself. Continue to the commit in every state; include the required command and current state in the result for the next gate.
 
 ```bash
 # CLAUDE.md may require commands like:
@@ -143,7 +143,7 @@ git add path/to/file1.ts path/to/file2.ts
 
 - One logical change per commit
 - Review each `??` untracked file consciously
-- Exclude experimental/incomplete work
+- Keep unrelated experimental work out of the concern; an intentionally incomplete checkpoint is allowed when its staged paths form one coherent concern
 - Use explicit paths, not wildcards
 
 **Step 2: Diff Review**
@@ -164,14 +164,20 @@ git diff --cached --name-only  # Verify file list
 
 - [ ] Single purpose - does exactly one thing
 - [ ] Independent - can be reverted without breaking other features
-- [ ] Complete - includes everything needed for the change to work
+- [ ] Complete for its stated checkpoint — includes every path needed to preserve that concern, even when verification still fails
 
-**Red Flags - DO NOT COMMIT IF:**
+**Split or inspect before committing:**
 
-- More than 10 files for a simple fix
+- More than 10 files for a simple fix without a clear generated or cross-cutting reason
 - Changes span unrelated modules
 - Experimental code mixed with stable fixes
 - New unintended files included
+
+These signals require concern reclassification or staging correction. A failing or not-run verification state never appears in this list and never blocks the local commit.
+
+**Step 4: Confirm Commit Postconditions**
+
+Record the full pre-commit and post-commit `HEAD` IDs. After `git commit` exits zero, confirm the IDs differ, inspect `git status --short`, and report the committed paths, remaining paths, and verification state. When a hook or `git commit` fails, preserve its output, confirm no successful commit was created, and return the failure without `--no-verify` or another bypass.
 
 </verification_protocol>
 
@@ -336,7 +342,7 @@ Refs: #234
 ```
 
 ```text
-fix: prevent crash on empty config file
+fix: return defaults for empty config
 
 Return sensible defaults when config is missing or empty
 instead of throwing unhandled exception.
@@ -418,3 +424,31 @@ git log --oneline -10
 ```
 
 </commands_reference>
+
+<failure_modes>
+
+**Failure 1: A failing check stranded a base sync.**
+
+What happened: Claude refused to commit session-owned changes because deterministic verification was red, so `/sync-base` could neither clear the dirty tree nor rebase the work.
+
+Why it failed: Local checkpoint creation was incorrectly treated as publication authorization.
+
+How to avoid: Record `Verification: failing`, create the atomic checkpoint, and leave gate dispatch and publication blocked until the tree is repaired and re-verified.
+
+**Failure 2: Missing verification blocked a recovery checkpoint.**
+
+What happened: Claude required a fresh validation run before preserving work even though the immediate need was a local checkpoint for recovery or context loading.
+
+Why it failed: An unrun gate predicate was used as commit authority instead of lifecycle evidence.
+
+How to avoid: Record `Verification: not-run`, create the checkpoint, and include the product command required before any readiness gate.
+
+**Failure 3: A hook rejection was treated as permission to bypass hooks.**
+
+What happened: A pre-commit hook rejected the staged concern and Claude attempted to preserve the checkpoint with `--no-verify`.
+
+Why it failed: Commit availability never overrides repository hook policy.
+
+How to avoid: Preserve the hook output, report that no commit was created, repair the hook failure through its governing workflow, and retry with hooks enabled.
+
+</failure_modes>

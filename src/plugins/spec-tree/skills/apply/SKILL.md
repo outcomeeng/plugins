@@ -86,10 +86,10 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 Before dispatching any persisted audit or review gate, bind its subject to an exact local commit:
 
-1. Run the touched-scope deterministic verification required by the repository overlay over the stabilized changes. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
-2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local verification checkpoint.
+1. Run the touched-scope deterministic verification required by the repository overlay when preparing to dispatch a gate. Do not run an aggregate gate whose generated-output drift check requires committed `src/` and `dist/` files before creating the checkpoint.
+2. When the relevant tracked or untracked files differ from `HEAD`, invoke `/commit-changes` to create an atomic local checkpoint regardless of whether the latest verification state is `passing`, `failing`, or `not-run`; preserve that state in the checkpoint result.
 3. Confirm the worktree is clean and record the checkpoint's full `HEAD` commit ID.
-4. Dispatch the gate against the committed `<base>..<head>` scope. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
+4. Dispatch the gate only when the required deterministic verification is `passing`, against the committed `<base>..<head>` scope. A `failing` or `not-run` checkpoint remains valid local history for recovery and collaboration while withholding gate dispatch. Do not supply a live file list for a gating run. The repository's declared full deterministic gate, when required, runs once against the clean checkpoint head as a later lifecycle step rather than before every checkpoint.
 
 An audit over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 6, Step 8, evidence-auditor, Step 9, or merge-readiness predicate.
 
