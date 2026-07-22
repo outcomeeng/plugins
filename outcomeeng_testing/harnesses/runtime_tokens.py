@@ -23,6 +23,7 @@ from outcomeeng.distribution.contracts import (
 from outcomeeng.validation._steps import runtime_token_files
 from outcomeeng.validation.runtime_tokens import (
     RUNTIME_TOKEN_IGNORE,
+    Violation,
     forbidden_names,
     is_ignored,
     main,
@@ -187,7 +188,7 @@ class AuthoredTreeEnforcement:
     enforced_roots: tuple[Path, ...]
     expected_files: frozenset[Path]
     gate_files: frozenset[Path]
-    raw_token_violations: tuple[str, ...]
+    raw_token_violations: tuple[Violation, ...]
     ignored_files: frozenset[Path]
     ignore_listed_files: frozenset[Path]
 
