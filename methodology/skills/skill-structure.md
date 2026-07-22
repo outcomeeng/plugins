@@ -23,7 +23,7 @@ Within these steps:
 - `verify` is the public evidence entry point and selects test, evaluate, or audit from the real subject's verdict.
 - `test` remains the generic deterministic-evidence specialist invoked after `verify` selects test; `eval` owns generic eval authoring after its follow-on implementation.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
-- `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
+- `commit-changes` creates local checkpoints independently of verification state, with Conventional Commits, selective staging, and atomic concerns; readiness gates still require their declared verification predicates.
 - `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
@@ -300,7 +300,8 @@ Skills for writing implementation code and committing results. `apply` is an orc
 - **`commit-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
-  - Runs product validation before committing
+  - Records product validation as `passing`, `failing`, or `not-run` without using it as commit authorization
+  - Preserves hooks and returns exact hook failures without bypassing them
 - **`manage-github-pr`** owns shipping orchestration:
   - Detects instructed, existing-changeset, empty, and open-PR modes
   - Reads local lifecycle routing from `spx/local/merging.md` via `understand`
@@ -481,12 +482,12 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 
 #### `commit-changes`
 
-1. Run product validation (e.g., `just check`).
+1. Record the latest product-validation state as `passing`, `failing`, or `not-run`.
 2. Review changes: `git status`, `git diff`.
 3. Classify changes by concern — group by type+scope.
 4. Stage specific files for one concern (never `git add .`).
-5. Write Conventional Commits message (imperative, under 50 chars).
-6. Commit, then repeat from step 4 for remaining concerns.
+5. Write a Conventional Commits message (imperative, under 50 chars).
+6. Commit with hooks enabled, confirm the full `HEAD` changed, report remaining paths and validation state, then repeat from step 4 for remaining concerns.
 
 #### `manage-github-pr`
 
