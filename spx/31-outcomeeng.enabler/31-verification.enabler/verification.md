@@ -6,6 +6,8 @@ CAN share one verification model across deterministic tests, deterministic evals
 
 ## Assertions
 
+- ALWAYS: conformance-verification governance lives under `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/conformance-verification.md` when it concerns script-emitted workflow traces, conformance contracts, deterministic conformance verdicts, or contract provenance
+
 ### Compliance
 
 - ALWAYS: verification terminology, verdict modes, verification types, assertion tags, and local-versus-CI responsibility derive from `spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md` ([audit])
