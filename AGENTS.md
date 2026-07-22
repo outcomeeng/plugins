@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.29.0 langs:python -->
+<!-- SPEC-TREE v0.29.1 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -98,7 +98,9 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 **ALWAYS** wait for `ready: true`, then run the selected command unchanged.
 **NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
-**Codex execution boundary.** Invoke `/wait-for-load` in its own top-level `functions.exec` call. Treat readiness as established only when that call's returned output visibly contains the terminal JSON with `ready: true`; an internal nested exit-code branch or a successfully completed outer cell is insufficient. Start the selected command in a separate top-level `functions.exec` call. When a nested `exec_command` may outlive that call, set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin` in later top-level calls whose outer yield window exceeds the nested `write_stdin` yield. **NEVER** place the waiter and selected command in the same `functions.exec` script or use `functions.wait` as the planned collector for a nested selected command.
+**Codex execution boundary.** Invoke `/wait-for-load` in its own top-level `functions.exec` call. Inside that call, set a nested `exec_command` yield below the outer call's yield window so the nested call returns either terminal JSON or a `session_id` before the outer call can yield. When it returns a `session_id`, preserve that exact id and collect the same waiter with `write_stdin` in later top-level calls whose outer yield window exceeds the nested `write_stdin` yield. Treat readiness as established only when a top-level call visibly returns the terminal JSON with `ready: true`; an internal exit-code branch, a successfully completed outer cell, or an empty terminal payload is insufficient. Start the selected command in a separate top-level `functions.exec` call. **NEVER** place the waiter and selected command in the same `functions.exec` script or use `functions.wait` as the planned collector for a nested waiter or selected command.
+
+**Codex process lifecycle.** Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
 
 ### When shipping work to the default branch -> `/merge` (transport dispatcher)
 

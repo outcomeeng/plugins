@@ -185,25 +185,45 @@ WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     ),
     (
         "visible ready result",
-        "returned output visibly contains the terminal JSON with `ready: true`",
+        "top-level call visibly returns the terminal JSON with `ready: true`",
     ),
     (
         "separate selected-command call",
         "Start the selected command in a separate top-level `functions.exec` call.",
     ),
     (
-        "nested command collection",
-        "set its `yield_time_ms` below the outer call's yield window so it returns a `session_id`, then collect the command with `write_stdin` in later top-level calls",
+        "nested waiter yield containment",
+        "set a nested `exec_command` yield below the outer call's yield window",
+    ),
+    (
+        "nested waiter collection",
+        "preserve that exact id and collect the same waiter with `write_stdin`",
     ),
     (
         "collector yield containment",
         "outer yield window exceeds the nested `write_stdin` yield",
     ),
     (
+        "owned process lifecycle",
+        "Every nested `exec_command` that returns a `session_id` creates an owned process handle.",
+    ),
+    (
+        "owned process reconciliation",
+        "reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end",
+    ),
+    (
+        "abandoned process termination",
+        "interrupt that process and collect its terminal result",
+    ),
+    (
+        "dangling process prohibition",
+        "never permits leaving its background terminal dangling",
+    ),
+    (
         "combined-script and nested-wait prohibition",
         "**NEVER** place the waiter and selected command in the same "
         "`functions.exec` script or use `functions.wait` as the planned collector "
-        "for a nested selected command.",
+        "for a nested waiter or selected command.",
     ),
 )
 ROUTER_POLICY_NAMES: Final = (
