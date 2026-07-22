@@ -161,7 +161,7 @@ Product-scope {{! term('configured_agents') !}} override user-scope when names c
 ```yaml
 skills:
   - audit-typescript-code
-  - testing
+  - test-typescript
 ```
 
 </field>

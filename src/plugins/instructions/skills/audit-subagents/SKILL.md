@@ -2,8 +2,8 @@
 name: audit-subagents
 description: >-
   {{! term('configured_agent') | capitalize !}}-configuration audit methodology — judges a {{! term('configured_agent') !}}
-  configuration file against the agent-prompt standards, covering frontmatter,
-  role framing, constraints, and output contract.
+  configuration file against the create-subagent and agent-prompt standards, covering
+  frontmatter, role framing, constraints, and output contract.
 argument-hint: <configured-agent-path>
 arguments: configured_agent_path
 model: sonnet

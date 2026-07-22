@@ -94,7 +94,7 @@ Product-scope subagents override user-scope when names conflict.
 ```yaml
 skills:
   - audit-typescript-code
-  - testing
+  - test-typescript
 ```
 
 </field>
