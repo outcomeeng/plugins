@@ -101,6 +101,7 @@ SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
 CODEX_RENDERED_AGENT_FIXTURE: Final = "codex-rendered-agent.md"
 CODEX_BLOCK_MCP_AGENT_FIXTURE: Final = "codex-block-mcp-agent.md"
 CODEX_FLOW_MCP_AGENT_FIXTURE: Final = "codex-flow-mcp-agent.txt"
+DUPLICATE_REVIEWER_FIXTURE: Final = "duplicate-reviewer.md"
 DUPLICATE_REVIEWER_BANG_FIXTURE: Final = "duplicate-reviewer-bang.md"
 EMPTY_TOOLS_AGENT_FIXTURE: Final = "empty-tools-agent.md"
 FOLDED_DESCRIPTION_AGENT_FIXTURE: Final = "folded-description-agent.md"
@@ -375,6 +376,31 @@ def converted_empty_tools_toml(root: Path) -> dict[str, object]:
 def convert_agent_tree(source_root: Path) -> tuple[CodexAgent, ...]:
     """Convert a harness-created agent tree."""
     return convert_agents(source_root)
+
+
+def assert_two_sources_converting_to_one_filename_fail(root: Path) -> None:
+    """Assert conversion rejects two sources that slugify to one filename.
+
+    The pair collides only after slugification, so the guard compares converted
+    filenames rather than source names. Without it conversion returns two
+    agents claiming one filename, and the writer that materializes them drops
+    the earlier definition.
+    """
+    for fixture in (DUPLICATE_REVIEWER_FIXTURE, DUPLICATE_REVIEWER_BANG_FIXTURE):
+        write_agent_source(
+            root,
+            PLUGIN_NAME,
+            Path(fixture).stem,
+            agent_conversion_fixture(fixture),
+        )
+    source_root = root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME
+    try:
+        convert_agents(source_root)
+    except AgentConversionError as exc:
+        assert "multiple source agents convert to" in str(exc)
+    else:
+        msg = "two sources converting to one filename did not raise"
+        raise AssertionError(msg)
 
 
 def write_dist_codex_agent_tree(

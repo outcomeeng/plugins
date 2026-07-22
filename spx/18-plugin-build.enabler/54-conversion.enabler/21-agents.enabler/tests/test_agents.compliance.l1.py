@@ -30,6 +30,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     assert_environment_marker_without_source_plugin_is_rejected,
     assert_generated_toml_stays_outside_codex_plugin_manifest_content,
     assert_manual_guidance_preserves_source_only_fields,
+    assert_two_sources_converting_to_one_filename_fail,
 )
 
 
@@ -47,6 +48,13 @@ def test_environment_marker_is_namespaced_by_source_plugin() -> None:
 
 def test_environment_marker_without_source_plugin_is_rejected() -> None:
     assert_environment_marker_without_source_plugin_is_rejected()
+
+
+def test_two_sources_converting_to_one_filename_fail(tmp_path: Path) -> None:
+    # The build-level path-collision check below guards the generated tree.
+    # This guards conversion itself, which the harnesses call directly, so a
+    # colliding pair cannot silently reduce to one written definition.
+    assert_two_sources_converting_to_one_filename_fail(tmp_path)
 
 
 def test_two_sources_claiming_one_output_fail_before_the_build_writes(
