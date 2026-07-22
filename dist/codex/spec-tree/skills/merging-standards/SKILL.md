@@ -24,7 +24,7 @@ A compact shared contract that keeps every merge transport on the same authority
 
 <reference_index>
 
-Read [references/merge-policy.md](references/merge-policy.md) before executing or evaluating any detailed merge-lifecycle operation. It owns the canonical tagged sections for:
+Read `${SKILL_DIR}/references/merge-policy.md` before executing or evaluating any detailed merge-lifecycle operation. It owns the canonical tagged sections for:
 
 - repository overlay and safety checks;
 - delivered-value and close-phase records;
