@@ -158,6 +158,18 @@ def _assert_template_symlink_is_rejected(tmp_path: pathlib.Path) -> None:
     link.symlink_to(real)
     repo = tmp_path / "repo"
     repo.mkdir()
+    direct_code = MODULE.main(
+        [
+            "--template",
+            str(link),
+            "--repo-root",
+            str(repo),
+            "--languages",
+            harness.LANG_PRIMARY,
+            "--write",
+        ]
+    )
+    assert direct_code == 2
     previous_home = os.environ.get("HOME")
     os.environ["HOME"] = str(home)
     try:
