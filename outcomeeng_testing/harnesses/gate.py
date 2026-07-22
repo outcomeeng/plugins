@@ -897,6 +897,45 @@ def _expected_plugin_script_reason(argv: tuple[str, ...]) -> str:
     return SKILL_REASON
 
 
+@dataclass(frozen=True)
+class SelectedGateMapping:
+    """One changed path's selected steps beside the derived expectation.
+
+    Carries both sequences rather than their agreement, so the linked test owns
+    the comparison the assertion claims.
+    """
+
+    selected: tuple[tuple[str, str], ...]
+    expected: tuple[tuple[str, str], ...]
+    full_gate: bool
+
+
+def template_script_gate_mapping() -> SelectedGateMapping:
+    """Return what a per-plugin template script selects, undecided.
+
+    A template renders into every plugin's generated tree, so its script
+    selects the skill steps an authored plugin script selects plus the lint
+    steps its suffix earns. An eval names its producer by an authored
+    ``src/plugins/`` path, so a template edit stales no materialized prompt and
+    the prompt check stays out of the expectation.
+    """
+    plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
+    expected_steps = tuple(
+        step
+        for step in VALIDATION_STEPS
+        if step.label in SKILL_STEP_LABELS
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+    )
+    return SelectedGateMapping(
+        selected=tuple((item.step.label, item.reason) for item in plan.selected_steps),
+        expected=tuple(
+            (step.label, _expected_plugin_script_reason(step.argv))
+            for step in expected_steps
+        ),
+        full_gate=plan.full_gate,
+    )
+
+
 def assert_selected_gate_mapping_contract() -> None:
     """Assert selected local gate planning mappings."""
 
@@ -1059,26 +1098,6 @@ def assert_selected_gate_mapping_contract() -> None:
     )
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
         _expected_plugin_script_reason(item.step.argv) for item in plan.selected_steps
-    )
-
-    # A per-plugin template renders into every plugin's generated tree, so a
-    # template script selects the same skill steps an authored plugin script
-    # does. An eval names its producer by an authored `src/plugins/` path, so a
-    # template edit stales no materialized prompt and the prompt check stays
-    # unselected.
-    template_plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
-    expected_template_script_steps = tuple(
-        step
-        for step in VALIDATION_STEPS
-        if step.label in SKILL_STEP_LABELS
-        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
-    )
-    assert tuple(item.step for item in template_plan.selected_steps) == (
-        expected_template_script_steps
-    )
-    assert tuple(item.reason for item in template_plan.selected_steps) == tuple(
-        _expected_plugin_script_reason(item.step.argv)
-        for item in template_plan.selected_steps
     )
 
     # A shared fragment is inlined by the build; an eval names its producer by

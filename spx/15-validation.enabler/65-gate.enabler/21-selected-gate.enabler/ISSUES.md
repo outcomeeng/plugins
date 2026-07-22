@@ -28,3 +28,9 @@ non-pytest-bearing changes.
 `outcomeeng/validation/selected_gate.py` selects gate steps from hardcoded `dist/claude/**`, `dist/codex/**`, and instruction-block path lists that duplicate relations 1 and 2 of `spx/local/generated-sources.toml`, while `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` makes the committed declaration the single source of generated-path knowledge for verifiers and consumers.
 
 **Resolution shape**: derive the selector's generated-path patterns from `spx/local/generated-sources.toml`. The migration and the superseding `spx` verification scope projection are tracked in `spx/31-outcomeeng.enabler/31-verification.enabler/PLAN.md`.
+
+## DEBT [evidence]: the mapping contract holds every predicate in its harness
+
+`assert_selected_gate_mapping_contract` in `outcomeeng_testing/harnesses/gate.py` owns all fifty assertion calls across roughly sixteen changed-path cases, so `tests/test_selected_gate.mapping.l1.py::test_selected_gate_mapping_contract` carries no predicate a reader can see. `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md` governs the opposite arrangement: the linked executed test owns every behavioral predicate and assertion API call, while a harness exposes observations and never calls an assertion API. An `assert_*` helper is a verdict-shaped helper.
+
+Resolution shape: give each case an observation helper returning the selected steps beside their independently derived expectation, as `template_script_gate_mapping` already does, then move every comparison into its own test function. The same inversion is tracked for the agent-conversion node in `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/ISSUES.md`; both are instances of one repository-wide migration rather than a defect this node introduced.
