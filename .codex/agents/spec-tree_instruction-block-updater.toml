@@ -42,7 +42,7 @@ Report the fields the skill's deterministic path produces:
 <constraints>
 
 - NEVER carry parse, filter, render, bootstrap, or reconcile logic here — follow the preloaded skill; all intelligence lives there.
-- NEVER construct a path to `scripts/instruction_block.py` at runtime — the preloaded skill resolves `${CLAUDE_SKILL_DIR}` and runs every CLI command from inside its own prose; run the command the injected skill content provides, never a runtime-built path, because an agent prompt body gets no `${CLAUDE_SKILL_DIR}` substitution.
+- NEVER construct a path to `scripts/instruction_block.py` at runtime — the preloaded skill resolves `${SKILL_DIR}` and runs every CLI command from inside its own prose; run the command the injected skill content provides, never a runtime-built path, because an agent prompt body gets no `${SKILL_DIR}` substitution.
 - NEVER report success when the skill's `--check`, `--write`, or `--reconcile` step exits non-zero with an `error:` line — surface the exact error verbatim and stop.
 - Run non-interactively and NEVER prompt the user. The deterministic path needs no input: the enabled languages are read from the project's `spx/**/tests/` extensions, a `stale` or `absent` block is regenerated in place, and a diverged `shared` region is reconciled by git recency. The non-deterministic cases — a recency tie, a one-sided region, a malformed shared fence, a dirty root file — are NOT resolved here and are NOT resolved by prompting; report the unresolved ambiguity and stop, leaving the interactive resolution to `/update-instruction-block` Step 3.
 

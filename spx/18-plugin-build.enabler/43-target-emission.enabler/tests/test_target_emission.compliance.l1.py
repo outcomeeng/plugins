@@ -25,6 +25,7 @@ from outcomeeng_testing.harnesses.target_emission import (
     skill_dir_escape_preserves_authoring_guidance,
     source_emission_counts,
     agent_artifact_paths,
+    agent_artifacts_carrying_foreign_skill_dir_token,
     structure_deviations,
     synthetic_inventory,
     target_scoped_includes_emit_only_to_matching_tree,
@@ -191,3 +192,20 @@ def test_no_target_tree_carries_an_agent_artifact_it_cannot_read() -> None:
             assert path.suffix not in foreign_suffixes[target], (
                 f"{target.value} carries a foreign agent artifact: {path}"
             )
+
+
+def test_no_agent_artifact_carries_another_targets_skill_dir_token() -> None:
+    # Conversion emits a derived artifact, so it bypasses the rendered-text
+    # corpus the skill-dir rewrite assertions draw from. Reading the committed
+    # agent artifacts directly keeps the rewrite contract reachable for the
+    # converted class instead of holding only where the corpus already looks.
+    for target in Target:
+        assert agent_artifact_paths(target), (
+            f"{target.value} carries no agent artifacts, so this check would "
+            "pass vacuously"
+        )
+        leaked = agent_artifacts_carrying_foreign_skill_dir_token(target)
+        assert not leaked, (
+            f"{target.value} agent artifacts carry another target's skill-dir "
+            f"token, so conversion skipped the rewrite: {leaked}"
+        )

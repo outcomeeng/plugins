@@ -190,6 +190,26 @@ def agent_artifact_paths(target: Target) -> tuple[Path, ...]:
     )
 
 
+def agent_artifacts_carrying_foreign_skill_dir_token(
+    target: Target,
+) -> tuple[Path, ...]:
+    """Return this target's agent artifacts referencing another target's token.
+
+    A converted agent is translated for its target like every other emission,
+    so an artifact carrying a foreign runtime token records a translation the
+    conversion path skipped. Reads the committed tree, so the observation
+    reflects what a consumer installs rather than what the build intended.
+    """
+    foreign_token = (
+        CODEX_SKILL_DIR_TOKEN if target is Target.CLAUDE else CLAUDE_SKILL_DIR_TOKEN
+    )
+    return tuple(
+        path
+        for path in agent_artifact_paths(target)
+        if foreign_token in path.read_text(encoding="utf-8")
+    )
+
+
 @dataclass(frozen=True)
 class SyntheticInventory:
     """What the synthetic fixture covers, for the caller to judge."""

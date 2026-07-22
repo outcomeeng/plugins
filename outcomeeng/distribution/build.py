@@ -1241,11 +1241,16 @@ def _emit_converted_agent(
     performs stays a file copy. The placement manifest beside the artifacts
     tells the plugin's lifecycle skill where the target reads them from and
     which namespace this plugin owns there.
+
+    Target translation runs before conversion so the artifact carries the
+    target's own runtime tokens; converting first would freeze the authoring
+    target's tokens into every generated definition.
     """
     destination = dist_root / emission.target.value / emission.relative_path
     rendered = render_planned_emission_text(emission, src_root=src_root)
+    translated = _translate_rendered_text(rendered, target=emission.target)
     converted = convert_agent_markdown(
-        rendered,
+        translated,
         source_path=emission.source,
         name=destination.stem,
     )
