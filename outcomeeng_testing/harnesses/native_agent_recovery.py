@@ -20,6 +20,7 @@ from outcomeeng_testing.generators.native_agent_recovery import (
     invalid_recovery_evidence,
     non_native_agent_types,
     recovery_candidates,
+    recovery_delivery_results,
     roster_cases,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
@@ -380,26 +381,34 @@ def verify_native_agent_recovery_compliance() -> list[str]:
     if any(frozenset(delivery) != module.DELIVERY_FIELDS for delivery in deliveries):
         failures.append("recovery delivery exposed non-semantic environment arguments")
 
-    successful_results = [
-        {
-            module.PANE_ID_FIELD: pane_id,
-            module.DELIVERED_FIELD: True,
-            module.COMMAND_EXIT_CODE_FIELD: 0,
-        }
-        for pane_id in roster.unoccupied_pane_ids
-    ]
+    successful_results = recovery_delivery_results(module, roster.unoccupied_pane_ids)
     settled = module.settle_recovery(plan, successful_results)
     if settled[module.STATUS_FIELD] != module.ResultStatus.RESUMED:
         failures.append("successful delivery results did not preserve resumed")
-    failed_results = [*successful_results]
-    failed_results[-1] = {
-        **failed_results[-1],
-        module.DELIVERED_FIELD: False,
-        module.COMMAND_EXIT_CODE_FIELD: 9,
-    }
+    failed_results = recovery_delivery_results(
+        module,
+        roster.unoccupied_pane_ids,
+        failed_pane_id=roster.unoccupied_pane_ids[-1],
+    )
     failed = module.settle_recovery(plan, failed_results)
     if failed[module.STATUS_FIELD] != module.ResultStatus.COMMAND_FAILED:
         failures.append("failed environment delivery did not map to command-failed")
+    incomplete_results = deepcopy(successful_results)
+    cast(dict[str, object], incomplete_results[0][module.TRANSPORT_FIELD]).pop(
+        module.RESPONSE_FIELD
+    )
+    incomplete_status = _error_status(
+        module, lambda: module.settle_recovery(plan, incomplete_results)
+    )
+    if incomplete_status != module.ResultStatus.INVALID_SCHEMA:
+        failures.append("incomplete successful transport evidence was accepted")
+    settled_results = cast(
+        list[dict[str, object]], settled[module.DELIVERY_RESULTS_FIELD]
+    )
+    if any(
+        frozenset(result) != module.DELIVERY_RESULT_FIELDS for result in settled_results
+    ):
+        failures.append("settled delivery omitted checked transport evidence")
 
     post_panes, post_agents = _post_launch_rosters(module, roster)
     verified = module.verify(roster.pane_ids, post_panes, post_agents, candidates)

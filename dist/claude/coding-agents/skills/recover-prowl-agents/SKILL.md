@@ -28,8 +28,8 @@ A bounded recovery plan for exact restored Prowl panes whose expected native ses
 5. Correlate every candidate to its exact restored pane and worktree. Retain a pane already occupied by the expected `claude` or `codex` session as already correlated. Reject absent panes, non-native occupants, mismatched sessions, duplicate session identities, and multiple correlations without partial delivery.
 6. Pass the public `items` and `agents` arrays plus the exact `candidates` array to the bundled script over stdin and run `recover`, repeating `--pane` for every candidate pane UUID. When no eligible candidate remains, stop without mutation.
 7. Read the plan exactly: `resumed` carries one semantic delivery for every selected unoccupied pane; `already-current` carries no delivery; `invalid-target`, `pane-occupied`, or `invalid-schema` stops with exact detail and no partial delivery.
-8. For every planned delivery, invoke `/operate-prowl` once for `send` using the complete `paneId`, exact `text`, and immediate-return mode. Preserve the exact status and command exit code; add no retry or polling phase.
-9. Pass the plan and ordered delivery results to `settle`. Accept only `resumed` or `already-current`; `command-failed` reports every exact failed pane and environment result.
+8. For every planned delivery, invoke `/operate-prowl` once for `send` using the complete `paneId`, exact `text`, and immediate-return mode. Bind that planned `paneId` to the complete checked environment result under `transport`; NEVER derive or supply a separate delivered claim. Add no retry or polling phase.
+9. Pass the plan and ordered `{paneId, transport}` delivery results to `settle`. Accept only `resumed` or `already-current`; `command-failed` reports every exact failed pane and environment result.
 10. Invoke `/operate-prowl` for `list` and `agents` exactly once more. Pass those arrays and the unchanged candidates to `verify`. Accept only `verified`, which requires one native agent with the expected session identity in every selected pane. For `correlation-incomplete`, report complete `missingPaneIds`, `duplicatePaneIds`, and `unexpectedAgentPaneIds` values without polling or retrying.
 
 The source-owned recovery input contains `spx agent resume --latest`, the expected complete session identity, the authorized recovery role, and the reassessment instruction. The resumed session verifies its identity and inspects authoritative repository and SPX state. Concrete unfinished work with continuing authority proceeds; completed, superseded, `owned_elsewhere`, deliberately terminated, identity-mismatched, or unclear work exits without mutation or background activity.
@@ -46,7 +46,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" recover --pane <complete
 JSON
 
 python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" settle <<'JSON'
-{"plan":{},"deliveryResults":[]}
+{"plan":{},"deliveryResults":[{"paneId":"<complete-pane-uuid>","transport":{"schemaVersion":1,"operation":"send","status":"succeeded","commandExitCode":0,"response":{}}}]}
 JSON
 
 python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" verify --pane <complete-pane-uuid> <<'JSON'
@@ -58,7 +58,7 @@ When the runner requires one physical command line:
 
 ```bash
 printf '%s\n' '{"items":[],"agents":[],"candidates":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" recover --pane <complete-pane-uuid>
-printf '%s\n' '{"plan":{},"deliveryResults":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" settle
+printf '%s\n' '{"plan":{},"deliveryResults":[{"paneId":"<complete-pane-uuid>","transport":{"schemaVersion":1,"operation":"send","status":"succeeded","commandExitCode":0,"response":{}}}]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" settle
 printf '%s\n' '{"items":[],"agents":[],"candidates":[]}' | python3 "${CLAUDE_SKILL_DIR}/scripts/recover_agents.py" verify --pane <complete-pane-uuid>
 ```
 

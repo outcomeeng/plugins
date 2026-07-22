@@ -128,6 +128,39 @@ def recovery_candidates(
     ]
 
 
+def recovery_delivery_results(
+    module: ModuleType,
+    pane_ids: tuple[str, ...],
+    *,
+    failed_pane_id: str | None = None,
+) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    for pane_id in pane_ids:
+        if pane_id == failed_pane_id:
+            transport = {
+                module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
+                module.OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
+                module.STATUS_FIELD: module.TRANSPORT_COMMAND_FAILED_STATUS,
+                module.DETAIL_FIELD: f"delivery failed for {pane_id}",
+                module.COMMAND_EXIT_CODE_FIELD: MAX_RECOVERY_PANES,
+            }
+        else:
+            transport = {
+                module.SCHEMA_VERSION_FIELD: module.TRANSPORT_SCHEMA_VERSION,
+                module.OPERATION_FIELD: module.TRANSPORT_SEND_OPERATION,
+                module.STATUS_FIELD: module.TRANSPORT_SUCCEEDED_STATUS,
+                module.COMMAND_EXIT_CODE_FIELD: 0,
+                module.RESPONSE_FIELD: {},
+            }
+        results.append(
+            {
+                module.PANE_ID_FIELD: pane_id,
+                module.TRANSPORT_FIELD: transport,
+            }
+        )
+    return results
+
+
 def invalid_recovery_evidence(
     evidence_kinds: tuple[str, ...],
 ) -> SearchStrategy[str]:

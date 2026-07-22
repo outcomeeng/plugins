@@ -60,6 +60,27 @@ PLAN_FIELD = "plan"
 TEXT_FIELD = "text"
 DELIVERED_FIELD = "delivered"
 COMMAND_EXIT_CODE_FIELD = "commandExitCode"
+TRANSPORT_FIELD = "transport"
+OPERATION_FIELD = "operation"
+RESPONSE_FIELD = "response"
+TRANSPORT_SCHEMA_VERSION = 1
+TRANSPORT_SEND_OPERATION = "send"
+TRANSPORT_SUCCEEDED_STATUS = "succeeded"
+TRANSPORT_COMMAND_FAILED_STATUS = "command-failed"
+TRANSPORT_FAILURE_REQUIRED_FIELDS = frozenset(
+    {SCHEMA_VERSION_FIELD, OPERATION_FIELD, STATUS_FIELD, DETAIL_FIELD}
+)
+TRANSPORT_FAILURE_OPTIONAL_FIELDS = frozenset({COMMAND_EXIT_CODE_FIELD})
+TRANSPORT_SUCCESS_FIELDS = frozenset(
+    {
+        SCHEMA_VERSION_FIELD,
+        OPERATION_FIELD,
+        STATUS_FIELD,
+        COMMAND_EXIT_CODE_FIELD,
+        RESPONSE_FIELD,
+    }
+)
+DELIVERY_RESULT_INPUT_FIELDS = frozenset({PANE_ID_FIELD, TRANSPORT_FIELD})
 PANE_RESULT_FIELDS = frozenset(
     {
         PANE_ID_FIELD,
@@ -88,6 +109,14 @@ CORRELATION_FIELDS = frozenset(
     }
 )
 DELIVERY_FIELDS = frozenset({PANE_ID_FIELD, TEXT_FIELD})
+DELIVERY_RESULT_FIELDS = frozenset(
+    {
+        PANE_ID_FIELD,
+        DELIVERED_FIELD,
+        COMMAND_EXIT_CODE_FIELD,
+        TRANSPORT_FIELD,
+    }
+)
 
 
 class Operation(StrEnum):
@@ -475,24 +504,100 @@ def recover(
     }
 
 
+def checked_delivery_result(result: object) -> dict[str, object]:
+    value = _object(result, "deliveryResult")
+    if set(value) != DELIVERY_RESULT_INPUT_FIELDS:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Delivery result fields must bind one pane to one transport result.",
+        )
+    pane_id = _text(value.get(PANE_ID_FIELD), f"deliveryResult.{PANE_ID_FIELD}")
+    transport = _object(value.get(TRANSPORT_FIELD), f"deliveryResult.{TRANSPORT_FIELD}")
+    if transport.get(SCHEMA_VERSION_FIELD) != TRANSPORT_SCHEMA_VERSION:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            f"Transport schema version must be {TRANSPORT_SCHEMA_VERSION}.",
+        )
+    if transport.get(OPERATION_FIELD) != TRANSPORT_SEND_OPERATION:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            "Recovery delivery requires a checked send transport operation.",
+        )
+    status = _text(
+        transport.get(STATUS_FIELD), f"deliveryResult.{TRANSPORT_FIELD}.{STATUS_FIELD}"
+    )
+    if status == TRANSPORT_SUCCEEDED_STATUS:
+        if set(transport) != TRANSPORT_SUCCESS_FIELDS:
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Successful transport fields do not match the checked result schema.",
+            )
+        exit_code = transport.get(COMMAND_EXIT_CODE_FIELD)
+        if (
+            not isinstance(exit_code, int)
+            or isinstance(exit_code, bool)
+            or exit_code != 0
+        ):
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Successful recovery transport requires commandExitCode 0.",
+            )
+        _object(
+            transport.get(RESPONSE_FIELD),
+            f"deliveryResult.{TRANSPORT_FIELD}.{RESPONSE_FIELD}",
+        )
+        delivered = True
+    else:
+        allowed_fields = (
+            TRANSPORT_FAILURE_REQUIRED_FIELDS | TRANSPORT_FAILURE_OPTIONAL_FIELDS
+        )
+        if (
+            not TRANSPORT_FAILURE_REQUIRED_FIELDS <= set(transport)
+            or set(transport) - allowed_fields
+        ):
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Failed transport fields do not match the checked result schema.",
+            )
+        _text(
+            transport.get(DETAIL_FIELD),
+            f"deliveryResult.{TRANSPORT_FIELD}.{DETAIL_FIELD}",
+        )
+        exit_code = transport.get(COMMAND_EXIT_CODE_FIELD)
+        if exit_code is not None and (
+            not isinstance(exit_code, int) or isinstance(exit_code, bool)
+        ):
+            raise AdapterError(
+                ResultStatus.INVALID_SCHEMA,
+                "Failed recovery transport commandExitCode must be an integer.",
+            )
+        delivered = False
+    return {
+        PANE_ID_FIELD: pane_id,
+        DELIVERED_FIELD: delivered,
+        COMMAND_EXIT_CODE_FIELD: exit_code,
+        TRANSPORT_FIELD: transport,
+    }
+
+
 def settle_recovery(plan: object, delivery_results: object) -> dict[str, object]:
     value = _object(plan, PLAN_FIELD)
     deliveries = _array(value.get(DELIVERIES_FIELD), f"{PLAN_FIELD}.{DELIVERIES_FIELD}")
-    results = _array(delivery_results, DELIVERY_RESULTS_FIELD)
+    results = [
+        checked_delivery_result(result)
+        for result in _array(delivery_results, DELIVERY_RESULTS_FIELD)
+    ]
     expected_panes = [
         _text(delivery.get(PANE_ID_FIELD), f"delivery.{PANE_ID_FIELD}")
         for delivery in deliveries
     ]
-    observed_panes = [
-        _text(result.get(PANE_ID_FIELD), f"deliveryResult.{PANE_ID_FIELD}")
-        for result in results
-    ]
+    observed_panes = [cast(str, result[PANE_ID_FIELD]) for result in results]
     if expected_panes != observed_panes:
         raise AdapterError(
             ResultStatus.INVALID_SCHEMA,
             "Delivery results must match planned pane identities in order.",
         )
-    failures = [result for result in results if result.get(DELIVERED_FIELD) is not True]
+    failures = [result for result in results if result[DELIVERED_FIELD] is not True]
     if failures:
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
