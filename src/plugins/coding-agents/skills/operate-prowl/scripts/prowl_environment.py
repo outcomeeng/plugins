@@ -225,6 +225,40 @@ def _send_shapes() -> tuple[RequestShape, ...]:
     return tuple(shapes)
 
 
+PUBLIC_PROWL_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
+    Operation.LIST: ("prowl", "list"),
+    Operation.AGENTS: ("prowl", "agents"),
+    Operation.READ: ("prowl", "read"),
+    Operation.SEND: ("prowl", "send"),
+    Operation.KEY: ("prowl", "key"),
+    Operation.FOCUS: ("prowl", "focus"),
+    Operation.TAB_CREATE: ("prowl", "tab", "create"),
+    Operation.TAB_CLOSE: ("prowl", "tab", "close"),
+    Operation.PANE_CLOSE: ("prowl", "pane", "close"),
+    Operation.OPEN: ("prowl", "open"),
+}
+PUBLIC_PROWL_SELECTOR_OPTIONS: Final[Mapping[str, str]] = {
+    TARGET_FIELD: "--target",
+    WORKTREE_FIELD: "--worktree",
+    TAB_FIELD: "--tab",
+    PANE_FIELD: "--pane",
+}
+PUBLIC_PROWL_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
+    LAST_FIELD: "--last",
+    WAIT_STABLE_FIELD: "--wait-stable",
+    STABLE_INTERVAL_FIELD: "--stable-interval",
+    STABLE_PERIOD_FIELD: "--stable-period",
+    WAIT_TIMEOUT_FIELD: "--wait-timeout",
+    NO_ENTER_FIELD: "--no-enter",
+    NO_WAIT_FIELD: "--no-wait",
+    CAPTURE_FIELD: "--capture",
+    TIMEOUT_FIELD: "--timeout",
+    REPEAT_FIELD: "--repeat",
+    PATH_FIELD: "--path",
+    FORCE_FIELD: "--force",
+}
+PUBLIC_PROWL_JSON_OPTION = "--json"
+
 OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
     Operation.LIST: OperationContract((RequestShape(),)),
     Operation.AGENTS: OperationContract((RequestShape(),)),
