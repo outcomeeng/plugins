@@ -34,12 +34,8 @@ Run the `instructions:audit-skills` methodology in this already-dispatched, isol
 <workflow>
 
 1. Read the caller's scoped skill paths.
-   {!% if target == 'codex' %!}
-2. Load `instructions:audit-skills` and follow its methodology with those values.
-   {!% else %!}
-3. Follow the preloaded `instructions:audit-skills` methodology with those values.
-   {!% endif %!}
-4. Relay the returned JSON verdict verbatim, including every row and finding.
+2. {!% if target == 'codex' %!}Load `instructions:audit-skills` and follow its methodology with those values.{!% else %!}Follow the preloaded `instructions:audit-skills` methodology with those values.{!% endif %!}
+3. Relay the returned JSON verdict verbatim, including every row and finding.
 
 </workflow>
 

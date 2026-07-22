@@ -23,10 +23,8 @@ Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated
 <workflow>
 
 1. Read the caller's test-evidence scope and governing node.
-   
 2. Load `spec-tree:audit-tests` and follow its methodology with those values.
-   
-4. Relay the returned JSON verdict verbatim.
+3. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

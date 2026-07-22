@@ -29,9 +29,7 @@ Run the `spec-tree:audit-specs` methodology in this already-dispatched, isolated
 <workflow>
 
 1. Read the caller's node spec path and governing node.
-
 2. Follow the preloaded `spec-tree:audit-specs` methodology with those values.
-
 3. Relay the returned JSON verdict verbatim.
 
 </workflow>

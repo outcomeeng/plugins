@@ -23,10 +23,8 @@ Run the `spec-tree:audit-eval-evidence` methodology in this already-dispatched, 
 <workflow>
 
 1. Read the caller's spec node path and governing node.
-   
 2. Load `spec-tree:audit-eval-evidence` and follow its methodology with those values.
-   
-4. Relay the returned JSON verdict verbatim.
+3. Relay the returned JSON verdict verbatim.
 
 </workflow>
 

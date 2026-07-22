@@ -29,9 +29,7 @@ Run the `spec-tree:audit-adr` methodology in this already-dispatched, isolated v
 <workflow>
 
 1. Read the caller's ADR path, governing node, and scope classification.
-
 2. Follow the preloaded `spec-tree:audit-adr` methodology with those values.
-
 3. Relay the returned JSON verdict verbatim, including composed language rows and findings.
 
 </workflow>
