@@ -327,7 +327,7 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 </authority_gates>
 
 <merge_cleanup>
-Read `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md` immediately before the merge mutation. It defines the merge command, overlay checks, worktree transition, and remote and local branch cleanup sequence.
+Immediately before the merge mutation, apply the merge-cleanup reference loaded directly from the top-level `<reference_index>`.
 
 </merge_cleanup>
 
@@ -437,7 +437,7 @@ Local auditor agents — `test-evidence-auditor`, `eval-evidence-auditor`, `adr-
 </auditor_verdicts>
 
 <action_tokens>
-Read `${CLAUDE_SKILL_DIR}/references/action-tokens.md` before emitting a merge lifecycle action token. The reference defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`, including the exact trigger condition and required follow-up for each token.
+Before emitting a merge lifecycle action token, apply the action-token reference loaded directly from the top-level `<reference_index>`. It defines `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`, including the exact trigger condition and required follow-up for each token.
 </action_tokens>
 <self_reference>No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.</self_reference>
 
@@ -451,7 +451,7 @@ How to avoid: Apply `<branch_state_closeout>` using remote-ref absence, worktree
 **Failure 2: Claude force-deleted the local branch before proving safety.**
 What happened: Claude deleted the branch without proving its commits were present on the base.
 Why it failed: The branch could contain commits absent from the base.
-How to avoid: Follow `${CLAUDE_SKILL_DIR}/references/merge-cleanup.md`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
+How to avoid: Follow the merge-cleanup reference loaded directly from the top-level `<reference_index>`: remove the remote ref first, prove the local tip is an ancestor, and use `git branch -d`.
 
 **Failure 3: Claude let `gh pr merge` clean up the branch.**
 What happened: Claude delegated local cleanup to the host CLI.
