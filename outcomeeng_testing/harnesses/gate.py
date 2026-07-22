@@ -129,6 +129,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_README_PATH,
     SELECTED_GATE_SHARED_SOURCE_PATH,
     SELECTED_GATE_SKILL_PATH,
+    SELECTED_GATE_TEMPLATE_SCRIPT_PATH,
     SELECTED_GATE_SPX_CONFIG_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     selected_gate_changed_paths,
@@ -1058,6 +1059,26 @@ def assert_selected_gate_mapping_contract() -> None:
     )
     assert tuple(item.reason for item in plan.selected_steps) == tuple(
         _expected_plugin_script_reason(item.step.argv) for item in plan.selected_steps
+    )
+
+    # A per-plugin template renders into every plugin's generated tree, so a
+    # template script selects the same skill steps an authored plugin script
+    # does. An eval names its producer by an authored `src/plugins/` path, so a
+    # template edit stales no materialized prompt and the prompt check stays
+    # unselected.
+    template_plan = build_selected_gate_plan((SELECTED_GATE_TEMPLATE_SCRIPT_PATH,))
+    expected_template_script_steps = tuple(
+        step
+        for step in VALIDATION_STEPS
+        if step.label in SKILL_STEP_LABELS
+        or step.argv in {RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV}
+    )
+    assert tuple(item.step for item in template_plan.selected_steps) == (
+        expected_template_script_steps
+    )
+    assert tuple(item.reason for item in template_plan.selected_steps) == tuple(
+        _expected_plugin_script_reason(item.step.argv)
+        for item in template_plan.selected_steps
     )
 
     # A shared fragment is inlined by the build; an eval names its producer by

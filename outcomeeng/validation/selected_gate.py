@@ -98,6 +98,7 @@ PYTHON_FORMAT_LINT_PATTERNS: Final = (
     "outcomeeng_testing/**",
     "outcomeeng_evals/**",
     "src/plugins/**/*.py",
+    "src/templates/**/*.py",
     "spx/**/tests/test_*.py",
 )
 PYTHON_TYPECHECK_PATTERNS: Final = (
@@ -121,6 +122,7 @@ WORKFLOW_PATTERNS: Final = (
 SKILL_PATTERNS: Final = (
     "src/plugins/**",
     "src/_shared/**",
+    "src/templates/**",
     "dist/claude/**",
     "dist/codex/**",
     ".claude-plugin/**",
