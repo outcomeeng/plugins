@@ -12,20 +12,6 @@ A spec-tree work item implemented and ready for the delivery boundary the user r
 
 </objective>
 
-<quick_start>
-
-0. Select the slice when the work is a plan or proposal, not a specific node or queue — invoke `/slice` to select the observable slice whose node set becomes the work queue (see `<invocation_modes>`)
-1. Load methodology (Step 1 — once per session)
-2. Load work item context (Step 2 — every node)
-3. Architect -> audit until APPROVED (Steps 3–4)
-4. Verify -> evidence specialist -> audit until APPROVED (Steps 5–6)
-5. Implement -> audit until the rendered projection reports `terminalStatus: approved` (Steps 7–8)
-6. Evidence-auditor gates for every touched `[test]` and `[eval]` evidence artifact (Step 8a), then whole-changeset review when the change reaches beyond the target node (Step 9)
-7. Run the terminal full deterministic gate when the repository requires it, only after all agentic gates converge
-8. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
-
-</quick_start>
-
 <invocation_modes>
 
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
