@@ -39,6 +39,11 @@
       "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /handoff, /pickup, /refocus, /diagnose, /issue"
     },
     {
+      "name": "coding-agents",
+      "source": "./dist/claude/coding-agents",
+      "description": "Coding-agent environments and coordination: /operate-prowl, /message-agents, /coordinate-agents, /recover-prowl-agents"
+    },
+    {
       "name": "work",
       "source": "./dist/claude/work",
       "description": "Work deliverables: /draw-excalidraw (Excalidraw diagrams), /sanitize-powerpoint (PowerPoint deck cleanup)"

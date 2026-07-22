@@ -1,0 +1,29 @@
+title = "inter-worktree-coordination-decision"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/coding-agents"
+owned_paths = [
+  "spx/43-coding-agents.enabler/15-agent-environments.pdr.md",
+  "spx/43-coding-agents.enabler/18-prowl-environment.enabler/15-prowl-adapter.adr.md",
+  "spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/inter-worktree-coordination.md",
+  "spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler/evals/coordination-decision/**",
+  "src/plugins/coding-agents/skills/coordinate-agents/**",
+  "src/plugins/coding-agents/skills/message-agents/**",
+  "dist/claude/coding-agents/skills/coordinate-agents/**",
+  "dist/claude/coding-agents/skills/message-agents/**",
+  "dist/codex/coding-agents/skills/coordinate-agents/**",
+  "dist/codex/coding-agents/skills/message-agents/**",
+]
+smoke_cases = [
+  "overlapping-paths-propose-ownership",
+  "independent-work-sends-nothing",
+  "delegated-mutation-mismatch-withholds-authorization",
+  "delegated-mutation-match-without-ack-withholds-authorization",
+]
+threshold = 0.85
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "src/plugins/coding-agents/skills/coordinate-agents/SKILL.md"
+template = "prompt.template.md"
