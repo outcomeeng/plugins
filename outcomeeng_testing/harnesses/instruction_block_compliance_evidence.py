@@ -629,6 +629,19 @@ def _assert_codex_router_bounds_dispatched_verifiers() -> None:
                 )
 
 
+def _require_deferred_agent_discovery_policy_error(
+    document: str, accepted_message: str
+) -> None:
+    """Require the production validator to reject a deferred-discovery render."""
+    try:
+        dist.validate_deferred_agent_discovery_policy(
+            {dist.CODEX_HARNESS: document}
+        )
+    except dist.DeferredAgentDiscoveryPolicyError:
+        return
+    raise AssertionError(accepted_message)
+
+
 def _assert_codex_router_discovers_deferred_agent_tools() -> None:
     """Challenge deferred typed-agent discovery across every language subset."""
     for enabled_languages in harness.template_language_subsets():
@@ -648,31 +661,23 @@ def _assert_codex_router_discovers_deferred_agent_tools() -> None:
             invalid_document = codex_document.replace(
                 policy, policy.replace(required_text, "", 1), 1
             )
-            try:
-                dist.validate_deferred_agent_discovery_policy(
-                    {dist.CODEX_HARNESS: invalid_document}
-                )
-            except dist.DeferredAgentDiscoveryPolicyError:
-                pass
-            else:
-                raise AssertionError(
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
                     "incomplete deferred-agent discovery policy was accepted: "
                     f"{required_text}"
-                )
+                ),
+            )
 
         for _, required_text in dist.DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS:
             invalid_document = codex_document.replace(required_text, "", 1)
-            try:
-                dist.validate_deferred_agent_discovery_policy(
-                    {dist.CODEX_HARNESS: invalid_document}
-                )
-            except dist.DeferredAgentDiscoveryPolicyError:
-                pass
-            else:
-                raise AssertionError(
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
                     "incomplete deferred-agent discovery policy was accepted: "
                     f"{required_text}"
-                )
+                ),
+            )
 
         for contradiction in dist.DEFERRED_AGENT_DISCOVERY_POLICY_CONTRADICTIONS:
             invalid_document = codex_document.replace(
@@ -680,17 +685,13 @@ def _assert_codex_router_discovers_deferred_agent_tools() -> None:
                 f"{contradiction.violating_directive}\n\n{MODULE.ROUTER_BLOCK_END}",
                 1,
             )
-            try:
-                dist.validate_deferred_agent_discovery_policy(
-                    {dist.CODEX_HARNESS: invalid_document}
-                )
-            except dist.DeferredAgentDiscoveryPolicyError:
-                pass
-            else:
-                raise AssertionError(
+            _require_deferred_agent_discovery_policy_error(
+                invalid_document,
+                (
                     "contradictory deferred-agent discovery directive was accepted: "
                     f"{contradiction.name}"
-                )
+                ),
+            )
 
 
 def router_policy_evidence_run() -> harness.EvidenceRun:

@@ -297,7 +297,7 @@ DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
     ("top-level registry capability", "top-level `functions.exec`"),
     ("deferred registry", "inspect `ALL_TOOLS`"),
     ("nested shell distinction", "Treat `exec_command` as the nested shell tool"),
-    ("typed spawn schema", "typed `spawn_agent`"),
+    ("typed spawn schema", "typed `multi_agent_v1.spawn_agent`"),
     ("available roles", "`Available roles`"),
     ("exact role authority", "exact match proves availability"),
     (
@@ -313,7 +313,7 @@ DEFERRED_AGENT_DISCOVERY_POLICY_REQUIREMENTS: Final = (
 DEFERRED_AGENT_DISCOVERY_LIFECYCLE_REQUIREMENTS: Final = (
     (
         "lifecycle discovery",
-        "if `spawn_agent`, `wait_agent`, or `close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry",
+        "if `multi_agent_v1.spawn_agent`, `multi_agent_v1.wait_agent`, or `multi_agent_v1.close_agent` is not initially exposed, discover it through the runtime's complete deferred-tool registry",
     ),
 )
 
