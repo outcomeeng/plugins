@@ -248,6 +248,24 @@ This is the review predicate `VERIFICATION_READINESS` reads, and it runs before 
 
 </local_review_invocation>
 
+<local_review_process_exception>
+
+A process exception may substitute for the persisted local-review projection only when the review infrastructure fails after the typed `changes-reviewer` has completed. The operator is the sole approving authority. Approval is explicit, collected through a structured choice, and bound to the exact clean committed head named in that choice.
+
+The exception is available only when all of these conditions hold:
+
+- the typed `changes-reviewer` completed for the exact head and returned a raw review run token;
+- the prescribed review-run renderer failed to resolve that token from both the current journal scope and the sealed-run index;
+- deterministic verification passed on the exact head;
+- every applicable evidence, skill-content, subagent-configuration, decision, specification, and implementation audit passed on the exact head; and
+- the owning node's `ISSUES.md` records the unresolved infrastructure defect, a reproducible failure record, attempted recovery, and revisit condition.
+
+The immutable PR or lifecycle record carries the operator's decision, exact head SHA, agent id, raw token, renderer command, exact error, exception reason, and link to the owning issue. Keeping the head-bound evidence outside the changeset avoids changing the commit it identifies. This substitutes only for collection of the persisted local-review projection. The current-head CI review, deterministic verification, applicable audits, finding disposition, and every later authority gate remain required.
+
+Any content change after approval invalidates the exception. If the renderer still cannot resolve a new completed review run, collect a new operator decision bound to the new clean committed head. A base-only update may reuse the exception only when the `<base_sync>` preservation proof permits reuse of the local review predicate.
+
+</local_review_process_exception>
+
 <authority_gates>
 
 The delivery lifecycle runs `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE` with four gates, evaluated in order: `VERIFICATION_READINESS`, `MERGE_READINESS`, `DEPLOYMENT_READINESS`, and `RELEASE_READINESS`. A **gate** is a named authorization over one lifecycle step, decided from defined predicates; a **predicate** is a condition a gate reads — predicates are never themselves gates. The opening flow evaluates the GitHub-PR transport's `VERIFICATION_READINESS` predicates before publishing; the managing flow evaluates `MERGE_READINESS` for the current head, then continues through declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases after merge.
@@ -256,7 +274,7 @@ The delivery lifecycle runs `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> 
 
 - **deterministic verification passes** — the project's local validation and testing commands for the touched scope per `<local_deterministic_scope>` report success. A failing touched-scope test means this predicate does not hold, including a TDD-red opener authored intentionally ahead of an implementation slice. The remedy is either land the implementation in the same PR so the test passes, or add the owning node to the project's spec-tree EXCLUDE mechanism (for example `spx/EXCLUDE`) so the test runner skips the node until implementation arrives. See `references/excluded-nodes.md` in `/understand`. Per-line suppression (`# noqa`, `# type: ignore`, `@pytest.mark.skipif`, `@pytest.mark.xfail`, equivalents in other languages) does not satisfy this predicate because those suppressions are scattered and invisible to the spec-tree status surface; and
 - **required evidence audits have passed** — when the diff creates or modifies `[test]` assertions, linked test files, or test-infrastructure artifacts imported by linked tests, dispatch `test-evidence-auditor`; when the diff creates or modifies `[eval]` assertions, eval artifacts (`eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`), or producer artifacts for eval-backed assertions, dispatch `eval-evidence-auditor`. Run the applicable evidence auditors after deterministic verification passes and before `changes-reviewer`. Handle rejected, failing, or unknown evidence-auditor verdicts per `<auditor_verdicts>`; and
-- **the local review has converged** — `changes-reviewer`, invoked at parity per `<local_review_invocation>` and iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped.
+- **the local review has converged** — `changes-reviewer`, invoked at parity per `<local_review_invocation>` and iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped. A process exception satisfying `<local_review_process_exception>` substitutes only for the unavailable persisted projection;
 - **the terminal full deterministic gate has passed when required** — `just check-full` ran after every applicable evidence audit and agentic review converged, against the current clean committed head, with no subsequent change and no concurrent heavy command.
 
 The moment `VERIFICATION_READINESS` holds, the PR is created `ready_for_review` — never draft (a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges). There is no draft phase and no gated promotion; opening ready fires every CI review at once (reviewers that wait for ready, such as Codex, alongside the CI review). A declared `PREVIEW` action then runs before `MERGE_READINESS`; absent preview declaration means `PREVIEW` is a no-op and never blocks merge.
@@ -350,7 +368,7 @@ Compare timestamps against the most recent push. Entries after that push are re-
 </review_inspection>
 <review_classification>
 
-Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of six). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
+Every review finding — whether produced by a reviewer (outgoing feedback) or triaged by an author (incoming feedback) — carries two dimensions: **severity** (one of two) and **category** (one of five). The taxonomy is shared so output and triage use the same vocabulary; nothing has to be translated between them.
 
 This skill is the canonical consumer-facing taxonomy. Repositories may add local review instructions, but the default severity and category vocabulary below is complete here.
 
@@ -371,7 +389,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 **Cross-reviewer union and convergence.** Build one finding ledger from all current-head review surfaces and reviewers, then classify each item once. A no-findings review from the designated CI reviewer, a clean local review, a passing deterministic check, or an approved audit never cancels a valid finding from another reviewer. Multiple review rounds that keep surfacing valid variants in the same area are not reviewer noise and not an operator decision point; they prove the prior fix or sweep was too narrow. Treat the next valid variant as the same defect class until the underlying lifecycle contract is repaired and a new review round finds no valid in-scope variant. "Not wired into production yet" and "deferred next slice" are not dispositions for code in the diff — if the changed diff carries the defect and the finding is valid in scope, fix it in the changeset before merge.
 
-**Category** (one of six), grouped by three axes:
+**Category** (one of five), grouped by three axes:
 
 *What the code does vs. what it is supposed to do*
 
@@ -385,7 +403,6 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 *How it does what it is supposed to do*
 
-- `standards` — adherence to AGENTS.md and the rules declared in standards skills (naming conventions, command tokens, file structure, language idioms).
 - `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.
@@ -402,13 +419,6 @@ Comment format examples:
 ### BLOCKING [consistency]: path/to/file:42
 Reference: <quote the standard from AGENTS.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
 Evidence: <quote the diff or behavior and explain the disagreement between layers>
-Required: <concrete change>
-```
-
-```text
-### DEBT [standards]: path/to/file:97
-Reference: <quote the standard from AGENTS.md, skills, governance from decisions (PDR/ADR), or assertion from specs>
-Evidence: <quote the diff or behavior and explain how it violates the standard>
 Required: <concrete change>
 ```
 
