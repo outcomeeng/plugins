@@ -21,12 +21,12 @@ RECOVERY_REASSESSMENT_PROMPT = (
     "stopped, or continuation is unclear, exit now without modifying files or starting "
     "background work. Do not remain active merely because recovery resumed the session."
 )
-RECOVERY_INPUT = f"{SPX_RESUME_COMMAND}\n{RECOVERY_REASSESSMENT_PROMPT}"
 NATIVE_AGENT_TYPES = frozenset({"claude", "codex"})
 
 SCHEMA_VERSION_FIELD = "schemaVersion"
 ITEMS_FIELD = "items"
 AGENTS_FIELD = "agents"
+CANDIDATES_FIELD = "candidates"
 WORKTREE_FIELD = "worktree"
 PANE_FIELD = "pane"
 ID_FIELD = "id"
@@ -42,6 +42,11 @@ PANE_ID_FIELD = "paneId"
 WORKTREE_ID_FIELD = "worktreeId"
 WORKTREE_PATH_FIELD = "worktreePath"
 REPOSITORY_ROOT_FIELD = "repositoryRoot"
+SESSION_FIELD = "session"
+SESSION_ID_FIELD = "sessionId"
+EVIDENCE_FIELD = "evidence"
+ROLE_FIELD = "role"
+SECONDARY_AUTHORIZED_FIELD = "secondaryAuthorized"
 VERIFIED_FIELD = "verified"
 MISSING_PANE_IDS_FIELD = "missingPaneIds"
 DUPLICATE_PANE_IDS_FIELD = "duplicatePaneIds"
@@ -62,6 +67,9 @@ PANE_RESULT_FIELDS = frozenset(
         WORKTREE_PATH_FIELD,
         REPOSITORY_ROOT_FIELD,
         CWD_FIELD,
+        SESSION_ID_FIELD,
+        EVIDENCE_FIELD,
+        ROLE_FIELD,
         STATUS_FIELD,
     }
 )
@@ -72,6 +80,9 @@ CORRELATION_FIELDS = frozenset(
         WORKTREE_PATH_FIELD,
         REPOSITORY_ROOT_FIELD,
         CWD_FIELD,
+        SESSION_ID_FIELD,
+        EVIDENCE_FIELD,
+        ROLE_FIELD,
         TYPE_FIELD,
         STATUS_FIELD,
     }
@@ -100,6 +111,16 @@ class ResultStatus(StrEnum):
 class Resolution(StrEnum):
     RESUMED = "resumed"
     ALREADY_CORRELATED = "already-correlated"
+
+
+class EvidenceKind(StrEnum):
+    LIVE_PROCESS = "live-process"
+    OPERATOR_CONFIRMED = "operator-confirmed"
+
+
+class RecoveryRole(StrEnum):
+    PRIMARY = "primary"
+    SECONDARY = "secondary"
 
 
 class AdapterError(RuntimeError):
@@ -133,6 +154,24 @@ class AgentIdentity:
     worktree_path: str
     agent_type: str
     status: str
+    session_id: str | None
+
+
+@dataclass(frozen=True)
+class RecoveryCandidate:
+    pane_id: str
+    worktree_path: str
+    session_id: str
+    evidence: EvidenceKind
+    role: RecoveryRole
+    secondary_authorized: bool
+
+    def result_fields(self) -> dict[str, object]:
+        return {
+            SESSION_ID_FIELD: self.session_id,
+            EVIDENCE_FIELD: self.evidence,
+            ROLE_FIELD: self.role,
+        }
 
 
 def _object(value: object, location: str) -> dict[str, object]:
@@ -158,6 +197,14 @@ def _array(value: object, location: str) -> list[dict[str, object]]:
             ResultStatus.INVALID_SCHEMA, f"Expected an array at {location}."
         )
     return [_object(item, f"{location}[{index}]") for index, item in enumerate(value)]
+
+
+def _boolean(value: object, location: str) -> bool:
+    if not isinstance(value, bool):
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA, f"Expected a boolean at {location}."
+        )
+    return value
 
 
 def _absolute_path(value: object, location: str) -> str:
@@ -189,6 +236,11 @@ def _pane_identity(item: dict[str, object], location: str) -> PaneIdentity:
 def _agent_identity(item: dict[str, object], location: str) -> AgentIdentity:
     worktree = _object(item.get(WORKTREE_FIELD), f"{location}.worktree")
     pane = _object(item.get(PANE_FIELD), f"{location}.pane")
+    session_value = item.get(SESSION_FIELD)
+    session_id = None
+    if session_value is not None:
+        session = _object(session_value, f"{location}.session")
+        session_id = _text(session.get(ID_FIELD), f"{location}.session.id")
     return AgentIdentity(
         pane_id=_text(pane.get(ID_FIELD), f"{location}.pane.id"),
         worktree_path=_absolute_path(
@@ -196,6 +248,31 @@ def _agent_identity(item: dict[str, object], location: str) -> AgentIdentity:
         ),
         agent_type=_text(item.get(TYPE_FIELD), f"{location}.type"),
         status=_text(item.get(STATUS_FIELD), f"{location}.status"),
+        session_id=session_id,
+    )
+
+
+def candidate_from_item(item: dict[str, object], location: str) -> RecoveryCandidate:
+    try:
+        evidence = EvidenceKind(_text(item.get(EVIDENCE_FIELD), f"{location}.evidence"))
+        role = RecoveryRole(_text(item.get(ROLE_FIELD), f"{location}.role"))
+    except ValueError as error:
+        raise AdapterError(
+            ResultStatus.INVALID_SCHEMA,
+            f"Recovery candidate at {location} has unsupported evidence or role.",
+        ) from error
+    return RecoveryCandidate(
+        pane_id=_text(item.get(PANE_ID_FIELD), f"{location}.paneId"),
+        worktree_path=_absolute_path(
+            item.get(WORKTREE_PATH_FIELD), f"{location}.worktreePath"
+        ),
+        session_id=_text(item.get(SESSION_ID_FIELD), f"{location}.sessionId"),
+        evidence=evidence,
+        role=role,
+        secondary_authorized=_boolean(
+            item.get(SECONDARY_AUTHORIZED_FIELD),
+            f"{location}.secondaryAuthorized",
+        ),
     )
 
 
@@ -217,6 +294,21 @@ def _agent_roster(items: list[dict[str, object]]) -> dict[str, list[AgentIdentit
     for index, item in enumerate(items):
         identity = _agent_identity(item, f"agents[{index}]")
         roster.setdefault(identity.pane_id, []).append(identity)
+    return roster
+
+
+def _candidate_roster(
+    items: list[dict[str, object]],
+) -> dict[str, RecoveryCandidate]:
+    roster: dict[str, RecoveryCandidate] = {}
+    for index, item in enumerate(items):
+        value = candidate_from_item(item, f"candidates[{index}]")
+        if value.pane_id in roster:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Recovery candidates contain duplicate pane identity: {value.pane_id}",
+            )
+        roster[value.pane_id] = value
     return roster
 
 
@@ -247,21 +339,89 @@ def _validate_targets(
     return {pane_id: panes[pane_id] for pane_id in selected}
 
 
+def _validated_candidates(
+    selected: tuple[str, ...],
+    panes: dict[str, PaneIdentity],
+    candidate_items: list[dict[str, object]],
+) -> dict[str, RecoveryCandidate]:
+    candidates = _candidate_roster(candidate_items)
+    if set(candidates) != set(selected):
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Recovery candidates must identify every selected pane exactly once and no other pane.",
+        )
+    session_ids = [candidate.session_id for candidate in candidates.values()]
+    if len(session_ids) != len(set(session_ids)):
+        raise AdapterError(
+            ResultStatus.INVALID_TARGET,
+            "Recovery candidates must carry distinct native session identities.",
+        )
+    by_worktree: dict[str, list[RecoveryCandidate]] = {}
+    for pane_id in selected:
+        candidate = candidates[pane_id]
+        pane = panes[pane_id]
+        if candidate.worktree_path != pane.worktree_path:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Recovery candidate worktree does not match pane {pane_id}.",
+            )
+        by_worktree.setdefault(candidate.worktree_path, []).append(candidate)
+    for worktree_path, worktree_candidates in by_worktree.items():
+        if len(worktree_candidates) == 1:
+            continue
+        primaries = [
+            candidate
+            for candidate in worktree_candidates
+            if candidate.role is RecoveryRole.PRIMARY
+        ]
+        secondaries = [
+            candidate
+            for candidate in worktree_candidates
+            if candidate.role is RecoveryRole.SECONDARY
+        ]
+        if len(primaries) != 1 or len(secondaries) != len(worktree_candidates) - 1:
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Worktree {worktree_path} requires exactly one primary recovery candidate.",
+            )
+        if any(not candidate.secondary_authorized for candidate in secondaries):
+            raise AdapterError(
+                ResultStatus.INVALID_TARGET,
+                f"Worktree {worktree_path} contains an unauthorized secondary recovery candidate.",
+            )
+    return candidates
+
+
+def recovery_input(candidate: RecoveryCandidate) -> str:
+    return (
+        f"{SPX_RESUME_COMMAND}\n"
+        f"Expected native session identity: {candidate.session_id}. "
+        f"Recovery role: {candidate.role.value}. "
+        f"{RECOVERY_REASSESSMENT_PROMPT}"
+    )
+
+
 def recover(
     selected_pane_ids: tuple[str, ...],
     pane_items: list[dict[str, object]],
     agent_items: list[dict[str, object]],
+    candidate_items: list[dict[str, object]],
 ) -> dict[str, object]:
     selected = _selected_pane_ids(selected_pane_ids)
     panes = _pane_roster(pane_items)
     targets = _validate_targets(selected, panes)
+    candidates = _validated_candidates(selected, panes, candidate_items)
     agents = _agent_roster(agent_items)
 
     occupied: list[str] = []
     for pane_id in selected:
         matches = agents.get(pane_id, [])
         if len(matches) > 1 or (
-            matches and matches[0].agent_type not in NATIVE_AGENT_TYPES
+            matches
+            and (
+                matches[0].agent_type not in NATIVE_AGENT_TYPES
+                or matches[0].session_id != candidates[pane_id].session_id
+            )
         ):
             occupied.append(pane_id)
     if occupied:
@@ -269,7 +429,7 @@ def recover(
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
             STATUS_FIELD: ResultStatus.PANE_OCCUPIED,
             DETAIL_FIELD: (
-                "Selected panes have non-native or multiple detected-agent correlations."
+                "Selected panes have non-native, mismatched-session, or multiple detected-agent correlations."
             ),
             OCCUPIED_PANE_IDS_FIELD: occupied,
             TARGETS_FIELD: [
@@ -283,6 +443,7 @@ def recover(
     deliveries: list[dict[str, object]] = []
     for pane_id in selected:
         pane = targets[pane_id]
+        candidate = candidates[pane_id]
         matches = agents.get(pane_id, [])
         if matches:
             agent = matches[0]
@@ -291,13 +452,18 @@ def recover(
                     ResultStatus.INVALID_SCHEMA,
                     f"Detected agent worktree does not match pane {pane_id}.",
                 )
-            results.append(pane.result(Resolution.ALREADY_CORRELATED))
+            correlated = pane.result(Resolution.ALREADY_CORRELATED)
+            correlated.update(candidate.result_fields())
+            results.append(correlated)
             continue
         result = pane.result(Resolution.RESUMED)
+        result.update(candidate.result_fields())
         result[COMMAND_FIELD] = SPX_RESUME_COMMAND
         result[REASSESSMENT_SENT_FIELD] = True
         results.append(result)
-        deliveries.append({PANE_ID_FIELD: pane_id, TEXT_FIELD: RECOVERY_INPUT})
+        deliveries.append(
+            {PANE_ID_FIELD: pane_id, TEXT_FIELD: recovery_input(candidate)}
+        )
 
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -342,10 +508,12 @@ def verify(
     selected_pane_ids: tuple[str, ...],
     pane_items: list[dict[str, object]],
     agent_items: list[dict[str, object]],
+    candidate_items: list[dict[str, object]],
 ) -> dict[str, object]:
     selected = _selected_pane_ids(selected_pane_ids)
     panes = _pane_roster(pane_items)
     targets = _validate_targets(selected, panes)
+    candidates = _validated_candidates(selected, panes, candidate_items)
     agents = _agent_roster(agent_items)
 
     correlations: list[dict[str, object]] = []
@@ -354,6 +522,7 @@ def verify(
     unexpected: list[str] = []
     for pane_id in selected:
         pane = targets[pane_id]
+        candidate = candidates[pane_id]
         matches = agents.get(pane_id, [])
         if not matches:
             missing.append(pane_id)
@@ -365,10 +534,12 @@ def verify(
         if (
             agent.agent_type not in NATIVE_AGENT_TYPES
             or agent.worktree_path != pane.worktree_path
+            or agent.session_id != candidate.session_id
         ):
             unexpected.append(pane_id)
             continue
         correlation = pane.result(Resolution.ALREADY_CORRELATED)
+        correlation.update(candidate.result_fields())
         correlation[TYPE_FIELD] = agent.agent_type
         correlation[STATUS_FIELD] = agent.status
         correlations.append(correlation)
@@ -443,11 +614,12 @@ def main(
         else:
             pane_items = _array(value.get(ITEMS_FIELD), ITEMS_FIELD)
             agent_items = _array(value.get(AGENTS_FIELD), AGENTS_FIELD)
+            candidate_items = _array(value.get(CANDIDATES_FIELD), CANDIDATES_FIELD)
             selected = tuple(cast(list[str], args.pane))
             result = (
-                recover(selected, pane_items, agent_items)
+                recover(selected, pane_items, agent_items, candidate_items)
                 if operation is Operation.RECOVER
-                else verify(selected, pane_items, agent_items)
+                else verify(selected, pane_items, agent_items, candidate_items)
             )
         print(json.dumps(result, sort_keys=True), file=output_stream)
         return command_exit_code(result)

@@ -216,7 +216,7 @@ Coding-agent environments and coordination: /operate-prowl, /message-agents, /co
 | Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination                           |
 | Skill | `/message-agents`       | Discovering a Prowl coding-agent recipient or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane |
 | Skill | `/operate-prowl`        | A workflow needs a public Prowl operation or a correlated delegation handback between Prowl coding agents                                                  |
-| Skill | `/recover-prowl-agents` | Prowl has restored panes whose stopped coding-agent sessions may need recovery                                                                             |
+| Skill | `/recover-prowl-agents` | Preparing or executing recovery of coding-agent sessions after Prowl restarts                                                                              |
 
 ### frontend
 
